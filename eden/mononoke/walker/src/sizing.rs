@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{FileContentData, Node, NodeData, NodeType, WrappedPath};
+use crate::graph::{FileContentData, Node, NodeData, NodeType};
 use crate::progress::{
     progress_stream, report_state, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::sampling::{PathTrackingRoute, SamplingWalkVisitor, WalkSampleMapping};
+use crate::sampling::{
+    PathTrackingRoute, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime, WalkSampleMapping,
+};
 use crate::setup::{
     parse_node_types, setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
     DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
@@ -91,22 +93,13 @@ fn size_sampling_stream<InStream, InStats>(
     sampler: Arc<WalkSampleMapping<Node, SizingSample>>,
 ) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<SizingStats>), Error>>
 where
-    InStream: Stream<
-            Item = Result<
-                (
-                    (Node, Option<WrappedPath>),
-                    Option<NodeData>,
-                    Option<InStats>,
-                ),
-                Error,
-            >,
-        >
+    InStream: Stream<Item = Result<(WalkKeyOptPath, Option<NodeData>, Option<InStats>), Error>>
         + 'static
         + Send,
     InStats: 'static + Send,
 {
     s.map_ok(
-        move |((n, _path), data_opt, _stats_opt)| match (&n, data_opt) {
+        move |(WalkKeyOptPath(n, _path), data_opt, _stats_opt)| match (&n, data_opt) {
             (Node::FileContent(_content_id), Some(NodeData::FileContent(fc)))
                 if sampler.is_sampling(&n) =>
             {
@@ -338,7 +331,9 @@ pub async fn compression_benefit<'a>(
                 cloned!(ctx, sizing_progress_state);
                 // Sizing doesn't use mtime, so remove it from payload
                 let walk_progress = progress_stream(quiet, &progress_state.clone(), walk_output)
-                    .map_ok(|(key, (_mtime, node_data), stats)| (key, node_data, stats));
+                    .map_ok(|(key, WalkPayloadMtime(_mtime, node_data), stats)| {
+                        (key, node_data, stats)
+                    });
 
                 let compressor = size_sampling_stream(
                     scheduled_max,

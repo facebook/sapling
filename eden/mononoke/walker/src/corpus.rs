@@ -9,7 +9,10 @@ use crate::graph::{FileContentData, Node, NodeData, NodeType, WrappedPath};
 use crate::progress::{
     progress_stream, report_state, ProgressReporter, ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::sampling::{PathTrackingRoute, SampleTrigger, SamplingWalkVisitor, WalkSampleMapping};
+use crate::sampling::{
+    PathTrackingRoute, SampleTrigger, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime,
+    WalkSampleMapping,
+};
 use crate::scrub::ScrubStats;
 use crate::setup::{
     parse_node_types, setup_common, CORPUS, DEFAULT_INCLUDE_NODE_TYPES,
@@ -60,20 +63,11 @@ fn corpus_stream<InStream, SS>(
     sampler: Arc<CorpusSamplingHandler<CorpusSample>>,
 ) -> impl Stream<Item = Result<(Node, Option<()>, Option<ScrubStats>), Error>>
 where
-    InStream: Stream<
-            Item = Result<
-                (
-                    (Node, Option<WrappedPath>),
-                    (Option<DateTime>, Option<NodeData>),
-                    Option<SS>,
-                ),
-                Error,
-            >,
-        >
+    InStream: Stream<Item = Result<(WalkKeyOptPath, WalkPayloadMtime, Option<SS>), Error>>
         + 'static
         + Send,
 {
-    s.map_ok(move |(walk_key, (mtime, nd), _progress_stats)| match nd {
+    s.map_ok(move |(walk_key, WalkPayloadMtime(mtime, nd), _progress_stats)| match nd {
         Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream))) => {
             cloned!(sampler);
             file_bytes_stream
@@ -96,7 +90,7 @@ where
     })
     .try_buffer_unordered(scheduled_max)
     // Dump the data to disk
-    .map_ok(move |((n, path), sample, mtime, stats)| match sample {
+    .map_ok(move |(WalkKeyOptPath(n, path), sample, mtime, stats)| match sample {
         Some(sample) => move_node_files(output_dir.clone(), n.clone(), path, mtime, sample).map_ok(move |()| (n, Some(()), stats)).left_future(),
         None => future::ok((n, Some(()), stats)).right_future(),
     })
@@ -223,15 +217,15 @@ async fn move_node_files(
 
 #[derive(Debug)]
 pub struct CorpusSamplingHandler<T> {
-    inner: WalkSampleMapping<(Node, Option<WrappedPath>), T>,
+    inner: WalkSampleMapping<WalkKeyOptPath, T>,
     output_dir: Option<String>,
 }
 
-impl<T> SampleTrigger<(Node, Option<WrappedPath>)> for CorpusSamplingHandler<T>
+impl<T> SampleTrigger<WalkKeyOptPath> for CorpusSamplingHandler<T>
 where
     T: Default,
 {
-    fn map_keys(&self, sample_key: SamplingKey, walk_key: (Node, Option<WrappedPath>)) {
+    fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath) {
         self.inner.map_keys(sample_key, walk_key);
     }
 }
@@ -245,7 +239,7 @@ impl<T> CorpusSamplingHandler<T> {
         }
     }
 
-    pub fn complete_step(&self, walk_key: &(Node, Option<WrappedPath>)) -> Option<T> {
+    pub fn complete_step(&self, walk_key: &WalkKeyOptPath) -> Option<T> {
         self.inner.complete_step(walk_key)
     }
 }

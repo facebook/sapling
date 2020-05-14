@@ -131,24 +131,24 @@ impl PathTrackingRoute {
     }
 }
 
+// Name the stream output key type
+#[derive(Debug, Eq, Hash, PartialEq)]
+pub struct WalkKeyOptPath(pub Node, pub Option<WrappedPath>);
+
 // Map the key type so progress reporting works
-impl<'a> From<&'a (Node, Option<WrappedPath>)> for &'a Node {
-    fn from((n, _p): &'a (Node, Option<WrappedPath>)) -> &'a Node {
+impl<'a> From<&'a WalkKeyOptPath> for &'a Node {
+    fn from(WalkKeyOptPath(n, _p): &'a WalkKeyOptPath) -> &'a Node {
         n
     }
 }
 
-impl<T>
-    WalkVisitor<
-        (
-            (Node, Option<WrappedPath>),
-            (Option<DateTime>, Option<NodeData>),
-            Option<StepStats>,
-        ),
-        PathTrackingRoute,
-    > for SamplingWalkVisitor<T>
+// Name the stream output payload type
+pub struct WalkPayloadMtime(pub Option<DateTime>, pub Option<NodeData>);
+
+impl<T> WalkVisitor<(WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>), PathTrackingRoute>
+    for SamplingWalkVisitor<T>
 where
-    T: SampleTrigger<(Node, Option<WrappedPath>)>,
+    T: SampleTrigger<WalkKeyOptPath>,
 {
     fn start_step(
         &self,
@@ -186,8 +186,10 @@ where
                 if should_sample {
                     let sampling_key = SamplingKey::new();
                     ctx = ctx.clone_and_sample(sampling_key);
-                    self.sampler
-                        .map_keys(sampling_key, (step.target.clone(), repo_path.cloned()));
+                    self.sampler.map_keys(
+                        sampling_key,
+                        WalkKeyOptPath(step.target.clone(), repo_path.cloned()),
+                    );
                 }
             }
         }
@@ -202,11 +204,7 @@ where
         route: Option<PathTrackingRoute>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
-        (
-            (Node, Option<WrappedPath>),
-            (Option<DateTime>, Option<NodeData>),
-            Option<StepStats>,
-        ),
+        (WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>),
         PathTrackingRoute,
         Vec<OutgoingEdge>,
     ) {
@@ -231,7 +229,11 @@ where
                 .visit(ctx, resolved, node_data, inner_route, outgoing);
 
         (
-            ((n, route.path.clone()), (route.mtime.clone(), nd), stats),
+            (
+                WalkKeyOptPath(n, route.path.clone()),
+                WalkPayloadMtime(route.mtime.clone(), nd),
+                stats,
+            ),
             route,
             outgoing,
         )
@@ -310,22 +312,21 @@ where
     }
 }
 
-impl<T> SampleTrigger<(Node, Option<WrappedPath>)> for WalkSampleMapping<Node, T>
+impl<T> SampleTrigger<WalkKeyOptPath> for WalkSampleMapping<Node, T>
 where
     T: Default,
 {
-    fn map_keys(&self, sample_key: SamplingKey, walk_key: (Node, Option<WrappedPath>)) {
+    fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath) {
         self.inflight.insert(sample_key, T::default());
         self.inflight_reverse.insert(walk_key.0, sample_key);
     }
 }
 
-impl<T> SampleTrigger<(Node, Option<WrappedPath>)>
-    for WalkSampleMapping<(Node, Option<WrappedPath>), T>
+impl<T> SampleTrigger<WalkKeyOptPath> for WalkSampleMapping<WalkKeyOptPath, T>
 where
     T: Default,
 {
-    fn map_keys(&self, sample_key: SamplingKey, walk_key: (Node, Option<WrappedPath>)) {
+    fn map_keys(&self, sample_key: SamplingKey, walk_key: WalkKeyOptPath) {
         self.inflight.insert(sample_key, T::default());
         self.inflight_reverse.insert(walk_key, sample_key);
     }
