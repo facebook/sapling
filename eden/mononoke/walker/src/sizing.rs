@@ -247,8 +247,8 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<SizingStats, Sizin
 }
 
 #[derive(Debug)]
-struct SizingSample {
-    data: HashMap<String, BlobstoreBytes>,
+pub struct SizingSample {
+    pub data: HashMap<String, BlobstoreBytes>,
 }
 
 impl Default for SizingSample {

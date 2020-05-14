@@ -60,6 +60,7 @@ pub const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
 pub const SCRUB: &str = "scrub";
 pub const COMPRESSION_BENEFIT: &str = "compression-benefit";
 pub const VALIDATE: &str = "validate";
+pub const CORPUS: &str = "corpus";
 
 // Subcommand args
 const QUIET_ARG: &str = "quiet";
@@ -87,6 +88,7 @@ pub const EXCLUDE_CHECK_TYPE_ARG: &str = "exclude-check-type";
 pub const INCLUDE_CHECK_TYPE_ARG: &str = "include-check-type";
 pub const EXCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "exclude-sample-node-type";
 pub const INCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "include-sample-node-type";
+pub const OUTPUT_DIR_ARG: &str = "output-dir";
 const SCUBA_TABLE_ARG: &str = "scuba-table";
 const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
 
@@ -309,6 +311,18 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     );
     let compression_benefit = add_sampling_args(compression_benefit);
 
+    let corpus = setup_subcommand_args(
+        SubCommand::with_name(CORPUS).about("Dump a sampled corpus of blobstore data"),
+    )
+    .arg(
+        Arg::with_name(OUTPUT_DIR_ARG)
+            .long(OUTPUT_DIR_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Where to write the output corpus. Default is to to a dry run with no output."),
+    );
+    let corpus = add_sampling_args(corpus);
+
     let validate = setup_subcommand_args(
         SubCommand::with_name(VALIDATE).about("estimate compression benefit"),
     )
@@ -344,6 +358,7 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
                 .help("id of storage group to operate over, e.g. manifold_xdb_multiplex"),
         )
         .subcommand(compression_benefit)
+        .subcommand(corpus)
         .subcommand(scrub_objects)
         .subcommand(validate)
 }

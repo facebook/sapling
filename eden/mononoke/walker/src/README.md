@@ -96,6 +96,28 @@ When running locally or in integration tests glog progress logging provides the 
 
 # Subcommands
 
+## Corpus
+
+This walker can dump out a corpus of blobs from a repo via the `corpus` subcommand.  This is intended to allow shell level investigation and experimentation with the corpus,  e.g. trying various compression techniques.
+
+To form a corps it associates an in-repo `WrappedPath` with `Node`s that either have a path as part of their identity (e.g. `Node::HgManifest`),  can be associated with a path as part of an edge,  (e.g. `OutgoingEdge` for `EdgeType::BonsaiChangesetToFileContent`), or can have a path associated based on the route taken through the graph (e.g. `Node::FileContentMetadata`).
+
+The output directory is specified with --output-dir, and can be sampled by path-hash or path-regex
+
+The blobs are dumped out in the output dir in the layout `NodeType`/<repo_path>/.mononoke,/aa/bb/cc/blob_key  where the repo_path and blob_key are both percent_encoded and the aa/bb/cc etc are a subset of the hash used to prevent any one directory becoming too large.  For types without any in-repo path (e.g. `BonsaiChangeset`) the repo_path component is omitted.  The repo paths and key are percent encoded so that they can't match the magic `.mononoke,` directory name as it contains a comma, and comma is percent encoded. This property can be used in shell operations to separate the blob structure from the in-repo path.
+
+e.g to find all blobs and list them
+```
+$ find . -type d -name .mononoke,| xargs -i find {} -type f | head -1
+./FileContent/root/foo/bar/baz/space_usage.json/.mononoke,/49/f0/c1/repo2103.content.blake2.49f0c1d254974a7eb43ad25e93426e738aa27e3f5e391301a1402e26643542c6
+```
+
+vs to find all files we have dumped blobs for
+```
+$  find . -type d -name .mononoke, |xargs dirname| head -1
+./FileContent/root/foo/bar/baz/space_usage.json
+```
+
 ## Scrub
 
 The walker can check and optional repair storage durability via the `scrub` subcommand.  This checks each component of a multiplexed blobstore has data for each key, so that we could run on one side of the multiplex if necessary

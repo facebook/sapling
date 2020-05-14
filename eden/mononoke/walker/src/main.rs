@@ -15,6 +15,7 @@ use futures::future::{self, FutureExt};
 use cmdlib::{args, helpers::block_execute};
 
 mod blobstore;
+mod corpus;
 #[macro_use]
 mod graph;
 mod parse_node;
@@ -38,11 +39,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = args::init_logging(fb, &matches);
 
     let future = match matches.subcommand() {
-        (setup::SCRUB, Some(sub_m)) => {
-            scrub::scrub_objects(fb, logger.clone(), &matches, sub_m).boxed()
-        }
         (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {
             sizing::compression_benefit(fb, logger.clone(), &matches, sub_m).boxed()
+        }
+        (setup::CORPUS, Some(sub_m)) => corpus::corpus(fb, logger.clone(), &matches, sub_m).boxed(),
+        (setup::SCRUB, Some(sub_m)) => {
+            scrub::scrub_objects(fb, logger.clone(), &matches, sub_m).boxed()
         }
         (setup::VALIDATE, Some(sub_m)) => {
             validate::validate(fb, logger.clone(), &matches, sub_m).boxed()

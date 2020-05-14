@@ -18,6 +18,7 @@ use crate::setup::{
     PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG,
     SAMPLE_RATE_ARG, SCRUB,
 };
+use crate::sizing::SizingSample;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::validate::TOTAL;
 
@@ -48,9 +49,9 @@ define_stats! {
 }
 
 #[derive(Add, Div, Mul, Sub, Clone, Copy, Default, Debug)]
-struct ScrubStats {
-    blobstore_bytes: u64,
-    blobstore_keys: u64,
+pub struct ScrubStats {
+    pub blobstore_bytes: u64,
+    pub blobstore_keys: u64,
 }
 
 impl From<Option<&ScrubSample>> for ScrubStats {
@@ -59,6 +60,22 @@ impl From<Option<&ScrubSample>> for ScrubStats {
             .map(|sample| ScrubStats {
                 blobstore_keys: sample.data.values().len() as u64,
                 blobstore_bytes: sample.data.values().sum(),
+            })
+            .unwrap_or_default()
+    }
+}
+
+impl From<Option<&SizingSample>> for ScrubStats {
+    fn from(sample: Option<&SizingSample>) -> Self {
+        sample
+            .map(|sample| ScrubStats {
+                blobstore_keys: sample.data.values().len() as u64,
+                blobstore_bytes: sample
+                    .data
+                    .values()
+                    .by_ref()
+                    .map(|bytes| bytes.len() as u64)
+                    .sum(),
             })
             .unwrap_or_default()
     }
