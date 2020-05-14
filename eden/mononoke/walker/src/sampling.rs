@@ -12,6 +12,7 @@ use crate::walk::{OutgoingEdge, WalkVisitor};
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
 use mononoke_types::datetime::DateTime;
+use regex::Regex;
 use std::{collections::HashSet, fmt, hash, sync::Arc};
 
 pub trait SampleTrigger<K> {
@@ -22,6 +23,7 @@ pub trait SampleTrigger<K> {
 pub struct SamplingWalkVisitor<T> {
     inner: WalkStateCHashMap,
     sample_node_types: HashSet<NodeType>,
+    sample_path_regex: Option<Regex>,
     sampler: Arc<T>,
     sample_rate: u64,
     sample_offset: u64,
@@ -32,6 +34,7 @@ impl<T> SamplingWalkVisitor<T> {
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
         sample_node_types: HashSet<NodeType>,
+        sample_path_regex: Option<Regex>,
         sampler: Arc<T>,
         sample_rate: u64,
         sample_offset: u64,
@@ -39,6 +42,7 @@ impl<T> SamplingWalkVisitor<T> {
         Self {
             inner: WalkStateCHashMap::new(include_node_types, include_edge_types),
             sample_node_types,
+            sample_path_regex,
             sampler,
             sample_rate,
             sample_offset,
@@ -158,25 +162,33 @@ where
                 step.path.as_ref(),
                 &step.target,
             );
-            let should_sample = match self.sample_rate {
-                0 => false,
-                1 => true,
-                sample_rate => {
-                    let sampling_fingerprint = repo_path.map_or_else(
-                        || step.target.sampling_fingerprint(),
-                        |r| r.sampling_fingerprint(),
-                    );
-                    sampling_fingerprint.map_or(self.sample_offset % sample_rate == 0, |fp| {
-                        (fp + self.sample_offset) % sample_rate == 0
-                    })
-                }
-            };
+            if self.sample_path_regex.as_ref().map_or_else(
+                || true,
+                |re| match repo_path {
+                    None => false,
+                    Some(repo_path) => re.is_match(&repo_path.to_string()),
+                },
+            ) {
+                let should_sample = match self.sample_rate {
+                    0 => false,
+                    1 => true,
+                    sample_rate => {
+                        let sampling_fingerprint = repo_path.map_or_else(
+                            || step.target.sampling_fingerprint(),
+                            |r| r.sampling_fingerprint(),
+                        );
+                        sampling_fingerprint.map_or(self.sample_offset % sample_rate == 0, |fp| {
+                            (fp + self.sample_offset) % sample_rate == 0
+                        })
+                    }
+                };
 
-            if should_sample {
-                let sampling_key = SamplingKey::new();
-                ctx = ctx.clone_and_sample(sampling_key);
-                self.sampler
-                    .map_keys(sampling_key, (step.target.clone(), repo_path.cloned()));
+                if should_sample {
+                    let sampling_key = SamplingKey::new();
+                    ctx = ctx.clone_and_sample(sampling_key);
+                    self.sampler
+                        .map_keys(sampling_key, (step.target.clone(), repo_path.cloned()));
+                }
             }
         }
         self.inner.start_step(ctx, route.map(|_| &()), step)

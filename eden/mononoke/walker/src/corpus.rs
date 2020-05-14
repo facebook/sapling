@@ -15,7 +15,7 @@ use crate::setup::{
     parse_node_types, setup_common, CORPUS, DEFAULT_INCLUDE_NODE_TYPES,
     EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG, OUTPUT_DIR_ARG,
     PROGRESS_INTERVAL_ARG, PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE,
-    PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG, SAMPLE_RATE_ARG,
+    PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG, SAMPLE_PATH_REGEX_ARG, SAMPLE_RATE_ARG,
 };
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 
@@ -32,6 +32,7 @@ use futures::{
 };
 use mononoke_types::{datetime::DateTime, BlobstoreBytes};
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
+use regex::Regex;
 use samplingblob::SamplingHandler;
 use slog::Logger;
 use std::{collections::HashMap, io::Write, path::PathBuf, sync::Arc, time::Duration};
@@ -356,6 +357,11 @@ pub async fn corpus<'a>(
     )?;
     sampling_node_types.retain(|i| include_node_types.contains(i));
 
+    let sampling_path_regex = sub_m
+        .value_of(SAMPLE_PATH_REGEX_ARG)
+        .map(|s| Regex::new(s))
+        .transpose()?;
+
     let sizing_progress_state =
         ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
             fb,
@@ -400,6 +406,7 @@ pub async fn corpus<'a>(
         include_node_types,
         include_edge_types,
         sampling_node_types,
+        sampling_path_regex,
         corpus_sampler,
         sample_rate,
         sample_offset,

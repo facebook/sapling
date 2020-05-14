@@ -99,3 +99,12 @@ See the breakdown
 Check overall total
   $ find slice -type f -exec du --bytes -c {} + | tail -1 | cut -f1
   3086
+
+Check path regex can pick out just one path
+  $ mononoke_walker --storage-id=blobstore --readonly-storage corpus -q --bookmark master_bookmark --output-dir=A --sample-path-regex='^A$' --sample-rate 1 -I deep 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types * (glob)
+  Walking node types * (glob)
+  Final count: * (glob)
+  * Run */s,*/s,295,6,0s; Type:Raw,Compressed AliasContentMapping:111,3 BonsaiChangeset:0,0 BonsaiFsnodeMapping:0,0 BonsaiHgMapping:0,0 Bookmark:0,0 FileContent:4,1 FileContentMetadata:117,1 Fsnode:0,0 HgBonsaiMapping:0,0 HgChangeset:0,0 HgFileEnvelope:63,1 HgFileNode:0,0 HgManifest:0,0* (glob)
+  Walked/s,* (glob)

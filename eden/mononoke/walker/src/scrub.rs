@@ -385,6 +385,7 @@ pub async fn scrub_objects<'a>(
         include_node_types,
         include_edge_types,
         sampling_node_types,
+        None,
         scrub_sampler,
         sample_rate,
         sample_offset,

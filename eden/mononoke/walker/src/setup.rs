@@ -86,6 +86,7 @@ pub const SAMPLE_RATE_ARG: &str = "sample-rate";
 pub const SAMPLE_OFFSET_ARG: &str = "sample-offset";
 pub const EXCLUDE_CHECK_TYPE_ARG: &str = "exclude-check-type";
 pub const INCLUDE_CHECK_TYPE_ARG: &str = "include-check-type";
+pub const SAMPLE_PATH_REGEX_ARG: &str = "sample-path-regex";
 pub const EXCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "exclude-sample-node-type";
 pub const INCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "include-sample-node-type";
 pub const OUTPUT_DIR_ARG: &str = "output-dir";
@@ -289,6 +290,13 @@ fn add_sampling_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .number_of_values(1)
             .required(false)
             .help("Node types to include in the sample, defaults to same as the walk."),
+    )
+    .arg(
+        Arg::with_name(SAMPLE_PATH_REGEX_ARG)
+            .long(SAMPLE_PATH_REGEX_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("If provided, only sample paths that match"),
     )
 }
 

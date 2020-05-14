@@ -133,6 +133,15 @@ impl WrappedPath {
     }
 }
 
+impl fmt::Display for WrappedPath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            WrappedPath::Root => write!(f, ""),
+            WrappedPath::NonRoot(path) => write!(f, "{}", path.as_ref()),
+        }
+    }
+}
+
 impl From<Option<MPath>> for WrappedPath {
     fn from(mpath: Option<MPath>) -> Self {
         match mpath {

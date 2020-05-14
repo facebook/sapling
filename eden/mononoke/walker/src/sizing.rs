@@ -367,6 +367,7 @@ pub async fn compression_benefit<'a>(
         include_node_types,
         include_edge_types,
         sampling_node_types,
+        None,
         sizing_sampler,
         sample_rate,
         sample_offset,
