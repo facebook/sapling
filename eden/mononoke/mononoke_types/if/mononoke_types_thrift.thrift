@@ -15,6 +15,8 @@
 //! IMPORTANT!!!
 //! ------------
 
+namespace py3 eden.mononoke.mononoke_types
+
 // Thrift doesn't have fixed-length arrays, so a 256-bit hash can be
 // represented in one of two ways:
 // 1. as four i64s
@@ -337,6 +339,6 @@ enum BlameRejected {
 }
 
 union BlameMaybeRejected {
-  1: Blame Blame,
+  1: Blame Blame (py3.name = "blame"),
   2: BlameRejected Rejected,
 }
