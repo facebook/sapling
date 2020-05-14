@@ -24,7 +24,12 @@ class pullattempt(object):
     """Describe an auto-pull attempt"""
 
     def __init__(
-        self, friendlyname=None, headnodes=None, headnames=None, bookmarknames=None
+        self,
+        friendlyname=None,
+        headnodes=None,
+        headnames=None,
+        bookmarknames=None,
+        source=None,
     ):
         # Name to display during pull. ex. "commit abcdef", "bookmark foo".
         self.friendlyname = friendlyname
@@ -32,12 +37,15 @@ class pullattempt(object):
         self.headnodes = headnodes or []
         self.headnames = headnames or []
         self.bookmarknames = bookmarknames or []
+        self.source = source
 
     def execute(self, repo):
         """Execute the pull on a repo."""
         # TODO: Change source to "default" once Mononoke rolls out to
         # everywhere.
-        if self.bookmarknames and "infinitepushbookmark" in repo.ui.paths:
+        if self.source:
+            source = self.source
+        elif self.bookmarknames and "infinitepushbookmark" in repo.ui.paths:
             source = "infinitepushbookmark"
         elif "infinitepush" in repo.ui.paths:
             source = "infinitepush"
@@ -60,7 +68,10 @@ class pullattempt(object):
             )
         else:
             name = self.friendlyname
-        url = str(repo.ui.paths.get(source).url)
+        path = repo.ui.paths.get(source)
+        if path is None:
+            return
+        url = str(path.url)
         repo.ui.status_err(_("pulling %s from %r\n") % (name, url))
 
         # Pull.
@@ -80,12 +91,19 @@ class pullattempt(object):
         except Exception as ex:
             repo.ui.status_err(_("pull failed: %s\n") % ex)
 
-    def merge(self, other):
-        """Merge this pullattempt with another pullattempt"""
-        self.bookmarknames += other.bookmarknames
-        self.headnodes += other.headnodes
-        self.headnames += other.headnames
-        self.friendlyname = None
+    def trymerge(self, other):
+        """Merge this pullattempt with another pullattempt.
+
+        If pullattempt cannot be merged, return None.
+        """
+        if self.source != other.source:
+            return None
+        return pullattempt(
+            bookmarknames=self.bookmarknames + other.bookmarknames,
+            headnodes=self.headnodes + other.headnodes,
+            headnames=self.headnames + other.headnames,
+            source=self.source,
+        )
 
 
 def _cachedstringmatcher(pattern, _cache={}):
@@ -138,7 +156,12 @@ def trypull(repo, xs):
     if attempts:
         attempt = attempts[0]
         for other in attempts[1:]:
-            attempt.merge(other)
+            merged = attempt.trymerge(other)
+            if merged:
+                attempt = merged
+            else:
+                attempt.execute(repo)
+                attempt = other
         attempt.execute(repo)
         unfi = repo.unfiltered()
         return all(x in unfi for x in xs)
@@ -186,11 +209,16 @@ def _pullremotebookmarks(repo, x):
     if pattern and "/" in x:
         matchfn = _cachedstringmatcher(pattern)
         if matchfn(x):
-            _remotename, name = bookmarks.splitremotename(x)
-            # XXX: remotename should be the source, but is ignored here. This
-            # is because "remote/scratch/x" might require special remote name
-            # (ex.  "infinitepushbookmark", not "remote"/"default") to handle.
-            return pullattempt(bookmarknames=[name], headnames=[name])
+            remotename, name = bookmarks.splitremotename(x)
+            if remotename in {"default", "remote"}:
+                # XXX: remotename should be the source, but is ignored here.
+                # This is because "remote/scratch/x" might require special
+                # remote name (ex.  "infinitepushbookmark", not
+                # "remote"/"default") to handle.
+                source = None
+            else:
+                source = remotename
+            return pullattempt(bookmarknames=[name], headnames=[name], source=source)
 
 
 @builtinautopullpredicate("commits", priority=20)
