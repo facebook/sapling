@@ -605,6 +605,7 @@ def validatedynamicconfig(ui):
     # Once all configs are migrated, we can delete the rc files and remove this
     # validation.
     originalrcs = [
+        "common_overrides.rc",
         "configerator_overrides.rc",
         "devserver_no_sandcastle_overrides.rc",
         "fbsource_overrides.rc",
