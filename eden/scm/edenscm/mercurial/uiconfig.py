@@ -607,6 +607,7 @@ def validatedynamicconfig(ui):
     originalrcs = [
         "configerator_overrides.rc",
         "devserver_no_sandcastle_overrides.rc",
+        "fbsource_overrides.rc",
         "instagram-server_overrides.rc",
         "ovrsource_overrides.rc",
         "www_overrides.rc",

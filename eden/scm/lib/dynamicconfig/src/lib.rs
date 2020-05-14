@@ -32,6 +32,7 @@ pub(crate) enum HgGroup {
 }
 
 impl HgGroup {
+    #[allow(dead_code)]
     pub(crate) fn to_str(&self) -> &'static str {
         match self {
             HgGroup::Dev => "hg_dev",
@@ -61,6 +62,7 @@ pub enum Domain {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Repo {
     Configerator,
+    Fbsource,
     InstagramServer,
     Ovrsource,
     Www,
@@ -73,6 +75,7 @@ impl AsRef<str> for Repo {
         use Repo::*;
         match self {
             Configerator => "configerator",
+            Fbsource => "fbsource",
             InstagramServer => "instagram-server",
             Ovrsource => "ovrsource",
             Www => "www",
@@ -88,6 +91,7 @@ impl FromStr for Repo {
         use Repo::*;
         Ok(match name {
             "configerator" => Configerator,
+            "fbsource" => Fbsource,
             "instagram-server" => InstagramServer,
             "ovrsource" => Ovrsource,
             "www" => Www,
