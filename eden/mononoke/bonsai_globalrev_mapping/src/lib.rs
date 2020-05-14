@@ -105,6 +105,12 @@ pub trait BonsaiGlobalrevMapping: Send + Sync {
         globalrev: Globalrev,
     ) -> BoxFuture<Option<ChangesetId>, Error>;
 
+    fn get_closest_globalrev(
+        &self,
+        repo_id: RepositoryId,
+        globalrev: Globalrev,
+    ) -> BoxFuture<Option<Globalrev>, Error>;
+
     /// Read the most recent Globalrev. This produces the freshest data possible, and is meant to
     /// be used for Globalrev assignment.
     fn get_max(&self, repo_id: RepositoryId) -> BoxFuture<Option<Globalrev>, Error>;
@@ -137,6 +143,14 @@ impl BonsaiGlobalrevMapping for Arc<dyn BonsaiGlobalrevMapping> {
         globalrev: Globalrev,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         (**self).get_bonsai_from_globalrev(repo_id, globalrev)
+    }
+
+    fn get_closest_globalrev(
+        &self,
+        repo_id: RepositoryId,
+        globalrev: Globalrev,
+    ) -> BoxFuture<Option<Globalrev>, Error> {
+        (**self).get_closest_globalrev(repo_id, globalrev)
     }
 
     fn get_max(&self, repo_id: RepositoryId) -> BoxFuture<Option<Globalrev>, Error> {
@@ -177,6 +191,16 @@ queries! {
         SELECT globalrev
         FROM bonsai_globalrev_mapping
         WHERE repo_id = {}
+        ORDER BY globalrev DESC
+        LIMIT 1
+        "
+    }
+
+    read SelectClosestGlobalrev(repo_id: RepositoryId, rev: Globalrev) -> (Globalrev,) {
+        "
+        SELECT globalrev
+        FROM bonsai_globalrev_mapping
+        WHERE repo_id = {repo_id} AND globalrev <= {rev}
         ORDER BY globalrev DESC
         LIMIT 1
         "
@@ -269,6 +293,27 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         self.get(repo_id, BonsaisOrGlobalrevs::Globalrev(vec![globalrev]))
             .map(|result| result.into_iter().next().map(|entry| entry.bcs_id))
             .boxify()
+    }
+
+    fn get_closest_globalrev(
+        &self,
+        repo_id: RepositoryId,
+        globalrev: Globalrev,
+    ) -> BoxFuture<Option<Globalrev>, Error> {
+        cloned!(self.read_connection);
+
+        async move {
+            let row = SelectClosestGlobalrev::query(&read_connection, &repo_id, &globalrev)
+                .compat()
+                .await?
+                .into_iter()
+                .next();
+
+            Ok(row.map(|r| r.0))
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     fn get_max(&self, repo_id: RepositoryId) -> BoxFuture<Option<Globalrev>, Error> {

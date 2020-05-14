@@ -16,7 +16,7 @@ use bonsai_globalrev_mapping::{
 use futures::compat::Future01CompatExt;
 use mercurial_types_mocks::globalrev::*;
 use mononoke_types_mocks::changesetid as bonsai;
-use mononoke_types_mocks::repo::REPO_ZERO;
+use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_ext::{open_sqlite_in_memory, SqlConnections};
@@ -193,6 +193,67 @@ async fn test_add_globalrevs() -> Result<(), Error> {
             .get_globalrev_from_bonsai(REPO_ZERO, bonsai::TWOS_CSID)
             .compat()
             .await?
+    );
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_closest_globalrev() -> Result<(), Error> {
+    let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
+
+    let e0 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::ONES_CSID,
+        globalrev: GLOBALREV_ONE,
+    };
+
+    let e1 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::TWOS_CSID,
+        globalrev: GLOBALREV_TWO,
+    };
+
+    mapping.bulk_import(&[e0, e1]).compat().await?;
+
+    assert_eq!(
+        mapping
+            .get_closest_globalrev(REPO_ZERO, GLOBALREV_ZERO)
+            .compat()
+            .await?,
+        None
+    );
+
+    assert_eq!(
+        mapping
+            .get_closest_globalrev(REPO_ZERO, GLOBALREV_ONE)
+            .compat()
+            .await?,
+        Some(GLOBALREV_ONE)
+    );
+
+    assert_eq!(
+        mapping
+            .get_closest_globalrev(REPO_ZERO, GLOBALREV_TWO)
+            .compat()
+            .await?,
+        Some(GLOBALREV_TWO)
+    );
+
+    assert_eq!(
+        mapping
+            .get_closest_globalrev(REPO_ZERO, GLOBALREV_THREE)
+            .compat()
+            .await?,
+        Some(GLOBALREV_TWO)
+    );
+
+    assert_eq!(
+        mapping
+            .get_closest_globalrev(REPO_ONE, GLOBALREV_THREE)
+            .compat()
+            .await?,
+        None,
     );
 
     Ok(())
