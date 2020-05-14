@@ -129,7 +129,7 @@ impl<'a> FromPyObject<'a> for Names {
 
         // Others - convert to LazySet.
         let obj = obj.clone_ref(py);
-        let iter = PyNameIter::new(py, obj)?;
+        let iter = PyNameIter::new(py, obj.iter(py)?.into_object())?;
         let set = NameSet::from_iter(iter);
         Ok(Names(set))
     }
@@ -169,7 +169,10 @@ impl Iterator for PyNameIter {
                     let value = value.extract::<PyBytes>(py)?;
                     Ok(Some(VertexName::copy_from(value.data(py))))
                 }
-                Some(Err(err)) => Err(err),
+                Some(Err(err)) => {
+                    self.errored = true;
+                    Err(err)
+                }
             }
         })()
         .into_anyhow_result()
