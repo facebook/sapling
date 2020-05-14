@@ -43,6 +43,7 @@ anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 chrono = { version="0.4", features=["serde"] }
+futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 itertools = "0.8"
@@ -53,6 +54,7 @@ rand = { version = "0.7", features = ["small_rng"] }
 serde_json = "1.0"
 slog = { version="2.5", features=["max_level_debug"] }
 thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
 tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]
@@ -62,4 +64,3 @@ hooks_content_stores = { path = "../hooks/content-stores" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 skiplist = { path = "../reachabilityindex/skiplist" }
 tests_utils = { path = "../tests/utils" }
-tokio = { version = "=0.2.13", features = ["full"] }

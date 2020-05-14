@@ -18,12 +18,18 @@ use bytes_old::{BufMut as BufMutOld, Bytes as BytesOld, BytesMut as BytesMutOld}
 use cached_config::ConfigHandle;
 use cloned::cloned;
 use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
+use futures::{
+    channel::oneshot::{self, Sender},
+    future,
+};
 use futures_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
     FutureExt as OldFutureExt, StreamExt, StreamTimeoutError,
 };
 use futures_old::future::ok;
-use futures_old::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
+use futures_old::{
+    future as future_old, stream, try_ready, Async, Future, IntoFuture, Poll, Stream,
+};
 use futures_stats::{Timed, TimedStreamTrait};
 use futures_util::{FutureExt, TryFutureExt};
 use getbundle_response::{
@@ -59,11 +65,12 @@ use serde_json::{self, json};
 use slog::{debug, info, o};
 use stats::prelude::*;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::convert::TryInto;
 use std::fmt::Write;
 use std::mem;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use streaming_clone::RevlogStreamingChunks;
 use time_ext::DurationExt;
 use tokio_old::timer::timeout::Error as TimeoutError;
@@ -72,9 +79,11 @@ use tracing::{trace_args, Traced};
 use tunables::tunables;
 
 mod logging;
+mod monitor;
 
 use logging::CommandLogger;
 pub use logging::WireprotoLogging;
+use monitor::Monitor;
 
 define_stats! {
     prefix = "mononoke.repo_client";
@@ -367,7 +376,7 @@ impl RepoClient {
         H: FnOnce(CoreContext, CommandLogger) -> F,
     {
         let (ctx, command_logger) = self.start_command(command);
-        handler(ctx, command_logger).boxify()
+        with_command_monitor(ctx.clone(), handler(ctx, command_logger)).boxify()
     }
 
     fn command_stream<S, I, E, H>(&self, command: &str, handler: H) -> BoxStream<I, E>
@@ -376,7 +385,7 @@ impl RepoClient {
         H: FnOnce(CoreContext, CommandLogger) -> S,
     {
         let (ctx, command_logger) = self.start_command(command);
-        handler(ctx, command_logger).boxify()
+        with_command_monitor(ctx.clone(), handler(ctx, command_logger)).boxify()
     }
 
     fn start_command(&self, command: &str) -> (CoreContext, CommandLogger) {
@@ -419,7 +428,7 @@ impl RepoClient {
                 self.repo.blobrepo().clone(),
             )
             .left_future(),
-            Some(bookmarks) => future::ok(bookmarks).right_future(),
+            Some(bookmarks) => future_old::ok(bookmarks).right_future(),
         }
     }
 
@@ -623,10 +632,10 @@ impl RepoClient {
                                 .collect(),
                             );
 
-                            future::join_all(blob_futs.into_iter()).map(move |blobs| {
+                            future_old::join_all(blob_futs.into_iter()).map(move |blobs| {
                                 let total_weight = blobs.iter().map(|(size, _)| size).sum();
                                 let content_futs = blobs.into_iter().map(|(_, fut)| fut);
-                                let contents_and_history = future::join_all(content_futs)
+                                let contents_and_history = future_old::join_all(content_futs)
                                     .join(history_fut)
                                     .map(move |(contents, history)| (path, contents, history));
 
@@ -958,7 +967,7 @@ impl HgCommands for RepoClient {
                 );
             }
 
-            future::ok(hostname)
+            future_old::ok(hostname)
                 .timeout(*TIMEOUT)
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::CLIENTTELEMETRY, trace_args!())
@@ -1037,7 +1046,7 @@ impl HgCommands for RepoClient {
                 })
                 .collect::<Vec<_>>();
 
-            future::join_all(futs)
+            future_old::join_all(futs)
                 .map(|mut info_plus_date| {
                     info_plus_date.sort_by_key(|&(_, time)| time);
                     let mut infos = info_plus_date
@@ -1290,7 +1299,7 @@ impl HgCommands for RepoClient {
             caps.push(format!("bundle2={}", bundle2caps()));
             res.insert("capabilities".to_string(), caps);
 
-            future::ok(res)
+            future_old::ok(res)
                 .timeout(*TIMEOUT)
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::HELLO, trace_args!())
@@ -1317,7 +1326,7 @@ impl HgCommands for RepoClient {
                 self.logging.logger(),
                 "unsupported listkeys namespace: {}", namespace
             );
-            future::ok(HashMap::new()).boxify()
+            future_old::ok(HashMap::new()).boxify()
         }
     }
 
@@ -1332,7 +1341,7 @@ impl HgCommands for RepoClient {
                 self.logging.logger(),
                 "unsupported listkeyspatterns namespace: {}", namespace,
             );
-            return future::err(format_err!(
+            return future_old::err(format_err!(
                 "unsupported listkeyspatterns namespace: {}",
                 namespace
             ))
@@ -2291,6 +2300,50 @@ fn serialize_getcommitdata(
     buffer.extend_from_slice(&revlog_commit);
     buffer.put("\n");
     Ok(buffer.freeze())
+}
+
+fn with_command_monitor<T>(ctx: CoreContext, t: T) -> Monitor<T, Sender<()>> {
+    let (sender, receiver) = oneshot::channel();
+
+    let reporting_loop = async move {
+        let start = Instant::now();
+
+        loop {
+            let interval = match tunables().get_command_monitor_interval().try_into() {
+                Ok(interval) if interval > 0 => interval,
+                _ => {
+                    break;
+                }
+            };
+
+            tokio::time::delay_for(Duration::from_secs(interval)).await;
+
+            if tunables().get_command_monitor_remote_logging() != 0 {
+                info!(
+                    ctx.logger(),
+                    "Command in progress. Elapsed: {}s, BlobPuts: {}, BlobGets: {}, SqlWrites: {}, SqlReadsMaster: {}, SqlReadsReplica: {}.",
+                    start.elapsed().as_secs(),
+                    ctx.perf_counters().get_counter(PerfCounterType::BlobPuts),
+                    ctx.perf_counters().get_counter(PerfCounterType::BlobGets),
+                    ctx.perf_counters().get_counter(PerfCounterType::SqlWrites),
+                    ctx.perf_counters().get_counter(PerfCounterType::SqlReadsMaster),
+                    ctx.perf_counters().get_counter(PerfCounterType::SqlReadsReplica),
+                    ; o!("remote" => "true")
+                );
+            }
+
+            ctx.scuba()
+                .clone()
+                .log_with_msg("Long running command", None);
+        }
+    };
+
+    tokio::task::spawn(async move {
+        futures::pin_mut!(reporting_loop);
+        let _ = future::select(reporting_loop, receiver).await;
+    });
+
+    Monitor::new(t, sender)
 }
 
 #[cfg(test)]

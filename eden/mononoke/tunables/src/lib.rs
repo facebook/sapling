@@ -34,6 +34,8 @@ pub struct MononokeTunables {
     max_scuba_msg_length: AtomicI64,
     wishlist_read_qps: AtomicI64,
     wishlist_write_qps: AtomicI64,
+    command_monitor_interval: AtomicI64,
+    command_monitor_remote_logging: AtomicI64,
 }
 
 pub fn init_tunables_worker(
