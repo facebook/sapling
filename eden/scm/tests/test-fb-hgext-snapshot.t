@@ -304,7 +304,6 @@
   $ hg snapshot checkout somebadid
   somebadid is not a valid revision id
   abort: unknown revision 'somebadid'!
-  (if somebadid is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 # Still bad id -- not a snapshot
   $ hg snapshot checkout "$BASEREV"

@@ -706,7 +706,6 @@ command provided extension, should be aborted.
   > EOF
   $ hg reba
   abort: unknown revision '-1'!
-  (if -1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ hg rebat

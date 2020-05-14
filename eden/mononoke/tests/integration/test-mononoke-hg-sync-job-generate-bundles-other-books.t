@@ -110,5 +110,4 @@ Sync deletion of a bookmark
   $ cd $TESTTMP/repo-hg
   $ hg log -r newbook
   abort: unknown revision 'newbook'!
-  (if newbook is a remote bookmark or commit, try to 'hg pull' it first)
   [255]

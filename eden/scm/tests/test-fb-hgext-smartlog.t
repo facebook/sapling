@@ -284,7 +284,6 @@ Test with weird bookmark names
   |
   $ hg smartlog --config smartlog.master=xxxx -T compact
   abort: unknown revision 'xxxx'!
-  (if xxxx is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ hg phase -r 'all()' --draft -f

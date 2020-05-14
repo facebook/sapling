@@ -161,7 +161,6 @@ Multiple destinations cannot be used with --base:
   > A D
   > EOS
   abort: unknown revision 'SRC'!
-  (if SRC is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 Rebase to null should work:

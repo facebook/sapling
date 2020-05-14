@@ -394,7 +394,6 @@ test unknown revision in `_list`
 
   $ log '0|unknown'
   abort: unknown revision 'unknown'!
-  (if unknown is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 test integer range in `_list`
@@ -405,12 +404,10 @@ test integer range in `_list`
 
   $ log '-10|-11'
   abort: unknown revision '-11'!
-  (if -11 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ log '9|10'
   abort: unknown revision '10'!
-  (if 10 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 test '0000' != '0' in `_list`
@@ -893,7 +890,6 @@ aliases:
   $ try m
   (symbol 'm')
   abort: unknown revision 'm'!
-  (if m is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
   $ HGPLAINEXCEPT=revsetalias
@@ -1085,7 +1081,6 @@ far away.
       (symbol 'max')
       (string '$1')))
   abort: unknown revision '$1'!
-  (if $1 is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 test scope of alias expansion: 'universe' is expanded prior to 'shadowall(0)',

@@ -21,11 +21,9 @@ sh % "cd empty"
 sh % "hg log"
 sh % "hg log -r 1" == r"""
     abort: unknown revision '1'!
-    (if 1 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 sh % "hg log -r '-1:0'" == r"""
     abort: unknown revision '-1'!
-    (if -1 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 sh % "hg log -r 'branch(name)'"
 sh % "hg log -r null -q" == "-1:000000000000"
@@ -864,7 +862,6 @@ sh % "hg log -r ''" == r"""
 
 sh % "hg log -r 1000000000000000000000000000000000000000" == r"""
     abort: unknown revision '1000000000000000000000000000000000000000'!
-    (if 1000000000000000000000000000000000000000 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 
 # log -k r1

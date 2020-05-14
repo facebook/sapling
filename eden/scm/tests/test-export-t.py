@@ -208,7 +208,6 @@ sh % "hg export ''" == r"""
     [255]"""
 sh % "hg export 999" == r"""
     abort: unknown revision '999'!
-    (if 999 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 sh % 'hg export "not all()"' == r"""
     abort: export requires at least one changeset

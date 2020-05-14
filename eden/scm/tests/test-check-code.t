@@ -107,7 +107,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   tests/test-remotenames-selective-pull-accessed-bookmarks.t:40: don't use 'python', use '$PYTHON' --> >        sort -k 3 $file ; python $TESTTMP/verifylast.py
   tests/test-revert-t.py:24: always assign an opened file to a variable, and close it afterwards --> content = open(filename).read()
   tests/test-revset-age-t.py:26: always assign an opened file to a variable, and close it afterwards --> open("file1", "w").write("%s\n" % delta)
-  tests/test-revset-t.py:1798: always assign an opened file to a variable, and close it afterwards --> open("a", "wb").write("%s\n" % i)
   tests/test-shelve-t.py:1025: always assign an opened file to a variable, and close it afterwards --> f.write(open(".hg/shelvedstate").read().replace("ae8c668541e8", "123456789012"))
   tests/test-sparse-fetch-t.py:136: always assign an opened file to a variable, and close it afterwards --> open("y", "w").write("2")
   tests/test-sparse-fetch-t.py:138: always assign an opened file to a variable, and close it afterwards --> open("z/1", "w").write("2")

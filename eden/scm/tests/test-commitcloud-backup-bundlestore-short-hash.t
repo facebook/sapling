@@ -94,7 +94,6 @@ Test pulling a commit with the same prefix by creating fake files
   pull failed: ambiguous identifier 'b1b6fe'
   suggestion: provide longer commithash prefix
   abort: unknown revision 'b1b6fe'!
-  (if b1b6fe is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 Clean up from the previous tests
@@ -187,7 +186,6 @@ case 2: recent commit, length of prefix < 6 characters
   $ (cd ./client2 && hg up $my_new_commit2_hashlen5)
   pulling '*' from 'ssh://user@dummy/server' (glob)
   abort: unknown revision '*'! (glob)
-  (if * is a remote bookmark or commit, try to 'hg pull' it first) (glob)
   [255]
 
 case 3: test longerlength
@@ -204,7 +202,6 @@ case 3a: very old commit, hash size 9 characters
     summary: someothercommit3
   #commitcloud hint: if you would like to fetch this commit, please provide the full hash
   abort: unknown revision '*'! (glob)
-  (if * is a remote bookmark or commit, try to 'hg pull' it first) (glob)
   [255]
 
 case 3b: 32 days old commit, hash size 12 characters
@@ -218,7 +215,6 @@ case 3b: 32 days old commit, hash size 12 characters
     summary: someothercommit4
   #commitcloud hint: if you would like to fetch this commit, please provide the full hash
   abort: unknown revision '*'! (glob)
-  (if * is a remote bookmark or commit, try to 'hg pull' it first) (glob)
   [255]
 
 case 3ba: same test but check that output contains the full hash
@@ -246,7 +242,6 @@ Test when the commit is not found
   pulling 'aaaaaa' from 'ssh://user@dummy/server'
   pull failed: unknown revision 'aaaaaa'
   abort: unknown revision 'aaaaaa'!
-  (if aaaaaa is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
 #endif

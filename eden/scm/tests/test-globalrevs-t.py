@@ -553,7 +553,6 @@ sh % "hg log -r 'globalrev(invalid_input_type)'" == r"""
 
 sh % "hg log -r munknown" == r"""
     abort: unknown revision 'munknown'!
-    (if munknown is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 
 
@@ -567,9 +566,11 @@ def testlookup():
 
     for globalrev in output:
         result = getglobalrev("globalrev(%s)" % globalrev)
-        assert result == globalrev, (
-            "globalrev revset doesn't roundtrip: globalrev(%s) == %s"
-            % (globalrev, result)
+        assert (
+            result == globalrev
+        ), "globalrev revset doesn't roundtrip: globalrev(%s) == %s" % (
+            globalrev,
+            result,
         )
 
         result = getglobalrev("m%s" % globalrev)
@@ -590,12 +591,10 @@ sh % "hg log -r 'globalrev(4999)'"
 
 sh % "hg log -r m4999" == r"""
     abort: unknown revision 'm4999'!
-    (if m4999 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 
 sh % "hg log -r m1+m2" == r"""
     abort: unknown revision 'm1'!
-    (if m1 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 
 sh % "hg log -r 'globalrev(-1)'"
@@ -710,7 +709,6 @@ sh % "getglobalrev 'globalrev(5003)'"
 
 sh % "getglobalrev m5004" == r"""
     abort: unknown revision 'm5004'!
-    (if m5004 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 
 

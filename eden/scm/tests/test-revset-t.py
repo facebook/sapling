@@ -350,7 +350,6 @@ sh % "try -- -a-b-c--a" == r"""
       (negate
         (symbol 'a')))
     abort: unknown revision '-a'!
-    (if -a is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 sh % "try '\xc3\xa9'" == r"""
     (symbol '\xc3\xa9')
@@ -448,7 +447,6 @@ sh % "log 'date()'" == r"""
     [255]"""
 sh % "log date" == r"""
     abort: unknown revision 'date'!
-    (if date is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 sh % "log 'date('" == r"""
     hg: parse error at 5: not a prefix: end
@@ -463,11 +461,9 @@ sh % "log 'date(tip)'" == r"""
     [255]"""
 sh % "log '0:date'" == r"""
     abort: unknown revision 'date'!
-    (if date is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 sh % "log '::\"date\"'" == r"""
     abort: unknown revision 'date'!
-    (if date is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 sh % "hg book date -r 4"
 sh % "log '0:date'" == r"""
@@ -1795,7 +1791,8 @@ sh % "hg ci -qAm 0"
 
 for i in [2463, 2961, 6726, 78127]:
     sh.hg("up", "-q", "0")
-    open("a", "wb").write("%s\n" % i)
+    with open("a", "wb") as f:
+        f.write("%s\n" % i)
     sh.hg("ci", "-qm", "%s" % i)
 sh % "hg up -q null"
 sh % "hg log -r '0:wdir()' -T '{rev}:{node} {shortest(node, 3)}\\n'" == r"""

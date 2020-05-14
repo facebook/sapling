@@ -37,7 +37,6 @@ sh % "hg log -r D1234 -T '{desc}\n'" == r"""
     pulling D1234 (6008bb23d775556ff6c3528541ca5a2177b4bb92) from 'dummy://dummy/'
     pull failed: repository dummy://dummy/ not found
     abort: unknown revision 'D1234'!
-    (if D1234 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
 
 # 'pull -r Dxxx' will be rewritten to 'pull -r HASH'
@@ -45,5 +44,4 @@ sh % "hg pull -r D1234 --config paths.default=." == r"""
     pulling from $TESTTMP/repo
     rewriting pull rev 'D1234' into '6008bb23d775556ff6c3528541ca5a2177b4bb92'
     abort: unknown revision '6008bb23d775556ff6c3528541ca5a2177b4bb92'!
-    (if 6008bb23d775556ff6c3528541ca5a2177b4bb92 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
