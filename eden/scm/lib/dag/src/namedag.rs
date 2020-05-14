@@ -359,6 +359,142 @@ pub trait NameDagAlgorithm: NameDagStorage {
         }
     }
 
+    /// Re-create the graph so it looks better when rendered.
+    ///
+    /// For example, the left-side graph will be rewritten to the right-side:
+    ///
+    /// 1. Linearize.
+    ///
+    /// ```plain,ignore
+    ///   A             A      # Linearize is done by IdMap::assign_heads,
+    ///   |             |      # as long as the heads provided are the heads
+    ///   | C           B      # of the whole graph ("A", "C", not "B", "D").
+    ///   | |           |
+    ///   B |     ->    | C
+    ///   | |           | |
+    ///   | D           | D
+    ///   |/            |/
+    ///   E             E
+    /// ```
+    ///
+    /// 2. Reorder branches (at different branching points) to reduce columns.
+    ///
+    /// ```plain,ignore
+    ///     D           B
+    ///     |           |      # Assuming the main branch is B-C-E.
+    ///   B |           | A    # Branching point of the D branch is "C"
+    ///   | |           |/     # Branching point of the A branch is "C"
+    ///   | | A   ->    C      # The D branch should be moved to below
+    ///   | |/          |      # the A branch.
+    ///   | |           | D
+    ///   |/|           |/
+    ///   C /           E
+    ///   |/
+    ///   E
+    /// ```
+    ///
+    /// 3. Reorder branches (at a same branching point) to reduce length of
+    ///    edges.
+    ///
+    /// ```plain,ignore
+    ///   D              A
+    ///   |              |     # This is done by picking the longest
+    ///   | A            B     # branch (A-B-C-E) as the "main branch"
+    ///   | |            |     # and work on the remaining branches
+    ///   | B     ->     C     # recursively.
+    ///   | |            |
+    ///   | C            | D
+    ///   |/             |/
+    ///   E              E
+    /// ```
+    ///
+    /// `main_branch` optionally defines how to sort the heads. A head `x` will
+    /// be emitted first during iteration, if `ancestors(x) & main_branch`
+    /// contains larger vertexes. For example, if `main_branch` is `[C, D, E]`,
+    /// then `C` will be emitted first, and the returned DAG will have `all()`
+    /// output `[C, D, A, B, E]`. Practically, `main_branch` usually contains
+    /// "public" commits.
+    ///
+    /// This function is expensive. Only run on small graphs.
+    ///
+    /// This function is currently more optimized for "forking" cases. It is
+    /// not yet optimized for graphs with many merges.
+    fn beautify(&self, main_branch: Option<NameSet>) -> Result<MemNameDag> {
+        // Find the "largest" branch.
+        fn find_main_branch(
+            get_ancestors: &impl Fn(&VertexName) -> Result<NameSet>,
+            heads: &[VertexName],
+        ) -> Result<NameSet> {
+            let mut best_branch = NameSet::empty();
+            let mut best_count = best_branch.count()?;
+            for head in heads {
+                let branch = get_ancestors(head)?;
+                let count = branch.count()?;
+                if count > best_count {
+                    best_count = count;
+                    best_branch = branch;
+                }
+            }
+            Ok(best_branch)
+        };
+
+        // Sort heads recursively.
+        fn sort(
+            get_ancestors: &impl Fn(&VertexName) -> Result<NameSet>,
+            heads: &mut [VertexName],
+            main_branch: NameSet,
+        ) -> Result<()> {
+            if heads.len() <= 1 {
+                return Ok(());
+            }
+
+            // Sort heads by "branching point" on the main branch.
+            let mut branching_points: HashMap<VertexName, usize> =
+                HashMap::with_capacity(heads.len());
+            for head in heads.iter() {
+                let count = (get_ancestors(head)? & main_branch.clone()).count()?;
+                branching_points.insert(head.clone(), count);
+            }
+            heads.sort_by_key(|v| branching_points.get(v));
+
+            // For heads with a same branching point, sort them recursively
+            // using a different "main branch".
+            let mut start = 0;
+            let mut start_branching_point: Option<usize> = None;
+            for end in 0..=heads.len() {
+                let branching_point = heads
+                    .get(end)
+                    .and_then(|h| branching_points.get(&h).cloned());
+                if branching_point != start_branching_point {
+                    if start + 1 < end {
+                        let heads = &mut heads[start..end];
+                        let main_branch = find_main_branch(get_ancestors, heads)?;
+                        sort(get_ancestors, heads, main_branch)?;
+                    }
+                    start = end;
+                    start_branching_point = branching_point;
+                }
+            }
+
+            Ok(())
+        };
+
+        let main_branch = main_branch.unwrap_or_else(|| NameSet::empty());
+        let mut heads: Vec<_> = self
+            .heads_ancestors(self.all()?)?
+            .iter()?
+            .collect::<Result<_>>()?;
+        let get_ancestors = |head: &VertexName| self.ancestors(head.into());
+        // Stabilize output if the sort key conflicts.
+        heads.sort();
+        sort(&get_ancestors, &mut heads[..], main_branch)?;
+
+        let mut dag = MemNameDag::new();
+        let get_parents = |v| self.parent_names(v);
+        dag.add_heads(get_parents, &heads)?;
+        Ok(dag)
+    }
+
     /// Get ordered parent vertexes.
     fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
         let id = self.map().vertex_id(name)?;

@@ -13,6 +13,7 @@ use std::any::Any;
 use std::fmt;
 
 /// A set backed by a concrete ordered set.
+#[derive(Default)]
 pub struct StaticSet(pub(crate) IndexSet<VertexName>);
 
 type Iter =

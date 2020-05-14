@@ -42,6 +42,11 @@ impl NameSet {
         Self(Arc::new(query))
     }
 
+    /// Creates an empty set.
+    pub fn empty() -> Self {
+        Self::from_query(r#static::StaticSet::default())
+    }
+
     /// Creates from a (short) list of known names.
     pub fn from_static_names(names: impl IntoIterator<Item = VertexName>) -> NameSet {
         Self::from_query(r#static::StaticSet::from_names(names))
@@ -248,6 +253,18 @@ type RevVecNameIter = std::iter::Map<
 
 impl NameIter for VecNameIter {}
 impl NameIter for RevVecNameIter {}
+
+impl From<VertexName> for NameSet {
+    fn from(name: VertexName) -> NameSet {
+        NameSet::from_static_names(std::iter::once(name))
+    }
+}
+
+impl From<&VertexName> for NameSet {
+    fn from(name: &VertexName) -> NameSet {
+        NameSet::from_static_names(std::iter::once(name.clone()))
+    }
+}
 
 #[cfg(test)]
 pub(crate) mod tests {

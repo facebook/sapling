@@ -511,6 +511,13 @@ py_class!(pub class memnamedag |py| {
         };
         Ok(renderdag::render_namedag(namedag.deref(), get_message).map_pyerr(py)?.into())
     }
+
+    /// Beautify the graph so `render` might look better.
+    def beautify(&self, mainbranch: Option<Names> = None) -> PyResult<Self> {
+        let namedag = self.namedag(py).borrow();
+        let dag = namedag.beautify(mainbranch.map(|h| h.0)).map_pyerr(py)?;
+        Self::from_memnamedag(py, dag)
+    }
 });
 
 impl memnamedag {

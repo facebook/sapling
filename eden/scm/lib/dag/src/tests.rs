@@ -64,6 +64,61 @@ fn test_mem_namedag() -> Result<()> {
 }
 
 #[test]
+fn test_beautify() -> Result<()> {
+    let ascii = r#"
+        A C
+        | |
+        B D
+        |/
+        E"#;
+    let order = ["B", "D", "A", "C"];
+    let dag = MemNameDag::from_ascii_with_heads(ascii, Some(&order))?;
+    assert_eq!(expand(dag.all()?), "C A D B E");
+
+    let dag2 = dag.beautify(None)?;
+    assert_eq!(expand(dag2.all()?), "A B C D E");
+
+    let dag3 = dag.beautify(Some(nameset("A B E")))?;
+    assert_eq!(expand(dag3.all()?), "A B C D E");
+
+    let dag4 = dag.beautify(Some(nameset("C D E")))?;
+    assert_eq!(expand(dag4.all()?), "C D A B E");
+
+    let ascii = r#"
+        A G
+        |/
+        B F
+        |/
+        C E
+        |/
+        D"#;
+    let order = ["C", "E", "G", "F", "A"];
+    let dag = MemNameDag::from_ascii_with_heads(ascii, Some(&order))?;
+    assert_eq!(expand(dag.all()?), "A F G B E C D");
+
+    let dag2 = dag.beautify(None)?;
+    assert_eq!(expand(dag2.all()?), "A G B F C E D");
+
+    let dag3 = dag.beautify(Some(dag.ancestors(nameset("A"))?))?;
+    assert_eq!(expand(dag3.all()?), "A G B F C E D");
+
+    let ascii = r#"
+        A---B---C---D---E---F---G
+             \
+              H---I---J---K
+                   \
+                    L "#;
+    let order = ["D", "J", "L", "K", "G"];
+    let dag = MemNameDag::from_ascii_with_heads(ascii, Some(&order))?;
+    assert_eq!(expand(dag.all()?), "G F E K L J I H D C B A");
+
+    let dag2 = dag.beautify(None)?;
+    assert_eq!(expand(dag2.all()?), "G F E D C K J L I H B A");
+
+    Ok(())
+}
+
+#[test]
 fn test_namedag() -> Result<()> {
     let ascii = r#"
             J K
