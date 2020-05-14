@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use cpython::*;
 use cpython_ext::PyNone;
+use minibytes::Bytes;
 use parking_lot::Mutex;
 use renderdag::{Ancestor, GraphRowRenderer, Renderer};
 
@@ -35,12 +36,33 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-fn convert_parents(py: Python, parents: Vec<(String, i64)>) -> PyResult<Vec<Ancestor<i64>>> {
+pub struct PyNode(Bytes);
+
+impl From<PyNode> for Bytes {
+    fn from(pynode: PyNode) -> Bytes {
+        pynode.0
+    }
+}
+
+impl<'a> FromPyObject<'a> for PyNode {
+    fn extract(py: Python, obj: &'a PyObject) -> PyResult<Self> {
+        if let Ok(node) = obj.extract::<PyBytes>(py) {
+            Ok(PyNode(Bytes::copy_from_slice(node.data(py))))
+        } else if let Ok(rev) = obj.extract::<i64>(py) {
+            let slice: [u8; 8] = unsafe { std::mem::transmute(rev.to_be()) };
+            Ok(PyNode(Bytes::copy_from_slice(&slice)))
+        } else {
+            Err(PyErr::new::<exc::TypeError, _>(py, "expect bytes or int"))
+        }
+    }
+}
+
+fn convert_parents(py: Python, parents: Vec<(String, PyNode)>) -> PyResult<Vec<Ancestor<Bytes>>> {
     parents
         .into_iter()
         .map(|(kind, parent)| match kind.as_str() {
-            "P" => Ok(Ancestor::Parent(parent)),
-            "G" => Ok(Ancestor::Ancestor(parent)),
+            "P" => Ok(Ancestor::Parent(parent.into())),
+            "G" => Ok(Ancestor::Ancestor(parent.into())),
             "M" => Ok(Ancestor::Anonymous),
             _ => Err(PyErr::new::<exc::ValueError, _>(
                 py,
@@ -51,23 +73,24 @@ fn convert_parents(py: Python, parents: Vec<(String, i64)>) -> PyResult<Vec<Ance
 }
 
 py_class!(pub class renderer |py| {
-    data inner: Arc<Mutex<dyn Renderer<i64, Output = String> + Send>>;
+    data inner: Arc<Mutex<dyn Renderer<Bytes, Output = String> + Send>>;
 
-    def width(&self, node: Option<i64>, parents: Option<Vec<(String, i64)>>) -> PyResult<u64> {
+    def width(&self, node: Option<PyNode>, parents: Option<Vec<(String, PyNode)>>) -> PyResult<u64> {
         let renderer = self.inner(py).lock();
         let parents = parents.map(|parents| convert_parents(py, parents)).transpose()?;
+        let node: Option<Bytes> = node.map(Into::into);
         Ok(renderer.width(node.as_ref(), parents.as_ref()))
     }
 
-    def reserve(&self, node: i64) -> PyResult<PyNone> {
+    def reserve(&self, node: PyNode) -> PyResult<PyNone> {
         let mut renderer = self.inner(py).lock();
-        renderer.reserve(node);
+        renderer.reserve(node.into());
         Ok(PyNone)
     }
 
-    def nextrow(&self, node: i64, parents: Vec<(String, i64)>, glyph: String, message: String) -> PyResult<String> {
+    def nextrow(&self, node: PyNode, parents: Vec<(String, PyNode)>, glyph: String, message: String) -> PyResult<String> {
         let mut renderer = self.inner(py).lock();
-        Ok(renderer.next_row(node, convert_parents(py, parents)?, glyph, message))
+        Ok(renderer.next_row(node.into(), convert_parents(py, parents)?, glyph, message))
     }
 });
 
