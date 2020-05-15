@@ -45,6 +45,16 @@ if(USE_CARGO_VENDOR)
   )
 endif()
 
+# Cargo is a build system in itself, and thus will try to take advantage of all
+# the cores on the system. Unfortunately, this conflicts with Ninja, since it
+# also tries to utilize all the cores. This can lead to a system that is
+# completely overloaded with compile jobs to the point where nothing else can
+# be achieved on the system.
+#
+# Let's inform Ninja of this fact so it won't try to spawn other jobs while
+# Rust being compiled.
+set_property(GLOBAL APPEND PROPERTY JOB_POOLS rust_job_pool=1)
+
 # This function creates an interface library target based on the static library
 # built by Cargo. It will call Cargo to build a staticlib and generate a CMake
 # interface library with it.
@@ -111,6 +121,7 @@ function(rust_static_library TARGET)
       ${cargo_cmd}
       ${cargo_flags}
     COMMENT "Building Rust crate '${crate_name}'..."
+    JOB_POOL rust_job_pool
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     BYPRODUCTS
       "${CMAKE_CURRENT_BINARY_DIR}/debug/${staticlib_name}"
@@ -168,6 +179,7 @@ function(rust_executable TARGET)
       ${cargo_cmd}
       ${cargo_flags}
     COMMENT "Building Rust executable '${crate_name}'..."
+    JOB_POOL rust_job_pool
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     BYPRODUCTS
       "${CMAKE_CURRENT_BINARY_DIR}/debug/${executable_name}"
