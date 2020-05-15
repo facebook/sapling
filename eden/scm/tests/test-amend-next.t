@@ -29,6 +29,7 @@ Check help text for new options and removal of unsupported options.
    -C --clean                discard uncommitted changes (no backup)
    -B --move-bookmark        move active bookmark
    -m --merge                merge uncommitted changes
+   -c --check                require clean working directory
   
   (some details hidden, use --verbose to show complete help)
 
@@ -141,9 +142,8 @@ Test dirty working copy and --clean.
   $ hg add test
   $ hg st
   A test
-  $ hg next
+  $ hg next --check
   abort: uncommitted changes
-  (use --clean to discard uncommitted changes or --merge to bring them along)
   [255]
   $ hg next --clean
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -160,9 +160,8 @@ Test dirty working copy and --merge.
   $ echo test >> mf
   $ hg st
   M mf
-  $ hg next
+  $ hg next --check
   abort: uncommitted changes
-  (use --clean to discard uncommitted changes or --merge to bring them along)
   [255]
   $ hg next --merge
   merging mf

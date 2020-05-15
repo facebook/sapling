@@ -31,6 +31,7 @@ moveopts = [
     ("C", "clean", False, _("discard uncommitted changes (no backup)")),
     ("B", "move-bookmark", False, _("move active bookmark")),
     ("m", "merge", False, _("merge uncommitted changes")),
+    ("c", "check", False, _("require clean working directory")),
 ]
 
 
@@ -133,17 +134,8 @@ def _moverelative(ui, repo, args, opts, reverse=False):
     if opts.get("merge", False) and opts.get("rebase", False):
         raise error.Abort(_("cannot use both --merge and --rebase"))
 
-    # Check if there is an outstanding operation or uncommited changes.
+    # Check if there is an outstanding operation.
     cmdutil.checkunfinished(repo)
-    if not opts.get("clean", False) and not opts.get("merge", False):
-        try:
-            cmdutil.bailifchanged(repo)
-        except error.Abort as e:
-            e.hint = _(
-                "use --clean to discard uncommitted changes "
-                "or --merge to bring them along"
-            )
-            raise
 
     # If we have both --clean and --rebase, we need to discard any outstanding
     # changes now before we attempt to perform any rebases.
@@ -178,6 +170,7 @@ def _moverelative(ui, repo, args, opts, reverse=False):
                 rev=hex(target),
                 clean=opts.get("clean", False),
                 merge=opts.get("merge", False),
+                check=opts.get("check", False),
             )
 
             # Print out the changeset we landed on.

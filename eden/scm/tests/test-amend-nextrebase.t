@@ -84,7 +84,6 @@ Test --clean flag.
   A foo
   $ hg next --rebase
   abort: uncommitted changes
-  (use --clean to discard uncommitted changes or --merge to bring them along)
   [255]
   $ hg next --rebase --clean
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
