@@ -52,6 +52,16 @@ def printstacks(sig, currentframe):
     sys.stderr.write("\nStacktrace written to %s\n" % path)
     sys.stderr.flush()
 
+    # Calculate the tracing data (can take a while) and write it.
+    content = "Tracing Data:\n%s\n" % util.tracer.ascii()
+    with open(path, "a") as f:
+        f.write("\n")
+        f.write(content)
+
+    sys.stderr.write(content)
+    sys.stderr.write("\nTracing data written to %s\n" % path)
+    sys.stderr.flush()
+
 
 memorytracker = []
 
