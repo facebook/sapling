@@ -397,7 +397,7 @@ def has_p4():
 
 @check("jq", "json processing tool")
 def has_jq():
-    return matchoutput("jq --help", br"Usage: jq .*")
+    return matchoutput("jq --help", br"Usage:\W+jq .*")
 
 
 @check("symlink", "symbolic links")
