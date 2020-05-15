@@ -554,7 +554,11 @@ def wraprepo(repo):
             if depth is None:
                 depth = self.ui.configint("treemanifest", "fetchdepth")
 
-            if self._httpprefetchtrees(rootdir, mfnodes, basemfnodes, depth):
+            if self.ui.configbool("treemanifest", "bfsprefetch"):
+                self._bfsprefetch(rootdir, mfnodes, depth)
+                return
+
+            if self.httpgettreepack(rootdir, mfnodes, basemfnodes, depth):
                 return
 
             start = util.timer()
@@ -636,13 +640,17 @@ def wraprepo(repo):
 
             return True
 
-        def _httpprefetchtrees(self, rootdir, mfnodes, basemfnodes, depth=None):
+        def httpgettreepack(self, rootdir, mfnodes, basemfnodes, depth=None):
+            """
+            Wrapper around _httpgettreepack() that catches any exceptions
+            and returns False if fetching failed for any reason, including
+            HTTP fetching being disabled.
+
+            Intended to allow for graceful fallback to SSH if needed.
+            """
             if _usehttp(self.ui):
                 try:
-                    if self.ui.configbool("treemanifest", "bfsprefetch"):
-                        self._httpbfsprefetch(rootdir, mfnodes, depth)
-                    else:
-                        self._httpgettreepack(rootdir, mfnodes, basemfnodes, depth)
+                    self._httpgettreepack(rootdir, mfnodes, basemfnodes, depth)
                     return True
                 except Exception as e:
                     self.ui.warn(_("encountered error during HTTPS fetching;"))
@@ -650,7 +658,12 @@ def wraprepo(repo):
                     edenapi.logexception(self.ui, e)
             return False
 
+        @perftrace.tracefunc("HTTP Gettreepack")
         def _httpgettreepack(self, rootdir, mfnodes, basemfnodes, depth=None):
+            """
+            Fetch the specified nodes over HTTP using EdenAPI's equivalent
+            of the gettreepack wireproto command.
+            """
             dpack, _hpack = self.manifestlog.getmutablesharedpacks()
 
             with progress.spinner(self.ui, "prefetching trees over HTTPS"):
@@ -661,8 +674,9 @@ def wraprepo(repo):
             if self.ui.interactive() and edenapi.debug(self.ui):
                 self.ui.warn(_("%s\n") % stats.to_str())
 
-        def _httpbfsprefetch(self, rootdir, mfnodes, depth=None):
-            with progress.spinner(self.ui, "prefetching trees over HTTPS"):
+        @perftrace.tracefunc("BFS Prefetch")
+        def _bfsprefetch(self, rootdir, mfnodes, depth=None):
+            with progress.spinner(self.ui, "prefetching trees using BFS"):
                 store = self.manifestlog.datastore
                 for node in mfnodes:
                     rustmanifest.prefetch(store, node, rootdir, depth)
