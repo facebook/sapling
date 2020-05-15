@@ -13,6 +13,7 @@ cacheblob = { path = "../cacheblob" }
 chaosblob = { path = "../chaosblob" }
 context = { path = "../../server/context" }
 fileblob = { path = "../fileblob" }
+logblob = { path = "../logblob" }
 memblob = { path = "../memblob" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }

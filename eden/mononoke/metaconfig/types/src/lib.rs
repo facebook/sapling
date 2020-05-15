@@ -703,6 +703,15 @@ pub enum BlobConfig {
         /// TTL for each object we put in Manifold
         ttl: Duration,
     },
+    /// A logging blobstore that wraps another blobstore
+    Logging {
+        /// The config for the blobstore that is wrapped.
+        blobconfig: Box<BlobConfig>,
+        /// The scuba table to log requests to.
+        scuba_table: Option<String>,
+        /// 1 in scuba_sample_rate samples will be logged.
+        scuba_sample_rate: NonZeroU64,
+    },
 }
 
 impl BlobConfig {
@@ -718,6 +727,7 @@ impl BlobConfig {
                 .iter()
                 .map(|(_, config)| config)
                 .all(BlobConfig::is_local),
+            Logging { blobconfig, .. } => blobconfig.is_local(),
         }
     }
 
@@ -797,15 +807,7 @@ impl TryFrom<RawBlobstoreConfig> for BlobConfig {
                     .map(|id| MultiplexId::new(id))
                     .ok_or_else(|| anyhow!("missing multiplex_id from configuration"))?,
                 scuba_table: def.scuba_table,
-                scuba_sample_rate: def
-                    .scuba_sample_rate
-                    .map(|rate| {
-                        NonZeroU64::new(rate.try_into()?).ok_or(anyhow!(
-                            "scuba_sample_rate must be an integer larger than zero"
-                        ))
-                    })
-                    .transpose()?
-                    .unwrap_or(nonzero!(100_u64)),
+                scuba_sample_rate: parse_scuba_sample_rate(def.scuba_sample_rate)?,
                 blobstores: def
                     .components
                     .into_iter()
@@ -829,12 +831,29 @@ impl TryFrom<RawBlobstoreConfig> for BlobConfig {
                     ttl,
                 }
             }
+            RawBlobstoreConfig::logging(def) => BlobConfig::Logging {
+                scuba_table: def.scuba_table,
+                scuba_sample_rate: parse_scuba_sample_rate(def.scuba_sample_rate)?,
+                blobconfig: Box::new(BlobConfig::try_from(*def.blobstore)?),
+            },
             RawBlobstoreConfig::UnknownField(_) => {
                 return Err(anyhow!("unsupported blobstore configuration"));
             }
         };
         Ok(res)
     }
+}
+
+fn parse_scuba_sample_rate(sample_rate: Option<i64>) -> Result<NonZeroU64, Error> {
+    let rate = sample_rate
+        .map(|rate| {
+            NonZeroU64::new(rate.try_into()?)
+                .ok_or_else(|| anyhow!("scuba_sample_rate must be an integer larger than zero"))
+        })
+        .transpose()?
+        .unwrap_or(nonzero!(100_u64));
+
+    Ok(rate)
 }
 
 /// Configuration for a local SQLite database

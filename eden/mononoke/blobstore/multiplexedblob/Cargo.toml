@@ -8,6 +8,7 @@ include = ["src/*.rs"]
 
 [dependencies]
 blobstore = { path = ".." }
+blobstore_stats = { path = "../blobstore_stats" }
 blobstore_sync_queue = { path = "../../blobstore_sync_queue" }
 cacheblob = { path = "../cacheblob" }
 context = { path = "../../server/context" }

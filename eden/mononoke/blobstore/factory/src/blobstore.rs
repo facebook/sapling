@@ -15,6 +15,7 @@ use futures::{
     compat::Future01CompatExt,
     future::{self, BoxFuture, Future, FutureExt},
 };
+use logblob::LogBlob;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, ScrubAction,
     ShardableRemoteDatabaseConfig,
@@ -192,7 +193,27 @@ pub fn make_blobstore<'a>(
                 )
                 .await?
             }
+            Logging {
+                blobconfig,
+                scuba_table,
+                scuba_sample_rate,
+            } => {
+                let scuba = scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
+                    ScubaSampleBuilder::new(fb, table)
+                });
 
+                let store = make_blobstore(
+                    fb,
+                    *blobconfig,
+                    mysql_options,
+                    readonly_storage,
+                    &blobstore_options,
+                    logger,
+                )
+                .await?;
+
+                Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn Blobstore>
+            }
             Manifold { bucket, prefix } => {
                 #[cfg(fbcode_build)]
                 {
