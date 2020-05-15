@@ -217,16 +217,8 @@ EdenMount::EdenMount(
       clock_{serverState_->getClock()} {
 }
 
-#ifdef _WIN32
-FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
-    std::unique_ptr<FsChannel>&& fsChannel) {
-  const bool takeover = false;
-  fsChannel_ = std::move(fsChannel);
-
-#else
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
     const std::optional<SerializedInodeMap>& takeover) {
-#endif
   transitionState(State::UNINITIALIZED, State::INITIALIZING);
 
   return serverState_->getFaultInjector()
@@ -250,21 +242,20 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       .thenValue(
           [this](ParentCommits&& parents) { return createRootInode(parents); })
       .thenValue([this, takeover](TreeInodePtr initTreeNode) {
-#ifdef _WIN32
-        inodeMap_->initialize(std::move(initTreeNode));
-        transitionState(State::INITIALIZING, State::INITIALIZED);
-#else
         if (takeover) {
           inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
-
         } else {
           inodeMap_->initialize(std::move(initTreeNode));
         }
 
+#ifndef _WIN32
         // TODO: It would be nice if the .eden inode was created before
         // allocating inode numbers for the Tree's entries. This would give the
         // .eden directory inode number 2.
         return setupDotEden(getRootInode());
+#else
+        return folly::makeFuture();
+#endif
       })
       .thenTry([this](auto&& result) {
         if (result.hasException()) {
@@ -273,7 +264,6 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
           transitionState(State::INITIALIZING, State::INITIALIZED);
         }
         return std::move(result);
-#endif
       });
 }
 

@@ -27,13 +27,13 @@
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
+#include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
-#include "eden/fs/takeover/TakeoverData.h"
 #else
 #include "eden/fs/inodes/win/DirList.h" // @manual
 #include "eden/fs/win/mount/FsChannel.h" // @manual
@@ -175,13 +175,9 @@ class EdenMount {
    *
    * If takeover data is specified, it is used to initialize the inode map.
    */
-#ifndef _WIN32
   FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
       const std::optional<SerializedInodeMap>& takeover = std::nullopt);
-#else
-  FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
-      std::unique_ptr<FsChannel>&& fsChannel);
-#endif
+
   /**
    * Destroy the EdenMount.
    *
@@ -323,6 +319,10 @@ class EdenMount {
    */
   FsChannel* getFsChannel() const {
     return fsChannel_.get();
+  }
+
+  void setFsChannel(std::unique_ptr<FsChannel> fsChannel) {
+    fsChannel_ = std::move(fsChannel);
   }
 
 #else

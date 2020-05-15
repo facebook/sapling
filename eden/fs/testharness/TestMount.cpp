@@ -175,11 +175,11 @@ void TestMount::initialize(
 
 void TestMount::initializeEdenMount() {
 #ifdef _WIN32
-  edenMount_->initialize(std::move(std::make_unique<TestFsChannel>()))
-      .getVia(serverExecutor_.get());
-  edenMount_->start();
-#else
+  edenMount_->setFsChannel(std::make_unique<TestFsChannel>());
+#endif
   edenMount_->initialize().getVia(serverExecutor_.get());
+#ifdef _WIN32
+  edenMount_->start();
 #endif
 }
 
@@ -308,11 +308,11 @@ void TestMount::remount() {
       serverState_,
       std::move(journal));
 #ifdef _WIN32
-  edenMount_->initialize(std::move(std::make_unique<TestFsChannel>()))
-      .getVia(serverExecutor_.get());
-  edenMount_->start();
-#else
+  edenMount_->setFsChannel(std::make_unique<TestFsChannel>());
+#endif
   edenMount_->initialize().getVia(serverExecutor_.get());
+#ifdef _WIN32
+  edenMount_->start();
 #endif
 }
 

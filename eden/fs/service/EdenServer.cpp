@@ -34,6 +34,7 @@
 #include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServiceHandler.h"
@@ -67,7 +68,6 @@
 #else
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/takeover/TakeoverClient.h"
@@ -1212,19 +1212,23 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   registerStats(edenMount);
 
 #ifdef _WIN32
-  (void)
-      mountStopWatch; // TODO: log to StructuredLogger once supported on Windows
-  return edenMount->initialize(std::make_unique<PrjfsChannel>(edenMount.get()))
-      .thenValue([edenMount](folly::Unit) {
-        edenMount->start();
-        return edenMount;
-      });
-#else
-  // Now actually begin starting the mount point
+  edenMount->setFsChannel(std::make_unique<PrjfsChannel>(edenMount.get()));
+#endif
+
   const bool doTakeover = optionalTakeover.has_value();
   auto initFuture = edenMount->initialize(
-      optionalTakeover ? std::make_optional(optionalTakeover->inodeMap)
-                       : std::nullopt);
+      doTakeover ? std::make_optional(optionalTakeover->inodeMap)
+                 : std::nullopt);
+
+#ifdef _WIN32
+  (void)
+      mountStopWatch; // TODO: log to StructuredLogger once supported on Windows
+  return std::move(initFuture).thenValue([edenMount](folly::Unit) {
+    edenMount->start();
+    return edenMount;
+  });
+#else
+  // Now actually begin starting the mount point
   return std::move(initFuture)
       .thenTry([this,
                 doTakeover,

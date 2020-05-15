@@ -35,14 +35,6 @@ struct SerializedFileHandleMap {
 using uid_t = int;
 using gid_t = int;
 
-class TakeoverData {
- public:
-  int stub;
-  struct MountInfo {
-    int stub;
-  };
-};
-
 struct FuseChannelData {
   //  folly::File fd;
   int fd;

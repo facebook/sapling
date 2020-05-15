@@ -130,7 +130,6 @@ class InodeMap {
    */
   void initialize(TreeInodePtr root);
 
-#ifndef _WIN32
   /**
    * Initialize the InodeMap from data handed over from a process being taken
    * over.
@@ -140,7 +139,6 @@ class InodeMap {
   void initializeFromTakeover(
       TreeInodePtr root,
       const SerializedInodeMap& takeover);
-#endif
 
   /**
    * Get the root inode.

@@ -118,10 +118,10 @@ void InodeMap::initialize(TreeInodePtr root) {
   DCHECK_EQ(0, data->numFileInodes_);
 }
 
-#ifndef _WIN32
 void InodeMap::initializeFromTakeover(
     TreeInodePtr root,
     const SerializedInodeMap& takeover) {
+#ifndef _WIN32
   auto data = data_.wlock();
 
   CHECK_EQ(data->loadedInodes_.size(), 0)
@@ -168,8 +168,10 @@ void InodeMap::initializeFromTakeover(
   XLOG(DBG2) << "InodeMap initialized mount " << mount_->getPath()
              << " from takeover, " << data->unloadedInodes_.size()
              << " inodes registered";
-}
+#else
+  NOT_IMPLEMENTED();
 #endif
+}
 
 Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // Lock the data.
