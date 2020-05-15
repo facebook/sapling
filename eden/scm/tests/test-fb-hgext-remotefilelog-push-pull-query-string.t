@@ -96,3 +96,5 @@ Verify logging uses correct repo name
   > EOF
   $ python logverify.py | uniq
   repo: repo
+  repo: client
+  repo: repo
