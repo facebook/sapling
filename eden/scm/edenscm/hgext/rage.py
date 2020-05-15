@@ -381,6 +381,7 @@ def _makerage(ui, repo, **opts):
             ),
         ),
         ("ssh config", lambda: shcmd("ssh -G hg.vip.facebook.com", check=False)),
+        ("debuglocks", lambda: hgcmd("debuglocks")),
     ]
 
     msg = ""
