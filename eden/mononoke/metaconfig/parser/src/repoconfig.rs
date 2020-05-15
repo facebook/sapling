@@ -1413,7 +1413,6 @@ mod test {
 
             [[hooks]]
             name="hook1"
-            path="common/hooks/hook1.lua"
             hook_type="PerAddedOrModifiedFile"
             bypass_commit_string="@allow_hook1"
 
@@ -1746,8 +1745,6 @@ mod test {
 
     #[fbinit::test]
     fn test_broken_bypass_config(fb: FacebookInit) {
-        // Two bypasses for one hook
-        let hook1_content = "this is hook1";
         let content = r#"
             repoid=0
             storage_config = "sqlite"
@@ -1764,14 +1761,12 @@ mod test {
             hook_name="hook1"
             [[hooks]]
             name="hook1"
-            path="common/hooks/hook1.lua"
             hook_type="PerAddedOrModifiedFile"
             bypass_commit_string="@allow_hook1"
             bypass_pushvar="var=val"
         "#;
 
         let paths = btreemap! {
-            "common/hooks/hook1.lua" => hook1_content,
             "common/commitsyncmap.toml" => "",
             "repos/fbsource/server.toml" => content,
         };
@@ -1785,7 +1780,6 @@ mod test {
         assert!(msg.contains("TooManyBypassOptions"));
 
         // Incorrect bypass string
-        let hook1_content = "this is hook1";
         let content = r#"
             repoid=0
             storage_config = "sqlite"
@@ -1802,13 +1796,11 @@ mod test {
             hook_name="hook1"
             [[hooks]]
             name="hook1"
-            path="common/hooks/hook1.lua"
             hook_type="PerAddedOrModifiedFile"
             bypass_pushvar="var"
         "#;
 
         let paths = btreemap! {
-            "common/hooks/hook1.lua" => hook1_content,
             "common/commitsyncmap.toml" => "",
             "repos/fbsource/server.toml" => content,
         };
