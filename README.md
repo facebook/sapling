@@ -74,6 +74,9 @@ The filesystem monitoring tool [Watchman](https://facebook.github.io/watchman/)
 also integrates with EdenFS, allowing it to more efficiently track updates to
 the filesystem.
 
+More detailed EdenFS design documentation can be found at
+[eden/fs/docs/Overview.md](eden/fs/docs/Overview.md).
+
 ## Building EdenFS
 
 EdenFS currently builds on Linux, Mac, and Windows.
