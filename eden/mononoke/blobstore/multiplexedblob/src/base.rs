@@ -188,8 +188,6 @@ pub fn inner_put(
         .map({ move |_| blobstore_id })
         .map_err(remap_timeout_error)
         .timed(move |stats, result| {
-            write_order.fetch_add(1, Ordering::Relaxed);
-
             record_put_stats(
                 &mut scuba,
                 stats,
@@ -199,7 +197,7 @@ pub fn inner_put(
                 OperationType::Put,
                 size,
                 Some(blobstore_id),
-                Some(write_order.load(Ordering::Relaxed)),
+                Some(write_order.fetch_add(1, Ordering::Relaxed) + 1),
             );
             Ok(())
         })
