@@ -59,7 +59,7 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{try_join, try_join_all, FutureExt, TryFutureExt},
+    future::{self, try_join, try_join_all, FutureExt, TryFutureExt},
     stream::{StreamExt, TryStream, TryStreamExt},
 };
 use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt, StreamExt as Futures01StreamExt};
@@ -977,7 +977,19 @@ async fn rebase_changeset(
 //
 // generate_additional_bonsai_file_changes works around this problem. It returns a Vec containing
 // a file change for all files that were changed between root and onto and that are different between onto
-// and bcs (in the example above one of the file changes will be the file change for "file.txt").
+// and parent of bcs that's outside of rebase set (in the example above one of the file changes will be the file
+// change for "file.txt").
+//
+// o <- onto
+// |
+// A  <- modifies file.txt
+// |
+// |   C <- Commit C is a merge commit we are pushrebasing
+// | / |
+// o   D <- commit D has file.txt (because it exists in commit B), so we need to add additional change file.txt
+// | /
+// B <- this commit has file.text
+//
 // The file change sets the file to the file as it exists in onto, thus resolving the
 // conflict. Since these files were changed after bcs lineage forked off of the root, that means
 // that bcs has a "stale" version of them, and that's why we use onto's version instead.
@@ -1007,78 +1019,108 @@ async fn generate_additional_bonsai_file_changes(
     repo: &BlobRepo,
     rebased_set: &HashSet<ChangesetId>,
 ) -> Result<Vec<(MPath, Option<FileChange>)>> {
-    let cs_id = bcs.get_changeset_id();
     let parents: Vec<_> = bcs.parents().collect();
 
-    if parents.len() > 1 && parents.iter().any(|p| !rebased_set.contains(p)) {
-        let bonsai_diff = find_bonsai_diff(&ctx, &repo, *root, *onto)
-            .await?
-            .try_collect::<Vec<_>>()
-            .await?;
-
-        let mf_id = id_to_manifestid(ctx, repo, cs_id).await?;
-
-        let mut paths = vec![];
-        for res in &bonsai_diff {
-            match res {
-                BonsaiDiffFileChange::Changed(path, ..)
-                | BonsaiDiffFileChange::ChangedReusedId(path, ..) => {
-                    paths.push(path.clone());
-                }
-                BonsaiDiffFileChange::Deleted(path) => {
-                    paths.push(path.clone());
-                }
-            }
-        }
-
-        // If a file is not present in the `cs_id`, then no need to add it to the new_file_changes.
-        // This is done in order to not add unnecessary file changes if they are guaranteed to
-        // not have conflicts.
-        // Consider the following case:
-        //
-        // o <- onto
-        // |
-        // A  <- adds file.txt
-        // |
-        // |   C <-  commit C doesn't have file.txt, so no conflicts possible after pushrebase
-        // | / |
-        // o   D
-        // | /
-        // B
-        //
-        let stale_entries = mf_id
-            .find_entries(ctx.clone(), repo.get_blobstore(), paths)
-            .filter_map(|(path, _)| path)
-            .collect_to::<HashSet<_>>()
-            .compat()
-            .await?;
-
-        let mut new_file_changes = vec![];
-        for res in bonsai_diff {
-            match res {
-                BonsaiDiffFileChange::Changed(ref path, ..)
-                | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
-                | BonsaiDiffFileChange::Deleted(ref path) => {
-                    if !stale_entries.contains(path) {
-                        continue;
-                    }
-                }
-            }
-
-            new_file_changes.push(convert_diff_result_into_file_change_for_diamond_merge(
-                ctx.clone(),
-                &repo,
-                res,
-            ));
-        }
-
-        stream::futures_unordered(new_file_changes)
-            .collect()
-            .compat()
-            .await
-    } else {
-        Ok(vec![])
+    if parents.len() <= 1 {
+        return Ok(vec![]);
     }
+
+    // We use non_root_parent_outside_of_rebase_set below to figure out what
+    // stale entries we DO NOT need to add to the bonsai changeset.
+    // o <- onto
+    // |
+    // A
+    // |
+    // |   C <- this is the commit being rebased (bcs_id)
+    // | / |
+    // o   D <- this is non_root_parent_outside_of_rebase_set
+    // | /
+    // B
+    let non_root_parents_outside_of_rebase_set = parents
+        .iter()
+        .filter(|p| !rebased_set.contains(p) && p != &root)
+        .collect::<Vec<_>>();
+
+    if non_root_parents_outside_of_rebase_set.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let bonsai_diff = find_bonsai_diff(&ctx, &repo, *root, *onto)
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let mut paths = vec![];
+    for res in &bonsai_diff {
+        match res {
+            BonsaiDiffFileChange::Changed(path, ..)
+            | BonsaiDiffFileChange::ChangedReusedId(path, ..) => {
+                paths.push(path.clone());
+            }
+            BonsaiDiffFileChange::Deleted(path) => {
+                paths.push(path.clone());
+            }
+        }
+    }
+
+    // If a file is not present in the parent, then no need to add it to the new_file_changes.
+    // This is done in order to not add unnecessary file changes if they are guaranteed to
+    // not have conflicts.
+    // Consider the following case:
+    //
+    // o <- onto
+    // |
+    // A  <- adds file.txt
+    // |
+    // |   C <- commit C doesn't have file.txt either
+    // | / |
+    // o   D <- commit D doesn't have file.txt, so no conflicts possible after pushrebase
+    // | /
+    // B
+    let mut futs = vec![];
+    for p in non_root_parents_outside_of_rebase_set {
+        let paths = paths.clone();
+        futs.push(async move {
+            let mfid = id_to_manifestid(ctx, repo, *p).await?;
+            let stale = mfid
+                .find_entries(ctx.clone(), repo.get_blobstore(), paths)
+                .filter_map(|(path, _)| path)
+                .collect_to::<HashSet<_>>()
+                .compat()
+                .await?;
+            Result::<_, Error>::Ok(stale)
+        });
+    }
+
+    let stale_entries = future::try_join_all(futs)
+        .await?
+        .into_iter()
+        .flatten()
+        .collect::<HashSet<_>>();
+
+    let mut new_file_changes = vec![];
+    for res in bonsai_diff {
+        match res {
+            BonsaiDiffFileChange::Changed(ref path, ..)
+            | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
+            | BonsaiDiffFileChange::Deleted(ref path) => {
+                if !stale_entries.contains(path) {
+                    continue;
+                }
+            }
+        }
+
+        new_file_changes.push(convert_diff_result_into_file_change_for_diamond_merge(
+            ctx.clone(),
+            &repo,
+            res,
+        ));
+    }
+
+    stream::futures_unordered(new_file_changes)
+        .collect()
+        .compat()
+        .await
 }
 
 // Order - from lowest generation number to highest
@@ -3210,6 +3252,79 @@ mod tests {
 
             Ok(())
         })
+    }
+
+    #[fbinit::compat_test]
+    async fn test_pushrebase_new_repo_merge_no_new_file_changes(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+
+        // First commit in the new repo
+        let other_first_commit = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("otherrepofile", "otherrepocontent")
+            .commit()
+            .await?;
+
+        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+            // Bottom commit of the main repo
+            .add_parent("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")
+            .add_parent(other_first_commit)
+            .commit()
+            .await?;
+
+        let hg_cs = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+            .compat()
+            .await?;
+
+        let result = do_pushrebase(
+            &ctx,
+            &repo,
+            &Default::default(),
+            &master_bookmark(),
+            &hashset![hg_cs],
+            &None,
+        )
+        .map_err(|err| format_err!("{:?}", err))
+        .await?;
+
+        let bcs = result
+            .head
+            .load(ctx.clone(), repo.blobstore())
+            .compat()
+            .await?;
+        assert_eq!(bcs.file_changes().collect::<Vec<_>>(), vec![]);
+
+        let master_hg = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
+            .compat()
+            .await?;
+
+        ensure_content(
+            &ctx,
+            master_hg,
+            &repo,
+            btreemap! {
+                    "1".to_string()=> "1\n".to_string(),
+                    "2".to_string()=> "2\n".to_string(),
+                    "3".to_string()=> "3\n".to_string(),
+                    "4".to_string()=> "4\n".to_string(),
+                    "5".to_string()=> "5\n".to_string(),
+                    "6".to_string()=> "6\n".to_string(),
+                    "7".to_string()=> "7\n".to_string(),
+                    "8".to_string()=> "8\n".to_string(),
+                    "9".to_string()=> "9\n".to_string(),
+                    "10".to_string()=> "modified10\n".to_string(),
+
+                    "files".to_string()=> "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+                    "otherrepofile".to_string()=> "otherrepocontent".to_string(),
+            },
+        )
+        .await?;
+
+        Ok(())
     }
 
     async fn ensure_content(
