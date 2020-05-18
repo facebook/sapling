@@ -10,6 +10,7 @@
 #include <folly/Exception.h>
 #include <folly/Expected.h>
 #include <folly/File.h>
+#include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
@@ -491,6 +492,11 @@ unique_ptr<PrivHelper> startPrivHelper(
   clientConn.close();
   int rc = 1;
   try {
+    // Redirect stdin
+    folly::File devNullIn("/dev/null", O_RDONLY);
+    auto retcode = folly::dup2NoInt(devNullIn.fd(), STDIN_FILENO);
+    folly::checkUnixError(retcode, "failed to redirect stdin");
+
     server->init(std::move(serverConn), userInfo.getUid(), userInfo.getGid());
     server->run();
     rc = 0;
