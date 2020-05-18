@@ -12,6 +12,7 @@ use std::sync::Arc;
 use context::generate_session_id;
 use fbinit::FacebookInit;
 use futures_stats::{FutureStats, TimedFutureExt};
+use identity::Identity;
 use mononoke_api::{
     ChangesetContext, ChangesetSpecifier, CoreContext, FileContext, FileId, Mononoke, RepoContext,
     SessionContainer, TreeContext, TreeId,
@@ -31,6 +32,8 @@ use crate::errors;
 use crate::from_request::FromRequest;
 use crate::params::AddScubaParams;
 use crate::specifiers::SpecifierExt;
+
+const SCS_IDENTITY: &str = "scm_service_identity";
 
 define_stats! {
     prefix = "mononoke.scs_server";
@@ -53,6 +56,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) mononoke: Arc<Mononoke>,
     pub(crate) logger: Logger,
     pub(crate) scuba_builder: ScubaSampleBuilder,
+    pub(crate) service_identity: Identity,
 }
 
 pub(crate) struct SourceControlServiceThriftImpl(SourceControlServiceImpl);
@@ -69,6 +73,7 @@ impl SourceControlServiceImpl {
             mononoke,
             logger,
             scuba_builder,
+            service_identity: Identity::with_service(SCS_IDENTITY),
         }
     }
 
@@ -115,7 +120,9 @@ impl SourceControlServiceImpl {
             }
         }
 
-        let identities = req_ctxt.identities().map_err(errors::internal_error)?;
+        let identities = req_ctxt
+            .identities_for_service(&self.service_identity)
+            .map_err(errors::internal_error)?;
         let identities = identities.entries();
         scuba.add(
             "identities",
