@@ -110,7 +110,7 @@ fn disk_node_dir(
     let mut o = base_for_type.clone();
     match path {
         Some(WrappedPath::NonRoot(path)) => {
-            let path = PathBuf::from(percent_encode(&path.as_ref().to_vec(), PATH).to_string());
+            let path = PathBuf::from(percent_encode(&path.mpath().to_vec(), PATH).to_string());
             if dump_extension {
                 match path.extension() {
                     Some(ext) => {

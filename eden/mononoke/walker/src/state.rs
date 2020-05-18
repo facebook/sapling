@@ -64,7 +64,7 @@ where
     K: Eq + Hash + Copy,
 {
     let (path, id) = k;
-    let mpathhash_opt = path.as_ref().map(|m| m.get_path_hash());
+    let mpathhash_opt = path.get_path_hash().cloned();
     !visited_with_path.insert((mpathhash_opt, *id), ()).is_some()
 }
 

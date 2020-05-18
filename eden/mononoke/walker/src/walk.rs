@@ -440,7 +440,7 @@ fn hg_file_node_step(
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     let repo_path = match &path {
         WrappedPath::Root => RepoPath::RootPath,
-        WrappedPath::NonRoot(mpath) => RepoPath::FilePath(mpath.as_ref().clone()),
+        WrappedPath::NonRoot(path) => RepoPath::FilePath(path.mpath().clone()),
     };
     repo.get_filenode_opt(ctx, &repo_path, hg_file_node_id)
         .map(move |file_node_opt| match file_node_opt {

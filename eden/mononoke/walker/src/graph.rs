@@ -16,9 +16,16 @@ use mercurial_types::{
     FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,
 };
 use mononoke_types::{fsnode::Fsnode, FsnodeId};
-use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId};
+use mononoke_types::{
+    BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MPathHash, MononokeId,
+};
+use once_cell::sync::OnceCell;
 use phases::Phase;
-use std::{fmt, str::FromStr};
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+    str::FromStr,
+};
 
 // Helper to save repetition for the type enums
 macro_rules! define_type_enum {
@@ -113,23 +120,69 @@ impl NodeType {
     }
 }
 
+// Memoize the hash of the path as it is used frequently
+
+#[derive(Debug)]
+pub struct MPathHashMemo {
+    mpath: MPath,
+    memoized_hash: OnceCell<MPathHash>,
+}
+
+impl MPathHashMemo {
+    fn new(mpath: MPath) -> Self {
+        Self {
+            mpath,
+            memoized_hash: OnceCell::new(),
+        }
+    }
+
+    pub fn get_path_hash(&self) -> &MPathHash {
+        self.memoized_hash
+            .get_or_init(|| self.mpath.get_path_hash())
+    }
+
+    pub fn mpath(&self) -> &MPath {
+        &self.mpath
+    }
+}
+
+impl PartialEq for MPathHashMemo {
+    fn eq(&self, other: &Self) -> bool {
+        self.mpath == other.mpath
+    }
+}
+
+impl Eq for MPathHashMemo {}
+
+impl Hash for MPathHashMemo {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.mpath.hash(state);
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WrappedPath {
     Root,
-    NonRoot(ArcIntern<MPath>),
+    NonRoot(ArcIntern<MPathHashMemo>),
 }
 
 impl WrappedPath {
     pub fn as_ref(&self) -> Option<&MPath> {
         match self {
             WrappedPath::Root => None,
-            WrappedPath::NonRoot(path) => Some(path.as_ref()),
+            WrappedPath::NonRoot(path) => Some(path.mpath()),
+        }
+    }
+
+    pub fn get_path_hash(&self) -> Option<&MPathHash> {
+        match self {
+            WrappedPath::Root => None,
+            WrappedPath::NonRoot(path) => Some(path.get_path_hash()),
         }
     }
 
     pub fn sampling_fingerprint(&self) -> Option<u64> {
-        self.as_ref()
-            .map(|o| o.get_path_hash().sampling_fingerprint())
+        self.get_path_hash().map(|h| h.sampling_fingerprint())
     }
 }
 
@@ -137,7 +190,7 @@ impl fmt::Display for WrappedPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             WrappedPath::Root => write!(f, ""),
-            WrappedPath::NonRoot(path) => write!(f, "{}", path.as_ref()),
+            WrappedPath::NonRoot(path) => write!(f, "{}", path.mpath()),
         }
     }
 }
@@ -145,7 +198,7 @@ impl fmt::Display for WrappedPath {
 impl From<Option<MPath>> for WrappedPath {
     fn from(mpath: Option<MPath>) -> Self {
         match mpath {
-            Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(mpath)),
+            Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(MPathHashMemo::new(mpath))),
             None => WrappedPath::Root,
         }
     }
