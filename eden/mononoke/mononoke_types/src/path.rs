@@ -430,6 +430,16 @@ impl MPath {
         }
     }
 
+    pub fn is_prefix_of_opt<'a, E: IntoIterator<Item = &'a MPathElement>>(
+        prefix: Option<&MPath>,
+        other: E,
+    ) -> bool {
+        match prefix {
+            Some(prefix) => prefix.is_prefix_of(other),
+            None => true,
+        }
+    }
+
     pub fn join_opt_element(path: Option<&Self>, element: &MPathElement) -> Self {
         match path {
             Some(path) => path.join_element(Some(element)),

@@ -112,6 +112,9 @@ define_stats! {
     push_conflicts: dynamic_timeseries("push_conflicts.{}", (reponame: String); Rate, Sum),
     rate_limits_exceeded: dynamic_timeseries("rate_limits_exceeded.{}", (reponame: String); Rate, Sum),
     push_error: dynamic_timeseries("push_error.{}", (reponame: String); Rate, Sum),
+
+    undesired_tree_fetches: timeseries(Sum),
+    undesired_file_fetches: timeseries(Sum),
 }
 
 mod ops {
@@ -270,6 +273,58 @@ fn bundle2caps() -> String {
     }
 
     percent_encode(&encodedcaps.join("\n"))
+}
+
+struct UndesiredPathLogger {
+    ctx: CoreContext,
+    repo_needs_logging: bool,
+    path_prefix_to_log: Option<MPath>,
+}
+
+impl UndesiredPathLogger {
+    fn new(ctx: CoreContext, repo: &BlobRepo) -> Result<Self, Error> {
+        let tunables = tunables();
+        let repo_needs_logging =
+            repo.name() == tunables.get_undesired_path_repo_name_to_log().as_str();
+
+        let path_prefix_to_log = if repo_needs_logging {
+            MPath::new_opt(tunables.get_undesired_path_prefix_to_log().as_str())?
+        } else {
+            None
+        };
+
+        Ok(Self {
+            ctx,
+            repo_needs_logging,
+            path_prefix_to_log,
+        })
+    }
+
+    fn maybe_log_tree(&self, path: Option<&MPath>) {
+        if self.should_log(path) {
+            STATS::undesired_tree_fetches.add_value(1);
+            self.ctx
+                .perf_counters()
+                .add_to_counter(PerfCounterType::UndesiredTreeFetch, 1);
+        }
+    }
+
+    fn maybe_log_file(&self, path: Option<&MPath>) {
+        if self.should_log(path) {
+            STATS::undesired_file_fetches.add_value(1);
+            self.ctx
+                .perf_counters()
+                .add_to_counter(PerfCounterType::UndesiredFileFetch, 1);
+        }
+    }
+
+    fn should_log(&self, path: Option<&MPath>) -> bool {
+        if self.repo_needs_logging {
+            MPath::is_prefix_of_opt(self.path_prefix_to_log.as_ref(), MPath::iter_opt(path))
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -519,6 +574,10 @@ impl RepoClient {
         params: GettreepackArgs,
     ) -> BoxStream<BytesOld, Error> {
         let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
+
+        let undesired_path_logger =
+            try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blobrepo()));
+
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blobrepo(), params)
             .filter({
                 let mut used_hashes = HashSet::new();
@@ -528,6 +587,8 @@ impl RepoClient {
                 cloned!(ctx);
                 let blobrepo = self.repo.blobrepo().clone();
                 move |(hg_mf_id, path)| {
+                    undesired_path_logger.maybe_log_tree(path.as_ref());
+
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::GettreepackNumTreepacks);
 
@@ -566,6 +627,8 @@ impl RepoClient {
             + 'static,
     {
         self.command_stream(name, |ctx, command_logger| {
+            let undesired_path_logger =
+                try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blobrepo()));
             // We buffer all parameters in memory so that we can log them.
             // That shouldn't be a problem because requests are quite small
             let getpack_params = Arc::new(Mutex::new(vec![]));
@@ -604,6 +667,7 @@ impl RepoClient {
                                 getpack_params.push((path.clone(), filenodes.clone()));
                             }
 
+                            undesired_path_logger.maybe_log_file(Some(&path));
                             ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
 
                             let blob_futs: Vec<_> = filenodes
@@ -780,6 +844,7 @@ impl RepoClient {
                 name,
                 request_stream,
             )
+            .boxify()
         })
     }
 
@@ -1648,6 +1713,9 @@ impl HgCommands for RepoClient {
             // That shouldn't be a problem because requests are quite small
             let getfiles_params = Arc::new(Mutex::new(vec![]));
 
+            let undesired_path_logger =
+                try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blobrepo()));
+
             let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
             let lfs_params = self
                 .repo
@@ -1667,6 +1735,7 @@ impl HgCommands for RepoClient {
                     .map({
                         cloned!(ctx);
                         move |(node, path)| {
+                            undesired_path_logger.maybe_log_file(Some(&path));
                             let repo = this.repo.clone();
                             ctx.session().bump_load(Metric::EgressGetfilesFiles, 1.0);
                             create_getfiles_blob(
@@ -1755,6 +1824,7 @@ impl HgCommands for RepoClient {
                 ops::GETFILES,
                 request_stream,
             )
+            .boxify()
         })
     }
 

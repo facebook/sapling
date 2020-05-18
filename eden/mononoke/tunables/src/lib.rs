@@ -40,6 +40,10 @@ pub struct MononokeTunables {
     wishlist_write_qps: AtomicI64,
     command_monitor_interval: AtomicI64,
     command_monitor_remote_logging: AtomicI64,
+    // Log all getfiles/gettreepack requests for paths that start with prefix
+    // in a particular repo
+    undesired_path_repo_name_to_log: TunableString,
+    undesired_path_prefix_to_log: TunableString,
 }
 
 pub fn init_tunables_worker(
