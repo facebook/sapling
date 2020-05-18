@@ -18,6 +18,7 @@ const STRUCT_FIELD_MSG: &str = "Only implemented for named fields of a struct";
 enum TunableType {
     Bool,
     I64,
+    String,
 }
 
 #[proc_macro_derive(Tunables)]
@@ -45,10 +46,19 @@ pub fn derive_tunables(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 }
 
 impl TunableType {
-    fn external_type(&self) -> Ident {
+    fn external_type(&self) -> TokenStream {
+        match self {
+            Self::Bool => quote! { bool },
+            Self::I64 => quote! { i64 },
+            Self::String => quote! { Arc<String> },
+        }
+    }
+
+    fn input_type(&self) -> Ident {
         match self {
             Self::Bool => quote::format_ident!("{}", "bool"),
             Self::I64 => quote::format_ident!("{}", "i64"),
+            Self::String => quote::format_ident!("{}", "String"),
         }
     }
 
@@ -56,9 +66,20 @@ impl TunableType {
         let method = quote::format_ident!("get_{}", name);
         let external_type = self.external_type();
 
-        quote! {
-            pub fn #method(&self) -> #external_type {
-                return self.#name.load(std::sync::atomic::Ordering::Relaxed)
+        match &self {
+            Self::Bool | Self::I64 => {
+                quote! {
+                    pub fn #method(&self) -> #external_type {
+                        return self.#name.load(std::sync::atomic::Ordering::Relaxed)
+                    }
+                }
+            }
+            Self::String => {
+                quote! {
+                    pub fn #method(&self) -> #external_type {
+                        self.#name.load_full()
+                    }
+                }
             }
         }
     }
@@ -90,9 +111,15 @@ where
     ));
 
     methods.extend(generate_updater_method(
-        names_and_types,
+        names_and_types.clone(),
         TunableType::I64,
         quote::format_ident!("update_ints"),
+    ));
+
+    methods.extend(generate_updater_method(
+        names_and_types,
+        TunableType::String,
+        quote::format_ident!("update_strings"),
     ));
 
     methods
@@ -108,21 +135,37 @@ where
 {
     let names = names_and_types.filter(|(_, t)| *t == ty).map(|(n, _)| n);
 
-    let type_ident = ty.external_type();
+    let type_ident = ty.input_type();
     let mut names = names.peekable();
     let mut body = TokenStream::new();
 
     if names.peek().is_some() {
-        body.extend(
-            quote! {
-                for (name, val) in tunables.iter() {
-                    match name.as_ref() {
-                        #(stringify!(#names) => self.#names.store(*val, std::sync::atomic::Ordering::Relaxed), )*
-                        _ => {}
+        match ty {
+            TunableType::I64 | TunableType::Bool => {
+                body.extend(
+                    quote! {
+                        for (name, val) in tunables.iter() {
+                            match name.as_ref() {
+                                #(stringify!(#names) => self.#names.store(*val, std::sync::atomic::Ordering::Relaxed), )*
+                                _ => {}
+                            }
+                        }
                     }
-                }
+                );
             }
-        )
+            TunableType::String => {
+                body.extend(quote! {
+                    for (name, val) in tunables {
+                        match name.as_ref() {
+                            #(stringify!(#names) => {
+                                self.#names.swap(Arc::new(val.clone()));
+                            }, )*
+                            _ => {}
+                        }
+                    }
+                });
+            }
+        }
     }
 
     quote! {
@@ -154,6 +197,11 @@ fn resolve_type(ty: Type) -> TunableType {
             match &ident.to_string()[..] {
                 "AtomicBool" => return TunableType::Bool,
                 "AtomicI64" => return TunableType::I64,
+                // TunableString is a type alias of ArcSwap<String>.
+                // p.path.get_ident() returns None for ArcSwap<String>
+                // and it makes it harder to parse it.
+                // We use TunableString as a workaround
+                "TunableString" => return TunableType::String,
                 _ => unimplemented!("{}", UNIMPLEMENTED_MSG),
             }
         }
