@@ -27,6 +27,15 @@ use std::{
     str::FromStr,
 };
 
+pub(crate) const fn const_max(a: usize, b: usize) -> usize {
+    [a, b][(a < b) as usize]
+}
+
+macro_rules! max {
+    ($x: expr) => ($x);
+    ($x: expr, $($z: expr),+) => ($crate::graph::const_max($x, max!($($z),*)));
+}
+
 // Helper to save repetition for the type enums
 macro_rules! define_type_enum {
      (enum $enum_name:ident {
@@ -58,6 +67,9 @@ macro_rules! define_type_enum {
                     $($enum_name::$variant=>stringify!($variant),)*
                 }
             }
+
+            #[allow(dead_code)]
+            pub const MAX_ORDINAL: usize = max!($($enum_name::$variant as usize),*);
         }
     }
 }
@@ -544,6 +556,26 @@ impl Node {
             // Derived data
             Node::BonsaiFsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode((_, k)) => Some(k.sampling_fingerprint()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::mem::size_of;
+
+    #[test]
+    fn test_node_size() {
+        // Node size is important as we have lots of them, add a test to check for accidental changes
+        assert_eq!(48, size_of::<Node>());
+    }
+
+    #[test]
+    fn test_node_type_max_ordinal() {
+        // Check the macros worked consistently
+        for t in NodeType::ALL_VARIANTS {
+            assert!(*t as usize <= NodeType::MAX_ORDINAL)
         }
     }
 }

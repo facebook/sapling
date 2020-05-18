@@ -7,12 +7,19 @@
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::walk::{expand_checked_nodes, OutgoingEdge, WalkVisitor};
+use array_init::array_init;
 use chashmap::CHashMap;
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, FsnodeId, MPathHash};
 use phases::Phase;
-use std::{cmp, collections::HashSet, hash::Hash, ops::Add};
+use std::{
+    cmp,
+    collections::HashSet,
+    hash::Hash,
+    ops::Add,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {
@@ -52,7 +59,7 @@ pub struct WalkStateCHashMap {
     visited_hg_filenode: CHashMap<(Option<MPathHash>, HgFileNodeId), ()>,
     visited_hg_manifest: CHashMap<(Option<MPathHash>, HgManifestId), ()>,
     visited_fsnode: CHashMap<(Option<MPathHash>, FsnodeId), ()>,
-    visit_count: CHashMap<NodeType, usize>,
+    visit_count: [AtomicUsize; NodeType::MAX_ORDINAL + 1],
 }
 
 /// If the state did not have this value present, true is returned.
@@ -86,7 +93,7 @@ impl WalkStateCHashMap {
             visited_hg_filenode: CHashMap::new(),
             visited_hg_manifest: CHashMap::new(),
             visited_fsnode: CHashMap::new(),
-            visit_count: CHashMap::new(),
+            visit_count: array_init(|_i| AtomicUsize::new(0)),
         }
     }
 
@@ -94,7 +101,7 @@ impl WalkStateCHashMap {
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
         let target_node: &Node = &outgoing.target;
         let k = target_node.get_type();
-        &self.visit_count.upsert(k, || 1, |old| *old += 1);
+        self.visit_count[k as usize].fetch_add(1, Ordering::Release);
 
         match &target_node {
             Node::BonsaiChangeset(bcs_id) => self.visited_bcs.insert(*bcs_id, ()).is_none(),
@@ -146,7 +153,7 @@ impl WalkStateCHashMap {
     }
 
     fn get_visit_count(&self, t: &NodeType) -> usize {
-        self.visit_count.get(t).map(|v| *v).unwrap_or(0)
+        self.visit_count[*t as usize].load(Ordering::Acquire)
     }
 }
 
