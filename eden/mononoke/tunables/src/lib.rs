@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
+use std::ops::Deref;
 use std::sync::Arc;
 use std::thread;
+use std::thread_local;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -22,8 +25,31 @@ use tunables_structs::Tunables as TunablesStruct;
 static TUNABLES: OnceCell<MononokeTunables> = OnceCell::new();
 const REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 
-pub fn tunables() -> &'static MononokeTunables {
-    TUNABLES.get_or_init(MononokeTunables::default)
+thread_local! {
+    static TUNABLES_OVERRIDE: RefCell<Option<Arc<MononokeTunables>>> = RefCell::new(None);
+}
+
+pub enum TunablesReference {
+    Override(Arc<MononokeTunables>),
+    Static(&'static MononokeTunables),
+}
+
+impl Deref for TunablesReference {
+    type Target = MononokeTunables;
+
+    fn deref(&self) -> &MononokeTunables {
+        match self {
+            Self::Override(r) => r.as_ref(),
+            Self::Static(r) => r,
+        }
+    }
+}
+
+pub fn tunables() -> TunablesReference {
+    TUNABLES_OVERRIDE.with(|tunables_override| match *tunables_override.borrow() {
+        Some(ref arc) => TunablesReference::Override(arc.clone()),
+        None => TunablesReference::Static(TUNABLES.get_or_init(MononokeTunables::default)),
+    })
 }
 
 // This type exists to simplify code generation in tunables-derive
@@ -82,6 +108,18 @@ fn update_tunables(new_tunables: Arc<TunablesStruct>) -> Result<()> {
     Ok(())
 }
 
+/// A helper function to override tunables during a closure's execution.
+/// This is useful for unit tests.
+pub fn with_tunables<T>(new_tunables: MononokeTunables, f: impl FnOnce() -> T) -> T {
+    TUNABLES_OVERRIDE.with(|t| *t.borrow_mut() = Some(Arc::new(new_tunables)));
+
+    let res = f();
+
+    TUNABLES_OVERRIDE.with(|tunables| *tunables.borrow_mut() = None);
+
+    res
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -97,6 +135,22 @@ mod test {
 
     #[derive(Tunables, Default)]
     struct EmptyTunables {}
+
+    #[test]
+    fn test_override_tunables() {
+        assert_eq!(tunables().get_wishlist_write_qps(), 0);
+
+        let res = with_tunables(
+            MononokeTunables {
+                wishlist_write_qps: AtomicI64::new(2),
+                ..MononokeTunables::default()
+            },
+            || tunables().get_wishlist_write_qps(),
+        );
+
+        assert_eq!(res, 2);
+        assert_eq!(tunables().get_wishlist_write_qps(), 0);
+    }
 
     #[test]
     fn test_empty_tunables() {
