@@ -37,4 +37,5 @@ tracing = "0.1"
 tracing-collector = { path = "../tracing-collector" }
 types = { path = "../types" }
 util = { path = "../util" }
+version = { path = "../version" }
 zstd = "0.4"

@@ -38,6 +38,12 @@ pub fn table() -> CommandTable {
 
     Returns 0 on success."#,
     );
+    table.register(
+        version,
+        "version|vers|versi|versio",
+        r#"output version and copyright information"#,
+    );
+    status::register(&mut table);
     status::register(&mut table);
 
     table.register(dump_trace, "dump-trace", "export tracing information");
@@ -133,10 +139,7 @@ define_flags! {
         args: Vec<String>,
     }
 
-    pub struct DebugHttpOpts {}
-
-    pub struct DebugDynamicConfigOpts {
-    }
+    pub struct NoOpts {}
 }
 
 pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8> {
@@ -149,6 +152,20 @@ pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     io.write(format!(
         "{}\n",
         util::path::strip_unc_prefix(&path).display()
+    ))?;
+    Ok(0)
+}
+
+pub fn version(_opts: NoOpts, io: &mut IO) -> Result<u8> {
+    io.write(format!(
+        r#"Mercurial Distributed SCM (version {})
+(see https://mercurial-scm.org for more information)
+
+Copyright (C) 2005-2017 Matt Mackall and others
+This is free software; see the source for copying conditions. There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+"#,
+        ::version::VERSION
     ))?;
     Ok(0)
 }
@@ -266,7 +283,7 @@ pub fn debugindexedlogrepair(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
     Ok(0)
 }
 
-pub fn debughttp(_opts: DebugHttpOpts, io: &mut IO, repo: Repo) -> Result<u8> {
+pub fn debughttp(_opts: NoOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     let config = EdenApiConfig::from_hg_config(repo.config())?;
     let client = EdenApiCurlClient::new(config)?;
     let hostname = client.hostname()?;
@@ -274,7 +291,7 @@ pub fn debughttp(_opts: DebugHttpOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     Ok(0)
 }
 
-pub fn debugdynamicconfig(_opts: DebugDynamicConfigOpts, _io: &mut IO, repo: Repo) -> Result<u8> {
+pub fn debugdynamicconfig(_opts: NoOpts, _io: &mut IO, repo: Repo) -> Result<u8> {
     let repo_name: String = repo
         .repo_name()
         .map_or_else(|| "".to_string(), |s| s.to_string());
