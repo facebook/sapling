@@ -12,7 +12,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::{self, BufRead, Cursor};
 use std::mem;
-use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use anyhow::{bail, Error, Result};
@@ -32,9 +31,7 @@ use crate::errors::*;
 use crate::{GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
 use mercurial_bundles::Bundle2Item;
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, MPath};
-
-const HASH_SIZE: usize = 40;
+use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
 
 pub struct HgCommandHandler<H> {
     logger: Logger,
@@ -230,14 +227,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .boxify(),
                 ok(instream).boxify(),
             ),
-            SingleRequest::Getfiles => {
-                let (reqs, instream) =
-                    decode_getfiles_arg_stream(instream, || GetfilesArgDecoder {});
-                (
-                    hgcmds.getfiles(reqs).map(SingleResponse::Getfiles).boxify(),
-                    instream,
-                )
-            }
             SingleRequest::StreamOutShallow => (
                 hgcmds
                     .stream_out_shallow()
@@ -247,7 +236,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             ),
             SingleRequest::GetpackV1 => {
                 let (reqs, instream) =
-                    decode_getfiles_arg_stream(instream, || Getpackv1ArgDecoder::new());
+                    decode_getpack_arg_stream(instream, Getpackv1ArgDecoder::new);
                 (
                     hgcmds
                         .getpackv1(reqs)
@@ -258,7 +247,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             }
             SingleRequest::GetpackV2 => {
                 let (reqs, instream) =
-                    decode_getfiles_arg_stream(instream, || Getpackv1ArgDecoder::new());
+                    decode_getpack_arg_stream(instream, Getpackv1ArgDecoder::new);
                 (
                     hgcmds
                         .getpackv2(reqs)
@@ -305,67 +294,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
 
 const NONE: &[u8] = b"None";
 
-// getfiles args format:
-// (nodepath\n)*\n
-// nodepath := node path
-// node = hex hash
-// Example:
-// 1111111111111111111111111111111111111111path1\n2222222222222222222222222222222222222222path2\n\n
-struct GetfilesArgDecoder {}
-
-// Parses one (hash, path) pair
-impl Decoder for GetfilesArgDecoder {
-    // If None has been decoded, then that means that client has sent all the data
-    type Item = Option<(HgFileNodeId, MPath)>;
-    type Error = Error;
-
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
-        let maybeindex = src
-            .iter()
-            .enumerate()
-            .find(|item| item.1 == &b'\n')
-            .map(|(index, _)| index);
-
-        let index = match maybeindex {
-            Some(index) => index,
-            None => {
-                // Need more bytes
-                return Ok(None);
-            }
-        };
-
-        // Consume input and \n
-        let mut buf = src.split_to(index + 1);
-        debug_assert!(buf.len() > 0);
-        let new_len = buf.len() - 1;
-        buf.truncate(new_len);
-
-        if buf.is_empty() {
-            // Finished parsing the stream
-            // 'Ok' means no error, 'Some' means that no more bytes needed,
-            // None means that getfiles stream has finished
-            Ok(Some(None))
-        } else {
-            if buf.len() < HASH_SIZE {
-                bail!("Expected node hash")
-            } else {
-                let nodehashbytes = buf.split_to(HASH_SIZE);
-                if buf.is_empty() {
-                    bail!("Expected non-empty file")
-                } else {
-                    let nodehashstr = String::from_utf8(nodehashbytes.to_vec())?;
-                    let nodehash = HgNodeHash::from_str(&nodehashstr)?;
-                    // Some here means that new entry has been parsed
-                    let parsed_res = Some((HgFileNodeId::new(nodehash), MPath::new(&buf)?));
-                    // 'Ok' means no error, 'Some' means that no more bytes needed.
-                    Ok(Some(parsed_res))
-                }
-            }
-        }
-    }
-}
-
-fn decode_getfiles_arg_stream<D, RType, S>(
+fn decode_getpack_arg_stream<D, RType, S>(
     input: BytesStream<S>,
     create_decoder: impl Fn() -> D + Send + 'static,
 ) -> (BoxStream<RType, Error>, BoxFuture<BytesStream<S>, Error>)
@@ -705,14 +634,6 @@ pub trait HgCommands {
         once(Err(ErrorKind::Unimplemented("gettreepack".into()).into())).boxify()
     }
 
-    // @wireprotocommand('getfiles', 'files*')
-    fn getfiles(
-        &self,
-        _params: BoxStream<(HgFileNodeId, MPath), Error>,
-    ) -> BoxStream<Bytes, Error> {
-        once(Err(ErrorKind::Unimplemented("getfiles".into()).into())).boxify()
-    }
-
     // @wireprotocommand('stream_out_shallow', '*')
     fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
         once(Err(
@@ -774,10 +695,6 @@ mod test {
         HgFileNodeId::new("1111111111111111111111111111111111111111".parse().unwrap())
     }
 
-    fn hash_twos() -> HgFileNodeId {
-        HgFileNodeId::new("2222222222222222222222222222222222222222".parse().unwrap())
-    }
-
     #[test]
     fn hello() {
         let logger = Logger::root(Discard, o!());
@@ -812,50 +729,6 @@ mod test {
     }
 
     #[test]
-    fn getfilesdecoder() {
-        let mut decoder = GetfilesArgDecoder {};
-        let mut input = BytesMut::from(format!("{}path\n", hash_ones()).as_bytes());
-        let res = decoder
-            .decode(&mut input)
-            .expect("unexpected error")
-            .expect("empty result");
-        assert_eq!(Some((hash_ones(), MPath::new("path").unwrap())), res);
-
-        let mut input = BytesMut::from(format!("{}path", hash_ones()).as_bytes());
-        assert!(decoder
-            .decode(&mut input)
-            .expect("unexpected error")
-            .is_none());
-
-        let mut input =
-            BytesMut::from(format!("{}path\n{}path2\n", hash_ones(), hash_twos()).as_bytes());
-
-        let res = decoder
-            .decode(&mut input)
-            .expect("unexpected error")
-            .expect("empty result");
-        assert_eq!(Some((hash_ones(), MPath::new("path").unwrap())), res);
-
-        let res = decoder
-            .decode(&mut input)
-            .expect("unexpected error")
-            .expect("empty result");
-        assert_eq!(Some((hash_twos(), MPath::new("path2").unwrap())), res);
-
-        let mut input = BytesMut::from(format!("{}\n", hash_ones()).as_bytes());
-        assert!(decoder.decode(&mut input).is_err());
-
-        let mut input = BytesMut::from(format!("{}", hash_ones()).as_bytes());
-        assert!(decoder
-            .decode(&mut input)
-            .expect("unexpected error")
-            .is_none());
-
-        let mut input = BytesMut::from("11111path\n".as_bytes());
-        assert!(decoder.decode(&mut input).is_err());
-    }
-
-    #[test]
     fn getpackv1decoder() {
         let mut decoder = Getpackv1ArgDecoder::new();
         let mut buf = vec![];
@@ -882,32 +755,9 @@ mod test {
     }
 
     #[test]
-    fn getfilesargs() {
-        let input = format!("{}path\n{}path2\n\n", hash_ones(), hash_twos());
-        let (paramstream, _input) = decode_getfiles_arg_stream(
-            BytesStream::new(stream::once(Ok(Bytes::from(input)))),
-            || GetfilesArgDecoder {},
-        );
-
-        let res = paramstream.collect().wait().unwrap();
-        assert_eq!(
-            res,
-            vec![
-                (hash_ones(), MPath::new("path").unwrap()),
-                (hash_twos(), MPath::new("path2").unwrap()),
-            ]
-        );
-
-        // Unexpected end of file
-        let (paramstream, _input) =
-            decode_getfiles_arg_stream(BytesStream::new(stream::empty()), || GetfilesArgDecoder {});
-        assert!(paramstream.collect().wait().is_err());
-    }
-
-    #[test]
     fn getpackv1() {
         let input = "\u{0}\u{4}path\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}";
-        let (paramstream, _input) = decode_getfiles_arg_stream(
+        let (paramstream, _input) = decode_getpack_arg_stream(
             BytesStream::new(stream::once(Ok(Bytes::from(input)))),
             || Getpackv1ArgDecoder::new(),
         );

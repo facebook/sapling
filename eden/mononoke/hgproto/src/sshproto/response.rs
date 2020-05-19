@@ -140,8 +140,6 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
 
         Gettreepack(res) => res,
 
-        Getfiles(res) => res,
-
         Lookup(res) => res,
 
         Listkeys(res) => {
