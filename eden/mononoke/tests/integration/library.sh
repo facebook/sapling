@@ -560,7 +560,6 @@ function setup_configerator_configs {
  "ingress_blobstore_bytes": 1000000000000,
  "total_manifests": 1000000000000,
  "quicksand_manifests": 1000000000,
- "getfiles_files": 1000000000,
  "getpack_files": 1000000000,
  "commits": 1000000000
 },
