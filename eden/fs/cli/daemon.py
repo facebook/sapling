@@ -164,9 +164,7 @@ def _start_edenfs_service(
     if sys.platform == "win32":
         from . import winproc
 
-        winproc.start_edenfs_service(cmd)
-        print("EdenFS started")
-        return 0
+        return winproc.start_edenfs_service(cmd)
 
     eden_env = get_edenfs_environment()
 

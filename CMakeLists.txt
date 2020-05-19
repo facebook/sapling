@@ -152,6 +152,12 @@ if(WIN32)
   get_filename_component(python_dll_dir "${python_dll}" DIRECTORY)
   file(TO_NATIVE_PATH "${python_dll_dir}" python_dll_dir)
   file(WRITE "${CMAKE_BINARY_DIR}/LIBRARY_DEP_DIRS.txt" "${python_dll_dir}\n")
+
+  # The following powershell script is required to start the EdenFS service.
+  install(
+    FILES "${CMAKE_SOURCE_DIR}/eden/scripts/startservice.ps1"
+    DESTINATION scripts
+  )
 endif()
 
 configure_file(
