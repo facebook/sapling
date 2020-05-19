@@ -100,12 +100,15 @@ impl MultiplexedBlobstoreBase {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreGetData>, ErrorKind> {
+        let mut scuba = self.scuba.clone();
+        scuba.sampled(self.scuba_sample_rate);
+
         let requests = multiplexed_get(
             &ctx,
             self.blobstores.as_ref(),
             &key,
             OperationType::ScrubGet,
-            self.scuba.clone(),
+            scuba,
         )
         .into_iter()
         .map(|f| f.then(Ok));
