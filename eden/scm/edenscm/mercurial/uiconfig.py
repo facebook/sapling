@@ -608,16 +608,24 @@ def validatedynamicconfig(ui):
         "common_overrides.rc",
         "configerator_overrides.rc",
         "devserver_no_sandcastle_overrides.rc",
+        "facebook_overrides.rc",
         "fbsource_overrides.rc",
         "instagram-server_overrides.rc",
         "ovrsource_overrides.rc",
         "www_overrides.rc",
         "www-merge_overrides.rc",
     ]
+    # Configs that are allowed to be different, usually because they must come
+    # from external configuration (like hotfixes).
+    whitelist = [
+        ("extensions", "hotfix"),
+    ]
+
     testrcs = ui.configlist("configs", "testdynamicconfigsubset")
     if testrcs:
         originalrcs.extend(testrcs)
-    issues = ui._uiconfig._rcfg.ensure_location_supersets("hgrc.dynamic", originalrcs)
+    issues = ui._uiconfig._rcfg.ensure_location_supersets("hgrc.dynamic",
+            originalrcs, whitelist)
 
     for section, key, dynamic_value, file_value in issues:
         msg = _("Config mismatch: %s.%s has '%s' (dynamic) vs '%s' (file)\n") % (

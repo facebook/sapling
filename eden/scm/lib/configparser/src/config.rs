@@ -426,6 +426,7 @@ impl ConfigSet {
         &mut self,
         superset_location: String,
         subset_locations: Vec<String>,
+        whitelist: HashSet<(&str, &str)>,
     ) -> SupersetVerification {
         let mut result = SupersetVerification::new();
 
@@ -434,6 +435,10 @@ impl ConfigSet {
 
         for (sname, section) in self.sections.iter_mut() {
             for (kname, values) in section.items.iter_mut() {
+                if whitelist.contains(&(sname.as_ref(), kname.as_ref())) {
+                    continue;
+                }
+
                 let mut super_value = None;
                 let mut super_index = 10000; // Dummy place holder value
                 let mut sub_value = None;
@@ -1115,6 +1120,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
+            HashSet::new(),
         );
         assert!(result.is_empty());
 
@@ -1125,6 +1131,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
+            HashSet::new(),
         );
         assert_eq!(
             result.missing,
@@ -1137,8 +1144,11 @@ space_list=value1.a value1.b
         assert!(result.mismatched.is_empty());
 
         // Verify not specifying a subset avoids returning errors
-        let result =
-            tempcfg.ensure_location_supersets("super".to_string(), vec!["subset1".to_string()]);
+        let result = tempcfg.ensure_location_supersets(
+            "super".to_string(),
+            vec!["subset1".to_string()],
+            HashSet::new(),
+        );
         assert!(result.is_empty());
 
         // Verify an extra config
@@ -1150,6 +1160,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
+            HashSet::new(),
         );
         assert_eq!(
             result.extra,
@@ -1172,6 +1183,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
+            HashSet::new(),
         );
         assert_eq!(
             result.mismatched,

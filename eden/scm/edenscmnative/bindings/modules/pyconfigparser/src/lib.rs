@@ -7,7 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{cell::RefCell, convert::TryInto};
+use std::{cell::RefCell, collections::HashSet, convert::TryInto, iter::FromIterator};
 
 use cpython::*;
 
@@ -146,9 +146,12 @@ py_class!(pub class config |py| {
     def ensure_location_supersets(
         &self,
         superset_source: String,
-        subset_sources: Vec<String>
+        subset_sources: Vec<String>,
+        whitelist: Vec<(String, String)>
     ) -> PyResult<Vec<(String, String, Option<String>, Option<String>)>> {
-        let results = self.cfg(py).borrow_mut().ensure_location_supersets(superset_source, subset_sources);
+        let whitelist = HashSet::from_iter(whitelist.iter().map(|v| (v.0.as_ref(), v.1.as_ref())));
+
+        let results = self.cfg(py).borrow_mut().ensure_location_supersets(superset_source, subset_sources, whitelist);
         if results.is_empty() {
             return Ok(vec![]);
         }
