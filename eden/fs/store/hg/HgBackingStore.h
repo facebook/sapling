@@ -18,12 +18,9 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
-
-#ifdef EDEN_HAVE_RUST_DATAPACK
-#include "eden/fs/store/hg/HgDatapackStore.h" // @manual
-#endif
 
 /* forward declare support classes from mercurial */
 class ConstantStringRef;
@@ -191,9 +188,7 @@ class HgBackingStore : public BackingStore {
   std::unique_ptr<folly::Synchronized<UnionDatapackStore>> unionStore_;
 
   std::string repoName_;
-#ifdef EDEN_HAVE_RUST_DATAPACK
   std::optional<HgDatapackStore> datapackStore_;
-#endif
 
   // Track metrics for imports currently fetching data from hg
   mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;

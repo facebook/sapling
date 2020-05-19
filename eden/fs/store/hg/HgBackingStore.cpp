@@ -27,6 +27,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
@@ -38,10 +39,6 @@
 
 #include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//eden/scm:datapack
 #include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//eden/scm:datapack
-
-#ifdef EDEN_HAVE_RUST_DATAPACK
-#include "eden/fs/store/hg/HgDatapackStore.h" // @manual
-#endif
 
 using folly::Future;
 using folly::IOBuf;
@@ -183,7 +180,6 @@ HgBackingStore::HgBackingStore(
           std::make_shared<HgImporterThreadFactory>(repository, stats))),
       config_(config),
       serverThreadPool_(serverThreadPool) {
-#ifdef EDEN_HAVE_RUST_DATAPACK
   try {
     auto useEdenApi = config->getEdenConfig()->useEdenApi.getValue();
     datapackStore_ =
@@ -191,7 +187,6 @@ HgBackingStore::HgBackingStore(
   } catch (const std::runtime_error& ex) {
     XLOG(WARN) << "Rust native store is disabled due to: " << ex.what();
   }
-#endif
   HgImporter importer(repository, stats);
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
@@ -287,7 +282,6 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
     RelativePath path) {
   auto writeBatch = localStore_->beginWrite();
   try {
-#ifdef EDEN_HAVE_RUST_DATAPACK
     if (config_) {
       auto edenConfig = config_->getEdenConfig();
       if (edenConfig->useHgCache.getValue() && datapackStore_) {
@@ -299,7 +293,6 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
         }
       }
     }
-#endif
     auto content = unionStoreGetWithRefresh(
         *unionStore_->wlock(), path.stringPiece(), manifestNode);
     return folly::makeFuture(
@@ -462,7 +455,6 @@ unique_ptr<Blob> HgBackingStore::getBlobFromHgCache(
     const HgProxyHash& hgInfo) {
   auto edenConfig = config_->getEdenConfig();
 
-#ifdef EDEN_HAVE_RUST_DATAPACK
   if (edenConfig->useHgCache.getValue() && datapackStore_) {
     if (auto content = datapackStore_->getBlobLocal(id, hgInfo)) {
       XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
@@ -476,7 +468,6 @@ unique_ptr<Blob> HgBackingStore::getBlobFromHgCache(
       return content;
     }
   }
-#endif
 
   return nullptr;
 }
@@ -633,11 +624,9 @@ HgBackingStore::getLiveImportWatches(HgImportObject object) const {
 }
 
 void HgBackingStore::periodicManagementTask() {
-#ifdef EDEN_HAVE_RUST_DATAPACK
   if (datapackStore_) {
     datapackStore_->refresh();
   }
-#endif
 
   if (unionStore_) {
     unionStore_->wlock()->refresh();
