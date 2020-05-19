@@ -21,7 +21,7 @@ hgrc.write("color=\n")
 hgrc.close()
 
 ui_ = uimod.ui.load()
-ui_.setconfig("ui", "formatted", "True")
+ui_.setconfig("ui", "assume-tty", "True")
 
 # we're not interested in the output, so write that to devnull
 ui_.fout = open(os.devnull, "wb")

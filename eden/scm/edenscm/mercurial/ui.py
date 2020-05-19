@@ -180,6 +180,8 @@ class ui(object):
         # color mode: see mercurial/color.py for possible value
         self._colormode = None
         self._styles = {}
+        # Whether the output stream is known to be a terminal.
+        self._terminaloutput = None
 
         if src:
             self._uiconfig = src._uiconfig.copy()
@@ -191,6 +193,7 @@ class ui(object):
             self._disablepager = src._disablepager
             self._tweaked = src._tweaked
             self._outputui = src._outputui
+            self._terminaloutput = src._terminaloutput
 
             self.environ = src.environ
             self.callhooks = src.callhooks
@@ -755,6 +758,8 @@ class ui(object):
     def _isatty(self, fh):
         if self.configbool("ui", "nontty"):
             return False
+        if self.configbool("ui", "assume-tty"):
+            return True
         return util.isatty(fh)
 
     def disablepager(self):
@@ -783,10 +788,8 @@ class ui(object):
             command in self.configlist("pager", "ignore")
             or not self.configbool("ui", "paginate")
             or not self.configbool("pager", "attend-" + command, True)
-            # TODO: if we want to allow HGPLAINEXCEPT=pager,
-            # formatted() will need some adjustment.
-            or not self.formatted
-            or self.plain()
+            or not self.terminaloutput()
+            or self.plain("pager")
             or self._buffers
             # TODO: expose debugger-enabled on the UI object
             or "--debugger" in pycompat.sysargv
@@ -809,6 +812,7 @@ class ui(object):
         self.flush()
 
         wasformatted = self.formatted
+        wasterminaloutput = self.terminaloutput()
         if util.safehasattr(signal, "SIGPIPE"):
             signal.signal(signal.SIGPIPE, _catchterm)
         if pagercmd == "internal:streampager":
@@ -821,6 +825,7 @@ class ui(object):
             self.setconfig("ui", "formatted", wasformatted, "pager")
             util.clearcachedproperty(self, "formatted")
             self.setconfig("ui", "interactive", False, "pager")
+            self._terminaloutput = wasterminaloutput
 
             # If pager encoding is set, update the output encoding
             pagerencoding = self.config("pager", "encoding")
@@ -847,6 +852,9 @@ class ui(object):
         # The Rust pager wants utf-8 unconditionally.
         encoding.outputencoding = "utf-8"
 
+        # Pass through whether output was a terminal
+        istty = self.terminaloutput()
+
         # Replace stream with write functions from the Rust pager.
         class stream(object):
             def __init__(self, writefunc):
@@ -860,6 +868,9 @@ class ui(object):
 
             def close(self):
                 pass
+
+            def isatty(self):
+                return istty
 
         assert isinstance(self.fout, util.refcell)
         assert isinstance(self.ferr, util.refcell)
@@ -1054,6 +1065,13 @@ class ui(object):
             except ValueError:
                 pass
         return scmutil.termsize(self)[0]
+
+    def terminaloutput(self):
+        """is output to a terminal?"""
+        istty = self._terminaloutput
+        if istty is None:
+            return self._isatty(self.fout)
+        return istty
 
     @util.propertycache
     def formatted(self):

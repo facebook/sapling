@@ -2,7 +2,7 @@
 
 Setup
 
-  $ setconfig ui.color=yes ui.formatted=always ui.paginate=never
+  $ setconfig ui.color=always ui.paginate=never
   $ setconfig color.mode=ansi
   $ hg init repo
   $ cd repo
@@ -49,7 +49,7 @@ default context
 
 (check that 'ui.color=yes' match '--color=auto')
 
-  $ hg diff --nodates --config ui.formatted=no
+  $ hg diff --nodates --config ui.color=yes
   diff -r cf9f4ba66af2 a
   --- a/a
   +++ b/a
@@ -65,7 +65,7 @@ default context
 
 (check that 'ui.color=no' disable color)
 
-  $ hg diff --nodates --config ui.formatted=yes --config ui.color=no
+  $ hg diff --nodates --config ui.color=no
   diff -r cf9f4ba66af2 a
   --- a/a
   +++ b/a
@@ -81,7 +81,7 @@ default context
 
 (check that 'ui.color=always' force color)
 
-  $ hg diff --nodates --config ui.formatted=no --config ui.color=always
+  $ hg diff --nodates --config ui.color=always
   \x1b[0;1mdiff -r cf9f4ba66af2 a\x1b[0m (esc)
   \x1b[0;31;1m--- a/a\x1b[0m (esc)
   \x1b[0;32;1m+++ b/a\x1b[0m (esc)

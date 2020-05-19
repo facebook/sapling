@@ -8,10 +8,9 @@
   >     sys.stdout.write('paged empty output!\n')
   > EOF
 
-Enable ui.formatted because pager won't fire without it, and set up
-pager and tell it to use our fake pager that lets us see when the
-pager was running.
-  $ setconfig ui.formatted=yes ui.color=no
+Enable ui.assume-tty so that the pager will start, and set the pager to our
+fake pager that lets us see when the pager was running.
+  $ setconfig ui.assume-tty=yes ui.color=no
   $ cat >>$HGRCPATH <<EOF
   > [pager]
   > pager = $PYTHON $TESTTMP/fakepager.py
@@ -147,7 +146,7 @@ Attend for an abbreviated command does not work
 
 Pager should not start if stdout is not a tty.
 
-  $ hg log -l1 -q --config ui.formatted=False
+  $ hg log -l1 -q --config ui.assume-tty=no
   10:46106edeeb38
 
 Pager should be disabled if pager.pager is empty (otherwise the output would

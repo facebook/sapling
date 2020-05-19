@@ -178,14 +178,16 @@ def _modesetup(ui):
     if not always and not auto:
         return None
 
-    formatted = always or (encoding.environ.get("TERM") != "dumb" and ui.formatted)
+    havecolors = always or (
+        encoding.environ.get("TERM") != "dumb" and ui.terminaloutput()
+    )
 
     if pycompat.iswindows:
         from . import win32
 
         if not (util.istest() or win32.enablevtmode()):
             if not ui.pageractive:
-                if formatted:
+                if havecolors:
                     ui.warn(
                         _(
                             "couldn't enable VT mode for your terminal, disabling colors\n"
@@ -194,7 +196,7 @@ def _modesetup(ui):
                 if not always:
                     return None
 
-    if always or (auto and formatted):
+    if always or (auto and havecolors):
         return "ansi"
     return None
 
