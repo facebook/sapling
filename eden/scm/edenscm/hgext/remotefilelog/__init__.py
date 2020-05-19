@@ -413,11 +413,10 @@ def reposetup(ui, repo):
         remotefilelogserver.onetimesetup(ui)
 
 
-def uploadblobs(repo, revs):
+def uploadblobs(repo, nodes):
     if repo.fileslog._ruststore:
         toupload = []
-        for r in revs:
-            ctx = repo[r]
+        for ctx in repo.set("%ln - public()", nodes):
             for f in ctx.files():
                 if f not in ctx:
                     continue
