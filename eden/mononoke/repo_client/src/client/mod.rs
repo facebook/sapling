@@ -56,8 +56,7 @@ use mononoke_types::RepositoryId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
 use rand::{self, Rng};
 use remotefilelog::{
-    create_getfiles_blob, create_getpack_v1_blob, create_getpack_v2_blob,
-    get_unordered_file_history_for_multiple_nodes,
+    create_getpack_v1_blob, create_getpack_v2_blob, get_unordered_file_history_for_multiple_nodes,
 };
 use revisionstore_types::Metadata;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -91,8 +90,6 @@ define_stats! {
         histogram(10, 0, 1_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     gettreepack_ms:
         histogram(2, 0, 200, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    getfiles_ms:
-        histogram(5, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getpack_ms:
         histogram(20, 0, 2_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getcommitdata_ms:
@@ -130,7 +127,6 @@ mod ops {
     pub static BETWEEN: &str = "between";
     pub static GETBUNDLE: &str = "getbundle";
     pub static GETTREEPACK: &str = "gettreepack";
-    pub static GETFILES: &str = "getfiles";
     pub static GETPACKV1: &str = "getpackv1";
     pub static GETPACKV2: &str = "getpackv2";
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
@@ -198,7 +194,7 @@ lazy_static! {
     // clone requests can be rather long. Let's bump the timeout
     static ref CLONE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
     // getfiles requests can be rather long. Let's bump the timeout
-    static ref GETFILES_TIMEOUT: Duration = Duration::from_secs(90 * 60);
+    static ref GETPACK_TIMEOUT: Duration = Duration::from_secs(90 * 60);
     static ref LOAD_LIMIT_TIMEFRAME: Duration = Duration::from_secs(1);
     static ref SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(1);
 }
@@ -715,7 +711,7 @@ impl RepoClient {
                 };
                 let s = s
                     .buffered_weight_limited(params)
-                    .whole_stream_timeout(*GETFILES_TIMEOUT)
+                    .whole_stream_timeout(*GETPACK_TIMEOUT)
                     .map_err(process_stream_timeout_error)
                     .map({
                         cloned!(ctx);
@@ -1697,134 +1693,6 @@ impl HgCommands for RepoClient {
                 ops::GETTREEPACK,
                 move || s,
             )
-        })
-    }
-
-    // @wireprotocommand('getfiles', 'files*')
-    fn getfiles(
-        &self,
-        params: BoxStream<(HgFileNodeId, MPath), Error>,
-    ) -> BoxStream<BytesOld, Error> {
-        self.command_stream(ops::GETFILES, |ctx, command_logger| {
-            let this = self.clone();
-            // TODO(stash): make it configurable
-            let getfiles_buffer_size = 100;
-            // We buffer all parameters in memory so that we can log them.
-            // That shouldn't be a problem because requests are quite small
-            let getfiles_params = Arc::new(Mutex::new(vec![]));
-
-            let undesired_path_logger =
-                try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blobrepo()));
-
-            let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
-            let lfs_params = self
-                .repo
-                .lfs_params(ctx.session().source_hostname().as_deref());
-
-            let request_stream = move || {
-                cloned!(ctx);
-                params
-                    .map({
-                        cloned!(getfiles_params);
-                        move |param| {
-                            let mut getfiles_params = getfiles_params.lock().unwrap();
-                            getfiles_params.push(param.clone());
-                            param
-                        }
-                    })
-                    .map({
-                        cloned!(ctx);
-                        move |(node, path)| {
-                            undesired_path_logger.maybe_log_file(Some(&path));
-                            let repo = this.repo.clone();
-                            ctx.session().bump_load(Metric::EgressGetfilesFiles, 1.0);
-                            create_getfiles_blob(
-                            ctx.clone(),
-                            repo.blobrepo().clone(),
-                            node,
-                            path.clone(),
-                            lfs_params.clone(),
-                            validate_hash,
-                        )
-                        .traced(
-                            this.session.trace(),
-                            ops::GETFILES,
-                            trace_args!("node" => node.to_string(), "path" =>  path.to_string()),
-                        )
-                        .timed({
-                            cloned!(ctx);
-                            move |stats, _| {
-                                STATS::getfiles_ms
-                                    .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                                let completion_time =
-                                    stats.completion_time.as_millis_unchecked() as i64;
-                                ctx.perf_counters().set_max_counter(
-                                    PerfCounterType::GetfilesMaxLatency,
-                                    completion_time,
-                                );
-                                Ok(())
-                            }
-                        })
-                        }
-                    })
-                    .buffered(getfiles_buffer_size)
-                    .inspect({
-                        cloned!(ctx);
-                        move |bytes| {
-                            let len = bytes.len() as i64;
-                            ctx.perf_counters()
-                                .add_to_counter(PerfCounterType::GetfilesResponseSize, len);
-                            ctx.perf_counters()
-                                .set_max_counter(PerfCounterType::GetfilesMaxFileSize, len);
-
-                            STATS::total_fetched_file_size.add_value(len as i64);
-                            if ctx.session().is_quicksand() {
-                                STATS::quicksand_fetched_file_size.add_value(len as i64);
-                            }
-                        }
-                    })
-                    .whole_stream_timeout(*GETFILES_TIMEOUT)
-                    .map_err(process_stream_timeout_error)
-                    .timed({
-                        cloned!(ctx);
-                        move |stats, _| {
-                            let encoded_params = {
-                                let getfiles_params = getfiles_params.lock().unwrap();
-                                let mut encoded_params = vec![];
-                                for (node, path) in getfiles_params.iter() {
-                                    encoded_params.push(vec![
-                                        format!("{}", node),
-                                        String::from_utf8_lossy(&path.to_vec()).to_string(),
-                                    ]);
-                                }
-                                encoded_params
-                            };
-
-                            ctx.perf_counters().add_to_counter(
-                                PerfCounterType::GetfilesNumFiles,
-                                stats.count as i64,
-                            );
-
-                            command_logger.finalize_command(
-                                ctx,
-                                &stats,
-                                Some(&json! {encoded_params}),
-                            );
-
-                            Ok(())
-                        }
-                    })
-                    .map(bytes_ext::copy_from_new)
-                    .boxify()
-            };
-
-            throttle_stream(
-                &self.session,
-                Metric::EgressGetfilesFiles,
-                ops::GETFILES,
-                request_stream,
-            )
-            .boxify()
         })
     }
 
