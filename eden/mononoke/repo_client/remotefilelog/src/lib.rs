@@ -9,13 +9,9 @@
 
 mod redaction;
 
-use std::{
-    collections::HashSet,
-    fmt,
-    io::{Cursor, Write},
-};
+use std::{collections::HashSet, fmt};
 
-use anyhow::{Error, Result};
+use anyhow::Error;
 use blobrepo::{file_history::get_file_history, BlobRepo};
 use blobstore::Loadable;
 use bytes::{Bytes, BytesMut};
@@ -33,9 +29,6 @@ use revisionstore_types::Metadata;
 use thiserror::Error;
 
 use redaction::RedactionFutureExt;
-
-const METAKEYFLAG: &str = "f";
-const METAKEYSIZE: &str = "s";
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -70,73 +63,6 @@ impl fmt::Debug for RemotefilelogBlob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "RemotefilelogBlob {{ kind: {:?} }}", self.kind)
     }
-}
-
-/// Remotefilelog blob consists of file content in `node` revision and all the history
-/// of the file up to `node`
-pub fn create_getfiles_blob(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    node: HgFileNodeId,
-    path: MPath,
-    lfs_params: SessionLfsParams,
-    validate_hash: bool,
-) -> impl Future<Item = Bytes, Error = Error> {
-    let raw_content_bytes =
-        prepare_blob(ctx.clone(), repo.clone(), node, lfs_params, validate_hash)
-            .and_then(|RemotefilelogBlob { kind, data }| {
-                (Ok(kind).into_future(), data.rescue_redacted())
-            })
-            .and_then(move |(kind, (_meta_bytes, file_bytes))| {
-                use RemotefilelogBlobKind::*;
-
-                let revlog_flags = match kind {
-                    Inline(_) => RevFlags::REVIDX_DEFAULT_FLAGS,
-                    Lfs => RevFlags::REVIDX_EXTSTORED,
-                };
-
-                encode_getfiles_file_content(file_bytes, revlog_flags)
-            });
-
-    let file_history_bytes = get_file_history(ctx, repo, node, path, None)
-        .collect()
-        .and_then(serialize_history);
-
-    raw_content_bytes
-        .join(file_history_bytes)
-        .map(|(mut raw_content, file_history)| {
-            raw_content.extend(file_history);
-            raw_content
-        })
-        .and_then(|content| lz4_pyframe::compress(&content))
-        .map(|bytes| Bytes::from(bytes))
-        .boxify()
-}
-
-fn encode_getfiles_file_content(
-    raw_content: FileBytes,
-    meta_key_flag: RevFlags,
-) -> Result<Vec<u8>> {
-    let raw_content = raw_content.into_bytes();
-    // requires digit counting to know for sure, use reasonable approximation
-    let approximate_header_size = 12;
-    let mut writer = Cursor::new(Vec::with_capacity(
-        approximate_header_size + raw_content.len(),
-    ));
-
-    // Write header
-    let res = write!(
-        writer,
-        "v1\n{}{}\n{}{}\0",
-        METAKEYSIZE,
-        raw_content.len(),
-        METAKEYFLAG,
-        meta_key_flag,
-    );
-
-    res.and_then(|_| writer.write_all(&raw_content))
-        .map_err(Error::from)
-        .map(|_| writer.into_inner())
 }
 
 /// Create a blob for getpack v1. This returns a future that resolves with an estimated weight for
@@ -280,20 +206,6 @@ pub fn get_unordered_file_history_for_multiple_nodes(
         let mut used_filenodes = HashSet::new();
         move |entry| used_filenodes.insert(entry.filenode().clone())
     })
-}
-
-/// Convert file history into bytes as expected in Mercurial's loose file format.
-fn serialize_history(history: Vec<HgFileHistoryEntry>) -> Result<Vec<u8>> {
-    let approximate_history_entry_size = 81;
-    let mut writer = Cursor::new(Vec::<u8>::with_capacity(
-        history.len() * approximate_history_entry_size,
-    ));
-
-    for entry in history {
-        entry.write_to_loose_file(&mut writer)?;
-    }
-
-    Ok(writer.into_inner())
 }
 
 fn prepare_blob(

@@ -7,7 +7,7 @@
 
 use anyhow::{Error, Result};
 use mononoke_types::MPath;
-use std::{convert::TryFrom, io::Write};
+use std::convert::TryFrom;
 use types::{Parents, RepoPathBuf as ClientRepoPathBuf, WireHistoryEntry};
 
 use crate::blobnode::HgParents;
@@ -75,24 +75,6 @@ impl HgFileHistoryEntry {
 
     pub fn copyfrom(&self) -> &Option<(MPath, HgFileNodeId)> {
         &self.copyfrom
-    }
-
-    /// Serialize this entry into Mercurial's loose file format and write
-    /// the resulting bytes to the given writer (most likely representing
-    /// partially written loose file contents).
-    pub fn write_to_loose_file<W: Write>(&self, writer: &mut W) -> Result<()> {
-        let (p1, p2, copied_from) =
-            convert_parents_to_remotefilelog_format(&self.parents, self.copyfrom.as_ref());
-
-        writer.write_all(self.node.clone().into_nodehash().as_bytes())?;
-        writer.write_all(p1.into_nodehash().as_bytes())?;
-        writer.write_all(p2.into_nodehash().as_bytes())?;
-        writer.write_all(self.linknode.clone().into_nodehash().as_bytes())?;
-        if let Some(copied_from) = copied_from {
-            writer.write_all(&copied_from.to_vec())?;
-        }
-
-        Ok(write!(writer, "\0")?)
     }
 }
 
