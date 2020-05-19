@@ -28,7 +28,6 @@ pub enum Metric {
     EgressBytes,
     IngressBlobstoreBytes,
     EgressTotalManifests,
-    EgressGetfilesFiles,
     EgressGetpackFiles,
     EgressCommits,
 }
