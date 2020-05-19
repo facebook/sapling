@@ -50,7 +50,7 @@ lazy_static = "1.0"
 maplit = "1.0"
 openssl = "0.10"
 ratelimit_meter = "5"
-slog = { version="2.5", features=["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
 slog-kvfilter = "0.7"
 slog-term = "2.4.2"
 thiserror = "1.0"

@@ -26,7 +26,7 @@ stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch 
 anyhow = "1.0"
 futures = "0.1"
 tokio = "0.1"
-uuid = { version = "0.8.1", features=["v4"] }
+uuid = { version = "0.8.1", features = ["v4"] }
 
 [dev-dependencies]
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

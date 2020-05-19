@@ -28,11 +28,11 @@ futures-old = { package = "futures", version = "0.1" }
 itertools = "0.8"
 lazy_static = "1.0"
 nonzero_ext = "0.2"
-slog = { version="2.5", features=["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = "0.1"
 tokio-compat = "0.1"
-uuid = { version = "0.8.1", features=["v4"] }
+uuid = { version = "0.8.1", features = ["v4"] }
 
 [dev-dependencies]
 memblob = { path = "../memblob" }

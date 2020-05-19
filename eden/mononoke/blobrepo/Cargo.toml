@@ -47,10 +47,10 @@ futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 maplit = "1.0"
-slog = { version="2.5", features=["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
-uuid = { version = "0.8.1", features=["v4"] }
+uuid = { version = "0.8.1", features = ["v4"] }
 
 [dev-dependencies]
 benchmark_lib = { path = "../benchmark" }

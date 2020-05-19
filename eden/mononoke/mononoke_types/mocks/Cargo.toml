@@ -11,5 +11,5 @@ path = "lib.rs"
 
 [dependencies]
 mononoke_types = { path = ".." }
-chrono = { version="0.4", features=["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 lazy_static = "1.0"

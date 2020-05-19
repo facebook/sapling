@@ -14,7 +14,7 @@ path = "main.rs"
 async_limiter = { path = "../.." }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-chrono = { version="0.4", features=["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 futures = "0.1"
 futures-util = "0.3"
 nonzero_ext = "0.2"

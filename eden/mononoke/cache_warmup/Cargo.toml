@@ -29,6 +29,6 @@ futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git",
 anyhow = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-slog = { version="2.5", features=["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }

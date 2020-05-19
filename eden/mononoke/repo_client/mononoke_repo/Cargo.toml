@@ -30,5 +30,5 @@ anyhow = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 rand = { version = "0.7", features = ["small_rng"] }
-slog = { version="2.5", features=["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }

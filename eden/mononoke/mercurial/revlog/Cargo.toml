@@ -21,7 +21,7 @@ anyhow = "1.0"
 ascii = "1.0"
 bitflags = "1.2"
 bytes = { version = "0.5", features = ["serde"] }
-flate2 = { version="1.0", features=["tokio", "rust_backend"], default-features=false }
+flate2 = { version = "1.0", features = ["tokio", "rust_backend"], default-features = false }
 futures = "0.1"
 itertools = "0.8"
 memmap = "0.7"

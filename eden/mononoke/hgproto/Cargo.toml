@@ -19,7 +19,7 @@ futures = "0.1"
 hex = "0.4"
 itertools = "0.8"
 nom = { version = "3", features = [ "verbose-errors" ] }
-slog = { version="2.5", features=["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio-io = "0.1"
 

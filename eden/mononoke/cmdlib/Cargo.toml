@@ -38,10 +38,10 @@ futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 lazy_static = "1.0"
 libc = "0.2"
-log = { version="0.4.8", features = ["kv_unstable"] }
+log = { version = "0.4.8", features = ["kv_unstable"] }
 maplit = "1.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
-slog = { version="2.5", features=["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
 slog-term = "2.4.2"
 tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"

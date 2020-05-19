@@ -29,8 +29,8 @@ clap = "2.33"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 git2 = "0.13"
-linked-hash-map = { version="0.5", features=["serde_impl"] }
+linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 r2d2 = "0.8.8"
-slog = { version="2.5", features=["max_level_debug"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }

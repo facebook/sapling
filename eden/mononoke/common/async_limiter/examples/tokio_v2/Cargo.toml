@@ -13,7 +13,7 @@ path = "main.rs"
 [dependencies]
 async_limiter = { path = "../.." }
 anyhow = "1.0"
-chrono = { version="0.4", features=["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 futures-util = "0.3"
 nonzero_ext = "0.2"
 ratelimit_meter = "5"
