@@ -22,7 +22,7 @@ Check that healer queue has all items
   90
 
 Run the heal
-  $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | grep -v "Monitoring regions"
+  $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | grep -E -v "^(Monitoring|Discovered) regions:.*"
   Max replication lag is *: *s (glob)
   Found 30 blobs to be healed... Doing it
   For 30 blobs did HealStats { queue_add: 0, queue_del: 90, put_success: 0, put_failure: 0 }
@@ -57,7 +57,7 @@ Run the heal, with write errors injected, simulating store still bad
   >  sed -re 's/^(Adding source blobstores \[BlobstoreId\(1\), BlobstoreId\(2\)\] to the queue so that failed destination blob stores \[BlobstoreId\(0\)\] will be retried later).*/\1/' |
   >  uniq -c | sed 's/^ *//'
   > }
-  $ mononoke_blobstore_healer --blobstore-write-chaos-rate 1 -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -v "Monitoring regions"
+  $ mononoke_blobstore_healer --blobstore-write-chaos-rate 1 -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
   1 Max replication lag is *: *s (glob)
   1 Found 30 blobs to be healed... Doing it
   30 Adding source blobstores [BlobstoreId(1), BlobstoreId(2)] to the queue so that failed destination blob stores [BlobstoreId(0)] will be retried later
@@ -70,7 +70,7 @@ Check that healer queue still has the items, should not have drained
   60
 
 Healer run again now store recovered
-  $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -v "Monitoring regions"
+  $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
   1 Max replication lag is *: *s (glob)
   1 Found 30 blobs to be healed... Doing it
   1 For 30 blobs did HealStats { queue_add: 0, queue_del: 60, put_success: 30, put_failure: 0 }
