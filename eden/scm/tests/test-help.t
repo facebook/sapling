@@ -966,6 +966,9 @@ Test list of internal help commands
    debugdate     parse and display a date
    debugdeltachain
                  dump information about delta chains in a revlog
+   debugdetectissues
+                 various repository integrity and health checks. for automatic
+                 remediation, use doctor.
    debugdifftree
                  diff two trees
    debugdirs     list directories

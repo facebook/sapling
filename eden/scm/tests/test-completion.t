@@ -104,6 +104,7 @@ Show debug commands if there are no other candidates
   debugdata
   debugdate
   debugdeltachain
+  debugdetectissues
   debugdifftree
   debugdirs
   debugdirstate
@@ -309,6 +310,7 @@ Show all commands + options
   debugdata: changelog, manifest, dir
   debugdate: extended, range
   debugdeltachain: changelog, manifest, dir, template
+  debugdetectissues: 
   debugdifftree: rev, include, exclude, style, template
   debugdirs: rev, print0
   debugdirstate: nodates, datesort, json

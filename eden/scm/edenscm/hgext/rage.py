@@ -29,6 +29,7 @@ from edenscm.mercurial import (
     cmdutil,
     color,
     commands,
+    detectissues,
     encoding,
     error,
     extensions,
@@ -331,6 +332,7 @@ def _makerage(ui, repo, **opts):
         ("hg config (local)", lambda: "\n".join(localconfig(ui))),
         ("hg sparse", lambda: hgcmd("sparse")),
         ("hg debuginstall", lambda: hgcmd("debuginstall")),
+        ("hg debugdetectissues", lambda: hgcmd("debugdetectissues")),
         ("usechg", usechginfo),
         (
             "uptime",

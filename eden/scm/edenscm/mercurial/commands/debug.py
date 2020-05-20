@@ -37,6 +37,7 @@ from .. import (
     context,
     dagparser,
     dagutil,
+    detectissues,
     drawdag,
     edenfs,
     encoding,
@@ -493,6 +494,22 @@ def debugcolor(ui, **opts):
         return _debugdisplaystyle(ui)
     else:
         return _debugdisplaycolor(ui)
+
+
+@command("debugdetectissues", [], "")
+def debugdetectissues(ui, repo):
+    """various repository integrity and health checks. for automatic remediation, use doctor."""
+
+    findings = detectissues.detectissues(repo)
+
+    for detectorname, issues in findings.items():
+        ui.write(
+            _("ran issue detector '%s', found %s issues\n")
+            % (detectorname, len(issues))
+        )
+        for issue in issues:
+            ui.write(_("'%s': '%s'\n") % (issue.category, issue.message))
+            ui.log("repoissues", issue.message, category=issue.category, **issue.data)
 
 
 def _debugdisplaycolor(ui):
