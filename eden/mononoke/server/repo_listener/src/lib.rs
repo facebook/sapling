@@ -24,7 +24,7 @@ use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
 use openssl::ssl::SslAcceptor;
-use slog::Logger;
+use slog::{debug, Logger};
 use sql_ext::facebook::MysqlOptions;
 use std::collections::{HashMap, HashSet};
 use std::sync::{atomic::AtomicBool, Arc};
@@ -66,6 +66,7 @@ pub fn create_repo_listeners(
         &root_log,
     )
     .and_then(move |handlers| {
+        debug!(root_log, "Mononoke server is listening on {}", sockname);
         connection_acceptor(
             fb,
             common_config,
