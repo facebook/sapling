@@ -1157,6 +1157,8 @@ impl LfsRemote {
             None
         };
 
+        let proxy_url = proxy_url.and_then(|s| if s.is_empty() { None } else { Some(s) });
+
         // The proxy can be specified without the http scheme at the beginning, for instance:
         // `http_proxy=fwdproxy:8082` is valid but isn't an http url, ie the proxy code below would
         // simply not send http traffic towards the proxy.
@@ -2005,6 +2007,20 @@ mod tests {
             let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
             let err = resp.err().unwrap();
             assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_empty_proxy() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let mut config = make_lfs_config(&cachedir);
+
+            config.set("http_proxy", "host", Some(""), &Default::default());
+
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            LfsRemote::new(lfs, None, &config)?;
 
             Ok(())
         }
