@@ -54,6 +54,8 @@ use crate::log;
 
 use self::cache::parse_caching;
 
+pub const CONFIG_PATH: &str = "mononoke-config-path";
+
 const REPO_ID: &str = "repo-id";
 const REPO_NAME: &str = "repo-name";
 const SOURCE_REPO_GROUP: &str = "source-repo";
@@ -66,7 +68,6 @@ const ENABLE_MCROUTER: &str = "enable-mcrouter";
 const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
 const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
 const RUNTIME_THREADS: &str = "runtime-threads";
-const CONFIG_PATH: &str = "mononoke-config-path";
 const TUNABLES_CONFIG: &str = "tunables-config";
 const DISABLE_TUNABLES: &str = "disable-tunables";
 

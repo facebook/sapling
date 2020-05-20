@@ -8,7 +8,7 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use cached_config::ConfigStore;
 use clap::{App, ArgMatches};
 use cmdlib::{args, monitoring::ReadyFlagService};
@@ -27,12 +27,15 @@ const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
 const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let app = App::new("mononoke server")
+    let app = args::MononokeApp::new("mononoke server")
+        .with_shutdown_timeout_args()
+        .with_all_repos()
+        .build()
         .version("0.0.0")
         .about("serve repos")
         .args_from_usage(
             r#"
-            <cpath>      -P, --config_path [PATH]           'path to the config files'
+            [cpath]      -P, --config_path [PATH]           'path to the config files (DEPRECATED)'
 
                           --listening-host-port <PATH>           'tcp address to listen to in format `host:port`'
 
@@ -47,19 +50,21 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --local-configerator-path [PATH]                    'local path to fetch configerator configs from. used only if --test-instance is '
             "#,
         );
-    let app = cmdlib::args::add_shutdown_timeout_args(app);
-    let app = cmdlib::args::add_mysql_options_args(app);
-    let app = cmdlib::args::add_mcrouter_args(app);
-    let app = cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */);
-    let app = cmdlib::args::add_disabled_hooks_args(app);
-    let app = cmdlib::args::add_logger_args(app);
-    let app = cmdlib::args::add_tunables_args(app);
-    cmdlib::args::add_blobstore_args(app)
+
+    let app = args::add_mcrouter_args(app);
+    let app = args::add_disabled_hooks_args(app);
+    app
 }
 
+// TODO(harveyhunt): Remove this once all uses of --config_path are gone.
 fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    let cpath = PathBuf::from(matches.value_of("cpath").unwrap());
-    RepoConfigs::read_configs(fb, cpath)
+    if let Some(config_path) = matches.value_of("cpath") {
+        RepoConfigs::read_configs(fb, config_path)
+    } else if let Some(config_path) = matches.value_of(args::CONFIG_PATH) {
+        RepoConfigs::read_configs(fb, config_path)
+    } else {
+        Err(anyhow!("a config path must be specified"))
+    }
 }
 
 #[fbinit::main]
