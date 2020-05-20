@@ -138,26 +138,10 @@ where
         }
     };
 
-    let last_changesets = unode_entries.into_iter().map({
-        cloned!(ctx, repo);
-        move |entry| {
-            cloned!(ctx, repo);
-            async move {
-                let unode = entry
-                    .load(ctx.clone(), &repo.get_blobstore())
-                    .compat()
-                    .await?;
-                Ok::<_, FastlogError>(match unode {
-                    Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
-                    Entry::Leaf(file_unode) => file_unode.linknode().clone(),
-                })
-            }
-        }
-    });
-    let last_changesets = future::try_join_all(last_changesets).await?;
+    let mut history_graph = HashMap::new();
+    let last_changesets =
+        fetch_linknodes_and_update_graph(&ctx, &repo, unode_entries, &mut history_graph).await?;
 
-    let history_graph =
-        HashMap::from_iter(last_changesets.clone().into_iter().map(|cs| (cs, None)));
     visited.extend(last_changesets.clone().into_iter());
 
     let mut last_changesets = last_changesets.into_iter();
@@ -196,6 +180,35 @@ where
             .try_flatten()
         })
         .boxed())
+}
+
+async fn fetch_linknodes_and_update_graph(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    unode_entries: Vec<UnodeEntry>,
+    history_graph: &mut CommitGraph,
+) -> Result<Vec<ChangesetId>, FastlogError> {
+    let linknodes = unode_entries.into_iter().map({
+        cloned!(ctx, repo);
+        move |entry| {
+            cloned!(ctx, repo);
+            async move {
+                let unode = entry
+                    .load(ctx.clone(), &repo.get_blobstore())
+                    .compat()
+                    .await?;
+                Ok::<_, FastlogError>(match unode {
+                    Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
+                    Entry::Leaf(file_unode) => file_unode.linknode().clone(),
+                })
+            }
+        }
+    });
+    let linknodes = future::try_join_all(linknodes).await?;
+    for linknode in &linknodes {
+        history_graph.insert(*linknode, None);
+    }
+    Ok(linknodes)
 }
 
 /// Returns history for a given unode if it exists.
