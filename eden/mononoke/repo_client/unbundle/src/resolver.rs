@@ -65,6 +65,7 @@ mod UNBUNDLE_STATS {
         bookmark_only_pushrebase: dynamic_timeseries("{}.bookmark_only_pushrebase", (reponame: String); Rate, Sum),
         infinitepush: dynamic_timeseries("{}.infinitepush", (reponame: String); Rate, Sum),
         resolver_error: dynamic_timeseries("{}.resolver_error", (reponame: String); Rate, Sum),
+        total_unbundles: dynamic_timeseries("{}.total_unbundles", (reponame: String); Rate, Sum),
     }
 
     pub use self::STATS::*;
@@ -237,6 +238,7 @@ pub async fn resolve<'a>(
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
 ) -> Result<PostResolveAction, BundleResolverError> {
+    UNBUNDLE_STATS::total_unbundles.add_value(1, (repo.name().to_string(),));
     let resolver = Bundle2Resolver::new(ctx, repo, infinitepush_writes_allowed, pushrebase_flags);
     let (stream_header, bundle2) = resolver.resolve_stream_params(bundle2).await?;
     let bundle2 = resolver.resolve_replycaps(bundle2).await?;
