@@ -26,6 +26,11 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyNone> {
     m.add(py, "dag", pydag::init_module(py, &name)?)?;
     m.add(py, "diffhelpers", pydiffhelpers::init_module(py, &name)?)?;
     m.add(py, "dirs", pydirs::init_module(py, &name)?)?;
+    m.add(
+        py,
+        "dynamicconfig",
+        pydynamicconfig::init_module(py, &name)?,
+    )?;
     m.add(py, "edenapi", pyedenapi::init_module(py, &name)?)?;
     m.add(py, "error", pyerror::init_module(py, &name)?)?;
     m.add(py, "fs", pyfs::init_module(py, &name)?)?;

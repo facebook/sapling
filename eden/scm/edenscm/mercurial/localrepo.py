@@ -439,14 +439,21 @@ class localrepository(object):
         # Callback are in the form: func(repo, roots) --> processed root.
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
-        try:
+
+        reponame = self.ui.config("remotefilelog", "reponame", "")
+        # If the repo already exists, load the existing configs
+        if self.localvfs.isdir():
             uiconfig.loaddynamicconfig(self.ui, self.path)
             # Load the primary config after the dynamic one, so it overwrites it
             self.ui.readconfig(self.localvfs.join("hgrc"), self.root)
             uiconfig.validatedynamicconfig(self.ui)
-            self._loadextensions()
-        except IOError:
-            pass
+        else:
+            # If the repo does not already exists, load the dynamic configs in
+            # memory only. They will be written to disk later once the localvfs
+            # is created.
+            uiconfig.applydynamicconfig(self.ui, reponame)
+
+        self._loadextensions()
 
         cacheaudited = self.ui.configbool("unsafe", "wvfsauditorcache")
         self.wvfs.audit._cached = cacheaudited
@@ -463,8 +470,10 @@ class localrepository(object):
             if engine.revlogheader():
                 self.supported.add("exp-compression-%s" % name)
 
+        created = False
         if not self.localvfs.isdir():
             if create:
+                created = True
                 self.requirements = newreporequirements(self)
                 if "store" in self.requirements:
                     self.storerequirements = newrepostorerequirements(self)
@@ -522,6 +531,12 @@ class localrepository(object):
             if inst.errno != errno.ENOENT:
                 raise
             self.sharedvfs = self.localvfs
+
+        # If this is a new repo, generate the dynamic configs. We must do this
+        # after the sharedvfs is set up so we can generate the dynamic config in
+        # the shared vfs.
+        if created:
+            uiconfig.generatedynamicconfig(self.ui, reponame, self.sharedpath)
 
         self.store = store.store(
             self.requirements,
