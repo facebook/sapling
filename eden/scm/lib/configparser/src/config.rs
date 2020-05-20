@@ -453,7 +453,9 @@ impl ConfigSet {
                     {
                         Some(l) => l,
                         None => {
-                            continue;
+                            // It's possible the superset was set from in-memory, in which case the
+                            // source will match the superset location.
+                            value.source().to_string()
                         }
                     };
 

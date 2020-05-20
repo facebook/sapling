@@ -134,7 +134,7 @@ Verify we don't regenerate configs if the Mercurial version hasn't changed
   $ hg config section3.key3
   value3
 
-Verify we load dynamicconfigs during clone
+Verify we load and verify dynamicconfigs during clone
   $ newserver server
   $ cd $TESTTMP
   $ export HG_TEST_DYNAMICCONFIG="$TESTTMP/test_hgrc"
@@ -142,7 +142,14 @@ Verify we load dynamicconfigs during clone
   > [hooks]
   > pretxnclose = echo "Hook ran!"
   > EOF
-  $ hg clone ssh://user@dummy/server client2
+  $ cat > good_hgrc <<EOF
+  > [hooks]
+  > pretxnclose = echo "Hook ran!"
+  > [foo]
+  > bar=True
+  > EOF
+  $ hg clone ssh://user@dummy/server client2 --configfile $TESTTMP/good_hgrc --config configs.testdynamicconfigsubset=good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True
+  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   no changes found
   Hook ran!
   updating to branch default
