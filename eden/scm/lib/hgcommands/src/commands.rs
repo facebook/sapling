@@ -13,6 +13,7 @@ use clidispatch::{
     repo::Repo,
 };
 use cliparser::define_flags;
+use filetime::{set_file_mtime, FileTime};
 
 use blackbox::{event::Event, json, SessionId};
 use dynamicconfig::Generator;
@@ -20,8 +21,9 @@ use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
 use revisionstore::{
     CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, UnionHgIdDataStore,
 };
-use std::{fs, path::Path, str::FromStr};
 use types::{HgId, Key, RepoPathBuf};
+
+use std::{fs, path::Path, str::FromStr};
 
 use crate::status;
 
@@ -303,7 +305,15 @@ pub fn debugdynamicconfig(_opts: NoOpts, _io: &mut IO, repo: Repo) -> Result<u8>
         config_str
     );
 
-    let repo_path = repo.shared_dot_hg_path();
-    fs::write(repo_path.join("hgrc.dynamic"), config_str)?;
+    let hgrc_path = repo.shared_dot_hg_path().join("hgrc.dynamic");
+
+    // If the file exists and will be unchanged, just update the mtime.
+    if hgrc_path.exists()
+        && fs::read_to_string(&hgrc_path).unwrap_or_else(|_| "".to_string()) == config_str
+    {
+        set_file_mtime(hgrc_path, FileTime::now())?;
+    } else {
+        fs::write(hgrc_path, config_str)?;
+    }
     Ok(0)
 }

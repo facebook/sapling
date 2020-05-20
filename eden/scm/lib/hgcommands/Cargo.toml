@@ -22,6 +22,7 @@ edenapi = { path = "../edenapi" }
 edenfs-client = { path = "../edenfs-client"}
 encoding = { path = "../encoding" }
 env_logger = "0.7"
+filetime = "0.2.9"
 flate2 = "1"
 hgtime = { path = "../hgtime"}
 indexedlog = { path = "../indexedlog" }
