@@ -23,6 +23,9 @@ use std::sync::{
 };
 use std::time::Duration;
 
+#[cfg(fbcode_build)]
+use openssl as _; // suppress unused crate warning - only used outside fbcode
+
 const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
 const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
 
