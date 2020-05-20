@@ -113,6 +113,8 @@ where
         }
     };
     let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
+
+    let mut visited = HashSet::new();
     // there might be more than one unode entry: if the given path was
     // deleted in several different branches, we have to gather history
     // from all of them
@@ -120,7 +122,6 @@ where
         Some(PathState::Deleted(deletion_nodes)) => {
             // we want to show commit, where path was deleted
             let mut entries = vec![];
-            let mut visited = HashSet::new();
             for (deleted_linknode, last_unode_entry) in deletion_nodes {
                 if visited.insert(deleted_linknode.clone()) {
                     // there might be one linknode for the several entries
@@ -157,7 +158,7 @@ where
 
     let history_graph =
         HashMap::from_iter(last_changesets.clone().into_iter().map(|cs| (cs, None)));
-    let visited = HashSet::from_iter(last_changesets.clone().into_iter());
+    visited.extend(last_changesets.clone().into_iter());
 
     let mut last_changesets = last_changesets.into_iter();
     let the_last_change = last_changesets.next().ok_or_else(not_found_err)?;
