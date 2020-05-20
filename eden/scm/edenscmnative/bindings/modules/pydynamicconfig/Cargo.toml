@@ -10,6 +10,7 @@ cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 dynamicconfig = { path = "../../../../lib/dynamicconfig" }
 configparser = { path = "../../../../lib/configparser" }
 pyconfigparser = { path = "../pyconfigparser" }
+version = { path = "../../../../lib/version" }
 
 [features]
 python2 = ["cpython/python27-sys", "cpython-ext/python2"]
