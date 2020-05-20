@@ -26,15 +26,14 @@ class BasicTestBase(testcase.EdenRepoTest):
         self.repo.write_file("bdir/test.sh", "#!/bin/bash\necho test\n", mode=0o755)
         self.repo.write_file("bdir/noexec.sh", "#!/bin/bash\necho test\n")
 
-        try:
-            self.repo.symlink("slink", "hello")
-            self.created_symlink = True
-        except OSError:
-            # On Windows symlinks can only be created if we have administrator
-            # privileges.
-            if sys.platform != "win32":
-                raise
-            self.created_symlink = False
+        self.created_symlink = False
+        # TODO(xavierd): EdenFS on Windows doesn't yet support symlinks
+        if sys.platform != "win32":
+            try:
+                self.repo.symlink("slink", "hello")
+                self.created_symlink = True
+            except OSError:
+                pass
 
         self.repo.commit("Initial commit.")
 
