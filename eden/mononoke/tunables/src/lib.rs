@@ -72,27 +72,62 @@ pub struct MononokeTunables {
     undesired_path_prefix_to_log: TunableString,
 }
 
+fn log_tunables(tunables: &TunablesStruct) -> String {
+    serde_json::to_string(tunables)
+        .unwrap_or_else(|e| format!("failed to serialize tunables: {}", e))
+}
+
 pub fn init_tunables_worker(
     logger: Logger,
     conf_handle: ConfigHandle<TunablesStruct>,
 ) -> Result<()> {
-    update_tunables(conf_handle.get())?;
+    let init_tunables = conf_handle.get();
+    debug!(
+        logger,
+        "Initializing tunables: {}",
+        log_tunables(&init_tunables)
+    );
+    update_tunables(init_tunables.clone())?;
 
     thread::Builder::new()
         .name("mononoke-tunables".into())
-        .spawn({ move || worker(conf_handle, logger) })
+        .spawn({ move || worker(conf_handle, init_tunables, logger) })
         .expect("Can't spawn tunables updater");
 
     Ok(())
 }
 
-fn worker(config_handle: ConfigHandle<TunablesStruct>, logger: Logger) {
+fn worker(
+    config_handle: ConfigHandle<TunablesStruct>,
+    init_tunables: Arc<TunablesStruct>,
+    logger: Logger,
+) {
+    // Previous value of the tunables.  If we fail to update tunables,
+    // this will be `None`.
+    let mut old_tunables = Some(init_tunables);
     loop {
         // TODO: Instead of refreshing tunables every loop iteration,
         // update cached_config to notify us when our config has changed.
-        debug!(logger, "Refreshing tunables...");
-        if let Err(e) = update_tunables(config_handle.get()) {
-            warn!(logger, "Failed to refresh tunables: {}", e);
+        let new_tunables = config_handle.get();
+        if Some(&new_tunables) != old_tunables.as_ref() {
+            debug!(
+                logger,
+                "Updating tunables, old: {}, new: {}",
+                old_tunables
+                    .as_deref()
+                    .map(log_tunables)
+                    .unwrap_or_else(|| String::from("unknown")),
+                log_tunables(&new_tunables),
+            );
+            match update_tunables(new_tunables.clone()) {
+                Ok(_) => {
+                    old_tunables = Some(new_tunables);
+                }
+                Err(e) => {
+                    warn!(logger, "Failed to refresh tunables: {}", e);
+                    old_tunables = None;
+                }
+            }
         }
 
         thread::sleep(REFRESH_INTERVAL);
