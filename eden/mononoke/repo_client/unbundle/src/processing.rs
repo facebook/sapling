@@ -694,7 +694,7 @@ async fn normal_pushrebase(
     match result {
         Ok(ref res) => {
             scuba_logger
-                .add("pushrebase_retry_num", res.retry_num)
+                .add("pushrebase_retry_num", res.retry_num.0)
                 .log_with_msg("Pushrebase finished", None);
         }
         Err(ref err) => {

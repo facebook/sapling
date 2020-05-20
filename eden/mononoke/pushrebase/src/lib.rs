@@ -79,6 +79,7 @@ use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
+use tunables::tunables;
 
 pub use hook::{PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook};
 
@@ -122,6 +123,13 @@ pub enum PushrebaseError {
     RootTooFarBehind,
     #[error("Internal error: {0:?}")]
     Error(#[source] Error),
+    #[error("Internal error: failed to validate commit {source_cs_id} (rebased to {rebased_cs_id}): {0:?}")]
+    ValidationError {
+        source_cs_id: ChangesetId,
+        rebased_cs_id: ChangesetId,
+        #[source]
+        err: Error,
+    },
 }
 
 type CsIdConvertor =
@@ -208,10 +216,19 @@ fn rebased_changesets_into_pairs(
         .collect()
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PushrebaseRetryNum(pub usize);
+
+impl PushrebaseRetryNum {
+    fn is_first(&self) -> bool {
+        self.0 == 0
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PushrebaseSuccessResult {
     pub head: ChangesetId,
-    pub retry_num: usize,
+    pub retry_num: PushrebaseRetryNum,
     pub rebased_changesets: Vec<PushrebaseChangesetPair>,
 }
 
@@ -305,6 +322,8 @@ async fn rebase_in_loop(
     let mut latest_rebase_attempt = root;
 
     for retry_num in 0..MAX_REBASE_ATTEMPTS {
+        let retry_num = PushrebaseRetryNum(retry_num);
+
         let hooks = try_join_all(
             prepushrebase_hooks
                 .iter()
@@ -351,6 +370,7 @@ async fn rebase_in_loop(
             &onto_bookmark,
             maybe_hg_replay_data,
             hooks,
+            retry_num,
         )
         .await?;
 
@@ -379,6 +399,7 @@ async fn do_rebase(
     onto_bookmark: &OntoBookmarkParams,
     maybe_hg_replay_data: &Option<HgReplayData>,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
+    retry_num: PushrebaseRetryNum,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
     let (new_head, rebased_changesets) = create_rebased_changesets(
         &ctx,
@@ -390,6 +411,10 @@ async fn do_rebase(
         &mut hooks,
     )
     .await?;
+
+    for (old_id, (new_id, _)) in &rebased_changesets {
+        maybe_validate_commit(ctx, repo, old_id, new_id, retry_num).await?;
+    }
 
     let hooks = try_join_all(
         hooks
@@ -409,6 +434,50 @@ async fn do_rebase(
         hooks,
     )
     .await
+}
+
+async fn maybe_validate_commit(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    old_id: &ChangesetId,
+    bcs_id: &ChangesetId,
+    retry_num: PushrebaseRetryNum,
+) -> Result<(), PushrebaseError> {
+    if tunables().get_pushrebase_disable_rebased_commit_validation() {
+        return Ok(());
+    }
+
+    // Validation is expensive, so do it only once
+    if !retry_num.is_first() {
+        return Ok(());
+    }
+
+    let bcs = bcs_id
+        .load(ctx.clone(), repo.blobstore())
+        .compat()
+        .map_err(Error::from)
+        .await?;
+    if !bcs.is_merge() {
+        return Ok(());
+    }
+
+    // Generate hg changeset to check that this rebased bonsai commit
+    // is valid.
+    repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs_id)
+        .compat()
+        .map_err(|err| PushrebaseError::ValidationError {
+            source_cs_id: *old_id,
+            rebased_cs_id: *bcs_id,
+            err,
+        })
+        .await?;
+
+    // FIXME: it would also be great to do a manifest diff for old_id
+    // and rebased bcs_id and check that this diffs are the same.
+    // However the caveat here is that we are not sure if diffs are the same
+    // in practice - in some cases Mononoke generates hg filenodes
+    // that are different from what mercurial would have generated.
+    Ok(())
 }
 
 // There should only be one head in the pushed set
@@ -2497,7 +2566,7 @@ mod tests {
             let res = try_join_all(futs).await?;
             let mut has_retry_num_bigger_1 = false;
             for r in res {
-                if r.retry_num > 1 {
+                if r.retry_num.0 > 1 {
                     has_retry_num_bigger_1 = true;
                 }
             }
@@ -2608,7 +2677,7 @@ mod tests {
             let res = try_join_all(futs).await?;
             let mut has_retry_num_bigger_1 = false;
             for r in res {
-                if r.retry_num > 1 {
+                if r.retry_num.0 > 1 {
                     has_retry_num_bigger_1 = true;
                 }
             }
@@ -3325,6 +3394,111 @@ mod tests {
         .await?;
 
         Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_commit_validation(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        // Pushrebase hook that deletes "base" file from the list of file changes
+        struct InvalidPushrebaseHook {}
+
+        #[async_trait]
+        impl PushrebaseHook for InvalidPushrebaseHook {
+            async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+                Ok(Box::new(InvalidPushrebaseHook {}))
+            }
+        }
+
+        #[async_trait]
+        impl PushrebaseCommitHook for InvalidPushrebaseHook {
+            fn post_rebase_changeset(
+                &mut self,
+                _bcs_old: ChangesetId,
+                bcs_new: &mut BonsaiChangesetMut,
+            ) -> Result<(), Error> {
+                bcs_new.file_changes.remove(&MPath::new("base")?);
+                Ok(())
+            }
+
+            async fn into_transaction_hook(
+                self: Box<Self>,
+                _ctx: &CoreContext,
+                _changesets: &RebasedChangesets,
+            ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
+                Ok(self)
+            }
+        }
+
+        #[async_trait]
+        impl PushrebaseTransactionHook for InvalidPushrebaseHook {
+            async fn populate_transaction(
+                &self,
+                _ctx: &CoreContext,
+                txn: Transaction,
+            ) -> Result<Transaction, BookmarkTransactionError> {
+                Ok(txn)
+            }
+        }
+
+        // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
+        // on top of master
+        let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("base", "base")
+            .commit()
+            .await?;
+
+        let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+            .add_file("p1", "p1")
+            .commit()
+            .await?;
+
+        let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+            .add_file("p2", "p2")
+            .commit()
+            .await?;
+
+        let bcs_id_merge = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
+            .add_file("merge", "merge")
+            .commit()
+            .await?;
+
+        // Modify base file again
+        let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
+            .add_file("base", "base2")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &repo, "master")
+            .set_to(bcs_id_master)
+            .await?;
+
+        let hook: Box<dyn PushrebaseHook> = Box::new(InvalidPushrebaseHook {});
+        let hooks = vec![hook];
+
+        let bcs_merge = bcs_id_merge
+            .load(ctx.clone(), repo.blobstore())
+            .compat()
+            .await?;
+
+        let book = master_bookmark();
+        let res = do_pushrebase_bonsai(
+            &ctx,
+            &repo,
+            &Default::default(),
+            &book,
+            &hashset![bcs_merge.clone()],
+            &None,
+            &hooks[..],
+        )
+        .await;
+
+        match res {
+            Err(PushrebaseError::ValidationError { .. }) => Ok(()),
+            Err(err) => Err(err.into()),
+            Ok(_) => Err(format_err!("should have failed")),
+        }
     }
 
     async fn ensure_content(

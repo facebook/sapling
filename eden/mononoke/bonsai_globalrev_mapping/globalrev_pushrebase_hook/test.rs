@@ -228,7 +228,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
     let results = try_join_all(futs).await?;
 
     // Check that we had some retries
-    assert!(results.iter().fold(0, |sum, e| sum + e.retry_num) > 0);
+    assert!(results.iter().fold(0, |sum, e| sum + e.retry_num.0) > 0);
 
     let mut next_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
     let mut next_globalrev = START_COMMIT_GLOBALREV + n - 1;
