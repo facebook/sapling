@@ -7,7 +7,7 @@
 
 CREATE TABLE `reversefillerqueue` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT,
-  `bundle` varchar(255) NOT NULL,
+  `bundle` varbinary(255) NOT NULL,
   `reponame` varbinary(255) NOT NULL,
   `slice` UNSIGNED INTEGER DEFAULT '0',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
