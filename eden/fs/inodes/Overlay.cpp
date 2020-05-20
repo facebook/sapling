@@ -231,7 +231,7 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     saveOverlayDir(inodeNumber, result);
   }
 
-  return std::move(result);
+  return optional<DirContents>{std::move(result)};
 }
 
 void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {

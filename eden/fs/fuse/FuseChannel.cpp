@@ -271,7 +271,7 @@ static iovec inline make_iovec(const T& t) {
 }
 
 static std::string flagsToLabel(
-    const std::unordered_map<int32_t, const char*>& labels,
+    const std::unordered_map<uint32_t, const char*>& labels,
     uint32_t flags) {
   std::vector<const char*> bits;
   for (const auto& it : labels) {
@@ -279,7 +279,7 @@ static std::string flagsToLabel(
       // Sometimes a define evaluates to zero; it's not useful so skip it
       continue;
     }
-    if ((static_cast<decltype(it.first)>(flags) & it.first) == it.first) {
+    if ((flags & it.first) == it.first) {
       bits.push_back(it.second);
       flags &= ~it.first;
     }
@@ -292,7 +292,7 @@ static std::string flagsToLabel(
   return folly::format("{} unknown:0x{:x}", str, flags).str();
 }
 
-static const std::unordered_map<int32_t, const char*> capsLabels = {
+static const std::unordered_map<uint32_t, const char*> capsLabels = {
     {FUSE_ASYNC_READ, "ASYNC_READ"},
     {FUSE_POSIX_LOCKS, "POSIX_LOCKS"},
     {FUSE_ATOMIC_O_TRUNC, "ATOMIC_O_TRUNC"},

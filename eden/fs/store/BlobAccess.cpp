@@ -28,7 +28,7 @@ folly::Future<BlobCache::GetResult> BlobAccess::getBlob(
     ImportPriority priority) {
   auto result = blobCache_->get(hash, interest);
   if (result.blob) {
-    return std::move(result);
+    return folly::Future<BlobCache::GetResult>{std::move(result)};
   }
 
   return objectStore_->getBlob(hash, context, priority)
