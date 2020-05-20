@@ -492,7 +492,7 @@ Make sure a broken uisetup doesn't globally break hg:
   > EOF
 
 Even though the extension fails during uisetup, hg is still basically usable:
-  $ hg --config extensions.baduisetup=$TESTTMP/baduisetup.py version
+  $ hg --config extensions.baduisetup=$TESTTMP/baduisetup.py log -r . -T '.\n'
   Traceback (most recent call last):
     File "*/mercurial/extensions.py", line *, in _runuisetup (glob)
       uisetup(ui)
@@ -500,12 +500,7 @@ Even though the extension fails during uisetup, hg is still basically usable:
       1/0
   ZeroDivisionError: integer division or modulo by zero
   warning: failed to set up extension baduisetup: integer division or modulo by zero
-  Mercurial Distributed SCM (version *) (glob)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-2017 Matt Mackall and others
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  .
 
   $ cd ..
 
@@ -956,167 +951,6 @@ No declared supported version, extension complains:
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
   ** Mercurial Distributed SCM * (glob)
 
-empty declaration of supported version, extension complains:
-  $ echo "testedwith = ''" >> throw.py
-  $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
-  ** * has crashed: (glob)
-
-If the extension specifies a buglink, show that:
-  $ echo 'buglink = "http://example.com/bts"' >> throw.py
-  $ rm -f throw.pyc throw.pyo
-  $ rm -Rf __pycache__
-  $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
-  ** * has crashed: (glob)
-
-If the extensions declare outdated versions, accuse the older extension first:
-  $ echo "from edenscm.mercurial import util" >> older.py
-  $ echo "util.version = lambda:'2.2'" >> older.py
-  $ echo "testedwith = '1.9.3'" >> older.py
-  $ echo "testedwith = '2.1.1'" >> throw.py
-  $ rm -f throw.pyc throw.pyo
-  $ rm -Rf __pycache__
-  $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
-  >   throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** * has crashed: (glob)
-
-One extension only tested with older, one only with newer versions:
-  $ echo "util.version = lambda:'2.1'" >> older.py
-  $ rm -f older.pyc older.pyo
-  $ rm -Rf __pycache__
-  $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
-  >   throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** * has crashed: (glob)
-
-Older extension is tested with current version, the other only with newer:
-  $ echo "util.version = lambda:'1.9.3'" >> older.py
-  $ rm -f older.pyc older.pyo
-  $ rm -Rf __pycache__
-  $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
-  >   throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** * has crashed: (glob)
-
-Declare the version as supporting this hg version, show regular bts link:
-  $ hgver=`hg debuginstall -T '{hgver}'`
-  $ echo 'testedwith = """'"$hgver"'"""' >> throw.py
-  $ if [ -z "$hgver" ]; then
-  >   echo "unable to fetch a mercurial version. Make sure __version__ is correct";
-  > fi
-  $ rm -f throw.pyc throw.pyo
-  $ rm -Rf __pycache__
-  $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** * has crashed: (glob)
-
-Patch version is ignored during compatibility check
-  $ echo "testedwith = '3.2'" >> throw.py
-  $ echo "util.version = lambda:'3.2.2'" >> throw.py
-  $ rm -f throw.pyc throw.pyo
-  $ rm -Rf __pycache__
-  $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*' | grep -v 'possibly-broken' | grep -v 'Please disable'
-  ** * has crashed: (glob)
-
-Test version number support in 'hg version':
-  $ echo '__version__ = (1, 2, 3)' >> throw.py
-  $ rm -f throw.pyc throw.pyo
-  $ rm -Rf __pycache__
-  $ hg version -v | grep -v external
-  Mercurial Distributed SCM (version *) (glob)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-* Matt Mackall and others (glob)
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-  
-  Enabled extensions:
-  
-
-  $ hg version -v --config extensions.throw=throw.py | egrep '(^external|throw)'
-    throw\s* external  1.2.3 (re)
-  $ echo 'getversion = lambda: "1.twentythree"' >> throw.py
-  $ rm -f throw.pyc throw.pyo
-  $ rm -Rf __pycache__
-  $ hg version -v --config extensions.throw=throw.py | egrep 'throw'
-    throw \s* external  1.twentythree (re)
-
-  $ hg version -q --config extensions.throw=throw.py
-  Mercurial Distributed SCM (version *) (glob)
-
-Test JSON output of version:
-
-  $ hg version -Tjson
-  [
-   {
-    "extensions": [*], (glob)
-    "ver": "*" (glob)
-   }
-  ]
-
-  $ hg version --config extensions.throw=throw.py -Tjson
-  [
-   {
-    "extensions": [{"bundled": false, "name": "throw", "ver": "1.twentythree"}, *], (glob)
-    "ver": "3.2.2"
-   }
-  ]
-
-  $ hg version -Tjson
-  [
-   {
-    "extensions": [{"bundled": false, "name": "conflictinfo", "ver": null}, *], (glob)
-    "ver": "*" (glob)
-   }
-  ]
-
-Test template output of version:
-
-  $ hg version --config extensions.throw=throw.py --config extensions.journal= \
-  > -T'{extensions % "{pad(name, 8)}  {pad(ver, 16)}  ({if(bundled, "internal", "external")})\n"}' | egrep '(throw|journal)'
-  throw     1.twentythree     (external)
-  journal                     (internal)
-
-Refuse to load extensions with minimum version requirements
-
-  $ cat > minversion1.py << EOF
-  > from edenscm.mercurial import util
-  > util.version = lambda: '3.5.2'
-  > minimumhgversion = '3.6'
-  > EOF
-  $ hg --config extensions.minversion=minversion1.py version
-  (third party extension minversion requires version 3.6 or newer of Mercurial; disabling)
-  Mercurial Distributed SCM (version 3.5.2)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-* Matt Mackall and others (glob)
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-  $ cat > minversion2.py << EOF
-  > from edenscm.mercurial import util
-  > util.version = lambda: '3.6'
-  > minimumhgversion = '3.7'
-  > EOF
-  $ hg --config extensions.minversion=minversion2.py version 2>&1 | egrep '\(third'
-  (third party extension minversion requires version 3.7 or newer of Mercurial; disabling)
-
-Can load version that is only off by point release
-
-  $ cat > minversion2.py << EOF
-  > from edenscm.mercurial import util
-  > util.version = lambda: '3.6.1'
-  > minimumhgversion = '3.6'
-  > EOF
-  $ hg --config extensions.minversion=minversion3.py version 2>&1 | egrep '\(third'
-  [1]
-
-Can load minimum version identical to current
-
-  $ cat > minversion3.py << EOF
-  > from edenscm.mercurial import util
-  > util.version = lambda: '3.5'
-  > minimumhgversion = '3.5'
-  > EOF
-  $ hg --config extensions.minversion=minversion3.py version 2>&1 | egrep '\(third'
-  [1]
-
 Restore HGRCPATH
 
   $ HGRCPATH=$ORGHGRCPATH
@@ -1307,18 +1141,3 @@ Test synopsis and docstring extending
   hg bookmarks [OPTIONS]... [NAME]... GREPME [--foo] [-x]
       GREPME make sure that this is in the help!
   $ cd ..
-
-Show deprecation warning for the use of cmdutil.command
-
-  $ cat > nonregistrar.py <<EOF
-  > from edenscm.mercurial import cmdutil
-  > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
-  > @command('foo', [], norepo=True)
-  > def foo(ui):
-  >     pass
-  > EOF
-
-  $ hg --config extensions.nonregistrar=`pwd`/nonregistrar.py version > /dev/null
-  devel-warn: cmdutil.command is deprecated, use registrar.command to register 'foo'
-  (compatibility will be dropped after Mercurial-4.6, update your code.) * (glob)
