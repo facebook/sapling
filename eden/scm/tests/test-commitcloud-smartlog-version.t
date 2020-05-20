@@ -6,7 +6,6 @@
   $ setconfig commitcloud.hostname=testhost
   $ setconfig experimental.graphstyle.grandparent=2.
   $ setconfig templatealias.sl_cloud="\"{truncatelonglines(node, 6)} {ifeq(phase, 'public', '(public)', '')} {ifeq(phase, 'draft', author, '')} {date|isodate} {bookmarks}\\n{desc|firstline}\\n \""
-  $ setconfig hint.ack=graph-renderer
 
   $ setconfig remotefilelog.reponame=server
 

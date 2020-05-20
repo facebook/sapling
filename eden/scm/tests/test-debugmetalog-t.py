@@ -16,7 +16,6 @@ sh.setconfig(
     "mutation.date=0 0",
     # Do not track config changes to stabilize the test a bit.
     "metalog.track-config=0",
-    "hint.ack-graph-renderer=true",
 )
 sh.newrepo()
 sh.enable("remotenames", "amend")
