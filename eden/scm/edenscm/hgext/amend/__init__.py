@@ -553,7 +553,9 @@ def amendtocommit(ui, repo, commitspec):
                 raise error.Abort(_("revision '%s' cannot be found") % commitspec)
             fp.flush()
             try:
-                histedit.histedit(ui, repo, commands=fp.name)
+                histedit.histedit(
+                    ui, repo, rev=[originalcommits[0].hex()], commands=fp.name
+                )
             except error.InterventionRequired:
                 ui.warn(
                     _(

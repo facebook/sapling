@@ -130,6 +130,5 @@ Test amending to commit when side branch is present
   $ hg update -q 75f11a3d
   $ echo EXTRA >> A
   $ hg amend --to 2a34000
-  hg: parse error: pick "2a34000d3544" changeset was not a candidate
-  (only use listed changesets)
+  abort: can only histedit a changeset together with all its descendants
   [255]
