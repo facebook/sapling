@@ -451,27 +451,24 @@ where
         _ => false,
     };
     let history_graph = if !terminate {
+        // Now we fetched parents for `prefetch` node - put it back in the queue so we
+        // can process it's parents again
+        bfs.push_front(prefetch);
         prefetch_and_process_history(&ctx, &repo, &path, prefetch.clone(), history_graph).await?
     } else {
         history_graph
     };
 
-    // `prefetch` changeset is not in bfs queue anymore and neither it's parents
-    // in order to traverse its parents we need to explicitly add them to the queue
-    if let Some(Some(parents)) = history_graph.get(&prefetch) {
-        // parents are fetched, ready to process
-        for p in parents {
-            if visited.insert(*p) {
-                bfs.push_back(*p);
-            }
-        }
-    }
-
     // process nodes to yield
     let mut next_to_fetch = None;
     let mut history = vec![];
     while let Some(cs_id) = bfs.pop_front() {
-        history.push(cs_id.clone());
+        // `prefetch` was already returned to the caller on the previous iteration,
+        // that's why we don't add it to the `history` here.
+        if cs_id != prefetch {
+            history.push(cs_id.clone());
+        }
+
         match history_graph.get(&cs_id) {
             Some(Some(parents)) => {
                 // parents are fetched, ready to process
@@ -484,6 +481,12 @@ where
             Some(None) => {
                 // parents haven't been fetched yet
                 // we want to proceed to next iteration to fetch the parents
+                if cs_id == prefetch {
+                    return Err(format_err!(
+                        "internal error: infinite loop while traversing history for {:?}",
+                        path
+                    ));
+                }
                 next_to_fetch = Some(cs_id);
                 break;
             }
