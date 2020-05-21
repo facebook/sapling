@@ -214,6 +214,7 @@ from edenscm.mercurial import (
     repair,
     scmutil,
     util,
+    visibility,
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.pycompat import range
@@ -1471,9 +1472,10 @@ def between(repo, old, new, keep):
     When keep is false, the specified set can't have children."""
     ctxs = list(repo.set("%n::%n", old, new))
     if ctxs and not keep:
-        if not obsolete.isenabled(repo, obsolete.allowunstableopt) and repo.revs(
-            "(%ld::) - (%ld)", ctxs, ctxs
-        ):
+        if not (
+            obsolete.isenabled(repo, obsolete.allowunstableopt)
+            or visibility.tracking(repo)
+        ) and repo.revs("(%ld::) - (%ld)", ctxs, ctxs):
             raise error.Abort(
                 _("can only histedit a changeset together " "with all its descendants")
             )

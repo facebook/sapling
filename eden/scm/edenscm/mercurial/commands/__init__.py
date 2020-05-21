@@ -1740,7 +1740,9 @@ def _docommit(ui, repo, *pats, **opts):
         #
         # Note: eventually this guard will be removed. Please do not expect
         # this behavior to remain.
-        if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+        if not obsolete.isenabled(
+            repo, obsolete.createmarkersopt
+        ) and not mutation.enabled(repo):
             cmdutil.checkunfinished(repo)
 
         node = cmdutil.amend(ui, repo, old, extra, pats, opts)
