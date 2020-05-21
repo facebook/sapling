@@ -6,7 +6,7 @@
  */
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
-use crate::state::{StepStats, WalkStateCHashMap};
+use crate::state::{StepStats, WalkState};
 use crate::walk::{OutgoingEdge, WalkVisitor};
 
 use context::{CoreContext, SamplingKey};
@@ -21,7 +21,7 @@ pub trait SampleTrigger<K> {
 
 #[derive(Debug)]
 pub struct SamplingWalkVisitor<T> {
-    inner: WalkStateCHashMap,
+    inner: WalkState,
     sample_node_types: HashSet<NodeType>,
     sample_path_regex: Option<Regex>,
     sampler: Arc<T>,
@@ -40,7 +40,7 @@ impl<T> SamplingWalkVisitor<T> {
         sample_offset: u64,
     ) -> Self {
         Self {
-            inner: WalkStateCHashMap::new(include_node_types, include_edge_types),
+            inner: WalkState::new(include_node_types, include_edge_types),
             sample_node_types,
             sample_path_regex,
             sampler,

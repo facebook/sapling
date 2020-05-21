@@ -21,7 +21,7 @@ use crate::setup::{
     setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, PROGRESS_SAMPLE_DURATION_S,
     PROGRESS_SAMPLE_RATE, VALIDATE,
 };
-use crate::state::{StepStats, WalkStateCHashMap};
+use crate::state::{StepStats, WalkState};
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::walk::{OutgoingEdge, WalkVisitor};
 
@@ -128,7 +128,7 @@ impl CheckOutput {
 
 struct ValidatingVisitor {
     repo_stats_key: String,
-    inner: WalkStateCHashMap,
+    inner: WalkState,
     checks_by_node_type: HashMap<NodeType, HashSet<CheckType>>,
 }
 
@@ -141,7 +141,7 @@ impl ValidatingVisitor {
     ) -> Self {
         Self {
             repo_stats_key,
-            inner: WalkStateCHashMap::new(include_node_types, include_edge_types),
+            inner: WalkState::new(include_node_types, include_edge_types),
             checks_by_node_type: include_checks
                 .into_iter()
                 .group_by(|c| c.node_type())

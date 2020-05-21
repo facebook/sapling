@@ -8,8 +8,8 @@
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::walk::{expand_checked_nodes, OutgoingEdge, WalkVisitor};
 use array_init::array_init;
-use chashmap::CHashMap;
 use context::CoreContext;
+use dashmap::DashMap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, FsnodeId, MPathHash};
 use phases::Phase;
@@ -44,27 +44,27 @@ impl Add<StepStats> for StepStats {
 }
 
 #[derive(Debug)]
-pub struct WalkStateCHashMap {
+pub struct WalkState {
     // TODO implement ID interning to u32 or u64 for types in more than one map
     // e.g. ChangesetId, HgChangesetId, HgFileNodeId
     include_node_types: HashSet<NodeType>,
     include_edge_types: HashSet<EdgeType>,
-    visited_bcs: CHashMap<ChangesetId, ()>,
-    visited_bcs_mapping: CHashMap<ChangesetId, ()>,
-    visited_bcs_phase: CHashMap<ChangesetId, ()>,
-    visited_file: CHashMap<ContentId, ()>,
-    visited_hg_cs: CHashMap<HgChangesetId, ()>,
-    visited_hg_cs_mapping: CHashMap<HgChangesetId, ()>,
-    visited_hg_file_envelope: CHashMap<HgFileNodeId, ()>,
-    visited_hg_filenode: CHashMap<(Option<MPathHash>, HgFileNodeId), ()>,
-    visited_hg_manifest: CHashMap<(Option<MPathHash>, HgManifestId), ()>,
-    visited_fsnode: CHashMap<(Option<MPathHash>, FsnodeId), ()>,
+    visited_bcs: DashMap<ChangesetId, ()>,
+    visited_bcs_mapping: DashMap<ChangesetId, ()>,
+    visited_bcs_phase: DashMap<ChangesetId, ()>,
+    visited_file: DashMap<ContentId, ()>,
+    visited_hg_cs: DashMap<HgChangesetId, ()>,
+    visited_hg_cs_mapping: DashMap<HgChangesetId, ()>,
+    visited_hg_file_envelope: DashMap<HgFileNodeId, ()>,
+    visited_hg_filenode: DashMap<(Option<MPathHash>, HgFileNodeId), ()>,
+    visited_hg_manifest: DashMap<(Option<MPathHash>, HgManifestId), ()>,
+    visited_fsnode: DashMap<(Option<MPathHash>, FsnodeId), ()>,
     visit_count: [AtomicUsize; NodeType::MAX_ORDINAL + 1],
 }
 
 /// If the state did not have this value present, true is returned.
 fn record_with_path<K>(
-    visited_with_path: &CHashMap<(Option<MPathHash>, K), ()>,
+    visited_with_path: &DashMap<(Option<MPathHash>, K), ()>,
     k: &(WrappedPath, K),
 ) -> bool
 where
@@ -75,7 +75,7 @@ where
     !visited_with_path.insert((mpathhash_opt, *id), ()).is_some()
 }
 
-impl WalkStateCHashMap {
+impl WalkState {
     pub fn new(
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
@@ -83,16 +83,16 @@ impl WalkStateCHashMap {
         Self {
             include_node_types,
             include_edge_types,
-            visited_bcs: CHashMap::new(),
-            visited_bcs_mapping: CHashMap::new(),
-            visited_bcs_phase: CHashMap::new(),
-            visited_file: CHashMap::new(),
-            visited_hg_cs: CHashMap::new(),
-            visited_hg_cs_mapping: CHashMap::new(),
-            visited_hg_file_envelope: CHashMap::new(),
-            visited_hg_filenode: CHashMap::new(),
-            visited_hg_manifest: CHashMap::new(),
-            visited_fsnode: CHashMap::new(),
+            visited_bcs: DashMap::new(),
+            visited_bcs_mapping: DashMap::new(),
+            visited_bcs_phase: DashMap::new(),
+            visited_file: DashMap::new(),
+            visited_hg_cs: DashMap::new(),
+            visited_hg_cs_mapping: DashMap::new(),
+            visited_hg_file_envelope: DashMap::new(),
+            visited_hg_filenode: DashMap::new(),
+            visited_hg_manifest: DashMap::new(),
+            visited_fsnode: DashMap::new(),
             visit_count: array_init(|_i| AtomicUsize::new(0)),
         }
     }
@@ -157,7 +157,7 @@ impl WalkStateCHashMap {
     }
 }
 
-impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkStateCHashMap {
+impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkState {
     fn start_step(
         &self,
         ctx: CoreContext,
