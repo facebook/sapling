@@ -312,11 +312,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> enforceParents{"hg:enforce-parents", true, this};
 
   /**
-   * Controls whether EdenFS reads directly from hgcache.
-   */
-  ConfigSetting<bool> useHgCache{"hg:use-hgcache", true, this};
-
-  /**
    * Location of scribe_cat binary on the system. If not specified, scribe
    * logging will be disabled.
    */

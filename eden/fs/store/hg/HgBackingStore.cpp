@@ -179,14 +179,10 @@ HgBackingStore::HgBackingStore(
               folly::CPUThreadPoolExecutor::CPUTask>>(),
           std::make_shared<HgImporterThreadFactory>(repository, stats))),
       config_(config),
-      serverThreadPool_(serverThreadPool) {
-  try {
-    auto useEdenApi = config->getEdenConfig()->useEdenApi.getValue();
-    datapackStore_ =
-        std::make_optional<HgDatapackStore>(repository, useEdenApi);
-  } catch (const std::runtime_error& ex) {
-    XLOG(WARN) << "Rust native store is disabled due to: " << ex.what();
-  }
+      serverThreadPool_(serverThreadPool),
+      datapackStore_(
+          repository,
+          config->getEdenConfig()->useEdenApi.getValue()) {
   HgImporter importer(repository, stats);
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
@@ -206,7 +202,8 @@ HgBackingStore::HgBackingStore(
     : localStore_{localStore},
       stats_{std::move(stats)},
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
-      serverThreadPool_{importThreadPool_.get()} {
+      serverThreadPool_{importThreadPool_.get()},
+      datapackStore_(repository, false) {
   const auto& options = importer->getOptions();
   initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;
@@ -282,16 +279,11 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
     RelativePath path) {
   auto writeBatch = localStore_->beginWrite();
   try {
-    if (config_) {
-      auto edenConfig = config_->getEdenConfig();
-      if (edenConfig->useHgCache.getValue() && datapackStore_) {
-        if (auto tree = datapackStore_->getTree(
-                path, manifestNode, edenTreeID, writeBatch.get())) {
-          XLOG(DBG4) << "imported tree node=" << manifestNode
-                     << " path=" << path << " from Rust hgcache";
-          return folly::makeFuture(std::move(tree));
-        }
-      }
+    if (auto tree = datapackStore_.getTree(
+            path, manifestNode, edenTreeID, writeBatch.get())) {
+      XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
+                 << " from Rust hgcache";
+      return folly::makeFuture(std::move(tree));
     }
     auto content = unionStoreGetWithRefresh(
         *unionStore_->wlock(), path.stringPiece(), manifestNode);
@@ -453,20 +445,10 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
 unique_ptr<Blob> HgBackingStore::getBlobFromHgCache(
     const Hash& id,
     const HgProxyHash& hgInfo) {
-  auto edenConfig = config_->getEdenConfig();
-
-  if (edenConfig->useHgCache.getValue() && datapackStore_) {
-    if (auto content = datapackStore_->getBlobLocal(id, hgInfo)) {
-      XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
-                 << hgInfo.revHash().toString() << " from datapack store";
-      return content;
-    }
-
-    if (auto content = datapackStore_->getBlobRemote(id, hgInfo)) {
-      XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
-                 << hgInfo.revHash().toString() << " from datapack store";
-      return content;
-    }
+  if (auto content = datapackStore_.getBlobLocal(id, hgInfo)) {
+    XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
+               << hgInfo.revHash().toString() << " from datapack store";
+    return content;
   }
 
   return nullptr;
@@ -624,9 +606,7 @@ HgBackingStore::getLiveImportWatches(HgImportObject object) const {
 }
 
 void HgBackingStore::periodicManagementTask() {
-  if (datapackStore_) {
-    datapackStore_->refresh();
-  }
+  datapackStore_.refresh();
 
   if (unionStore_) {
     unionStore_->wlock()->refresh();

@@ -188,7 +188,7 @@ class HgBackingStore : public BackingStore {
   std::unique_ptr<folly::Synchronized<UnionDatapackStore>> unionStore_;
 
   std::string repoName_;
-  std::optional<HgDatapackStore> datapackStore_;
+  HgDatapackStore datapackStore_;
 
   // Track metrics for imports currently fetching data from hg
   mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;
