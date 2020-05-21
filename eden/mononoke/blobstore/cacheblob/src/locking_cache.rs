@@ -16,8 +16,17 @@ use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{config::GET_OPERATION, RedactedBlobstore};
 use slog::debug;
+use stats::prelude::*;
 use std::fmt;
 use std::sync::Arc;
+
+define_stats! {
+    prefix = "mononoke.blobstore.cacheblob";
+    get_miss: dynamic_timeseries("{}.get_miss", (cache_name: &'static str); Rate, Sum),
+    get_hit: dynamic_timeseries("{}.get_hit", (cache_name: &'static str); Rate, Sum),
+    presence_hit: dynamic_timeseries("{}.presence_hit", (cache_name: &'static str); Rate, Sum),
+    presence_miss: dynamic_timeseries("{}.presence_miss", (cache_name: &'static str); Rate, Sum),
+}
 
 /// Extra operations that can be performed on a cache. Other wrappers can implement this trait for
 /// e.g. all `WrapperBlobstore<CacheBlobstore<T>>`.
@@ -58,6 +67,7 @@ pub trait CacheBlobstoreExt: Blobstore {
 pub trait CacheOps: fmt::Debug + Send + Sync + 'static {
     const HIT_COUNTER: Option<PerfCounterType> = None;
     const MISS_COUNTER: Option<PerfCounterType> = None;
+    const CACHE_NAME: &'static str = "unknown";
 
     /// Fetch the blob from the cache, if possible. Return `None` if the cache does not have a
     /// copy of the blob (i.e. the cache entry is not in Known state).
@@ -263,11 +273,13 @@ where
                         if let Some(counter) = C::HIT_COUNTER {
                             ctx.perf_counters().increment_counter(counter);
                         }
+                        STATS::get_hit.add_value(1, (C::CACHE_NAME,));
                         future::Either::A(Ok(blob).into_future())
                     } else {
                         if let Some(counter) = C::MISS_COUNTER {
                             ctx.perf_counters().increment_counter(counter);
                         }
+                        STATS::get_miss.add_value(1, (C::CACHE_NAME,));
                         future::Either::B(blobstore.get(ctx, key).map(cache_put))
                     }
                 }
@@ -308,8 +320,10 @@ where
         cache_check
             .and_then(|present| {
                 if present {
+                    STATS::presence_hit.add_value(1, (C::CACHE_NAME,));
                     Either::A(Ok(true).into_future())
                 } else {
+                    STATS::presence_miss.add_value(1, (C::CACHE_NAME,));
                     Either::B(blobstore_check)
                 }
             })

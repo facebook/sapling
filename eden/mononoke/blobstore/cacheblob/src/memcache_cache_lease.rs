@@ -210,6 +210,7 @@ where
 impl CacheOps for MemcacheOps {
     const HIT_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::MemcacheHits);
     const MISS_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::MemcacheMisses);
+    const CACHE_NAME: &'static str = "memcache";
 
     // Turns errors to Ok(None)
     fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreGetData>, ()> {

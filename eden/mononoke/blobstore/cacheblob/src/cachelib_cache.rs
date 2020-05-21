@@ -71,6 +71,7 @@ where
 impl CacheOps for CachelibOps {
     const HIT_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::CachelibHits);
     const MISS_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::CachelibMisses);
+    const CACHE_NAME: &'static str = "cachelib";
 
     fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreGetData>, ()> {
         self.blob_pool
