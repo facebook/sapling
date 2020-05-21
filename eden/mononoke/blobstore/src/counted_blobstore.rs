@@ -20,15 +20,13 @@ use crate::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 define_stats_struct! {
     CountedBlobstoreStats("mononoke.blobstore.{}", prefix: String),
     get: timeseries(Rate, Sum),
-    get_miss: timeseries(Rate, Sum),
-    get_hit: timeseries(Rate, Sum),
+    get_ok: timeseries(Rate, Sum),
     get_err: timeseries(Rate, Sum),
     put: timeseries(Rate, Sum),
     put_ok: timeseries(Rate, Sum),
     put_err: timeseries(Rate, Sum),
     is_present: timeseries(Rate, Sum),
-    is_present_miss: timeseries(Rate, Sum),
-    is_present_hit: timeseries(Rate, Sum),
+    is_present_ok: timeseries(Rate, Sum),
     is_present_err: timeseries(Rate, Sum),
     assert_present: timeseries(Rate, Sum),
     assert_present_ok: timeseries(Rate, Sum),
@@ -66,8 +64,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             .get(ctx, key)
             .then(move |res| {
                 match res {
-                    Ok(Some(_)) => stats.get_hit.add_value(1),
-                    Ok(None) => stats.get_miss.add_value(1),
+                    Ok(_) => stats.get_ok.add_value(1),
                     Err(_) => stats.get_err.add_value(1),
                 }
                 res
@@ -97,8 +94,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             .is_present(ctx, key)
             .then(move |res| {
                 match res {
-                    Ok(true) => stats.is_present_hit.add_value(1),
-                    Ok(false) => stats.is_present_miss.add_value(1),
+                    Ok(_) => stats.is_present_ok.add_value(1),
                     Err(_) => stats.is_present_err.add_value(1),
                 }
                 res
