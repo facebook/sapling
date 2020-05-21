@@ -582,8 +582,8 @@ The version of Eden that is installed on your machine is:
 but the version of Eden that is currently running is:
     fb-eden-{running_version}.x86_64
 
-Consider running `eden restart` to migrate to the newer version, which
-may have important bug fixes or performance improvements.
+Consider running `eden restart --graceful` to migrate to the newer version,
+which may have important bug fixes or performance improvements.
 """
             ),
             severity=ProblemSeverity.ADVICE,
