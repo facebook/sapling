@@ -121,3 +121,15 @@ Test
   amend --to encountered an issue - use hg histedit to continue or abortFix up the change (roll 8a18ce6b4d69)
   (hg histedit --continue to resume)
   [1]
+  $ hg histedit --abort > /dev/null
+  $ hg hide .  > /dev/null
+
+Test amending to commit when side branch is present
+  $ hg update -q ce91eb67
+  $ mkcommit "SIDE2"
+  $ hg update -q 75f11a3d
+  $ echo EXTRA >> A
+  $ hg amend --to 2a34000
+  hg: parse error: pick "2a34000d3544" changeset was not a candidate
+  (only use listed changesets)
+  [255]
