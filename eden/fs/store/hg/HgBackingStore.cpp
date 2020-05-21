@@ -559,7 +559,7 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
           [this, rootTreeHash, commitID](
               std::unique_ptr<Tree> tree) -> folly::Future<unique_ptr<Tree>> {
             if (tree) {
-              return tree;
+              return folly::makeFuture(std::move(tree));
             }
 
             return localStore_->getTree(rootTreeHash)
