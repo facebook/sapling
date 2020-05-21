@@ -442,6 +442,7 @@ impl ConfigSet {
                 let mut super_value = None;
                 let mut super_index = 10000; // Dummy place holder value
                 let mut sub_value = None;
+                let mut last_value = None;
                 for (index, value) in values.iter().enumerate() {
                     // Get the filename of the value's rc location
                     let location: String = match value
@@ -465,14 +466,19 @@ impl ConfigSet {
                         super_index = index;
                     } else if subset_locations.contains(&location) {
                         sub_value = value.value().clone();
+                        last_value = value.value().clone();
+                    } else {
+                        last_value = value.value().clone();
                     }
                 }
 
-                match (super_value, sub_value) {
+                let mut removed = false;
+                match (super_value.clone(), sub_value) {
                     // Sub does not have it, but super does (and should not)
                     (Some(value), None) => {
                         result.extra.push(((sname.clone(), kname.clone()), value));
                         values.remove(super_index);
+                        removed = true;
                     }
                     // Super and sub have it, but don't match
                     (Some(super_value), Some(sub_value)) => {
@@ -483,6 +489,7 @@ impl ConfigSet {
                                 sub_value,
                             ));
                             values.remove(super_index);
+                            removed = true;
                         }
                     }
                     // Sub has it, super does not (but should)
@@ -491,6 +498,12 @@ impl ConfigSet {
                     }
                     (None, None) => (),
                 };
+
+                // If the dynamic value matches the subsets, but does not match the final actual value,
+                // remove the dynamic value so we don't change the final actual value.
+                if !removed && super_value.is_some() && super_value != last_value {
+                    values.remove(super_index);
+                }
             }
         }
 
@@ -1202,6 +1215,22 @@ space_list=value1.a value1.b
         assert_eq!(
             tempcfg.get("section2", "key2"),
             Some(Text::from_static("value2"))
+        );
+
+        // Verify a good superset that overwrites a non-subset final value also gets removed.
+        let mut tempcfg = cfg.clone();
+        set(&mut tempcfg, "section2", "key2", "value3", "nonsubset");
+        set(&mut tempcfg, "section2", "key2", "value2", "super");
+
+        let result = tempcfg.ensure_location_supersets(
+            "super".to_string(),
+            vec!["subset2".to_string()],
+            HashSet::new(),
+        );
+        assert!(result.is_empty());
+        assert_eq!(
+            tempcfg.get("section2", "key2"),
+            Some(Text::from_static("value3")),
         );
     }
 }
