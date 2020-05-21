@@ -304,8 +304,7 @@ Test amend date when tweakdefaults.amendkeepdate is set
 Test amend --to doesn't give a flag error when tweakdefaults.amendkeepdate is set
   $ echo q > new_file
   $ hg amend --to 8 --config tweakdefaults.amendkeepdate=False
-  hg: parse error: pick "3903775176ed" changeset was not a candidate
-  (only use listed changesets)
+  abort: can only histedit a changeset together with all its descendants
   [255]
   $ hg log -l 1 -T "{date} {rev}\n"
   0.00 9
