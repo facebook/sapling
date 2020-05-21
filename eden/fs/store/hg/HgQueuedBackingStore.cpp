@@ -211,6 +211,12 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
 folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     const Hash& id,
     ImportPriority priority) {
+  auto proxyHash = HgProxyHash(localStore_.get(), id, "getBlob");
+  if (auto blob =
+          backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
+    return folly::makeSemiFuture(std::move(blob));
+  }
+
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
   auto [request, future] = HgImportRequest::makeBlobImportRequest(

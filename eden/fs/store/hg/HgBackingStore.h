@@ -127,6 +127,10 @@ class HgBackingStore : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Blob>> fetchBlobFromHgImporter(
       HgProxyHash hgInfo);
 
+  HgDatapackStore& getDatapackStore() {
+    return datapackStore_;
+  }
+
  private:
   // Forbidden copy constructor and assignment operator
   HgBackingStore(HgBackingStore const&) = delete;
