@@ -15,6 +15,7 @@
 
 mod backingstore;
 mod raw;
+mod remotestore;
 mod treecontentstore;
 
 pub use crate::backingstore::BackingStore;

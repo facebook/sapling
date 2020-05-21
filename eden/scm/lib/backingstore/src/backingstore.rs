@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::remotestore::FakeRemoteStore;
 use crate::treecontentstore::TreeContentStore;
 use anyhow::Result;
 use configparser::config::ConfigSet;
@@ -60,7 +61,10 @@ impl BackingStore {
                 treestore.remotestore(treeremotestore).build()?,
             )
         } else {
-            (blobstore.build()?, treestore.build()?)
+            (
+                blobstore.remotestore(Arc::new(FakeRemoteStore)).build()?,
+                treestore.remotestore(Arc::new(FakeRemoteStore)).build()?,
+            )
         };
 
         Ok(Self {
