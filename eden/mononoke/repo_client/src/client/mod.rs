@@ -192,7 +192,7 @@ lazy_static! {
     // getbundle requests can be very slow for huge commits
     static ref GETBUNDLE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
     // clone requests can be rather long. Let's bump the timeout
-    static ref CLONE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+    static ref CLONE_TIMEOUT: Duration = Duration::from_secs(4 * 60 * 60);
     // getfiles requests can be rather long. Let's bump the timeout
     static ref GETPACK_TIMEOUT: Duration = Duration::from_secs(90 * 60);
     static ref LOAD_LIMIT_TIMEFRAME: Duration = Duration::from_secs(1);
