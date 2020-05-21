@@ -71,6 +71,7 @@ pub struct MononokeTunables {
     undesired_path_repo_name_to_log: TunableString,
     undesired_path_prefix_to_log: TunableString,
     pushrebase_disable_rebased_commit_validation: AtomicBool,
+    scs_enable_history_across_deletions: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

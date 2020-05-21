@@ -19,19 +19,29 @@ use futures::{
     stream::{self, Stream as NewStream},
 };
 use futures_old::Future;
+use futures_stats::futures03::TimedFutureExt;
 use futures_util::{StreamExt, TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use maplit::hashset;
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
+use stats::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future as NewFuture;
 use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
+use time_ext::DurationExt;
+use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
 use crate::mapping::{FastlogParent, RootFastlog};
+
+define_stats! {
+    prefix = "mononoke.fastlog";
+    unexpected_existing_unode: timeseries(Sum),
+    find_where_file_was_deleted_ms: timeseries(Sum, Average),
+}
 
 #[derive(Debug, Error)]
 pub enum FastlogError {
@@ -55,7 +65,7 @@ pub enum FastlogError {
 /// fetched for the changeset. If the terminator returns true, fastlog is not fetched,
 /// which means that this history branch is terminated. Already prefetched commits are
 /// still streamed.
-/// It is possible that of history is not linear and have 2 or more branches, terminator
+/// It is possible that history is not linear and have 2 or more branches, terminator
 /// can drop history fetching on one of the branches and still proceed with others.
 /// Usage:
 ///       as history stream generally is not ordered by commit creation time (due to
@@ -450,7 +460,7 @@ where
         Some(terminator) => terminator(prefetch.clone()).await?,
         _ => false,
     };
-    let history_graph = if !terminate {
+    let mut history_graph = if !terminate {
         // Now we fetched parents for `prefetch` node - put it back in the queue so we
         // can process it's parents again
         bfs.push_front(prefetch);
@@ -458,10 +468,9 @@ where
     } else {
         history_graph
     };
-
+    let mut history = vec![];
     // process nodes to yield
     let mut next_to_fetch = None;
-    let mut history = vec![];
     while let Some(cs_id) = bfs.pop_front() {
         // `prefetch` was already returned to the caller on the previous iteration,
         // that's why we don't add it to the `history` here.
@@ -472,9 +481,38 @@ where
         match history_graph.get(&cs_id) {
             Some(Some(parents)) => {
                 // parents are fetched, ready to process
-                for p in parents {
-                    if visited.insert(*p) {
-                        bfs.push_back(*p);
+                let ancestors =
+                    if parents.is_empty() && tunables().get_scs_enable_history_across_deletions() {
+                        let (stats, deletion_nodes) =
+                            find_where_file_was_deleted(&ctx, &repo, cs_id, &path)
+                                .timed()
+                                .await;
+                        STATS::find_where_file_was_deleted_ms
+                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                        let deletion_nodes = deletion_nodes?;
+
+                        let mut new_unodes = vec![];
+                        for (cs_id, unode_entry) in deletion_nodes {
+                            if visited.insert(cs_id) {
+                                history.push(cs_id);
+                            }
+                            new_unodes.push(unode_entry);
+                        }
+                        let ancestor_linknodes = fetch_linknodes_and_update_graph(
+                            &ctx,
+                            &repo,
+                            new_unodes,
+                            &mut history_graph,
+                        )
+                        .await?;
+                        ancestor_linknodes
+                    } else {
+                        parents.clone()
+                    };
+
+                for ancestor in ancestors {
+                    if visited.insert(ancestor) {
+                        bfs.push_back(ancestor);
                     }
                 }
             }
@@ -509,6 +547,51 @@ where
     };
 
     Ok((history, new_state))
+}
+
+// Now let's process commits which have a "path" in their manifests but
+// their parent commits do not. That might mean one of two things:
+// 1) a `path` was introduced in this commit and never existed before
+// 2) a `path` was introduced in an ancestor of this commit, then deleted
+//    and then re-introduced
+//
+// Case #2 needs a special processing - we need to check deleted file
+// manifest of a parent commit and see if a commit was ever deleted.
+async fn find_where_file_was_deleted(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    commit_no_more_history: ChangesetId,
+    path: &Option<MPath>,
+) -> Result<Vec<(ChangesetId, UnodeEntry)>, Error> {
+    let parents = repo
+        .get_changeset_parents_by_bonsai(ctx.clone(), commit_no_more_history)
+        .compat()
+        .await?;
+
+    let resolved_path_states = future::try_join_all(
+        parents
+            .into_iter()
+            .map(|p| resolve_path_state(ctx, repo, p, path)),
+    )
+    .await?;
+
+    let mut all_deletion_nodes = vec![];
+    for maybe_resolved_path_state in resolved_path_states {
+        if let Some(resolved_path_states) = maybe_resolved_path_state {
+            match resolved_path_states {
+                PathState::Exists(_) => {
+                    // shouldn't really happen in practice - if a parent has a unode
+                    // then children should have a pointer to this unode
+                    STATS::unexpected_existing_unode.add_value(1);
+                }
+                PathState::Deleted(deletion_nodes) => {
+                    all_deletion_nodes.extend(deletion_nodes);
+                }
+            }
+        }
+    }
+
+    Ok(all_deletion_nodes)
 }
 
 /// prefetches and processes fastlog batch for the given changeset id
@@ -602,6 +685,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::future;
+    use maplit::hashmap;
     use mononoke_types::{ChangesetId, MPath};
     use std::collections::{HashMap, HashSet, VecDeque};
     use tests_utils::CreateCommitContext;
@@ -851,8 +935,21 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
-    async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
+    #[fbinit::test]
+    fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
+        let tunables = tunables::MononokeTunables::default();
+        tunables
+            .update_bools(&hashmap! {"scs_enable_history_across_deletions".to_string() => true});
+
+        let res = tunables::with_tunables(tunables, || {
+            let mut runtime = tokio_compat::runtime::Runtime::new()?;
+            runtime.block_on_std(list_history_deleted(fb))
+        });
+
+        res
+    }
+
+    async fn list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
         let repo = new_memblob_empty(None).unwrap();
         let ctx = CoreContext::test_mock(fb);
 
@@ -910,7 +1007,10 @@ mod test {
             .add_file("dir/otherfile", "boo")
             .commit()
             .await?;
-        assert_eq!(history(bcs_id.clone(), path("dir")).await?, vec![bcs_id]);
+
+        let mut res = vec![bcs_id];
+        res.extend(expected);
+        assert_eq!(history(bcs_id.clone(), path("dir")).await?, res);
 
         Ok(())
     }
@@ -1045,6 +1145,151 @@ mod test {
         ];
         assert_eq!(history(l.clone(), path("dir_1")).await?, expected);
 
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
+        let tunables = tunables::MononokeTunables::default();
+        tunables
+            .update_bools(&hashmap! {"scs_enable_history_across_deletions".to_string() => true});
+
+        let res = tunables::with_tunables(tunables, || {
+            let mut runtime = tokio_compat::runtime::Runtime::new()?;
+            runtime.block_on_std(list_history_across_deletions_linear(fb))
+        });
+
+        res
+    }
+
+    async fn list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
+        let repo = new_memblob_empty(None).unwrap();
+        let ctx = CoreContext::test_mock(fb);
+
+        let filename = "dir/1";
+        let mut expected = vec![];
+
+        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(filename, "content1")
+            .commit()
+            .await?;
+        expected.push(bcs_id.clone());
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .delete_file(filename)
+            .commit()
+            .await?;
+        expected.push(bcs_id.clone());
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file(filename, "content2")
+            .commit()
+            .await?;
+        expected.push(bcs_id.clone());
+
+        let terminator = Some(|_cs_id| future::ready(Ok(false)));
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(filename)?,
+            bcs_id,
+            terminator,
+        )
+        .await?;
+        let expected = expected.into_iter().rev().collect::<Vec<_>>();
+
+        let actual = history_stream.try_collect::<Vec<_>>().await?;
+        assert_eq!(actual, expected);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
+        let tunables = tunables::MononokeTunables::default();
+        tunables
+            .update_bools(&hashmap! {"scs_enable_history_across_deletions".to_string() => true});
+
+        let res = tunables::with_tunables(tunables, || {
+            let mut runtime = tokio_compat::runtime::Runtime::new()?;
+            runtime.block_on_std(list_history_across_deletions_with_merges(fb))
+        });
+
+        res
+    }
+
+    async fn list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
+        let repo = new_memblob_empty(None).unwrap();
+        let ctx = CoreContext::test_mock(fb);
+
+        let filename = "dir/1";
+        let mut expected = vec![];
+
+        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(filename, "content1")
+            .commit()
+            .await?;
+        expected.push(bcs_id.clone());
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .delete_file(filename)
+            .commit()
+            .await?;
+        expected.push(bcs_id.clone());
+
+        let bcs_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file("p1file", "p1")
+            .commit()
+            .await?;
+        let bcs_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file("p2file", "p2")
+            .commit()
+            .await?;
+
+        let merge = CreateCommitContext::new(&ctx, &repo, vec![bcs_p1, bcs_p2])
+            .add_file("mergefile", "merge")
+            .commit()
+            .await?;
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![merge])
+            .add_file(filename, "aftermerge")
+            .commit()
+            .await?;
+        expected.push(bcs_id);
+
+        //    O <- recreates "dir/1"
+        //    |
+        //    O
+        //   /  \
+        //  O    0
+        //   \  /
+        //    0 <- removes "dir/1"
+        //    |
+        //    0  <- creates "dir/1"
+
+        let terminator = Some(|_cs_id| future::ready(Ok(false)));
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(filename)?,
+            bcs_id,
+            terminator,
+        )
+        .await?;
+        let mut expected = expected.into_iter().rev().collect::<Vec<_>>();
+
+        let actual = history_stream.try_collect::<Vec<_>>().await?;
+        assert_eq!(actual, expected);
+
+        // Now check the history starting from a merge commit
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(filename)?,
+            merge,
+            terminator,
+        )
+        .await?;
+        expected.remove(0);
+
+        let actual = history_stream.try_collect::<Vec<_>>().await?;
+        assert_eq!(actual, expected);
         Ok(())
     }
 

@@ -169,7 +169,7 @@ where
     }
 
     quote! {
-        fn #method_name(&self, tunables: &std::collections::HashMap<String, #type_ident>) {
+        pub fn #method_name(&self, tunables: &std::collections::HashMap<String, #type_ident>) {
             #body
         }
     }
