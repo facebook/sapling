@@ -155,9 +155,12 @@ Please use `hg clean --all` to remove them.
         return 0
 
     def du(self, path) -> int:
-        output = subprocess.check_output(["du", "-skxc", path]).decode("utf-8")
-        # the -k option reports 1024 byte blocks, so scale to bytes
-        return int(output.split("\t")[0]) * 1024
+        cp = subprocess.run(["du", "-skxc", path], stdout=subprocess.PIPE)
+
+        if cp.returncode:
+            print(f"WARNING: `du` returned non-zero exit status {cp.returncode}")
+
+        return int(cp.stdout.decode("utf-8").split("\t")[0]) * 1024
 
     def underlined(self, message) -> None:
         underline = "-" * len(message)
@@ -250,13 +253,14 @@ parent of the buck-out directory.
         # obsolete by being migrated to redirections
         legacy_bind_mounts_dir = os.path.join(checkout.state_dir, "bind-mounts")
         legacy_dirs: List[str] = []
-        for legacy in os.listdir(legacy_bind_mounts_dir):
-            legacy_dir = os.path.join(legacy_bind_mounts_dir, legacy)
-            if legacy_dir not in seen_paths:
-                if not legacy_dirs:
-                    legacy_dirs.append(legacy_dir)
-                    print("Legacy bind mounts:")
-                self.usage_for_dir(f"    {legacy_dir}", legacy_dir)
+        if os.path.isdir(legacy_bind_mounts_dir):
+            for legacy in os.listdir(legacy_bind_mounts_dir):
+                legacy_dir = os.path.join(legacy_bind_mounts_dir, legacy)
+                if legacy_dir not in seen_paths:
+                    if not legacy_dirs:
+                        legacy_dirs.append(legacy_dir)
+                        print("Legacy bind mounts:")
+                    self.usage_for_dir(f"    {legacy_dir}", legacy_dir)
 
         if legacy_dirs:
             print(
