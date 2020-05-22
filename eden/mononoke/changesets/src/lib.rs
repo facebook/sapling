@@ -235,7 +235,8 @@ queries! {
         "SELECT cs_id
          FROM changesets
          WHERE repo_id = {repo_id}
-           AND id BETWEEN {min_id} AND {max_id}"
+           AND id BETWEEN {min_id} AND {max_id}
+         ORDER BY id"
     }
 
     read SelectChangesetsIdsBounds(repo_id: RepositoryId) -> (u64, u64) {

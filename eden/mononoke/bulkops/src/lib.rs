@@ -10,10 +10,12 @@
 ///! bulkops
 ///!
 ///! Utiltities for handling data in bulk.
+use std::collections::HashMap;
+
 use anyhow::{Error, Result};
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::TryFutureExt,
+    future::{try_join, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
     Stream,
 };
@@ -44,19 +46,25 @@ pub fn fetch_all_public_changesets<'a>(
     }
     .try_flatten_stream()
     .and_then(move |(lower_bound, upper_bound)| async move {
-        let ids = changesets
+        let ids: Vec<_> = changesets
             .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
             .compat()
             .try_collect()
             .await?;
-        let mut entries = changesets
-            .get_many(ctx.clone(), repo_id, ids)
-            .compat()
-            .await?;
-        let cs_ids = entries.iter().map(|entry| entry.cs_id).collect::<Vec<_>>();
-        let public = phases.get_public_raw(ctx, &cs_ids).await?;
-        entries.retain(|entry| public.contains(&entry.cs_id));
-        Ok::<_, Error>(stream::iter(entries).map(Ok))
+        let (entries, public) = try_join(
+            changesets
+                .get_many(ctx.clone(), repo_id, ids.clone())
+                .compat(),
+            phases.get_public_raw(ctx, &ids),
+        )
+        .await?;
+        let mut entries_map: HashMap<_, _> = entries.into_iter().map(|e| (e.cs_id, e)).collect();
+        let result: Vec<_> = ids
+            .into_iter()
+            .filter(|id| public.contains(&id))
+            .filter_map(|id| entries_map.remove(&id))
+            .collect();
+        Ok::<_, Error>(stream::iter(result).map(Ok))
     })
     .try_flatten()
 }
@@ -72,27 +80,30 @@ fn windows(start: u64, stop: u64, step: u64) -> impl Iterator<Item = (u64, u64)>
 mod tests {
     use super::*;
 
+    use std::str::FromStr;
+
     use fbinit::FacebookInit;
 
     use bookmarks::BookmarkName;
     use fixtures::branch_wide;
+    use mercurial_types::HgChangesetId;
     use phases::mark_reachable_as_public;
 
     #[fbinit::compat_test]
     async fn test_fetch_all_public_changesets(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = branch_wide::getrepo(fb).await;
+        let blobrepo = branch_wide::getrepo(fb).await;
 
-        let phases = repo.get_phases();
+        let phases = blobrepo.get_phases();
         let sql_phases = phases.get_sql_phases();
-        let changesets = repo.get_changesets_object();
+        let changesets = blobrepo.get_changesets_object();
         let sql_changesets = changesets.get_sql_changesets();
-        let repo_id = repo.get_repoid();
+        let repo_id = blobrepo.get_repoid();
 
         // our function avoids derivation so we need to explicitly do the derivation for
         // phases to have any data
         let master = BookmarkName::new("master")?;
-        let master = repo
+        let master = blobrepo
             .get_bonsai_bookmark(ctx.clone(), &master)
             .compat()
             .await?
@@ -103,7 +114,25 @@ mod tests {
             fetch_all_public_changesets(&ctx, repo_id, sql_changesets, sql_phases)
                 .try_collect()
                 .await?;
-        assert_eq!(public_changesets.len(), 3);
+
+        let mut hg_mapped = vec![];
+        for cs_entry in public_changesets {
+            let hg_cs_id = blobrepo
+                .get_hg_from_bonsai_changeset(ctx.clone(), cs_entry.cs_id)
+                .compat()
+                .await?;
+            hg_mapped.push(hg_cs_id);
+        }
+        let expected = vec![
+            "ecba698fee57eeeef88ac3dcc3b623ede4af47bd",
+            "4685e9e62e4885d477ead6964a7600c750e39b03",
+            "49f53ab171171b3180e125b918bd1cf0af7e5449",
+        ];
+        let expected_mapped = expected
+            .iter()
+            .map(|v| HgChangesetId::from_str(v))
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(hg_mapped, expected_mapped);
         Ok(())
     }
 }

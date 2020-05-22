@@ -17,6 +17,7 @@ futures = { version = "0.3", features = ["async-await", "compat"] }
 [dev-dependencies]
 bookmarks = { path = "../bookmarks" }
 fixtures = { path = "../tests/fixtures" }
+mercurial_types = { path = "../mercurial/types" }
 revset = { path = "../revset" }
 tests_utils = { path = "../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
