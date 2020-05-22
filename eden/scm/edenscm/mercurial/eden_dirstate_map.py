@@ -54,6 +54,9 @@ class eden_dirstate_map(dirstate.dirstatemap):
             for k, v in self._map.items()
             if not (v[0] == "n" and v[2] == MERGE_STATE_NOT_APPLICABLE)
         }
+        # pyre-fixme[6]: Expected `Dict[bytes, bytes]` for 4th param but got
+        #  `BoundMethod[typing.Callable(dirstate.dirstatemap.copymap)[[Named(self,
+        #  dirstate.dirstatemap)], typing.Any], eden_dirstate_map]`.
         eden_dirstate_serializer.write(st, parents, m, self.copymap)
         st.close()
 

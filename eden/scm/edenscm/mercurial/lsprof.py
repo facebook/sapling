@@ -155,7 +155,7 @@ if __name__ == "__main__":
         print("usage: lsprof.py <script> <arguments...>", file=sys.stderr)
         sys.exit(2)
     sys.path.insert(0, os.path.abspath(os.path.dirname(sys.argv[0])))
-    # pyre-fixme[18]: Global name `execfile` is undefined.
+    # pyre-fixme[10]: Name `execfile` is used but not defined.
     stats = profile(execfile, sys.argv[0], globals(), locals())  # noqa
     stats.sort()
     stats.pprint()

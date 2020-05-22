@@ -694,7 +694,11 @@ if pycompat.isdarwin:
         # drop HFS+ ignored characters
         return encoding.hfsignoreclean(enc)
 
+    # pyre-fixme[9]: checkexec has type `(path: str) -> bool`; used as `(path: str)
+    #  -> bool`.
     checkexec = _checkexec
+    # pyre-fixme[9]: checklink has type `(path: str) -> bool`; used as `(path: str)
+    #  -> bool`.
     checklink = _checklink
 
 elif pycompat.sysplatform == "cygwin":
@@ -755,7 +759,11 @@ else:
     # fallback normcase function for non-ASCII strings
     normcasefallback = normcase
 
+    # pyre-fixme[9]: checkexec has type `(path: str) -> bool`; used as `(path: str)
+    #  -> bool`.
     checkexec = _checkexec
+    # pyre-fixme[9]: checklink has type `(path: str) -> bool`; used as `(path: str)
+    #  -> bool`.
     checklink = _checklink
 
 _needsshellquote = None

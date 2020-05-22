@@ -88,7 +88,6 @@ source_converters = [
     ("svn", svn_source, "branchsort"),
     ("hg", mercurial_source, "sourcesort"),
     ("p4", p4_source, "branchsort"),
-    # pyre-fixme[18]: Global name `repo_source` is undefined.
     ("repo", repo_source, "branchsort"),
 ]
 

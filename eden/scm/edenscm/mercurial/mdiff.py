@@ -43,6 +43,8 @@ def init(ui):
     # type: (UI) -> None
     if ui.configbool("experimental", "xdiff"):
         global blocks
+        # pyre-fixme[9]: blocks has type `(a: str, b: str) -> List[Tuple[int, int,
+        #  int, int]]`; used as `(a: str, b: str) -> List[Tuple[int, int, int, int]]`.
         blocks = xdiff.blocks
 
 
@@ -486,8 +488,10 @@ def _unidiff(t1, t2, opts=defaultopts):
                     yield x
         if prev:
             # we've joined the previous hunk, record the new ending points.
+            # pyre-fixme[16]: `Optional` has no attribute `__setitem__`.
             hunk[1] = a2
             hunk[3] = b2
+            # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.
             delta = hunk[4]
         else:
             # create a new hunk

@@ -70,7 +70,7 @@ def reraise(tp, value, tb=None):
 if PYTHON3:
     UNICODE = str
 else:
-    # pyre-fixme[11]: Annotation `unicode` is not defined as a type.
+    # pyre-fixme[10]: Name `unicode` is used but not defined.
     UNICODE = unicode  # noqa: F821 We handled versioning above
 
 # pyre-fixme[11]: Annotation `abc` is not defined as a type.

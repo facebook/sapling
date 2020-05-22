@@ -378,8 +378,6 @@ class ListMountInfo(typing.NamedTuple):
     def to_json_dict(self) -> Dict[str, Any]:
         return {
             "data_dir": str(self.data_dir),
-            # pyre-fixme[6]: Expected `MountState` for 1st param but got
-            #  `Optional[MountState]`.
             "state": MountState._VALUES_TO_NAMES.get(self.state)
             if self.state is not None
             else "NOT_RUNNING",
@@ -480,8 +478,6 @@ class ListCmd(Subcmd):
                 # We only show the state if the mount is in an unusual state.
                 state_str = ""
             else:
-                # pyre-fixme[6]: Expected `MountState` for 1st param but got
-                #  `Optional[MountState]`.
                 state_name = MountState._VALUES_TO_NAMES[mount_info.state]
                 state_str = f" ({state_name})"
 
@@ -1691,7 +1687,6 @@ class StopCmd(Subcmd):
                     client.initiateShutdown(f"`eden stop` requested by {request_info}")
             except thrift.transport.TTransport.TTransportException as e:
                 print_stderr(f"warning: edenfs is not responding: {e}")
-                # pyre-fixme[25]: Assertion will always fail.
                 if pid is None:
                     pid = check_health_using_lockfile(instance.state_dir).pid
                     if pid is None:

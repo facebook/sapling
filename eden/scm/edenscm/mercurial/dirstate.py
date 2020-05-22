@@ -1054,12 +1054,14 @@ class dirstate(object):
             seenset.update(cleanpaths)
 
         # Step 4: Report any explicitly requested files that don't exist
+        # pyre-fixme[16]: Anonymous callable has no attribute `files`.
         for path in sorted(match.files()):
             try:
                 if path in seenset:
                     continue
                 os.lstat(os.path.join(self._root, path))
             except OSError as ex:
+                # pyre-fixme[16]: Anonymous callable has no attribute `bad`.
                 match.bad(path, encoding.strtolocal(ex.strerror))
 
         # TODO: fire this inside filesystem. fixup is a list of files that

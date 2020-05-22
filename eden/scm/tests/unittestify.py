@@ -52,6 +52,10 @@ os.environ["PYTHON_SYS_EXECUTABLE"] = pythonbinpath
 try:
     shlex_quote = shlex.quote  # Python 3.3 and up
 except AttributeError:
+    # pyre-fixme[9]: shlex_quote has type `(s: str) -> str`; used as `(seq:
+    #  Sequence[str]) -> str`.
+    # pyre-fixme[9]: shlex_quote has type `(s: str) -> str`; used as `(seq:
+    #  Sequence[str]) -> str`.
     shlex_quote = subprocess.list2cmdline
 
 

@@ -27,7 +27,6 @@ else:
     module = __file__
 
 try:
-    # pyre-fixme[18]: Global name `unicode` is undefined.
     unicode
 except NameError:
     unicode = str

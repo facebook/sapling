@@ -265,6 +265,8 @@ class abstractvfs(pycompat.ABC):
 
     def readdir(self, path=None, stat=None, skip=None):
         # type: (Optional[str], Optional[bool], Optional[str]) -> List[str]
+        # pyre-fixme[7]: Expected `List[str]` but got `Union[List[Tuple[str, int]],
+        #  List[Tuple[str, int, edenscmnative.osutil.stat]]]`.
         return util.listdir(self.join(path), stat, skip)
 
     def readlock(self, path):
@@ -567,6 +569,8 @@ class vfs(abstractvfs):
 
             fp = delayclosedfile(fp, self._backgroundfilecloser)
 
+        # pyre-fixme[7]: Expected `BinaryIO` but got `Union[IO[typing.Any],
+        #  checkambigatclosing, delayclosedfile]`.
         return fp
 
     def symlink(self, src, dst):

@@ -18,7 +18,6 @@ from .lib import testcase
 #
 # We have to ignore type errors on the next line until we update to a version
 # of typeshed that includes https://github.com/python/typeshed/pull/3945
-# pyre-fixme[6]: Expected `str` for 1st param but got `None`.
 libc = ctypes.CDLL(None)
 c_off_t = c_ssize_t
 

@@ -23,7 +23,6 @@ from . import context
 
 
 try:
-    # pyre-fixme[18]: Global name `buffer` is undefined.
     buffer
 except NameError:
     buffer = memoryview

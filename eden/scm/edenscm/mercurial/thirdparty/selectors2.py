@@ -41,6 +41,7 @@ Mapping = collections.Mapping
 try:
     monotonic = time.monotonic
 except AttributeError:
+    # pyre-fixme[9]: monotonic has type `() -> float`; used as `() -> float`.
     monotonic = time.time
 
 __author__ = "Seth Michael Larson"

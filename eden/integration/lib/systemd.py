@@ -589,7 +589,6 @@ def _get_current_xdg_runtime_dir() -> pathlib.Path:
     problems = []
     path = None
 
-    # pyre-fixme[25]: Assertion will always fail.
     if path is None:
         path_from_env = os.environ.get("XDG_RUNTIME_DIR")
         if path_from_env is None or path_from_env == "":

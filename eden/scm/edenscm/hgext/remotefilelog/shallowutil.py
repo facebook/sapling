@@ -234,6 +234,8 @@ def buildpackmeta(metadict):
     newmeta = {}
     for k, v in pycompat.iteritems((metadict or {})):
         expectedtype = _metaitemtypes.get(k, (bytes,))
+        # pyre-fixme[6]: Expected `Union[typing.Type[typing.Any],
+        #  typing.Tuple[typing.Type[typing.Any], ...]]` for 2nd param but got `Any`.
         if not isinstance(v, expectedtype):
             raise error.ProgrammingError("packmeta: wrong type of key %s" % k)
         # normalize int to binary buffer

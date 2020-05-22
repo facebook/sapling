@@ -751,6 +751,8 @@ class Top:
             row = (fmt(data) for fmt, data in zip(COLUMN_FORMATTING, row))
 
             style = self.curses.A_BOLD if process.is_running else self.curses.A_NORMAL
+            # pyre-fixme[6]: Expected `Row` for 2nd param but got
+            #  `Generator[typing.Any, None, None]`.
             self.render_row(window, row, style)
 
     def render_row(self, window: Window, row: Row, style) -> None:

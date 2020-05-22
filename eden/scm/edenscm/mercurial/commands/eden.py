@@ -837,6 +837,8 @@ def runedenimporthelper(repo, **opts):
     get_manifest_node_arg = opts.get("get_manifest_node")
     if get_manifest_node_arg:
         node = server.get_manifest_node(get_manifest_node_arg)
+        # pyre-fixme[6]: Expected `str` for 1st param but got `bytes`.
+        # pyre-fixme[6]: Expected `bytes` for 1st param but got `str`.
         repo.ui.write(hex(node) + "\n")
         return 0
 

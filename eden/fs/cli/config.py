@@ -213,6 +213,7 @@ class EdenInstance:
         else:
             user_id = os.getuid()
             user_name = "USER"
+        # pyre-fixme[7]: Expected `Dict[str, str]` but got `Optional[Dict[str, str]]`.
         return (
             self._interpolate_dict
             if self._interpolate_dict is not None

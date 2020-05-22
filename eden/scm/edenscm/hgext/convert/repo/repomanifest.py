@@ -8,8 +8,6 @@
 from __future__ import absolute_import
 
 import re
-
-# pyre-fixme[21]: Could not find `dom`.
 import xml.dom.minidom
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 

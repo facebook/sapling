@@ -114,12 +114,9 @@ if not pycompat.iswindows:
             (u"cmsg_len", _cmsg_len_t),
             (u"cmsg_level", ctypes.c_int),
             (u"cmsg_type", ctypes.c_int),
-            # pyre-fixme[6]: Expected `int` for 1st param but got
-            #  `Type[ctypes.c_ubyte]`.
             (u"cmsg_data", ctypes.c_ubyte * 0),
         ]
 
-    # pyre-fixme[6]: Expected `str` for 1st param but got `Optional[str]`.
     _libc = ctypes.CDLL(ctypes.util.find_library(u"c"), use_errno=True)
     _recvmsg = getattr(_libc, "recvmsg", None)
     if _recvmsg:

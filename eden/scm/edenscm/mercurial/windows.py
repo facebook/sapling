@@ -141,6 +141,7 @@ def posixfile(name, mode="r", buffering=-1):
         fp = osutil.posixfile(name, mode, buffering)  # may raise WindowsError
 
         return _fixseek(fp, mode)
+    # pyre-fixme[10]: Name `WindowsError` is used but not defined.
     except WindowsError as err:
         # convert to a friendlier exception
         raise IOError(err.errno, "%s: %s" % (name, encoding.strtolocal(err.strerror)))
