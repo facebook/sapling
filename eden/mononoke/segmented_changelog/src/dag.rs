@@ -10,7 +10,7 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::{format_err, Result};
 
 use futures::stream::TryStreamExt;
-use maplit::{hashmap, hashset};
+use maplit::hashset;
 
 use dag::{self, Id as Vertex, InProcessIdDag};
 
@@ -20,7 +20,7 @@ use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 use phases::SqlPhases;
 
-use crate::idmap::IdMap;
+use crate::idmap::{IdMap, MemIdMap};
 
 // Note. The equivalent graph in the scm/lib/dag crate is `NameDag`.
 pub struct Dag {
@@ -72,53 +72,36 @@ impl Dag {
         };
 
         let low_vertex = dag::Group::MASTER.min_id().0;
-        let (vertex2cs, cs2vertex) = assign_ids(low_vertex, head, &get_parents).await?;
+        let mem_idmap = assign_ids(low_vertex, head, &get_parents).await?;
 
-        let head_vertex = *cs2vertex
-            .get(&head)
+        let head_vertex = mem_idmap
+            .find_vertex(head)
             .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
 
         // TODO(sfilip): batch operations
-        for (vertex, cs_id) in vertex2cs.iter() {
-            self.idmap.insert(self.repo_id, *vertex, *cs_id).await?;
+        for (vertex, cs_id) in mem_idmap.iter() {
+            self.idmap.insert(self.repo_id, vertex, cs_id).await?;
         }
 
-        let high_vertex = low_vertex + vertex2cs.len() as u64;
-        let get_parents_vertex = |vertex: Vertex| -> Result<Vec<Vertex>> {
-            if low_vertex > vertex.0 || vertex.0 > high_vertex {
-                return Err(format_err!(
-                    "invalid Vertex requested by IdDag: {}; valid Vertex range: [{}, {}]",
-                    vertex,
-                    low_vertex,
-                    high_vertex,
-                ));
-            }
-            let cs_id = *vertex2cs.get(&vertex).ok_or_else(|| {
-                format_err!("failed to find vertex {} mapping in vertex2cs", vertex)
-            })?;
+        let vertex_get_parents = |vertex: Vertex| -> Result<Vec<Vertex>> {
+            let cs_id = mem_idmap.get_changeset_id(vertex)?;
             let parents = get_parents(cs_id)?;
             let mut response = Vec::with_capacity(parents.len());
             for parent in parents {
-                let vertex = *cs2vertex.get(&parent).ok_or_else(|| {
-                    format_err!("failed to find changeset {} mapping in cs2vertex", parent)
-                })?;
+                let vertex = mem_idmap.get_vertex(parent)?;
                 response.push(vertex);
             }
             Ok(response)
         };
 
         self.iddag
-            .build_segments_volatile(head_vertex, &get_parents_vertex)?;
+            .build_segments_volatile(head_vertex, &vertex_get_parents)?;
 
         Ok(())
     }
 }
 
-async fn assign_ids<F>(
-    low_vertex: u64,
-    head: ChangesetId,
-    get_parents: &F,
-) -> Result<(HashMap<Vertex, ChangesetId>, HashMap<ChangesetId, Vertex>)>
+async fn assign_ids<F>(low_vertex: u64, head: ChangesetId, get_parents: &F) -> Result<MemIdMap>
 where
     F: Fn(ChangesetId) -> Result<Vec<ChangesetId>>,
 {
@@ -127,8 +110,7 @@ where
         Assign(ChangesetId),
     }
     let mut todo_stack = vec![Todo::Visit(head)];
-    let mut vertex2cs = hashmap![];
-    let mut cs2vertex = hashmap![];
+    let mut mem_idmap = MemIdMap::new();
     let mut seen = hashset![head];
 
     while let Some(todo) = todo_stack.pop() {
@@ -146,14 +128,13 @@ where
                 }
             }
             Todo::Assign(cs_id) => {
-                let vertex = Vertex(low_vertex + vertex2cs.len() as u64);
-                vertex2cs.insert(vertex, cs_id);
-                cs2vertex.insert(cs_id, vertex);
+                let vertex = Vertex(low_vertex + mem_idmap.len() as u64);
+                mem_idmap.insert(vertex, cs_id);
             }
         }
     }
 
-    Ok((vertex2cs, cs2vertex))
+    Ok(mem_idmap)
 }
 
 #[cfg(test)]
