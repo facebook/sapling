@@ -5,23 +5,20 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{format_err, Result};
-use futures::{
-    compat::Future01CompatExt,
-    future,
-    stream::{self, StreamExt, TryStreamExt},
-};
-use maplit::hashset;
 
-use dag::{self, Id as Vertex, InProcessIdDag, Level};
+use futures::stream::TryStreamExt;
+use maplit::{hashmap, hashset};
 
-use blobrepo::ChangesetFetcher;
+use dag::{self, Id as Vertex, InProcessIdDag};
+
+use bulkops::fetch_all_public_changesets;
+use changesets::{ChangesetEntry, SqlChangesets};
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
+use phases::SqlPhases;
 
 use crate::idmap::IdMap;
 
@@ -30,58 +27,10 @@ pub struct Dag {
     // core fields
     repo_id: RepositoryId,
     iddag: InProcessIdDag,
-    // dependencies
     idmap: Arc<IdMap>,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
 }
 
 impl Dag {
-    // Dummy method. A production setup would have the changeset built by a separate job.
-    pub async fn build_up(&mut self, ctx: &CoreContext, head: ChangesetId) -> Result<()> {
-        let high_vertex = self.build_up_idmap(ctx, head).await?;
-        let low_vertex = self.iddag.next_free_id(0 as Level, high_vertex.group())?;
-        if low_vertex >= high_vertex {
-            return Ok(());
-        }
-        let idmap = &self.idmap;
-
-        // TODO(sfilip): buffering
-        let parents: Vec<Vec<Vertex>> = stream::iter(low_vertex.to(high_vertex))
-            .map(Ok)
-            .and_then(|vertex| idmap.get_changeset_id(self.repo_id, vertex))
-            .and_then(|cs_id: ChangesetId| {
-                self.changeset_fetcher
-                    .get_parents(ctx.clone(), cs_id)
-                    .compat()
-            })
-            .and_then(|cs_ids| {
-                future::try_join_all(
-                    cs_ids
-                        .iter()
-                        .map(|cs_id| idmap.get_vertex(self.repo_id, *cs_id)),
-                )
-            })
-            .try_collect()
-            .await?;
-        let get_parents = |vertex: Vertex| {
-            parents
-                .get((vertex.0 - low_vertex.0) as usize)
-                .cloned()
-                .ok_or_else(|| {
-                    format_err!(
-                        "invalid Id requested by IdDag: {}; present Id range: [{}, {}]",
-                        vertex,
-                        low_vertex,
-                        high_vertex
-                    )
-                })
-        };
-        // TODO(sfilip): check return value from build_segments_volatile
-        self.iddag
-            .build_segments_volatile(high_vertex, &get_parents)?;
-        Ok(())
-    }
-
     // TODO(sfilip): error scenarios
     pub async fn location_to_changeset_id(
         &self,
@@ -97,52 +46,114 @@ impl Dag {
         Ok(dist_ancestor)
     }
 
-    pub(crate) async fn build_up_idmap(
-        &self,
+    pub async fn build_all_graph(
+        &mut self,
         ctx: &CoreContext,
+        changesets: &SqlChangesets,
+        phases: &SqlPhases,
         head: ChangesetId,
-    ) -> Result<Vertex> {
-        enum Todo {
-            Visit(ChangesetId),
-            Assign(ChangesetId),
+    ) -> Result<()> {
+        let changeset_entries: Vec<ChangesetEntry> =
+            fetch_all_public_changesets(ctx, self.repo_id, changesets, phases)
+                .try_collect()
+                .await?;
+        let mut parents_map: HashMap<ChangesetId, Vec<ChangesetId>> = HashMap::new();
+        for cs_entry in changeset_entries.into_iter() {
+            parents_map.insert(cs_entry.cs_id, cs_entry.parents);
         }
-        let mut next_vertex = dag::Group::MASTER.min_id().0;
-        let mut todo_stack = vec![Todo::Visit(head)];
-        let mut seen = hashset![head];
-        while let Some(todo) = todo_stack.pop() {
-            match todo {
-                Todo::Visit(cs_id) => {
-                    todo_stack.push(Todo::Assign(cs_id));
-                    let parents = self
-                        .changeset_fetcher
-                        .get_parents(ctx.clone(), cs_id)
-                        .compat()
-                        .await?;
-                    for parent in parents.into_iter().rev() {
-                        // Note: iterating parents in reverse is a small optimization because
-                        // in our setup p1 is master.
-                        if !seen.contains(&parent) {
-                            seen.insert(parent);
-                            todo_stack.push(Todo::Visit(parent));
-                        }
+
+        let get_parents = |cs_id: ChangesetId| {
+            parents_map
+                .get(&cs_id)
+                .ok_or_else(|| format_err!("commit {} not found in parents map", cs_id))
+                .map(|v| v.clone())
+            // TODO(sfilip): use a dedicated parents structure which specializes the case where
+            // we have 0, 1 and 2 parents, 3+ is a 4th variant backed by Vec.
+        };
+
+        let low_vertex = dag::Group::MASTER.min_id().0;
+        let (vertex2cs, cs2vertex) = assign_ids(low_vertex, head, &get_parents).await?;
+
+        let head_vertex = *cs2vertex
+            .get(&head)
+            .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
+
+        // TODO(sfilip): batch operations
+        for (vertex, cs_id) in vertex2cs.iter() {
+            self.idmap.insert(self.repo_id, *vertex, *cs_id).await?;
+        }
+
+        let high_vertex = low_vertex + vertex2cs.len() as u64;
+        let get_parents_vertex = |vertex: Vertex| -> Result<Vec<Vertex>> {
+            if low_vertex > vertex.0 || vertex.0 > high_vertex {
+                return Err(format_err!(
+                    "invalid Vertex requested by IdDag: {}; valid Vertex range: [{}, {}]",
+                    vertex,
+                    low_vertex,
+                    high_vertex,
+                ));
+            }
+            let cs_id = *vertex2cs.get(&vertex).ok_or_else(|| {
+                format_err!("failed to find vertex {} mapping in vertex2cs", vertex)
+            })?;
+            let parents = get_parents(cs_id)?;
+            let mut response = Vec::with_capacity(parents.len());
+            for parent in parents {
+                let vertex = *cs2vertex.get(&parent).ok_or_else(|| {
+                    format_err!("failed to find changeset {} mapping in cs2vertex", parent)
+                })?;
+                response.push(vertex);
+            }
+            Ok(response)
+        };
+
+        self.iddag
+            .build_segments_volatile(head_vertex, &get_parents_vertex)?;
+
+        Ok(())
+    }
+}
+
+async fn assign_ids<F>(
+    low_vertex: u64,
+    head: ChangesetId,
+    get_parents: &F,
+) -> Result<(HashMap<Vertex, ChangesetId>, HashMap<ChangesetId, Vertex>)>
+where
+    F: Fn(ChangesetId) -> Result<Vec<ChangesetId>>,
+{
+    enum Todo {
+        Visit(ChangesetId),
+        Assign(ChangesetId),
+    }
+    let mut todo_stack = vec![Todo::Visit(head)];
+    let mut vertex2cs = hashmap![];
+    let mut cs2vertex = hashmap![];
+    let mut seen = hashset![head];
+
+    while let Some(todo) = todo_stack.pop() {
+        match todo {
+            Todo::Visit(cs_id) => {
+                todo_stack.push(Todo::Assign(cs_id));
+                let parents = get_parents(cs_id)?;
+                for parent in parents.iter().rev() {
+                    // Note: iterating parents in reverse is a small optimization because
+                    // in our setup p1 is master.
+                    if !seen.contains(parent) {
+                        seen.insert(*parent);
+                        todo_stack.push(Todo::Visit(*parent));
                     }
                 }
-                Todo::Assign(cs_id) => {
-                    self.idmap
-                        .insert(self.repo_id, Vertex(next_vertex), cs_id)
-                        .await?;
-                    next_vertex += 1;
-                }
+            }
+            Todo::Assign(cs_id) => {
+                let vertex = Vertex(low_vertex + vertex2cs.len() as u64);
+                vertex2cs.insert(vertex, cs_id);
+                cs2vertex.insert(cs_id, vertex);
             }
         }
-        match self.idmap.find_vertex(self.repo_id, head).await? {
-            None => Err(format_err!(
-                "Error building IdMap. Failed to assign head {}",
-                head
-            )),
-            Some(vertex) => Ok(vertex),
-        }
     }
+
+    Ok((vertex2cs, cs2vertex))
 }
 
 #[cfg(test)]
@@ -155,41 +166,73 @@ mod tests {
     use fixtures::{linear, merge_even, merge_uneven};
     use futures::compat::{Future01CompatExt, Stream01CompatExt};
     use futures::StreamExt;
+    use phases::mark_reachable_as_public;
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
     use tests_utils::resolve_cs_id;
 
     impl Dag {
-        pub fn new_in_process(blobrepo: &BlobRepo) -> Result<Self> {
+        fn new_in_process(repo_id: RepositoryId) -> Result<Dag> {
             Ok(Dag {
-                repo_id: blobrepo.get_repoid(),
+                repo_id,
                 iddag: InProcessIdDag::new_in_process(),
                 idmap: Arc::new(IdMap::with_sqlite_in_memory()?),
-                changeset_fetcher: blobrepo.get_changeset_fetcher(),
             })
         }
+
+        async fn build_from_blobrepo(
+            &mut self,
+            ctx: &CoreContext,
+            blobrepo: &BlobRepo,
+            head: ChangesetId,
+        ) -> Result<()> {
+            let changesets = blobrepo.get_changesets_object();
+            let sql_changesets = changesets.get_sql_changesets();
+            let phases = blobrepo.get_phases();
+            let sql_phases = phases.get_sql_phases();
+            self.build_all_graph(ctx, sql_changesets, sql_phases, head)
+                .await?;
+            Ok(())
+        }
+
+        async fn new_build_from_blobrepo(
+            ctx: &CoreContext,
+            blobrepo: &BlobRepo,
+            head: ChangesetId,
+        ) -> Result<Dag> {
+            let mut dag = Self::new_in_process(blobrepo.get_repoid())?;
+            dag.build_from_blobrepo(ctx, blobrepo, head).await?;
+            Ok(dag)
+        }
+    }
+
+    async fn setup_phases(ctx: &CoreContext, blobrepo: &BlobRepo, head: ChangesetId) -> Result<()> {
+        let phases = blobrepo.get_phases();
+        let sql_phases = phases.get_sql_phases();
+        mark_reachable_as_public(&ctx, sql_phases, &[head], false).await?;
+        Ok(())
     }
 
     async fn validate_build_up_idmap(
         ctx: CoreContext,
-        repo: BlobRepo,
+        blobrepo: BlobRepo,
         head: &'static str,
     ) -> Result<()> {
-        let dag = Dag::new_in_process(&repo)?;
-        let head = resolve_cs_id(&ctx, &repo, head).await?;
-        dag.build_up_idmap(&ctx, head).await?;
+        let head = resolve_cs_id(&ctx, &blobrepo, head).await?;
+        setup_phases(&ctx, &blobrepo, head).await?;
+        let dag = Dag::new_build_from_blobrepo(&ctx, &blobrepo, head).await?;
 
         let mut ancestors =
-            AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), head).compat();
+            AncestorsNodeStream::new(ctx.clone(), &blobrepo.get_changeset_fetcher(), head).compat();
         while let Some(cs_id) = ancestors.next().await {
             let cs_id = cs_id?;
-            let parents = repo
+            let parents = blobrepo
                 .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
                 .compat()
                 .await?;
             for parent in parents {
-                let parent_vertex = dag.idmap.get_vertex(repo.get_repoid(), parent).await?;
-                let vertex = dag.idmap.get_vertex(repo.get_repoid(), cs_id).await?;
+                let parent_vertex = dag.idmap.get_vertex(blobrepo.get_repoid(), parent).await?;
+                let vertex = dag.idmap.get_vertex(blobrepo.get_repoid(), cs_id).await?;
                 assert!(parent_vertex < vertex);
             }
         }
@@ -222,18 +265,17 @@ mod tests {
 
     async fn validate_location_to_changeset_id(
         ctx: CoreContext,
-        repo: BlobRepo,
+        blobrepo: BlobRepo,
         known: &'static str,
         distance: u64,
         expected: &'static str,
     ) -> Result<()> {
-        let known_cs_id = resolve_cs_id(&ctx, &repo, known).await?;
-
-        let mut dag = Dag::new_in_process(&repo)?;
-        dag.build_up(&ctx, known_cs_id).await?;
+        let known_cs_id = resolve_cs_id(&ctx, &blobrepo, known).await?;
+        setup_phases(&ctx, &blobrepo, known_cs_id).await?;
+        let dag = Dag::new_build_from_blobrepo(&ctx, &blobrepo, known_cs_id).await?;
 
         let answer = dag.location_to_changeset_id(known_cs_id, distance).await?;
-        let expected_cs_id = resolve_cs_id(&ctx, &repo, expected).await?;
+        let expected_cs_id = resolve_cs_id(&ctx, &blobrepo, expected).await?;
         assert_eq!(answer, expected_cs_id);
 
         Ok(())
@@ -272,25 +314,27 @@ mod tests {
     #[fbinit::compat_test]
     async fn test_two_build_up_calls(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
-        let mut dag = Dag::new_in_process(&repo)?;
+        let blobrepo = linear::getrepo(fb).await;
+        let mut dag = Dag::new_in_process(blobrepo.get_repoid())?;
 
         let known_cs =
-            resolve_cs_id(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
-        dag.build_up(&ctx, known_cs).await?;
-        let distance = 2;
+            resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
+        setup_phases(&ctx, &blobrepo, known_cs).await?;
+        dag.build_from_blobrepo(&ctx, &blobrepo, known_cs).await?;
+        let distance: u64 = 2;
         let answer = dag.location_to_changeset_id(known_cs, distance).await?;
         let expected_cs =
-            resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
+            resolve_cs_id(&ctx, &blobrepo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
         assert_eq!(answer, expected_cs);
 
         let known_cs =
-            resolve_cs_id(&ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
-        dag.build_up(&ctx, known_cs).await?;
-        let distance = 3;
+            resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
+        setup_phases(&ctx, &blobrepo, known_cs).await?;
+        dag.build_from_blobrepo(&ctx, &blobrepo, known_cs).await?;
+        let distance: u64 = 3;
         let answer = dag.location_to_changeset_id(known_cs, distance).await?;
         let expected_cs =
-            resolve_cs_id(&ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
+            resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
         assert_eq!(answer, expected_cs);
 
         Ok(())
@@ -300,28 +344,28 @@ mod tests {
     async fn test_two_repo_dags(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo1 = linear::getrepo(fb).await;
-        let mut dag1 = Dag::new_in_process(&repo1)?;
-
-        let repo2 = merge_even::getrepo(fb).await;
-        let mut dag2 = Dag::new_in_process(&repo2)?;
-
+        let blobrepo1 = linear::getrepo(fb).await;
         let known_cs1 =
-            resolve_cs_id(&ctx, &repo1, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
-        dag1.build_up(&ctx, known_cs1).await?;
+            resolve_cs_id(&ctx, &blobrepo1, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+        setup_phases(&ctx, &blobrepo1, known_cs1).await?;
+        let dag1 = Dag::new_build_from_blobrepo(&ctx, &blobrepo1, known_cs1).await?;
 
+        let blobrepo2 = merge_even::getrepo(fb).await;
         let known_cs2 =
-            resolve_cs_id(&ctx, &repo2, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
-        dag2.build_up(&ctx, known_cs2).await?;
+            resolve_cs_id(&ctx, &blobrepo2, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
+        setup_phases(&ctx, &blobrepo2, known_cs2).await?;
+        let dag2 = Dag::new_build_from_blobrepo(&ctx, &blobrepo2, known_cs2).await?;
 
-        let answer = dag1.location_to_changeset_id(known_cs1, 4).await?;
+        let distance: u64 = 4;
+        let answer = dag1.location_to_changeset_id(known_cs1, distance).await?;
         let expected_cs_id =
-            resolve_cs_id(&ctx, &repo1, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
+            resolve_cs_id(&ctx, &blobrepo1, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
         assert_eq!(answer, expected_cs_id);
 
-        let answer = dag2.location_to_changeset_id(known_cs2, 2).await?;
+        let distance: u64 = 2;
+        let answer = dag2.location_to_changeset_id(known_cs2, distance).await?;
         let expected_cs_id =
-            resolve_cs_id(&ctx, &repo2, "d7542c9db7f4c77dab4b315edd328edf1514952f").await?;
+            resolve_cs_id(&ctx, &blobrepo2, "d7542c9db7f4c77dab4b315edd328edf1514952f").await?;
         assert_eq!(answer, expected_cs_id);
 
         Ok(())
