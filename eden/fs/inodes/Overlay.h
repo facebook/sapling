@@ -10,6 +10,7 @@
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
+#include <folly/synchronization/Baton.h>
 #include <array>
 #include <atomic>
 #include <condition_variable>
