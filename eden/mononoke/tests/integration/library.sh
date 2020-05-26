@@ -1663,6 +1663,7 @@ function commitcloud_fill_one() {
   # database
   local CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
   "$MONONOKE_COMMITCLOUD_FILLONE" \
+    hg-to-mononoke \
     --hgcli "$MONONOKE_HGCLI" \
     --mononoke-address "[::1]:$MONONOKE_SOCKET" \
     --mononoke-server-common-name localhost \
