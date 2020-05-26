@@ -46,6 +46,17 @@ queries! {
         "
     }
 
+    read SelectLastEntry(repo_id: RepositoryId) -> (u64, ChangesetId) {
+        "
+        SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
+        FROM segmented_changelog_idmap AS idmap
+        WHERE idmap.repo_id = {repo_id} AND idmap.vertex = (
+            SELECT MAX(inner.vertex)
+            FROM segmented_changelog_idmap AS inner
+            WHERE inner.repo_id = {repo_id}
+        )
+        "
+    }
 }
 
 impl SqlConstruct for IdMap {
@@ -156,6 +167,16 @@ impl IdMap {
             .await?
             .ok_or_else(|| format_err!("Failed to find find changeset id {} in IdMap", cs_id))
     }
+
+    pub async fn get_last_entry(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<Option<(Vertex, ChangesetId)>> {
+        let rows = SelectLastEntry::query(&self.0.read_connection, &repo_id)
+            .compat()
+            .await?;
+        Ok(rows.into_iter().next().map(|r| (Vertex(r.0), r.1)))
+    }
 }
 
 pub struct MemIdMap {
@@ -202,5 +223,33 @@ impl MemIdMap {
     pub fn get_vertex(&self, cs_id: ChangesetId) -> Result<Vertex> {
         self.find_vertex(cs_id)
             .ok_or_else(|| format_err!("Failed to find find changeset id {} in IdMap", cs_id))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fbinit::FacebookInit;
+
+    use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
+
+    #[fbinit::compat_test]
+    async fn test_get_last_entry(_fb: FacebookInit) -> Result<()> {
+        let repo_id = RepositoryId::new(0);
+        let idmap = IdMap::with_sqlite_in_memory()?;
+
+        assert_eq!(idmap.get_last_entry(repo_id).await?, None);
+
+        idmap.insert(repo_id, Vertex(1), ONES_CSID).await?;
+        idmap.insert(repo_id, Vertex(2), TWOS_CSID).await?;
+        idmap.insert(repo_id, Vertex(3), THREES_CSID).await?;
+
+        assert_eq!(
+            idmap.get_last_entry(repo_id).await?,
+            Some((Vertex(3), THREES_CSID))
+        );
+
+        Ok(())
     }
 }
