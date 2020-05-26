@@ -103,30 +103,45 @@ class TestFlags(NamedTuple):
         return r
 
 
+def create_schema(mysql_schemas, conn):
+    client = ConfigeratorClient()
+    configs = []
+    for schema_path in mysql_schemas:
+        root = client.get_config_contents_as_thrift(
+            "{}/.sql_schema_domains".format(schema_path), DatabaseSchemas
+        )
+        for table in root.tables.keys():
+            configs.append("{}/{}.sql_table_schema".format(schema_path, table))
+    for table_path in configs:
+        table = client.get_config_contents_as_thrift(table_path, TableSchema)
+        conn.query(table.sql)
+
+
 @contextlib.contextmanager
-def ephemeral_db_helper(mysql_schemas):
+def ephemeral_db_helper(shard_part, mysql_schemas):
     with DbDef.TestDatabaseManager(
-        prefix="mononoke_tests",
+        prefix=shard_part,
         oncall_shortname="source_control",
         force_ephemeral=True,
         ttl_minutes=15,  # Some Mononoke tests last this long
     ) as test_db_manager:
-        client = ConfigeratorClient()
-
-        configs = []
-        for schema_path in mysql_schemas:
-            root = client.get_config_contents_as_thrift(
-                "{}/.sql_schema_domains".format(schema_path), DatabaseSchemas
-            )
-            for table in root.tables.keys():
-                configs.append("{}/{}.sql_table_schema".format(schema_path, table))
-
-        conn = test_db_manager.get_connection()
-        for table_path in configs:
-            table = client.get_config_contents_as_thrift(table_path, TableSchema)
-            conn.query(table.sql)
-
+        if len(mysql_schemas) > 0:
+            conn = test_db_manager.get_connection()
+            create_schema(mysql_schemas, conn)
         yield {"DB_SHARD_NAME": test_db_manager.get_shard_name()}
+
+
+@contextlib.contextmanager
+def devdb_db_helper(shard_part, mysql_schemas):
+    from libfb.py import db_locator
+
+    shard_name = "devdb." + shard_part
+    if len(mysql_schemas) > 0:
+        locator = db_locator.Locator(tier_name=shard_name, role="scriptrw")
+        locator.do_not_send_autocommit_query()
+        conn = locator.create_connection()
+        create_schema(mysql_schemas, conn)
+    yield {"DB_SHARD_NAME": shard_name}
 
 
 @contextlib.contextmanager
@@ -363,13 +378,19 @@ def run_tests(
     "--mysql",
     default=False,
     is_flag=True,
-    help="Use Ephemeral DB to run tests with MySQL",
+    help="Use Ephemeral DB or optionally devdb to run tests with MySQL",
 )
 @click.option(
     "mysql_schemas",
     "--mysql-schema",
     multiple=True,
-    help="Import schema into Ephemeral DB (Configerator path)",
+    help="Import schema into mysql Ephemeral DB or devdb (Configerator path)",
+)
+@click.option(
+    "--devdb",
+    default=None,
+    is_flag=False,
+    help="Use devdb to run tests with MySQL, specify the shard e.g. --devdb=$USER",
 )
 @click.argument("manifest", type=click.Path())
 @click.argument("tests", nargs=-1, type=click.Path())
@@ -387,6 +408,7 @@ def run(
     keep_tmpdir,
     mysql,
     mysql_schemas,
+    devdb,
 ):
     set_simple_logging(logging.INFO)
 
@@ -423,6 +445,7 @@ def run(
     else:
         selected_tests.extend(tests)
 
+    shard_part = "monononoke_tests"
     if mysql:
         if dry_run:
             # We can dry-run for ephemeral tests
@@ -430,7 +453,11 @@ def run(
         elif len(selected_tests) <= 1:
             # One test is allowed to use an ephemeral db. This is OK, because
             # TestPilot actually asks us to run tests one by one.
-            db_helper = ephemeral_db_helper
+            if devdb:
+                shard_part = devdb
+                db_helper = devdb_db_helper
+            else:
+                db_helper = ephemeral_db_helper
         else:
             # Too many tests! This won't work.
             raise click.BadParameter(
@@ -439,7 +466,7 @@ def run(
                 param_hint="simple_test_selector",
             )
 
-    with db_helper(mysql_schemas) as test_env:
+    with db_helper(shard_part, mysql_schemas) as test_env:
         run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env)
 
 
