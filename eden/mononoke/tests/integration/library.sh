@@ -1674,3 +1674,45 @@ function commitcloud_fill_one() {
     --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
     --debug "$@"
 }
+
+function commitcloud_reverse_fill_one() {
+  "$MONONOKE_COMMITCLOUD_FILLONE" \
+    mononoke-to-hg \
+    --reponame $REPONAME \
+    --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
+    --debug "$@"
+}
+
+function commitcloud_reversefiller_iteration() {
+  local default_sqlite_db="$TESTTMP/monsql/sqlite_dbs"
+  local sqlitedb="${REVERSEFILLER_SQLITE_DB:-"$default_sqlite_db"}"
+  "$MONONOKE_COMMITCLOUD_REVERSEFILLER" \
+    --num-workers 1 \
+    --identity "testfiller" \
+    --reponame "$REPONAME" \
+    --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
+    --stop-after-n-iterations=10 \
+    --with-sqlite-db="$sqlitedb" \
+    --debug "$@"
+}
+
+function commitcloud_forwardfiller_iteration() {
+  # Note: do not use `call_with_certs` here or
+  # put cert paths into env vars, as this causes
+  # the binary to lose access to `getdb.sh`-acquired
+  # database
+  local CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
+  "$MONONOKE_COMMITCLOUD_FORWARDFILLER" \
+    --num-workers 1 \
+    --hgcli "$MONONOKE_HGCLI" \
+    --mononoke-address "[::1]:$MONONOKE_SOCKET" \
+    --mononoke-server-common-name localhost \
+    --cert-override "$CERTDIR/localhost.crt" \
+    --private-key-override "$CERTDIR/localhost.key" \
+    --ca-pem-override "$CERTDIR/root-ca.crt" \
+    --identity "testfiller" \
+    --reponame "$REPONAME" \
+    --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
+    --stop-after-n-iterations=10 \
+    --debug "$@"
+}
