@@ -267,8 +267,9 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
     if (!isMaterialized) {
       auto entHash = ent.getHash();
       auto bytes = entHash.getBytes();
-      oent.set_hash(std::string{reinterpret_cast<const char*>(bytes.data()),
-                                bytes.size()});
+      oent.hash_ref() = std::string{reinterpret_cast<const char*>(bytes.data()),
+
+                                    bytes.size()};
     }
 
     odir.entries.emplace(

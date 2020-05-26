@@ -171,8 +171,9 @@ class TestDir {
     entry.inodeNumber = static_cast<int64_t>(number);
     if (hash) {
       auto hashBytes = hash->getBytes();
-      entry.set_hash(std::string{
-          reinterpret_cast<const char*>(hashBytes.data()), hashBytes.size()});
+      entry.hash_ref() = std::string{
+
+          reinterpret_cast<const char*>(hashBytes.data()), hashBytes.size()};
     }
     return InodeNumber(number);
   }

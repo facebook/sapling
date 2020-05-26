@@ -443,16 +443,16 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
           const FileChangeJournalDelta& current) -> void {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
-        fromPosition.set_mountGeneration(mountGeneration);
-        fromPosition.set_sequenceNumber(current.sequenceID);
-        fromPosition.set_snapshotHash(thriftHash(currentHash));
-        delta.set_fromPosition(fromPosition);
+        fromPosition.mountGeneration_ref() = mountGeneration;
+        fromPosition.sequenceNumber_ref() = current.sequenceID;
+        fromPosition.snapshotHash_ref() = thriftHash(currentHash);
+        delta.fromPosition_ref() = fromPosition;
 
         JournalPosition toPosition;
-        toPosition.set_mountGeneration(mountGeneration);
-        toPosition.set_sequenceNumber(current.sequenceID);
-        toPosition.set_snapshotHash(thriftHash(currentHash));
-        delta.set_toPosition(toPosition);
+        toPosition.mountGeneration_ref() = mountGeneration;
+        toPosition.sequenceNumber_ref() = current.sequenceID;
+        toPosition.snapshotHash_ref() = thriftHash(currentHash);
+        delta.toPosition_ref() = toPosition;
 
         for (const auto& entry : current.getChangedFilesInOverlay()) {
           auto& path = entry.first;
@@ -470,16 +470,16 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
           const HashUpdateJournalDelta& current) -> void {
         DebugJournalDelta delta;
         JournalPosition fromPosition;
-        fromPosition.set_mountGeneration(mountGeneration);
-        fromPosition.set_sequenceNumber(current.sequenceID);
-        fromPosition.set_snapshotHash(thriftHash(current.fromHash));
-        delta.set_fromPosition(fromPosition);
+        fromPosition.mountGeneration_ref() = mountGeneration;
+        fromPosition.sequenceNumber_ref() = current.sequenceID;
+        fromPosition.snapshotHash_ref() = thriftHash(current.fromHash);
+        delta.fromPosition_ref() = fromPosition;
 
         JournalPosition toPosition;
-        toPosition.set_mountGeneration(mountGeneration);
-        toPosition.set_sequenceNumber(current.sequenceID);
-        toPosition.set_snapshotHash(thriftHash(currentHash));
-        delta.set_toPosition(toPosition);
+        toPosition.mountGeneration_ref() = mountGeneration;
+        toPosition.sequenceNumber_ref() = current.sequenceID;
+        toPosition.snapshotHash_ref() = thriftHash(currentHash);
+        delta.toPosition_ref() = toPosition;
         currentHash = current.fromHash;
 
         for (auto& path : current.uncleanPaths) {

@@ -731,7 +731,7 @@ EdenServiceHandler::semifuture_getEntryInformation(
             result.set_error(newEdenError(item.exception()));
           } else {
             EntryInformation info;
-            info.set_dtype(static_cast<Dtype>(item.value()));
+            info.dtype_ref() = static_cast<Dtype>(item.value());
             result.set_info(info);
           }
           out->emplace_back(std::move(result));
@@ -936,7 +936,7 @@ void EdenServiceHandler::getManifestEntry(
     out.mode = mode.value();
   } else {
     NoValueForKeyError error;
-    error.set_key(*relativePath);
+    error.key_ref() = *relativePath;
     throw error;
   }
 }
@@ -1367,17 +1367,17 @@ void EdenServiceHandler::getTracePoints(std::vector<TracePoint>& result) {
   auto compactTracePoints = getAllTracepoints();
   for (auto& point : compactTracePoints) {
     TracePoint tp;
-    tp.set_timestamp(point.timestamp.count());
-    tp.set_traceId(point.traceId);
-    tp.set_blockId(point.blockId);
-    tp.set_parentBlockId(point.parentBlockId);
+    tp.timestamp_ref() = point.timestamp.count();
+    tp.traceId_ref() = point.traceId;
+    tp.blockId_ref() = point.blockId;
+    tp.parentBlockId_ref() = point.parentBlockId;
     if (point.name) {
-      tp.set_name(std::string(point.name));
+      tp.name_ref() = std::string(point.name);
     }
     if (point.start) {
-      tp.set_event(TracePointEvent::START);
+      tp.event_ref() = TracePointEvent::START;
     } else if (point.stop) {
-      tp.set_event(TracePointEvent::STOP);
+      tp.event_ref() = TracePointEvent::STOP;
     }
     result.emplace_back(std::move(tp));
   }
@@ -1482,12 +1482,12 @@ void EdenServiceHandler::reloadConfig() {
 void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
   result.pid = getpid();
   result.commandLine = originalCommandLine_;
-  result.set_status(getStatus());
+  result.status_ref() = getStatus();
 
 #ifndef _WIN32
   float uptime = UnixClock::getElapsedTimeInNs(
       server_->getStartTime(), UnixClock().getRealtime());
-  result.set_uptime(uptime);
+  result.uptime_ref() = uptime;
 #endif // !_WIN32
 }
 

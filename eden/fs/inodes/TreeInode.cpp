@@ -3476,7 +3476,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
     // We must use set_size here because size is
     // optional and if it is set directly then it will
     // not get serialized correctly.
-    infoEntry.set_fileSize(fileSize);
+    infoEntry.fileSize_ref() = fileSize;
   }
   results.push_back(info);
 
