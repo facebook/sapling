@@ -153,6 +153,10 @@ impl AddScubaParams for thrift::CommitPathHistoryParams {
         if let Some(after) = self.after_timestamp {
             scuba.add("param_after_timestamp", after);
         }
+        scuba.add(
+            "follow_history_across_deletions",
+            self.follow_history_across_deletions,
+        );
         self.identity_schemes.add_scuba_params(scuba);
     }
 }

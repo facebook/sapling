@@ -48,6 +48,9 @@ Commits with dates to test time filters
   $ echo -e "a\nb\nc\nd\ne" > d
   $ commit H "2020-01-03"
 
+  $ echo -e "re-added b" > b
+  $ commit I "2020-01-03"
+
 import testing repo to mononoke
   $ cd ..
   $ blobimport repo-hg/.hg repo
@@ -243,6 +246,30 @@ log request a single commit
 
 log request history for deleted file
   $ scsc log --repo repo -i "$COMMIT_H" --path b --limit 2
+  Commit: 159ed529f60d23c614fe315d46a4b2eb5d27b569
+  Date: 2020-01-03 00:00:00 +00:00
+  Author: test
+  Summary: H
+  
+  Commit: 3a61e10442a9b76f8826b05e7ef1a60d33c3bc2d
+  Date: 2020-01-01 00:00:00 +00:00
+  Author: test
+  Summary: F
+  
+
+log request history across deletions
+  $ scsc log --repo repo -i "$COMMIT_I" --path b --limit 3
+  Commit: 4eddc88ca261a8115dd01c3af50a17aad50287de
+  Date: 2020-01-03 00:00:00 +00:00
+  Author: test
+  Summary: I
+  
+  $ scsc log --repo repo -i "$COMMIT_I" --path b --limit 3 --history-across-deletions
+  Commit: 4eddc88ca261a8115dd01c3af50a17aad50287de
+  Date: 2020-01-03 00:00:00 +00:00
+  Author: test
+  Summary: I
+  
   Commit: 159ed529f60d23c614fe315d46a4b2eb5d27b569
   Date: 2020-01-03 00:00:00 +00:00
   Author: test

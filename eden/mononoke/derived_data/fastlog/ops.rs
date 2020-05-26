@@ -31,7 +31,6 @@ use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;
-use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
@@ -55,6 +54,12 @@ pub enum FastlogError {
     LoadableError(#[from] LoadableError),
     #[error("{0}")]
     Error(#[from] Error),
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum HistoryAcrossDeletions {
+    Track,
+    DontTrack,
 }
 
 /// Returns a full history of the given path starting from the given unode in BFS order.
@@ -108,6 +113,7 @@ pub async fn list_file_history<Terminator, TFut>(
     path: Option<MPath>,
     changeset_id: ChangesetId,
     terminator: Option<Terminator>,
+    history_across_deletions: HistoryAcrossDeletions,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError>
 where
     Terminator: Fn(ChangesetId) -> TFut + 'static + Clone + Send + Sync,
@@ -181,6 +187,7 @@ where
                             path.clone(),
                             state,
                             terminator,
+                            history_across_deletions,
                         )
                         .await
                     }
@@ -444,6 +451,7 @@ async fn do_history_unfold<Terminator, TFut>(
     path: Option<MPath>,
     state: TraversalState,
     terminator: Option<Terminator>,
+    history_across_deletions: HistoryAcrossDeletions,
 ) -> Result<(Vec<ChangesetId>, Option<TraversalState>), Error>
 where
     Terminator: Fn(ChangesetId) -> TFut + Clone,
@@ -481,34 +489,35 @@ where
         match history_graph.get(&cs_id) {
             Some(Some(parents)) => {
                 // parents are fetched, ready to process
-                let ancestors =
-                    if parents.is_empty() && tunables().get_scs_enable_history_across_deletions() {
-                        let (stats, deletion_nodes) =
-                            find_where_file_was_deleted(&ctx, &repo, cs_id, &path)
-                                .timed()
-                                .await;
-                        STATS::find_where_file_was_deleted_ms
-                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                        let deletion_nodes = deletion_nodes?;
+                let ancestors = if parents.is_empty()
+                    && history_across_deletions == HistoryAcrossDeletions::Track
+                {
+                    let (stats, deletion_nodes) =
+                        find_where_file_was_deleted(&ctx, &repo, cs_id, &path)
+                            .timed()
+                            .await;
+                    STATS::find_where_file_was_deleted_ms
+                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                    let deletion_nodes = deletion_nodes?;
 
-                        let mut new_unodes = vec![];
-                        for (cs_id, unode_entry) in deletion_nodes {
-                            if visited.insert(cs_id) {
-                                history.push(cs_id);
-                            }
-                            new_unodes.push(unode_entry);
+                    let mut new_unodes = vec![];
+                    for (cs_id, unode_entry) in deletion_nodes {
+                        if visited.insert(cs_id) {
+                            history.push(cs_id);
                         }
-                        let ancestor_linknodes = fetch_linknodes_and_update_graph(
-                            &ctx,
-                            &repo,
-                            new_unodes,
-                            &mut history_graph,
-                        )
-                        .await?;
-                        ancestor_linknodes
-                    } else {
-                        parents.clone()
-                    };
+                        new_unodes.push(unode_entry);
+                    }
+                    let ancestor_linknodes = fetch_linknodes_and_update_graph(
+                        &ctx,
+                        &repo,
+                        new_unodes,
+                        &mut history_graph,
+                    )
+                    .await?;
+                    ancestor_linknodes
+                } else {
+                    parents.clone()
+                };
 
                 for ancestor in ancestors {
                     if visited.insert(ancestor) {
@@ -685,7 +694,6 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::future;
-    use maplit::hashmap;
     use mononoke_types::{ChangesetId, MPath};
     use std::collections::{HashMap, HashSet, VecDeque};
     use tests_utils::CreateCommitContext;
@@ -721,7 +729,15 @@ mod test {
             .await?;
 
         let terminator = |_cs_id| future::ready(Ok(false));
-        let history = list_file_history(ctx, repo, path(filename), top, Some(terminator)).await?;
+        let history = list_file_history(
+            ctx,
+            repo,
+            path(filename),
+            top,
+            Some(terminator),
+            HistoryAcrossDeletions::Track,
+        )
+        .await?;
         let history = history.try_collect::<Vec<_>>().await?;
 
         expected.reverse();
@@ -787,7 +803,15 @@ mod test {
             .await?;
 
         let terminator = |_cs_id| future::ready(Ok(false));
-        let history = list_file_history(ctx, repo, path(filename), top, Some(terminator)).await?;
+        let history = list_file_history(
+            ctx,
+            repo,
+            path(filename),
+            top,
+            Some(terminator),
+            HistoryAcrossDeletions::Track,
+        )
+        .await?;
         let history = history.try_collect::<Vec<_>>().await?;
 
         let expected = bfs(&graph, top);
@@ -845,8 +869,15 @@ mod test {
             .await?;
 
         let terminator = |_cs_id| future::ready(Ok(false));
-        let history =
-            list_file_history(ctx, repo, path(filename), prev_id, Some(terminator)).await?;
+        let history = list_file_history(
+            ctx,
+            repo,
+            path(filename),
+            prev_id,
+            Some(terminator),
+            HistoryAcrossDeletions::Track,
+        )
+        .await?;
         let history = history.try_collect::<Vec<_>>().await?;
 
         expected.reverse();
@@ -904,6 +935,7 @@ mod test {
             filepath.clone(),
             top.clone(),
             terminator,
+            HistoryAcrossDeletions::Track,
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
@@ -921,7 +953,15 @@ mod test {
             cloned!(ctx, repo);
             move |cs_id| terminator(ctx.clone(), repo.clone(), cs_id)
         });
-        let history = list_file_history(ctx, repo, filepath, top, terminator).await?;
+        let history = list_file_history(
+            ctx,
+            repo,
+            filepath,
+            top,
+            terminator,
+            HistoryAcrossDeletions::Track,
+        )
+        .await?;
         let history = history.try_collect::<Vec<_>>().await?;
 
         // the beginning of the history should be same as bfs
@@ -935,21 +975,8 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
-        let tunables = tunables::MononokeTunables::default();
-        tunables
-            .update_bools(&hashmap! {"scs_enable_history_across_deletions".to_string() => true});
-
-        let res = tunables::with_tunables(tunables, || {
-            let mut runtime = tokio_compat::runtime::Runtime::new()?;
-            runtime.block_on_std(list_history_deleted(fb))
-        });
-
-        res
-    }
-
-    async fn list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
+    #[fbinit::compat_test]
+    async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
         let repo = new_memblob_empty(None).unwrap();
         let ctx = CoreContext::test_mock(fb);
 
@@ -990,8 +1017,15 @@ mod test {
             cloned!(ctx, repo);
             async move {
                 let terminator = Some(|_cs_id| future::ready(Ok(false)));
-                let history_stream =
-                    list_file_history(ctx.clone(), repo.clone(), path, cs_id, terminator).await?;
+                let history_stream = list_file_history(
+                    ctx.clone(),
+                    repo.clone(),
+                    path,
+                    cs_id,
+                    terminator,
+                    HistoryAcrossDeletions::Track,
+                )
+                .await?;
                 history_stream.try_collect::<Vec<_>>().await
             }
         };
@@ -1111,8 +1145,15 @@ mod test {
             cloned!(ctx, repo);
             async move {
                 let terminator = Some(|_cs_id| future::ready(Ok(false)));
-                let history_stream =
-                    list_file_history(ctx.clone(), repo.clone(), path, cs_id, terminator).await?;
+                let history_stream = list_file_history(
+                    ctx.clone(),
+                    repo.clone(),
+                    path,
+                    cs_id,
+                    terminator,
+                    HistoryAcrossDeletions::Track,
+                )
+                .await?;
                 history_stream.try_collect::<Vec<_>>().await
             }
         };
@@ -1148,21 +1189,8 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
-        let tunables = tunables::MononokeTunables::default();
-        tunables
-            .update_bools(&hashmap! {"scs_enable_history_across_deletions".to_string() => true});
-
-        let res = tunables::with_tunables(tunables, || {
-            let mut runtime = tokio_compat::runtime::Runtime::new()?;
-            runtime.block_on_std(list_history_across_deletions_linear(fb))
-        });
-
-        res
-    }
-
-    async fn list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
+    #[fbinit::compat_test]
+    async fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
         let repo = new_memblob_empty(None).unwrap();
         let ctx = CoreContext::test_mock(fb);
 
@@ -1192,6 +1220,7 @@ mod test {
             MPath::new_opt(filename)?,
             bcs_id,
             terminator,
+            HistoryAcrossDeletions::Track,
         )
         .await?;
         let expected = expected.into_iter().rev().collect::<Vec<_>>();
@@ -1199,24 +1228,23 @@ mod test {
         let actual = history_stream.try_collect::<Vec<_>>().await?;
         assert_eq!(actual, expected);
 
+        let history_stream = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            MPath::new_opt(filename)?,
+            bcs_id,
+            terminator,
+            HistoryAcrossDeletions::DontTrack,
+        )
+        .await?;
+        let actual = history_stream.try_collect::<Vec<_>>().await?;
+        assert_eq!(actual, vec![bcs_id]);
+
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
-        let tunables = tunables::MononokeTunables::default();
-        tunables
-            .update_bools(&hashmap! {"scs_enable_history_across_deletions".to_string() => true});
-
-        let res = tunables::with_tunables(tunables, || {
-            let mut runtime = tokio_compat::runtime::Runtime::new()?;
-            runtime.block_on_std(list_history_across_deletions_with_merges(fb))
-        });
-
-        res
-    }
-
-    async fn list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
+    #[fbinit::compat_test]
+    async fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
         let repo = new_memblob_empty(None).unwrap();
         let ctx = CoreContext::test_mock(fb);
 
@@ -1270,6 +1298,7 @@ mod test {
             MPath::new_opt(filename)?,
             bcs_id,
             terminator,
+            HistoryAcrossDeletions::Track,
         )
         .await?;
         let mut expected = expected.into_iter().rev().collect::<Vec<_>>();
@@ -1284,6 +1313,7 @@ mod test {
             MPath::new_opt(filename)?,
             merge,
             terminator,
+            HistoryAcrossDeletions::Track,
         )
         .await?;
         expected.remove(0);

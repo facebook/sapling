@@ -18,7 +18,7 @@ use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use fastlog::{list_file_history, FastlogError};
+use fastlog::{list_file_history, FastlogError, HistoryAcrossDeletions};
 use filestore::FetchKey;
 use futures::compat::Future01CompatExt;
 use futures::future::{FutureExt, Shared};
@@ -277,6 +277,7 @@ impl ChangesetPathContext {
     pub async fn history(
         &self,
         until_timestamp: Option<i64>,
+        follow_history_across_deletions: bool,
     ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_, MononokeError>
     {
         let ctx = self.changeset.ctx().clone();
@@ -308,15 +309,27 @@ impl ChangesetPathContext {
             None
         };
 
-        let history = list_file_history(ctx, repo, mpath.cloned(), self.changeset.id(), terminator)
-            .await
-            .map_err(|error| match error {
-                FastlogError::NoSuchPath(_) => MononokeError::InvalidRequest(error.to_string()),
-                FastlogError::InternalError(e) => MononokeError::from(format_err!(e)),
-                FastlogError::DeriveError(e) => MononokeError::from(e),
-                FastlogError::LoadableError(e) => MononokeError::from(e),
-                FastlogError::Error(e) => MononokeError::from(e),
-            })?;
+        let history_across_deletions = if follow_history_across_deletions {
+            HistoryAcrossDeletions::Track
+        } else {
+            HistoryAcrossDeletions::DontTrack
+        };
+        let history = list_file_history(
+            ctx,
+            repo,
+            mpath.cloned(),
+            self.changeset.id(),
+            terminator,
+            history_across_deletions,
+        )
+        .await
+        .map_err(|error| match error {
+            FastlogError::NoSuchPath(_) => MononokeError::InvalidRequest(error.to_string()),
+            FastlogError::InternalError(e) => MononokeError::from(format_err!(e)),
+            FastlogError::DeriveError(e) => MononokeError::from(e),
+            FastlogError::LoadableError(e) => MononokeError::from(e),
+            FastlogError::Error(e) => MononokeError::from(e),
+        })?;
 
         Ok(history
             .map_err(MononokeError::from)

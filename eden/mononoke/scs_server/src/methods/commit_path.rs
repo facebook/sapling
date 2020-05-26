@@ -230,7 +230,12 @@ impl SourceControlServiceImpl {
             .into());
         }
 
-        let history_stream = path.history(after_timestamp.clone()).await?;
+        let history_stream = path
+            .history(
+                after_timestamp.clone(),
+                params.follow_history_across_deletions,
+            )
+            .await?;
         let history = collect_history(
             history_stream,
             skip,
