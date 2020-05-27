@@ -64,14 +64,12 @@
   $ backsync_large_to_small 2>&1 | grep "syncing bookmark"
   * syncing bookmark master_bookmark to * (glob)
 
--- mononoke hg sync job: the commit is now present in the small hg repo server
   $ cd "$TESTTMP"
-  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 2 --use-existing-bundle-if-available 2>&1 | grep "successful sync"
+  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 2 2>&1 | grep "successful sync"
   * successful sync of entries [4] (glob)
 
--- mononoke hg sync job: do a second sync, but this time without the bundle
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from bundle_replay_data where bookmark_update_log_id = 6"
-  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 5 --use-existing-bundle-if-available 2>&1 | grep "successful sync"
+  $ REPOID="$REPOIDSMALL" mononoke_hg_sync small-hg-srv 5 --generate-bundles 2>&1 | grep "successful sync"
   * successful sync of entries [6] (glob)
   $ cd small-hg-srv
   $ log -r :
