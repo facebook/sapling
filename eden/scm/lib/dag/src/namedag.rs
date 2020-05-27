@@ -10,6 +10,7 @@
 //! Combination of IdMap and IdDag.
 
 use crate::id::Group;
+use crate::id::Id;
 use crate::id::VertexName;
 use crate::iddag::IdDag;
 use crate::iddag::SyncableIdDag;
@@ -523,6 +524,25 @@ where
 {
     fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
         self.map().vertexes_by_hex_prefix(hex_prefix, limit)
+    }
+}
+
+impl<T> IdConvert for T
+where
+    T: NameDagStorage,
+    T::IdMap: IdConvert,
+{
+    fn vertex_id(&self, name: VertexName) -> Result<Id> {
+        self.map().vertex_id(name)
+    }
+    fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>> {
+        self.map().vertex_id_with_max_group(name, max_group)
+    }
+    fn vertex_name(&self, id: Id) -> Result<VertexName> {
+        self.map().vertex_name(id)
+    }
+    fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+        self.map().contains_vertex_name(name)
     }
 }
 
