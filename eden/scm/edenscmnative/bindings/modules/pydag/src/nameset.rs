@@ -8,27 +8,27 @@
 use anyhow::Result;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
-use dag::{nameset::NameIter, NameSet, VertexName};
+use dag::{nameset::NameIter, Set, Vertex};
 use std::cell::RefCell;
 
-/// A wrapper around [`NameSet`] with Python integration added.
+/// A wrapper around [`Set`] with Python integration added.
 ///
 /// Differences from the `py_class` version:
 /// - Auto converts from a wider range of Python types - not just nameset, but
 ///   also List[bytes], and Generator[bytes].
 /// - Pure Rust. No need to take the Python GIL to create `Names`.
-pub struct Names(pub NameSet);
+pub struct Names(pub Set);
 
-// A wrapper around [`NameSet`].
+// A wrapper around [`Set`].
 py_class!(pub class nameset |py| {
-    data inner: NameSet;
+    data inner: Set;
 
     def __new__(_cls, obj: PyObject) -> PyResult<Self> {
         Ok(Names::extract(py, &obj)?.to_py_object(py))
     }
 
     def __contains__(&self, name: PyBytes) -> PyResult<bool> {
-        let name = VertexName::copy_from(name.data(py));
+        let name = Vertex::copy_from(name.data(py));
         Ok(self.inner(py).contains(&name).map_pyerr(py)?)
     }
 
@@ -101,7 +101,7 @@ py_class!(pub class nameiter |py| {
 
     def __next__(&self) -> PyResult<Option<PyBytes>> {
         let mut iter = self.iter(py).borrow_mut();
-        let next: Option<VertexName> = iter.next().transpose().map_pyerr(py)?;
+        let next: Option<Vertex> = iter.next().transpose().map_pyerr(py)?;
         Ok(next.map(|name| PyBytes::new(py, name.as_ref())))
     }
 
@@ -119,10 +119,10 @@ impl<'a> FromPyObject<'a> for Names {
 
         // type(obj) is list - convert to StaticSet
         if let Ok(pylist) = obj.extract::<Vec<PyBytes>>(py) {
-            let set = NameSet::from_static_names(
+            let set = Set::from_static_names(
                 pylist
                     .into_iter()
-                    .map(|name| VertexName::copy_from(name.data(py))),
+                    .map(|name| Vertex::copy_from(name.data(py))),
             );
             return Ok(Names(set));
         }
@@ -130,12 +130,12 @@ impl<'a> FromPyObject<'a> for Names {
         // Others - convert to LazySet.
         let obj = obj.clone_ref(py);
         let iter = PyNameIter::new(py, obj.iter(py)?.into_object())?;
-        let set = NameSet::from_iter(iter);
+        let set = Set::from_iter(iter);
         Ok(Names(set))
     }
 }
 
-/// Similar to `PyIterator`, but without lifetime and has `VertexName` as
+/// Similar to `PyIterator`, but without lifetime and has `Vertex` as
 /// output type.
 struct PyNameIter {
     obj: PyObject,
@@ -153,13 +153,13 @@ impl PyNameIter {
 }
 
 impl Iterator for PyNameIter {
-    type Item = Result<VertexName>;
+    type Item = Result<Vertex>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.errored {
             return None;
         }
-        (|| -> PyResult<Option<VertexName>> {
+        (|| -> PyResult<Option<Vertex>> {
             let gil = Python::acquire_gil();
             let py = gil.python();
             let mut iter = self.obj.iter(py)?;
@@ -167,7 +167,7 @@ impl Iterator for PyNameIter {
                 None => Ok(None),
                 Some(Ok(value)) => {
                     let value = value.extract::<PyBytes>(py)?;
-                    Ok(Some(VertexName::copy_from(value.data(py))))
+                    Ok(Some(Vertex::copy_from(value.data(py))))
                 }
                 Some(Err(err)) => {
                     self.errored = true;

@@ -33,5 +33,13 @@ pub use spanset::SpanSet;
 pub type Level = u8;
 pub type InProcessIdDag = IdDag<iddagstore::InProcessStore>;
 
+// Short aliases for main public types.
+pub type Dag = NameDag;
+pub type Set = NameSet;
+pub type IdSet = SpanSet;
+pub use namedag::MemNameDag as MemDag;
+pub use nameset::NameIter as SetIter;
+pub type Vertex = VertexName;
+
 #[cfg(test)]
 mod tests;

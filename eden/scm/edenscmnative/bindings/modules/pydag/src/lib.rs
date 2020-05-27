@@ -11,13 +11,8 @@ use anyhow::Error;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt, Str};
 use dag::{
-    id::{Id, VertexName},
-    namedag::LowLevelAccess,
-    namedag::MemNameDag,
-    nameset::dag::DagSet,
-    nameset::legacy::LegacyCodeNeedIdAccess,
-    spanset::{SpanSet, SpanSetIter},
-    DagAlgorithm, NameDag, NameSet,
+    namedag::LowLevelAccess, nameset::dag::DagSet, nameset::legacy::LegacyCodeNeedIdAccess,
+    spanset::SpanSetIter, Dag, DagAlgorithm, Id, IdSet, MemDag, Set, Vertex,
 };
 use std::cell::RefCell;
 use std::ops::Deref;
@@ -38,15 +33,15 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-/// A wrapper around [`SpanSet`] with Python integration.
+/// A wrapper around [`IdSet`] with Python integration.
 ///
 /// Differences from the `py_class` version:
 /// - Auto converts from a wider range of Python types - smartset, any iterator.
 /// - No need to take the Python GIL to create a new instance of `Set`.
-pub struct Spans(pub SpanSet);
+pub struct Spans(pub IdSet);
 
-impl Into<SpanSet> for Spans {
-    fn into(self) -> SpanSet {
+impl Into<IdSet> for Spans {
+    fn into(self) -> IdSet {
         self.0
     }
 }
@@ -54,11 +49,11 @@ impl Into<SpanSet> for Spans {
 // Mercurial's special case. -1 maps to (b"\0" * 20)
 const NULL_NODE: [u8; 20] = [0u8; 20];
 
-// A wrapper around [`SpanSet`].
+// A wrapper around [`IdSet`].
 // This is different from `smartset.spanset`.
-// Used in the Python world. The Rust world should use the `Spans` and `SpanSet` types.
+// Used in the Python world. The Rust world should use the `Spans` and `IdSet` types.
 py_class!(pub class spans |py| {
-    data inner: SpanSet;
+    data inner: IdSet;
 
     def __new__(_cls, obj: PyObject) -> PyResult<spans> {
         Ok(Spans::extract(py, &obj)?.to_py_object(py))
@@ -123,7 +118,7 @@ py_class!(pub class spans |py| {
 
 // A wrapper to [`SpanSetIter`].
 py_class!(pub class spansiter |py| {
-    data iter: RefCell<SpanSetIter<SpanSet>>;
+    data iter: RefCell<SpanSetIter<IdSet>>;
     data ascending: bool;
 
     def __next__(&self) -> PyResult<Option<u64>> {
@@ -151,7 +146,7 @@ impl<'a> FromPyObject<'a> for Spans {
 
         // Try to call `sort(reverse=True)` on the object.
         // - Python smartset.baseset has sort(reverse=False) API.
-        // - The Rust SpanSet is always sorted in reverse order internally.
+        // - The Rust IdSet is always sorted in reverse order internally.
         // - Most Python lazy smartsets (smartset.generatorset) are sorted in reverse order.
         if let Ok(sort) = obj.getattr(py, "sort") {
             let args = PyDict::new(py);
@@ -165,7 +160,7 @@ impl<'a> FromPyObject<'a> for Spans {
             .iter(py)?
             .map(|o| Ok(Id(o?.extract::<u64>(py)?)))
             .collect();
-        Ok(Spans(SpanSet::from_spans(ids?)))
+        Ok(Spans(IdSet::from_spans(ids?)))
     }
 }
 
@@ -178,10 +173,10 @@ impl ToPyObject for Spans {
 }
 
 py_class!(class namedag |py| {
-    data namedag: RefCell<NameDag>;
+    data namedag: RefCell<Dag>;
 
     def __new__(_cls, path: &PyPath) -> PyResult<namedag> {
-        let dag = NameDag::open(path.as_path()).map_pyerr(py)?;
+        let dag = Dag::open(path.as_path()).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(dag))
     }
 
@@ -189,7 +184,7 @@ py_class!(class namedag |py| {
     def addheads(&self, heads: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyNone> {
         let mut namedag = self.namedag(py).borrow_mut();
         let parents = wrap_parentfunc(py, parentfunc);
-        let heads = heads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
+        let heads = heads.into_iter().map(|b| Vertex::copy_from(b.data(py))).collect::<Vec<_>>();
         namedag.add_heads(&parents, &heads).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -197,7 +192,7 @@ py_class!(class namedag |py| {
     /// Write the DAG to disk.
     def flush(&self, masterheads: Vec<PyBytes>) -> PyResult<PyNone> {
         let mut namedag = self.namedag(py).borrow_mut();
-        let heads = masterheads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
+        let heads = masterheads.into_iter().map(|b| Vertex::copy_from(b.data(py))).collect::<Vec<_>>();
         namedag.flush(&heads).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -206,8 +201,8 @@ py_class!(class namedag |py| {
     def addheadsflush(&self, masterheads: Vec<PyBytes>, otherheads: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyNone> {
         let mut namedag = self.namedag(py).borrow_mut();
         let parents = wrap_parentfunc(py, parentfunc);
-        let masterheads = masterheads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
-        let otherheads = otherheads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
+        let masterheads = masterheads.into_iter().map(|b| Vertex::copy_from(b.data(py))).collect::<Vec<_>>();
+        let otherheads = otherheads.into_iter().map(|b| Vertex::copy_from(b.data(py))).collect::<Vec<_>>();
         namedag.add_heads_and_flush(&parents, &masterheads, &otherheads).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -243,15 +238,15 @@ py_class!(class namedag |py| {
     /// Translate a set using names to using ids. This is similar to `node2id` but works for a set.
     /// Ideally this API does not exist. However the revset layer heavily uses ids.
     def node2idset(&self, set: Names) -> PyResult<Spans> {
-        let set: NameSet = set.0;
+        let set: Set = set.0;
         if let Some(set) = set.as_any().downcast_ref::<DagSet>() {
-            let spans: SpanSet = (LegacyCodeNeedIdAccess, set).into();
+            let spans: IdSet = (LegacyCodeNeedIdAccess, set).into();
             Ok(Spans(spans))
         } else {
             let namedag = self.namedag(py).borrow();
             let set = namedag.sort(&set).map_pyerr(py)?;
             let set = set.as_any().downcast_ref::<DagSet>().expect("namedag.sort should return DagSet");
-            let spans: SpanSet = (LegacyCodeNeedIdAccess, set).into();
+            let spans: IdSet = (LegacyCodeNeedIdAccess, set).into();
             Ok(Spans(spans))
         }
     }
@@ -260,8 +255,8 @@ py_class!(class namedag |py| {
     /// Ideally this API does not exist. However the revset layer heavily uses ids.
     def id2nodeset(&self, set: Spans) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        let spans: SpanSet = set.0;
-        let set: NameSet = (LegacyCodeNeedIdAccess, spans , namedag.deref()).into();
+        let spans: IdSet = set.0;
+        let set: Set = (LegacyCodeNeedIdAccess, spans , namedag.deref()).into();
         Ok(Names(set))
     }
 
@@ -308,7 +303,7 @@ py_class!(class namedag |py| {
     /// Get parents of a single `name`. Preserve the order.
     def parentnames(&self, name: PyBytes) -> PyResult<Vec<PyBytes>> {
         let namedag = self.namedag(py).borrow();
-        let parents = namedag.parent_names(VertexName::copy_from(name.data(py))).map_pyerr(py)?;
+        let parents = namedag.parent_names(Vertex::copy_from(name.data(py))).map_pyerr(py)?;
         Ok(parents.into_iter().map(|name| PyBytes::new(py, name.as_ref())).collect())
     }
 
@@ -352,8 +347,8 @@ py_class!(class namedag |py| {
     /// Check if `ancestor` is an ancestor of `descendant`.
     def isancestor(&self, ancestor: PyBytes, descendant: PyBytes) -> PyResult<bool> {
         let namedag = self.namedag(py).borrow();
-        let ancestor = VertexName::copy_from(ancestor.data(py));
-        let descendant = VertexName::copy_from(descendant.data(py));
+        let ancestor = Vertex::copy_from(ancestor.data(py));
+        let descendant = Vertex::copy_from(descendant.data(py));
         namedag.is_ancestor(ancestor, descendant).map_pyerr(py)
     }
 
@@ -383,10 +378,10 @@ py_class!(class namedag |py| {
 });
 
 py_class!(pub class memnamedag |py| {
-    data namedag: RefCell<MemNameDag>;
+    data namedag: RefCell<MemDag>;
 
     def __new__(_cls) -> PyResult<Self> {
-        let dag = MemNameDag::new();
+        let dag = MemDag::new();
         Self::create_instance(py, RefCell::new(dag))
     }
 
@@ -394,7 +389,7 @@ py_class!(pub class memnamedag |py| {
     def addheads(&self, heads: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyNone> {
         let mut namedag = self.namedag(py).borrow_mut();
         let parents = wrap_parentfunc(py, parentfunc);
-        let heads = heads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
+        let heads = heads.into_iter().map(|b| Vertex::copy_from(b.data(py))).collect::<Vec<_>>();
         namedag.add_heads(&parents, &heads).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -425,7 +420,7 @@ py_class!(pub class memnamedag |py| {
     /// Get parents of a single `name`. Preserve the order.
     def parentnames(&self, name: PyBytes) -> PyResult<Vec<PyBytes>> {
         let namedag = self.namedag(py).borrow();
-        let parents = namedag.parent_names(VertexName::copy_from(name.data(py))).map_pyerr(py)?;
+        let parents = namedag.parent_names(Vertex::copy_from(name.data(py))).map_pyerr(py)?;
         Ok(parents.into_iter().map(|name| PyBytes::new(py, name.as_ref())).collect())
     }
 
@@ -469,8 +464,8 @@ py_class!(pub class memnamedag |py| {
     /// Check if `ancestor` is an ancestor of `descendant`.
     def isancestor(&self, ancestor: PyBytes, descendant: PyBytes) -> PyResult<bool> {
         let namedag = self.namedag(py).borrow();
-        let ancestor = VertexName::copy_from(ancestor.data(py));
-        let descendant = VertexName::copy_from(descendant.data(py));
+        let ancestor = Vertex::copy_from(ancestor.data(py));
+        let descendant = Vertex::copy_from(descendant.data(py));
         namedag.is_ancestor(ancestor, descendant).map_pyerr(py)
     }
 
@@ -496,7 +491,7 @@ py_class!(pub class memnamedag |py| {
     /// Render the graph into an ASCII string.
     def render(&self, getmessage: Option<PyObject> = None) -> PyResult<Str> {
         let namedag = self.namedag(py).borrow();
-        let get_message = move |vertex: &VertexName| -> Option<String> {
+        let get_message = move |vertex: &Vertex| -> Option<String> {
             if let Some(getmessage) = &getmessage {
                 if getmessage.is_callable(py) {
                     if let Ok(message) = getmessage.call(py, (PyBytes::new(py, vertex.as_ref()),), None) {
@@ -520,23 +515,23 @@ py_class!(pub class memnamedag |py| {
 });
 
 impl memnamedag {
-    pub fn from_memnamedag(py: Python, dag: MemNameDag) -> PyResult<Self> {
+    pub fn from_memnamedag(py: Python, dag: MemDag) -> PyResult<Self> {
         Self::create_instance(py, RefCell::new(dag))
     }
 }
 
-/// Return the "parents" function that takes VertexName and returns
-/// VertexNames.
+/// Return the "parents" function that takes Vertex and returns
+/// Vertexs.
 fn wrap_parentfunc<'a>(
     py: Python<'a>,
     pyparentfunc: PyObject,
-) -> impl Fn(VertexName) -> Result<Vec<VertexName>> + 'a {
-    move |node: VertexName| -> Result<Vec<VertexName>> {
+) -> impl Fn(Vertex) -> Result<Vec<Vertex>> + 'a {
+    move |node: Vertex| -> Result<Vec<Vertex>> {
         let mut result = Vec::new();
         let node = PyBytes::new(py, node.as_ref());
         let parents = pyparentfunc.call(py, (node,), None).into_anyhow_result()?;
         for parent in parents.iter(py).into_anyhow_result()? {
-            let parent = VertexName::copy_from(
+            let parent = Vertex::copy_from(
                 parent
                     .into_anyhow_result()?
                     .cast_as::<PyBytes>(py)
