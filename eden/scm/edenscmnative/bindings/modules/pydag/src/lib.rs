@@ -12,7 +12,7 @@ use cpython::*;
 use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt, Str};
 use dag::{
     namedag::LowLevelAccess, nameset::dag::DagSet, nameset::legacy::LegacyCodeNeedIdAccess,
-    spanset::SpanSetIter, Dag, DagAlgorithm, Id, IdSet, MemDag, Set, Vertex,
+    ops::PrefixLookup, spanset::SpanSetIter, Dag, DagAlgorithm, Id, IdSet, MemDag, Set, Vertex,
 };
 use std::cell::RefCell;
 use std::ops::Deref;
@@ -269,10 +269,10 @@ py_class!(class namedag |py| {
         }
         let namedag = self.namedag(py).borrow();
         let nodes = namedag.map()
-            .find_names_by_hex_prefix(prefix, limit)
+            .vertexes_by_hex_prefix(prefix, limit)
             .map_pyerr(py)?
             .into_iter()
-            .map(|s| PyBytes::new(py, &s))
+            .map(|s| PyBytes::new(py, s.as_ref()))
             .collect();
         Ok(nodes)
     }

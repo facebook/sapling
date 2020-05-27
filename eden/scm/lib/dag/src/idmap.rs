@@ -10,12 +10,12 @@
 //! See [`IdMap`] for the main structure.
 
 use crate::id::{Group, Id, VertexName};
+use crate::ops::PrefixLookup;
 use anyhow::{bail, ensure, format_err, Context, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
-use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::fs::{self, File};
 use std::io::{Cursor, Read, Write};
@@ -39,7 +39,7 @@ pub struct IdMap {
 #[derive(Default)]
 pub struct MemIdMap {
     id2name: HashMap<Id, VertexName>,
-    name2id: HashMap<VertexName, Id>,
+    name2id: BTreeMap<VertexName, Id>,
     cached_next_free_ids: [AtomicU64; Group::COUNT],
 }
 
@@ -296,17 +296,14 @@ impl IdMap {
     }
 
     /// Lookup names by hex prefix.
-    pub fn find_names_by_hex_prefix(
-        &self,
-        hex_prefix: &[u8],
-        limit: usize,
-    ) -> Result<Vec<Cow<[u8]>>> {
+    fn find_names_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
         self.log
             .lookup_prefix_hex(Self::INDEX_NAME_TO_ID, hex_prefix)?
             .take(limit)
             .map(|entry| {
                 let (k, _v) = entry?;
-                Ok(k)
+                let vertex = self.log.slice_to_bytes(&k);
+                Ok(VertexName(vertex))
             })
             .collect::<Result<_>>()
     }
@@ -643,6 +640,12 @@ impl IdMapWrite for MemIdMap {
     }
 }
 
+impl PrefixLookup for IdMap {
+    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
+        self.find_names_by_hex_prefix(hex_prefix, limit)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -677,14 +680,17 @@ mod tests {
         // Test hex lookup.
         assert_eq!(0x6a, b'j');
         assert_eq!(
-            map.find_names_by_hex_prefix(b"6a", 3).unwrap(),
-            [&b"jkl"[..], b"jkl2"]
+            map.vertexes_by_hex_prefix(b"6a", 3).unwrap(),
+            [
+                VertexName::from(&b"jkl"[..]),
+                VertexName::from(&b"jkl2"[..])
+            ]
         );
         assert_eq!(
-            map.find_names_by_hex_prefix(b"6a", 1).unwrap(),
-            [&b"jkl"[..]]
+            map.vertexes_by_hex_prefix(b"6a", 1).unwrap(),
+            [VertexName::from(&b"jkl"[..])]
         );
-        assert!(map.find_names_by_hex_prefix(b"6b", 1).unwrap().is_empty());
+        assert!(map.vertexes_by_hex_prefix(b"6b", 1).unwrap().is_empty());
 
         for _ in 0..=1 {
             assert_eq!(map.find_name_by_id(Id(1)).unwrap().unwrap(), b"abc");
