@@ -110,7 +110,7 @@ class InfoCmd(Subcmd):
 
 @subcmd("du", "Show disk space usage for a checkout")
 class DiskUsageCmd(Subcmd):
-    isatty = sys.stdout.isatty()
+    isatty = sys.stdout and sys.stdout.isatty()
     # Escape sequence to move the cursor left to the start of the line
     # and then clear to the end of that line.
     MOVE_TO_SOL_CLEAR_TO_EOL = "\r\x1b[K" if isatty else ""
