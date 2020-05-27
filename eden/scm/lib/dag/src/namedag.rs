@@ -19,7 +19,6 @@ use crate::iddagstore::IndexedLogStore;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapAssignHead;
 use crate::idmap::IdMapBuildParents;
-use crate::idmap::IdMapLike;
 use crate::idmap::IdMapWrite;
 use crate::idmap::MemIdMap;
 use crate::idmap::SyncableIdMap;
@@ -28,6 +27,7 @@ use crate::nameset::NameSet;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
+use crate::ops::IdConvert;
 use crate::ops::PrefixLookup;
 use crate::spanset::SpanSet;
 use anyhow::{anyhow, bail, ensure, Result};
@@ -53,7 +53,7 @@ pub struct NameDag {
     /// `Arc::ptr_eq` equivalent by using some sort of internal version number
     /// that gets bumped when `map` gets changed. However that might be more
     /// expensive.
-    pub(crate) snapshot_map: Arc<dyn IdMapLike + Send + Sync>,
+    pub(crate) snapshot_map: Arc<dyn IdConvert + Send + Sync>,
 
     mlog: multi::MultiLog,
 
@@ -68,7 +68,7 @@ pub struct NameDag {
 pub struct MemNameDag {
     dag: IdDag<InProcessStore>,
     map: MemIdMap,
-    snapshot_map: Arc<dyn IdMapLike + Send + Sync>,
+    snapshot_map: Arc<dyn IdConvert + Send + Sync>,
 }
 
 impl NameDag {
@@ -660,7 +660,7 @@ fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
 /// IdMap + IdDag backend for DagAlgorithm.
 pub trait NameDagStorage {
     type IdDagStore: IdDagStore;
-    type IdMap: IdMapLike;
+    type IdMap: IdConvert;
 
     /// The IdDag storage.
     fn dag(&self) -> &IdDag<Self::IdDagStore>;
@@ -669,10 +669,10 @@ pub trait NameDagStorage {
     fn map(&self) -> &Self::IdMap;
 
     /// (Cheaply) clone the map.
-    fn clone_map(&self) -> Arc<dyn IdMapLike + Send + Sync>;
+    fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync>;
 
     /// (Cheaply) test if the map is compatible (same).
-    fn is_map_compatible(&self, other: &Arc<dyn IdMapLike + Send + Sync>) -> bool;
+    fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool;
 }
 
 impl NameDagStorage for NameDag {
@@ -685,10 +685,10 @@ impl NameDagStorage for NameDag {
     fn map(&self) -> &Self::IdMap {
         &self.map
     }
-    fn clone_map(&self) -> Arc<dyn IdMapLike + Send + Sync> {
+    fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync> {
         self.snapshot_map.clone()
     }
-    fn is_map_compatible(&self, other: &Arc<dyn IdMapLike + Send + Sync>) -> bool {
+    fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool {
         Arc::ptr_eq(other, &self.snapshot_map)
     }
 }
@@ -703,10 +703,10 @@ impl NameDagStorage for MemNameDag {
     fn map(&self) -> &Self::IdMap {
         &self.map
     }
-    fn clone_map(&self) -> Arc<dyn IdMapLike + Send + Sync> {
+    fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync> {
         self.snapshot_map.clone()
     }
-    fn is_map_compatible(&self, other: &Arc<dyn IdMapLike + Send + Sync>) -> bool {
+    fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool {
         Arc::ptr_eq(other, &self.snapshot_map)
     }
 }

@@ -6,7 +6,7 @@
  */
 
 use super::{NameIter, NameSetQuery};
-use crate::idmap::IdMapLike;
+use crate::ops::IdConvert;
 use crate::spanset::{SpanSet, SpanSetIter};
 use crate::VertexName;
 use anyhow::Result;
@@ -18,13 +18,13 @@ use std::sync::Arc;
 /// Efficient for DAG calculation.
 pub struct DagSet {
     pub(crate) spans: SpanSet,
-    pub(crate) map: Arc<dyn IdMapLike + Send + Sync>,
+    pub(crate) map: Arc<dyn IdConvert + Send + Sync>,
     pub(crate) is_all: bool,
 }
 
 struct Iter {
     iter: SpanSetIter<SpanSet>,
-    map: Arc<dyn IdMapLike + Send + Sync>,
+    map: Arc<dyn IdConvert + Send + Sync>,
     reversed: bool,
 }
 
@@ -52,7 +52,7 @@ impl fmt::Debug for DagSet {
 }
 
 impl DagSet {
-    pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdMapLike + Send + Sync>) -> Self {
+    pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdConvert + Send + Sync>) -> Self {
         let is_all = false;
         Self { spans, map, is_all }
     }

@@ -1076,7 +1076,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// `sparse_idmap`. See [`IdDag::universal`].
     pub fn write_sparse_idmap(
         &self,
-        full_idmap: &dyn crate::idmap::IdMapLike,
+        full_idmap: &dyn crate::ops::IdConvert,
         sparse_idmap: &mut crate::idmap::IdMap,
     ) -> Result<()> {
         for id in self.universal()? {

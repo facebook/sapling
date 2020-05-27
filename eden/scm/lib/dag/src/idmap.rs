@@ -10,6 +10,7 @@
 //! See [`IdMap`] for the main structure.
 
 use crate::id::{Group, Id, VertexName};
+use crate::ops::IdConvert;
 use crate::ops::PrefixLookup;
 use anyhow::{bail, ensure, format_err, Context, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
@@ -350,7 +351,7 @@ impl Clone for MemIdMap {
 }
 
 /// DAG-aware write operations.
-pub trait IdMapAssignHead: IdMapLike + IdMapWrite {
+pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     /// Assign an id for a head in a DAG. This implies ancestors of the
     /// head will also have ids assigned.
     ///
@@ -451,9 +452,9 @@ pub trait IdMapAssignHead: IdMapLike + IdMapWrite {
     }
 }
 
-impl<T> IdMapAssignHead for T where T: IdMapLike + IdMapWrite {}
+impl<T> IdMapAssignHead for T where T: IdConvert + IdMapWrite {}
 
-pub trait IdMapBuildParents: IdMapLike {
+pub trait IdMapBuildParents: IdConvert {
     /// Translate `get_parents` from taking names to taking `Id`s.
     fn build_get_parents_by_id<'a>(
         &'a self,
@@ -483,7 +484,7 @@ pub trait IdMapBuildParents: IdMapLike {
     }
 }
 
-impl<T> IdMapBuildParents for T where T: IdMapLike {}
+impl<T> IdMapBuildParents for T where T: IdConvert {}
 
 // Remove data.
 impl IdMap {
@@ -549,21 +550,13 @@ impl<'a> DerefMut for SyncableIdMap<'a> {
     }
 }
 
-/// Minimal APIs for converting between Id and name.
-pub trait IdMapLike {
-    fn vertex_id(&self, name: VertexName) -> Result<Id>;
-    fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>>;
-    fn vertex_name(&self, id: Id) -> Result<VertexName>;
-    fn contains_vertex_name(&self, name: &VertexName) -> Result<bool>;
-}
-
 /// Minimal write operations for IdMap.
 pub trait IdMapWrite {
     fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
     fn next_free_id(&self, group: Group) -> Result<Id>;
 }
 
-impl IdMapLike for IdMap {
+impl IdConvert for IdMap {
     fn vertex_id(&self, name: VertexName) -> Result<Id> {
         self.find_id_by_name(name.as_ref())?
             .ok_or_else(|| format_err!("{:?} not found", name))
@@ -589,7 +582,7 @@ impl IdMapWrite for IdMap {
     }
 }
 
-impl IdMapLike for MemIdMap {
+impl IdConvert for MemIdMap {
     fn vertex_id(&self, name: VertexName) -> Result<Id> {
         let id = self
             .name2id

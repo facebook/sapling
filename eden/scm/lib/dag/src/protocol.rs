@@ -19,7 +19,7 @@
 use crate::id::VertexName;
 use crate::iddag::{FirstAncestorConstraint, IdDag};
 use crate::iddagstore::IdDagStore;
-use crate::idmap::IdMapLike;
+use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
 use crate::{Id, IdMap};
 use anyhow::{format_err, Result};
@@ -104,7 +104,7 @@ pub(crate) trait Process<I, O> {
 
 // Name -> Id, step 1: Name -> RequestNameToLocation
 // Works on an incomplete IdMap, client-side.
-impl<M: IdMapLike, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToLocation>
+impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToLocation>
     for (&M, &IdDag<DagStore>)
 {
     fn process(self, names: Vec<VertexName>) -> Result<RequestNameToLocation> {
@@ -123,7 +123,7 @@ impl<M: IdMapLike, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToL
 
 // Id -> Name, step 1: Id -> RequestLocationToName
 // Works on an incomplete IdMap, client-side.
-impl<M: IdMapLike, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
+impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
     for (&M, &IdDag<DagStore>)
 {
     fn process(self, ids: Vec<Id>) -> Result<RequestLocationToName> {
@@ -157,7 +157,7 @@ impl<M: IdMapLike, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
 
 // Name -> Id, step 2: RequestNameToLocation -> ResponseIdNamePair
 // Works on a complete IdMap, server-side.
-impl<M: IdMapLike, DagStore: IdDagStore> Process<RequestNameToLocation, ResponseIdNamePair>
+impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, ResponseIdNamePair>
     for (&M, &IdDag<DagStore>)
 {
     fn process(self, request: RequestNameToLocation) -> Result<ResponseIdNamePair> {
@@ -199,7 +199,7 @@ impl<M: IdMapLike, DagStore: IdDagStore> Process<RequestNameToLocation, Response
 
 // Id -> Name, step 2: RequestLocationToName -> ResponseIdNamePair
 // Works on a complete IdMap, server-side.
-impl<M: IdMapLike, DagStore: IdDagStore> Process<RequestLocationToName, ResponseIdNamePair>
+impl<M: IdConvert, DagStore: IdDagStore> Process<RequestLocationToName, ResponseIdNamePair>
     for (&M, &IdDag<DagStore>)
 {
     fn process(self, request: RequestLocationToName) -> Result<ResponseIdNamePair> {
