@@ -10,6 +10,7 @@ use crate::iddag::FirstAncestorConstraint;
 use crate::namedag::MemNameDag;
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
+use crate::ops::ImportAscii;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 #[cfg(test)]
 use crate::DagAlgorithm;
@@ -54,7 +55,7 @@ static ASCII_DAG5: &str = r#"
 
 #[test]
 fn test_mem_namedag() -> Result<()> {
-    let dag = MemNameDag::from_ascii(ASCII_DAG1)?;
+    let dag = from_ascii(ASCII_DAG1);
     assert_eq!(expand(dag.all()?), "L K J I H G F E D C B A");
     assert_eq!(expand(dag.ancestors(nameset("H I"))?), "I H G F E D C B A");
     assert_eq!(expand(dag.parents(nameset("H I E"))?), "G D B");
@@ -74,7 +75,7 @@ fn test_beautify() -> Result<()> {
         |/
         E"#;
     let order = ["B", "D", "A", "C"];
-    let dag = MemNameDag::from_ascii_with_heads(ascii, Some(&order))?;
+    let dag = from_ascii_with_heads(ascii, Some(&order));
     assert_eq!(expand(dag.all()?), "C A D B E");
 
     let dag2 = dag.beautify(None)?;
@@ -95,7 +96,7 @@ fn test_beautify() -> Result<()> {
         |/
         D"#;
     let order = ["C", "E", "G", "F", "A"];
-    let dag = MemNameDag::from_ascii_with_heads(ascii, Some(&order))?;
+    let dag = from_ascii_with_heads(ascii, Some(&order));
     assert_eq!(expand(dag.all()?), "A F G B E C D");
 
     let dag2 = dag.beautify(None)?;
@@ -111,7 +112,7 @@ fn test_beautify() -> Result<()> {
                    \
                     L "#;
     let order = ["D", "J", "L", "K", "G"];
-    let dag = MemNameDag::from_ascii_with_heads(ascii, Some(&order))?;
+    let dag = from_ascii_with_heads(ascii, Some(&order));
     assert_eq!(expand(dag.all()?), "G F E K L J I H D C B A");
 
     let dag2 = dag.beautify(None)?;
@@ -973,4 +974,14 @@ pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> Bu
         name_dag,
         dir,
     }
+}
+
+fn from_ascii(text: &str) -> MemNameDag {
+    from_ascii_with_heads(text, None)
+}
+
+fn from_ascii_with_heads(text: &str, heads: Option<&[&str]>) -> MemNameDag {
+    let mut dag = MemNameDag::new();
+    dag.import_ascii_with_heads(text, heads).unwrap();
+    dag
 }

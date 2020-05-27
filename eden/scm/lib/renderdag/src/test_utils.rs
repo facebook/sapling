@@ -8,6 +8,7 @@
 use std::collections::{HashMap, HashSet};
 
 use dag::namedag::MemNameDag;
+use dag::ops::ImportAscii;
 use dag::DagAlgorithm;
 use dag::VertexName;
 use unicode_width::UnicodeWidthStr;
@@ -28,14 +29,15 @@ pub(crate) fn render_string_with_order(
     order: Option<&[&str]>,
 ) -> String {
     let TestFixture {
-        dag,
+        dag: ascii,
         messages,
         heads,
         reserve,
         ancestors,
         missing,
     } = fixture;
-    let dag = MemNameDag::from_ascii_with_heads(dag, Some(heads)).unwrap();
+    let mut dag = MemNameDag::new();
+    dag.import_ascii_with_heads(ascii, Some(heads)).unwrap();
     // str -> VertexName
     let v = |s: &str| VertexName::copy_from(s.as_bytes());
 

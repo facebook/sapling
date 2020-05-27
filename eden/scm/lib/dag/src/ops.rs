@@ -246,6 +246,23 @@ pub trait DagPersistent {
         F: Fn(VertexName) -> Result<Vec<VertexName>>;
 }
 
+/// Import ASCII graph to DAG.
+pub trait ImportAscii {
+    /// Import vertexes described in an ASCII graph.
+    /// `heads` optionally specifies the order of heads to insert.
+    /// Useful for testing. Panic if the input is invalid.
+    fn import_ascii_with_heads(
+        &mut self,
+        text: &str,
+        heads: Option<&[impl AsRef<str>]>,
+    ) -> Result<()>;
+
+    /// Import vertexes described in an ASCII graph.
+    fn import_ascii(&mut self, text: &str) -> Result<()> {
+        self.import_ascii_with_heads(text, <Option<&[&str]>>::None)
+    }
+}
+
 /// Lookup vertexes by prefixes.
 pub trait PrefixLookup {
     /// Lookup vertexes by hex prefix.
@@ -258,4 +275,40 @@ pub trait IdConvert {
     fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>>;
     fn vertex_name(&self, id: Id) -> Result<VertexName>;
     fn contains_vertex_name(&self, name: &VertexName) -> Result<bool>;
+}
+
+impl<T> ImportAscii for T
+where
+    T: DagAddHeads,
+{
+    fn import_ascii_with_heads(
+        &mut self,
+        text: &str,
+        heads: Option<&[impl AsRef<str>]>,
+    ) -> Result<()> {
+        let parents = drawdag::parse(&text);
+        let heads: Vec<_> = match heads {
+            Some(heads) => heads
+                .iter()
+                .map(|s| VertexName::copy_from(s.as_ref().as_bytes()))
+                .collect(),
+            None => {
+                let mut heads: Vec<_> = parents
+                    .keys()
+                    .map(|s| VertexName::copy_from(s.as_bytes()))
+                    .collect();
+                heads.sort();
+                heads
+            }
+        };
+
+        let parents_func = move |name: VertexName| -> Result<Vec<VertexName>> {
+            Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
+                .iter()
+                .map(|p| VertexName::copy_from(p.as_bytes()))
+                .collect())
+        };
+        self.add_heads(&parents_func, &heads[..])?;
+        Ok(())
+    }
 }
