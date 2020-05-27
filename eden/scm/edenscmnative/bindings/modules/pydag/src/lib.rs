@@ -268,7 +268,7 @@ py_class!(class namedag |py| {
             return Ok(Vec::new())
         }
         let namedag = self.namedag(py).borrow();
-        let nodes = namedag.map()
+        let nodes = namedag
             .vertexes_by_hex_prefix(prefix, limit)
             .map_pyerr(py)?
             .into_iter()

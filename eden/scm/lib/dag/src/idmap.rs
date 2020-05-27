@@ -646,6 +646,23 @@ impl PrefixLookup for IdMap {
     }
 }
 
+impl PrefixLookup for MemIdMap {
+    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
+        let start = VertexName::from_hex(hex_prefix)?;
+        let mut result = Vec::new();
+        for (vertex, _) in self.name2id.range(start..) {
+            if !vertex.to_hex().as_bytes().starts_with(hex_prefix) {
+                break;
+            }
+            result.push(vertex.clone());
+            if result.len() >= limit {
+                break;
+            }
+        }
+        Ok(result)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

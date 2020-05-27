@@ -26,6 +26,7 @@ use crate::idmap::SyncableIdMap;
 use crate::nameset::dag::DagSet;
 use crate::nameset::NameSet;
 use crate::ops::DagAlgorithm;
+use crate::ops::PrefixLookup;
 use crate::spanset::SpanSet;
 use anyhow::{anyhow, bail, ensure, Result};
 use indexedlog::multi;
@@ -502,6 +503,16 @@ impl<T: NameDagStorage> ToSpanSet for T {
             spans.push(id);
         }
         Ok(spans)
+    }
+}
+
+impl<T> PrefixLookup for T
+where
+    T: NameDagStorage,
+    T::IdMap: PrefixLookup,
+{
+    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
+        self.map().vertexes_by_hex_prefix(hex_prefix, limit)
     }
 }
 
