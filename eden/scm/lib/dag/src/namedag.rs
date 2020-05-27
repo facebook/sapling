@@ -25,7 +25,9 @@ use crate::idmap::MemIdMap;
 use crate::idmap::SyncableIdMap;
 use crate::nameset::dag::DagSet;
 use crate::nameset::NameSet;
+use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
+use crate::ops::DagPersistent;
 use crate::ops::PrefixLookup;
 use crate::spanset::SpanSet;
 use anyhow::{anyhow, bail, ensure, Result};
@@ -91,12 +93,14 @@ impl NameDag {
             pending_heads: Default::default(),
         })
     }
+}
 
+impl DagPersistent for NameDag {
     /// Add vertexes and their ancestors to the on-disk DAG.
     ///
     /// This is similar to calling `add_heads` followed by `flush`.
     /// But is faster.
-    pub fn add_heads_and_flush<F>(
+    fn add_heads_and_flush<F>(
         &mut self,
         parent_names_func: F,
         master_names: &[VertexName],
@@ -150,6 +154,50 @@ impl NameDag {
         Ok(())
     }
 
+    /// Write in-memory DAG to disk. This will also pick up changes to
+    /// the DAG by other processes.
+    fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
+        // Sanity check.
+        for head in master_heads.iter() {
+            ensure!(
+                self.map.find_id_by_name(head.as_ref())?.is_some(),
+                "head {:?} does not exist in DAG",
+                head
+            );
+        }
+
+        // Dump the pending DAG to memory so we can re-assign numbers.
+        //
+        // PERF: There could be a fast path that does not re-assign numbers.
+        // But in practice we might always want to re-assign master commits.
+        let parents_map = self.pending_graph()?;
+        let mut non_master_heads = Vec::new();
+        std::mem::swap(&mut self.pending_heads, &mut non_master_heads);
+
+        self.reload()?;
+        let parents = |name| {
+            parents_map.get(&name).cloned().ok_or_else(|| {
+                anyhow!(
+                    "{:?} not found in parent map ({:?}, {:?})",
+                    &name,
+                    &parents_map,
+                    &non_master_heads,
+                )
+            })
+        };
+        let flush_result = self.add_heads_and_flush(&parents, master_heads, &non_master_heads);
+        if let Err(flush_err) = flush_result {
+            // Add back commits to revert the side effect of 'reload()'.
+            return match self.add_heads(&parents, &non_master_heads) {
+                Ok(_) => Err(flush_err),
+                Err(err) => Err(flush_err.context(err)),
+            };
+        }
+        Ok(())
+    }
+}
+
+impl DagAddHeads for NameDag {
     /// Add vertexes and their ancestors to the in-memory DAG.
     ///
     /// This does not write to disk. Use `add_heads_and_flush` to add heads
@@ -158,7 +206,7 @@ impl NameDag {
     /// The added vertexes are immediately query-able. They will get Ids
     /// assigned to the NON_MASTER group internally. The `flush` function
     /// can re-assign Ids to the MASTER group.
-    pub fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
+    fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {
@@ -199,51 +247,11 @@ impl NameDag {
 
         Ok(())
     }
+}
 
-    /// Write in-memory DAG to disk. This will also pick up changes to
-    /// the DAG by other processes.
-    pub fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
-        // Sanity check.
-        for head in master_heads.iter() {
-            ensure!(
-                self.map.find_id_by_name(head.as_ref())?.is_some(),
-                "head {:?} does not exist in DAG",
-                head
-            );
-        }
-
-        // Dump the pending DAG to memory so we can re-assign numbers.
-        //
-        // PERF: There could be a fast path that does not re-assign numbers.
-        // But in practice we might always want to re-assign master commits.
-        let parents_map = self.pending_graph()?;
-        let mut non_master_heads = Vec::new();
-        std::mem::swap(&mut self.pending_heads, &mut non_master_heads);
-
-        self.reload()?;
-        let parents = |name| {
-            parents_map.get(&name).cloned().ok_or_else(|| {
-                anyhow!(
-                    "{:?} not found in parent map ({:?}, {:?})",
-                    &name,
-                    &parents_map,
-                    &non_master_heads,
-                )
-            })
-        };
-        let flush_result = self.add_heads_and_flush(&parents, master_heads, &non_master_heads);
-        if let Err(flush_err) = flush_result {
-            // Add back commits to revert the side effect of 'reload()'.
-            return match self.add_heads(&parents, &non_master_heads) {
-                Ok(_) => Err(flush_err),
-                Err(err) => Err(flush_err.context(err)),
-            };
-        }
-        Ok(())
-    }
-
+impl NameDag {
     /// Reload segments from disk. This discards in-memory content.
-    pub fn reload(&mut self) -> Result<()> {
+    fn reload(&mut self) -> Result<()> {
         self.map.reload()?;
         self.dag.reload()?;
         self.pending_heads.clear();
@@ -317,9 +325,11 @@ impl MemNameDag {
         let heads: Option<&[&str]> = None;
         Self::from_ascii_with_heads(text, heads)
     }
+}
 
+impl DagAddHeads for MemNameDag {
     /// Add vertexes and their ancestors to the in-memory DAG.
-    pub fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
+    fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {

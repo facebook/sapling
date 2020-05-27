@@ -29,6 +29,7 @@
 
 use anyhow::Result;
 use dag::namedag::MemNameDag;
+use dag::ops::DagAddHeads;
 use dag::VertexName;
 use indexedlog::{
     log::{self as ilog, IndexDef, IndexOutput, Log},

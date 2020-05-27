@@ -12,7 +12,8 @@ use cpython::*;
 use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt, Str};
 use dag::{
     namedag::LowLevelAccess, nameset::dag::DagSet, nameset::legacy::LegacyCodeNeedIdAccess,
-    ops::PrefixLookup, spanset::SpanSetIter, Dag, DagAlgorithm, Id, IdSet, MemDag, Set, Vertex,
+    ops::DagAddHeads, ops::DagPersistent, ops::PrefixLookup, spanset::SpanSetIter, Dag,
+    DagAlgorithm, Id, IdSet, MemDag, Set, Vertex,
 };
 use std::cell::RefCell;
 use std::ops::Deref;

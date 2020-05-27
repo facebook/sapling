@@ -8,6 +8,8 @@
 use crate::id::{Group, Id, VertexName};
 use crate::iddag::FirstAncestorConstraint;
 use crate::namedag::MemNameDag;
+use crate::ops::DagAddHeads;
+use crate::ops::DagPersistent;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 #[cfg(test)]
 use crate::DagAlgorithm;

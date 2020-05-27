@@ -7,7 +7,7 @@
 
 use crate::{parse_bindag, ParentRevs};
 use anyhow::Result;
-use dag::{namedag::LowLevelAccess, spanset::SpanSet, Id, NameDag, VertexName};
+use dag::{namedag::LowLevelAccess, ops::DagPersistent, spanset::SpanSet, Id, NameDag, VertexName};
 use std::collections::HashSet;
 use std::ops::Range;
 use tempfile::TempDir;

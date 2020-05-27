@@ -218,6 +218,32 @@ pub trait DagAlgorithm {
     fn descendants(&self, set: NameSet) -> Result<NameSet>;
 }
 
+/// Add vertexes recursively to the DAG.
+pub trait DagAddHeads {
+    /// Add vertexes and their ancestors to the DAG. This does not persistent
+    /// changes to disk.
+    fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
+    where
+        F: Fn(VertexName) -> Result<Vec<VertexName>>;
+}
+
+/// Persistent the DAG on disk.
+pub trait DagPersistent {
+    /// Write in-memory DAG to disk. This might also pick up changes to
+    /// the DAG by other processes.
+    fn flush(&mut self, master_heads: &[VertexName]) -> Result<()>;
+
+    /// A faster path for add_heads, followed by flush.
+    fn add_heads_and_flush<F>(
+        &mut self,
+        parent_names_func: F,
+        master_names: &[VertexName],
+        non_master_names: &[VertexName],
+    ) -> Result<()>
+    where
+        F: Fn(VertexName) -> Result<Vec<VertexName>>;
+}
+
 /// Lookup vertexes by prefixes.
 pub trait PrefixLookup {
     /// Lookup vertexes by hex prefix.
