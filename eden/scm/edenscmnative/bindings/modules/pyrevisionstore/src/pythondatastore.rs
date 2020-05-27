@@ -7,18 +7,15 @@
 
 use anyhow::Result;
 use cpython::{
-    exc, FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, PyTuple, Python,
-    PythonObject, PythonObjectWithTypeObject,
+    exc, FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python, PythonObject,
+    PythonObjectWithTypeObject,
 };
 
 use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{Delta, HgIdDataStore, LocalStore, Metadata, RemoteDataStore, StoreKey};
+use revisionstore::{HgIdDataStore, LocalStore, Metadata, RemoteDataStore, StoreKey};
 use types::Key;
 
-use crate::pythonutil::{
-    bytes_from_tuple, from_key_to_tuple, from_tuple_to_delta, from_tuple_to_key, path_from_tuple,
-    to_key, to_metadata,
-};
+use crate::pythonutil::{from_key_to_tuple, from_tuple_to_key, to_metadata};
 
 pub struct PythonHgIdDataStore {
     py_store: PyObject,

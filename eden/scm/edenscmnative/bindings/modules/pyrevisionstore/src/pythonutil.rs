@@ -5,13 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
 use cpython::{
     exc, FromPyObject, PyBytes, PyDict, PyErr, PyObject, PyResult, PyTuple, Python, PythonObject,
     ToPyObject,
 };
 
-use cpython_ext::{PyErr as ExtPyErr, PyPath, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyPath, PyPathBuf, ResultPyErrExt};
 use revisionstore::datastore::{Delta, Metadata};
 use types::{Key, Node, RepoPathBuf};
 
@@ -51,28 +50,6 @@ pub fn to_delta(
     let base_key = to_key(py, name, deltabasenode)?;
     Ok(Delta {
         data: data.data(py).to_vec().into(),
-        base: if base_key.hgid.is_null() {
-            None
-        } else {
-            Some(base_key)
-        },
-        key,
-    })
-}
-
-pub fn from_tuple_to_delta<'a>(py: Python, py_delta: &PyObject) -> PyResult<Delta> {
-    // A python delta is a tuple: (name, node, base name, base node, delta bytes)
-    let py_delta = PyTuple::extract(py, &py_delta)?;
-    let py_name = PyPathBuf::extract(py, &py_delta.get_item(py, 0))?;
-    let py_node = PyBytes::extract(py, &py_delta.get_item(py, 1))?;
-    let py_delta_name = PyPathBuf::extract(py, &py_delta.get_item(py, 2))?;
-    let py_delta_node = PyBytes::extract(py, &py_delta.get_item(py, 3))?;
-    let py_bytes = PyBytes::extract(py, &py_delta.get_item(py, 4))?;
-
-    let key = to_key(py, &py_name, &py_node)?;
-    let base_key = to_key(py, &py_delta_name, &py_delta_node)?;
-    Ok(Delta {
-        data: py_bytes.data(py).to_vec().into(),
         base: if base_key.hgid.is_null() {
             None
         } else {
@@ -124,14 +101,6 @@ pub fn from_tuple_to_key(py: Python, py_tuple: &PyObject) -> PyResult<Key> {
     let name = <PyPathBuf>::extract(py, &py_tuple[0])?;
     let node = <&PyBytes>::extract(py, &py_tuple[1])?;
     to_key(py, &name, &node)
-}
-
-pub fn bytes_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Result<PyBytes> {
-    PyBytes::extract(py, &tuple.get_item(py, index)).map_err(|e| ExtPyErr::from(e).into())
-}
-
-pub fn path_from_tuple(py: Python, tuple: &PyTuple, index: usize) -> Result<PyPathBuf> {
-    PyPathBuf::extract(py, &tuple.get_item(py, index)).map_err(|e| ExtPyErr::from(e).into())
 }
 
 pub fn to_metadata(py: Python, meta: &PyDict) -> PyResult<Metadata> {
