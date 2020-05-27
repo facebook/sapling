@@ -7,12 +7,12 @@
 
 use crate::render::{Ancestor, Renderer};
 use anyhow::Result;
-use dag::namedag::NameDagAlgorithm;
+use dag::DagAlgorithm;
 use dag::VertexName;
 
 /// Render a NameDag or MemNameDag into a String.
 pub fn render_namedag(
-    dag: &impl NameDagAlgorithm,
+    dag: &impl DagAlgorithm,
     get_message: impl Fn(&VertexName) -> Option<String>,
 ) -> Result<String> {
     let mut renderer = crate::GraphRowRenderer::new().output().build_box_drawing();

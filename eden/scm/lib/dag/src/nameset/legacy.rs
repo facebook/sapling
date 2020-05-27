@@ -35,7 +35,7 @@ impl<'a> From<(LegacyCodeNeedIdAccess, SpanSet, &'a NameDag)> for NameSet {
 mod tests {
     use super::super::dag::tests::with_dag;
     use super::*;
-    use crate::namedag::NameDagAlgorithm;
+    use crate::DagAlgorithm;
     use anyhow::Result;
 
     #[test]

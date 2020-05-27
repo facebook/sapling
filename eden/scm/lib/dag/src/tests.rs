@@ -8,9 +8,9 @@
 use crate::id::{Group, Id, VertexName};
 use crate::iddag::FirstAncestorConstraint;
 use crate::namedag::MemNameDag;
-#[cfg(test)]
-use crate::namedag::NameDagAlgorithm;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
+#[cfg(test)]
+use crate::DagAlgorithm;
 use crate::IdMap;
 use crate::NameDag;
 use crate::NameSet;

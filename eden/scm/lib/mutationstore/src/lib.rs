@@ -216,7 +216,7 @@ impl MutationStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dag::namedag::NameDagAlgorithm;
+    use dag::DagAlgorithm;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempdir::TempDir;

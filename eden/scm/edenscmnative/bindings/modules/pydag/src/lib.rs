@@ -14,11 +14,10 @@ use dag::{
     id::{Id, VertexName},
     namedag::LowLevelAccess,
     namedag::MemNameDag,
-    namedag::NameDagAlgorithm,
     nameset::dag::DagSet,
     nameset::legacy::LegacyCodeNeedIdAccess,
     spanset::{SpanSet, SpanSetIter},
-    NameDag, NameSet,
+    DagAlgorithm, NameDag, NameSet,
 };
 use std::cell::RefCell;
 use std::ops::Deref;

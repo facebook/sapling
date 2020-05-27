@@ -8,7 +8,7 @@
 use std::collections::{HashMap, HashSet};
 
 use dag::namedag::MemNameDag;
-use dag::namedag::NameDagAlgorithm;
+use dag::DagAlgorithm;
 use dag::VertexName;
 use unicode_width::UnicodeWidthStr;
 

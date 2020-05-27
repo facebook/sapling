@@ -17,6 +17,7 @@ mod iddagstore;
 pub mod idmap;
 pub mod namedag;
 pub mod nameset;
+pub mod ops;
 pub mod protocol;
 mod segment;
 pub mod spanset;
@@ -25,8 +26,8 @@ pub use id::{Group, Id, VertexName};
 pub use iddag::IdDag;
 pub use idmap::IdMap;
 pub use namedag::NameDag;
-pub use namedag::NameDagAlgorithm;
 pub use nameset::NameSet;
+pub use ops::DagAlgorithm;
 pub use spanset::SpanSet;
 
 pub type Level = u8;
