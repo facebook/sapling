@@ -20,9 +20,12 @@ std::string win32ErrorToString(uint32_t error) {
   };
 
   LPSTR messageBufferRaw = nullptr;
+  // By default, FormatMessageA will terminate the string with "\r\n",
+  // and the mis-named (and mis-documented) FORMAT_MESSAGE_MAX_WIDTH_MASK flag
+  // will remove these (but add a whitespace instead).
   size_t size = FormatMessageA(
       FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-          FORMAT_MESSAGE_IGNORE_INSERTS,
+          FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
       nullptr,
       error,
       MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
@@ -37,7 +40,7 @@ std::string win32ErrorToString(uint32_t error) {
   if ((size > 0) && (messageBuffer)) {
     stream << "Error (0x" << std::hex << error << ") " << messageBuffer.get();
   } else {
-    stream << "Error (0x" << std::hex << error << ") Unknown Error\r\n";
+    stream << "Error (0x" << std::hex << error << ") Unknown Error";
   }
   return stream.str();
 }

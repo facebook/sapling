@@ -15,7 +15,7 @@ using namespace facebook::eden;
 TEST(WinErrorTest, testErrorFileNotFound) {
   std::string msg{
       "Error ERROR_FILE_NOT_FOUND: Error (0x2) The system cannot find the"
-      " file specified.\r\n"};
+      " file specified. "};
   auto ex = std::system_error(
       ERROR_FILE_NOT_FOUND,
       Win32ErrorCategory::get(),
@@ -27,7 +27,7 @@ TEST(WinErrorTest, testErrorFileNotFound) {
 // Test Win32 success
 TEST(WinErrorTest, testErrorSuccess) {
   std::string msg{
-      "Error ERROR_SUCCESS: Error (0x0) The operation completed successfully.\r\n"};
+      "Error ERROR_SUCCESS: Error (0x0) The operation completed successfully. "};
   auto ex = std::system_error(
       ERROR_SUCCESS, Win32ErrorCategory::get(), "Error ERROR_SUCCESS");
 
@@ -38,7 +38,7 @@ TEST(WinErrorTest, testErrorSuccess) {
 TEST(WinErrorTest, testErrorConfigNotFound) {
   std::string msg{
       "Error NAP_E_SHV_CONFIG_NOT_FOUND: Error (0x80270012) SHV configuration"
-      " is not found.\r\n"};
+      " is not found. "};
   auto ex = std::system_error(
       NAP_E_SHV_CONFIG_NOT_FOUND,
       HResultErrorCategory::get(),
@@ -50,7 +50,7 @@ TEST(WinErrorTest, testErrorConfigNotFound) {
 // Test HRESULT success
 TEST(WinErrorTest, testErrorSOK) {
   std::string msg{
-      "Error S_OK: Error (0x0) The operation completed successfully.\r\n"};
+      "Error S_OK: Error (0x0) The operation completed successfully. "};
   auto ex = std::system_error(S_OK, HResultErrorCategory::get(), "Error S_OK");
 
   EXPECT_EQ(msg, ex.what());
@@ -58,7 +58,7 @@ TEST(WinErrorTest, testErrorSOK) {
 
 // Test Invalid error code
 TEST(WinErrorTest, testErrorInvalidCode) {
-  std::string msg{"Error Invalid code: Error (0x22222222) Unknown Error\r\n"};
+  std::string msg{"Error Invalid code: Error (0x22222222) Unknown Error"};
   auto ex = std::system_error(
       0x22222222, Win32ErrorCategory::get(), "Error Invalid code");
 
