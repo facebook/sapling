@@ -9,6 +9,7 @@
 //!
 //! Defines types around [`Id`].
 
+use anyhow::{bail, Result};
 pub use minibytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -39,6 +40,27 @@ impl VertexName {
             v.push(HEX_CHARS[(byte & 0xf) as usize]);
         }
         unsafe { String::from_utf8_unchecked(v) }
+    }
+
+    /// Convert from hex.
+    ///
+    /// If `len(hex)` is an odd number, hex + '0' will be used.
+    pub fn from_hex(hex: &[u8]) -> Result<Self> {
+        let mut bytes = vec![0u8; (hex.len() + 1) / 2];
+        for (i, byte) in hex.iter().enumerate() {
+            let value = match byte {
+                b'0'..=b'9' => byte - b'0',
+                b'a'..=b'f' => byte - b'a' + 10,
+                b'A'..=b'F' => byte - b'A' + 10,
+                _ => bail!("{:?} is not a hex character", *byte as char),
+            };
+            if i & 1 == 0 {
+                bytes[i / 2] |= value << 4;
+            } else {
+                bytes[i / 2] |= value;
+            }
+        }
+        Ok(VertexName(Bytes::from(bytes)))
     }
 
     pub fn copy_from(value: &[u8]) -> Self {
@@ -199,6 +221,29 @@ impl Iterator for IdIter {
             let result = self.current;
             self.current = self.current + 1;
             Some(result)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quickcheck::quickcheck;
+
+    #[test]
+    fn test_vertex_from_hex_odd() {
+        let vertex = VertexName::from_hex(b"a").unwrap();
+        let vertex2 = VertexName::from_hex(b"a0").unwrap();
+        assert_eq!(vertex, vertex2);
+        assert_eq!(vertex.to_hex(), "a0");
+    }
+
+    quickcheck! {
+        fn test_vertex_hex_roundtrip(slice: Vec<u8>) -> bool {
+            let vertex = VertexName::from(slice);
+            let hex = vertex.to_hex();
+            let vertex2 = VertexName::from_hex(hex.as_bytes()).unwrap();
+            vertex2 == vertex
         }
     }
 }
