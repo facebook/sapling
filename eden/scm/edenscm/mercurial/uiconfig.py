@@ -633,6 +633,14 @@ def validatedynamicconfig(ui):
         "ovrsource_overrides.rc",
         "www_overrides.rc",
         "www-merge_overrides.rc",
+        "dev.rc",
+        "beta.rc",
+        "devserver.rc",
+        "client.rc",
+        "devserver_no_sandcastle.rc",
+        "linux_laptop.rc",
+        "osx_laptop.rc",
+        "osx_laptop_overrides.rc",
     ]
     # Configs that are allowed to be different, usually because they must come
     # from external configuration (like hotfixes).
@@ -652,7 +660,7 @@ def validatedynamicconfig(ui):
             dynamic_value,
             file_value,
         )
-        if ui.configbool("configs", "mismatchwarn"):
+        if ui.configbool("configs", "mismatchwarn") and not ui.plain():
             ui.warn(msg)
 
         samplerate = ui.configint("configs", "mismatchsampling")
