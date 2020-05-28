@@ -39,8 +39,7 @@ use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use repos::{
     RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawCommonConfig, RawHookConfig,
-    RawInfinitepushParams, RawRepoConfig, RawRepoConfigs, RawStorageConfig, RawUnodeVersion,
-    RawWireprotoLoggingConfig,
+    RawRepoConfig, RawRepoConfigs, RawStorageConfig, RawUnodeVersion, RawWireprotoLoggingConfig,
 };
 
 const CONFIGERATOR_CRYPTO_PROJECT: &'static str = "SCM";
@@ -674,37 +673,15 @@ impl RepoConfigs {
 
         let infinitepush = this
             .infinitepush
-            .map(
-                |RawInfinitepushParams {
-                     allow_writes,
-                     namespace_pattern,
-                     hydrate_getbundle_response,
-                     populate_reverse_filler_queue,
-                 }| {
-                    let namespace = match namespace_pattern {
-                        Some(ns) => {
-                            let regex = Regex::new(&ns);
-                            match regex {
-                                Ok(regex) => Some(InfinitepushNamespace::new(regex)),
-                                Err(_) => None,
-                            }
-                        }
-                        None => None,
-                    };
-                    // When the field is missing, we default to not hydrating the response
-                    let hydrate_getbundle_response = hydrate_getbundle_response.unwrap_or(false);
-                    // Same for queue population
-                    let populate_reverse_filler_queue =
-                        populate_reverse_filler_queue.unwrap_or(false);
-                    InfinitepushParams {
-                        allow_writes,
-                        namespace,
-                        hydrate_getbundle_response,
-                        populate_reverse_filler_queue,
-                    }
-                },
-            )
-            .unwrap_or(InfinitepushParams::default());
+            .map(|raw| InfinitepushParams {
+                allow_writes: raw.allow_writes,
+                namespace: raw
+                    .namespace_pattern
+                    .and_then(|ns| Regex::new(&ns).ok().map(InfinitepushNamespace::new)),
+                hydrate_getbundle_response: raw.hydrate_getbundle_response.unwrap_or(false),
+                populate_reverse_filler_queue: raw.populate_reverse_filler_queue.unwrap_or(false),
+            })
+            .unwrap_or_else(InfinitepushParams::default);
 
         let generation_cache_size: usize = this
             .generation_cache_size
