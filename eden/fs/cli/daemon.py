@@ -170,7 +170,7 @@ def _start_edenfs_service(
 
     # Wrap the command in sudo, if necessary
     cmd, eden_env = prepare_edenfs_privileges(daemon_binary, cmd, eden_env)
-    return subprocess.call(cmd, env=eden_env)
+    return subprocess.call(cmd, stdin=subprocess.DEVNULL, env=eden_env)
 
 
 def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
