@@ -238,6 +238,12 @@ def get_edenfs_environment() -> Dict[str, str]:
 
     eden_env = {"PATH": ":".join(path_dirs)}
 
+    if sys.platform == "darwin":
+        # Prevent warning on mac, which will crash eden:
+        # +[__NSPlaceholderDate initialize] may have been in progress in
+        # another thread when fork() was called.
+        eden_env["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+
     # Preserve the following environment settings
     preserve = [
         "USER",
