@@ -7,7 +7,6 @@ if(WIN32)
   add_executable(
     edenfs
     win/service/main.cpp
-    win/service/WinService.cpp
   )
 else()
   add_executable(
