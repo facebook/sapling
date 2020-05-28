@@ -623,28 +623,13 @@ def validatedynamicconfig(ui):
     #
     # Once all configs are migrated, we can delete the rc files and remove this
     # validation.
-    originalrcs = [
-        "common_overrides.rc",
-        "configerator_overrides.rc",
-        "devserver_no_sandcastle_overrides.rc",
-        "facebook_overrides.rc",
-        "fbsource_overrides.rc",
-        "instagram-server_overrides.rc",
-        "ovrsource_overrides.rc",
-        "www_overrides.rc",
-        "www-merge_overrides.rc",
-        "dev.rc",
-        "beta.rc",
-        "devserver.rc",
-        "client.rc",
-        "devserver_no_sandcastle.rc",
-        "linux_laptop.rc",
-        "osx_laptop.rc",
-        "osx_laptop_overrides.rc",
-        "posix.rc",
-        "windows.rc",
-        "windows_sandcastle.rc",
-    ]
+    try:
+        from . import fb
+
+        originalrcs = fb.ported_hgrcs
+    except ImportError:
+        originalrcs = []
+
     # Configs that are allowed to be different, usually because they must come
     # from external configuration (like hotfixes).
     whitelist = [("extensions", "hotfix")]
