@@ -109,3 +109,16 @@ Sync a pushrebase bookmark move
   $ mononoke_hg_sync_loop_regenerate repo-hg 5  2>&1 | grep 'successful sync'
   * successful sync of entries [6] (glob)
   * successful sync of entries [7] (glob)
+
+Do a manual move
+  $ cd "$TESTTMP/client-push"
+  $ NODE="$(hg log -T '{node}' -r master_bookmark~1)"
+  $ echo "$NODE"
+  f5fb745185a2d197d092e7dfffe147f36de1af76
+  $ mononoke_admin bookmarks set master_bookmark "$NODE" &> /dev/null
+  $ cd "$TESTTMP"
+  $ mononoke_hg_sync_loop_regenerate repo-hg 6 2>&1 | grep 'successful sync'
+  * successful sync of entries [8] (glob)
+  $ cd "$TESTTMP/repo-hg"
+  $ hg log -r master_bookmark -T '{node}\n'
+  f5fb745185a2d197d092e7dfffe147f36de1af76
