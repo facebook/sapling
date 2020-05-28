@@ -61,6 +61,21 @@ def correlator(ui):
     return _correlator
 
 
+@clienttelemetryfunc
+def wantslfspointers(ui):
+    """
+    Tells the server whether this clients wants LFS pointers to be sent in
+    getpackv2. Only applies when the repository is being migrated to sending
+    LFS pointers and doesn't apply on repositories already converted.
+
+    Oh, if you haven't realized already, this is a hack. Hopefully when the
+    Mercurial servers are gone we'll be able to have a real capability exchange
+    system when establishing a connection.
+    """
+
+    return str(ui.configbool("lfs", "wantslfspointers"))
+
+
 # Client telemetry data is generated before connection and stored here.
 _clienttelemetrydata = {}
 

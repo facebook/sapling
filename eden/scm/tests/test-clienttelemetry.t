@@ -26,25 +26,35 @@ set up the local repo
   pulling from ssh://user@dummy/server
   no changes found
 
+  $ hg pull -q --config lfs.wantslfspointers=True
+
 check telemetry
   >>> import json
   >>> with open("$TESTTMP/sampling.txt") as f:
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
-  ...     for key in "command", "fullcommand":
+  ...     for key in "command", "fullcommand", "wantslfspointers":
   ...         print("%s: %s" % (key, parsedrecord["data"]["client_%s" % key]))
   command: clone
   fullcommand: clone 'ssh://user@dummy/server' local -q
+  wantslfspointers: False
   command: pull
   fullcommand: pull
+  wantslfspointers: False
   command: pull
   fullcommand: pull -q
+  wantslfspointers: False
   command: pull
   fullcommand: pull --config 'clienttelemetry.announceremotehostname=False'
+  wantslfspointers: False
+  command: pull
+  fullcommand: pull -q --config 'lfs.wantslfspointers=True'
+  wantslfspointers: True
 
 check blackbox
   $ hg blackbox --pattern '{"clienttelemetry": "_"}'
+  * [clienttelemetry] peer name: * (glob)
   * [clienttelemetry] peer name: * (glob)
   * [clienttelemetry] peer name: * (glob)
   * [clienttelemetry] peer name: * (glob)
