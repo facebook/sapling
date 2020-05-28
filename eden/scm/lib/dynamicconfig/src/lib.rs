@@ -13,7 +13,9 @@ use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::str::FromStr;
 
-use anyhow::{anyhow, bail, Error, Result};
+#[cfg(not(feature = "fb"))]
+use anyhow::Error;
+use anyhow::{anyhow, bail, Result};
 use hostname;
 use minibytes::Text;
 
@@ -22,6 +24,30 @@ use hgtime::HgTime;
 
 #[cfg(feature = "fb")]
 mod fb;
+
+#[cfg(feature = "fb")]
+use fb::Repo;
+
+#[cfg(not(feature = "fb"))]
+#[derive(Clone, Debug, PartialEq)]
+pub enum Repo {
+    Unknown,
+}
+
+#[cfg(not(feature = "fb"))]
+impl FromStr for Repo {
+    type Err = Error;
+    fn from_str(name: &str) -> Result<Repo> {
+        Ok(Repo::Unknown)
+    }
+}
+
+#[cfg(not(feature = "fb"))]
+impl<'a> PartialEq<Repo> for &'a Repo {
+    fn eq(&self, other: &Repo) -> bool {
+        *self == other
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum HgGroup {
@@ -57,60 +83,6 @@ pub enum Platform {
 pub enum Domain {
     Corp,
     Prod,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Repo {
-    Configerator,
-    Fbsource,
-    InstagramServer,
-    Ovrsource,
-    Www,
-    WwwMerge,
-    Unknown(String),
-}
-
-impl AsRef<str> for Repo {
-    fn as_ref(&self) -> &str {
-        use Repo::*;
-        match self {
-            Configerator => "configerator",
-            Fbsource => "fbsource",
-            InstagramServer => "instagram-server",
-            Ovrsource => "ovrsource",
-            Www => "www",
-            WwwMerge => "www-merge",
-            Unknown(name) => &name,
-        }
-    }
-}
-
-impl FromStr for Repo {
-    type Err = Error;
-    fn from_str(name: &str) -> Result<Repo> {
-        use Repo::*;
-        Ok(match name {
-            "configerator" => Configerator,
-            "fbsource" => Fbsource,
-            "instagram-server" => InstagramServer,
-            "ovrsource" => Ovrsource,
-            "www" => Www,
-            "www-merge" => WwwMerge,
-            _ => Unknown(name.to_string()),
-        })
-    }
-}
-
-impl std::fmt::Display for Repo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_ref())
-    }
-}
-
-impl<'a> PartialEq<Repo> for &'a Repo {
-    fn eq(&self, other: &Repo) -> bool {
-        *self == other
-    }
 }
 
 pub struct Generator {
