@@ -641,6 +641,9 @@ def validatedynamicconfig(ui):
         "linux_laptop.rc",
         "osx_laptop.rc",
         "osx_laptop_overrides.rc",
+        "posix.rc",
+        "windows.rc",
+        "windows_sandcastle.rc",
     ]
     # Configs that are allowed to be different, usually because they must come
     # from external configuration (like hotfixes).
