@@ -1431,7 +1431,7 @@ mod tests {
         for (path, maybe_content) in content.iter() {
             let path: &str = path.as_ref();
             commit_ctx = match maybe_content {
-                Some(content) => commit_ctx.add_file(path, content),
+                Some(content) => commit_ctx.add_file(path, *content),
                 None => commit_ctx.delete_file(path),
             };
         }

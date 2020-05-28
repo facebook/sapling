@@ -82,15 +82,15 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
-    pub fn add_file(mut self, path: impl Into<String>, content: impl AsRef<str>) -> Self {
+    pub fn add_file(mut self, path: impl Into<String>, content: impl Into<String>) -> Self {
         self.files.insert(
             path.into(),
-            CreateFileContext::FromHelper(content.as_ref().to_string(), FileType::Regular, None),
+            CreateFileContext::FromHelper(content.into(), FileType::Regular, None),
         );
         self
     }
 
-    pub fn add_files<P: Into<String>, C: AsRef<str>, I: IntoIterator<Item = (P, C)>>(
+    pub fn add_files<P: Into<String>, C: Into<String>, I: IntoIterator<Item = (P, C)>>(
         mut self,
         path_contents: I,
     ) -> Self {
@@ -113,12 +113,12 @@ impl<'a> CreateCommitContext<'a> {
     pub fn add_file_with_type(
         mut self,
         path: impl Into<String>,
-        content: impl AsRef<str>,
+        content: impl Into<String>,
         t: FileType,
     ) -> Self {
         self.files.insert(
             path.into(),
-            CreateFileContext::FromHelper(content.as_ref().to_string(), t, None),
+            CreateFileContext::FromHelper(content.into(), t, None),
         );
         self
     }
@@ -126,17 +126,13 @@ impl<'a> CreateCommitContext<'a> {
     pub fn add_file_with_copy_info(
         mut self,
         path: &str,
-        content: impl AsRef<str>,
+        content: impl Into<String>,
         (parent, parent_path): (impl Into<CommitIdentifier>, &str),
     ) -> Result<Self, Error> {
         let copy_info = (MPath::new(parent_path)?, parent.into());
         self.files.insert(
             path.into(),
-            CreateFileContext::FromHelper(
-                content.as_ref().to_string(),
-                FileType::Regular,
-                Some(copy_info),
-            ),
+            CreateFileContext::FromHelper(content.into(), FileType::Regular, Some(copy_info)),
         );
         Ok(self)
     }
