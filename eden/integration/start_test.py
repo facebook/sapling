@@ -138,7 +138,7 @@ class DirectInvokeTest(testcase.IntegrationTestCase):
         """Directly invoking edenfs with an edenfsctl subcommand should fail."""
         cmd: List[str] = [FindExe.EDEN_DAEMON, "restart"]  # pyre-ignore[9]: T38947910
         out = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.assertEqual(os.EX_USAGE, out.returncode)
+        self.assertNotEqual(out.returncode, 0)
         self.assertEqual(b"", out.stdout)
 
         expected_err = "error: unexpected trailing command line arguments\n"
@@ -216,7 +216,7 @@ class StartFakeEdenFSTestBase(ServiceTestCaseBase):
 @service_test
 class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
     def test_eden_start_launches_separate_processes_for_separate_eden_dirs(
-        self
+        self,
     ) -> None:
         eden_dir_1 = self.eden_dir
         eden_dir_2 = self.make_temp_dir("eden2")
@@ -262,7 +262,7 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
         )
 
     def test_daemon_command_arguments_should_forward_to_edenfs_without_leading_dashdash(
-        self
+        self,
     ) -> None:
         self.start_edenfs(
             extra_args=[

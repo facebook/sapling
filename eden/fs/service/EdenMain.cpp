@@ -15,13 +15,11 @@
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Unistd.h>
 #include <folly/ssl/Init.h>
 #include <folly/stop_watch.h>
 #include <gflags/gflags.h>
-#include <pwd.h>
-#include <sysexits.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
-#include <unistd.h>
 #include <optional>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
@@ -72,6 +70,21 @@ SessionInfo makeSessionInfo(
   env.edenVersion = std::move(edenVersion);
   return env;
 }
+
+static constexpr int kExitCodeSuccess = 0;
+static constexpr int kExitCodeError = 1;
+static constexpr int kExitCodeUsage = 2;
+
+#ifdef _WIN32
+int geteuid() {
+  // EdenFS calls geteuid() during start-up to confirm that it is started with
+  // root privileges on POSIX systems.  This doesn't matter on Windows.
+  // We define geteuid() to return 0 to allow our geteuid() check always succeed
+  // on Windows.
+  return 0;
+}
+#endif // _WIN32
+
 } // namespace
 
 namespace facebook {
@@ -175,7 +188,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   folly::init(&argc, &argv);
   if (argc != 1) {
     fprintf(stderr, "error: unexpected trailing command line arguments\n");
-    return EX_USAGE;
+    return kExitCodeUsage;
   }
 
   // Fail if we were not started as root.  The privhelper needs root
@@ -184,7 +197,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   // can use the --help argument.
   if (originalEUID != 0) {
     fprintf(stderr, "error: edenfs must be started as root\n");
-    return EX_NOPERM;
+    return kExitCodeUsage;
   }
 
   if (identity.getUid() == 0 && !FLAGS_allowRoot) {
@@ -195,7 +208,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         "sudo or a setuid binary.  This is normally undesirable.\n"
         "Pass in the --allowRoot flag if you really mean to run "
         "eden as root.\n");
-    return EX_USAGE;
+    return kExitCodeUsage;
   }
 
 #if EDEN_HAVE_SYSTEMD
@@ -209,7 +222,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     edenConfig = getEdenConfig(identity);
   } catch (const ArgumentError& ex) {
     fprintf(stderr, "%s\n", ex.what());
-    return EX_SOFTWARE;
+    return kExitCodeError;
   }
 
   auto logPath = getLogPath(edenConfig->edenDir.getValue());
@@ -262,7 +275,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     server->getServerState()->getStructuredLogger()->logEvent(
         DaemonStart{startTimeInSeconds, FLAGS_takeover, false /*success*/});
     startupLogger->exitUnsuccessfully(
-        EX_SOFTWARE, "error starting edenfs: ", folly::exceptionStr(ex));
+        kExitCodeError, "error starting edenfs: ", folly::exceptionStr(ex));
   }
 
   std::move(prepareFuture)
@@ -305,7 +318,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   XLOG(INFO) << "edenfs exiting successfully";
-  return EX_OK;
+  return kExitCodeSuccess;
 }
 
 } // namespace eden

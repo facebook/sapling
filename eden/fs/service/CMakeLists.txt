@@ -48,13 +48,6 @@ target_link_libraries(
     Folly::folly
 )
 
-if (WIN32)
-  list(
-    REMOVE_ITEM SERVICE_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/EdenMain.cpp
-  )
-endif()
-
 list(APPEND EDEN_STORE_IMPLEMENTATIONS eden_store_hg)
 if(EDEN_HAVE_GIT)
   list(APPEND EDEN_STORE_IMPLEMENTATIONS eden_store_git)
