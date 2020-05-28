@@ -1,9 +1,11 @@
-# Copyright (C) 2015 Facebook, Inc
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Maintained by Ryan McElroy <rm@fb.com>
 #
 # Inspiration and derivation from git-completion.bash by Shawn O. Pearce.
-#
-# Distributed under the GNU General Public License, version 2.0.
 #
 # ========================================================================
 #
@@ -50,6 +52,11 @@
 #    is a remote or autofs mount point.
 #  * WANT_OLD_SCM_PROMPT : Use '%s' as the formatting for the prompt instead
 #    of ' (%s)'
+#  * SHOW_DIRTY_STATE : Show dirty state of the working directory of a
+#    repo with a star *. In addition, for hg, show untracked files with ?.
+#    For git, show staged change with +.  When SHOW_DIRTY_STATE is set,
+#    you can opt out invidivual repo by setting shell.showDirtyState to false
+#    in .hg/hgrc or .git/config.
 #
 # Notes to developers:
 #
@@ -99,6 +106,7 @@ _hg_prompt() {
   elif [[ -L "$hg/wlock" ]]; then
     extra="|WDIR-LOCKED"
   fi
+
   local dirstate="$( \
     ( [[ -f "$hg/dirstate" ]] && \
     command hexdump -vn 20 -e '1/1 "%02x"' "$hg/dirstate") || \
@@ -147,8 +155,28 @@ _hg_prompt() {
       br="$br|$branch"
     fi
   fi
-  br="$br$extra"
+  br="$br$extra$(_hg_dirty)"
   builtin printf "%s" "$br"
+}
+
+# cf. https://our.intern.facebook.com/intern/qa/4964/how-do-i-show-the-mercurial-bookmarkgit-branch-in?answerID=540621130023036
+_hg_dirty() {
+  if [ -n "${SHOW_DIRTY_STATE}" ] &&
+     [ "$(hg config shell.showDirtyState)" != "false" ]; then
+    command hg status 2> /dev/null \
+    | command awk '$1 == "?" { print "?" } $1 != "?" { print "*" }' \
+    | command sort | command uniq | command head -c1
+  fi
+}
+
+_git_dirty() {
+  # cf. git contrib/completion/git-prompt.sh
+  if [ -n "${SHOW_DIRTY_STATE}" ] &&
+     [ "$(git config --bool shell.showDirtyState)" != "false" ]; then
+       command git diff --no-ext-diff --quiet || w="*"
+       command git diff --no-ext-diff --cached --quiet || i="+"
+       builtin printf "%s" "$w$i"
+  fi
 }
 
 _git_prompt() {
@@ -190,6 +218,7 @@ _git_prompt() {
       fi
     fi
   fi
+  br="$br$(_git_dirty)"
   builtin printf "%s" "$br"
 }
 
