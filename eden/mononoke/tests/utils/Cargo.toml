@@ -11,6 +11,7 @@ blobrepo = { path = "../../blobrepo" }
 blobstore = { path = "../../blobstore" }
 bookmarks = { path = "../../bookmarks" }
 context = { path = "../../server/context" }
+drawdag = { path = "../../../scm/lib/drawdag" }
 filestore = { path = "../../filestore" }
 mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }

@@ -24,12 +24,16 @@ use mononoke_types::{
 };
 use std::{collections::BTreeMap, convert::TryInto, str::FromStr};
 
+pub mod drawdag;
+
 /// Helper to create bonsai changesets in a BlobRepo
 pub struct CreateCommitContext<'a> {
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     parents: Vec<CommitIdentifier>,
     files: BTreeMap<String, CreateFileContext>,
+    message: Option<String>,
+    author: Option<String>,
     author_date: Option<DateTime>,
     extra: BTreeMap<String, Vec<u8>>,
 }
@@ -46,6 +50,8 @@ impl<'a> CreateCommitContext<'a> {
             repo,
             parents,
             files: BTreeMap::new(),
+            message: None,
+            author: None,
             author_date: None,
             extra: btreemap! {},
         }
@@ -59,6 +65,8 @@ impl<'a> CreateCommitContext<'a> {
             repo,
             parents: vec![],
             files: BTreeMap::new(),
+            message: None,
+            author: None,
             author_date: None,
             extra: btreemap! {},
         }
@@ -94,6 +102,11 @@ impl<'a> CreateCommitContext<'a> {
 
     pub fn delete_file(mut self, path: impl Into<String>) -> Self {
         self.files.insert(path.into(), CreateFileContext::Deleted);
+        self
+    }
+
+    pub fn forget_file(mut self, path: impl AsRef<str>) -> Self {
+        self.files.remove(path.as_ref());
         self
     }
 
@@ -134,6 +147,16 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
+    pub fn set_message(mut self, message: impl Into<String>) -> Self {
+        self.message = Some(message.into());
+        self
+    }
+
+    pub fn set_author(mut self, author: impl Into<String>) -> Self {
+        self.author = Some(author.into());
+        self
+    }
+
     pub fn set_author_date(mut self, author_date: DateTime) -> Self {
         self.author_date = Some(author_date);
         self
@@ -168,11 +191,11 @@ impl<'a> CreateCommitContext<'a> {
 
         let mut bcs = BonsaiChangesetMut {
             parents,
-            author: "author".to_string(),
+            author: self.author.unwrap_or_else(|| String::from("author")),
             author_date,
             committer: None,
             committer_date: None,
-            message: "message".to_string(),
+            message: self.message.unwrap_or_else(|| String::from("message")),
             extra: self.extra,
             file_changes: btreemap! {},
         };
