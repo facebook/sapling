@@ -262,6 +262,7 @@ pub async fn init_small_large_repo(
         small_repos: hashmap! {
             smallrepo.get_repoid() => small_repo_sync_config,
         },
+        version_name: "TEST_VERSION_NAME".to_string(),
     };
 
     Ok((

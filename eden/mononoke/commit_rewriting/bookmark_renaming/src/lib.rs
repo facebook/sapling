@@ -153,6 +153,7 @@ mod test {
                 RepositoryId::new(1) => get_small_repo_sync_config_1(),
                 RepositoryId::new(2) => get_small_repo_sync_config_2(),
             },
+            version_name: "TEST_VERSION_NAME".to_string(),
         }
     }
 

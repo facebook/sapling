@@ -1156,6 +1156,8 @@ pub struct CommitSyncConfig {
     pub common_pushrebase_bookmarks: Vec<BookmarkName>,
     /// Corresponding small repo configs
     pub small_repos: HashMap<RepositoryId, SmallRepoCommitSyncConfig>,
+    /// Version name of the commit sync config
+    pub version_name: String,
 }
 
 /// Configuration for logging wireproto commands and arguments

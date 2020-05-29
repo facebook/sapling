@@ -530,6 +530,7 @@ mod test {
                 small_repos: hashmap! {
                     small_repo.get_repoid() => small_repo_sync_config,
                 },
+                version_name: "TEST_VERSION_NAME".to_string(),
             };
             update_large_repo_bookmarks(
                 ctx.clone(),

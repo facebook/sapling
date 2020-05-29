@@ -287,8 +287,10 @@ impl RepoConfigs {
                 let RawCommitSyncConfig {
                     large_repo_id,
                     common_pushrebase_bookmarks,
-                    small_repos
+                    small_repos,
+                    version_name,
                 } = v;
+
                 let small_repos: Result<HashMap<RepositoryId, SmallRepoCommitSyncConfig>> = small_repos
                     .into_iter()
                     .map(|raw_small_repo_config| {
@@ -346,6 +348,7 @@ impl RepoConfigs {
                     large_repo_id,
                     common_pushrebase_bookmarks: common_pushrebase_bookmarks?,
                     small_repos: small_repos?,
+                    version_name: version_name.unwrap_or_else(|| "".to_string()),
                 };
 
                 Self::verify_commit_sync_config(&commit_sync_config)
@@ -991,6 +994,7 @@ mod test {
             [mega]
             large_repo_id = 1
             common_pushrebase_bookmarks = ["master"]
+            version_name = "TEST_VERSION_NAME"
 
                 [[mega.small_repos]]
                 repoid = 2
@@ -1047,6 +1051,7 @@ mod test {
                         direction: CommitSyncDirection::SmallToLarge,
                     }
                 },
+                version_name: "TEST_VERSION_NAME".to_string(),
             }
         };
 
