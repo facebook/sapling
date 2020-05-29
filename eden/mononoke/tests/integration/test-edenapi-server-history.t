@@ -40,10 +40,10 @@ Start up EdenAPI server.
 Create and send file data request.
   $ edenapi_make_req history > req.cbor <<EOF
   > {
-  >   "keys": {
-  >     "test.txt": "$TEST_FILENODE",
-  >     "copy.txt": "$COPY_FILENODE"
-  >   }
+  >   "keys": [
+  >     ["test.txt", "$TEST_FILENODE"],
+  >     ["copy.txt", "$COPY_FILENODE"]
+  >   ]
   > }
   > EOF
   Reading from stdin
@@ -51,15 +51,15 @@ Create and send file data request.
       keys: [
           Key {
               path: RepoPathBuf(
-                  "copy.txt",
-              ),
-              hgid: HgId("672343a6daad357b926cd84a5a44a011ad029e5f"),
-          },
-          Key {
-              path: RepoPathBuf(
                   "test.txt",
               ),
               hgid: HgId("596c909aab726d7f8b3766795239cd20ede8e125"),
+          },
+          Key {
+              path: RepoPathBuf(
+                  "copy.txt",
+              ),
+              hgid: HgId("672343a6daad357b926cd84a5a44a011ad029e5f"),
           },
       ],
       depth: None,
@@ -94,5 +94,3 @@ Check history content.
     linknode: f91e155a86e1b909d99174818a2f98de2c128c59
   
   
-
-

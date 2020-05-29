@@ -64,36 +64,9 @@ fn main() -> Result<()> {
 }
 
 fn parse_data_req(json: &Value) -> Result<DataRequest> {
-    let arr = json
-        .as_array()
-        .ok_or_else(|| anyhow!("input must be a JSON array"))?;
-
-    let mut keys = Vec::new();
-    for i in arr.iter() {
-        let json_key = i
-            .as_array()
-            .ok_or_else(|| anyhow!("array items must be [path, hash] arrays"))?;
-
-        ensure!(
-            json_key.len() == 2,
-            "array items must be [path, hash] arrays"
-        );
-
-        // Cast slice into 2-element array reference so we can destructure it.
-        let [path, hash] = <&[_; 2]>::try_from(&json_key[..2])?;
-
-        let path = path
-            .as_str()
-            .ok_or_else(|| anyhow!("path must be a string"))?;
-        let hash = hash
-            .as_str()
-            .ok_or_else(|| anyhow!("hash must be a string"))?;
-
-        let key = make_key(&path, hash)?;
-        keys.push(key);
-    }
-
-    Ok(DataRequest { keys })
+    Ok(DataRequest {
+        keys: parse_keys(json)?,
+    })
 }
 
 fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
@@ -105,20 +78,7 @@ fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
         let json_keys = json
             .get("keys")
             .ok_or_else(|| anyhow!("missing field: keys"))?;
-        let json_keys = json_keys
-            .as_object()
-            .ok_or_else(|| anyhow!("keys field must be an object"))?;
-
-        let mut keys = Vec::new();
-        for (path, hash) in json_keys.iter() {
-            let hash = hash
-                .as_str()
-                .ok_or_else(|| anyhow!("hash must be a string"))?;
-            let key = make_key(&path, hash)?;
-            keys.push(key);
-        }
-
-        keys
+        parse_keys(json_keys)?
     };
 
     Ok(HistoryRequest { keys, depth })
@@ -158,6 +118,39 @@ fn parse_tree_req(json: &Value) -> Result<TreeRequest> {
         basemfnodes,
         depth,
     })
+}
+
+fn parse_keys(json: &Value) -> Result<Vec<Key>> {
+    let arr = json
+        .as_array()
+        .ok_or_else(|| anyhow!("input must be a JSON array"))?;
+
+    let mut keys = Vec::new();
+    for i in arr.iter() {
+        let json_key = i
+            .as_array()
+            .ok_or_else(|| anyhow!("array items must be [path, hash] arrays"))?;
+
+        ensure!(
+            json_key.len() == 2,
+            "array items must be [path, hash] arrays"
+        );
+
+        // Cast slice into 2-element array reference so we can destructure it.
+        let [path, hash] = <&[_; 2]>::try_from(&json_key[..2])?;
+
+        let path = path
+            .as_str()
+            .ok_or_else(|| anyhow!("path must be a string"))?;
+        let hash = hash
+            .as_str()
+            .ok_or_else(|| anyhow!("hash must be a string"))?;
+
+        let key = make_key(&path, hash)?;
+        keys.push(key);
+    }
+
+    Ok(keys)
 }
 
 fn parse_hashes(json: &Value) -> Result<Vec<HgId>> {
