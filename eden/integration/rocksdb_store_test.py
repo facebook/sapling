@@ -86,7 +86,7 @@ stats-interval = "100ms"
 
                 return None
 
-            poll_until(tree_size_incremented, timeout=1, interval=0.1)
+            poll_until(tree_size_incremented, timeout=10, interval=0.1)
 
             # EdenFS should not import blobs to local store
             self.assertEqual(
@@ -113,7 +113,7 @@ hgcommit2tree-size-limit = "1"
                     return counters
                 return None
 
-            counters = poll_until(gc_run_succeeded, timeout=5, interval=0.05)
+            counters = poll_until(gc_run_succeeded, timeout=30, interval=0.05)
 
             # Check the local_store.auto_gc counters
             self.assertEqual(counters.get("local_store.auto_gc.last_run_succeeded"), 1)

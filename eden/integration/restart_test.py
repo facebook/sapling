@@ -51,7 +51,7 @@ class RestartTestBase(ServiceTestCaseBase):
 
         print("Retarting eden: %r" % (restart_cmd,))
         return pexpect_spawn(
-            restart_cmd[0], restart_cmd[1:], logfile=sys.stdout.buffer, timeout=5
+            restart_cmd[0], restart_cmd[1:], logfile=sys.stdout.buffer, timeout=30
         )
 
     def _start_fake_edenfs(self) -> int:

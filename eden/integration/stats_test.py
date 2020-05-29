@@ -237,7 +237,13 @@ class CountersTest(testcase.EdenRepoTest):
     # cause this test to fail (since they can appear between counters and counters2)
     @staticmethod
     def get_nonthrift_set(s):
-        return {item for item in s if not item.startswith("thrift")}
+        # and memory_vm_rss_bytes is reported sporadically in the background
+        return {
+            item
+            for item in s
+            if not item.startswith("thrift")
+            and not item.startswith("memory_vm_rss_bytes")
+        }
 
     def test_mount_unmount_counters(self) -> None:
         self.eden.unmount(self.mount_path)

@@ -42,14 +42,9 @@ class ThriftTest(testcase.EdenRepoTest):
         self.repo.write_file("bdir/file", "bar!\n")
         self.commit3 = self.repo.commit("Commit 3.")
 
-    def setUp(self) -> None:
-        super().setUp()
-        self.client = self.get_thrift_client()
-        self.client.open()
-        self.addCleanup(self.client.close)
-
     def get_loaded_inodes_count(self, path: str) -> int:
-        result = self.client.debugInodeStatus(self.mount_path_bytes, os.fsencode(path))
+        with self.get_thrift_client() as client:
+            result = client.debugInodeStatus(self.mount_path_bytes, os.fsencode(path))
         inode_count = 0
         for item in result:
             assert item.entries is not None
@@ -59,7 +54,8 @@ class ThriftTest(testcase.EdenRepoTest):
         return inode_count
 
     def test_list_mounts(self) -> None:
-        mounts = self.client.listMounts()
+        with self.get_thrift_client() as client:
+            mounts = client.listMounts()
         self.assertEqual(1, len(mounts))
 
         mount = mounts[0]
@@ -77,13 +73,15 @@ class ThriftTest(testcase.EdenRepoTest):
         expected_sha1_for_adir_file = hashlib.sha1(b"foo!\n").digest()
         result_for_adir_file = SHA1Result(expected_sha1_for_adir_file)
 
-        self.assertEqual(
-            [result_for_hello, result_for_adir_file],
-            self.client.getSHA1(self.mount_path_bytes, [b"hello", b"adir/file"]),
-        )
+        with self.get_thrift_client() as client:
+            self.assertEqual(
+                [result_for_hello, result_for_adir_file],
+                client.getSHA1(self.mount_path_bytes, [b"hello", b"adir/file"]),
+            )
 
     def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
-        results = self.client.getSHA1(self.mount_path_bytes, [b"./hello"])
+        with self.get_thrift_client() as client:
+            results = client.getSHA1(self.mount_path_bytes, [b"./hello"])
         self.assertEqual(1, len(results))
         self.assert_error(
             results[0],
@@ -91,23 +89,27 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     def test_get_sha1_throws_for_empty_string(self) -> None:
-        results = self.client.getSHA1(self.mount_path_bytes, [b""])
+        with self.get_thrift_client() as client:
+            results = client.getSHA1(self.mount_path_bytes, [b""])
         self.assertEqual(1, len(results))
         self.assert_error(results[0], "path cannot be the empty string")
 
     def test_get_sha1_throws_for_directory(self) -> None:
-        results = self.client.getSHA1(self.mount_path_bytes, [b"adir"])
+        with self.get_thrift_client() as client:
+            results = client.getSHA1(self.mount_path_bytes, [b"adir"])
         self.assertEqual(1, len(results))
         self.assert_error(results[0], "adir: Is a directory")
 
     def test_get_sha1_throws_for_non_existent_file(self) -> None:
-        results = self.client.getSHA1(self.mount_path_bytes, [b"i_do_not_exist"])
+        with self.get_thrift_client() as client:
+            results = client.getSHA1(self.mount_path_bytes, [b"i_do_not_exist"])
         self.assertEqual(1, len(results))
         self.assert_error(results[0], "i_do_not_exist: No such file or directory")
 
     def test_get_sha1_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
-        results = self.client.getSHA1(self.mount_path_bytes, [b"slink"])
+        with self.get_thrift_client() as client:
+            results = client.getSHA1(self.mount_path_bytes, [b"slink"])
         self.assertEqual(1, len(results))
         self.assert_error(results[0], "slink: file is a symlink: Invalid argument")
 
@@ -137,7 +139,8 @@ class ThriftTest(testcase.EdenRepoTest):
         age = TimeSpec()
         age.seconds = 0
         age.nanoSeconds = 0
-        unload_count = self.client.unloadInodeForPath(self.mount_path_bytes, b"", age)
+        with self.get_thrift_client() as client:
+            unload_count = client.unloadInodeForPath(self.mount_path_bytes, b"", age)
 
         self.assertGreaterEqual(
             unload_count, 100, "Number of loaded inodes should reduce after unload"
@@ -149,7 +152,8 @@ class ThriftTest(testcase.EdenRepoTest):
         age = TimeSpec()
         age.seconds = 0
         age.nanoSeconds = 0
-        unload_count = self.client.unloadInodeForPath(self.mount_path_bytes, b".", age)
+        with self.get_thrift_client() as client:
+            unload_count = client.unloadInodeForPath(self.mount_path_bytes, b".", age)
 
         self.assertGreater(
             unload_count, 0, "Number of loaded inodes should reduce after unload"
@@ -176,7 +180,8 @@ class ThriftTest(testcase.EdenRepoTest):
         self.read_file(filename)
         reads_2read = self.get_counter("fuse.read_us.count")
         self.assertEqual(reads_1read, reads_2read)
-        self.client.invalidateKernelInodeCache(self.mount_path_bytes, b"bdir/file")
+        with self.get_thrift_client() as client:
+            client.invalidateKernelInodeCache(self.mount_path_bytes, b"bdir/file")
         self.read_file(filename)
         reads_3read = self.get_counter("fuse.read_us.count")
         self.assertEqual(reads_2read + 1, reads_3read)
@@ -187,7 +192,8 @@ class ThriftTest(testcase.EdenRepoTest):
         lookups_1ls = self.get_counter("fuse.lookup_us.count")
         # equal, the file was lookup'ed above.
         self.assertEqual(lookups, lookups_1ls)
-        self.client.invalidateKernelInodeCache(self.mount_path_bytes, b"bdir")
+        with self.get_thrift_client() as client:
+            client.invalidateKernelInodeCache(self.mount_path_bytes, b"bdir")
         os.system("ls -hl " + full_dirname + " > /dev/null")
         lookups_2ls = self.get_counter("fuse.lookup_us.count")
         self.assertEqual(lookups_1ls + 1, lookups_2ls)
