@@ -63,12 +63,45 @@ fn main() -> Result<()> {
     }
 }
 
+/// Parse a `DataRequest` from JSON.
+///
+/// The request is represented as a JSON array of path/filenode pairs.
+///
+/// Example request:
+///
+///     ```json
+///     [
+///       ["path/to/file_1", "48f43af456d770b6a78e1ace628319847e05cc24"],
+///       ["path/to/file_2", "7dcd6ede35eaaa5b1b16a341b19993e59f9b0dbf"],
+///       ["path/to/file_3", "218d708a9f8c3e37cfd7ab916c537449ac5419cd"],
+///     ]
+///     ```
+///
 fn parse_data_req(json: &Value) -> Result<DataRequest> {
     Ok(DataRequest {
         keys: parse_keys(json)?,
     })
 }
 
+/// Parse a `HistoryRequest` from JSON.
+///
+/// The request is represented as a JSON object containing a required
+/// "keys" field consisting of an array of path/filenode pairs (similar
+/// to a data request) as well as an optional depth parameter.
+///
+/// Example request:
+///
+///     ```json
+///     {
+///       "keys": [
+///         ["path/to/file_1", "48f43af456d770b6a78e1ace628319847e05cc24"],
+///         ["path/to/file_2", "7dcd6ede35eaaa5b1b16a341b19993e59f9b0dbf"],
+///         ["path/to/file_3", "218d708a9f8c3e37cfd7ab916c537449ac5419cd"],
+///       ],
+///       "depth": 1
+///     }
+///     ```
+///
 fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
     let json = json
         .as_object()
@@ -84,6 +117,32 @@ fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
     Ok(HistoryRequest { keys, depth })
 }
 
+/// Parse a `TreeRequest` from JSON.
+///
+/// The request is represented as a JSON object containing the fields
+/// needed for a "gettreepack"-style tree request. Note that most
+/// EdenAPI tree requests are actually performed using a `DataRequest`
+/// for the desired tree nodes; `TreeRequest`s are only used in situations
+/// where behavior similar to Mercurial's `gettreepack` wire protocol
+/// command is desired.
+///
+/// Example request:
+///
+///     ```json
+///     {
+///         "rootdir": "path/to/root/dir",
+///         "mfnodes": [
+///             "8722607999fc5ce35e9af56e6da2c823923291dd",
+///             "b7d7ffb1a37c86f00558ff132e57c56bca29dc04"
+///         ],
+///         "basemfnodes": [
+///             "26d6acbabf823b844917f04cfbe6747c80983119",
+///             "111caaed68164b939f6e2f58680b462ebc3174c7"
+///         ],
+///         "depth": 1
+///     }
+///     ```
+///
 fn parse_tree_req(json: &Value) -> Result<TreeRequest> {
     let obj = json
         .as_object()
