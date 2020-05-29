@@ -164,11 +164,10 @@ Pulling between peers should send local trees but not remote trees
   > EOF
 # Force the draft commit to be public so we can ensure it's trees are delivered
 # despite it being public.
-  $ hg -R ../client1 phase -r 3 -p
   $ rm -rf $TESTTMP/hgcache2/*
   $ hg pull -q --config treemanifest.sendtrees=True ../client1 --config remotefilelog.fallbackpath=ssh://user@dummy/master
-# Check that the local commits for the previously-draft-but-now-public commit
-# were downloaded to the local store.
+  2 trees fetched over * (glob)
+# Check that the local commits for the draft commit were downloaded to the local store.
   $ ls_l .hg/store/packs/manifests
   -r--r--r--    1273 700fb8a7918068e308a998d338d1689074118d07.histidx
   -r--r--r--     274 700fb8a7918068e308a998d338d1689074118d07.histpack
@@ -193,7 +192,7 @@ Pulling between peers should send local trees but not remote trees
   $ rm -rf $TESTTMP/hgcache2/*
   $ ls_l $TESTTMP/hgcache2/
   $ hg manifest -r 'tip^'
-  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, based on 3ffa0e0bbc707f62567ec13cb2dd919bef47aa97, found via b8ff91c925b4
+  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, found via b8ff91c925b4
   2 trees fetched over * (glob)
   subdir/x
 # Verify the fake-public commit was received during the pull and does not

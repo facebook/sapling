@@ -63,3 +63,9 @@ The bundle should have 6 tree items in it - the root tree, and the directory tre
       72e9b93c4354749519aa668d05dd8d358ec3b6c5
   b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
       6 data items, 6 history items
+      9aa450467c3cff6ce906129a8d87e2414c8a3adb 
+      9ccae32052b23cce0b4771389f588b8d98787a5f 
+      b3ec0b09ac898d08a4b9ebe89ab54f30ef2eca99 
+      b5a05191267df8533dd03dfb0cf897eb862c702e dir1
+      9dc6720799554340d343db656f2181f9c99590f0 dir2
+      c355490c72c78063d7e05398f70f4897f407ce07 dir3

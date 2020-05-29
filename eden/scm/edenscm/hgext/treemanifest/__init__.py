@@ -2221,8 +2221,9 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
     if len(repo.manifestlog.localdatastores) > 0:
         localmfstore = repo.manifestlog.localdatastores[0]
 
-    def shouldsend(mfnode):
-        if sendtrees == shallowbundle.AllTrees:
+    def shouldsend(ctx):
+        mfnode = ctx.manifestnode()
+        if sendtrees == shallowbundle.AllTrees or ctx.phase() != phases.public:
             return True
 
         # Else LocalTrees
@@ -2231,8 +2232,8 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
     linknodemap = {}
     for node in outgoing.missing:
         ctx = repo[node]
-        mfnode = ctx.manifestnode()
-        if shouldsend(mfnode):
+        if shouldsend(ctx):
+            mfnode = ctx.manifestnode()
             mfnodes.append(mfnode)
             linknodemap.setdefault(mfnode, node)
     basectxs = repo.set("parents(%ln) - %ln", outgoing.missing, outgoing.missing)
@@ -2768,8 +2769,14 @@ def _debugcmdfindtreemanifest(orig, ctx):
 
 def _debugbundle2part(orig, ui, part, all, **opts):
     if part.type == TREEGROUP_PARTTYPE2:
+        indent_string = "    "
         tempstore = wirepack.wirepackstore(part.read())
-        ui.write("    %s\n" % tempstore.debugstats())
+
+        ui.write(indent_string)
+        ui.write("%s\n" % tempstore.debugstats())
+        for key in sorted(tempstore):
+            ui.write(indent_string)
+            ui.write("%s %s\n" % (hex(key[1]), key[0]))
 
     orig(ui, part, all, **opts)
 
