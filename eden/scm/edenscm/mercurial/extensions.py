@@ -44,6 +44,7 @@ _ignoreextensions = {
     "fastmanifest",
     "fastpartialmatch",
     "fbsparse",
+    "fixcorrupt",
     "graphlog",
     "hbisect",
     "hgcia",

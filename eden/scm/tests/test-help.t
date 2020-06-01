@@ -319,7 +319,6 @@ Test extension help:
        fastlog
        fbhistedit    extends the existing histedit functionality
        fbscmquery    (no help text available)
-       fixcorrupt    (no help text available)
        generic_bisect
                      (no help text available)
        gitlookup     extension that will look up hashes from an hg-git map file
