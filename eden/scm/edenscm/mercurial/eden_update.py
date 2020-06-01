@@ -14,6 +14,7 @@ from . import (
     error,
     localrepo,
     merge as mergemod,
+    progress,
     pycompat,
     util,
 )
@@ -76,9 +77,10 @@ def update(
             # see if there are any conflicts that should prevent us from
             # attempting the update.
             if updatecheck == "noconflict":
-                conflicts = repo.dirstate.eden_client.checkout(
-                    destctx.node(), CheckoutMode.DRY_RUN
-                )
+                with progress.spinner(repo.ui, _("checking for conflicts")):
+                    conflicts = repo.dirstate.eden_client.checkout(
+                        destctx.node(), CheckoutMode.DRY_RUN
+                    )
                 if conflicts:
                     actions = _determine_actions_for_conflicts(repo, p1ctx, conflicts)
                     _check_actions_and_raise_if_there_are_conflicts(actions)
@@ -98,9 +100,10 @@ def update(
             # but since this is a force update it will have already replaced
             # the conflicts with the destination file state, so we don't have
             # to do anything with them here.
-            conflicts = repo.dirstate.eden_client.checkout(
-                destctx.node(), CheckoutMode.FORCE
-            )
+            with progress.spinner(repo.ui, _("updating to %s") % deststr):
+                conflicts = repo.dirstate.eden_client.checkout(
+                    destctx.node(), CheckoutMode.FORCE
+                )
             # We do still need to make sure to update the merge state though.
             # In the non-force code path the merge state is updated in
             # _handle_update_conflicts().
@@ -110,9 +113,10 @@ def update(
             stats = 0, 0, 0, 0
             actions = {}
         else:
-            conflicts = repo.dirstate.eden_client.checkout(
-                destctx.node(), CheckoutMode.NORMAL
-            )
+            with progress.spinner(repo.ui, _("updating to %s") % deststr):
+                conflicts = repo.dirstate.eden_client.checkout(
+                    destctx.node(), CheckoutMode.NORMAL
+                )
             # TODO(mbolin): Add a warning if we did a DRY_RUN and the conflicts
             # we get here do not match. Only in the event of a race would we
             # expect them to differ from when the DRY_RUN was done (or if we
