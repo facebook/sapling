@@ -50,6 +50,7 @@ pub struct SyncedCommitMappingEntry {
     pub large_bcs_id: ChangesetId,
     pub small_repo_id: RepositoryId,
     pub small_bcs_id: ChangesetId,
+    pub version_name: Option<String>,
 }
 
 impl SyncedCommitMappingEntry {
@@ -58,12 +59,14 @@ impl SyncedCommitMappingEntry {
         large_bcs_id: ChangesetId,
         small_repo_id: RepositoryId,
         small_bcs_id: ChangesetId,
+        version_name: Option<String>,
     ) -> Self {
         Self {
             large_repo_id,
             large_bcs_id,
             small_repo_id,
             small_bcs_id,
+            version_name,
         }
     }
 }
@@ -185,9 +188,10 @@ queries! {
         large_bcs_id: ChangesetId,
         small_repo_id: RepositoryId,
         small_bcs_id: ChangesetId,
+        sync_map_version_name: Option<String>,
     )) {
         insert_or_ignore,
-        "{insert_or_ignore} INTO synced_commit_mapping (large_repo_id, large_bcs_id, small_repo_id, small_bcs_id) VALUES {values}"
+        "{insert_or_ignore} INTO synced_commit_mapping (large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name) VALUES {values}"
     }
 
     read SelectMapping(
@@ -440,6 +444,7 @@ pub fn add_many_in_txn(
                 &entry.large_bcs_id,
                 &entry.small_repo_id,
                 &entry.small_bcs_id,
+                &entry.version_name,
             )
         })
         .collect();

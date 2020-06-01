@@ -419,6 +419,7 @@ fn get_large_to_small_commit_sync_repos(
                 reverse_mover,
                 bookmark_renamer,
                 reverse_bookmark_renamer,
+                version_name: commit_sync_config.version_name.clone(),
             })
         })
 }
@@ -607,6 +608,7 @@ mod test {
                         small_repo_id: small_repo.get_repoid(),
                         small_bcs_id: cs_id,
                         large_bcs_id: cs_id,
+                        version_name: None,
                     },
                 )
                 .compat()
@@ -621,6 +623,7 @@ mod test {
                 reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: Arc::new(noop_book_renamer),
                 reverse_bookmark_renamer: Arc::new(noop_book_renamer),
+                version_name: "TEST_VERSION_NAME".to_string(),
             },
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
@@ -629,6 +632,7 @@ mod test {
                 reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: Arc::new(noop_book_renamer),
                 reverse_bookmark_renamer: Arc::new(noop_book_renamer),
+                version_name: "TEST_VERSION_NAME".to_string(),
             },
         };
 

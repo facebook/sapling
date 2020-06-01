@@ -23,8 +23,13 @@ use synced_commit_mapping::{
 
 async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
-    let entry =
-        SyncedCommitMappingEntry::new(REPO_ZERO, bonsai::ONES_CSID, REPO_ONE, bonsai::TWOS_CSID);
+    let entry = SyncedCommitMappingEntry::new(
+        REPO_ZERO,
+        bonsai::ONES_CSID,
+        REPO_ONE,
+        bonsai::TWOS_CSID,
+        Some("TEST_VERSION_NAME".to_string()),
+    );
     assert_eq!(
         true,
         mapping
@@ -54,8 +59,13 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     );
 
     // insert again
-    let entry =
-        SyncedCommitMappingEntry::new(REPO_ZERO, bonsai::THREES_CSID, REPO_ONE, bonsai::FOURS_CSID);
+    let entry = SyncedCommitMappingEntry::new(
+        REPO_ZERO,
+        bonsai::THREES_CSID,
+        REPO_ONE,
+        bonsai::FOURS_CSID,
+        Some("TEST_VERSION_NAME".to_string()),
+    );
     assert_eq!(
         true,
         mapping

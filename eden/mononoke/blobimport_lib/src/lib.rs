@@ -217,6 +217,7 @@ impl<'a> Blobimport<'a> {
                             large_bcs_id: cs.get_changeset_id(),
                             small_repo_id,
                             small_bcs_id: cs.get_changeset_id(),
+                            version_name: None,
                         })
                         .collect();
                     synced_commit_mapping

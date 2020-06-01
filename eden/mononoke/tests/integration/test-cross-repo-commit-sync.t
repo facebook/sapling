@@ -234,3 +234,11 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   * validating topological order for *<->* (glob)
   * done validating topological order for *<->* (glob)
   * Validated entry: Entry 21(0/1) (glob)
+
+Query synced commit mapping, check that automatically inserted mappings have version_name
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << EOQ
+  > SELECT DISTINCT sync_map_version_name
+  > FROM synced_commit_mapping
+  > WHERE small_bcs_id NOT IN (X'$FBSOURCE_MASTER_BONSAI', X'$OVRSOURCE_MASTER_BONSAI');
+  > EOQ
+  TEST_VERSION_NAME

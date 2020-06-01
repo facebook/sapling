@@ -407,6 +407,7 @@ pub enum CommitSyncRepos {
         reverse_mover: Mover,
         bookmark_renamer: BookmarkRenamer,
         reverse_bookmark_renamer: BookmarkRenamer,
+        version_name: String,
     },
     SmallToLarge {
         small_repo: BlobRepo,
@@ -415,6 +416,7 @@ pub enum CommitSyncRepos {
         reverse_mover: Mover,
         bookmark_renamer: BookmarkRenamer,
         reverse_bookmark_renamer: BookmarkRenamer,
+        version_name: String,
     },
 }
 
@@ -450,6 +452,8 @@ impl CommitSyncRepos {
             ));
         };
 
+        let version_name = commit_sync_config.version_name.clone();
+
         let direction = if source_repo.get_repoid() == small_repo_id {
             CommitSyncDirection::SmallToLarge
         } else {
@@ -473,6 +477,7 @@ impl CommitSyncRepos {
                 reverse_mover,
                 bookmark_renamer,
                 reverse_bookmark_renamer,
+                version_name,
             })
         } else {
             Ok(CommitSyncRepos::LargeToSmall {
@@ -482,6 +487,7 @@ impl CommitSyncRepos {
                 reverse_mover,
                 bookmark_renamer,
                 reverse_bookmark_renamer,
+                version_name,
             })
         }
     }
@@ -567,6 +573,10 @@ where
 
     pub fn rename_bookmark(&self, bookmark: &BookmarkName) -> Option<BookmarkName> {
         self.repos.get_bookmark_renamer()(bookmark)
+    }
+
+    pub fn get_version_name(&self) -> &str {
+        &self.repos.get_version_name()
     }
 
     pub async fn get_commit_sync_outcome(
@@ -1372,6 +1382,13 @@ impl CommitSyncRepos {
             } => reverse_bookmark_renamer,
         }
     }
+
+    pub(crate) fn get_version_name(&self) -> &str {
+        match self {
+            CommitSyncRepos::LargeToSmall { version_name, .. } => version_name,
+            CommitSyncRepos::SmallToLarge { version_name, .. } => version_name,
+        }
+    }
 }
 
 pub async fn upload_commits(
@@ -1447,26 +1464,36 @@ pub fn create_synced_commit_mapping_entry(
     to: ChangesetId,
     repos: &CommitSyncRepos,
 ) -> SyncedCommitMappingEntry {
-    let (source_repo, target_repo, source_is_large) = match repos {
+    let (source_repo, target_repo, version_name, source_is_large) = match repos {
         CommitSyncRepos::LargeToSmall {
             large_repo,
             small_repo,
+            version_name,
             ..
-        } => (large_repo, small_repo, true),
+        } => (large_repo, small_repo, version_name, true),
         CommitSyncRepos::SmallToLarge {
             small_repo,
             large_repo,
+            version_name,
             ..
-        } => (small_repo, large_repo, false),
+        } => (small_repo, large_repo, version_name, false),
     };
 
     let source_repoid = source_repo.get_repoid();
     let target_repoid = target_repo.get_repoid();
+    let version_name: Option<String> = if from == to {
+        // For preserved commits we explicitly avoid writing down
+        // version_name, as it it makes no difference which commit
+        // sync config is used, when the commit is preserved
+        None
+    } else {
+        Some(version_name.to_owned())
+    };
 
     if source_is_large {
-        SyncedCommitMappingEntry::new(source_repoid, from, target_repoid, to)
+        SyncedCommitMappingEntry::new(source_repoid, from, target_repoid, to, version_name)
     } else {
-        SyncedCommitMappingEntry::new(target_repoid, to, source_repoid, from)
+        SyncedCommitMappingEntry::new(target_repoid, to, source_repoid, from, version_name)
     }
 }
 
@@ -1499,6 +1526,7 @@ where
         reverse_mover: large_to_small_mover.clone(),
         bookmark_renamer: small_to_large_renamer.clone(),
         reverse_bookmark_renamer: large_to_small_renamer.clone(),
+        version_name: commit_sync_config.version_name.clone(),
     };
 
     let large_to_small_commit_sync_repos = CommitSyncRepos::LargeToSmall {
@@ -1508,6 +1536,7 @@ where
         reverse_mover: small_to_large_mover.clone(),
         bookmark_renamer: large_to_small_renamer,
         reverse_bookmark_renamer: small_to_large_renamer.clone(),
+        version_name: commit_sync_config.version_name.clone(),
     };
 
     let large_to_small_commit_syncer = CommitSyncer {
