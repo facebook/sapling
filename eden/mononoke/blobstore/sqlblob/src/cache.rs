@@ -11,7 +11,7 @@ use std::sync::Arc;
 use anyhow::{bail, Error, Result};
 use cloned::cloned;
 use fbthrift::compact_protocol;
-use futures::prelude::*;
+use futures_old::prelude::*;
 
 use blobstore::BlobstoreGetData;
 use cacheblob::{CacheOps, CacheOpsUtil};
@@ -69,7 +69,7 @@ where
         {
             let key = self.translator.cache_key(key);
             let value = self.translator.to_cache(&value);
-            tokio::spawn(self.cache.put(&key, value));
+            tokio_old::spawn(self.cache.put(&key, value));
         }
         value
     }

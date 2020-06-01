@@ -8,9 +8,19 @@
 #![deny(warnings)]
 
 mod cache;
+mod delay;
+#[cfg(fbcode_build)]
+mod facebook;
+#[cfg(not(fbcode_build))]
+mod myadmin_delay_dummy;
 mod store;
 
 use crate::cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
+use crate::delay::BlobDelay;
+#[cfg(fbcode_build)]
+use crate::facebook::myadmin_delay;
+#[cfg(not(fbcode_build))]
+use crate::myadmin_delay_dummy as myadmin_delay;
 use crate::store::{ChunkSqlStore, DataSqlStore};
 use anyhow::{format_err, Error, Result};
 use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
@@ -18,9 +28,9 @@ use cacheblob::{dummy::DummyCache, CacheOps, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::join_all;
-use futures::prelude::*;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as _};
+use futures_old::future::{self, join_all};
+use futures_old::prelude::*;
 use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use mononoke_types::BlobstoreBytes;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
@@ -70,6 +80,7 @@ pub struct Sqlblob<C> {
     chunk_store: ChunkSqlStore,
     data_cache: SqlblobCacheOps<DataCacheTranslator, C>,
     chunk_cache: SqlblobCacheOps<ChunkCacheTranslator, C>,
+    delay: BlobDelay,
 }
 
 impl Sqlblob<MemcacheOps> {
@@ -81,7 +92,8 @@ impl Sqlblob<MemcacheOps> {
         shard_num: NonZeroUsize,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
-        Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
+        let delay = try_boxfuture!(myadmin_delay::sharded(fb, &shardmap));
+        Self::with_connection_factory(fb, delay, shardmap.clone(), shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
                 shardmap.clone(),
                 Some(shard_id),
@@ -103,8 +115,10 @@ impl Sqlblob<MemcacheOps> {
         read_con_type: ReadConnectionType,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
+        let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
             fb,
+            delay,
             db_address.clone(),
             NonZeroUsize::new(1).expect("One should be greater than zero"),
             move |_shard_id| {
@@ -130,7 +144,8 @@ impl Sqlblob<MemcacheOps> {
         shard_num: NonZeroUsize,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
-        Self::with_connection_factory(fb, shardmap.clone(), shard_num, move |shard_id| {
+        let delay = try_boxfuture!(myadmin_delay::sharded(fb, &shardmap));
+        Self::with_connection_factory(fb, delay, shardmap.clone(), shard_num, move |shard_id| {
             create_raw_xdb_connections(
                 fb,
                 format!("{}.{}", shardmap, shard_id),
@@ -147,8 +162,10 @@ impl Sqlblob<MemcacheOps> {
         read_con_type: ReadConnectionType,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
+        let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
             fb,
+            delay,
             db_address.clone(),
             NonZeroUsize::new(1).expect("One should be greater than zero"),
             move |_shard_id| {
@@ -159,6 +176,7 @@ impl Sqlblob<MemcacheOps> {
 
     fn with_connection_factory(
         fb: FacebookInit,
+        delay: BlobDelay,
         label: String,
         shard_num: NonZeroUsize,
         connection_factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
@@ -214,6 +232,7 @@ impl Sqlblob<MemcacheOps> {
                             ),
                             ChunkCacheTranslator::new(),
                         ),
+                        delay,
                     },
                     label,
                 )
@@ -277,6 +296,7 @@ impl Sqlblob<DummyCache> {
                     Arc::new(DummyCache {}),
                     ChunkCacheTranslator::new(),
                 ),
+                delay: BlobDelay::dummy(),
             },
             "sqlite".into(),
         ))
@@ -380,33 +400,45 @@ impl<C: CacheOps> Blobstore for Sqlblob<C> {
             .boxify();
         }
 
+        let delay = self.delay.clone();
         // Store blobs that can be stored in Memcache as well
         if value.len() < CHUNK_SIZE {
-            self.data_store
-                .put(&key, &DataEntry::Data(value.into()))
-                .boxify()
+            let init_delay = delay.delay();
+            let put = self.data_store.put(&key, &DataEntry::Data(value.into()));
+            init_delay.and_then(move |_| put).boxify()
         } else {
-            cloned!(self.data_store, self.chunk_store);
+            cloned!(self.data_store, self.chunk_store, self.delay);
             data_store
                 .is_present(&key)
                 .and_then(move |is_present| {
                     if is_present {
                         Ok(()).into_future().left_future()
                     } else {
-                        let chunk_fut: Vec<_> = value
+                        let chunk_futs: Vec<_> = value
                             .as_bytes()
                             .chunks(CHUNK_SIZE)
                             .enumerate()
-                            .map(|(chunk_id, chunk)| chunk_store.put(&key, chunk_id as u32, chunk))
+                            .map({
+                                |(chunk_id, chunk)| chunk_store.put(&key, chunk_id as u32, chunk)
+                            })
                             .collect();
+                        let len = chunk_futs.len();
 
-                        join_all(chunk_fut)
-                            .and_then(move |chunks| {
+                        let fut = chunk_futs.into_iter().fold(future::ok(()).boxify(), {
+                            let delay = delay.clone();
+                            move |chain, next| {
+                                let delay = delay.clone();
+                                chain
+                                    .and_then(move |_| delay.delay().and_then(|()| next))
+                                    .boxify()
+                            }
+                        });
+                        fut.and_then(move |_| delay.delay())
+                            .and_then(move |_| {
                                 data_store.put(
                                     &key,
                                     &DataEntry::InChunk(
-                                        NonZeroUsize::new(chunks.len())
-                                            .expect("No way this is zero"),
+                                        NonZeroUsize::new(len).expect("No way this is zero"),
                                     ),
                                 )
                             })
@@ -427,10 +459,11 @@ mod tests {
     use super::*;
     use bytes::Bytes;
     use fbinit::FacebookInit;
+    use futures::compat::Future01CompatExt;
     use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
 
-    #[fbinit::test]
-    fn read_write(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn read_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         // Generate unique keys.
         let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
@@ -456,6 +489,6 @@ mod tests {
                 .map(|is_present| assert!(is_present, "Blob should exist now"))
                 .map_err(|err| panic!("{:#?}", err));
 
-        tokio::run(fut);
+        fut.compat().await.unwrap()
     }
 }

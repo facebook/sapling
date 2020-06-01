@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use anyhow::{bail, format_err, Error};
 use fbthrift::compact_protocol;
-use futures::prelude::*;
 use futures_ext::FutureExt;
+use futures_old::prelude::*;
 use sql::{queries, Connection};
 use twox_hash::XxHash32;
 
