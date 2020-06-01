@@ -7,7 +7,6 @@
 
 #![deny(warnings)]
 
-mod cache;
 mod delay;
 #[cfg(fbcode_build)]
 mod facebook;
@@ -15,7 +14,6 @@ mod facebook;
 mod myadmin_delay_dummy;
 mod store;
 
-use crate::cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
 use crate::delay::BlobDelay;
 #[cfg(fbcode_build)]
 use crate::facebook::myadmin_delay;
@@ -24,7 +22,6 @@ use crate::myadmin_delay_dummy as myadmin_delay;
 use crate::store::{ChunkSqlStore, DataSqlStore};
 use anyhow::{format_err, Error, Result};
 use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
-use cacheblob::{dummy::DummyCache, CacheOps, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -40,7 +37,6 @@ use sql_ext::{
     },
     open_sqlite_in_memory, open_sqlite_path, SqlConnections,
 };
-use stats::prelude::*;
 use std::fmt;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
@@ -54,13 +50,7 @@ const CHUNK_SIZE: usize = MEMCACHE_VALUE_MAX_SIZE - 1000;
 const SQLITE_SHARD_NUM: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(2) };
 
 const COUNTED_ID: &str = "sqlblob";
-pub type CountedSqlblob<C> = CountedBlobstore<Sqlblob<C>>;
-
-define_stats! {
-    prefix = "mononoke.blobstore.sqlblob";
-    data_cache_hit_permille: timeseries(Average, Count),
-    chunk_cache_hit_permille: timeseries(Average, Count),
-}
+pub type CountedSqlblob = CountedBlobstore<Sqlblob>;
 
 enum DataEntry {
     Data(BlobstoreGetData),
@@ -75,15 +65,13 @@ fn i32_to_non_zero_usize(val: i32) -> Option<NonZeroUsize> {
     }
 }
 
-pub struct Sqlblob<C> {
+pub struct Sqlblob {
     data_store: DataSqlStore,
     chunk_store: ChunkSqlStore,
-    data_cache: SqlblobCacheOps<DataCacheTranslator, C>,
-    chunk_cache: SqlblobCacheOps<ChunkCacheTranslator, C>,
     delay: BlobDelay,
 }
 
-impl Sqlblob<MemcacheOps> {
+impl Sqlblob {
     pub fn with_myrouter(
         fb: FacebookInit,
         shardmap: String,
@@ -91,9 +79,9 @@ impl Sqlblob<MemcacheOps> {
         read_con_type: ReadConnectionType,
         shard_num: NonZeroUsize,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
+    ) -> BoxFuture<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, &shardmap));
-        Self::with_connection_factory(fb, delay, shardmap.clone(), shard_num, move |shard_id| {
+        Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
                 shardmap.clone(),
                 Some(shard_id),
@@ -114,10 +102,9 @@ impl Sqlblob<MemcacheOps> {
         port: u16,
         read_con_type: ReadConnectionType,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
+    ) -> BoxFuture<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
-            fb,
             delay,
             db_address.clone(),
             NonZeroUsize::new(1).expect("One should be greater than zero"),
@@ -143,9 +130,9 @@ impl Sqlblob<MemcacheOps> {
         read_con_type: ReadConnectionType,
         shard_num: NonZeroUsize,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
+    ) -> BoxFuture<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, &shardmap));
-        Self::with_connection_factory(fb, delay, shardmap.clone(), shard_num, move |shard_id| {
+        Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
             create_raw_xdb_connections(
                 fb,
                 format!("{}.{}", shardmap, shard_id),
@@ -161,10 +148,9 @@ impl Sqlblob<MemcacheOps> {
         db_address: String,
         read_con_type: ReadConnectionType,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
+    ) -> BoxFuture<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
-            fb,
             delay,
             db_address.clone(),
             NonZeroUsize::new(1).expect("One should be greater than zero"),
@@ -175,12 +161,11 @@ impl Sqlblob<MemcacheOps> {
     }
 
     fn with_connection_factory(
-        fb: FacebookInit,
         delay: BlobDelay,
         label: String,
         shard_num: NonZeroUsize,
         connection_factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
-    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
+    ) -> BoxFuture<CountedSqlblob, Error> {
         let shard_count = shard_num.get();
 
         let futs: Vec<_> = (0..shard_count)
@@ -218,20 +203,6 @@ impl Sqlblob<MemcacheOps> {
                             read_connections,
                             read_master_connections,
                         ),
-                        data_cache: SqlblobCacheOps::new(
-                            Arc::new(
-                                MemcacheOps::new(fb, "sqlblob.data", 0)
-                                    .expect("failed to create MemcacheOps"),
-                            ),
-                            DataCacheTranslator::new(),
-                        ),
-                        chunk_cache: SqlblobCacheOps::new(
-                            Arc::new(
-                                MemcacheOps::new(fb, "sqlblob.chunk", 0)
-                                    .expect("failed to create MemcacheOps"),
-                            ),
-                            ChunkCacheTranslator::new(),
-                        ),
                         delay,
                     },
                     label,
@@ -239,10 +210,8 @@ impl Sqlblob<MemcacheOps> {
             })
             .boxify()
     }
-}
 
-impl Sqlblob<DummyCache> {
-    pub fn with_sqlite_in_memory() -> Result<CountedSqlblob<DummyCache>> {
+    pub fn with_sqlite_in_memory() -> Result<CountedSqlblob> {
         Self::with_sqlite(|_| {
             let con = open_sqlite_in_memory()?;
             con.execute_batch(Self::CREATION_QUERY)?;
@@ -253,7 +222,7 @@ impl Sqlblob<DummyCache> {
     pub fn with_sqlite_path<P: Into<PathBuf>>(
         path: P,
         readonly_storage: bool,
-    ) -> Result<CountedSqlblob<DummyCache>> {
+    ) -> Result<CountedSqlblob> {
         let pathbuf = path.into();
         Self::with_sqlite(move |shard_id| {
             let con = open_sqlite_path(
@@ -267,7 +236,7 @@ impl Sqlblob<DummyCache> {
         })
     }
 
-    fn with_sqlite<F>(mut constructor: F) -> Result<CountedSqlblob<DummyCache>>
+    fn with_sqlite<F>(mut constructor: F) -> Result<CountedSqlblob>
     where
         F: FnMut(usize) -> Result<SqliteConnection>,
     {
@@ -288,14 +257,6 @@ impl Sqlblob<DummyCache> {
                     cons.clone(),
                 ),
                 chunk_store: ChunkSqlStore::new(SQLITE_SHARD_NUM, cons.clone(), cons.clone(), cons),
-                data_cache: SqlblobCacheOps::new(
-                    Arc::new(DummyCache {}),
-                    DataCacheTranslator::new(),
-                ),
-                chunk_cache: SqlblobCacheOps::new(
-                    Arc::new(DummyCache {}),
-                    ChunkCacheTranslator::new(),
-                ),
                 delay: BlobDelay::dummy(),
             },
             "sqlite".into(),
@@ -303,74 +264,30 @@ impl Sqlblob<DummyCache> {
     }
 
     const CREATION_QUERY: &'static str = include_str!("../schema/sqlite-sqlblob.sql");
-}
 
-impl<C: CacheOps> Sqlblob<C> {
     fn counted(self, label: String) -> CountedBlobstore<Self> {
         CountedBlobstore::new(format!("{}.{}", COUNTED_ID, label), self)
     }
 }
 
-impl<C: CacheOps> fmt::Debug for Sqlblob<C> {
+impl fmt::Debug for Sqlblob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Sqlblob").finish()
     }
 }
 
-impl<C: CacheOps> Blobstore for Sqlblob<C> {
+impl Blobstore for Sqlblob {
     fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
-        cloned!(
-            self.data_store,
-            self.chunk_store,
-            self.data_cache,
-            self.chunk_cache
-        );
+        cloned!(self.data_store, self.chunk_store);
 
-        self.data_cache
+        data_store
             .get(&key)
-            .and_then({
-                cloned!(data_store, data_cache, key);
-                move |maybe_value| match maybe_value {
-                    Some(value) => {
-                        STATS::data_cache_hit_permille.add_value(1000);
-                        Ok(Some(value)).into_future().left_future()
-                    }
-                    None => {
-                        STATS::data_cache_hit_permille.add_value(0);
-                        data_store
-                            .get(&key)
-                            .map(move |maybe_entry| {
-                                maybe_entry.map(|entry| data_cache.put(&key, entry))
-                            })
-                            .right_future()
-                    }
-                }
-            })
             .and_then(move |maybe_entry| match maybe_entry {
                 None => Ok(None).into_future().left_future(),
                 Some(DataEntry::Data(value)) => Ok(Some(value)).into_future().left_future(),
                 Some(DataEntry::InChunk(num_of_chunks)) => {
                     let chunk_fut: Vec<_> = (0..num_of_chunks.get() as u32)
-                        .map(move |chunk_id| {
-                            cloned!(chunk_store, chunk_cache, key);
-                            chunk_cache
-                                .get(&(key.clone(), chunk_id))
-                                .and_then(move |maybe_chunk| match maybe_chunk {
-                                    Some(chunk) => {
-                                        STATS::chunk_cache_hit_permille.add_value(1000);
-                                        Ok(chunk).into_future().left_future()
-                                    }
-                                    None => {
-                                        STATS::chunk_cache_hit_permille.add_value(0);
-                                        chunk_store
-                                            .get(&key, chunk_id)
-                                            .map(move |chunk| {
-                                                chunk_cache.put(&(key.clone(), chunk_id), chunk)
-                                            })
-                                            .right_future()
-                                    }
-                                })
-                        })
+                        .map(move |chunk_id| chunk_store.get(&key, chunk_id))
                         .collect();
 
                     join_all(chunk_fut)
@@ -401,7 +318,6 @@ impl<C: CacheOps> Blobstore for Sqlblob<C> {
         }
 
         let delay = self.delay.clone();
-        // Store blobs that can be stored in Memcache as well
         if value.len() < CHUNK_SIZE {
             let init_delay = delay.delay();
             let put = self.data_store.put(&key, &DataEntry::Data(value.into()));
