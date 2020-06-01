@@ -69,7 +69,10 @@ use std::convert::TryInto;
 use std::fmt::Write;
 use std::mem;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 use std::time::{Duration, Instant};
 use streaming_clone::RevlogStreamingChunks;
 use time_ext::DurationExt;
@@ -349,6 +352,7 @@ pub struct RepoClient {
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector: Option<PushRedirector>,
     pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
+    force_lfs: Arc<AtomicBool>,
 }
 
 fn get_pull_default_bookmarks_maybe_stale_raw(
@@ -419,6 +423,7 @@ impl RepoClient {
             wireproto_logging,
             maybe_push_redirector,
             pushredirect_config,
+            force_lfs: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -485,9 +490,7 @@ impl RepoClient {
     }
 
     fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
-        let lfs_params = self
-            .repo
-            .lfs_params(ctx.session().source_hostname().as_deref());
+        let lfs_params = self.lfs_params();
         let blobrepo = self.repo.blobrepo().clone();
         let reponame = self.repo.reponame().clone();
         let mut bundle2_parts = vec![];
@@ -631,9 +634,7 @@ impl RepoClient {
             let getpack_params = Arc::new(Mutex::new(vec![]));
             let repo = self.repo.blobrepo().clone();
 
-            let lfs_params = self
-                .repo
-                .lfs_params(ctx.session().source_hostname().as_deref());
+            let lfs_params = self.lfs_params();
 
             let validate_hash =
                 rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
@@ -865,6 +866,15 @@ impl RepoClient {
             Ok(None)
         }
     }
+
+    fn lfs_params(&self) -> SessionLfsParams {
+        if self.force_lfs.load(Ordering::Relaxed) {
+            self.repo.force_lfs_if_threshold_set()
+        } else {
+            self.repo
+                .lfs_params(self.session.source_hostname().as_deref())
+        }
+    }
 }
 
 fn maybe_pushredirect_action(
@@ -1027,6 +1037,12 @@ impl HgCommands for RepoClient {
                     "hg_short_command",
                     String::from_utf8_lossy(command).into_owned(),
                 );
+            }
+
+            if let Some(val) = args.get(b"wantslfspointers" as &[u8]) {
+                if val == b"True" {
+                    self.force_lfs.store(true, Ordering::Relaxed);
+                }
             }
 
             future_old::ok(hostname)
@@ -1474,9 +1490,8 @@ impl HgCommands for RepoClient {
             .expect("lock poisoned")
             .take();
 
-        let lfs_params = self
-            .repo
-            .lfs_params(self.session.source_hostname().as_deref());
+        let lfs_params = self.lfs_params();
+
         self.repo
             .readonly()
             // Assume read only if we have an error.

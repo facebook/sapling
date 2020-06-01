@@ -146,6 +146,12 @@ impl MononokeRepo {
         self.maybe_reverse_filler_queue.as_deref()
     }
 
+    pub fn force_lfs_if_threshold_set(&self) -> SessionLfsParams {
+        SessionLfsParams {
+            threshold: self.lfs_params.threshold,
+        }
+    }
+
     pub fn lfs_params(&self, client_hostname: Option<&str>) -> SessionLfsParams {
         let percentage = self.lfs_params.rollout_percentage;
         let allowed = match client_hostname {
