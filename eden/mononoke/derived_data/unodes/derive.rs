@@ -1077,6 +1077,7 @@ mod tests {
 
             let hg_linknode_fut = repo.get_linknode(ctx.clone(), &RepoPath::RootPath, filenode_id);
             let hg_linknode = runtime.block_on(hg_linknode_fut).unwrap();
+            let hg_linknode = hg_linknode.do_not_handle_disabled_filenodes().unwrap();
             let linknode = runtime
                 .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_linknode))
                 .unwrap()

@@ -11,7 +11,7 @@ use crate::repo::BlobRepo;
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::FilenodeInfo;
+use filenodes::{FilenodeInfo, FilenodeResult};
 use futures_ext::{BoxStream, FutureExt, StreamExt};
 use futures_old::{future::ok, stream, Future, Stream};
 use maplit::hashset;
@@ -145,7 +145,7 @@ fn get_file_history_using_prefetched(
             let filenode_fut = if let Some(filenode) = prefetched_history.get(&node) {
                 ok(filenode.clone()).left_future()
             } else {
-                get_maybe_draft_filenode(ctx.clone(), repo.clone(), path.clone(), node)
+                get_maybe_missing_filenode(ctx.clone(), repo.clone(), path.clone(), node)
                     .right_future()
             };
 
@@ -183,7 +183,7 @@ fn get_file_history_using_prefetched(
     .boxify()
 }
 
-pub fn get_maybe_draft_filenode(
+fn get_maybe_missing_filenode(
     ctx: CoreContext,
     repo: BlobRepo,
     path: RepoPath,
@@ -191,13 +191,14 @@ pub fn get_maybe_draft_filenode(
 ) -> impl Future<Item = FilenodeInfo, Error = Error> {
     repo.get_filenode_opt(ctx.clone(), &path, node).and_then({
         cloned!(repo, ctx, path, node);
-        move |filenode_opt| match filenode_opt {
-            Some(filenode) => ok(filenode).left_future(),
-            None => {
+        move |filenode_res| match filenode_res {
+            FilenodeResult::Present(Some(filenode)) => ok(filenode).left_future(),
+            FilenodeResult::Present(None) | FilenodeResult::Disabled => {
                 // The filenode couldn't be found.  This may be because it is a
-                // draft node, which doesn't get stored in the database.  Attempt
+                // draft node, which doesn't get stored in the database or because
+                // filenodes were intentionally disabled.  Attempt
                 // to reconstruct the filenode from the envelope.  Use `NULL_CSID`
-                // to indicate a draft linknode.
+                // to indicate a draft or missing linknode.
                 repo.get_filenode_from_envelope(ctx, &path, node, NULL_CSID)
                     .right_future()
             }

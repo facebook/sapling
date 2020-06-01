@@ -443,6 +443,7 @@ fn hg_file_node_step(
         WrappedPath::NonRoot(path) => RepoPath::FilePath(path.mpath().clone()),
     };
     repo.get_filenode_opt(ctx, &repo_path, hg_file_node_id)
+        .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
         .map(move |file_node_opt| match file_node_opt {
             Some(file_node_info) => {
                 // Validate hg link node

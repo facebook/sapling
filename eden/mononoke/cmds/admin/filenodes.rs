@@ -160,7 +160,9 @@ fn handle_filenodes_at_revision(
                         .map(move |(path, filenode_id)| {
                             let path = RepoPath::FilePath(path);
 
-                            let filenode = blobrepo.get_filenode(ctx.clone(), &path, filenode_id);
+                            let filenode = blobrepo
+                                .get_filenode(ctx.clone(), &path, filenode_id)
+                                .and_then(|filenode| filenode.do_not_handle_disabled_filenodes());
 
                             let envelope = if log_envelope {
                                 filenode_id
@@ -236,6 +238,7 @@ pub async fn subcommand_filenodes<'a>(
                     move |(blobrepo, path, id)| {
                         blobrepo
                             .get_filenode(ctx.clone(), &path, id)
+                            .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
                             .and_then(move |filenode| {
                                 let envelope = if log_envelope {
                                     filenode
@@ -292,6 +295,9 @@ pub async fn subcommand_filenodes<'a>(
                                     };
 
                                     repo.get_filenode_opt(ctx.clone(), &repo_path, filenode_id)
+                                        .and_then(|filenode| {
+                                            filenode.do_not_handle_disabled_filenodes()
+                                        })
                                         .and_then(move |maybe_filenode| {
                                             if maybe_filenode.is_some() {
                                                 Ok(())

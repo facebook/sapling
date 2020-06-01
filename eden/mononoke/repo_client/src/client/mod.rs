@@ -18,6 +18,7 @@ use bytes_old::{BufMut as BufMutOld, Bytes as BytesOld, BytesMut as BytesMutOld}
 use cached_config::ConfigHandle;
 use cloned::cloned;
 use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
+use filenodes::FilenodeResult;
 use futures::{
     channel::oneshot::{self, Sender},
     future,
@@ -2081,63 +2082,74 @@ pub fn fetch_treepack_part_input(
     let envelope_fut =
         fetch_manifest_envelope(ctx.clone(), &repo.get_blobstore().boxed(), hg_mf_id);
 
-    repo.get_filenode_opt(
-        ctx.clone(),
-        &repo_path,
-        HgFileNodeId::new(hg_mf_id.into_nodehash()),
-    )
-    .join(envelope_fut)
-    .map({
-        cloned!(ctx);
-        move |(maybe_filenode, envelope)| {
-            let content = envelope.contents().clone();
-            match maybe_filenode {
-                Some(filenode) => {
-                    let p1 = filenode.p1.map(|p| p.into_nodehash());
-                    let p2 = filenode.p2.map(|p| p.into_nodehash());
-                    let parents = HgParents::new(p1, p2);
-                    let linknode = filenode.linknode;
-                    (parents, linknode, content)
-                }
-                // Filenodes might not be present. For example we don't have filenodes for
-                // infinitepush commits. In that case fetch parents from manifest, but we can't
-                // fetch the linknode, so set it to NULL_CSID. Client can handle null linknode,
-                // though it can cause slowness sometimes.
-                None => {
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::NullLinknode);
-                    STATS::null_linknode_gettreepack.add_value(1);
-                    let (p1, p2) = envelope.parents();
-                    let parents = HgParents::new(p1, p2);
+    let filenode_fut = repo
+        .get_filenode_opt(
+            ctx.clone(),
+            &repo_path,
+            HgFileNodeId::new(hg_mf_id.into_nodehash()),
+        )
+        .map(|filenode_res| {
+            match filenode_res {
+                FilenodeResult::Present(maybe_filenode) => maybe_filenode,
+                // Filenodes are disabled - that means we can't fetch
+                // linknode so we'll return NULL to clients.
+                FilenodeResult::Disabled => None,
+            }
+        });
 
-                    (parents, NULL_CSID, content)
+    filenode_fut
+        .join(envelope_fut)
+        .map({
+            cloned!(ctx);
+            move |(maybe_filenode, envelope)| {
+                let content = envelope.contents().clone();
+                match maybe_filenode {
+                    Some(filenode) => {
+                        let p1 = filenode.p1.map(|p| p.into_nodehash());
+                        let p2 = filenode.p2.map(|p| p.into_nodehash());
+                        let parents = HgParents::new(p1, p2);
+                        let linknode = filenode.linknode;
+                        (parents, linknode, content)
+                    }
+                    // Filenodes might not be present. For example we don't have filenodes for
+                    // infinitepush commits. In that case fetch parents from manifest, but we can't
+                    // fetch the linknode, so set it to NULL_CSID. Client can handle null linknode,
+                    // though it can cause slowness sometimes.
+                    None => {
+                        ctx.perf_counters()
+                            .increment_counter(PerfCounterType::NullLinknode);
+                        STATS::null_linknode_gettreepack.add_value(1);
+                        let (p1, p2) = envelope.parents();
+                        let parents = HgParents::new(p1, p2);
+
+                        (parents, NULL_CSID, content)
+                    }
                 }
             }
-        }
-    })
-    .and_then(move |(parents, linknode, content)| {
-        if validate_content {
-            validate_manifest_content(
-                ctx,
-                hg_mf_id.into_nodehash(),
-                &content,
-                &repo_path,
-                &parents,
-            )?;
-        }
-
-        let fullpath = repo_path.into_mpath();
-        let (p1, p2) = parents.get_nodes();
-        Ok(parts::TreepackPartInput {
-            node: hg_mf_id.into_nodehash(),
-            p1,
-            p2,
-            content: bytes_ext::copy_from_new(content),
-            fullpath,
-            linknode: linknode.into_nodehash(),
         })
-    })
-    .boxify()
+        .and_then(move |(parents, linknode, content)| {
+            if validate_content {
+                validate_manifest_content(
+                    ctx,
+                    hg_mf_id.into_nodehash(),
+                    &content,
+                    &repo_path,
+                    &parents,
+                )?;
+            }
+
+            let fullpath = repo_path.into_mpath();
+            let (p1, p2) = parents.get_nodes();
+            Ok(parts::TreepackPartInput {
+                node: hg_mf_id.into_nodehash(),
+                p1,
+                p2,
+                content: bytes_ext::copy_from_new(content),
+                fullpath,
+                linknode: linknode.into_nodehash(),
+            })
+        })
+        .boxify()
 }
 
 fn validate_manifest_content(

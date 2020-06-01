@@ -15,6 +15,7 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
+use filenodes::FilenodeResult;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, TryFutureExt},
@@ -110,7 +111,13 @@ async fn blobstore_and_filenodes_warmup(
                         None => RepoPath::RootPath,
                     };
 
-                    let fut = repo.get_linknode_opt(ctx.clone(), &path, hash).compat();
+                    let fut = repo
+                        .get_linknode_opt(ctx.clone(), &path, hash)
+                        .compat()
+                        .map_ok(|res| match res {
+                            FilenodeResult::Present(maybe_linknode) => maybe_linknode,
+                            FilenodeResult::Disabled => None,
+                        });
                     Some(fut)
                 }
             };

@@ -25,7 +25,7 @@ use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt};
-use filenodes::{FilenodeInfo, Filenodes};
+use filenodes::{FilenodeInfo, FilenodeResult, Filenodes};
 use filestore::FilestoreConfig;
 use futures::{
     compat::Future01CompatExt,
@@ -507,10 +507,11 @@ impl BlobRepo {
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> impl Future<Item = Option<HgChangesetId>, Error = Error> {
+    ) -> impl Future<Item = FilenodeResult<Option<HgChangesetId>>, Error = Error> {
         STATS::get_linknode_opt.add_value(1);
-        self.get_filenode_opt(ctx, path, node)
-            .map(|filenode_opt| filenode_opt.map(|filenode| filenode.linknode))
+        self.get_filenode_opt(ctx, path, node).map(|filenode_res| {
+            filenode_res.map(|filenode_opt| filenode_opt.map(|filenode| filenode.linknode))
+        })
     }
 
     pub fn get_linknode(
@@ -518,10 +519,10 @@ impl BlobRepo {
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> impl Future<Item = HgChangesetId, Error = Error> {
+    ) -> impl Future<Item = FilenodeResult<HgChangesetId>, Error = Error> {
         STATS::get_linknode.add_value(1);
         self.get_filenode(ctx, path, node)
-            .map(|filenode| filenode.linknode)
+            .map(|filenode_res| filenode_res.map(|filenode| filenode.linknode))
     }
 
     pub fn get_filenode_opt(
@@ -529,9 +530,11 @@ impl BlobRepo {
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> impl Future<Item = Option<FilenodeInfo>, Error = Error> {
+    ) -> impl Future<Item = FilenodeResult<Option<FilenodeInfo>>, Error = Error> {
         let path = path.clone();
-        self.filenodes.get_filenode(ctx, &path, node, self.repoid)
+        self.filenodes
+            .get_filenode(ctx, &path, node, self.repoid)
+            .map(FilenodeResult::Present)
     }
 
     pub fn get_filenode(
@@ -539,10 +542,17 @@ impl BlobRepo {
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> impl Future<Item = FilenodeInfo, Error = Error> {
+    ) -> impl Future<Item = FilenodeResult<FilenodeInfo>, Error = Error> {
         self.get_filenode_opt(ctx, path, node).and_then({
             cloned!(path);
-            move |filenode| filenode.ok_or(ErrorKind::MissingFilenode(path, node).into())
+            move |filenode_res| match filenode_res {
+                FilenodeResult::Present(maybe_filenode) => {
+                    let filenode = maybe_filenode
+                        .ok_or_else(|| Error::from(ErrorKind::MissingFilenode(path, node)))?;
+                    Ok(FilenodeResult::Present(filenode))
+                }
+                FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+            }
         })
     }
 

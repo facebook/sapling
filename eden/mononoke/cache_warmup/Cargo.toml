@@ -16,6 +16,7 @@ bookmarks = { path = "../bookmarks" }
 context = { path = "../server/context" }
 derived_data = { path = "../derived_data" }
 derived_data_filenodes = { path = "../derived_data/filenodes" }
+filenodes = { path = "../filenodes" }
 manifest = { path = "../manifest" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }

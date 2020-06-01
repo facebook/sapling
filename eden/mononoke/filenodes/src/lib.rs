@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use context::CoreContext;
 use futures_ext::BoxFuture;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
@@ -37,6 +37,36 @@ pub struct FilenodeInfo {
     pub p2: Option<HgFileNodeId>,
     pub copyfrom: Option<(RepoPath, HgFileNodeId)>,
     pub linknode: HgChangesetId,
+}
+
+// The main purpose of FilenodeResult is to force callers to deal with situation
+// when filenodes are disabled. This shouldn't happen normally, but it
+// might happen in exceptional situation like e.g. filenodes db being
+// unavailable.
+//
+// The guideline here is the following - if the code might affect the critical
+// read path i.e. serving "hg pull"/"hg update" then it should not rely on
+// filenodes being available and it needs to have a workaround.
+#[derive(Debug)]
+pub enum FilenodeResult<T> {
+    Present(T),
+    Disabled,
+}
+
+impl<T> FilenodeResult<T> {
+    pub fn map<U>(self, func: impl Fn(T) -> U) -> FilenodeResult<U> {
+        match self {
+            FilenodeResult::Present(t) => FilenodeResult::Present(func(t)),
+            FilenodeResult::Disabled => FilenodeResult::Disabled,
+        }
+    }
+
+    pub fn do_not_handle_disabled_filenodes(self) -> Result<T, Error> {
+        match self {
+            FilenodeResult::Present(t) => Ok(t),
+            FilenodeResult::Disabled => Err(anyhow!("filenodes are disabled")),
+        }
+    }
 }
 
 impl FilenodeInfo {
