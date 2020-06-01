@@ -1360,6 +1360,11 @@ impl RemoteDataStore for LfsRemoteStore {
             .filter_map(|res| res.transpose())
             .collect::<Result<Vec<_>>>()?;
 
+        // If there are no objects involved at all, then don't make an (expensive) remote request!
+        if objs.is_empty() {
+            return Ok(());
+        }
+
         self.remote.batch_fetch(&objs, {
             let remote = self.remote.clone();
             move |sha256, data| remote.shared.blobs.add(&sha256, data)
@@ -2425,6 +2430,27 @@ mod tests {
                 hash,
             })
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_skips_server_for_empty_batch() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let lfsdir = TempDir::new()?;
+        let mut config = make_lfs_config(&cachedir);
+
+        let store = Arc::new(LfsStore::local(&lfsdir, &config)?);
+
+        // 192.0.2.0 won't be routable, since that's TEST-NET-1. This test will fail if we attempt
+        // to connect.
+        config.set("lfs", "url", Some("http://192.0.2.0/"), &Default::default());
+
+        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+        let remote = Arc::new(LfsRemote::new(lfs, None, &config)?);
+
+        let resp = remote.datastore(store).prefetch(&[]);
+        assert!(resp.is_ok());
 
         Ok(())
     }
