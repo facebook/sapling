@@ -147,7 +147,7 @@ pub struct RevlogEntry {
     link: i32,
     p1: i32,
     p2: i32,
-    node: [u8; 32],
+    pub node: [u8; 32],
 }
 
 impl<T> RevlogIndex<T>

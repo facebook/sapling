@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::RevlogEntry;
 use anyhow::{bail, Result};
 use radixbuf::errors as rerrors;
 use radixbuf::key::KeyId;
@@ -63,7 +64,7 @@ use std::u32;
 /// the main index in-place. But that requires extra efforts to deal with possible
 /// filesystem issues like locking, or unexpected poweroff.
 pub struct NodeRevMap<C, I> {
-    changelogi: C,
+    pub(crate) changelogi: C,
     main_index: I,        // Immutable main index
     side_index: Vec<u32>, // Mutable side index
 }
@@ -76,9 +77,7 @@ const RADIX_HEADER_LEN: usize = RADIX_NEXT_REV_OFFSET + 1;
 const MAIN_RADIX_OFFSET: u32 = 1;
 const SIDE_RADIX_OFFSET: u32 = 0;
 
-const CHANGELOG_ENTRY_SIZE: u64 = 64;
-
-impl<C: AsRef<[u8]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
+impl<C: AsRef<[RevlogEntry]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
     /// Initialize NodeMap from a non-inlined version of changelog.i and an incomplete index.
     pub fn new(changelogi: C, main_index: I) -> Result<Self> {
         // Sanity check if the index is corrupted or not.
@@ -196,10 +195,10 @@ impl<C: AsRef<[u8]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
 }
 
 /// Return the minimal revision number the changelog.i does not have.
-fn changelog_end_rev<T: AsRef<[u8]>>(changelogi: &T) -> u32 {
+fn changelog_end_rev<T: AsRef<[RevlogEntry]>>(changelogi: &T) -> u32 {
     let changelogi = changelogi.as_ref();
-    let rev = changelogi.len() as u64 / CHANGELOG_ENTRY_SIZE;
-    if rev > u32::MAX as u64 {
+    let rev = changelogi.len();
+    if rev as u64 > u32::MAX as u64 {
         panic!("rev exceeds 32 bit integers")
     }
     rev as u32
@@ -216,7 +215,7 @@ fn build<T>(
     end_rev: u32,
 ) -> Result<()>
 where
-    T: AsRef<[u8]>,
+    T: AsRef<[RevlogEntry]>,
 {
     // Reserve the approximate size needed for the index - 28 bytes for each revision.
     // See D1291 for a table of number of revisions and index sizes.
@@ -228,16 +227,11 @@ where
 }
 
 /// Helper method similar to `radixbuf::key::FixedKey::read`, but takes a revision number instead.
-fn rev_to_node<K: AsRef<[u8]>>(changelogi: &K, rev: KeyId) -> Result<&[u8]> {
+fn rev_to_node<K: AsRef<[RevlogEntry]>>(changelogi: &K, rev: KeyId) -> Result<&[u8]> {
     let buf = changelogi.as_ref();
     let rev_usize: usize = rev.into();
-    let start_pos = rev_usize * 64 + 32;
-    let end_pos = start_pos + 20;
-    if buf.len() < end_pos {
-        Err(rerrors::ErrorKind::InvalidKeyId(rev).into())
-    } else {
-        Ok(&buf[start_pos..end_pos])
-    }
+    let entry = &buf[rev_usize];
+    Ok(&entry.node[0..20])
 }
 
 /// Convert hex base16 sequence to binary base16 sequence.

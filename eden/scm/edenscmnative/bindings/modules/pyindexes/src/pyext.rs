@@ -7,6 +7,7 @@
 
 use cpython::{PyBytes, PyModule, PyObject, PyResult, Python};
 use revlogindex::NodeRevMap;
+use revlogindex::RevlogEntry;
 use std::slice;
 
 use cpython_ext::ResultPyErrExt;
@@ -20,7 +21,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class nodemap |py| {
-    data nodemap: NodeRevMap<SimplePyBuf<u8>, SimplePyBuf<u32>>;
+    data nodemap: NodeRevMap<SimplePyBuf<RevlogEntry>, SimplePyBuf<u32>>;
 
     def __new__(_cls, changelog: &PyObject, index: &PyObject) -> PyResult<nodemap> {
         let changelog_buf = SimplePyBuf::new(py, changelog);
@@ -53,7 +54,7 @@ py_class!(class nodemap |py| {
 
     @staticmethod
     def emptyindexbuffer() -> PyResult<PyBytes> {
-        let buf = NodeRevMap::<Vec<u8>, Vec<u32>>::empty_index_buffer();
+        let buf = NodeRevMap::<Vec<RevlogEntry>, Vec<u32>>::empty_index_buffer();
         let slice = unsafe { slice::from_raw_parts(buf.as_ptr() as *const u8, buf.len() * 4) };
         Ok(PyBytes::new(py, slice))
     }
