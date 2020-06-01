@@ -10,7 +10,7 @@ python3 = []
 
 [dependencies]
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
-radixbuf = { path = "../../../../lib/radixbuf" }
+revlogindex = { path = "../../../../lib/revlogindex" }
 anyhow = "1.0.20"
 thiserror = "1.0.5"
 cpython = { version = "0.5", default-features = false }

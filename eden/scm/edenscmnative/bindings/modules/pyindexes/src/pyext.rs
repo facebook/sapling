@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::nodemap::NodeRevMap;
 use cpython::{PyBytes, PyModule, PyObject, PyResult, Python};
+use revlogindex::NodeRevMap;
 use std::slice;
 
 use cpython_ext::ResultPyErrExt;

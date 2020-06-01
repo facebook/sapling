@@ -9,9 +9,6 @@
 #[macro_use]
 extern crate cpython;
 
-pub mod errors;
-pub mod nodemap;
-
 #[allow(non_camel_case_types)]
 pub mod pyext;
 

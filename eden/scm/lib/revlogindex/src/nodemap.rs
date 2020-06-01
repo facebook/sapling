@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::ErrorKind;
 use anyhow::{bail, Result};
 use radixbuf::errors as rerrors;
 use radixbuf::key::KeyId;
@@ -47,7 +46,7 @@ use std::u32;
 /// is in-memory only. The side index is usually much smaller than the main index
 /// so it can be built quickly.
 ///
-/// ```
+/// ```text
 ///         main index               side index
 ///   +---------------------+  +----------------------+
 ///   | next_index_rev: u32 |  | (small radix buffer) |
@@ -87,7 +86,7 @@ impl<C: AsRef<[u8]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
         // The index must contain at least 17 elements. index[0] tracks the last rev the index has.
         // index[1..17] is the root radix node.
         if main_index.as_ref().len() < RADIX_HEADER_LEN + RADIX_NCHILDREN {
-            bail!(ErrorKind::IndexCorrupted);
+            bail!("revlog radix index corrupted (main index too small)")
         }
 
         // Check if the index is behind and build incrementally
@@ -96,7 +95,7 @@ impl<C: AsRef<[u8]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
 
         if next_rev > end_rev {
             // next_rev cannot be larger than what changelogi has.
-            bail!(ErrorKind::IndexCorrupted);
+            bail!("revlog radix index corrupted (next_rev > end_rev)")
         } else if next_rev > 0 {
             // Sanity check: if the last node stored in the index does not match the changelogi,
             // the index is broken and needs rebuilt. That could happen if strip happens.
@@ -104,10 +103,10 @@ impl<C: AsRef<[u8]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
             let node = rev_to_node(&changelogi, rev)?;
             if let Ok(Some(id)) = radix_lookup_unchecked(&main_index, MAIN_RADIX_OFFSET, &node) {
                 if id != rev {
-                    bail!(ErrorKind::IndexCorrupted);
+                    bail!("revlog radix index corrupted (revlog out-of-sync)")
                 }
             } else {
-                bail!(ErrorKind::IndexCorrupted);
+                bail!("revlog radix index corrupted (revlog out-of-sync)")
             }
         }
 
