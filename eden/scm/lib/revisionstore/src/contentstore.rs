@@ -246,26 +246,19 @@ impl<'a> ContentStoreBuilder<'a> {
     pub fn build(self) -> Result<ContentStore> {
         let local_path = get_local_path(&self.local_path, &self.suffix)?;
         let cache_path = get_cache_path(self.config, &self.suffix)?;
-
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
+
+        let mut datastore: UnionHgIdDataStore<Arc<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
+        let mut blob_stores: UnionContentDataStore<Arc<dyn ContentDataStore>> =
+            UnionContentDataStore::new();
+
         let shared_pack_store = Arc::new(MutableDataPackStore::new(
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
         )?);
-        let mut datastore: UnionHgIdDataStore<Arc<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
-
-        if self
-            .config
-            .get_or_default::<bool>("remotefilelog", "indexedlogdatastore")?
-        {
-            let shared_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
-                get_indexedlogdatastore_path(&cache_path)?,
-            )?);
-            datastore.add(shared_indexedlogdatastore);
-        }
-
-        let mut blob_stores: UnionContentDataStore<Arc<dyn ContentDataStore>> =
-            UnionContentDataStore::new();
+        let shared_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
+            get_indexedlogdatastore_path(&cache_path)?,
+        )?);
 
         // The shared stores should precede the local one since we expect both the number of blobs,
         // and the number of requests satisfied by the shared cache to be significantly higher than
@@ -282,22 +275,33 @@ impl<'a> ContentStoreBuilder<'a> {
         let shared_lfs_store = Arc::new(LfsStore::shared(&cache_path, self.config)?);
         blob_stores.add(shared_lfs_store.clone());
 
-        let shared_store: Arc<dyn HgIdMutableDeltaStore> =
+        let primary: Arc<dyn HgIdMutableDeltaStore> = if self
+            .config
+            .get_or_default::<bool>("remotefilelog", "write-hgcache-to-indexedlog")?
+        {
+            // Put the indexedlog first, since recent data will have gone there.
+            datastore.add(shared_indexedlogdatastore.clone());
+            datastore.add(shared_pack_store.clone());
+            shared_indexedlogdatastore
+        } else {
+            datastore.add(shared_pack_store.clone());
+            datastore.add(shared_indexedlogdatastore.clone());
+            shared_pack_store
+        };
+        datastore.add(shared_lfs_store.clone());
+
+        let shared_mutabledatastore: Arc<dyn HgIdMutableDeltaStore> = {
             if let Some(lfs_threshold) = lfs_threshold {
                 let lfs_store = Arc::new(LfsMultiplexer::new(
                     shared_lfs_store.clone(),
-                    shared_pack_store,
+                    primary,
                     lfs_threshold.value() as usize,
                 ));
-
-                datastore.add(lfs_store.clone());
-
                 lfs_store
             } else {
-                datastore.add(shared_pack_store.clone());
-                datastore.add(shared_lfs_store.clone());
-                shared_pack_store
-            };
+                primary
+            }
+        };
 
         let (local_mutabledatastore, local_lfs_store): (Option<Arc<dyn HgIdMutableDeltaStore>>, _) =
             if let Some(unsuffixed_local_path) = self.local_path {
@@ -347,19 +351,21 @@ impl<'a> ContentStoreBuilder<'a> {
                     // store it will be written to the local cache, and will populate the memcache
                     // store, so other clients and future requests won't need to go to a network
                     // store.
-                    let memcachedatastore = memcachestore.clone().datastore(shared_store.clone());
+                    let memcachedatastore = memcachestore
+                        .clone()
+                        .datastore(shared_mutabledatastore.clone());
 
                     let mut multiplexstore: MultiplexDeltaStore<Arc<dyn HgIdMutableDeltaStore>> =
                         MultiplexDeltaStore::new();
                     multiplexstore.add_store(memcachestore);
-                    multiplexstore.add_store(shared_store.clone());
+                    multiplexstore.add_store(shared_mutabledatastore.clone());
 
                     (
                         Some(memcachedatastore),
                         Arc::new(multiplexstore) as Arc<dyn HgIdMutableDeltaStore>,
                     )
                 } else {
-                    (None, shared_store.clone())
+                    (None, shared_mutabledatastore.clone())
                 };
 
                 let mut remotestores = UnionHgIdDataStore::new();
@@ -403,7 +409,7 @@ impl<'a> ContentStoreBuilder<'a> {
         Ok(ContentStore {
             datastore,
             local_mutabledatastore,
-            shared_mutabledatastore: shared_store,
+            shared_mutabledatastore,
             remote_store,
             blob_stores,
         })

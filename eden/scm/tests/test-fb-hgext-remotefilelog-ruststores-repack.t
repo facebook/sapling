@@ -52,3 +52,40 @@
   x
   $ cat y
   y
+
+Test that we can repack packs into indexedlog
+  $ hg push -q -r tip --to master --create
+  $ clearcache
+  $ clone master shallow2
+  fetching tree '' d80a4bdb312d799dffbbce4719a5e2ad7987058e, found via d34c38483be9
+  1 trees fetched over 0.00s
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+
+# Verify stuff normally goes to packs
+  $ ls $CACHEDIR/master/packs | grep datapack
+  102e9c722b8edc89ad9e5a488ad8e5347bc7e213.datapack
+  $ cd shallow2
+  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True remotefilelog.localdatarepack=True
+
+# Verify repack turns packs into indexedlog
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=True
+  $ hg repack
+  $ ls_l $CACHEDIR/master/indexedlogdatastore/0
+  -rw-rw-r--      25 index2-node
+  -rw-rw-r--     108 log
+  -rw-rw-r--      * meta (glob)
+  $ ls $CACHEDIR/master/packs/ | grep datapack
+  [1]
+
+# Verify new fetches go to the indexedlog
+  $ clearcache
+  $ hg prefetch -r .
+  1 trees fetched over * (glob)
+  $ ls_l $CACHEDIR/master/indexedlogdatastore/0
+  -rw-rw-r--      25 index2-node
+  -rw-rw-r--     108 log
+  -rw-rw-r--      * meta (glob)
+  $ ls $CACHEDIR/master/packs/ | grep datapack
+  [1]
+  $ hg cat -r tip x
+  x

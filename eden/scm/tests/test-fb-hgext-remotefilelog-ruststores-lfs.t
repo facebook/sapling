@@ -100,6 +100,10 @@
   $ cat y
   THIS IS ANOTHER LFS BLOB
   $ findfilessorted $CACHEDIR
+  $TESTTMP/hgcache/master/indexedlogdatastore/0/index2-node
+  $TESTTMP/hgcache/master/indexedlogdatastore/0/log
+  $TESTTMP/hgcache/master/indexedlogdatastore/0/meta
+  $TESTTMP/hgcache/master/indexedlogdatastore/latest
   $TESTTMP/hgcache/master/lfs/blobs/0/index2-sha256
   $TESTTMP/hgcache/master/lfs/blobs/0/log
   $TESTTMP/hgcache/master/lfs/blobs/0/meta
