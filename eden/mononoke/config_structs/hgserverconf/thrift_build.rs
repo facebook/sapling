@@ -26,7 +26,7 @@ fn main() {
             .expect("Failed to canonicalize base_path");
         conf.base_path(base_path);
 
-        let options = "";
+        let options = "serde";
         if !options.is_empty() {
             conf.options(options);
         }
