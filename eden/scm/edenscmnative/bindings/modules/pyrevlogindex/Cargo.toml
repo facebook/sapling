@@ -8,3 +8,8 @@ cpython = { version = "0.5", default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 dag = { path = "../../../../lib/dag" }
 pydag = { path = "../pydag" }
+revlogindex = { path = "../../../../lib/revlogindex" }
+
+[features]
+python2 = ["cpython/python27-sys", "cpython-ext/python2"]
+python3 = ["cpython/python3-sys", "cpython-ext/python3"]
