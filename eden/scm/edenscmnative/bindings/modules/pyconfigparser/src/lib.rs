@@ -148,7 +148,7 @@ py_class!(pub class config |py| {
         superset_source: String,
         subset_sources: Vec<String>,
         whitelist: Vec<(String, String)>
-    ) -> PyResult<Vec<(String, String, Option<String>, Option<String>)>> {
+    ) -> PyResult<Vec<(Str, Str, Option<Str>, Option<Str>)>> {
         let whitelist = HashSet::from_iter(whitelist.iter().map(|v| (v.0.as_ref(), v.1.as_ref())));
 
         let results = self.cfg(py).borrow_mut().ensure_location_supersets(superset_source, subset_sources, whitelist);
@@ -156,17 +156,17 @@ py_class!(pub class config |py| {
             return Ok(vec![]);
         }
 
-        let mut output: Vec<(String, String, Option<String>, Option<String>)> = vec![];
+        let mut output: Vec<(Str, Str, Option<Str>, Option<Str>)> = vec![];
         for ((section, key), value) in results.missing.iter() {
-            output.push((section.to_string(), key.to_string(), None, Some(value.to_string())));
+            output.push((section.to_string().into(), key.to_string().into(), None, Some(value.to_string().into())));
         }
 
         for ((section, key), value) in results.extra.iter() {
-            output.push((section.to_string(), key.to_string(), Some(value.to_string()), None));
+            output.push((section.to_string().into(), key.to_string().into(), Some(value.to_string().into()), None));
         }
 
         for ((section, key), super_value, sub_value) in results.mismatched.iter() {
-            output.push((section.to_string(), key.to_string(), Some(super_value.to_string()), Some(sub_value.to_string())));
+            output.push((section.to_string().into(), key.to_string().into(), Some(super_value.to_string().into()), Some(sub_value.to_string().into())));
         }
 
         Ok(output)

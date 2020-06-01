@@ -1601,7 +1601,7 @@ class ui(object):
                     )
                     outfile.write("\0")
                 if debug:
-                    ui.write_err(
+                    self.write_err(
                         "%s\n"
                         % pycompat.toutf8lossy(
                             json.dumps({"data": opts, "category": ref})
