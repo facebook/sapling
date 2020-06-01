@@ -46,8 +46,8 @@ mod fdio;
 
 const X509_R_CERT_ALREADY_IN_HASH_TABLE: c_ulong = 185057381;
 
-// Wait for up to 1sec to let Scuba flush it's data to the server.
-const SCUBA_TIMEOUT_MS: i64 = 1000;
+// Wait for up to 1sec to let Scuba flush its data to the server.
+const SCUBA_TIMEOUT: Duration = Duration::from_millis(1000);
 
 pub async fn cmd(
     fb: FacebookInit,
@@ -206,7 +206,7 @@ impl<'a> StdioRelay<'a> {
                 error!(client_logger, "Error in hgcli proxy"; SlogKVError(err));
             }
         }
-        scuba_logger.flush(SCUBA_TIMEOUT_MS);
+        scuba_logger.flush(SCUBA_TIMEOUT);
         Ok(())
     }
 
