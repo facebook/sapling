@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeSet;
 use std::convert::TryInto;
 
 use anyhow::{anyhow, Result};
@@ -95,9 +94,7 @@ impl Convert for RawHookConfig {
     type Output = HookParams;
 
     fn convert(self) -> Result<Self::Output> {
-        let bypass_commit_message = self
-            .bypass_commit_string
-            .map(|s| HookBypass::CommitMessage(s));
+        let bypass_commit_message = self.bypass_commit_string.map(HookBypass::CommitMessage);
 
         let bypass_pushvar = self.bypass_pushvar.and_then(|s| {
             let pushvar: Vec<_> = s.split('=').map(|val| val.to_string()).collect();
@@ -274,7 +271,7 @@ impl Convert for RawSourceControlServiceMonitoring {
         let bookmarks_to_report_age = self
             .bookmarks_to_report_age
             .into_iter()
-            .map(|bookmark| BookmarkName::new(bookmark))
+            .map(BookmarkName::new)
             .collect::<Result<Vec<_>>>()?;
         Ok(SourceControlServiceMonitoring {
             bookmarks_to_report_age,
@@ -300,7 +297,7 @@ impl Convert for RawDerivedDataConfig {
 
         Ok(DerivedDataConfig {
             scuba_table: self.scuba_table,
-            derived_data_types: self.derived_data_types.unwrap_or(BTreeSet::new()),
+            derived_data_types: self.derived_data_types.unwrap_or_default(),
             unode_version,
         })
     }

@@ -19,8 +19,8 @@ use repos::{
 
 use crate::errors::ConfigurationError;
 
-const CONFIGERATOR_CRYPTO_PROJECT: &'static str = "SCM";
-const CONFIGERATOR_PREFIX: &'static str = "configerator://";
+const CONFIGERATOR_CRYPTO_PROJECT: &str = "SCM";
+const CONFIGERATOR_PREFIX: &str = "configerator://";
 
 pub(crate) fn read_raw_configs(fb: FacebookInit, config_path: &Path) -> Result<RawRepoConfigs> {
     if config_path.starts_with(CONFIGERATOR_PREFIX) {
@@ -122,8 +122,7 @@ where
         .into());
     }
     let content = std::fs::read(path)?;
-    let res = read_toml::<T>(&content);
-    res
+    read_toml::<T>(&content)
 }
 
 /// Helper to read toml files which throws an error upon encountering
@@ -140,8 +139,8 @@ where
                 unused.insert(path.to_string());
             })?;
 
-            if unused.len() > 0 {
-                Err(anyhow!("unknown keys in config parsing: `{:?}`", unused))?;
+            if !unused.is_empty() {
+                return Err(anyhow!("unknown keys in config parsing: `{:?}`", unused));
             }
 
             Ok(t)

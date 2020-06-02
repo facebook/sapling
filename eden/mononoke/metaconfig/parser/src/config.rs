@@ -106,7 +106,7 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
     let mut tiers_num = 0;
     let security_config: Vec<_> = common
         .whitelist_entry
-        .unwrap_or(vec![])
+        .unwrap_or_default()
         .into_iter()
         .map(|whitelist_entry| {
             let has_tier = whitelist_entry.tier.is_some();
@@ -156,24 +156,16 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
         );
     }
 
-    let loadlimiter_category = match common.loadlimiter_category {
-        Some(category) => {
-            if category.len() > 0 {
-                Some(category)
-            } else {
-                None
-            }
-        }
-        None => None,
-    };
-
+    let loadlimiter_category = common
+        .loadlimiter_category
+        .filter(|category| !category.is_empty());
     let scuba_censored_table = common.scuba_censored_table;
 
-    return Ok(CommonConfig {
+    Ok(CommonConfig {
         security_config,
         loadlimiter_category,
         scuba_censored_table,
-    });
+    })
 }
 
 fn parse_repo_config(
@@ -396,15 +388,15 @@ fn is_commit_sync_config_relevant_to_repo(
 fn validate_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<()> {
     let all_prefixes_with_direction: Vec<(&MPath, CommitSyncDirection)> = commit_sync_config
         .small_repos
-        .iter()
-        .flat_map(|(_, small_repo_sync_config)| {
+        .values()
+        .flat_map(|small_repo_sync_config| {
             let SmallRepoCommitSyncConfig {
                 default_action,
                 map,
                 direction,
                 ..
             } = small_repo_sync_config;
-            let all_prefixes = map.into_iter().map(|(_, target_prefix)| target_prefix);
+            let all_prefixes = map.values();
             match default_action {
                 DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
                     all_prefixes.chain(vec![prefix].into_iter())
@@ -490,10 +482,7 @@ fn parse_commit_sync_config(
 
 impl RepoConfigs {
     /// Get individual `RepoConfig`, given a repo_id
-    pub fn get_repo_config<'a>(
-        &'a self,
-        repo_id: RepositoryId,
-    ) -> Option<(&'a String, &'a RepoConfig)> {
+    pub fn get_repo_config(&self, repo_id: RepositoryId) -> Option<(&String, &RepoConfig)> {
         self.repos
             .iter()
             .find(|(_, repo_config)| repo_config.repoid == repo_id)
