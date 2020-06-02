@@ -41,18 +41,18 @@ impl Convert for RawBlobstoreConfig {
     fn convert(self) -> Result<Self::Output> {
         let config = match self {
             RawBlobstoreConfig::disabled(_) => BlobConfig::Disabled,
-            RawBlobstoreConfig::blob_files(def) => BlobConfig::Files {
-                path: PathBuf::from(def.path),
+            RawBlobstoreConfig::blob_files(raw) => BlobConfig::Files {
+                path: PathBuf::from(raw.path),
             },
-            RawBlobstoreConfig::blob_sqlite(def) => BlobConfig::Sqlite {
-                path: PathBuf::from(def.path),
+            RawBlobstoreConfig::blob_sqlite(raw) => BlobConfig::Sqlite {
+                path: PathBuf::from(raw.path),
             },
-            RawBlobstoreConfig::manifold(def) => BlobConfig::Manifold {
-                bucket: def.manifold_bucket,
-                prefix: def.manifold_prefix,
+            RawBlobstoreConfig::manifold(raw) => BlobConfig::Manifold {
+                bucket: raw.manifold_bucket,
+                prefix: raw.manifold_prefix,
             },
-            RawBlobstoreConfig::mysql(def) => {
-                if let Some(remote) = def.remote {
+            RawBlobstoreConfig::mysql(raw) => {
+                if let Some(remote) = raw.remote {
                     BlobConfig::Mysql {
                         remote: remote.convert()?,
                     }
@@ -60,22 +60,22 @@ impl Convert for RawBlobstoreConfig {
                     BlobConfig::Mysql {
                         remote: ShardableRemoteDatabaseConfig::Sharded(
                             ShardedRemoteDatabaseConfig {
-                                shard_map: def.mysql_shardmap.ok_or_else(|| anyhow!("mysql shard name must be specified"))?,
-                                shard_num: NonZeroUsize::new(def.mysql_shard_num.ok_or_else(|| anyhow!("mysql shard num must be specified"))?.try_into()?)
+                                shard_map: raw.mysql_shardmap.ok_or_else(|| anyhow!("mysql shard name must be specified"))?,
+                                shard_num: NonZeroUsize::new(raw.mysql_shard_num.ok_or_else(|| anyhow!("mysql shard num must be specified"))?.try_into()?)
                                     .ok_or_else(|| anyhow!("mysql shard num must be specified and an integer larger than 0"))?,
                             },
                         ),
                     }
                 }
             }
-            RawBlobstoreConfig::multiplexed(def) => BlobConfig::Multiplexed {
-                multiplex_id: def
+            RawBlobstoreConfig::multiplexed(raw) => BlobConfig::Multiplexed {
+                multiplex_id: raw
                     .multiplex_id
                     .map(MultiplexId::new)
                     .ok_or_else(|| anyhow!("missing multiplex_id from configuration"))?,
-                scuba_table: def.scuba_table,
-                scuba_sample_rate: parse_scuba_sample_rate(def.scuba_sample_rate)?,
-                blobstores: def
+                scuba_table: raw.scuba_table,
+                scuba_sample_rate: parse_scuba_sample_rate(raw.scuba_sample_rate)?,
+                blobstores: raw
                     .components
                     .into_iter()
                     .map(|comp| {
@@ -85,23 +85,23 @@ impl Convert for RawBlobstoreConfig {
                         ))
                     })
                     .collect::<Result<Vec<_>>>()?,
-                queue_db: def
+                queue_db: raw
                     .queue_db
                     .ok_or_else(|| anyhow!("missing queue_db from configuration"))?
                     .convert()?,
             },
-            RawBlobstoreConfig::manifold_with_ttl(def) => {
-                let ttl = Duration::from_secs(def.ttl_secs.try_into()?);
+            RawBlobstoreConfig::manifold_with_ttl(raw) => {
+                let ttl = Duration::from_secs(raw.ttl_secs.try_into()?);
                 BlobConfig::ManifoldWithTtl {
-                    bucket: def.manifold_bucket,
-                    prefix: def.manifold_prefix,
+                    bucket: raw.manifold_bucket,
+                    prefix: raw.manifold_prefix,
                     ttl,
                 }
             }
-            RawBlobstoreConfig::logging(def) => BlobConfig::Logging {
-                scuba_table: def.scuba_table,
-                scuba_sample_rate: parse_scuba_sample_rate(def.scuba_sample_rate)?,
-                blobconfig: Box::new(def.blobstore.convert()?),
+            RawBlobstoreConfig::logging(raw) => BlobConfig::Logging {
+                scuba_table: raw.scuba_table,
+                scuba_sample_rate: parse_scuba_sample_rate(raw.scuba_sample_rate)?,
+                blobconfig: Box::new(raw.blobstore.convert()?),
             },
             RawBlobstoreConfig::UnknownField(f) => {
                 return Err(anyhow!("unsupported blobstore configuration ({})", f));
@@ -162,11 +162,11 @@ impl Convert for RawDbShardableRemote {
 
     fn convert(self) -> Result<Self::Output> {
         match self {
-            RawDbShardableRemote::unsharded(def) => {
-                Ok(ShardableRemoteDatabaseConfig::Unsharded(def.convert()?))
+            RawDbShardableRemote::unsharded(raw) => {
+                Ok(ShardableRemoteDatabaseConfig::Unsharded(raw.convert()?))
             }
-            RawDbShardableRemote::sharded(def) => {
-                Ok(ShardableRemoteDatabaseConfig::Sharded(def.convert()?))
+            RawDbShardableRemote::sharded(raw) => {
+                Ok(ShardableRemoteDatabaseConfig::Sharded(raw.convert()?))
             }
             RawDbShardableRemote::UnknownField(f) => {
                 Err(anyhow!("unsupported database configuration ({})", f))
@@ -180,8 +180,8 @@ impl Convert for RawDbConfig {
 
     fn convert(self) -> Result<Self::Output> {
         match self {
-            RawDbConfig::local(def) => Ok(DatabaseConfig::Local(def.convert()?)),
-            RawDbConfig::remote(def) => Ok(DatabaseConfig::Remote(def.convert()?)),
+            RawDbConfig::local(raw) => Ok(DatabaseConfig::Local(raw.convert()?)),
+            RawDbConfig::remote(raw) => Ok(DatabaseConfig::Remote(raw.convert()?)),
             RawDbConfig::UnknownField(f) => {
                 Err(anyhow!("unsupported database configuration ({})", f))
             }
@@ -194,12 +194,12 @@ impl Convert for RawMetadataConfig {
 
     fn convert(self) -> Result<Self::Output> {
         match self {
-            RawMetadataConfig::local(def) => Ok(MetadataDatabaseConfig::Local(def.convert()?)),
-            RawMetadataConfig::remote(def) => Ok(MetadataDatabaseConfig::Remote(
+            RawMetadataConfig::local(raw) => Ok(MetadataDatabaseConfig::Local(raw.convert()?)),
+            RawMetadataConfig::remote(raw) => Ok(MetadataDatabaseConfig::Remote(
                 RemoteMetadataDatabaseConfig {
-                    primary: def.primary.convert()?,
-                    filenodes: def.filenodes.convert()?,
-                    mutation: def.mutation.convert()?,
+                    primary: raw.primary.convert()?,
+                    filenodes: raw.filenodes.convert()?,
+                    mutation: raw.mutation.convert()?,
                 },
             )),
             RawMetadataConfig::UnknownField(f) => Err(anyhow!(
