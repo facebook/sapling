@@ -99,7 +99,7 @@ class bundlerevlog(revlog.revlog):
                 node,
             )
             self.index.insert(-1, e)
-            self.index2.insert([p for p in (p1rev, p2rev) if p >= 0])
+            self.index2.insert(node, [p for p in (p1rev, p2rev) if p >= 0])
             self.nodemap[node] = n
             self.bundlerevs.add(n)
             self.bundleheads.add(n)

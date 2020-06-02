@@ -12,6 +12,7 @@ use radixbuf::key::KeyId;
 use radixbuf::radix::{
     radix_insert, radix_lookup, radix_lookup_unchecked, radix_prefix_lookup, RADIX_NCHILDREN,
 };
+use std::sync::Arc;
 use std::u32;
 
 /// An index for node to rev lookups.
@@ -63,10 +64,11 @@ use std::u32;
 /// of the time even if the source of truth has changed. It's possible to update
 /// the main index in-place. But that requires extra efforts to deal with possible
 /// filesystem issues like locking, or unexpected poweroff.
+#[derive(Clone)]
 pub struct NodeRevMap<C, I> {
     pub(crate) changelogi: C,
-    main_index: I,        // Immutable main index
-    side_index: Vec<u32>, // Mutable side index
+    main_index: I,             // Immutable main index
+    side_index: Arc<Vec<u32>>, // Mutable side index
 }
 
 // Offsets in the main radix and key buffers
@@ -118,6 +120,7 @@ impl<C: AsRef<[RevlogEntry]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
             next_rev,
             end_rev,
         )?;
+        let side_index = Arc::new(side_index);
 
         Ok(NodeRevMap {
             changelogi,
@@ -141,8 +144,13 @@ impl<C: AsRef<[RevlogEntry]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
             rev_to_node,
             cl,
         )?;
-        let side_res =
-            radix_prefix_lookup(&self.side_index, SIDE_RADIX_OFFSET, iter, rev_to_node, cl)?;
+        let side_res = radix_prefix_lookup(
+            self.side_index.as_ref(),
+            SIDE_RADIX_OFFSET,
+            iter,
+            rev_to_node,
+            cl,
+        )?;
         match (main_res, side_res) {
             (Some(_), Some(_)) => bail!(rerrors::ErrorKind::AmbiguousPrefix),
             (Some(rev), None) | (None, Some(rev)) => Ok(Some(rev_to_node(&self.changelogi, rev)?)),
@@ -155,7 +163,8 @@ impl<C: AsRef<[RevlogEntry]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
         let cl = &self.changelogi;
         if let Some(rev) = radix_lookup(&self.main_index, 1, &node, rev_to_node, cl)? {
             Ok(Some(rev.into()))
-        } else if let Some(rev) = radix_lookup(&self.side_index, 0, &node, rev_to_node, cl)? {
+        } else if let Some(rev) = radix_lookup(self.side_index.as_ref(), 0, &node, rev_to_node, cl)?
+        {
             Ok(Some(rev.into()))
         } else {
             Ok(None)
@@ -226,7 +235,7 @@ fn rev_to_node<K: AsRef<[RevlogEntry]>>(changelogi: &K, rev: KeyId) -> Result<&[
     let buf = changelogi.as_ref();
     let rev_usize: usize = rev.into();
     let entry = &buf[rev_usize];
-    Ok(&entry.node[0..20])
+    Ok(&entry.node[..])
 }
 
 /// Convert hex base16 sequence to binary base16 sequence.

@@ -7,18 +7,26 @@
 
 use crate::nodemap;
 use crate::NodeRevMap;
+use anyhow::bail;
 use anyhow::Result;
+use dag::ops::IdConvert;
+use dag::ops::PrefixLookup;
+use dag::Group;
 use dag::Id;
 use dag::IdSet;
+use dag::Vertex;
 use indexedlog::utils::{atomic_write, mmap_bytes};
 use minibytes::Bytes;
-use std::cell::RefCell;
+use parking_lot::RwLock;
+use std::collections::BTreeMap;
 use std::fs;
 use std::io;
 use std::marker::PhantomData;
 use std::mem;
+use std::ops::Deref;
 use std::path::Path;
 use std::slice;
+use std::sync::Arc;
 
 impl RevlogIndex {
     /// Calculate `heads(ancestors(revs))`.
@@ -119,7 +127,14 @@ impl RevlogIndex {
 /// Minimal code to read the DAG (i.e. parents) stored in non-inlined revlog.
 pub struct RevlogIndex {
     /// Inserted entries that are not flushed to disk.
-    pub inserted: RefCell<Vec<ParentRevs>>,
+    pub pending_parents: Vec<ParentRevs>,
+
+    /// Inserted node -> index of pending_parents.
+    pub pending_nodes: Vec<Vertex>,
+    pub pending_nodes_index: BTreeMap<Vertex, usize>,
+
+    /// Snapshot used to construct Set.
+    snapshot: RwLock<Option<Arc<RevlogIndex>>>,
 
     /// Index to convert node to rev.
     pub nodemap: NodeRevMap<BytesSlice<RevlogEntry>, BytesSlice<u32>>,
@@ -158,10 +173,12 @@ pub struct RevlogEntry {
     link: i32,
     p1: i32,
     p2: i32,
-    pub node: [u8; 32],
+    pub node: [u8; 20],
+    _padding: [u8; 12],
 }
 
 /// Bytes that can be converted to &[T].
+#[derive(Clone)]
 pub struct BytesSlice<T>(Bytes, PhantomData<T>);
 pub trait UnsafeSliceCast {}
 
@@ -209,15 +226,17 @@ impl RevlogIndex {
         }
         let result = Self {
             nodemap,
-            inserted: Default::default(),
+            pending_parents: Default::default(),
+            pending_nodes: Default::default(),
+            pending_nodes_index: Default::default(),
+            snapshot: Default::default(),
         };
         Ok(result)
     }
 
     /// Revisions in total.
     pub fn len(&self) -> usize {
-        let inserted = self.inserted.borrow();
-        self.data_len() + inserted.len()
+        self.data_len() + self.pending_parents.len()
     }
 
     /// Revisions stored in the original revlog index.
@@ -234,8 +253,7 @@ impl RevlogIndex {
     pub fn parents(&self, rev: u32) -> ParentRevs {
         let data_len = self.data_len();
         if rev >= data_len as u32 {
-            let inserted = self.inserted.borrow();
-            return inserted[rev as usize - data_len].clone();
+            return self.pending_parents[rev as usize - data_len].clone();
         }
 
         let data = self.data();
@@ -245,11 +263,35 @@ impl RevlogIndex {
     }
 
     /// Insert a new revision with given parents at the end.
-    pub fn insert(&self, parents: Vec<u32>) {
-        let mut inserted = self.inserted.borrow_mut();
+    pub fn insert(&mut self, node: Vertex, parents: Vec<u32>) {
         let p1 = parents.get(0).map(|r| *r as i32).unwrap_or(-1);
         let p2 = parents.get(1).map(|r| *r as i32).unwrap_or(-1);
-        inserted.push(ParentRevs::from_p1p2(p1, p2));
+        self.pending_parents.push(ParentRevs::from_p1p2(p1, p2));
+        self.pending_nodes.push(node.clone());
+
+        let idx = self.pending_parents.len();
+        self.pending_nodes_index.insert(node, idx);
+        *self.snapshot.write() = None;
+    }
+
+    /// Create a Arc snapshot of IdConvert trait object on demand.
+    pub fn get_snapshot(&self) -> Arc<Self> {
+        let mut snapshot = self.snapshot.write();
+        // Create snapshot on demand.
+        match snapshot.deref() {
+            Some(s) => s.clone(),
+            None => {
+                let result = Arc::new(RevlogIndex {
+                    pending_parents: self.pending_parents.clone(),
+                    pending_nodes: self.pending_nodes.clone(),
+                    pending_nodes_index: self.pending_nodes_index.clone(),
+                    snapshot: Default::default(),
+                    nodemap: self.nodemap.clone(),
+                });
+                *snapshot = Some(result.clone());
+                result
+            }
+        }
     }
 }
 
@@ -263,5 +305,69 @@ fn read_path(path: &Path, fallback: Bytes) -> io::Result<Bytes> {
             }
         }
         Ok(file) => mmap_bytes(&file, None),
+    }
+}
+
+impl PrefixLookup for RevlogIndex {
+    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<Vertex>> {
+        // Search through the BTreeMap
+        let start = Vertex::from_hex(hex_prefix)?;
+        let mut result = Vec::new();
+        for (vertex, _) in self.pending_nodes_index.range(start..) {
+            if !vertex.to_hex().as_bytes().starts_with(hex_prefix) {
+                break;
+            }
+            result.push(vertex.clone());
+            if result.len() >= limit {
+                break;
+            }
+        }
+        // Search through the NodeRevMap
+        if let Some(node) = self.nodemap.hex_prefix_to_node(hex_prefix)? {
+            result.push(node.to_vec().into());
+        }
+        Ok(result)
+    }
+}
+
+impl IdConvert for RevlogIndex {
+    fn vertex_id(&self, vertex: Vertex) -> Result<Id> {
+        if let Some(pending_id) = self.pending_nodes_index.get(&vertex) {
+            Ok(Id((pending_id + self.data_len()) as _))
+        } else if let Some(id) = self.nodemap.node_to_rev(vertex.as_ref())? {
+            Ok(Id(id as _))
+        } else {
+            bail!("not found in revlog: {:?}", &vertex)
+        }
+    }
+    fn vertex_id_with_max_group(&self, vertex: &Vertex, _max_group: Group) -> Result<Option<Id>> {
+        // RevlogIndex stores everything in the master group. So max_gorup is ignored.
+        if let Some(pending_id) = self.pending_nodes_index.get(vertex) {
+            Ok(Some(Id((pending_id + self.data_len()) as _)))
+        } else if let Some(id) = self.nodemap.node_to_rev(vertex.as_ref())? {
+            Ok(Some(Id(id as _)))
+        } else {
+            Ok(None)
+        }
+    }
+    fn vertex_name(&self, id: Id) -> Result<Vertex> {
+        let id = id.0 as usize;
+        if id < self.data_len() {
+            Ok(Vertex::from(self.data()[id].node.as_ref().to_vec()))
+        } else {
+            match self.pending_nodes.get(id - self.data_len()) {
+                Some(node) => Ok(node.clone()),
+                None => bail!("rev {} not found", id),
+            }
+        }
+    }
+    fn contains_vertex_name(&self, vertex: &Vertex) -> Result<bool> {
+        if let Some(_pending_id) = self.pending_nodes_index.get(vertex) {
+            Ok(true)
+        } else if let Some(_id) = self.nodemap.node_to_rev(vertex.as_ref())? {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 }

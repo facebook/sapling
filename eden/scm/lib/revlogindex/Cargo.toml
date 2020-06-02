@@ -8,4 +8,5 @@ anyhow = "1.0.20"
 dag = { path = "../dag" }
 indexedlog = { path = "../indexedlog" }
 minibytes = { path = "../minibytes" }
+parking_lot = "0.10"
 radixbuf = { path = "../radixbuf" }

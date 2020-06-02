@@ -2061,7 +2061,7 @@ class revlog(object):
         self.index.insert(-1, e)
         index2 = getattr(self, "index2", None)
         if index2 is not None:
-            index2.insert([p for p in (p1r, p2r) if p >= 0])
+            index2.insert(node, [p for p in (p1r, p2r) if p >= 0])
         self.nodemap[node] = curr
 
         entry = self._io.packentry(e, self.node, self.version, curr)
