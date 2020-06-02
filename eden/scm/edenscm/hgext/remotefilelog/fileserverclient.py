@@ -317,24 +317,31 @@ class getpackclient(object):
         )
 
     def getpack(self, datastore, historystore, fileids):
-        with self._connect() as conn:
-            self.ui.metrics.gauge("ssh_getpack_revs", len(fileids))
-            self.ui.metrics.gauge("ssh_getpack_calls", 1)
+        chunksize = self.ui.configint("remotefilelog", "prefetchchunksize", 200000)
 
-            getpackversion = self.ui.configint("remotefilelog", "getpackversion")
+        receiveddatalen = 0
+        for start_id in range(0, len(fileids), chunksize):
+            ids = fileids[start_id : start_id + chunksize]
 
-            remote = conn.peer
-            remote._callstream("getpackv%d" % getpackversion)
+            with self._connect() as conn:
+                self.ui.metrics.gauge("ssh_getpack_revs", len(ids))
+                self.ui.metrics.gauge("ssh_getpack_calls", 1)
 
-            self._sendpackrequest(remote, fileids)
+                getpackversion = self.ui.configint("remotefilelog", "getpackversion")
 
-            pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
+                remote = conn.peer
+                remote._callstream("getpackv%d" % getpackversion)
 
-            receiveddata, receivedhistory = wirepack.receivepack(
-                self.repo.ui, pipei, datastore, historystore, version=getpackversion
-            )
+                self._sendpackrequest(remote, ids)
 
-            return len(receiveddata)
+                pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
+
+                receiveddata, _receivedhistory = wirepack.receivepack(
+                    self.repo.ui, pipei, datastore, historystore, version=getpackversion
+                )
+                receiveddatalen += len(receiveddata)
+
+        return receiveddatalen
 
     @perftrace.tracefunc("Fetch Pack")
     def prefetch(self, datastore, historystore, fileids):
@@ -543,10 +550,7 @@ class fileserverclient(object):
 
         dpack, hpack = self.repo.fileslog.getmutablesharedpacks()
         fileids = [(filename, bin(node)) for filename, node in fileids]
-        chunksize = self.ui.configint("remotefilelog", "prefetchchunksize", 200000)
-        for start_id in range(0, len(fileids), chunksize):
-            ids = fileids[start_id : start_id + chunksize]
-            self.getpackclient.prefetch(dpack, hpack, ids)
+        self.getpackclient.prefetch(dpack, hpack, fileids)
 
     def _httpfetchpacks(self, fileids, fetchdata, fetchhistory):
         """Fetch packs via HTTPS using the Eden API"""

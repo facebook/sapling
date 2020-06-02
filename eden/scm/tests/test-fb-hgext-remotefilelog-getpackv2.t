@@ -39,3 +39,11 @@ Shallow clone from full
   79c51fb96423: y
    dir/y: bin=0 lnk=0 flag=0 size=2 copied='' chain=076f5e2225b3
     rawdata: 'y\n'
+
+Now try prefetchchunksize option, and expect that two getpackv2 calls were made
+  $ hg up -q null
+  $ rm -r "$TESTTMP"/hgcache/*
+  $ ls "$TESTTMP"/hgcache/
+  $ hg up tip --config remotefilelog.prefetchchunksize=1 --debug 2>&1 | grep 'sending getpackv2 command'
+  sending getpackv2 command
+  sending getpackv2 command
