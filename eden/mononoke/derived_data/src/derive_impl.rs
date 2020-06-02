@@ -16,11 +16,10 @@ use futures::{
     future::{try_join, try_join_all, FutureExt as NewFutureExt, TryFutureExt},
     TryStreamExt,
 };
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::FutureExt;
 use futures_old::sync::oneshot;
-use futures_old::{future, stream, Future, Stream};
+use futures_old::Future;
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
-use lock_ext::LockExt;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::ChangesetId;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -28,7 +27,7 @@ use slog::debug;
 use slog::warn;
 use stats::prelude::*;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -88,39 +87,29 @@ pub fn derive_impl<
                 find_topo_sorted_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode)
                     .await?;
 
-            let mut acc = 0;
-            for csids in all_csids.chunks(100) {
-                let mapping = DeferredDerivedMapping::new(derived_mapping.clone());
+            for csid in &all_csids {
+                ctx.scuba().clone().log_with_msg(
+                    "Waiting for derived data to be generated",
+                    Some(format!("{} {}", Derived::NAME, csid)),
+                );
 
-                for csid in csids {
-                    ctx.scuba().clone().log_with_msg(
-                        "Waiting for derived data to be generated",
-                        Some(format!("{} {}", Derived::NAME, csid)),
-                    );
+                let (stats, res) = derive_may_panic(&ctx, &repo, &derived_mapping, &csid)
+                    .timed()
+                    .await;
 
-                    let (stats, res) = derive_may_panic(&ctx, &repo, &mapping, &csid).timed().await;
-
-                    let tag = if res.is_ok() {
-                        "Got derived data"
-                    } else {
-                        "Failed to get derived data"
-                    };
-                    ctx.scuba()
-                        .clone()
-                        .add_future_stats(&stats)
-                        .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, csid)));
-                    res?;
-                }
-
-                mapping
-                    .persist(ctx.clone())
-                    .traced(&ctx.trace(), "derive::update_mapping", None)
-                    .compat()
-                    .await?;
-                acc += csids.len();
+                let tag = if res.is_ok() {
+                    "Got derived data"
+                } else {
+                    "Failed to get derived data"
+                };
+                ctx.scuba()
+                    .clone()
+                    .add_future_stats(&stats)
+                    .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, csid)));
+                res?;
             }
 
-            let res: Result<_, DeriveError> = Ok(acc);
+            let res: Result<_, DeriveError> = Ok(all_csids.len());
             res
         };
 
@@ -528,70 +517,6 @@ impl<Derived: BonsaiDerived> DeriveNode<Derived> {
     }
 }
 
-#[derive(Clone)]
-struct DeferredDerivedMapping<M: BonsaiDerivedMapping> {
-    cache: Arc<Mutex<HashMap<ChangesetId, M::Value>>>,
-    inner: M,
-}
-
-impl<M> DeferredDerivedMapping<M>
-where
-    M: BonsaiDerivedMapping + Clone,
-{
-    pub fn new(inner: M) -> Self {
-        Self {
-            cache: Default::default(),
-            inner,
-        }
-    }
-
-    pub fn persist(&self, ctx: CoreContext) -> impl Future<Item = (), Error = Error> {
-        let cache = self
-            .cache
-            .with(|cache| std::mem::replace(cache, HashMap::new()));
-        let inner = self.inner.clone();
-        stream::iter_ok(cache)
-            .map(move |(csid, id)| inner.put(ctx.clone(), csid, id))
-            .buffered(4096)
-            .for_each(|_| Ok(()))
-    }
-}
-
-impl<M> BonsaiDerivedMapping for DeferredDerivedMapping<M>
-where
-    M: BonsaiDerivedMapping,
-    M::Value: Clone,
-{
-    type Value = M::Value;
-
-    fn get(
-        &self,
-        ctx: CoreContext,
-        mut csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
-        let cached: HashMap<_, _> = self.cache.with(|cache| {
-            csids
-                .iter()
-                .map(|csid| cache.get(csid).map(|val| (*csid, val.clone())))
-                .flatten()
-                .collect()
-        });
-        csids.retain(|csid| !cached.contains_key(&csid));
-        self.inner
-            .get(ctx, csids)
-            .map(move |mut noncached| {
-                noncached.extend(cached);
-                noncached
-            })
-            .boxify()
-    }
-
-    fn put(&self, _ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
-        self.cache.with(|cache| cache.insert(csid, id));
-        future::ok(()).boxify()
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -609,6 +534,7 @@ mod test {
     };
     use futures::compat::Future01CompatExt;
     use futures_ext::BoxFuture;
+    use futures_old::{future, Stream};
     use lazy_static::lazy_static;
     use lock_ext::LockExt;
     use maplit::hashmap;
