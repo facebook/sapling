@@ -55,7 +55,7 @@ void Subprocess::createSubprocess(
       nullptr,
       nullptr,
       TRUE, // inherit the handles
-      CREATE_NO_WINDOW,
+      0,
       nullptr,
       currentDir,
       &startupInfo,
