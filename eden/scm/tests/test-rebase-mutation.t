@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
   $ configure mutation-norecord
   $ enable rebase
@@ -767,6 +766,11 @@ Even when the chain include missing node
   $ hg commit -m D
   $ hg --hidden debugstrip -r 'desc(B1)'
   saved backup bundle to $TESTTMP/obsskip/.hg/strip-backup/86f6414ccda7-b1c452ee-backup.hg
+
+XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be okay)
+  $ enable amend
+  $ hg hide 3 -q
+
   $ hg log -G
   @  5:1a79b7535141 D
   |

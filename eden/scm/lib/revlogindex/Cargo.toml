@@ -6,4 +6,6 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.20"
 dag = { path = "../dag" }
+indexedlog = { path = "../indexedlog" }
+minibytes = { path = "../minibytes" }
 radixbuf = { path = "../radixbuf" }

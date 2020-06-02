@@ -126,11 +126,6 @@ impl<C: AsRef<[RevlogEntry]>, I: AsRef<[u32]>> NodeRevMap<C, I> {
         })
     }
 
-    /// Return an empty index that can be used as "main_index" when passed to `new`.
-    pub fn empty_index_buffer() -> Vec<u32> {
-        return vec![0u32; RADIX_HEADER_LEN + RADIX_NCHILDREN];
-    }
-
     /// Convert hex prefix to node.
     pub fn hex_prefix_to_node<T: AsRef<[u8]>>(&self, hex_prefix: T) -> Result<Option<&[u8]>> {
         let bin_prefix = match hex_to_bin_base16(hex_prefix) {
@@ -248,4 +243,9 @@ fn hex_to_bin_base16<T: AsRef<[u8]>>(base16: T) -> Option<Vec<u8>> {
         }
     }
     Some(result)
+}
+
+/// Return an empty index that can be used as "main_index" when passed to `new`.
+pub fn empty_index_buffer() -> Vec<u8> {
+    return vec![0u8; 4 * (RADIX_HEADER_LEN + RADIX_NCHILDREN)];
 }

@@ -7,11 +7,11 @@
 
 #![allow(non_camel_case_types)]
 
-use ::revlogindex::{RevlogEntry, RevlogIndex};
+use ::revlogindex::RevlogIndex;
 use cpython::*;
-use cpython_ext::{PyNone, SimplePyBuf};
+use cpython_ext::{PyNone, ResultPyErrExt};
 use pydag::Spans;
-use std::cell::RefCell;
+use std::path::Path;
 
 // XXX: The revlogindex is a temporary solution before migrating to
 // segmented changelog. It is here to experiment breaking changes with
@@ -29,14 +29,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class revlogindex |py| {
-    data changelogi: RevlogIndex<SimplePyBuf<RevlogEntry>>;
+    data changelogi: RevlogIndex;
 
-    def __new__(_cls, changelogi: &PyObject) -> PyResult<Self> {
-        let changelogi = RevlogIndex {
-            data: SimplePyBuf::new(py, changelogi),
-            inserted: RefCell::new(Vec::new()),
-        };
-        Self::create_instance(py, changelogi)
+    def __new__(_cls, changelogipath: String, nodemappath: String) -> PyResult<Self> {
+        let changelogipath = Path::new(&changelogipath);
+        let nodemappath = Path::new(&nodemappath);
+        let index = RevlogIndex::new(&changelogipath, &nodemappath).map_pyerr(py)?;
+        Self::create_instance(py, index)
     }
 
     /// Calculate `heads(ancestors(revs))`.

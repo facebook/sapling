@@ -6,6 +6,7 @@
  */
 
 use cpython::{PyBytes, PyModule, PyObject, PyResult, Python};
+use revlogindex::nodemap::empty_index_buffer;
 use revlogindex::NodeRevMap;
 use revlogindex::RevlogEntry;
 use std::slice;
@@ -54,8 +55,7 @@ py_class!(class nodemap |py| {
 
     @staticmethod
     def emptyindexbuffer() -> PyResult<PyBytes> {
-        let buf = NodeRevMap::<Vec<RevlogEntry>, Vec<u32>>::empty_index_buffer();
-        let slice = unsafe { slice::from_raw_parts(buf.as_ptr() as *const u8, buf.len() * 4) };
-        Ok(PyBytes::new(py, slice))
+        let buf = empty_index_buffer();
+        Ok(PyBytes::new(py, &buf))
     }
 });

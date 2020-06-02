@@ -7,7 +7,7 @@
 
 #![allow(dead_code)]
 
-mod nodemap;
+pub mod nodemap;
 mod revlogindex;
 
 pub use crate::nodemap::NodeRevMap;

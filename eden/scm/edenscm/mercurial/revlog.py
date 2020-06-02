@@ -457,7 +457,10 @@ class revlog(object):
         if nodemap is not None:
             self.nodemap = self._nodecache = nodemap
         if index2:
-            self.index2 = bindings.revlogindex.revlogindex(indexdata)
+            nodemapfile = indexfile[:-2] + ".nodemap"
+            self.index2 = bindings.revlogindex.revlogindex(
+                opener.join(indexfile), opener.join(nodemapfile)
+            )
         if not self._chunkcache:
             self._chunkclear()
         # revnum -> (chain-length, sum-delta-length)
