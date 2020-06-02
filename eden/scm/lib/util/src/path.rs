@@ -173,7 +173,7 @@ pub fn create_dir(path: impl AsRef<Path>) -> io::Result<()> {
 
 /// Create the directory with group write permission on UNIX systems.
 pub fn create_shared_dir(path: impl AsRef<Path>) -> io::Result<()> {
-    create_dir_with_mode(path.as_ref(), 0o775)
+    create_dir_with_mode(path.as_ref(), 0o2775)
 }
 
 /// Expand the user's home directory and any environment variables references in
@@ -312,7 +312,7 @@ mod tests {
             create_shared_dir(&path)?;
             assert!(path.is_dir());
             let metadata = path.metadata()?;
-            assert_eq!(metadata.permissions().mode(), 0o40775);
+            assert_eq!(metadata.permissions().mode(), 0o42775);
             // check we don't have temporary directory left
             assert_eq!(tempdir.path().read_dir()?.count(), 1);
             Ok(())
