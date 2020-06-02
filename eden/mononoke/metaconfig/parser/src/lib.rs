@@ -10,6 +10,7 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
+mod convert;
 pub mod errors;
 pub mod repoconfig;
 

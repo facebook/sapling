@@ -14,10 +14,10 @@ use std::{
     fs,
     path::Path,
     str,
-    str::FromStr,
     time::Duration,
 };
 
+use crate::convert::Convert;
 use crate::errors::ErrorKind;
 use anyhow::{anyhow, format_err, Error, Result};
 use ascii::AsciiString;
@@ -38,8 +38,8 @@ use metaconfig_types::{
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use repos::{
-    RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawCommonConfig, RawHookConfig,
-    RawRepoConfig, RawRepoConfigs, RawStorageConfig, RawUnodeVersion, RawWireprotoLoggingConfig,
+    RawCommitSyncConfig, RawCommonConfig, RawHookConfig, RawRepoConfig, RawRepoConfigs,
+    RawStorageConfig, RawUnodeVersion, RawWireprotoLoggingConfig,
 };
 
 const CONFIGERATOR_CRYPTO_PROJECT: &'static str = "SCM";
@@ -283,78 +283,10 @@ impl RepoConfigs {
     ) -> Result<HashMap<String, CommitSyncConfig>> {
         raw_commit_syncs
             .into_iter()
-            .map(|(config_name, v)| {
-                let RawCommitSyncConfig {
-                    large_repo_id,
-                    common_pushrebase_bookmarks,
-                    small_repos,
-                    version_name,
-                } = v;
-
-                let small_repos: Result<HashMap<RepositoryId, SmallRepoCommitSyncConfig>> = small_repos
-                    .into_iter()
-                    .map(|raw_small_repo_config| {
-                        let RawCommitSyncSmallRepoConfig {
-                            repoid,
-                            default_action,
-                            default_prefix,
-                            bookmark_prefix,
-                            mapping,
-                            direction,
-                        } = raw_small_repo_config;
-
-                        let default_action = match default_action.as_str() {
-                            "preserve" => DefaultSmallToLargeCommitSyncPathAction::Preserve,
-                            "prepend_prefix" => match default_prefix {
-                                Some(prefix_to_prepend) => {
-                                    let prefix_to_prepend = MPath::new(prefix_to_prepend)?;
-                                    DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix_to_prepend)
-                                },
-                                None => return Err(format_err!("default_prefix must be provided when default_action=\"prepend_prefix\""))
-                            },
-                            other => return Err(format_err!("unknown default_action: \"{}\"", other))
-                        };
-
-                        let mapping: Result<HashMap<MPath, MPath>> = mapping
-                            .into_iter()
-                            .map(|(k, v)| {
-                                let k = MPath::new(k)?;
-                                let v = MPath::new(v)?;
-                                Ok((k, v))
-                            }).collect();
-
-                        let bookmark_prefix: Result<AsciiString> = AsciiString::from_str(&bookmark_prefix).map_err(|_| format_err!("failed to parse ascii string from: {:?}", bookmark_prefix));
-
-                        let direction = match direction.as_str() {
-                            "large_to_small" => CommitSyncDirection::LargeToSmall,
-                            "small_to_large" => CommitSyncDirection::SmallToLarge,
-                            other => return Err(format_err!("unknown commit sync direction: \"{}\"", other))
-                        };
-
-                        Ok((RepositoryId::new(repoid), SmallRepoCommitSyncConfig {
-                            default_action,
-                            map: mapping?,
-                            bookmark_prefix: bookmark_prefix?,
-                            direction,
-                        }))
-
-                    })
-                    .collect();
-
-                let common_pushrebase_bookmarks: Result<Vec<_>> = common_pushrebase_bookmarks.into_iter().map(BookmarkName::new).collect();
-                let large_repo_id = RepositoryId::new(large_repo_id);
-
-                let commit_sync_config = CommitSyncConfig {
-                    large_repo_id,
-                    common_pushrebase_bookmarks: common_pushrebase_bookmarks?,
-                    small_repos: small_repos?,
-                    version_name: version_name.unwrap_or_else(|| "".to_string()),
-                };
-
-                Self::verify_commit_sync_config(&commit_sync_config)
-                    .map(move |_| {
-                        (config_name, commit_sync_config)
-                    })
+            .map(|(config_name, commit_sync_config)| {
+                let commit_sync_config = commit_sync_config.convert()?;
+                Self::verify_commit_sync_config(&commit_sync_config)?;
+                Ok((config_name, commit_sync_config))
             })
             .collect()
     }
@@ -966,6 +898,7 @@ mod test {
     use pretty_assertions::assert_eq;
     use std::fs::{create_dir_all, write};
     use std::num::NonZeroUsize;
+    use std::str::FromStr;
     use tempdir::TempDir;
 
     fn write_files(
