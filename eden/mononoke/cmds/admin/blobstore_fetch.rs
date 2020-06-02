@@ -183,7 +183,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
         blobstore_options,
     );
 
-    let common_config = args::read_common_config(fb, &matches)?;
+    let common_config = args::load_common_config(fb, &matches)?;
     let scuba_censored_table = common_config.scuba_censored_table;
     let scuba_redaction_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 

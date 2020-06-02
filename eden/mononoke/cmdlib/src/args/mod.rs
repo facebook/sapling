@@ -38,10 +38,8 @@ use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
 use blobstore_factory::{BlobstoreOptions, ChaosOptions, Scrubbing, ThrottleOptions};
-use metaconfig_parser::RepoConfigs;
-use metaconfig_types::{
-    BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction, StorageConfig,
-};
+use metaconfig_parser::{RepoConfigs, StorageConfigs};
+use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction};
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
@@ -438,7 +436,7 @@ fn get_repo_id_and_name_from_values<'a>(
 ) -> Result<(RepositoryId, String)> {
     let repo_name = matches.value_of(option_repo_name);
     let repo_id = matches.value_of(option_repo_id);
-    let configs = read_configs(fb, matches)?;
+    let configs = load_repo_configs(fb, matches)?;
 
     match (repo_name, repo_id) {
         (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
@@ -795,19 +793,19 @@ pub fn get_config_path<'a>(matches: &'a ArgMatches<'a>) -> Result<&'a str> {
         .ok_or(Error::msg(format!("{} must be specified", CONFIG_PATH)))
 }
 
-pub fn read_configs<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    RepoConfigs::read_configs(fb, get_config_path(matches)?)
+pub fn load_repo_configs<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
+    metaconfig_parser::load_repo_configs(fb, get_config_path(matches)?)
 }
 
-pub fn read_common_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<CommonConfig> {
-    RepoConfigs::read_common_config(fb, get_config_path(matches)?)
+pub fn load_common_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<CommonConfig> {
+    metaconfig_parser::load_common_config(fb, get_config_path(matches)?)
 }
 
-pub fn read_storage_configs<'a>(
+pub fn load_storage_configs<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
-) -> Result<HashMap<String, StorageConfig>> {
-    RepoConfigs::read_storage_configs(fb, get_config_path(matches)?)
+) -> Result<StorageConfigs> {
+    metaconfig_parser::load_storage_configs(fb, get_config_path(matches)?)
 }
 
 pub fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
@@ -820,7 +818,7 @@ pub fn get_config_by_repoid<'a>(
     matches: &ArgMatches<'a>,
     repo_id: RepositoryId,
 ) -> Result<(String, RepoConfig)> {
-    let configs = read_configs(fb, matches)?;
+    let configs = load_repo_configs(fb, matches)?;
     configs
         .get_repo_config(repo_id)
         .ok_or_else(|| format_err!("unknown repoid {:?}", repo_id))
@@ -859,7 +857,7 @@ fn open_repo_internal_with_repo_id<'a>(
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> BoxFuture<BlobRepo, Error> {
-    let common_config = try_boxfuture!(read_common_config(fb, &matches));
+    let common_config = try_boxfuture!(load_common_config(fb, &matches));
 
     let (reponame, config) = {
         let (reponame, mut config) = try_boxfuture!(get_config_by_repoid(fb, matches, repo_id));

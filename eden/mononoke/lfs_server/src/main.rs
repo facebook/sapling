@@ -252,7 +252,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         matches.value_of(ARG_UPSTREAM_URL),
     )?;
 
-    let RepoConfigs { repos, common } = args::read_configs(fb, &matches)?;
+    let RepoConfigs { repos, common } = args::load_repo_configs(fb, &matches)?;
 
     let futs = repos
         .into_iter()

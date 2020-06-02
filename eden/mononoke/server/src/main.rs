@@ -14,7 +14,7 @@ use clap::{App, ArgMatches};
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use metaconfig_parser::RepoConfigs;
+use metaconfig_parser::{load_repo_configs, RepoConfigs};
 use slog::info;
 use std::path::PathBuf;
 use std::sync::{
@@ -62,9 +62,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 // TODO(harveyhunt): Remove this once all uses of --config_path are gone.
 fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     if let Some(config_path) = matches.value_of("cpath") {
-        RepoConfigs::read_configs(fb, config_path)
+        load_repo_configs(fb, config_path)
     } else if let Some(config_path) = matches.value_of(args::CONFIG_PATH) {
-        RepoConfigs::read_configs(fb, config_path)
+        load_repo_configs(fb, config_path)
     } else {
         Err(anyhow!("a config path must be specified"))
     }

@@ -82,7 +82,7 @@ async fn do_main<'a>(
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches);
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);
 
-    let RepoConfigs { repos, common } = args::read_configs(fb, &matches)?;
+    let RepoConfigs { repos, common } = args::load_repo_configs(fb, &matches)?;
     let scuba_censored_table = common.scuba_censored_table;
 
     let location = match matches.subcommand() {

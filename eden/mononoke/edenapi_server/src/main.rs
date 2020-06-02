@@ -141,7 +141,7 @@ async fn start(
     matches: ArgMatches<'_>,
 ) -> Result<()> {
     debug!(logger, "Reading args");
-    let repo_configs = args::read_configs(fb, &matches)?;
+    let repo_configs = args::load_repo_configs(fb, &matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);

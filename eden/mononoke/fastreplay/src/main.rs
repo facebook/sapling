@@ -221,7 +221,7 @@ async fn bootstrap_repositories<'a>(
     logger: &Logger,
     scuba: &ScubaSampleBuilder,
 ) -> Result<HashMap<String, FastReplayDispatcher>, Error> {
-    let config = args::read_configs(fb, &matches)?;
+    let config = args::load_repo_configs(fb, &matches)?;
 
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);

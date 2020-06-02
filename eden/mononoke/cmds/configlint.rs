@@ -32,7 +32,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     // Most of the work is done here - this validates that the files are present,
     // are correctly formed, and have the right fields (not too many, not too few).
-    let configs = match args::read_configs(fb, &matches) {
+    let configs = match args::load_repo_configs(fb, &matches) {
         Err(err) => {
             eprintln!("Error loading configs: {:#?}", err);
             return Err(err);

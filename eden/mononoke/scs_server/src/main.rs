@@ -20,7 +20,7 @@ use fb303::server::make_FacebookService_server;
 use fb303_core::server::make_BaseService_server;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
-use metaconfig_parser::RepoConfigs;
+use metaconfig_parser::load_repo_configs;
 use mononoke_api::{CoreContext, Mononoke};
 use panichandler::Fate;
 use slog::info;
@@ -87,7 +87,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let exec = runtime.executor();
 
-    let repo_configs = RepoConfigs::read_configs(fb, config_path)?;
+    let repo_configs = load_repo_configs(fb, config_path)?;
 
     let mut scuba_builder = args::get_scuba_sample_builder(fb, &matches)?;
 

@@ -485,27 +485,6 @@ fn parse_commit_sync_config(
 }
 
 impl RepoConfigs {
-    /// Read repo configs
-    pub fn read_configs(fb: FacebookInit, config_path: impl AsRef<Path>) -> Result<Self> {
-        load_repo_configs(fb, config_path)
-    }
-
-    /// Read common config, returns default if it doesn't exist
-    pub fn read_common_config(
-        fb: FacebookInit,
-        config_path: impl AsRef<Path>,
-    ) -> Result<CommonConfig> {
-        load_common_config(fb, config_path)
-    }
-
-    /// Read all common storage configurations
-    pub fn read_storage_configs(
-        fb: FacebookInit,
-        config_root_path: impl AsRef<Path>,
-    ) -> Result<HashMap<String, StorageConfig>> {
-        Ok(load_storage_configs(fb, config_root_path)?.storage)
-    }
-
     /// Get individual `RepoConfig`, given a repo_id
     pub fn get_repo_config<'a>(
         &'a self,
@@ -662,7 +641,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -701,7 +680,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let commit_sync_config = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let commit_sync_config = load_repo_configs(fb, tmp_dir.path());
         assert!(commit_sync_config.is_ok());
 
         // Overlapping, but not identical prefixes
@@ -734,7 +713,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -773,7 +752,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -820,7 +799,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -859,7 +838,7 @@ mod test {
             "common/commitsyncmap.toml" => commit_sync_config
         };
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -899,7 +878,7 @@ mod test {
         };
 
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1039,8 +1018,7 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let repoconfig =
-            RepoConfigs::read_configs(fb, tmp_dir.path()).expect("failed to read configs");
+        let repoconfig = load_repo_configs(fb, tmp_dir.path()).expect("failed to read configs");
 
         let multiplex = BlobConfig::Multiplexed {
             multiplex_id: MultiplexId::new(1),
@@ -1326,7 +1304,7 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1360,7 +1338,7 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1389,7 +1367,7 @@ mod test {
 
             let tmp_dir = write_files(&paths);
 
-            let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+            let res = load_repo_configs(fb, tmp_dir.path());
             println!("res = {:?}", res);
             let msg = format!("{:?}", res);
             assert!(res.is_err(), "unexpected success for {}", common);
@@ -1469,7 +1447,7 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path()).expect("read configs failed");
+        let res = load_repo_configs(fb, tmp_dir.path()).expect("read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -1562,7 +1540,7 @@ mod test {
 
         let tmp_dir = write_files(&paths);
 
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path()).expect("read configs failed");
+        let res = load_repo_configs(fb, tmp_dir.path()).expect("read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -1615,7 +1593,7 @@ mod test {
         };
 
         let tmp_dir = write_files(&paths);
-        let res = RepoConfigs::read_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(fb, tmp_dir.path());
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());

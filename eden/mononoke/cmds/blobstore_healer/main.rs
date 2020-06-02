@@ -315,7 +315,8 @@ fn main(fb: FacebookInit) -> Result<()> {
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
-    let storage_config = args::read_storage_configs(fb, &matches)?
+    let storage_config = args::load_storage_configs(fb, &matches)?
+        .storage
         .remove(storage_id)
         .ok_or(format_err!("Storage id `{}` not found", storage_id))?;
     let source_blobstore_key = matches.value_of("blobstore-key-like");

@@ -190,7 +190,8 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         .value_of("storage-id")
         .ok_or(Error::msg("`storage-id` argument required"))?;
 
-    let storage_config = args::read_storage_configs(fb, &matches)?
+    let storage_config = args::load_storage_configs(fb, &matches)?
+        .storage
         .remove(storage_id)
         .ok_or(Error::msg("Unknown `storage-id`"))?;
 

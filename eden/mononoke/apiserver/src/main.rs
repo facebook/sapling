@@ -19,7 +19,7 @@ use futures_old::{future::err, Future};
 
 use blobrepo_factory::Caching;
 use context::CoreContext;
-use metaconfig_parser::RepoConfigs;
+use metaconfig_parser::load_repo_configs;
 use mononoke_api::Mononoke as NewMononoke;
 use panichandler::Fate;
 use percent_encoding::percent_decode;
@@ -517,7 +517,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let stats_aggregation =
         schedule_stats_aggregation().expect("failed to create stats aggregation scheduler");
 
-    let repo_configs = RepoConfigs::read_configs(fb, config_path)?;
+    let repo_configs = load_repo_configs(fb, config_path)?;
 
     let ssl_acceptor = if let Some(cert) = matches.value_of("ssl-certificate") {
         let cert = cert.to_string();

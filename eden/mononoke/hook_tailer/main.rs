@@ -93,7 +93,7 @@ async fn run_hook_tailer<'a>(
 ) -> Result<(), Error> {
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = BookmarkName::new(bookmark_name)?;
-    let common_config = cmdlib::args::read_common_config(fb, &matches)?;
+    let common_config = cmdlib::args::load_common_config(fb, &matches)?;
     let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
     let concurrency = cmdlib::args::get_usize(&matches, "concurrency", 100);
     let stats_file = matches.value_of("stats-file");
