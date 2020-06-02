@@ -58,22 +58,22 @@ Create and send file data request.
   $ sslcurl -s "$EDENAPI_URI/repo/files" -d@req.cbor > res.cbor
 
 Check files in response.
-  $ edenapi_read_res ls res.cbor
+  $ edenapi_read_res data ls res.cbor
   Reading from file: "res.cbor"
   186cafa3319c24956783383dc44c5cbc68c5a0ca test.txt
   17b8d4e3bafd4ec4812ad7c930aace9bf07ab033 copy.txt
 
 Verify that filenode hashes match contents.
-  $ edenapi_read_res check res.cbor
+  $ edenapi_read_res data check res.cbor
   Reading from file: "res.cbor"
 
 Examine file data.
-  $ edenapi_read_res cat res.cbor -p test.txt -h $TEST_FILENODE
+  $ edenapi_read_res data cat res.cbor -p test.txt -h $TEST_FILENODE
   Reading from file: "res.cbor"
   test content
 
 Note that copyinfo header is present for the copied file.
-  $ edenapi_read_res cat res.cbor -p copy.txt -h $COPY_FILENODE
+  $ edenapi_read_res data cat res.cbor -p copy.txt -h $COPY_FILENODE
   Reading from file: "res.cbor"
   \x01 (esc)
   copy: test.txt

@@ -27,24 +27,30 @@ use types::{
 };
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "read_res", about = "Extract data from EdenAPI responses")]
+#[structopt(name = "read_res", about = "Read the content of EdenAPI responses")]
 enum Args {
-    Ls(LsArgs),
-    Cat(CatArgs),
-    Check(CheckArgs),
+    Data(DataArgs),
     History(HistoryArgs),
 }
 
 #[derive(Debug, StructOpt)]
+#[structopt(about = "Read the content of a CBOR data response")]
+enum DataArgs {
+    Ls(DataLsArgs),
+    Cat(DataCatArgs),
+    Check(DataCheckArgs),
+}
+
+#[derive(Debug, StructOpt)]
 #[structopt(about = "List the data entries in the response")]
-struct LsArgs {
+struct DataLsArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
 }
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Get the content of a data entry")]
-struct CatArgs {
+struct DataCatArgs {
     #[structopt(help = "Input CBOR file (stdin used if omitted)")]
     input: Option<PathBuf>,
     #[structopt(long, short, help = "Output file (stdout used if omitted)")]
@@ -57,7 +63,7 @@ struct CatArgs {
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Check the validity of node hashes for all entries")]
-struct CheckArgs {
+struct DataCheckArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
 }
@@ -89,14 +95,20 @@ struct HistShowArgs {
 
 fn main() -> Result<()> {
     match Args::from_args() {
-        Args::Ls(args) => cmd_ls(args),
-        Args::Cat(args) => cmd_cat(args),
-        Args::Check(args) => cmd_check(args),
+        Args::Data(args) => cmd_data(args),
         Args::History(args) => cmd_history(args),
     }
 }
 
-fn cmd_ls(args: LsArgs) -> Result<()> {
+fn cmd_data(args: DataArgs) -> Result<()> {
+    match args {
+        DataArgs::Ls(args) => cmd_data_ls(args),
+        DataArgs::Cat(args) => cmd_data_cat(args),
+        DataArgs::Check(args) => cmd_data_check(args),
+    }
+}
+
+fn cmd_data_ls(args: DataLsArgs) -> Result<()> {
     let response: DataResponse = read_input(args.input)?;
     for entry in response.entries {
         println!("{}", entry.key());
@@ -104,7 +116,7 @@ fn cmd_ls(args: LsArgs) -> Result<()> {
     Ok(())
 }
 
-fn cmd_cat(args: CatArgs) -> Result<()> {
+fn cmd_data_cat(args: DataCatArgs) -> Result<()> {
     let path = RepoPathBuf::from_string(args.path)?;
     let hgid = args.hgid.parse()?;
     let key = Key::new(path, hgid);
@@ -119,7 +131,7 @@ fn cmd_cat(args: CatArgs) -> Result<()> {
     write_output(args.output, &entry.data().0)
 }
 
-fn cmd_check(args: CheckArgs) -> Result<()> {
+fn cmd_data_check(args: DataCheckArgs) -> Result<()> {
     let response: DataResponse = read_input(args.input)?;
     for entry in response.entries {
         match entry.data().1 {

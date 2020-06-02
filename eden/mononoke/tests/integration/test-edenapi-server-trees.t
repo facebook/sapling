@@ -58,16 +58,16 @@ Create and send tree request.
   $ sslcurl -s "$EDENAPI_URI/repo/trees" -d@req.cbor > res.cbor
 
 Check trees in response.
-  $ edenapi_read_res ls res.cbor
+  $ edenapi_read_res data ls res.cbor
   Reading from file: "res.cbor"
   15024c4dc4a27b572d623db342ae6a08d7f7adec 
   c8743b14e0789cc546125213c18a18d813862db5 
 
-  $ edenapi_read_res cat res.cbor -p '' -h $ROOT_MFID_1
+  $ edenapi_read_res data cat res.cbor -p '' -h $ROOT_MFID_1
   Reading from file: "res.cbor"
   test.txt\x00186cafa3319c24956783383dc44c5cbc68c5a0ca (esc)
 
-  $ edenapi_read_res cat res.cbor -p '' -h $ROOT_MFID_2
+  $ edenapi_read_res data cat res.cbor -p '' -h $ROOT_MFID_2
   Reading from file: "res.cbor"
   copy.txt\x0017b8d4e3bafd4ec4812ad7c930aace9bf07ab033 (esc)
   test.txt\x00186cafa3319c24956783383dc44c5cbc68c5a0ca (esc)
