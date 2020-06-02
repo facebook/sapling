@@ -8,6 +8,7 @@
 use super::{NameIter, NameSetQuery};
 use crate::ops::IdConvert;
 use crate::spanset::{SpanSet, SpanSetIter};
+use crate::Group;
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
@@ -115,7 +116,11 @@ impl NameSetQuery for DagSet {
     }
 
     fn contains(&self, name: &VertexName) -> Result<bool> {
-        self.map.contains_vertex_name(name)
+        let result = match self.map.vertex_id_with_max_group(name, Group::NON_MASTER)? {
+            Some(id) => self.spans.contains(id),
+            None => false,
+        };
+        Ok(result)
     }
 
     fn is_topo_sorted(&self) -> bool {
@@ -173,6 +178,10 @@ pub(crate) mod tests {
 
             let ab = abcd.intersection(&abefg);
             check_invariants(ab.deref())?;
+
+            assert!(abcd.contains(&vec![b'A'].into())?);
+            assert!(!abcd.contains(&vec![b'E'].into())?);
+
             // should not be "<and <...> <...>>"
             assert_eq!(format!("{:?}", &ab), "<dag [0 1]>");
 
