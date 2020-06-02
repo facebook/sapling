@@ -1014,8 +1014,8 @@ function edenapi_make_req {
 	"$EDENAPI_MAKE_REQ" "$@"
 }
 
-function edenapi_data_util {
-	"$EDENAPI_DATA_UTIL" "$@"
+function edenapi_read_res {
+	"$EDENAPI_READ_RES" "$@"
 }
 
 function lfs_server {

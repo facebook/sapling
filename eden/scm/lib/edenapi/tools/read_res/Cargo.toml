@@ -1,5 +1,5 @@
 [package]
-name = "data_util"
+name = "read_res"
 version = "0.1.0"
 edition = "2018"
 

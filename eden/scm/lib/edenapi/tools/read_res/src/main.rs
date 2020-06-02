@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! data_util -- Extract data from EdenAPI responses
+//! read_res -- Read the content of EdenAPI responses
 //!
 //! This program allows querying the contents of
 //! EdenAPI CBOR data and history responses.
@@ -27,7 +27,7 @@ use types::{
 };
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "data_util", about = "Extract data from EdenAPI responses")]
+#[structopt(name = "read_res", about = "Extract data from EdenAPI responses")]
 enum Args {
     Ls(LsArgs),
     Cat(CatArgs),

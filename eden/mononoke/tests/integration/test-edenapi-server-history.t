@@ -67,7 +67,7 @@ Create and send file data request.
   $ sslcurl -s "$EDENAPI_URI/repo/history" -d@req.cbor > res.cbor
 
 Check history content.
-  $ edenapi_data_util history show res.cbor
+  $ edenapi_read_res history show res.cbor
   Reading from file: "res.cbor"
   copy.txt:
     node: 672343a6daad357b926cd84a5a44a011ad029e5f
