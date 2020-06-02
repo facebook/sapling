@@ -273,7 +273,6 @@ def _preimportmodules():
         "fastlog",
         "fbscmquery",
         "fbhistedit",
-        "fixcorrupt",
         "fsmonitor",
         "githelp",
         "gitlookup",
