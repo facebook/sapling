@@ -7,6 +7,7 @@
 
 //! DAG and Id operations (mostly traits)
 
+use crate::default_impl;
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
@@ -169,49 +170,66 @@ pub trait DagAlgorithm {
     ///
     /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
     /// to preserve order.
-    fn parents(&self, set: NameSet) -> Result<NameSet>;
+    fn parents(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::parents(self, set)
+    }
 
     /// Calculates the n-th first ancestor.
-    fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName>;
+    fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
+        default_impl::first_ancestor_nth(self, name, n)
+    }
 
     /// Calculates heads of the given set.
     fn heads(&self, set: NameSet) -> Result<NameSet> {
-        Ok(set.clone() - self.parents(set)?)
+        default_impl::heads(self, set)
     }
 
     /// Calculates children of the given set.
     fn children(&self, set: NameSet) -> Result<NameSet>;
 
     /// Calculates roots of the given set.
-    fn roots(&self, set: NameSet) -> Result<NameSet>;
+    fn roots(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::roots(self, set)
+    }
 
     /// Calculates one "greatest common ancestor" of the given set.
     ///
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>>;
+    fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
+        default_impl::gca_one(self, set)
+    }
 
     /// Calculates all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
-    fn gca_all(&self, set: NameSet) -> Result<NameSet>;
+    fn gca_all(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::gca_all(self, set)
+    }
 
     /// Calculates all common ancestors of the given set.
-    fn common_ancestors(&self, set: NameSet) -> Result<NameSet>;
+    fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::common_ancestors(self, set)
+    }
 
     /// Tests if `ancestor` is an ancestor of `descendant`.
-    fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool>;
+    fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool> {
+        default_impl::is_ancestor(self, ancestor, descendant)
+    }
 
     /// Calculates "heads" of the ancestors of the given set. That is,
     /// Find Y, which is the smallest subset of set X, where `ancestors(Y)` is
     /// `ancestors(X)`.
     ///
-    /// This is faster than calculating `heads(ancestors(set))`.
+    /// This is faster than calculating `heads(ancestors(set))` in certain
+    /// implementations like segmented changelog.
     ///
     /// This is different from `heads`. In case set contains X and Y, and Y is
     /// an ancestor of X, but not the immediate ancestor, `heads` will include
     /// Y while this function won't.
-    fn heads_ancestors(&self, set: NameSet) -> Result<NameSet>;
+    fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::heads_ancestors(self, set)
+    }
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
     fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet>;

@@ -280,6 +280,24 @@ pub(crate) mod tests {
         }
     }
 
+    impl NameSet {
+        pub(crate) fn assert_eq(&self, other: NameSet) {
+            assert!(
+                other.count().unwrap() == self.count().unwrap()
+                    && (other.clone() & self.clone()).count().unwrap() == self.count().unwrap(),
+                "set {:?} ({:?}) != {:?} ({:?})",
+                self,
+                self.iter().unwrap().map(|i| i.unwrap()).collect::<Vec<_>>(),
+                &other,
+                other
+                    .iter()
+                    .unwrap()
+                    .map(|i| i.unwrap())
+                    .collect::<Vec<_>>(),
+            );
+        }
+    }
+
     #[derive(Debug)]
     pub(crate) struct VecQuery(Vec<VertexName>);
 

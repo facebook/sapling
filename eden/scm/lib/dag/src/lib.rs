@@ -11,6 +11,7 @@
 //!
 //! Building blocks for the commit graph used by source control.
 
+mod default_impl;
 pub mod id;
 mod iddag;
 mod iddagstore;
