@@ -353,7 +353,7 @@ impl<T: NameDagStorage> DagAlgorithm for T {
 
     /// Calculates all ancestors reachable from any name from the given set.
     fn ancestors(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().ancestors(self.to_span_set(set)?)?;
+        let spans = self.dag().ancestors(self.to_span_set(&set)?)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
@@ -362,7 +362,7 @@ impl<T: NameDagStorage> DagAlgorithm for T {
     /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
     /// to preserve order.
     fn parents(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().parents(self.to_span_set(set)?)?;
+        let spans = self.dag().parents(self.to_span_set(&set)?)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
@@ -375,19 +375,19 @@ impl<T: NameDagStorage> DagAlgorithm for T {
 
     /// Calculates heads of the given set.
     fn heads(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().heads(self.to_span_set(set)?)?;
+        let spans = self.dag().heads(self.to_span_set(&set)?)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
     /// Calculates children of the given set.
     fn children(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().children(self.to_span_set(set)?)?;
+        let spans = self.dag().children(self.to_span_set(&set)?)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
     /// Calculates roots of the given set.
     fn roots(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().roots(self.to_span_set(set)?)?;
+        let spans = self.dag().roots(self.to_span_set(&set)?)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
@@ -397,7 +397,7 @@ impl<T: NameDagStorage> DagAlgorithm for T {
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
     fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
-        match self.dag().gca_one(self.to_span_set(set)?)? {
+        match self.dag().gca_one(self.to_span_set(&set)?)? {
             None => Ok(None),
             Some(id) => Ok(Some(self.map().vertex_name(id)?)),
         }
@@ -406,13 +406,13 @@ impl<T: NameDagStorage> DagAlgorithm for T {
     /// Calculates all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
     fn gca_all(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().gca_all(self.to_span_set(set)?)?;
+        let spans = self.dag().gca_all(self.to_span_set(&set)?)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
     /// Calculates all common ancestors of the given set.
     fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().common_ancestors(self.to_span_set(set)?)?;
+        let spans = self.dag().common_ancestors(self.to_span_set(&set)?)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
@@ -433,33 +433,33 @@ impl<T: NameDagStorage> DagAlgorithm for T {
     /// an ancestor of X, but not the immediate ancestor, `heads` will include
     /// Y while this function won't.
     fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().heads_ancestors(self.to_span_set(set)?)?;
+        let spans = self.dag().heads_ancestors(self.to_span_set(&set)?)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
     fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
-        let roots = self.to_span_set(roots)?;
-        let heads = self.to_span_set(heads)?;
+        let roots = self.to_span_set(&roots)?;
+        let heads = self.to_span_set(&heads)?;
         let spans = self.dag().range(roots, heads)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
     /// Calculates the descendants of the given set.
     fn descendants(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().descendants(self.to_span_set(set)?)?;
+        let spans = self.dag().descendants(self.to_span_set(&set)?)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 }
 
 pub trait ToSpanSet {
     /// Converts [`NameSet`] to [`SpanSet`].
-    fn to_span_set(&self, set: NameSet) -> Result<SpanSet>;
+    fn to_span_set(&self, set: &NameSet) -> Result<SpanSet>;
 }
 
 impl<T: NameDagStorage> ToSpanSet for T {
     /// Converts [`NameSet`] to [`SpanSet`].
-    fn to_span_set(&self, set: NameSet) -> Result<SpanSet> {
+    fn to_span_set(&self, set: &NameSet) -> Result<SpanSet> {
         // Fast path: extract SpanSet directly.
         if let Some(set) = set.as_any().downcast_ref::<DagSet>() {
             if self.is_map_compatible(&set.map) {
