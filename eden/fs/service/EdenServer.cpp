@@ -637,6 +637,10 @@ Future<Unit> EdenServer::recoverImpl(TakeoverData&& takeoverData) {
 
 #endif // !_WIN32
 
+void EdenServer::serve() const {
+  getServer()->serve();
+}
+
 Future<Unit> EdenServer::prepare(
     std::shared_ptr<StartupLogger> logger,
     bool waitForMountCompletion) {
@@ -1544,7 +1548,7 @@ Future<Unit> EdenServer::createThriftServer() {
   return serverEventHandler_->getThriftRunningFuture();
 }
 
-void EdenServer::prepareThriftAddress() {
+void EdenServer::prepareThriftAddress() const {
   // If we are serving on a local Unix socket, remove any old socket file
   // that may be left over from a previous instance.
   // We have already acquired the mount point lock at this time, so we know
@@ -1553,11 +1557,53 @@ void EdenServer::prepareThriftAddress() {
   if (!path) {
     return;
   }
-  const int rc = unlink(path->c_str());
-  if (rc != 0 && errno != ENOENT) {
-    // This might happen if we don't have permission to remove the file.
-    folly::throwSystemError("unable to remove old Eden thrift socket ", *path);
+
+  auto sock = folly::AsyncServerSocket::UniquePtr(new folly::AsyncServerSocket);
+  const auto addr = folly::SocketAddress::makeFromPath(*path);
+
+#ifdef _WIN32
+  auto constexpr maxTries = 3;
+#else
+  auto constexpr maxTries = 1;
+#endif
+
+  auto tries = 1;
+  while (true) {
+    const int rc = unlink(path->c_str());
+    if (rc != 0 && errno != ENOENT) {
+      // This might happen if we don't have permission to remove the file.
+      folly::throwSystemError(
+          "unable to remove old Eden thrift socket ", *path);
+    }
+
+    try {
+      sock->bind(addr);
+      break;
+    } catch (const std::system_error& ex) {
+      if (tries == maxTries) {
+        throw;
+      }
+
+#ifdef _WIN32
+      // On Windows, a race condition exist where an attempt to connect to a
+      // non-existing socket will create it on-disk, preventing bind(2) from
+      // succeeding, leading to the Thrift server failing to start.
+      //
+      // Since at this point we're holding the lock, no other edenfs process
+      // should be attempting to bind to the socket, and thus it's safe to try
+      // to remove it, and retry.
+      if (std::system_category().equivalent(ex.code(), WSAEADDRINUSE)) {
+        throw;
+      }
+#else
+      (void)ex;
+#endif
+
+      tries++;
+    }
   }
+
+  server_->useExistingSocket(std::move(sock));
 }
 
 void EdenServer::stop() {

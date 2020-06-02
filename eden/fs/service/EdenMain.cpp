@@ -135,9 +135,8 @@ void DefaultEdenMain::runServer(const EdenServer& server) {
   fb303::fbData->setExportedValue(
       "build_time_unix", folly::to<std::string>(EDEN_BUILD_TIME_UNIX));
 
-  fb303::withThriftFunctionStats(kServiceName, server.getHandler().get(), [&] {
-    server.getServer()->serve();
-  });
+  fb303::withThriftFunctionStats(
+      kServiceName, server.getHandler().get(), [&] { server.serve(); });
 }
 
 int runEdenMain(EdenMain&& main, int argc, char** argv) {

@@ -155,6 +155,11 @@ class EdenServer : private TakeoverHandler {
       std::shared_ptr<StartupLogger> logger,
       bool waitForMountCompletion = true);
 
+  /**
+   * Run the EdenServer.
+   */
+  void serve() const;
+
 #ifndef _WIN32
   /**
    * Recover the EdenServer after a failed takeover request.
@@ -426,7 +431,7 @@ class EdenServer : private TakeoverHandler {
       folly::StringPiece name);
   FOLLY_NODISCARD folly::Future<folly::Unit> createThriftServer();
 
-  void prepareThriftAddress();
+  void prepareThriftAddress() const;
 
   /**
    * prepareImpl() contains the bulk of the implementation of prepare()
