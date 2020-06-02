@@ -16,7 +16,7 @@ use std::{
 };
 
 use crate::convert::Convert;
-use crate::errors::ErrorKind;
+use crate::errors::ConfigurationError;
 use anyhow::{anyhow, Result};
 use ascii::AsciiString;
 use fbinit::FacebookInit;
@@ -67,7 +67,7 @@ pub fn load_repo_configs(fb: FacebookInit, config_path: impl AsRef<Path>) -> Res
         let config = parse_repo_config(&reponame, raw_repo_config, &storage, &commit_sync)?;
 
         if !repoids.insert(config.repoid) {
-            return Err(ErrorKind::DuplicatedRepoId(config.repoid).into());
+            return Err(ConfigurationError::DuplicatedRepoId(config.repoid).into());
         }
 
         repo_configs.insert(reponame.clone(), config);
@@ -113,7 +113,7 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
             let has_identity = {
                 if whitelist_entry.identity_data.is_none() ^ whitelist_entry.identity_type.is_none()
                 {
-                    return Err(ErrorKind::InvalidFileStructure(
+                    return Err(ConfigurationError::InvalidFileStructure(
                         "identity type and data must be specified".into(),
                     )
                     .into());
@@ -123,14 +123,14 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
             };
 
             if has_tier && has_identity {
-                return Err(ErrorKind::InvalidFileStructure(
+                return Err(ConfigurationError::InvalidFileStructure(
                     "tier and identity cannot be both specified".into(),
                 )
                 .into());
             }
 
             if !has_tier && !has_identity {
-                return Err(ErrorKind::InvalidFileStructure(
+                return Err(ConfigurationError::InvalidFileStructure(
                     "tier or identity must be specified".into(),
                 )
                 .into());
@@ -151,7 +151,9 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
         .collect::<Result<_>>()?;
 
     if tiers_num > 1 {
-        return Err(ErrorKind::InvalidFileStructure("only one tier is allowed".into()).into());
+        return Err(
+            ConfigurationError::InvalidFileStructure("only one tier is allowed".into()).into(),
+        );
     }
 
     let loadlimiter_category = match common.loadlimiter_category {
@@ -234,7 +236,9 @@ fn parse_repo_config(
             .and_then(|s| s.get(name))
             .or_else(|| common_storage_config.get(name))
             .cloned()
-            .ok_or_else(|| ErrorKind::InvalidConfig(format!("Storage \"{}\" not defined", name)))?;
+            .ok_or_else(|| {
+                ConfigurationError::InvalidConfig(format!("Storage \"{}\" not defined", name))
+            })?;
 
         raw_storage_config.convert()
     };

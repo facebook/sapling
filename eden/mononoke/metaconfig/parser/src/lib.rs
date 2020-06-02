@@ -18,4 +18,4 @@ mod raw;
 pub use crate::config::{
     load_common_config, load_repo_configs, load_storage_configs, RepoConfigs, StorageConfigs,
 };
-pub use crate::errors::ErrorKind;
+pub use crate::errors::ConfigurationError;

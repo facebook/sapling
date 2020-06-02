@@ -12,7 +12,7 @@ use thiserror::Error;
 
 /// Types of errors we can raise
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum ConfigurationError {
     /// The given bookmark does not exist in the repo
     #[error("bookmark not found: {0}")]
     BookmarkNotFound(String),

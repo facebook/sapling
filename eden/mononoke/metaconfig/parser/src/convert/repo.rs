@@ -26,7 +26,7 @@ use repos::{
 };
 
 use crate::convert::Convert;
-use crate::errors::ErrorKind;
+use crate::errors::ConfigurationError;
 
 pub(crate) const DEFAULT_ARG_SIZE_THRESHOLD: u64 = 500_000;
 
@@ -102,7 +102,7 @@ impl Convert for RawHookConfig {
         let bypass_pushvar = self.bypass_pushvar.and_then(|s| {
             let pushvar: Vec<_> = s.split('=').map(|val| val.to_string()).collect();
             if pushvar.len() != 2 {
-                return Some(Err(ErrorKind::InvalidPushvar(s).into()));
+                return Some(Err(ConfigurationError::InvalidPushvar(s).into()));
             }
             Some(Ok((
                 pushvar.get(0).unwrap().clone(),
@@ -118,7 +118,7 @@ impl Convert for RawHookConfig {
         };
 
         if bypass_commit_message.is_some() && bypass_pushvar.is_some() {
-            return Err(ErrorKind::TooManyBypassOptions(self.name).into());
+            return Err(ConfigurationError::TooManyBypassOptions(self.name).into());
         }
         let bypass = bypass_commit_message.or(bypass_pushvar);
 
@@ -144,7 +144,7 @@ impl Convert for RawBookmarkConfig {
             (Some(regex), None) => match Regex::new(&regex) {
                 Ok(regex) => BookmarkOrRegex::Regex(regex),
                 Err(err) => {
-                    return Err(ErrorKind::InvalidConfig(format!(
+                    return Err(ConfigurationError::InvalidConfig(format!(
                         "invalid bookmark regex: {}",
                         err
                     ))
@@ -152,7 +152,7 @@ impl Convert for RawBookmarkConfig {
                 }
             },
             _ => {
-                return Err(ErrorKind::InvalidConfig(
+                return Err(ConfigurationError::InvalidConfig(
                     "bookmark's params need to specify regex xor name".into(),
                 )
                 .into());

@@ -17,7 +17,7 @@ use repos::{
     RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawStorageConfig,
 };
 
-use crate::errors::ErrorKind;
+use crate::errors::ConfigurationError;
 
 const CONFIGERATOR_CRYPTO_PROJECT: &'static str = "SCM";
 const CONFIGERATOR_PREFIX: &'static str = "configerator://";
@@ -46,10 +46,11 @@ pub(crate) fn read_raw_configs(fb: FacebookInit, config_path: &Path) -> Result<R
         let repo_configs = std::fs::read(config_path)?;
         Ok(serde_json::from_slice(&repo_configs)?)
     } else {
-        Err(
-            ErrorKind::InvalidFileStructure(format!("{} does not exist", config_path.display()))
-                .into(),
-        )
+        Err(ConfigurationError::InvalidFileStructure(format!(
+            "{} does not exist",
+            config_path.display()
+        ))
+        .into())
     }
 }
 
@@ -73,7 +74,7 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
     let mut repos = HashMap::new();
     let repos_dir = config_path.join("repos");
     if !repos_dir.is_dir() {
-        return Err(ErrorKind::InvalidFileStructure(format!(
+        return Err(ConfigurationError::InvalidFileStructure(format!(
             "expected 'repos' directory under {}",
             config_path.display()
         ))
@@ -85,7 +86,10 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
             .file_name()
             .and_then(|s| s.to_str())
             .ok_or_else(|| {
-                ErrorKind::InvalidFileStructure(format!("invalid repo path {:?}", repo_config_path))
+                ConfigurationError::InvalidFileStructure(format!(
+                    "invalid repo path {:?}",
+                    repo_config_path
+                ))
             })?
             .to_string();
 
@@ -111,7 +115,7 @@ where
             return Ok(Default::default());
         }
 
-        return Err(ErrorKind::InvalidFileStructure(format!(
+        return Err(ConfigurationError::InvalidFileStructure(format!(
             "{} should be a file",
             path.display()
         ))
