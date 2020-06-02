@@ -47,6 +47,7 @@ Test bisect state
   $ hg status
   
   # The repository is in an unfinished *bisect* state.
+  # Current bisect state: 1 good commit(s), 0 bad commit(s), 0 skip commit(s)
   # To mark the changeset good:    hg bisect --good
   # To mark the changeset bad:     hg bisect --bad
   # To abort:                      hg bisect --reset
@@ -282,3 +283,31 @@ Test args escaping in continue command
   # To continue:                hg --config 'extensions.fsmonitor=!' --config 'ui.ssh=ssh -oControlMaster=no' update -C 2977a57ce863
   # To abort:                   hg update --clean b1    (warning: this will discard uncommitted changes)
 
+  $ unbreakupdate
+  $ hg update --clean b1
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status
+
+Test bisect search status (after cleaning up previous setup)
+  $ echo 'z' > z
+  $ hg commit -Am 'z' -q
+  $ hg bisect --bad
+  $ hg bisect --good 0efcea34f18a
+  Testing changeset 69a19f24e505 (5 changesets remaining, ~2 tests)
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status
+  
+  # The repository is in an unfinished *bisect* state.
+  # Current bisect state: 1 good commit(s), 1 bad commit(s), 0 skip commit(s)
+  # 
+  # Current Tracker: bad commit     current        good commit
+  #                  547e426ae373...69a19f24e505...0efcea34f18a
+  # Commits remaining:           5
+  # Estimated bisects remaining: 3
+  # To mark the changeset good:    hg bisect --good
+  # To mark the changeset bad:     hg bisect --bad
+  # To abort:                      hg bisect --reset
+
+Test hg status is normal after bisect reset
+  $ hg bisect --reset
+  $ hg status

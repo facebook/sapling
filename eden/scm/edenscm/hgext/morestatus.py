@@ -9,9 +9,19 @@ This extension will wrap the status command to make it show more context about
 the state of the repo
 """
 
+import math
 import os
 
-from edenscm.mercurial import commands, merge as mergemod, pycompat, registrar, scmutil
+from edenscm.mercurial import (
+    commands,
+    hbisect,
+    merge as mergemod,
+    node as nodeutil,
+    pycompat,
+    registrar,
+    scmutil,
+)
+from edenscm.mercurial.error import Abort
 from edenscm.mercurial.extensions import wrapcommand
 from edenscm.mercurial.i18n import _
 
@@ -117,6 +127,42 @@ def bisectmsg(repo, ui):
         "To mark the changeset bad:     hg bisect --bad\n"
         "To abort:                      hg bisect --reset\n"
     )
+
+    state = hbisect.load_state(repo)
+    bisectstatus = _(
+        """Current bisect state: {} good commit(s), {} bad commit(s), {} skip commit(s)"""
+    ).format(len(state["good"]), len(state["bad"]), len(state["skip"]))
+    ui.write_err(prefixlines(bisectstatus))
+
+    if len(state["good"]) > 0 and len(state["bad"]) > 0:
+        try:
+            nodes, commitsremaining, searching, badnode, goodnode = hbisect.bisect(
+                repo, state
+            )
+            searchesremaining = (
+                int(math.ceil(math.log(commitsremaining, 2)))
+                if commitsremaining > 0
+                else 0
+            )
+            bisectstatus = _(
+                """
+Current Tracker: bad commit     current        good commit
+                 {}...{}...{}
+Commits remaining:           {}
+Estimated bisects remaining: {}
+"""
+            ).format(
+                nodeutil.short(badnode),
+                nodeutil.short(nodes[0]),
+                nodeutil.short(goodnode),
+                commitsremaining,
+                searchesremaining,
+            )
+
+            ui.write_err(prefixlines(bisectstatus))
+        except Abort:
+            # ignore the output if bisect() fails
+            pass
     ui.warn(prefixlines(msg))
 
 
