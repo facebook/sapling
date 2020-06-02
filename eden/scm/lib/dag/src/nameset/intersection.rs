@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::{NameIter, NameSet, NameSetQuery};
+use super::hints::Flags;
+use super::{Hints, NameIter, NameSet, NameSetQuery};
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
@@ -17,6 +18,7 @@ use std::fmt;
 pub struct IntersectionSet {
     lhs: NameSet,
     rhs: NameSet,
+    hints: Hints,
 }
 
 struct Iter {
@@ -28,7 +30,8 @@ impl NameIter for Iter {}
 
 impl IntersectionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
-        Self { lhs, rhs }
+        let hints = Hints::default();
+        Self { lhs, rhs, hints }
     }
 }
 
@@ -53,12 +56,12 @@ impl NameSetQuery for IntersectionSet {
         Ok(self.lhs.contains(name)? && self.rhs.contains(name)?)
     }
 
-    fn is_topo_sorted(&self) -> bool {
-        self.lhs.is_topo_sorted()
-    }
-
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn hints(&self) -> &Hints {
+        &self.hints
     }
 }
 
@@ -95,7 +98,7 @@ mod tests {
     fn intersection(a: &[u8], b: &[u8]) -> IntersectionSet {
         let a = NameSet::from_query(VecQuery::from_bytes(a));
         let b = NameSet::from_query(VecQuery::from_bytes(b));
-        IntersectionSet { lhs: a, rhs: b }
+        IntersectionSet::new(a, b)
     }
 
     #[test]

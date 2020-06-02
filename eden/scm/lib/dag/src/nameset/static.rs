@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::{NameIter, NameSetQuery};
+use super::hints::Flags;
+use super::{Hints, NameIter, NameSetQuery};
 use crate::VertexName;
 use anyhow::Result;
 use indexmap::IndexSet;
@@ -14,7 +15,7 @@ use std::fmt;
 
 /// A set backed by a concrete ordered set.
 #[derive(Default)]
-pub struct StaticSet(pub(crate) IndexSet<VertexName>);
+pub struct StaticSet(pub(crate) IndexSet<VertexName>, Hints);
 
 type Iter =
     std::iter::Map<indexmap::set::IntoIter<VertexName>, fn(VertexName) -> Result<VertexName>>;
@@ -29,8 +30,12 @@ impl NameIter for IterRev {}
 
 impl StaticSet {
     pub fn from_names(names: impl IntoIterator<Item = VertexName>) -> Self {
-        let names = names.into_iter().collect();
-        Self(names)
+        let names: IndexSet<VertexName> = names.into_iter().collect();
+        let hints = Hints::default();
+        if names.is_empty() {
+            hints.add_flags(Flags::EMPTY | Flags::ID_DESC | Flags::ID_ASC | Flags::TOPO_DESC);
+        }
+        Self(names, hints)
     }
 }
 
@@ -59,6 +64,10 @@ impl NameSetQuery for StaticSet {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn hints(&self) -> &Hints {
+        &self.1
     }
 }
 

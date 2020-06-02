@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::{NameIter, NameSet, NameSetQuery};
+use super::hints::Flags;
+use super::{Hints, NameIter, NameSet, NameSetQuery};
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
@@ -17,6 +18,7 @@ use std::fmt;
 pub struct DifferenceSet {
     lhs: NameSet,
     rhs: NameSet,
+    hints: Hints,
 }
 
 struct Iter {
@@ -28,7 +30,8 @@ impl NameIter for Iter {}
 
 impl DifferenceSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
-        Self { lhs, rhs }
+        let hints = Hints::default();
+        Self { lhs, rhs, hints }
     }
 }
 
@@ -53,12 +56,12 @@ impl NameSetQuery for DifferenceSet {
         Ok(self.lhs.contains(name)? && !self.rhs.contains(name)?)
     }
 
-    fn is_topo_sorted(&self) -> bool {
-        self.lhs.is_topo_sorted()
-    }
-
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn hints(&self) -> &Hints {
+        &self.hints
     }
 }
 
@@ -94,7 +97,7 @@ mod tests {
     fn difference(a: &[u8], b: &[u8]) -> DifferenceSet {
         let a = NameSet::from_query(VecQuery::from_bytes(a));
         let b = NameSet::from_query(VecQuery::from_bytes(b));
-        DifferenceSet { lhs: a, rhs: b }
+        DifferenceSet::new(a, b)
     }
 
     #[test]

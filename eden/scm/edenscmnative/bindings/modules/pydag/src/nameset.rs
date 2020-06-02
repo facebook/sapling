@@ -8,8 +8,10 @@
 use anyhow::Result;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
+use dag::nameset::hints::Flags;
 use dag::{nameset::NameIter, Set, Vertex};
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 /// A wrapper around [`Set`] with Python integration added.
 ///
@@ -82,16 +84,32 @@ py_class!(pub class nameset |py| {
         Ok(self.inner(py).last().map_pyerr(py)?.map(|name| PyBytes::new(py, name.as_ref())))
     }
 
-    /// Test if the set is topologically sorted. A sorted set has heads first, roots last.
-    def issorted(&self) -> PyResult<bool> {
-        Ok(self.inner(py).is_topo_sorted())
-    }
-
-    /// Mark the set as sorted, and return the marked-sorted set.
-    /// This is usually useful for generator sets where the generator function
-    /// ensures the set is sorted.
-    def marksorted(&self) -> PyResult<Names> {
-        Ok(Names(self.inner(py).mark_sorted()))
+    def hints(&self) -> PyResult<HashMap<&'static str, PyObject>> {
+        let mut result = HashMap::new();
+        let hints = self.inner(py).hints();
+        if let Some(id) = hints.min_id() {
+            result.insert("min", id.0.to_py_object(py).into_object());
+        }
+        if let Some(id) = hints.max_id() {
+            result.insert("max", id.0.to_py_object(py).into_object());
+        }
+        let flags = hints.flags();
+        if flags.contains(Flags::ID_DESC) {
+            result.insert("desc", py.True().into_object());
+        }
+        if flags.contains(Flags::ID_ASC) {
+            result.insert("asc", py.True().into_object());
+        }
+        if flags.contains(Flags::TOPO_DESC) {
+            result.insert("topo", py.True().into_object());
+        }
+        if flags.contains(Flags::EMPTY) {
+            result.insert("empty", py.True().into_object());
+        }
+        if flags.contains(Flags::FULL) {
+            result.insert("full", py.True().into_object());
+        }
+        Ok(result)
     }
 });
 

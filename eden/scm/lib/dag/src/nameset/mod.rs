@@ -21,14 +21,16 @@ use std::sync::Arc;
 
 pub mod dag;
 pub mod difference;
+pub mod hints;
 pub mod intersection;
 pub mod lazy;
 pub mod legacy;
-pub mod sorted;
 pub mod r#static;
 pub mod union;
 
 use self::dag::DagSet;
+use self::hints::Flags;
+use self::hints::Hints;
 
 /// A [`NameSet`] contains an immutable list of names.
 ///
@@ -88,7 +90,7 @@ impl NameSet {
 
     /// Calculates the intersection of two sets.
     pub fn intersection(&self, other: &NameSet) -> NameSet {
-        if self.is_all() {
+        if self.hints().contains(Flags::FULL) {
             return other.clone();
         }
         if let (Some(this), Some(other)) = (
@@ -121,17 +123,6 @@ impl NameSet {
             }
         }
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
-    }
-
-    /// Mark the set as "topologically sorted".
-    /// Useful to mark a [`LazySet`] as sorted to avoid actual sorting
-    /// (and keep the set lazy).
-    pub fn mark_sorted(&self) -> NameSet {
-        if self.is_topo_sorted() {
-            self.clone()
-        } else {
-            Self::from_query(sorted::SortedSet::from_set(self.clone()))
-        }
     }
 }
 
@@ -221,22 +212,11 @@ pub trait NameSetQuery: Any + Debug + Send + Sync {
         Ok(false)
     }
 
-    /// Returns true if this set is known topologically sorted (head first, root
-    /// last).
-    fn is_topo_sorted(&self) -> bool {
-        false
-    }
-
-    /// Returns true if this set is an "all" set.
-    ///
-    /// An "all" set will return X when intersection with X.
-    /// Otherwise it's not different from a normal set.
-    fn is_all(&self) -> bool {
-        false
-    }
-
     /// For downcasting.
     fn as_any(&self) -> &dyn Any;
+
+    /// Get or set optimization hints.
+    fn hints(&self) -> &Hints;
 }
 
 /// Iterator of [`NameSet`].
@@ -269,6 +249,7 @@ impl From<&VertexName> for NameSet {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::Id;
 
     // For easier testing.
     impl From<&str> for NameSet {
@@ -298,8 +279,8 @@ pub(crate) mod tests {
         }
     }
 
-    #[derive(Debug)]
-    pub(crate) struct VecQuery(Vec<VertexName>);
+    #[derive(Default, Debug)]
+    pub(crate) struct VecQuery(Vec<VertexName>, Hints);
 
     impl NameSetQuery for VecQuery {
         fn iter(&self) -> Result<Box<dyn NameIter>> {
@@ -309,6 +290,10 @@ pub(crate) mod tests {
 
         fn as_any(&self) -> &dyn Any {
             self
+        }
+
+        fn hints(&self) -> &Hints {
+            &self.1
         }
     }
 
@@ -328,6 +313,7 @@ pub(crate) mod tests {
                         }
                     })
                     .collect(),
+                Hints::default(),
             )
         }
     }
@@ -351,7 +337,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_empty_query() -> Result<()> {
-        let query = VecQuery(Vec::new());
+        let query = VecQuery::default();
         check_invariants(&query)?;
         assert_eq!(query.iter()?.count(), 0);
         assert_eq!(query.iter_rev()?.count(), 0);
@@ -383,11 +369,11 @@ pub(crate) mod tests {
             .union(&NameSet::from_static_names(vec![to_name(1)]))
             .difference(
                 &NameSet::from_static_names(vec![to_name(3)])
-                    .intersection(&NameSet::from_static_names(vec![to_name(2)])),
+                    .intersection(&NameSet::from_static_names(vec![to_name(2), to_name(3)])),
             );
         assert_eq!(
             format!("{:?}", set),
-            "<difference <or <[0202]> <[0101]>> <and <[0303]> <[0202]>>>"
+            "<difference <or <[0202]> <[0101]>> <and <[0303]> <[0202 0303]>>>"
         );
     }
 
@@ -399,6 +385,104 @@ pub(crate) mod tests {
         assert_eq!(s(ab.clone() | bc.clone()), ["61", "62", "63"]);
         assert_eq!(s(ab.clone() & bc.clone()), ["62"]);
         assert_eq!(s(ab.clone() - bc.clone()), ["61"]);
+    }
+
+    #[test]
+    fn test_hints_empty_full_fast_paths() {
+        let partial: NameSet = "a".into();
+        partial.hints().add_flags(Flags::ID_ASC);
+        let empty: NameSet = "".into();
+        let full: NameSet = "f".into();
+        full.hints().add_flags(Flags::FULL | Flags::ID_DESC);
+
+        assert_eq!(
+            hints_ops(&partial, &empty),
+            [
+                "- Hints((empty))",
+                "  Hints((empty))",
+                "& Hints((empty))",
+                "  Hints((empty))",
+                "| Hints((empty))",
+                "  Hints((empty))"
+            ]
+        );
+        assert_eq!(
+            hints_ops(&partial, &full),
+            [
+                "- Hints((empty))",
+                "  Hints((empty))",
+                "& Hints((empty))",
+                "  Hints(ID_ASC)",
+                "| Hints((empty))",
+                "  Hints((empty))"
+            ]
+        );
+        assert_eq!(
+            hints_ops(&empty, &full),
+            [
+                "- Hints((empty))",
+                "  Hints((empty))",
+                "& Hints((empty))",
+                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
+                "| Hints((empty))",
+                "  Hints((empty))"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_hints_min_max_id() {
+        let bc: NameSet = "b c".into();
+        bc.hints().set_min_id(Id(20));
+        bc.hints().add_flags(Flags::ID_DESC);
+
+        let ad: NameSet = "a d".into();
+        ad.hints().set_max_id(Id(40));
+        ad.hints().add_flags(Flags::ID_ASC);
+
+        assert_eq!(
+            hints_ops(&bc, &ad),
+            [
+                "- Hints((empty))",
+                "  Hints((empty))",
+                "& Hints((empty))",
+                "  Hints((empty))",
+                "| Hints((empty))",
+                "  Hints((empty))"
+            ]
+        );
+
+        ad.hints().set_min_id(Id(10));
+        bc.hints().set_max_id(Id(30));
+        assert_eq!(
+            hints_ops(&bc, &ad),
+            [
+                "- Hints((empty))",
+                "  Hints((empty))",
+                "& Hints((empty))",
+                "  Hints((empty))",
+                "| Hints((empty))",
+                "  Hints((empty))"
+            ]
+        );
+    }
+
+    // Print hints for &, |, - operations.
+    fn hints_ops(lhs: &NameSet, rhs: &NameSet) -> Vec<String> {
+        vec![
+            (lhs.clone() - rhs.clone(), rhs.clone() - lhs.clone()),
+            (lhs.clone() & rhs.clone(), rhs.clone() & lhs.clone()),
+            (lhs.clone() | rhs.clone(), rhs.clone() | lhs.clone()),
+        ]
+        .into_iter()
+        .zip("-&|".chars())
+        .flat_map(|((set1, set2), ch)| {
+            vec![
+                format!("{} {:?}", ch, set1.hints()),
+                format!("  {:?}", set2.hints()),
+            ]
+        })
+        .collect()
     }
 
     /// Check consistency of a `NameSetQuery`, such as `iter().nth(0)` matches

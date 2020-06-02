@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::{NameIter, NameSet, NameSetQuery};
+use super::hints::Flags;
+use super::{Hints, NameIter, NameSet, NameSetQuery};
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
@@ -18,6 +19,7 @@ use std::iter::{Chain, Filter};
 /// is iterated, with duplicated names skipped.
 pub struct UnionSet {
     sets: [NameSet; 2],
+    hints: Hints,
 }
 
 type Iter<F> = Chain<
@@ -35,7 +37,11 @@ impl<F: FnMut(&Result<VertexName>) -> bool + Send> NameIter for RevIter<F> {}
 
 impl UnionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
-        Self { sets: [lhs, rhs] }
+        let hints = Hints::default();
+        Self {
+            sets: [lhs, rhs],
+            hints,
+        }
     }
 }
 
@@ -99,6 +105,10 @@ impl NameSetQuery for UnionSet {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn hints(&self) -> &Hints {
+        &self.hints
+    }
 }
 
 impl fmt::Debug for UnionSet {
@@ -116,7 +126,7 @@ mod tests {
     fn union(a: &[u8], b: &[u8]) -> UnionSet {
         let a = NameSet::from_query(VecQuery::from_bytes(a));
         let b = NameSet::from_query(VecQuery::from_bytes(b));
-        UnionSet { sets: [a, b] }
+        UnionSet::new(a, b)
     }
 
     #[test]

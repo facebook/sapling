@@ -24,7 +24,9 @@ use crate::idmap::IdMapWrite;
 use crate::idmap::MemIdMap;
 use crate::idmap::SyncableIdMap;
 use crate::nameset::dag::DagSet;
+use crate::nameset::hints::Flags;
 use crate::nameset::NameSet;
+use crate::nameset::NameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
@@ -322,7 +324,7 @@ impl DagAddHeads for MemNameDag {
 impl<T: NameDagStorage> DagAlgorithm for T {
     /// Sort a `NameSet` topologically.
     fn sort(&self, set: &NameSet) -> Result<NameSet> {
-        if set.is_topo_sorted() {
+        if set.hints().contains(Flags::TOPO_DESC) {
             Ok(set.clone())
         } else {
             let mut spans = SpanSet::empty();
@@ -347,7 +349,8 @@ impl<T: NameDagStorage> DagAlgorithm for T {
     /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
     fn all(&self) -> Result<NameSet> {
         let spans = self.dag().all()?;
-        let query = DagSet::from_spans_idmap(spans, self.clone_map()).mark_as_all();
+        let query = DagSet::from_spans_idmap(spans, self.clone_map());
+        query.hints().add_flags(Flags::FULL);
         Ok(NameSet::from_query(query))
     }
 

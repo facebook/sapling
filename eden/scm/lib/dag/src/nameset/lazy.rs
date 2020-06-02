@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use super::{r#static::IterRev, NameIter, NameSetQuery};
+use super::{r#static::IterRev, Hints, NameIter, NameSetQuery};
 use crate::VertexName;
 use anyhow::{anyhow, bail, Result};
 use indexmap::IndexSet;
@@ -16,6 +16,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 /// A set backed by a lazy iterator of names.
 pub struct LazySet {
     inner: Arc<Mutex<Inner>>,
+    hints: Hints,
 }
 
 struct Inner {
@@ -120,8 +121,10 @@ impl LazySet {
             visited: IndexSet::new(),
             state: State::Incomplete,
         };
+        let hints = Hints::default();
         Self {
             inner: Arc::new(Mutex::new(inner)),
+            hints,
         }
     }
 
@@ -175,6 +178,10 @@ impl NameSetQuery for LazySet {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn hints(&self) -> &Hints {
+        &self.hints
     }
 }
 

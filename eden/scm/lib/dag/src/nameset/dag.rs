@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::{NameIter, NameSetQuery};
+use super::hints::Flags;
+use super::{Hints, NameIter, NameSetQuery};
 use crate::ops::IdConvert;
 use crate::spanset::{SpanSet, SpanSetIter};
 use crate::Group;
@@ -20,7 +21,7 @@ use std::sync::Arc;
 pub struct DagSet {
     pub(crate) spans: SpanSet,
     pub(crate) map: Arc<dyn IdConvert + Send + Sync>,
-    pub(crate) is_all: bool,
+    hints: Hints,
 }
 
 struct Iter {
@@ -47,20 +48,14 @@ impl NameIter for Iter {}
 
 impl fmt::Debug for DagSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let all = if self.is_all { " (all)" } else { "" };
-        write!(f, "<dag{} [{:?}]>", all, &self.spans)
+        write!(f, "<dag [{:?}]>", &self.spans)
     }
 }
 
 impl DagSet {
     pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdConvert + Send + Sync>) -> Self {
-        let is_all = false;
-        Self { spans, map, is_all }
-    }
-
-    pub(crate) fn mark_as_all(mut self) -> Self {
-        self.is_all = true;
-        self
+        let hints = Hints::default();
+        Self { spans, map, hints }
     }
 }
 
@@ -123,17 +118,12 @@ impl NameSetQuery for DagSet {
         Ok(result)
     }
 
-    fn is_topo_sorted(&self) -> bool {
-        // SpanSet is always sorted.
-        true
-    }
-
-    fn is_all(&self) -> bool {
-        self.is_all
-    }
-
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn hints(&self) -> &Hints {
+        &self.hints
     }
 }
 
@@ -242,7 +232,7 @@ pub(crate) mod tests {
     fn test_dag_all() -> Result<()> {
         with_dag(|dag| {
             let all = dag.all()?;
-            assert_eq!(format!("{:?}", &all), "<dag (all) [0..=6]>");
+            assert_eq!(format!("{:?}", &all), "<dag [0..=6]>");
 
             let ac = "A C".into();
             let intersection = all.intersection(&ac);
