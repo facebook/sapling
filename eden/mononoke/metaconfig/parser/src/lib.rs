@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
-//! Provides RepoConfigs structure that can read config from a manifest of a metaconfig repo
+//! Loading and parsing of Mononoke configuration.
 
 #![deny(missing_docs)]
 #![deny(warnings)]
 
+pub mod config;
 mod convert;
 pub mod errors;
-pub mod repoconfig;
+mod raw;
 
+pub use crate::config::RepoConfigs;
 pub use crate::errors::ErrorKind;
-pub use crate::repoconfig::RepoConfigs;

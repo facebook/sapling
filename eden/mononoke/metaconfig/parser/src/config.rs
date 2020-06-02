@@ -5,13 +5,11 @@
  * GNU General Public License version 2.
  */
 
-//! Contains structures describing configuration of the entire repo. Those structures are
-//! deserialized from TOML files from metaconfig repo
+//! Functions to load and parse Mononoke configuration.
 
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     convert::TryInto,
-    fs,
     path::Path,
     str,
     time::Duration,
@@ -19,79 +17,477 @@ use std::{
 
 use crate::convert::Convert;
 use crate::errors::ErrorKind;
-use anyhow::{anyhow, format_err, Error, Result};
+use anyhow::{anyhow, Result};
 use ascii::AsciiString;
-use bookmarks_types::BookmarkName;
-use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use itertools::Itertools;
-use maplit::hashmap;
 use metaconfig_types::{
-    BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
-    CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig,
-    HgsqlGlobalrevsName, HgsqlName, HookBypass, HookConfig, HookManagerParams, HookParams,
-    InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
-    PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig,
-    SourceControlServiceParams, StorageConfig, UnodeVersion, WhitelistEntry,
-    WireprotoLoggingConfig,
+    CommitSyncConfig, CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction,
+    HgsqlGlobalrevsName, HgsqlName, Redaction, RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig,
+    StorageConfig, WhitelistEntry,
 };
 use mononoke_types::{MPath, RepositoryId};
-use regex::Regex;
 use repos::{
-    RawCommitSyncConfig, RawCommonConfig, RawHookConfig, RawRepoConfig, RawRepoConfigs,
-    RawStorageConfig, RawUnodeVersion, RawWireprotoLoggingConfig,
+    RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawStorageConfig,
 };
 
-const CONFIGERATOR_CRYPTO_PROJECT: &'static str = "SCM";
-const CONFIGERATOR_PREFIX: &'static str = "configerator://";
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
-const DEFAULT_ARG_SIZE_THRESHOLD: u64 = 500_000;
 
-/// Holds configuration all configuration that was read from metaconfig repository's manifest.
+/// Load configuration common to all repositories.
+pub fn load_common_config(fb: FacebookInit, config_path: impl AsRef<Path>) -> Result<CommonConfig> {
+    let common = crate::raw::read_raw_configs(fb, config_path.as_ref())?.common;
+    parse_common_config(common)
+}
+
+/// Holds configuration for repostories.
 #[derive(Debug, PartialEq)]
 pub struct RepoConfigs {
-    /// Configs for all other repositories
+    /// Configs for all repositories
     pub repos: HashMap<String, RepoConfig>,
     /// Common configs for all repos
     pub common: CommonConfig,
 }
 
+/// Load configuration for repositories.
+pub fn load_repo_configs(fb: FacebookInit, config_path: impl AsRef<Path>) -> Result<RepoConfigs> {
+    let RawRepoConfigs {
+        commit_sync,
+        common,
+        repos,
+        storage,
+    } = crate::raw::read_raw_configs(fb, config_path.as_ref())?;
+
+    let commit_sync = parse_commit_sync_config(commit_sync)?;
+
+    let mut repo_configs = HashMap::new();
+    let mut repoids = HashSet::new();
+
+    for (reponame, raw_repo_config) in repos.into_iter() {
+        let config = parse_repo_config(&reponame, raw_repo_config, &storage, &commit_sync)?;
+
+        if !repoids.insert(config.repoid) {
+            return Err(ErrorKind::DuplicatedRepoId(config.repoid).into());
+        }
+
+        repo_configs.insert(reponame.clone(), config);
+    }
+
+    let common = parse_common_config(common)?;
+
+    Ok(RepoConfigs {
+        repos: repo_configs,
+        common,
+    })
+}
+
+/// Holds configuration for storage.
+#[derive(Debug, PartialEq)]
+pub struct StorageConfigs {
+    /// Configs for all storage
+    pub storage: HashMap<String, StorageConfig>,
+}
+
+/// Load configuration for storage.
+pub fn load_storage_configs(
+    fb: FacebookInit,
+    config_path: impl AsRef<Path>,
+) -> Result<StorageConfigs> {
+    let storage = crate::raw::read_raw_configs(fb, config_path.as_ref())?
+        .storage
+        .into_iter()
+        .map(|(k, v)| Ok((k, v.convert()?)))
+        .collect::<Result<_>>()?;
+
+    Ok(StorageConfigs { storage })
+}
+
+fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
+    let mut tiers_num = 0;
+    let security_config: Vec<_> = common
+        .whitelist_entry
+        .unwrap_or(vec![])
+        .into_iter()
+        .map(|whitelist_entry| {
+            let has_tier = whitelist_entry.tier.is_some();
+            let has_identity = {
+                if whitelist_entry.identity_data.is_none() ^ whitelist_entry.identity_type.is_none()
+                {
+                    return Err(ErrorKind::InvalidFileStructure(
+                        "identity type and data must be specified".into(),
+                    )
+                    .into());
+                }
+
+                whitelist_entry.identity_type.is_some()
+            };
+
+            if has_tier && has_identity {
+                return Err(ErrorKind::InvalidFileStructure(
+                    "tier and identity cannot be both specified".into(),
+                )
+                .into());
+            }
+
+            if !has_tier && !has_identity {
+                return Err(ErrorKind::InvalidFileStructure(
+                    "tier or identity must be specified".into(),
+                )
+                .into());
+            }
+
+            if whitelist_entry.tier.is_some() {
+                tiers_num += 1;
+                Ok(WhitelistEntry::Tier(whitelist_entry.tier.unwrap()))
+            } else {
+                let identity_type = whitelist_entry.identity_type.unwrap();
+
+                Ok(WhitelistEntry::HardcodedIdentity {
+                    ty: identity_type,
+                    data: whitelist_entry.identity_data.unwrap(),
+                })
+            }
+        })
+        .collect::<Result<_>>()?;
+
+    if tiers_num > 1 {
+        return Err(ErrorKind::InvalidFileStructure("only one tier is allowed".into()).into());
+    }
+
+    let loadlimiter_category = match common.loadlimiter_category {
+        Some(category) => {
+            if category.len() > 0 {
+                Some(category)
+            } else {
+                None
+            }
+        }
+        None => None,
+    };
+
+    let scuba_censored_table = common.scuba_censored_table;
+
+    return Ok(CommonConfig {
+        security_config,
+        loadlimiter_category,
+        scuba_censored_table,
+    });
+}
+
+fn parse_repo_config(
+    reponame: &str,
+    repo_config: RawRepoConfig,
+    common_storage_config: &HashMap<String, RawStorageConfig>,
+    commit_sync_config: &HashMap<String, CommitSyncConfig>,
+) -> Result<RepoConfig> {
+    let RawRepoConfig {
+        repoid,
+        storage_config,
+        storage,
+        enabled,
+        readonly,
+        bookmarks,
+        bookmarks_cache_ttl,
+        hook_manager_params,
+        hooks,
+        write_lock_db_address,
+        redaction,
+        generation_cache_size,
+        scuba_table,
+        scuba_table_hooks,
+        delay_mean: _,
+        delay_stddev: _,
+        cache_warmup,
+        push,
+        pushrebase,
+        lfs,
+        wireproto_logging,
+        hash_validation_percentage,
+        skiplist_index_blobstore_key,
+        bundle2_replay_params,
+        infinitepush,
+        list_keys_patterns_max,
+        filestore,
+        hook_max_file_size,
+        hipster_acl,
+        source_control_service,
+        source_control_service_monitoring,
+        name: _,
+        derived_data_config,
+        scuba_local_path,
+        scuba_local_path_hooks,
+        hgsql_name,
+        hgsql_globalrevs_name,
+        ..
+    } = repo_config;
+
+    let repoid =
+        RepositoryId::new(repoid.ok_or_else(|| anyhow!("missing repoid from configuration"))?);
+
+    let enabled = enabled.unwrap_or(true);
+
+    let hooks: Vec<_> = hooks.unwrap_or_default().convert()?;
+
+    let get_storage = move |name: &str| -> Result<StorageConfig> {
+        let raw_storage_config = storage
+            .as_ref()
+            .and_then(|s| s.get(name))
+            .or_else(|| common_storage_config.get(name))
+            .cloned()
+            .ok_or_else(|| ErrorKind::InvalidConfig(format!("Storage \"{}\" not defined", name)))?;
+
+        raw_storage_config.convert()
+    };
+
+    let storage_config = get_storage(
+        &storage_config.ok_or_else(|| anyhow!("missing storage_config from configuration"))?,
+    )?;
+
+    let wireproto_logging = wireproto_logging
+        .map(|raw| crate::convert::repo::convert_wireproto_logging_config(raw, get_storage))
+        .transpose()?
+        .unwrap_or_default();
+
+    let cache_warmup = cache_warmup.convert()?;
+
+    let hook_manager_params = hook_manager_params.convert()?;
+
+    let bookmarks = bookmarks.unwrap_or_default().convert()?;
+
+    let bookmarks_cache_ttl = bookmarks_cache_ttl
+        .map(|ttl| -> Result<_> { Ok(Duration::from_millis(ttl.try_into()?)) })
+        .transpose()?;
+
+    let push = push.convert()?.unwrap_or_default();
+
+    let pushrebase = pushrebase.convert()?.unwrap_or_default();
+
+    let bundle2_replay_params = bundle2_replay_params.convert()?.unwrap_or_default();
+
+    let lfs = lfs.convert()?.unwrap_or_default();
+
+    let hash_validation_percentage = hash_validation_percentage
+        .map(|v| v.try_into())
+        .transpose()?
+        .unwrap_or(0);
+
+    let readonly = if readonly.unwrap_or_default() {
+        RepoReadOnly::ReadOnly("Set by config option".to_string())
+    } else {
+        RepoReadOnly::ReadWrite
+    };
+
+    let redaction = if redaction.unwrap_or(true) {
+        Redaction::Enabled
+    } else {
+        Redaction::Disabled
+    };
+
+    let infinitepush = infinitepush.convert()?.unwrap_or_default();
+
+    let generation_cache_size: usize = generation_cache_size
+        .map(|v| v.try_into())
+        .transpose()?
+        .unwrap_or(10 * 1024 * 1024);
+
+    let list_keys_patterns_max: u64 = list_keys_patterns_max
+        .map(|v| v.try_into())
+        .transpose()?
+        .unwrap_or(LIST_KEYS_PATTERNS_MAX_DEFAULT);
+
+    let hook_max_file_size: u64 = hook_max_file_size
+        .map(|v| v.try_into())
+        .transpose()?
+        .unwrap_or(HOOK_MAX_FILE_SIZE_DEFAULT);
+
+    let filestore = filestore.convert()?;
+
+    let source_control_service = source_control_service.convert()?.unwrap_or_default();
+
+    let source_control_service_monitoring = source_control_service_monitoring.convert()?;
+
+    let derived_data_config = derived_data_config.convert()?.unwrap_or_default();
+
+    let hgsql_name = HgsqlName(hgsql_name.unwrap_or_else(|| reponame.to_string()));
+
+    let hgsql_globalrevs_name =
+        HgsqlGlobalrevsName(hgsql_globalrevs_name.unwrap_or_else(|| hgsql_name.0.clone()));
+
+    let relevant_commit_sync_configs: Vec<&CommitSyncConfig> = commit_sync_config
+        .values()
+        .filter(|config| is_commit_sync_config_relevant_to_repo(&repoid, config))
+        .collect();
+    let commit_sync_config = match relevant_commit_sync_configs.as_slice() {
+        [] => None,
+        [commit_sync_config] => Some((*commit_sync_config).clone()),
+        _ => {
+            return Err(anyhow!(
+                "Repo {} participates in more than one commit sync config",
+                repoid,
+            ))
+        }
+    };
+
+    Ok(RepoConfig {
+        enabled,
+        storage_config,
+        generation_cache_size,
+        repoid,
+        scuba_table,
+        scuba_local_path,
+        scuba_table_hooks,
+        scuba_local_path_hooks,
+        cache_warmup,
+        hook_manager_params,
+        bookmarks,
+        bookmarks_cache_ttl,
+        hooks,
+        push,
+        pushrebase,
+        lfs,
+        wireproto_logging,
+        hash_validation_percentage,
+        readonly,
+        redaction,
+        skiplist_index_blobstore_key,
+        bundle2_replay_params,
+        write_lock_db_address,
+        infinitepush,
+        list_keys_patterns_max,
+        filestore,
+        commit_sync_config,
+        hook_max_file_size,
+        hipster_acl,
+        source_control_service,
+        source_control_service_monitoring,
+        derived_data_config,
+        hgsql_name,
+        hgsql_globalrevs_name,
+    })
+}
+
+fn is_commit_sync_config_relevant_to_repo(
+    repoid: &RepositoryId,
+    commit_sync_config: &CommitSyncConfig,
+) -> bool {
+    &commit_sync_config.large_repo_id == repoid
+        || commit_sync_config
+            .small_repos
+            .iter()
+            .any(|(k, _)| k == repoid)
+}
+
+/// Validate the commit sync config
+///
+/// Check that all the prefixes in the large repo (target prefixes in a map and prefixes
+/// from `DefaultSmallToLargeCommitSyncPathAction::PrependPrefix`) are independent, e.g. aren't prefixes
+/// of each other, if the sync direction is small-to-large. This is not allowed, because
+/// otherwise there is no way to prevent path conflicts. For example, if one repo maps
+/// `p1 => foo/bar` and the other maps `p2 => foo`, both repos can accept commits that
+/// change `foo` and these commits can contain path conflicts. Given that the repos have
+/// already replied successfully to their clients, it's too late to reject these commits.
+/// To avoid this problem, we remove the possiblity of path conflicts altogether.
+/// Also check that no two small repos use the same bookmark prefix. If they did, this would
+/// mean potentail bookmark name collisions.
+fn validate_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<()> {
+    let all_prefixes_with_direction: Vec<(&MPath, CommitSyncDirection)> = commit_sync_config
+        .small_repos
+        .iter()
+        .flat_map(|(_, small_repo_sync_config)| {
+            let SmallRepoCommitSyncConfig {
+                default_action,
+                map,
+                direction,
+                ..
+            } = small_repo_sync_config;
+            let all_prefixes = map.into_iter().map(|(_, target_prefix)| target_prefix);
+            match default_action {
+                DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
+                    all_prefixes.chain(vec![prefix].into_iter())
+                }
+                DefaultSmallToLargeCommitSyncPathAction::Preserve => {
+                    all_prefixes.chain(vec![].into_iter())
+                }
+            }
+            .map(move |prefix| (prefix, direction.clone()))
+        })
+        .collect();
+
+    let bookmark_prefixes: Vec<&AsciiString> = commit_sync_config
+        .small_repos
+        .iter()
+        .map(|(_, sr)| &sr.bookmark_prefix)
+        .collect();
+
+    for ((first_prefix, first_direction), (second_prefix, second_direction)) in
+        all_prefixes_with_direction
+            .iter()
+            .tuple_combinations::<(_, _)>()
+    {
+        if first_prefix == second_prefix
+            && *first_direction == CommitSyncDirection::LargeToSmall
+            && *second_direction == CommitSyncDirection::LargeToSmall
+        {
+            // when syncing large-to-small, it is allowed to have identical prefixes,
+            // but not prefixes that are proper prefixes of other prefixes
+            continue;
+        }
+        validate_mpath_prefixes(first_prefix, second_prefix)?;
+    }
+
+    // No two small repos can have the same bookmark prefix
+    for (first_prefix, second_prefix) in bookmark_prefixes.iter().tuple_combinations::<(_, _)>() {
+        let fp = first_prefix.as_str();
+        let sp = second_prefix.as_str();
+        if fp.starts_with(sp) || sp.starts_with(fp) {
+            return Err(anyhow!(
+                "One bookmark prefix starts with another, which is prohibited: {:?}, {:?}",
+                fp,
+                sp
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+/// Verify that two mpaths are not a prefix of each other
+fn validate_mpath_prefixes(first_prefix: &MPath, second_prefix: &MPath) -> Result<()> {
+    if first_prefix.is_prefix_of(second_prefix) {
+        return Err(anyhow!(
+            "{:?} is a prefix of {:?}, which is disallowed",
+            first_prefix,
+            second_prefix
+        ));
+    }
+    if second_prefix.is_prefix_of(first_prefix) {
+        return Err(anyhow!(
+            "{:?} is a prefix of {:?}, which is disallowed",
+            second_prefix,
+            first_prefix
+        ));
+    }
+    Ok(())
+}
+
+/// Parse a collection of raw commit sync config into commit sync config and validate it.
+fn parse_commit_sync_config(
+    raw_commit_syncs: HashMap<String, RawCommitSyncConfig>,
+) -> Result<HashMap<String, CommitSyncConfig>> {
+    raw_commit_syncs
+        .into_iter()
+        .map(|(config_name, commit_sync_config)| {
+            let commit_sync_config = commit_sync_config.convert()?;
+            validate_commit_sync_config(&commit_sync_config)?;
+            Ok((config_name, commit_sync_config))
+        })
+        .collect()
+}
+
 impl RepoConfigs {
     /// Read repo configs
     pub fn read_configs(fb: FacebookInit, config_path: impl AsRef<Path>) -> Result<Self> {
-        let config_path = config_path.as_ref();
-
-        let RawRepoConfigs {
-            commit_sync,
-            common: _,
-            repos,
-            storage,
-        } = Self::read_raw_configs(fb, config_path)?;
-        let commit_sync = Self::parse_commit_sync_config(commit_sync)?;
-        let mut repo_configs = HashMap::new();
-        let mut repoids = HashSet::new();
-
-        for (reponame, raw_repo_config) in &repos {
-            let config = RepoConfigs::process_single_repo_config(
-                &reponame,
-                raw_repo_config.clone(),
-                &storage,
-                &commit_sync,
-            )?;
-
-            if !repoids.insert(config.repoid) {
-                return Err(ErrorKind::DuplicatedRepoId(config.repoid).into());
-            }
-
-            repo_configs.insert(reponame.clone(), config);
-        }
-
-        let common = Self::read_common_config(fb, &config_path)?;
-        Ok(Self {
-            repos: repo_configs,
-            common,
-        })
+        load_repo_configs(fb, config_path)
     }
 
     /// Read common config, returns default if it doesn't exist
@@ -99,196 +495,7 @@ impl RepoConfigs {
         fb: FacebookInit,
         config_path: impl AsRef<Path>,
     ) -> Result<CommonConfig> {
-        let config_path = config_path.as_ref();
-        let raw_config = Self::read_raw_configs(fb, config_path)?.common;
-        let mut tiers_num = 0;
-        let whitelisted_entries: Result<Vec<_>> = raw_config
-            .whitelist_entry
-            .unwrap_or(vec![])
-            .into_iter()
-            .map(|whitelist_entry| {
-                let has_tier = whitelist_entry.tier.is_some();
-                let has_identity = {
-                    if whitelist_entry.identity_data.is_none()
-                        ^ whitelist_entry.identity_type.is_none()
-                    {
-                        return Err(ErrorKind::InvalidFileStructure(
-                            "identity type and data must be specified".into(),
-                        )
-                        .into());
-                    }
-
-                    whitelist_entry.identity_type.is_some()
-                };
-
-                if has_tier && has_identity {
-                    return Err(ErrorKind::InvalidFileStructure(
-                        "tier and identity cannot be both specified".into(),
-                    )
-                    .into());
-                }
-
-                if !has_tier && !has_identity {
-                    return Err(ErrorKind::InvalidFileStructure(
-                        "tier or identity must be specified".into(),
-                    )
-                    .into());
-                }
-
-                if whitelist_entry.tier.is_some() {
-                    tiers_num += 1;
-                    Ok(WhitelistEntry::Tier(whitelist_entry.tier.unwrap()))
-                } else {
-                    let identity_type = whitelist_entry.identity_type.unwrap();
-
-                    Ok(WhitelistEntry::HardcodedIdentity {
-                        ty: identity_type,
-                        data: whitelist_entry.identity_data.unwrap(),
-                    })
-                }
-            })
-            .collect();
-
-        if tiers_num > 1 {
-            return Err(ErrorKind::InvalidFileStructure("only one tier is allowed".into()).into());
-        }
-
-        let loadlimiter_category = match raw_config.loadlimiter_category {
-            Some(category) => {
-                if category.len() > 0 {
-                    Some(category)
-                } else {
-                    None
-                }
-            }
-            None => None,
-        };
-
-        let scuba_censored_table = raw_config.scuba_censored_table;
-
-        return Ok(CommonConfig {
-            security_config: whitelisted_entries?,
-            loadlimiter_category,
-            scuba_censored_table,
-        });
-    }
-
-    /// Verify that two prefixes are not a prefix of each other
-    fn verify_mpath_prefixes(first_prefix: &MPath, second_prefix: &MPath) -> Result<()> {
-        if first_prefix.is_prefix_of(second_prefix) {
-            return Err(format_err!(
-                "{:?} is a prefix of {:?}, which is disallowed",
-                first_prefix,
-                second_prefix
-            ));
-        }
-        if second_prefix.is_prefix_of(first_prefix) {
-            return Err(format_err!(
-                "{:?} is a prefix of {:?}, which is disallowed",
-                second_prefix,
-                first_prefix
-            ));
-        }
-        Ok(())
-    }
-
-    /// Create auxillary structs, needed to run verification of commit sync config
-    fn produce_structs_for_verification(
-        commit_sync_config: &CommitSyncConfig,
-    ) -> (Vec<(&MPath, CommitSyncDirection)>, Vec<&AsciiString>) {
-        let small_repos = &commit_sync_config.small_repos;
-
-        let all_prefixes_with_direction: Vec<(&MPath, CommitSyncDirection)> = small_repos
-            .iter()
-            .flat_map(|(_, small_repo_sync_config)| {
-                let SmallRepoCommitSyncConfig {
-                    default_action,
-                    map,
-                    direction,
-                    ..
-                } = small_repo_sync_config;
-                let iter_to_return = map.into_iter().map(|(_, target_prefix)| target_prefix);
-                match default_action {
-                    DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
-                        iter_to_return.chain(vec![prefix].into_iter())
-                    }
-                    DefaultSmallToLargeCommitSyncPathAction::Preserve => {
-                        iter_to_return.chain(vec![].into_iter())
-                    }
-                }
-                .map(move |prefix| (prefix, direction.clone()))
-            })
-            .collect();
-
-        let bookmark_prefixes: Vec<&AsciiString> = small_repos
-            .iter()
-            .map(|(_, sr)| &sr.bookmark_prefix)
-            .collect();
-
-        (all_prefixes_with_direction, bookmark_prefixes)
-    }
-
-    /// Verify the correctness of the commit sync config
-    ///
-    /// Check that all the prefixes in the large repo (target prefixes in a map and prefixes
-    /// from `DefaultSmallToLargeCommitSyncPathAction::PrependPrefix`) are independent, e.g. aren't prefixes
-    /// of each other, if the sync direction is small-to-large. This is not allowed, because
-    /// otherwise there is no way to prevent path conflicts. For example, if one repo maps
-    /// `p1 => foo/bar` and the other maps `p2 => foo`, both repos can accept commits that
-    /// change `foo` and these commits can contain path conflicts. Given that the repos have
-    /// already replied successfully to their clients, it's too late to reject these commits.
-    /// To avoid this problem, we remove the possiblity of path conflicts altogether.
-    /// Also check that no two small repos use the same bookmark prefix. If they did, this would
-    /// mean potentail bookmark name collisions.
-    fn verify_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<()> {
-        let (all_prefixes_with_direction, bookmark_prefixes) =
-            Self::produce_structs_for_verification(commit_sync_config);
-
-        for ((first_prefix, first_direction), (second_prefix, second_direction)) in
-            all_prefixes_with_direction
-                .iter()
-                .tuple_combinations::<(_, _)>()
-        {
-            if first_prefix == second_prefix
-                && *first_direction == CommitSyncDirection::LargeToSmall
-                && *second_direction == CommitSyncDirection::LargeToSmall
-            {
-                // when syncing large-to-small, it is allowed to have identical prefixes,
-                // but not prefixes that are proper prefixes of other prefixes
-                continue;
-            }
-            Self::verify_mpath_prefixes(first_prefix, second_prefix)?;
-        }
-
-        // No two small repos can have the same bookmark prefix
-        for (first_prefix, second_prefix) in bookmark_prefixes.iter().tuple_combinations::<(_, _)>()
-        {
-            let fp = first_prefix.as_str();
-            let sp = second_prefix.as_str();
-            if fp.starts_with(sp) || sp.starts_with(fp) {
-                return Err(format_err!(
-                    "One bookmark prefix starts with another, which is prohibited: {:?}, {:?}",
-                    fp,
-                    sp
-                ));
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Read commit sync config
-    fn parse_commit_sync_config(
-        raw_commit_syncs: HashMap<String, RawCommitSyncConfig>,
-    ) -> Result<HashMap<String, CommitSyncConfig>> {
-        raw_commit_syncs
-            .into_iter()
-            .map(|(config_name, commit_sync_config)| {
-                let commit_sync_config = commit_sync_config.convert()?;
-                Self::verify_commit_sync_config(&commit_sync_config)?;
-                Ok((config_name, commit_sync_config))
-            })
-            .collect()
+        load_common_config(fb, config_path)
     }
 
     /// Read all common storage configurations
@@ -296,448 +503,7 @@ impl RepoConfigs {
         fb: FacebookInit,
         config_root_path: impl AsRef<Path>,
     ) -> Result<HashMap<String, StorageConfig>> {
-        let config_root_path = config_root_path.as_ref();
-
-        Self::read_raw_configs(fb, config_root_path)?
-            .storage
-            .into_iter()
-            .map(|(k, v)| Ok((k, v.convert()?)))
-            .collect()
-    }
-
-    fn process_single_repo_config(
-        reponame: &str,
-        raw_config: RawRepoConfig,
-        storage_config: &HashMap<String, RawStorageConfig>,
-        commit_sync: &HashMap<String, CommitSyncConfig>,
-    ) -> Result<RepoConfig> {
-        let hooks = raw_config.hooks.clone().unwrap_or_default();
-
-        let mut all_hook_params = vec![];
-        for raw_hook_config in hooks {
-            let config = HookConfig {
-                bypass: RepoConfigs::get_bypass(raw_hook_config.clone())?,
-                strings: raw_hook_config.config_strings.unwrap_or_default(),
-                ints: raw_hook_config.config_ints.unwrap_or_default(),
-            };
-
-            let hook_params = HookParams {
-                name: raw_hook_config.name,
-                config,
-            };
-
-            all_hook_params.push(hook_params);
-        }
-        Ok(RepoConfigs::convert_conf(
-            reponame,
-            raw_config,
-            storage_config,
-            commit_sync,
-            all_hook_params,
-        )?)
-    }
-
-    fn get_bypass(raw_hook_config: RawHookConfig) -> Result<Option<HookBypass>> {
-        let bypass_commit_message = raw_hook_config
-            .bypass_commit_string
-            .map(|s| HookBypass::CommitMessage(s));
-
-        let bypass_pushvar = raw_hook_config.bypass_pushvar.and_then(|s| {
-            let pushvar: Vec<_> = s.split('=').map(|val| val.to_string()).collect();
-            if pushvar.len() != 2 {
-                return Some(Err(ErrorKind::InvalidPushvar(s).into()));
-            }
-            Some(Ok((
-                pushvar.get(0).unwrap().clone(),
-                pushvar.get(1).unwrap().clone(),
-            )))
-        });
-        let bypass_pushvar = match bypass_pushvar {
-            Some(Err(err)) => {
-                return Err(err);
-            }
-            Some(Ok((name, value))) => Some(HookBypass::Pushvar { name, value }),
-            None => None,
-        };
-
-        if bypass_commit_message.is_some() && bypass_pushvar.is_some() {
-            return Err(ErrorKind::TooManyBypassOptions(raw_hook_config.name).into());
-        }
-        let bypass = bypass_commit_message.or(bypass_pushvar);
-
-        Ok(bypass)
-    }
-
-    fn is_commit_sync_config_relevant_to_repo(
-        repoid: &RepositoryId,
-        commit_sync_config: &CommitSyncConfig,
-    ) -> bool {
-        &commit_sync_config.large_repo_id == repoid
-            || commit_sync_config
-                .small_repos
-                .iter()
-                .any(|(k, _)| k == repoid)
-    }
-
-    fn convert_conf(
-        reponame: &str,
-        this: RawRepoConfig,
-        common_storage: &HashMap<String, RawStorageConfig>,
-        commit_sync: &HashMap<String, CommitSyncConfig>,
-        hooks: Vec<HookParams>,
-    ) -> Result<RepoConfig> {
-        let storage = this.storage.clone().unwrap_or_default();
-        let get_storage = move |name: &str| -> Result<StorageConfig> {
-            let raw_storage_config = storage
-                .get(name)
-                .or_else(|| common_storage.get(name))
-                .cloned()
-                .ok_or_else(|| {
-                    ErrorKind::InvalidConfig(format!("Storage \"{}\" not defined", name))
-                })?;
-
-            raw_storage_config.convert()
-        };
-
-        let storage_config = get_storage(
-            &this
-                .storage_config
-                .ok_or_else(|| anyhow!("missing storage_config from configuration"))?,
-        )?;
-        let enabled = this.enabled.unwrap_or(true);
-        let repoid = RepositoryId::new(
-            this.repoid
-                .ok_or_else(|| anyhow!("missing repoid from configuration"))?,
-        );
-        let scuba_table = this.scuba_table;
-        let scuba_local_path = this.scuba_local_path;
-        let scuba_table_hooks = this.scuba_table_hooks;
-        let scuba_local_path_hooks = this.scuba_local_path_hooks;
-
-        let wireproto_logging = match this.wireproto_logging {
-            Some(wireproto_logging) => {
-                let RawWireprotoLoggingConfig {
-                    scribe_category,
-                    storage_config: wireproto_storage_config,
-                    remote_arg_size_threshold,
-                    local_path,
-                } = wireproto_logging;
-
-                let storage_config_and_threshold = match (
-                    wireproto_storage_config,
-                    remote_arg_size_threshold,
-                ) {
-                    (Some(storage_config), Some(threshold)) => {
-                        Some((storage_config, threshold as u64))
-                    }
-                    (None, Some(_threshold)) => {
-                        return Err(
-                            format_err!("Invalid configuration: wireproto threshold is specified, but storage config is not")
-                        );
-                    }
-                    (Some(storage_config), None) => {
-                        Some((storage_config, DEFAULT_ARG_SIZE_THRESHOLD))
-                    }
-                    (None, None) => None,
-                };
-
-                let storage_config_and_threshold = storage_config_and_threshold
-                    .map(|(storage_config, threshold)| {
-                        get_storage(&storage_config).map(|config| (config, threshold))
-                    })
-                    .transpose()?;
-
-                WireprotoLoggingConfig {
-                    scribe_category,
-                    storage_config_and_threshold,
-                    local_path,
-                }
-            }
-            None => Default::default(),
-        };
-
-        let cache_warmup = match this.cache_warmup {
-            Some(raw) => Some(CacheWarmupParams {
-                bookmark: BookmarkName::new(raw.bookmark)?,
-                commit_limit: raw
-                    .commit_limit
-                    .map(|v| v.try_into())
-                    .transpose()?
-                    .unwrap_or(200000),
-                microwave_preload: raw.microwave_preload.unwrap_or(false),
-            }),
-            None => None,
-        };
-
-        let hook_manager_params = this.hook_manager_params.map(|params| HookManagerParams {
-            disable_acl_checker: params.disable_acl_checker,
-        });
-        let bookmarks = {
-            let mut bookmark_params = Vec::new();
-            for bookmark in this.bookmarks.unwrap_or_default().iter().cloned() {
-                let bookmark_or_regex = match (bookmark.regex, bookmark.name) {
-                    (None, Some(name)) => {
-                        BookmarkOrRegex::Bookmark(BookmarkName::new(name).unwrap())
-                    }
-                    (Some(regex), None) => match Regex::new(&regex) {
-                        Ok(regex) => BookmarkOrRegex::Regex(regex),
-                        Err(err) => {
-                            return Err(ErrorKind::InvalidConfig(format!(
-                                "invalid bookmark regex: {}",
-                                err
-                            ))
-                            .into())
-                        }
-                    },
-                    _ => {
-                        return Err(ErrorKind::InvalidConfig(
-                            "bookmark's params need to specify regex xor name".into(),
-                        )
-                        .into());
-                    }
-                };
-
-                let only_fast_forward = bookmark.only_fast_forward;
-                let allowed_users = bookmark
-                    .allowed_users
-                    .map(|re| Regex::new(&re))
-                    .transpose()?;
-                let rewrite_dates = bookmark.rewrite_dates;
-
-                bookmark_params.push(BookmarkParams {
-                    bookmark: bookmark_or_regex,
-                    hooks: bookmark
-                        .hooks
-                        .into_iter()
-                        .map(|rbmh| rbmh.hook_name)
-                        .collect(),
-                    only_fast_forward,
-                    allowed_users,
-                    rewrite_dates,
-                });
-            }
-            bookmark_params
-        };
-        let bookmarks_cache_ttl = this
-            .bookmarks_cache_ttl
-            .map(|ttl| -> Result<_, Error> { Ok(Duration::from_millis(ttl.try_into()?)) })
-            .transpose()?;
-
-        let push = this
-            .push
-            .map(|raw| {
-                let default = PushParams::default();
-                PushParams {
-                    pure_push_allowed: raw.pure_push_allowed.unwrap_or(default.pure_push_allowed),
-                }
-            })
-            .unwrap_or_default();
-
-        let pushrebase = this
-            .pushrebase
-            .map(|raw| -> Result<_, Error> {
-                let default = PushrebaseParams::default();
-                Ok(PushrebaseParams {
-                    flags: PushrebaseFlags {
-                        rewritedates: raw.rewritedates.unwrap_or(default.flags.rewritedates),
-                        recursion_limit: raw
-                            .recursion_limit
-                            .map(|v| v.try_into())
-                            .transpose()?
-                            .or(default.flags.recursion_limit),
-                        forbid_p2_root_rebases: raw
-                            .forbid_p2_root_rebases
-                            .unwrap_or(default.flags.forbid_p2_root_rebases),
-                        casefolding_check: raw
-                            .casefolding_check
-                            .unwrap_or(default.flags.casefolding_check),
-                        not_generated_filenodes_limit: 500,
-                    },
-                    commit_scribe_category: raw.commit_scribe_category,
-                    block_merges: raw.block_merges.unwrap_or(default.block_merges),
-                    emit_obsmarkers: raw.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),
-                    assign_globalrevs: raw.assign_globalrevs.unwrap_or(default.assign_globalrevs),
-                    populate_git_mapping: raw
-                        .populate_git_mapping
-                        .unwrap_or(default.populate_git_mapping),
-                })
-            })
-            .transpose()?
-            .unwrap_or_default();
-
-        let bundle2_replay_params = this
-            .bundle2_replay_params
-            .map(|raw| Bundle2ReplayParams {
-                preserve_raw_bundle2: raw.preserve_raw_bundle2.unwrap_or(false),
-            })
-            .unwrap_or_default();
-
-        let lfs = match this.lfs {
-            Some(lfs_params) => LfsParams {
-                threshold: lfs_params.threshold.map(|v| v.try_into()).transpose()?,
-                rollout_percentage: lfs_params.rollout_percentage.unwrap_or(0).try_into()?,
-                generate_lfs_blob_in_hg_sync_job: lfs_params
-                    .generate_lfs_blob_in_hg_sync_job
-                    .unwrap_or(false),
-                rollout_smc_tier: lfs_params.rollout_smc_tier,
-            },
-            None => LfsParams::default(),
-        };
-
-        let hash_validation_percentage = this
-            .hash_validation_percentage
-            .map(|v| v.try_into())
-            .transpose()?
-            .unwrap_or(0);
-
-        let readonly = if this.readonly.unwrap_or_default() {
-            RepoReadOnly::ReadOnly("Set by config option".to_string())
-        } else {
-            RepoReadOnly::ReadWrite
-        };
-
-        let redaction = if this.redaction.unwrap_or(true) {
-            Redaction::Enabled
-        } else {
-            Redaction::Disabled
-        };
-
-        let infinitepush = this
-            .infinitepush
-            .map(|raw| InfinitepushParams {
-                allow_writes: raw.allow_writes,
-                namespace: raw
-                    .namespace_pattern
-                    .and_then(|ns| Regex::new(&ns).ok().map(InfinitepushNamespace::new)),
-                hydrate_getbundle_response: raw.hydrate_getbundle_response.unwrap_or(false),
-                populate_reverse_filler_queue: raw.populate_reverse_filler_queue.unwrap_or(false),
-            })
-            .unwrap_or_else(InfinitepushParams::default);
-
-        let generation_cache_size: usize = this
-            .generation_cache_size
-            .map(|v| v.try_into())
-            .transpose()?
-            .unwrap_or(10 * 1024 * 1024);
-
-        let list_keys_patterns_max: u64 = this
-            .list_keys_patterns_max
-            .map(|v| v.try_into())
-            .transpose()?
-            .unwrap_or(LIST_KEYS_PATTERNS_MAX_DEFAULT);
-
-        let hook_max_file_size: u64 = this
-            .hook_max_file_size
-            .map(|v| v.try_into())
-            .transpose()?
-            .unwrap_or(HOOK_MAX_FILE_SIZE_DEFAULT);
-
-        let filestore = this.filestore.map(|f| f.convert()).transpose()?;
-
-        let source_control_service = this
-            .source_control_service
-            .map(|source_control_service| SourceControlServiceParams {
-                permit_writes: source_control_service.permit_writes,
-            })
-            .unwrap_or(SourceControlServiceParams::default());
-
-        let source_control_service_monitoring = this
-            .source_control_service_monitoring
-            .map(|m| m.try_into())
-            .transpose()?;
-
-        let skiplist_index_blobstore_key = this.skiplist_index_blobstore_key;
-        let relevant_commit_sync_configs: Vec<&CommitSyncConfig> = commit_sync
-            .iter()
-            .filter_map(|(_, config)| {
-                if Self::is_commit_sync_config_relevant_to_repo(&repoid, config) {
-                    Some(config)
-                } else {
-                    None
-                }
-            })
-            .collect();
-        let commit_sync_config = match relevant_commit_sync_configs.as_slice() {
-            [] => None,
-            [commit_sync_config] => Some((*commit_sync_config).clone()),
-            _ => {
-                return Err(format_err!(
-                    "Repo {} participates in more than one commit sync config",
-                    repoid,
-                ))
-            }
-        };
-
-        let derived_data_config = this
-            .derived_data_config
-            .map(|raw_derived_data_config| {
-                let unode_version =
-                    if let Some(unode_version) = raw_derived_data_config.raw_unode_version {
-                        match unode_version {
-                            RawUnodeVersion::unode_version_v1(_) => UnodeVersion::V1,
-                            RawUnodeVersion::unode_version_v2(_) => UnodeVersion::V2,
-                            RawUnodeVersion::UnknownField(field) => {
-                                return Err(format_err!("unknown unode version {}", field));
-                            }
-                        }
-                    } else {
-                        UnodeVersion::default()
-                    };
-
-                Ok(DerivedDataConfig {
-                    scuba_table: raw_derived_data_config.scuba_table,
-                    derived_data_types: raw_derived_data_config
-                        .derived_data_types
-                        .unwrap_or(BTreeSet::new()),
-                    unode_version,
-                })
-            })
-            .transpose()?
-            .unwrap_or(DerivedDataConfig::default());
-
-        let hgsql_name = HgsqlName(this.hgsql_name.unwrap_or_else(|| reponame.to_string()));
-
-        let hgsql_globalrevs_name = HgsqlGlobalrevsName(
-            this.hgsql_globalrevs_name
-                .unwrap_or_else(|| hgsql_name.0.clone()),
-        );
-
-        Ok(RepoConfig {
-            enabled,
-            storage_config,
-            generation_cache_size,
-            repoid,
-            scuba_table,
-            scuba_local_path,
-            scuba_table_hooks,
-            scuba_local_path_hooks,
-            cache_warmup,
-            hook_manager_params,
-            bookmarks,
-            bookmarks_cache_ttl,
-            hooks,
-            push,
-            pushrebase,
-            lfs,
-            wireproto_logging,
-            hash_validation_percentage,
-            readonly,
-            redaction,
-            skiplist_index_blobstore_key,
-            bundle2_replay_params,
-            write_lock_db_address: this.write_lock_db_address,
-            infinitepush,
-            list_keys_patterns_max,
-            filestore,
-            commit_sync_config,
-            hook_max_file_size,
-            hipster_acl: this.hipster_acl,
-            source_control_service,
-            source_control_service_monitoring,
-            derived_data_config,
-            hgsql_name,
-            hgsql_globalrevs_name,
-        })
+        Ok(load_storage_configs(fb, config_root_path)?.storage)
     }
 
     /// Get individual `RepoConfig`, given a repo_id
@@ -749,149 +515,25 @@ impl RepoConfigs {
             .iter()
             .find(|(_, repo_config)| repo_config.repoid == repo_id)
     }
-
-    fn read_raw_configs(fb: FacebookInit, config_path: &Path) -> Result<RawRepoConfigs> {
-        if config_path.starts_with(CONFIGERATOR_PREFIX) {
-            let cfg_path = config_path
-                .strip_prefix(CONFIGERATOR_PREFIX)?
-                .to_string_lossy()
-                .into_owned();
-            let arc_conf = ConfigStore::signed_configerator(
-                fb,
-                None,
-                hashmap! {
-                    cfg_path.clone() => CONFIGERATOR_CRYPTO_PROJECT.to_owned(),
-                },
-                None,
-                Duration::from_secs(30),
-            )?
-            .get_config_handle::<RawRepoConfigs>(cfg_path)?
-            .get();
-            Ok((*arc_conf).clone())
-        } else if config_path.is_dir() {
-            Self::read_raw_configs_toml(config_path)
-        } else if config_path.is_file() {
-            let repo_configs = fs::read(config_path)?;
-            Ok(serde_json::from_slice(&repo_configs)?)
-        } else {
-            Err(ErrorKind::InvalidFileStructure(format!(
-                "{} does not exist",
-                config_path.display()
-            ))
-            .into())
-        }
-    }
-
-    fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
-        let commit_sync = Self::read_toml_path::<HashMap<String, RawCommitSyncConfig>>(
-            config_path
-                .join("common")
-                .join("commitsyncmap.toml")
-                .as_path(),
-            false,
-        )?;
-        let common = Self::read_toml_path::<RawCommonConfig>(
-            config_path.join("common").join("common.toml").as_path(),
-            true,
-        )?;
-        let storage = Self::read_toml_path::<HashMap<String, RawStorageConfig>>(
-            config_path.join("common").join("storage.toml").as_path(),
-            true,
-        )?;
-
-        let mut repos = HashMap::new();
-        let repos_dir = config_path.join("repos");
-        if !repos_dir.is_dir() {
-            return Err(ErrorKind::InvalidFileStructure(format!(
-                "expected 'repos' directory under {}",
-                config_path.display()
-            ))
-            .into());
-        }
-        for entry in repos_dir.read_dir()? {
-            let repo_config_path = entry?.path();
-            let reponame = repo_config_path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .ok_or_else(|| {
-                    ErrorKind::InvalidFileStructure(format!(
-                        "invalid repo path {:?}",
-                        repo_config_path
-                    ))
-                })?
-                .to_string();
-
-            let repo_config = Self::read_toml_path::<RawRepoConfig>(
-                repo_config_path.join("server.toml").as_path(),
-                false,
-            )?;
-            repos.insert(reponame, repo_config);
-        }
-
-        Ok(RawRepoConfigs {
-            commit_sync,
-            common,
-            repos,
-            storage,
-        })
-    }
-
-    fn read_toml_path<T>(path: &Path, defaults: bool) -> Result<T, Error>
-    where
-        T: serde::de::DeserializeOwned + Default,
-    {
-        if !path.is_file() {
-            if defaults && !path.exists() {
-                return Ok(Default::default());
-            }
-
-            return Err(ErrorKind::InvalidFileStructure(format!(
-                "{} should be a file",
-                path.display()
-            ))
-            .into());
-        }
-        let content = fs::read(path)?;
-        let res = Self::read_toml::<T>(&content);
-        res
-    }
-
-    /// Helper to read toml files which throws an error upon encountering
-    /// unknown keys
-    fn read_toml<T>(bytes: &[u8]) -> Result<T, Error>
-    where
-        T: serde::de::DeserializeOwned,
-    {
-        match str::from_utf8(bytes) {
-            Ok(s) => {
-                let mut unused = BTreeSet::new();
-                let de = &mut toml::de::Deserializer::new(s);
-                let t: T = serde_ignored::deserialize(de, |path| {
-                    unused.insert(path.to_string());
-                })?;
-
-                if unused.len() > 0 {
-                    Err(anyhow!("unknown keys in config parsing: `{:?}`", unused))?;
-                }
-
-                Ok(t)
-            }
-            Err(e) => Err(anyhow!("error parsing toml: {}", e)),
-        }
-    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use bookmarks_types::BookmarkName;
     use maplit::{btreemap, btreeset, hashmap};
     use metaconfig_types::{
-        BlobConfig, BlobstoreId, DatabaseConfig, FilestoreParams, LocalDatabaseConfig,
-        MetadataDatabaseConfig, MultiplexId, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
+        BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
+        DatabaseConfig, DerivedDataConfig, FilestoreParams, HookBypass, HookConfig,
+        HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
+        LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, PushParams, PushrebaseFlags,
+        PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
         ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SourceControlServiceMonitoring,
+        SourceControlServiceParams, UnodeVersion, WireprotoLoggingConfig,
     };
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
+    use regex::Regex;
     use std::fs::{create_dir_all, write};
     use std::num::NonZeroUsize;
     use std::str::FromStr;
@@ -952,8 +594,8 @@ mod test {
         };
         let tmp_dir = write_files(&paths);
         let raw_config =
-            RepoConfigs::read_raw_configs(fb, tmp_dir.path()).expect("expect to read configs");
-        let commit_sync = RepoConfigs::parse_commit_sync_config(raw_config.commit_sync)
+            crate::raw::read_raw_configs(fb, tmp_dir.path()).expect("expect to read configs");
+        let commit_sync = parse_commit_sync_config(raw_config.commit_sync)
             .expect("expected to get a commit sync config");
 
         let expected = hashmap! {
@@ -1524,7 +1166,7 @@ mod test {
                     scribe_category: Some("category".to_string()),
                     storage_config_and_threshold: Some((
                         main_storage_config,
-                        DEFAULT_ARG_SIZE_THRESHOLD,
+                        crate::convert::repo::DEFAULT_ARG_SIZE_THRESHOLD,
                     )),
                     local_path: None,
                 },

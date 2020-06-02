@@ -14,7 +14,6 @@
 use anyhow::{anyhow, Error, Result};
 use std::{
     collections::{BTreeSet, HashMap},
-    convert::TryFrom,
     fmt, mem,
     num::NonZeroU64,
     num::NonZeroUsize,
@@ -29,7 +28,6 @@ use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
-use repos::RawSourceControlServiceMonitoring;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
 use sql::mysql_async::{
@@ -1023,21 +1021,6 @@ pub struct SourceControlServiceMonitoring {
     /// a freshness value may be the `now - author_date` of
     /// the commit, to which the bookmark points
     pub bookmarks_to_report_age: Vec<BookmarkName>,
-}
-
-impl TryFrom<RawSourceControlServiceMonitoring> for SourceControlServiceMonitoring {
-    type Error = Error;
-
-    fn try_from(t: RawSourceControlServiceMonitoring) -> Result<Self, Error> {
-        let bookmarks_to_report_age = t
-            .bookmarks_to_report_age
-            .into_iter()
-            .map(|bookmark| BookmarkName::new(bookmark))
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(SourceControlServiceMonitoring {
-            bookmarks_to_report_age,
-        })
-    }
 }
 
 /// Represents the repository name for this repository in Hgsql.

@@ -8,6 +8,7 @@
 use anyhow::Result;
 
 mod commit_sync;
+pub(crate) mod repo;
 mod storage;
 
 /// Trait for converting raw config into parsed config.
@@ -15,4 +16,25 @@ pub(crate) trait Convert {
     type Output;
 
     fn convert(self) -> Result<Self::Output>;
+}
+
+impl<T: Convert> Convert for Option<T> {
+    type Output = Option<<T as Convert>::Output>;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self {
+            Some(v) => Ok(Some(v.convert()?)),
+            None => Ok(None),
+        }
+    }
+}
+
+impl<T: Convert> Convert for Vec<T> {
+    type Output = Vec<<T as Convert>::Output>;
+
+    fn convert(self) -> Result<Self::Output> {
+        self.into_iter()
+            .map(<T as Convert>::convert)
+            .collect::<Result<_>>()
+    }
 }
