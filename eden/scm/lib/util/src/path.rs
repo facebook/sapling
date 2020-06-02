@@ -115,6 +115,10 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> Result<()> {
 #[cfg(unix)]
 fn create_dir_with_mode_impl(path: &Path, mode: u32) -> io::Result<()> {
     if path.exists() {
+        if path.metadata()?.permissions().mode() != (0o40000 | mode) {
+            fs::set_permissions(path, fs::Permissions::from_mode(mode))?;
+        }
+
         return Err(io::ErrorKind::AlreadyExists.into());
     }
     let parent = path.parent().ok_or_else(|| {
@@ -315,6 +319,25 @@ mod tests {
             assert_eq!(metadata.permissions().mode(), 0o42775);
             // check we don't have temporary directory left
             assert_eq!(tempdir.path().read_dir()?.count(), 1);
+            Ok(())
+        }
+
+        #[test]
+        fn test_fixup_perms() -> Result<()> {
+            let tempdir = TempDir::new()?;
+            let mut path = tempdir.path().to_path_buf();
+            path.push("shared");
+
+            // Create it without the SGID bit.
+            create_dir_with_mode(&path, 0o775)?;
+            let metadata = path.metadata()?;
+            assert_eq!(metadata.permissions().mode(), 0o40775);
+
+            // Fix it up.
+            create_shared_dir(&path)?;
+            let metadata = path.metadata()?;
+            assert_eq!(metadata.permissions().mode(), 0o42775);
+
             Ok(())
         }
     }
