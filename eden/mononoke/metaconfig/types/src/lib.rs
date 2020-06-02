@@ -14,7 +14,7 @@
 use anyhow::{anyhow, Error, Result};
 use std::{
     collections::{BTreeSet, HashMap},
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     fmt, mem,
     num::NonZeroU64,
     num::NonZeroUsize,
@@ -28,13 +28,8 @@ use std::{
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use mononoke_types::{MPath, RepositoryId};
-use nonzero_ext::nonzero;
 use regex::Regex;
-use repos::{
-    RawBlobstoreConfig, RawDbConfig, RawDbLocal, RawDbRemote, RawDbShardableRemote,
-    RawDbShardedRemote, RawFilestoreParams, RawMetadataConfig, RawSourceControlServiceMonitoring,
-    RawStorageConfig,
-};
+use repos::RawSourceControlServiceMonitoring;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
 use sql::mysql_async::{
@@ -603,18 +598,6 @@ pub struct StorageConfig {
     pub metadata: MetadataDatabaseConfig,
 }
 
-impl TryFrom<RawStorageConfig> for StorageConfig {
-    type Error = Error;
-
-    fn try_from(raw: RawStorageConfig) -> Result<Self, Error> {
-        let config = StorageConfig {
-            metadata: TryFrom::try_from(raw.metadata)?,
-            blobstore: TryFrom::try_from(raw.blobstore)?,
-        };
-        Ok(config)
-    }
-}
-
 /// What to do when the ScrubBlobstore finds a problem
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize)]
 pub enum ScrubAction {
@@ -768,94 +751,6 @@ impl Default for BlobConfig {
     }
 }
 
-impl TryFrom<RawBlobstoreConfig> for BlobConfig {
-    type Error = Error;
-
-    fn try_from(raw: RawBlobstoreConfig) -> Result<Self, Error> {
-        let res = match raw {
-            RawBlobstoreConfig::disabled(_) => BlobConfig::Disabled,
-            RawBlobstoreConfig::blob_files(def) => BlobConfig::Files {
-                path: PathBuf::from(def.path),
-            },
-            RawBlobstoreConfig::blob_sqlite(def) => BlobConfig::Sqlite {
-                path: PathBuf::from(def.path),
-            },
-            RawBlobstoreConfig::manifold(def) => BlobConfig::Manifold {
-                bucket: def.manifold_bucket,
-                prefix: def.manifold_prefix,
-            },
-            RawBlobstoreConfig::mysql(def) => {
-                if let Some(remote) = def.remote {
-                    BlobConfig::Mysql {
-                        remote: remote.try_into()?,
-                    }
-                } else {
-                    BlobConfig::Mysql {
-                        remote: ShardableRemoteDatabaseConfig::Sharded(
-                            ShardedRemoteDatabaseConfig {
-                                shard_map: def.mysql_shardmap.ok_or_else(|| anyhow!("mysql shard name must be specified"))?,
-                                shard_num: NonZeroUsize::new(def.mysql_shard_num.ok_or_else(|| anyhow!("mysql shard num must be specified"))?.try_into()?)
-                                    .ok_or_else(|| anyhow!("mysql shard num must be specified and an integer larger than 0"))?,
-                            },
-                        ),
-                    }
-                }
-            }
-            RawBlobstoreConfig::multiplexed(def) => BlobConfig::Multiplexed {
-                multiplex_id: def
-                    .multiplex_id
-                    .map(|id| MultiplexId::new(id))
-                    .ok_or_else(|| anyhow!("missing multiplex_id from configuration"))?,
-                scuba_table: def.scuba_table,
-                scuba_sample_rate: parse_scuba_sample_rate(def.scuba_sample_rate)?,
-                blobstores: def
-                    .components
-                    .into_iter()
-                    .map(|comp| {
-                        Ok((
-                            BlobstoreId(comp.blobstore_id.try_into()?),
-                            BlobConfig::try_from(comp.blobstore)?,
-                        ))
-                    })
-                    .collect::<Result<Vec<_>>>()?,
-                queue_db: def
-                    .queue_db
-                    .ok_or_else(|| anyhow!("missing queue_db from configuration"))?
-                    .try_into()?,
-            },
-            RawBlobstoreConfig::manifold_with_ttl(def) => {
-                let ttl = Duration::from_secs(def.ttl_secs.try_into()?);
-                BlobConfig::ManifoldWithTtl {
-                    bucket: def.manifold_bucket,
-                    prefix: def.manifold_prefix,
-                    ttl,
-                }
-            }
-            RawBlobstoreConfig::logging(def) => BlobConfig::Logging {
-                scuba_table: def.scuba_table,
-                scuba_sample_rate: parse_scuba_sample_rate(def.scuba_sample_rate)?,
-                blobconfig: Box::new(BlobConfig::try_from(*def.blobstore)?),
-            },
-            RawBlobstoreConfig::UnknownField(_) => {
-                return Err(anyhow!("unsupported blobstore configuration"));
-            }
-        };
-        Ok(res)
-    }
-}
-
-fn parse_scuba_sample_rate(sample_rate: Option<i64>) -> Result<NonZeroU64, Error> {
-    let rate = sample_rate
-        .map(|rate| {
-            NonZeroU64::new(rate.try_into()?)
-                .ok_or_else(|| anyhow!("scuba_sample_rate must be an integer larger than zero"))
-        })
-        .transpose()?
-        .unwrap_or(nonzero!(100_u64));
-
-    Ok(rate)
-}
-
 /// Configuration for a local SQLite database
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LocalDatabaseConfig {
@@ -949,88 +844,6 @@ impl MetadataDatabaseConfig {
         match self {
             MetadataDatabaseConfig::Remote(remote) => Some(remote.primary.db_address.clone()),
             MetadataDatabaseConfig::Local(_) => None,
-        }
-    }
-}
-
-impl From<RawDbLocal> for LocalDatabaseConfig {
-    fn from(raw: RawDbLocal) -> Self {
-        LocalDatabaseConfig {
-            path: PathBuf::from(raw.local_db_path),
-        }
-    }
-}
-
-impl From<RawDbRemote> for RemoteDatabaseConfig {
-    fn from(raw: RawDbRemote) -> Self {
-        RemoteDatabaseConfig {
-            db_address: raw.db_address,
-        }
-    }
-}
-
-impl TryFrom<RawDbShardedRemote> for ShardedRemoteDatabaseConfig {
-    type Error = Error;
-
-    fn try_from(raw: RawDbShardedRemote) -> Result<Self, Self::Error> {
-        let shard_num = NonZeroUsize::new(raw.shard_num.try_into()?)
-            .ok_or_else(|| anyhow!("sharded remote shard_num must be > 0"))?;
-        Ok(ShardedRemoteDatabaseConfig {
-            shard_map: raw.shard_map,
-            shard_num,
-        })
-    }
-}
-
-impl TryFrom<RawDbShardableRemote> for ShardableRemoteDatabaseConfig {
-    type Error = Error;
-
-    fn try_from(raw: RawDbShardableRemote) -> Result<Self, Self::Error> {
-        match raw {
-            RawDbShardableRemote::unsharded(def) => {
-                Ok(ShardableRemoteDatabaseConfig::Unsharded(def.try_into()?))
-            }
-            RawDbShardableRemote::sharded(def) => {
-                Ok(ShardableRemoteDatabaseConfig::Sharded(def.try_into()?))
-            }
-            RawDbShardableRemote::UnknownField(f) => {
-                Err(anyhow!("unsupported database configuration ({})", f))
-            }
-        }
-    }
-}
-
-impl TryFrom<RawDbConfig> for DatabaseConfig {
-    type Error = Error;
-
-    fn try_from(raw: RawDbConfig) -> Result<Self, Self::Error> {
-        match raw {
-            RawDbConfig::local(def) => Ok(DatabaseConfig::Local(def.into())),
-            RawDbConfig::remote(def) => Ok(DatabaseConfig::Remote(def.into())),
-            RawDbConfig::UnknownField(f) => {
-                Err(anyhow!("unsupported database configuration ({})", f))
-            }
-        }
-    }
-}
-
-impl TryFrom<RawMetadataConfig> for MetadataDatabaseConfig {
-    type Error = Error;
-
-    fn try_from(raw: RawMetadataConfig) -> Result<Self, Self::Error> {
-        match raw {
-            RawMetadataConfig::local(def) => Ok(MetadataDatabaseConfig::Local(def.into())),
-            RawMetadataConfig::remote(def) => Ok(MetadataDatabaseConfig::Remote(
-                RemoteMetadataDatabaseConfig {
-                    primary: def.primary.into(),
-                    filenodes: def.filenodes.try_into()?,
-                    mutation: def.mutation.into(),
-                },
-            )),
-            RawMetadataConfig::UnknownField(f) => Err(anyhow!(
-                "unsupported metadata database configuration ({})",
-                f
-            )),
         }
     }
 }
@@ -1210,22 +1023,6 @@ pub struct SourceControlServiceMonitoring {
     /// a freshness value may be the `now - author_date` of
     /// the commit, to which the bookmark points
     pub bookmarks_to_report_age: Vec<BookmarkName>,
-}
-
-impl TryFrom<RawFilestoreParams> for FilestoreParams {
-    type Error = Error;
-
-    fn try_from(raw: RawFilestoreParams) -> Result<Self, Error> {
-        let RawFilestoreParams {
-            chunk_size,
-            concurrency,
-        } = raw;
-
-        Ok(FilestoreParams {
-            chunk_size: chunk_size.try_into()?,
-            concurrency: concurrency.try_into()?,
-        })
-    }
 }
 
 impl TryFrom<RawSourceControlServiceMonitoring> for SourceControlServiceMonitoring {

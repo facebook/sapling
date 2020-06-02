@@ -10,7 +10,7 @@
 
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
-    convert::{TryFrom, TryInto},
+    convert::TryInto,
     fs,
     path::Path,
     str,
@@ -301,11 +301,7 @@ impl RepoConfigs {
         Self::read_raw_configs(fb, config_root_path)?
             .storage
             .into_iter()
-            .map(|(k, v)| {
-                StorageConfig::try_from(v)
-                    .map(|v| (k, v))
-                    .map_err(Error::from)
-            })
+            .map(|(k, v)| Ok((k, v.convert()?)))
             .collect()
     }
 
@@ -400,7 +396,7 @@ impl RepoConfigs {
                     ErrorKind::InvalidConfig(format!("Storage \"{}\" not defined", name))
                 })?;
 
-            raw_storage_config.try_into()
+            raw_storage_config.convert()
         };
 
         let storage_config = get_storage(
@@ -636,7 +632,7 @@ impl RepoConfigs {
             .transpose()?
             .unwrap_or(HOOK_MAX_FILE_SIZE_DEFAULT);
 
-        let filestore = this.filestore.map(|f| f.try_into()).transpose()?;
+        let filestore = this.filestore.map(|f| f.convert()).transpose()?;
 
         let source_control_service = this
             .source_control_service

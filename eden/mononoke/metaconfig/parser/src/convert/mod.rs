@@ -8,6 +8,7 @@
 use anyhow::Result;
 
 mod commit_sync;
+mod storage;
 
 /// Trait for converting raw config into parsed config.
 pub(crate) trait Convert {
