@@ -21,11 +21,10 @@ use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 pub struct IdMap(SqlConnections);
 
 queries! {
-    // TODO(sfilip): upsert is a hack around a limited build_up implementation, we want insert_or_ignore.
     write InsertIdMapEntry(values: (repo_id: RepositoryId, vertex: u64, cs_id: ChangesetId)) {
-        none,
+        insert_or_ignore,
         "
-        INSERT OR REPLACE INTO segmented_changelog_idmap (repo_id, vertex, cs_id)
+        {insert_or_ignore} INTO segmented_changelog_idmap (repo_id, vertex, cs_id)
         VALUES {values}
         "
     }
