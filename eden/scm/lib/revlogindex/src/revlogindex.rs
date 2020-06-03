@@ -19,6 +19,7 @@ use indexedlog::utils::{atomic_write, mmap_bytes};
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
+use std::collections::VecDeque;
 use std::fs;
 use std::io;
 use std::marker::PhantomData;
@@ -60,7 +61,7 @@ impl RevlogIndex {
                     if state == State::PotentialHead {
                         result.push(rev as u32);
                     }
-                    for &parent_rev in self.parents(rev as u32).as_revs() {
+                    for &parent_rev in self.parent_revs(rev as u32).as_revs() {
                         if parent_rev >= min_rev {
                             states[(parent_rev - min_rev) as usize] = State::NotHead;
                         }
@@ -115,12 +116,193 @@ impl RevlogIndex {
                 // with the new "dag" abstraction.
                 Phase::Unspecified => (),
             }
-            for &parent_rev in self.parents(rev as u32).as_revs() {
+            for &parent_rev in self.parent_revs(rev as u32).as_revs() {
                 // Propagate phases from this rev to its parents.
                 phases[parent_rev as usize] = phases[parent_rev as usize].max(phase);
             }
         }
         (public_set, draft_set)
+    }
+
+    /// GCA based on linear scan.
+    ///
+    /// Ported from Mercurial's C code `find_gca_candidates()`.
+    ///
+    /// The algorithm was written by Bryan O'Sullivan on 2013-04-16.
+    /// He provided both a Python [1] and a C version [2]. Since then, the only real
+    /// logic change is removing an unnecessary "if" branch by Mads Kiilerich on
+    /// 2014-02-24 [4].
+    ///
+    /// The C implementation is quite competitive among linear algorithms on
+    /// performance. It is cache-efficient, has fast paths to exit early, and
+    /// takes up to 62 (if bitmask is u64) revs at once. Other implementations
+    /// might just take 2 revs at most. For example, the older implemenation
+    /// by Matt Mackall in 2006 [3] takes 2 revs explicitly.
+    ///
+    /// Changes in this Rust implementation:
+    /// - Change `bitmask` from `u64` to `u8` for smaller memory footage, at the
+    ///   cost of losing support for more than 6 revs.
+    /// - Adopted to RevlogIndex.
+    /// - Run `gca` recursively on large input.
+    ///
+    /// [1]: https://www.mercurial-scm.org/repo/hg/rev/2f7186400a07
+    /// [2]: https://www.mercurial-scm.org/repo/hg/rev/5bae936764bb
+    /// [3]: https://www.mercurial-scm.org/repo/hg/rev/b1db258e875c
+    /// [4]: https://www.mercurial-scm.org/repo/hg/rev/4add43865a9b
+    pub fn gca_revs(&self, revs: &[u32], limit: usize) -> Vec<u32> {
+        type BitMask = u8;
+        let revcount = revs.len();
+        assert!(revcount < 7);
+        if revcount == 0 {
+            return Vec::new();
+        }
+
+        let allseen: BitMask = (1 << revcount) - 1;
+        let poison: BitMask = 1 << revcount;
+        let maxrev = revs.iter().max().cloned().unwrap();
+        let mut interesting = revcount;
+        let mut gca = Vec::new();
+        let mut seen: Vec<BitMask> = vec![0; maxrev as usize + 1];
+
+        for (i, &rev) in revs.iter().enumerate() {
+            seen[rev as usize] = 1 << i;
+        }
+
+        for v in (0..=maxrev).rev() {
+            if interesting == 0 {
+                break;
+            }
+            let mut sv = seen[v as usize];
+            if sv == 0 {
+                continue;
+            }
+            if sv < poison {
+                interesting -= 1;
+                if sv == allseen {
+                    gca.push(v);
+                    if gca.len() >= limit {
+                        return gca;
+                    }
+                    sv |= poison;
+                    if revs.iter().any(|&r| r == v) {
+                        break;
+                    }
+                }
+            }
+            for &p in self.parent_revs(v).as_revs() {
+                let sp = seen[p as usize];
+                if sv < poison {
+                    if sp == 0 {
+                        seen[p as usize] = sv;
+                        interesting += 1
+                    } else if sp != sv {
+                        seen[p as usize] |= sv
+                    }
+                } else {
+                    if sp != 0 && sp < poison {
+                        interesting -= 1
+                    }
+                    seen[p as usize] = sv
+                }
+            }
+        }
+
+        gca
+    }
+
+    /// Range based on linear scan.
+    ///
+    /// Ported from Mercurial's C code `reachableroots2()`.
+    ///
+    /// The C implementation was added by Laurent Charignon on 2015-08-06 [1].
+    /// It was based on the a Python implementation added by Bryan O'Sullivan on
+    /// 2012-06-01 [2], which is similar to an older implementation by Eric Hopper
+    /// on 2005-10-07 [3], but faster and shorter.
+    ///
+    /// The C code was then revised by others. The most significant change was
+    /// switching the "contains" check of "roots" and "reachable" from Python sets
+    /// to bits in the pure C "revstates" array for easier error handling and
+    /// better performance, by Yuya Nishihara on 2015-08-13 [4] [5].
+    ///
+    /// Improvements in this Rust implementation:
+    /// - Use `VecDeque` for `tovisit` (roughly O(len(result)) -> O(len(heads))).
+    /// - Truncate `revstates` (O(len(changelog)) -> O(max_head - min_root)).
+    /// - Add `reachable.is_empty()` fast path that existed in the Python code.
+    /// - Support octopus merge.
+    ///
+    /// [1]: https://www.mercurial-scm.org/repo/hg/rev/ff89383a97db
+    /// [2]: https://www.mercurial-scm.org/repo/hg/rev/b6efeb27e733
+    /// [3]: https://www.mercurial-scm.org/repo/hg/rev/518da3c3b6ce
+    /// [4]: https://www.mercurial-scm.org/repo/hg/rev/b68c9d232db6
+    /// [5]: https://www.mercurial-scm.org/repo/hg/rev/b3ad349d0e50
+    pub fn range_revs(&self, roots: &[u32], heads: &[u32]) -> Vec<u32> {
+        if roots.is_empty() || heads.is_empty() {
+            return Vec::new();
+        }
+        let min_root = *roots.iter().min().unwrap();
+        let max_head = *heads.iter().max().unwrap();
+        let len = (max_head.max(min_root) - min_root + 1) as usize;
+        let mut reachable = Vec::with_capacity(len);
+        let mut tovisit = VecDeque::new();
+        let mut revstates = vec![0u8; len];
+
+        const RS_SEEN: u8 = 1;
+        const RS_ROOT: u8 = 2;
+        const RS_REACHABLE: u8 = 4;
+
+        for &rev in roots {
+            if rev <= max_head {
+                revstates[(rev - min_root) as usize] |= RS_ROOT;
+            }
+        }
+
+        for &rev in heads {
+            if rev >= min_root && revstates[(rev - min_root) as usize] & RS_SEEN == 0 {
+                tovisit.push_back(rev);
+                revstates[(rev - min_root) as usize] |= RS_SEEN;
+            }
+        }
+
+        // Visit the tovisit list and find the reachable roots
+        while let Some(rev) = tovisit.pop_front() {
+            // Add the node to reachable if it is a root
+            if revstates[(rev - min_root) as usize] & RS_ROOT != 0 {
+                revstates[(rev - min_root) as usize] |= RS_REACHABLE;
+                reachable.push(rev);
+            }
+
+            // Add its parents to the list of nodes to visit
+            for &p in self.parent_revs(rev).as_revs() {
+                if p >= min_root && revstates[(p - min_root) as usize] & RS_SEEN == 0 {
+                    tovisit.push_back(p);
+                    revstates[(p - min_root) as usize] |= RS_SEEN;
+                }
+            }
+        }
+
+        if reachable.is_empty() {
+            return Vec::new();
+        }
+
+        // Find all the nodes in between the roots we found and the heads
+        // and add them to the reachable set
+        for rev in min_root..=max_head {
+            if revstates[(rev - min_root) as usize] & RS_SEEN == 0 {
+                continue;
+            }
+            if self
+                .parent_revs(rev)
+                .as_revs()
+                .iter()
+                .any(|&p| p >= min_root && revstates[(p - min_root) as usize] & RS_REACHABLE != 0)
+                && revstates[(rev - min_root) as usize] & RS_REACHABLE == 0
+            {
+                revstates[(rev - min_root) as usize] |= RS_REACHABLE;
+                reachable.push(rev);
+            }
+        }
+
+        reachable
     }
 }
 
@@ -250,7 +432,7 @@ impl RevlogIndex {
     }
 
     /// Get parent revisions.
-    pub fn parents(&self, rev: u32) -> ParentRevs {
+    pub fn parent_revs(&self, rev: u32) -> ParentRevs {
         let data_len = self.data_len();
         if rev >= data_len as u32 {
             return self.pending_parents[rev as usize - data_len].clone();

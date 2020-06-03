@@ -56,7 +56,7 @@ py_class!(class revlogindex |py| {
     /// Get parent revisions.
     def parentrevs(&self, rev: u32) -> PyResult<Vec<u32>> {
         let revlog = self.index(py).borrow();
-        Ok(revlog.parents(rev).as_revs().to_vec())
+        Ok(revlog.parent_revs(rev).as_revs().to_vec())
     }
 
     /// Insert a new revision that hasn't been written to disk.
