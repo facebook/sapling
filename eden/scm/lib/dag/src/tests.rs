@@ -15,10 +15,12 @@ use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 #[cfg(test)]
 use crate::DagAlgorithm;
 use crate::IdMap;
+use crate::InverseDag;
 use crate::NameDag;
 use crate::NameSet;
 use crate::SpanSet;
 use anyhow::Result;
+use std::sync::Arc;
 use tempfile::tempdir;
 
 // Example from segmented-changelog.pdf
@@ -63,6 +65,24 @@ fn test_mem_namedag() -> Result<()> {
     assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "I C A");
     assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "J F");
     assert_eq!(expand(dag.gca_all(nameset("J K H"))?), "G");
+    Ok(())
+}
+
+#[test]
+fn test_inverse_dag() -> Result<()> {
+    let dag = InverseDag::new(Arc::new(from_ascii(ASCII_DAG1)));
+    assert_eq!(expand(dag.all()?), "L K J I H G F E D C B A");
+    assert_eq!(
+        expand(dag.descendants(nameset("H I"))?),
+        "I H G F E D C B A"
+    );
+    assert_eq!(expand(dag.children(nameset("H I E"))?), "G D B");
+    assert_eq!(expand(dag.parents(nameset("G D L"))?), "I H E");
+    assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "A C I");
+    assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "J F");
+    assert_eq!(expand(dag.gca_all(nameset("J H"))?), "K");
+    assert_eq!(expand(dag.range(nameset("F"), nameset("D"))?), "F E D");
+    assert_eq!(expand(dag.range(nameset("D"), nameset("F"))?), "");
     Ok(())
 }
 
