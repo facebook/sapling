@@ -124,6 +124,7 @@ class DiskUsageCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         mounts = args.mounts
         clean = args.clean
+
         if clean:
             print(
                 """
@@ -134,8 +135,12 @@ Please use `hg clean --all` to remove them.
         instance = None
 
         if len(mounts) == 0:
-            instance, checkout, _rel_path = require_checkout(args, None)
-            mounts = [str(checkout.path)]
+            instance = get_eden_instance(args)
+            if not instance:
+                raise subcmd_mod.CmdError(f"no Eden instance found.")
+            mounts = list(instance.get_mount_paths())
+            if not len(mounts):
+                raise subcmd_mod.CmdError(f"no Eden mount found.")
 
         backing_repos = set()
 
@@ -212,12 +217,14 @@ space by running:
         logs_dir = instance.state_dir / "logs"
         storage_dir = instance.state_dir / "storage"
 
-        self.underlined("Data shared by all mounts in this Eden instance")
+        self.underlined("Data shared by all mounts")
         self.usage_for_dir("Log files", logs_dir)
         self.usage_for_dir("Storage engine", storage_dir)
         if clean:
             print("\nCleaning the space used by the storage engine...")
-            subprocess.check_call(["buck", "run", "edenfsctl", "gc"])
+            subprocess.check_call(["eden", "gc"])
+            # subprocess.check_call(["buck", "run", "edenfsctl", "gc"])
+
         else:
             print("\nRun `eden gc` to reduce the space used by the storage engine.")
 
