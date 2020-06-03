@@ -12,7 +12,7 @@ use dag::VertexName;
 
 /// Render a NameDag or MemNameDag into a String.
 pub fn render_namedag(
-    dag: &impl DagAlgorithm,
+    dag: &(impl DagAlgorithm + ?Sized),
     get_message: impl Fn(&VertexName) -> Option<String>,
 ) -> Result<String> {
     let mut renderer = crate::GraphRowRenderer::new().output().build_box_drawing();
