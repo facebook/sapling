@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use super::{r#static::IterRev, Hints, NameIter, NameSetQuery};
+use super::{Hints, NameIter, NameSetQuery};
 use crate::VertexName;
 use anyhow::{anyhow, bail, Result};
 use indexmap::IndexSet;
@@ -101,8 +101,6 @@ impl Iterator for Iter {
     }
 }
 
-impl NameIter for Iter {}
-
 impl fmt::Debug for LazySet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<lazy>")
@@ -144,7 +142,7 @@ impl NameSetQuery for LazySet {
 
     fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         let inner = self.load_all()?;
-        let iter: IterRev = inner.visited.clone().into_iter().rev().map(Ok);
+        let iter = inner.visited.clone().into_iter().rev().map(Ok);
         Ok(Box::new(iter))
     }
 

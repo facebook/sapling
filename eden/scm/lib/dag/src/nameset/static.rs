@@ -16,17 +16,6 @@ use std::fmt;
 /// A set backed by a concrete ordered set.
 pub struct StaticSet(pub(crate) IndexSet<VertexName>, Hints);
 
-type Iter =
-    std::iter::Map<indexmap::set::IntoIter<VertexName>, fn(VertexName) -> Result<VertexName>>;
-
-pub(crate) type IterRev = std::iter::Map<
-    std::iter::Rev<indexmap::set::IntoIter<VertexName>>,
-    fn(VertexName) -> Result<VertexName>,
->;
-
-impl NameIter for Iter {}
-impl NameIter for IterRev {}
-
 impl StaticSet {
     pub fn from_names(names: impl IntoIterator<Item = VertexName>) -> Self {
         let names: IndexSet<VertexName> = names.into_iter().collect();
@@ -47,12 +36,12 @@ impl StaticSet {
 
 impl NameSetQuery for StaticSet {
     fn iter(&self) -> Result<Box<dyn NameIter>> {
-        let iter: Iter = self.0.clone().into_iter().map(Ok);
+        let iter = self.0.clone().into_iter().map(Ok);
         Ok(Box::new(iter))
     }
 
     fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
-        let iter: IterRev = self.0.clone().into_iter().rev().map(Ok);
+        let iter = self.0.clone().into_iter().rev().map(Ok);
         Ok(Box::new(iter))
     }
 

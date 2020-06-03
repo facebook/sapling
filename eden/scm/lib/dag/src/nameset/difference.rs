@@ -26,8 +26,6 @@ struct Iter {
     rhs: NameSet,
 }
 
-impl NameIter for Iter {}
-
 impl DifferenceSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
         let hints = Hints::default();

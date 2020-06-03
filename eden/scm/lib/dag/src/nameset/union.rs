@@ -11,7 +11,6 @@ use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
 use std::fmt;
-use std::iter::{Chain, Filter};
 
 /// Union of 2 sets.
 ///
@@ -21,19 +20,6 @@ pub struct UnionSet {
     sets: [NameSet; 2],
     hints: Hints,
 }
-
-type Iter<F> = Chain<
-    Box<dyn NameIter<Item = Result<VertexName>>>,
-    Filter<Box<dyn NameIter<Item = Result<VertexName>>>, F>,
->;
-
-type RevIter<F> = Chain<
-    Filter<Box<dyn NameIter<Item = Result<VertexName>>>, F>,
-    Box<dyn NameIter<Item = Result<VertexName>>>,
->;
-
-impl<F: FnMut(&Result<VertexName>) -> bool + Send> NameIter for Iter<F> {}
-impl<F: FnMut(&Result<VertexName>) -> bool + Send> NameIter for RevIter<F> {}
 
 impl UnionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
@@ -61,19 +47,20 @@ impl NameSetQuery for UnionSet {
     fn iter(&self) -> Result<Box<dyn NameIter>> {
         debug_assert_eq!(self.sets.len(), 2);
         let set0 = self.sets[0].clone();
-        let iter: Iter<_> = self.sets[0]
-            .iter()?
-            .chain(self.sets[1].iter()?.filter(move |name| match name {
-                Ok(name) => set0.contains(name).ok() != Some(true),
-                _ => true,
-            }));
+        let iter =
+            self.sets[0]
+                .iter()?
+                .chain(self.sets[1].iter()?.filter(move |name| match name {
+                    Ok(name) => set0.contains(name).ok() != Some(true),
+                    _ => true,
+                }));
         Ok(Box::new(iter))
     }
 
     fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         debug_assert_eq!(self.sets.len(), 2);
         let set0 = self.sets[0].clone();
-        let iter: RevIter<_> = self.sets[1]
+        let iter = self.sets[1]
             .iter_rev()?
             .filter(move |name| match name {
                 Ok(name) => set0.contains(name).ok() != Some(true),

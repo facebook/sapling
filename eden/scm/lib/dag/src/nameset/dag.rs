@@ -44,8 +44,6 @@ impl Iterator for Iter {
     }
 }
 
-impl NameIter for Iter {}
-
 impl fmt::Debug for DagSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<dag [{:?}]>", &self.spans)
@@ -69,7 +67,7 @@ impl DagSet {
 
 impl NameSetQuery for DagSet {
     fn iter(&self) -> Result<Box<dyn NameIter>> {
-        let iter: Iter = Iter {
+        let iter = Iter {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
             reversed: false,
@@ -78,7 +76,7 @@ impl NameSetQuery for DagSet {
     }
 
     fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
-        let iter: Iter = Iter {
+        let iter = Iter {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
             reversed: true,

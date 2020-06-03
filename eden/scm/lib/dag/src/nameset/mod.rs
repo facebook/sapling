@@ -193,7 +193,7 @@ pub trait NameSetQuery: Any + Debug + Send + Sync {
     /// Iterate through the set in the reversed order.
     fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         let names = self.iter()?.collect::<Result<Vec<VertexName>, _>>()?;
-        let iter: RevVecNameIter = names.into_iter().rev().map(Ok);
+        let iter = names.into_iter().rev().map(Ok);
         Ok(Box::new(iter))
     }
 
@@ -241,16 +241,7 @@ pub trait NameSetQuery: Any + Debug + Send + Sync {
 /// Types implementing this should consider replacing `iter_rev` with a fast
 /// path if possible.
 pub trait NameIter: Iterator<Item = Result<VertexName>> + Send {}
-
-type VecNameIter =
-    std::iter::Map<std::vec::IntoIter<VertexName>, fn(VertexName) -> Result<VertexName>>;
-type RevVecNameIter = std::iter::Map<
-    std::iter::Rev<std::vec::IntoIter<VertexName>>,
-    fn(VertexName) -> Result<VertexName>,
->;
-
-impl NameIter for VecNameIter {}
-impl NameIter for RevVecNameIter {}
+impl<T> NameIter for T where T: Iterator<Item = Result<VertexName>> + Send {}
 
 impl From<VertexName> for NameSet {
     fn from(name: VertexName) -> NameSet {
@@ -302,7 +293,7 @@ pub(crate) mod tests {
 
     impl NameSetQuery for VecQuery {
         fn iter(&self) -> Result<Box<dyn NameIter>> {
-            let iter: VecNameIter = self.0.clone().into_iter().map(Ok);
+            let iter = self.0.clone().into_iter().map(Ok);
             Ok(Box::new(iter))
         }
 
