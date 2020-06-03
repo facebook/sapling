@@ -9,11 +9,17 @@ use crate::nodemap;
 use crate::NodeRevMap;
 use anyhow::bail;
 use anyhow::Result;
+use bit_vec::BitVec;
+use dag::nameset::hints::Flags;
+use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
+use dag::ops::IdMapEq;
 use dag::ops::PrefixLookup;
+use dag::ops::ToIdSet;
 use dag::Group;
 use dag::Id;
 use dag::IdSet;
+use dag::Set;
 use dag::Vertex;
 use indexedlog::utils::{atomic_write, mmap_bytes};
 use minibytes::Bytes;
@@ -551,5 +557,250 @@ impl IdConvert for RevlogIndex {
         } else {
             Ok(false)
         }
+    }
+}
+
+impl DagAlgorithm for RevlogIndex {
+    /// Sort a `Set` topologically.
+    fn sort(&self, set: &Set) -> Result<Set> {
+        if set.hints().contains(Flags::TOPO_DESC) {
+            Ok(set.clone())
+        } else {
+            let mut spans = IdSet::empty();
+            for name in set.iter()? {
+                let id = self.vertex_id(name?)?;
+                spans.push(id);
+            }
+            Ok(Set::from_spans_idmap(spans, self.get_snapshot()))
+        }
+    }
+
+    /// Get ordered parent vertexes.
+    fn parent_names(&self, name: Vertex) -> Result<Vec<Vertex>> {
+        let rev = self.vertex_id(name)?.0 as u32;
+        let parent_revs = self.parent_revs(rev);
+        let parent_revs = parent_revs.as_revs();
+        let mut result = Vec::with_capacity(parent_revs.len());
+        for &rev in parent_revs {
+            result.push(self.vertex_name(Id(rev as _))?);
+        }
+        Ok(result)
+    }
+
+    /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
+    fn all(&self) -> Result<Set> {
+        let id_set = if self.len() == 0 {
+            IdSet::empty()
+        } else {
+            IdSet::from(Id(0)..=Id(self.len() as u64 - 1))
+        };
+        Ok(Set::from_spans_idmap(id_set, self.get_snapshot()))
+    }
+
+    /// Calculates all ancestors reachable from any name from the given set.
+    fn ancestors(&self, set: Set) -> Result<Set> {
+        let id_set = self.to_id_set(&set)?;
+        if id_set.is_empty() {
+            return Ok(Set::empty());
+        }
+
+        let dag = self.get_snapshot();
+        let max_id = id_set.max().unwrap();
+        let max_rev = max_id.0 as u32;
+
+        let mut included = BitVec::from_elem(max_rev as usize + 1, false);
+        for id in id_set.into_iter() {
+            included.set(id.0 as usize, true);
+        }
+
+        let iter = (0..=max_rev)
+            .rev()
+            .filter(move |&rev| {
+                let should_include = included[rev as usize];
+                if should_include {
+                    for &p in dag.parent_revs(rev).as_revs() {
+                        included.set(p as usize, true);
+                    }
+                }
+                should_include
+            })
+            .map(|rev| Ok(Id(rev as _)));
+
+        let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
+        let set = Set::from_iter_idmap(iter, map);
+        set.hints().add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
+        set.hints().set_max_id(max_id);
+
+        Ok(set)
+    }
+
+    /// Calculates children of the given set.
+    fn children(&self, set: Set) -> Result<Set> {
+        let id_set = self.to_id_set(&set)?;
+        if id_set.is_empty() {
+            return Ok(Set::empty());
+        }
+
+        let min_id = id_set.min().unwrap();
+        let dag = self.get_snapshot();
+        // Children: scan to the highest Id. Check parents.
+        let iter = ((min_id.0 as u32)..(dag.len() as u32))
+            .filter(move |&rev| {
+                dag.parent_revs(rev)
+                    .as_revs()
+                    .iter()
+                    .any(|&p| id_set.contains(Id(p as _)))
+            })
+            .map(|rev| Ok(Id(rev as _)));
+
+        let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
+        let set = Set::from_iter_idmap(iter, map);
+        set.hints().add_flags(Flags::ID_ASC);
+        set.hints().set_min_id(min_id);
+        Ok(set)
+    }
+
+    /// Calculates roots of the given set.
+    fn roots(&self, set: Set) -> Result<Set> {
+        let id_set = self.to_id_set(&set)?;
+        if id_set.is_empty() {
+            return Ok(Set::empty());
+        }
+        let min_id = id_set.min().unwrap();
+        let max_id = id_set.max().unwrap();
+        let dag = self.get_snapshot();
+        // Roots: [x for x in set if (parents(x) & set) is empty]
+        let iter = id_set
+            .clone()
+            .into_iter()
+            .filter(move |i| {
+                dag.parent_revs(i.0 as _)
+                    .as_revs()
+                    .iter()
+                    .all(|&p| !id_set.contains(Id(p as _)))
+            })
+            .map(Ok);
+        let set = Set::from_iter_idmap(iter, self.get_snapshot());
+        set.hints().add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
+        set.hints().set_min_id(min_id);
+        set.hints().set_max_id(max_id);
+        Ok(set)
+    }
+
+    /// Calculates one "greatest common ancestor" of the given set.
+    ///
+    /// If there are no common ancestors, return None.
+    /// If there are multiple greatest common ancestors, pick one arbitrarily.
+    /// Use `gca_all` to get all of them.
+    fn gca_one(&self, set: Set) -> Result<Option<Vertex>> {
+        let id_set = self.to_id_set(&set)?;
+        let mut revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
+        while revs.len() > 1 {
+            let mut new_revs = Vec::new();
+            // gca_revs takes at most 6 revs at one.
+            for revs in revs.chunks(6) {
+                let gcas = self.gca_revs(revs, 1);
+                if gcas.is_empty() {
+                    return Ok(None);
+                } else {
+                    new_revs.extend(gcas);
+                }
+            }
+            revs = new_revs;
+        }
+        if revs.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(self.vertex_name(Id(revs[0] as _))?))
+        }
+    }
+
+    /// Calculates all "greatest common ancestor"s of the given set.
+    /// `gca_one` is faster if an arbitrary answer is ok.
+    fn gca_all(&self, set: Set) -> Result<Set> {
+        let id_set = self.to_id_set(&set)?;
+        // XXX: Limited by gca_revs implementation detail.
+        if id_set.count() > 6 {
+            bail!("RevlogIndex::gca_all does not support set with > 6 items");
+        }
+        let revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
+        let gcas = self.gca_revs(&revs, usize::max_value());
+        let spans = IdSet::from_spans(gcas.into_iter().map(|r| Id(r as _)));
+        Ok(Set::from_spans_idmap(spans, self.get_snapshot()))
+    }
+
+    /// Tests if `ancestor` is an ancestor of `descendant`.
+    fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> Result<bool> {
+        let ancestor_rev = self.vertex_id(ancestor)?.0 as u32;
+        let descendant_rev = self.vertex_id(descendant)?.0 as u32;
+        Ok(self.gca_revs(&[ancestor_rev, descendant_rev], 1).get(0) == Some(&ancestor_rev))
+    }
+
+    /// Calculates "heads" of the ancestors of the given set. That is,
+    /// Find Y, which is the smallest subset of set X, where `ancestors(Y)` is
+    /// `ancestors(X)`.
+    fn heads_ancestors(&self, set: Set) -> Result<Set> {
+        let id_set = self.to_id_set(&set)?;
+        let revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
+        let result_revs = self.headsancestors(revs);
+        let result_id_set = IdSet::from_spans(result_revs.into_iter().map(|r| Id(r as _)));
+        Ok(Set::from_spans_idmap(result_id_set, self.get_snapshot()))
+    }
+
+    /// Calculates the "dag range" - vertexes reachable from both sides.
+    fn range(&self, roots: Set, heads: Set) -> Result<Set> {
+        let root_ids = self.to_id_set(&roots)?;
+        let head_ids = self.to_id_set(&heads)?;
+        let root_revs: Vec<u32> = root_ids.into_iter().map(|i| i.0 as u32).collect();
+        let head_revs: Vec<u32> = head_ids.into_iter().map(|i| i.0 as u32).collect();
+        let result_revs = self.range_revs(&root_revs, &head_revs);
+        let result_id_set = IdSet::from_spans(result_revs.into_iter().map(|r| Id(r as _)));
+        Ok(Set::from_spans_idmap(result_id_set, self.get_snapshot()))
+    }
+
+    /// Calculates the descendants of the given set.
+    fn descendants(&self, set: Set) -> Result<Set> {
+        let id_set = self.to_id_set(&set)?;
+        if id_set.is_empty() {
+            return Ok(Set::empty());
+        }
+
+        let min_id = id_set.min().unwrap();
+        let min_rev = min_id.0 as u32;
+        let dag = self.get_snapshot();
+        let mut included = BitVec::from_elem(dag.len() - min_id.0 as usize, false);
+        for id in id_set.into_iter() {
+            included.set(id.0 as usize - min_id.0 as usize, true);
+        }
+
+        let iter = (min_rev..(dag.len() as u32))
+            .filter(move |&rev| {
+                let should_include = included[(rev - min_rev) as usize]
+                    || dag
+                        .parent_revs(rev)
+                        .as_revs()
+                        .iter()
+                        .any(|&prev| prev >= min_rev && included[(prev - min_rev) as usize]);
+                if should_include {
+                    included.set((rev - min_rev) as usize, true);
+                }
+                should_include
+            })
+            .map(|rev| Ok(Id(rev as _)));
+
+        let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
+        let set = Set::from_iter_idmap(iter, map);
+        set.hints().add_flags(Flags::ID_ASC);
+        set.hints().set_min_id(min_id);
+        Ok(set)
+    }
+}
+
+impl IdMapEq for RevlogIndex {
+    fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool {
+        Arc::ptr_eq(
+            other,
+            &(self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>),
+        )
     }
 }
