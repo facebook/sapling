@@ -19,18 +19,18 @@ use std::fmt::Debug;
 use std::ops::{BitAnd, BitOr, Deref, Sub};
 use std::sync::Arc;
 
-pub mod dag;
 pub mod difference;
 pub mod hints;
+pub mod id_static;
 pub mod intersection;
 pub mod lazy;
 pub mod legacy;
 pub mod r#static;
 pub mod union;
 
-use self::dag::DagSet;
 use self::hints::Flags;
 use self::hints::Hints;
+use self::id_static::IdStaticSet;
 
 /// A [`NameSet`] contains an immutable list of names.
 ///
@@ -64,11 +64,8 @@ impl NameSet {
     }
 
     /// Creates from [`SpanSet`] and [`IdMap`]. Used by [`NameDag`].
-    pub(crate) fn from_spans_idmap(
-        spans: SpanSet,
-        map: Arc<dyn IdConvert + Send + Sync>,
-    ) -> NameSet {
-        Self::from_query(dag::DagSet::from_spans_idmap(spans, map))
+    pub fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdConvert + Send + Sync>) -> NameSet {
+        Self::from_query(IdStaticSet::from_spans_idmap(spans, map))
     }
 
     /// Calculates the subset that is only in self, not in other.
@@ -80,11 +77,11 @@ impl NameSet {
             return self.clone();
         }
         if let (Some(this), Some(other)) = (
-            self.as_any().downcast_ref::<DagSet>(),
-            other.as_any().downcast_ref::<DagSet>(),
+            self.as_any().downcast_ref::<IdStaticSet>(),
+            other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
             if Arc::ptr_eq(&this.map, &other.map) {
-                // Fast path for DagSet
+                // Fast path for IdStaticSet
                 return Self::from_spans_idmap(
                     this.spans.difference(&other.spans),
                     this.map.clone(),
@@ -106,11 +103,11 @@ impl NameSet {
             return Self::empty();
         }
         if let (Some(this), Some(other)) = (
-            self.as_any().downcast_ref::<DagSet>(),
-            other.as_any().downcast_ref::<DagSet>(),
+            self.as_any().downcast_ref::<IdStaticSet>(),
+            other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
             if Arc::ptr_eq(&this.map, &other.map) {
-                // Fast path for DagSet
+                // Fast path for IdStaticSet
                 return Self::from_spans_idmap(
                     this.spans.intersection(&other.spans),
                     this.map.clone(),
@@ -132,11 +129,11 @@ impl NameSet {
             return other.clone();
         }
         if let (Some(this), Some(other)) = (
-            self.as_any().downcast_ref::<DagSet>(),
-            other.as_any().downcast_ref::<DagSet>(),
+            self.as_any().downcast_ref::<IdStaticSet>(),
+            other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
             if Arc::ptr_eq(&this.map, &other.map) {
-                // Fast path for DagSet
+                // Fast path for IdStaticSet
                 return Self::from_spans_idmap(this.spans.union(&other.spans), this.map.clone());
             }
         }

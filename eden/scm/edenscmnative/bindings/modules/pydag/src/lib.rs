@@ -11,9 +11,9 @@ use anyhow::Error;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt, Str};
 use dag::{
-    namedag::LowLevelAccess, nameset::dag::DagSet, nameset::legacy::LegacyCodeNeedIdAccess,
-    ops::DagAddHeads, ops::DagPersistent, ops::PrefixLookup, spanset::SpanSetIter, Dag,
-    DagAlgorithm, Id, IdSet, MemDag, Set, Vertex,
+    namedag::LowLevelAccess, nameset::id_static::IdStaticSet,
+    nameset::legacy::LegacyCodeNeedIdAccess, ops::DagAddHeads, ops::DagPersistent,
+    ops::PrefixLookup, spanset::SpanSetIter, Dag, DagAlgorithm, Id, IdSet, MemDag, Set, Vertex,
 };
 use std::cell::RefCell;
 use std::ops::Deref;
@@ -240,13 +240,13 @@ py_class!(class namedag |py| {
     /// Ideally this API does not exist. However the revset layer heavily uses ids.
     def node2idset(&self, set: Names) -> PyResult<Spans> {
         let set: Set = set.0;
-        if let Some(set) = set.as_any().downcast_ref::<DagSet>() {
+        if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
             let spans: IdSet = (LegacyCodeNeedIdAccess, set).into();
             Ok(Spans(spans))
         } else {
             let namedag = self.namedag(py).borrow();
             let set = namedag.sort(&set).map_pyerr(py)?;
-            let set = set.as_any().downcast_ref::<DagSet>().expect("namedag.sort should return DagSet");
+            let set = set.as_any().downcast_ref::<IdStaticSet>().expect("namedag.sort should return IdStaticSet");
             let spans: IdSet = (LegacyCodeNeedIdAccess, set).into();
             Ok(Spans(spans))
         }

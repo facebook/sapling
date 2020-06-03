@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 /// A set backed by [`SpanSet`] + [`IdMap`].
 /// Efficient for DAG calculation.
-pub struct DagSet {
+pub struct IdStaticSet {
     pub(crate) spans: SpanSet,
     pub(crate) map: Arc<dyn IdConvert + Send + Sync>,
     hints: Hints,
@@ -44,13 +44,13 @@ impl Iterator for Iter {
     }
 }
 
-impl fmt::Debug for DagSet {
+impl fmt::Debug for IdStaticSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<dag [{:?}]>", &self.spans)
     }
 }
 
-impl DagSet {
+impl IdStaticSet {
     pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdConvert + Send + Sync>) -> Self {
         let hints = Hints::default();
         hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
@@ -65,7 +65,7 @@ impl DagSet {
     }
 }
 
-impl NameSetQuery for DagSet {
+impl NameSetQuery for IdStaticSet {
     fn iter(&self) -> Result<Box<dyn NameIter>> {
         let iter = Iter {
             iter: self.spans.clone().into_iter(),

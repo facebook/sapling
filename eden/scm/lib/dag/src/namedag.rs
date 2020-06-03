@@ -23,8 +23,8 @@ use crate::idmap::IdMapBuildParents;
 use crate::idmap::IdMapWrite;
 use crate::idmap::MemIdMap;
 use crate::idmap::SyncableIdMap;
-use crate::nameset::dag::DagSet;
 use crate::nameset::hints::Flags;
+use crate::nameset::id_static::IdStaticSet;
 use crate::nameset::NameSet;
 use crate::nameset::NameSetQuery;
 use crate::ops::DagAddHeads;
@@ -349,7 +349,7 @@ impl<T: NameDagStorage> DagAlgorithm for T {
     /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
     fn all(&self) -> Result<NameSet> {
         let spans = self.dag().all()?;
-        let query = DagSet::from_spans_idmap(spans, self.clone_map());
+        let query = IdStaticSet::from_spans_idmap(spans, self.clone_map());
         query.hints().add_flags(Flags::FULL);
         Ok(NameSet::from_query(query))
     }
@@ -514,7 +514,7 @@ impl<T: NameDagStorage> ToSpanSet for T {
     /// Converts [`NameSet`] to [`SpanSet`].
     fn to_span_set(&self, set: &NameSet) -> Result<SpanSet> {
         // Fast path: extract SpanSet directly.
-        if let Some(set) = set.as_any().downcast_ref::<DagSet>() {
+        if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
             if self.is_map_compatible(&set.map) {
                 return Ok(set.spans.clone());
             }
