@@ -523,29 +523,14 @@ fn main(fb: FacebookInit) -> Result<()> {
         let cert = cert.to_string();
         let private_key = matches
             .value_of("ssl-private-key")
-            .expect("must specify ssl private key")
-            .to_string();
-        let ca_pem = matches
-            .value_of("ssl-ca")
-            .expect("must specify CA")
-            .to_string();
-        let ticket_seed = matches
-            .value_of("ssl-ticket-seeds")
-            .unwrap_or(secure_utils::fb_tls::SEED_PATH)
-            .to_string();
+            .expect("must specify ssl private key");
+        let ca_pem = matches.value_of("ssl-ca").expect("must specify CA");
+        let ticket_seed = matches.value_of("ssl-ticket-seeds");
 
-        let ssl = secure_utils::SslConfig {
-            cert,
-            private_key,
-            ca_pem,
-        };
-        let acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())?;
-        Some(secure_utils::fb_tls::tls_acceptor_builder(
-            root_logger.clone(),
-            ssl.clone(),
-            acceptor,
-            ticket_seed,
-        )?)
+        Some(
+            secure_utils::SslConfig::new(ca_pem, cert, private_key, ticket_seed)
+                .tls_acceptor_builder(root_logger.clone())?,
+        )
     } else {
         None
     };

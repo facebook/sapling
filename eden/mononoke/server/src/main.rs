@@ -81,34 +81,18 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let config = get_config(fb, &matches)?;
     let acceptor = {
-        #[cfg(fbcode_build)]
-        {
-            let cert = matches.value_of("cert").unwrap().to_string();
-            let private_key = matches.value_of("private_key").unwrap().to_string();
-            let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
+        let cert = matches.value_of("cert").unwrap().to_string();
+        let private_key = matches.value_of("private_key").unwrap().to_string();
+        let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
 
-            let ticket_seed = matches
-                .value_of("ssl-ticket-seeds")
-                .unwrap_or(secure_utils::fb_tls::SEED_PATH)
-                .to_string();
-
-            let ssl = secure_utils::SslConfig {
-                cert,
-                private_key,
-                ca_pem,
-            };
-
-            let acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())
-                .expect("failed to build tls acceptor");
-            secure_utils::fb_tls::tls_acceptor_builder(root_log.clone(), ssl, acceptor, ticket_seed)
-                .expect("failed to build fb_tls acceptor")
-        }
-        #[cfg(not(fbcode_build))]
-        {
-            use openssl::ssl::{SslAcceptor, SslMethod};
-            SslAcceptor::mozilla_intermediate(SslMethod::tls())
-                .expect("failed to build tls acceptor")
-        }
+        secure_utils::SslConfig::new(
+            ca_pem,
+            cert,
+            private_key,
+            matches.value_of("ssl-ticket-seeds"),
+        )
+        .build_tls_acceptor(root_log.clone())
+        .expect("failed to build tls acceptor")
     };
 
     let test_instance = matches.is_present("test-instance");
@@ -150,7 +134,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         matches
             .value_of("listening-host-port")
             .expect("listening path must be specified"),
-        acceptor.build(),
+        acceptor,
         service.clone(),
         terminate.clone(),
         config_source,

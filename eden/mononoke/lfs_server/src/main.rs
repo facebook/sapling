@@ -379,24 +379,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
         (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
-            let config = secure_utils::SslConfig {
-                cert: tls_certificate.to_string(),
-                private_key: tls_private_key.to_string(),
-                ca_pem: tls_ca.to_string(),
-            };
-
-            let tls_ticket_seeds = tls_ticket_seeds
-                .unwrap_or(secure_utils::fb_tls::SEED_PATH)
-                .to_string();
-
-            let tls_builder = secure_utils::build_tls_acceptor_builder(config.clone())?;
-            let fbs_tls_builder = secure_utils::fb_tls::tls_acceptor_builder(
-                logger.clone(),
-                config.clone(),
-                tls_builder,
-                tls_ticket_seeds,
-            )?;
-            let acceptor = Arc::new(fbs_tls_builder.build());
+            let acceptor = Arc::new(
+                secure_utils::SslConfig::new(
+                    tls_ca,
+                    tls_certificate,
+                    tls_private_key,
+                    tls_ticket_seeds,
+                )
+                .build_tls_acceptor(logger.clone())?,
+            );
 
             let capture_session_data = tls_session_data_log.is_some();
 

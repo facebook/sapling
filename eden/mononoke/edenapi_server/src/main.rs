@@ -23,7 +23,6 @@ use futures::{
 };
 use gotham::{bind_server, bind_server_with_socket_data};
 use hyper::header::HeaderValue;
-use openssl::ssl::SslAcceptor;
 use slog::{debug, info, warn, Logger};
 use tokio::net::TcpListener;
 
@@ -81,48 +80,17 @@ fn parse_server_addr(matches: &ArgMatches) -> Result<SocketAddr> {
 }
 
 /// Read the command line arguments related to TLS credentials.
-fn parse_tls_options(matches: &ArgMatches) -> Option<(SslConfig, String)> {
+fn parse_tls_options(matches: &ArgMatches) -> Option<SslConfig> {
     let cert = matches.value_of(ARG_TLS_CERTIFICATE);
     let key = matches.value_of(ARG_TLS_PRIVATE_KEY);
     let ca = matches.value_of(ARG_TLS_CA);
     let ticket_seeds = matches
         .value_of(ARG_TLS_TICKET_SEEDS)
-        .unwrap_or(secure_utils::fb_tls::SEED_PATH)
-        .to_string();
+        .map(|x| x.to_string());
 
     cert.and_then(|cert| {
-        key.and_then(|key| {
-            ca.map(|ca| {
-                let ssl_config = SslConfig {
-                    ca_pem: ca.to_string(),
-                    cert: cert.to_string(),
-                    private_key: key.to_string(),
-                };
-                (ssl_config, ticket_seeds)
-            })
-        })
+        key.and_then(|key| ca.map(|ca| SslConfig::new(ca, cert, key, ticket_seeds)))
     })
-}
-
-/// Create and configure an `SslAcceptor` that can accept and decrypt TLS
-/// connections, accounting for FB-specific TLS configuration.
-fn build_tls_acceptor(
-    config: SslConfig,
-    ticket_seeds: String,
-    logger: &Logger,
-) -> Result<SslAcceptor> {
-    // Create an async acceptor that handles the TLS handshake and decryption.
-    let builder = secure_utils::build_tls_acceptor_builder(config.clone())?;
-
-    // Configure the acceptor to work with FB's expected TLS setup.
-    let builder = secure_utils::fb_tls::tls_acceptor_builder(
-        logger.clone(),
-        config.clone(),
-        builder,
-        ticket_seeds,
-    )?;
-
-    Ok(builder.build())
 }
 
 /// Parse AclChecker identities passed in as arguments.
@@ -185,7 +153,7 @@ async fn start(
     let addr = parse_server_addr(&matches)?;
     let listener = TcpListener::bind(&addr).await?;
     let acceptor = parse_tls_options(&matches)
-        .map(|(config, ticket_seeds)| build_tls_acceptor(config, ticket_seeds, &logger))
+        .map(|config| config.build_tls_acceptor(logger.clone()))
         .transpose()?;
 
     // Bind to the socket and set up the Future for the server's main loop.
