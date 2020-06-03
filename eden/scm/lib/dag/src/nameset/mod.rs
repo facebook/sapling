@@ -11,6 +11,7 @@
 
 use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
+use crate::Id;
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
@@ -21,6 +22,7 @@ use std::sync::Arc;
 
 pub mod difference;
 pub mod hints;
+pub mod id_lazy;
 pub mod id_static;
 pub mod intersection;
 pub mod lazy;
@@ -61,6 +63,15 @@ impl NameSet {
         <I as IntoIterator>::IntoIter: Send + Sync,
     {
         Self::from_query(lazy::LazySet::from_iter(iter))
+    }
+
+    /// Creates from a (lazy) iterator of Ids and an IdMap.
+    pub fn from_iter_idmap<I>(iter: I, map: Arc<dyn IdConvert + Send + Sync>) -> NameSet
+    where
+        I: IntoIterator<Item = Result<Id>> + 'static,
+        <I as IntoIterator>::IntoIter: Send + Sync,
+    {
+        Self::from_query(id_lazy::IdLazySet::from_iter_idmap(iter, map))
     }
 
     /// Creates from [`SpanSet`] and [`IdMap`]. Used by [`NameDag`].
