@@ -12,9 +12,13 @@ use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
 use crate::namedag::MemNameDag;
+use crate::nameset::id_lazy::IdLazySet;
+use crate::nameset::id_static::IdStaticSet;
 use crate::nameset::NameSet;
+use crate::IdSet;
 use anyhow::Result;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// DAG related read-only algorithms.
 pub trait DagAlgorithm {
@@ -328,5 +332,45 @@ where
         };
         self.add_heads(&parents_func, &heads[..])?;
         Ok(())
+    }
+}
+
+pub trait ToIdSet {
+    /// Converts [`NameSet`] to [`SpanSet`].
+    fn to_id_set(&self, set: &NameSet) -> Result<IdSet>;
+}
+
+pub trait IdMapEq {
+    /// (Cheaply) test if the map is compatible (same).
+    fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool;
+}
+
+impl<T: IdConvert + IdMapEq> ToIdSet for T {
+    /// Converts [`NameSet`] to [`IdSet`].
+    fn to_id_set(&self, set: &NameSet) -> Result<IdSet> {
+        // Fast path: extract IdSet from IdStaticSet.
+        if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
+            if self.is_map_compatible(&set.map) {
+                return Ok(set.spans.clone());
+            }
+        }
+
+        // Convert IdLazySet to IdStaticSet. Bypass hash lookups.
+        if let Some(set) = set.as_any().downcast_ref::<IdLazySet>() {
+            if self.is_map_compatible(&set.map) {
+                let set: IdStaticSet = set.to_static()?;
+                return Ok(set.spans);
+            }
+        }
+
+        // Slow path: iterate through the set and convert it to a non-lazy
+        // IdSet. Does not bypass hash lookups.
+        let mut spans = IdSet::empty();
+        for name in set.iter()? {
+            let name = name?;
+            let id = self.vertex_id(name)?;
+            spans.push(id);
+        }
+        Ok(spans)
     }
 }
