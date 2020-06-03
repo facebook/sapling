@@ -73,6 +73,12 @@ impl NameSet {
 
     /// Calculates the subset that is only in self, not in other.
     pub fn difference(&self, other: &NameSet) -> NameSet {
+        if other.hints().contains(Flags::FULL) {
+            return Self::empty();
+        }
+        if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::EMPTY) {
+            return self.clone();
+        }
         if let (Some(this), Some(other)) = (
             self.as_any().downcast_ref::<DagSet>(),
             other.as_any().downcast_ref::<DagSet>(),
@@ -92,6 +98,12 @@ impl NameSet {
     pub fn intersection(&self, other: &NameSet) -> NameSet {
         if self.hints().contains(Flags::FULL) {
             return other.clone();
+        }
+        if other.hints().contains(Flags::FULL) {
+            return self.clone();
+        }
+        if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::EMPTY) {
+            return Self::empty();
         }
         if let (Some(this), Some(other)) = (
             self.as_any().downcast_ref::<DagSet>(),
@@ -113,6 +125,12 @@ impl NameSet {
 
     /// Calculates the union of two sets.
     pub fn union(&self, other: &NameSet) -> NameSet {
+        if self.hints().contains(Flags::FULL) || other.hints().contains(Flags::EMPTY) {
+            return self.clone();
+        }
+        if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::FULL) {
+            return other.clone();
+        }
         if let (Some(this), Some(other)) = (
             self.as_any().downcast_ref::<DagSet>(),
             other.as_any().downcast_ref::<DagSet>(),
@@ -400,32 +418,32 @@ pub(crate) mod tests {
             [
                 "- Hints(ID_ASC)",
                 "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
-                "& Hints(ID_ASC)",
+                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
                 "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "| Hints(ID_ASC)",
+                "  Hints(ID_ASC)"
             ]
         );
         assert_eq!(
             hints_ops(&partial, &full),
             [
-                "- Hints(ID_ASC)",
+                "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
                 "  Hints(ID_DESC)",
                 "& Hints(ID_ASC)",
                 "  Hints(ID_ASC)",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "| Hints(FULL | ID_DESC)",
+                "  Hints(FULL | ID_DESC)"
             ]
         );
         assert_eq!(
             hints_ops(&empty, &full),
             [
                 "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
-                "  Hints(ID_DESC)",
+                "  Hints(FULL | ID_DESC)",
                 "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
                 "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "| Hints(FULL | ID_DESC)",
+                "  Hints(FULL | ID_DESC)"
             ]
         );
     }
