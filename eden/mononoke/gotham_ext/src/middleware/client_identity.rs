@@ -9,7 +9,7 @@ use gotham::state::{client_addr, FromState, State};
 use gotham_derive::StateData;
 use hyper::header::HeaderMap;
 use hyper::{Body, Response};
-use json_encoded::get_identities;
+use identity_ext::json::get_identities;
 use lazy_static::lazy_static;
 use percent_encoding::percent_decode;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};

@@ -10,7 +10,6 @@ use gotham::{socket_data::SocketData, state::State};
 use gotham_derive::StateData;
 use openssl::ssl::SslRef;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
-use x509::identity;
 
 pub struct TlsSocketData {
     identities: Option<TlsCertificateIdentities>,
@@ -86,7 +85,7 @@ pub struct TlsCertificateIdentities {
 impl TlsCertificateIdentities {
     pub fn from_ssl(ssl: &SslRef) -> Option<Self> {
         let peer_certificate = ssl.peer_certificate()?;
-        let identities = identity::get_identities(&peer_certificate)
+        let identities = identity_ext::x509::get_identities(&peer_certificate)
             .ok()?
             .into_iter()
             .filter_map(|id| MononokeIdentity::try_from_identity(&id).ok())

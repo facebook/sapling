@@ -17,7 +17,7 @@ use anyhow::{format_err, Error};
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use identity::Identity;
-use json_encoded::get_identities;
+use identity_ext::json::get_identities;
 use openssl::x509::X509;
 use percent_encoding::percent_decode;
 use scuba_ext::ScubaSampleBuilder;
@@ -76,7 +76,7 @@ fn extract_client_identities(cert: &X509, headers: &HeaderMap) -> Result<Vec<Ide
     const PROXY_IDENTITY_DATA: &str = "proxygen";
     const PROXY_IDENTITY_HEADER: &str = "x-fb-validated-client-encoded-identity";
 
-    let cert_identities = x509::identity::get_identities(&cert)?;
+    let cert_identities = identity_ext::x509::get_identities(&cert)?;
 
     let cert_is_trusted_proxy = cert_identities.iter().any(|identity| {
         identity.get_type() == PROXY_IDENTITY_TYPE && identity.get_data() == PROXY_IDENTITY_DATA

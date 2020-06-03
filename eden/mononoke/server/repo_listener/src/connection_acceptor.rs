@@ -176,7 +176,7 @@ fn accept(
                     Some(cert) => {
                         #[cfg(fbcode_build)]
                         {
-                            ::x509::identity::get_identities(&cert).and_then(
+                            ::identity_ext::x509::get_identities(&cert).and_then(
                                 |identities| -> Result<MononokeIdentitySet> {
                                     identities
                                         .into_iter()
