@@ -115,8 +115,16 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> Result<()> {
 #[cfg(unix)]
 fn create_dir_with_mode_impl(path: &Path, mode: u32) -> io::Result<()> {
     if path.exists() {
-        if path.metadata()?.permissions().mode() != (0o40000 | mode) {
-            fs::set_permissions(path, fs::Permissions::from_mode(mode))?;
+        if path.is_dir() {
+            // If metadata operation fails, it's fine.
+            if let Ok(metadata) = path.metadata() {
+                if metadata.permissions().mode() & mode != mode {
+                    // We only attempt to fix the permission. If we can't, proceed.
+                    // TODO: We should at least generate a warning here. We cannot because we
+                    // cannot print messages in Mercurial Rust yet.
+                    let _ = fs::set_permissions(path, fs::Permissions::from_mode(mode));
+                }
+            }
         }
 
         return Err(io::ErrorKind::AlreadyExists.into());
