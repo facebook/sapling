@@ -9,6 +9,7 @@
 
 pub mod nodemap;
 mod revlogindex;
+mod utils;
 
 pub use crate::nodemap::NodeRevMap;
 pub use crate::revlogindex::RevlogEntry;

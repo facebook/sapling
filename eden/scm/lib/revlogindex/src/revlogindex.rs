@@ -6,6 +6,7 @@
  */
 
 use crate::nodemap;
+use crate::utils::read_path;
 use crate::NodeRevMap;
 use anyhow::bail;
 use anyhow::Result;
@@ -21,13 +22,11 @@ use dag::Id;
 use dag::IdSet;
 use dag::Set;
 use dag::Vertex;
-use indexedlog::utils::{atomic_write, mmap_bytes};
+use indexedlog::utils::atomic_write;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
-use std::fs;
-use std::io;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::Deref;
@@ -392,12 +391,12 @@ impl RevlogIndex {
     /// Constructs a RevlogIndex. The NodeRevMap is automatically manage>
     pub fn new(changelogi_path: &Path, nodemap_path: &Path) -> Result<Self> {
         let empty_nodemap_data = Bytes::from(nodemap::empty_index_buffer());
-        let nodemap_data = read_path(nodemap_path, empty_nodemap_data.clone())?;
-        let changelogi_data = read_path(changelogi_path, Bytes::default())?;
+        let nodemap_data = read_path(nodemap_path, empty_nodemap_data.clone(), false)?;
+        let changelogi_data = read_path(changelogi_path, Bytes::default(), true)?;
         let nodemap =
             NodeRevMap::new(changelogi_data.into(), nodemap_data.into()).or_else(|_| {
                 // Attempt to rebuild the index automatically.
-                let changelogi_data = read_path(changelogi_path, Bytes::default())?;
+                let changelogi_data = read_path(changelogi_path, Bytes::default(), true)?;
                 NodeRevMap::new(changelogi_data.into(), empty_nodemap_data.into())
             })?;
         // 20000 is chosen as it takes a few milliseconds to build up.
@@ -480,19 +479,6 @@ impl RevlogIndex {
                 result
             }
         }
-    }
-}
-
-fn read_path(path: &Path, fallback: Bytes) -> io::Result<Bytes> {
-    match fs::OpenOptions::new().read(true).open(path) {
-        Err(err) => {
-            if err.kind() == io::ErrorKind::NotFound {
-                Ok(fallback)
-            } else {
-                Err(err)
-            }
-        }
-        Ok(file) => mmap_bytes(&file, None),
     }
 }
 
