@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use clap::{App, ArgMatches, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
@@ -40,15 +40,26 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(
             SubCommand::with_name(SKIPLIST_BUILD)
                 .about("build skiplist index")
-                .args_from_usage(
-                    "<BLOBSTORE_KEY>  'Blobstore key where to store the built skiplist'",
+                .arg(
+                    Arg::with_name("BLOBSTORE_KEY")
+                        .required(true)
+                        .index(1)
+                        .help("Blobstore key where to store the built skiplist"),
+                )
+                .arg(
+                    Arg::with_name("rebuild")
+                        .long("rebuild")
+                        .help("forces the full rebuild instead of incremental update"),
                 ),
         )
         .subcommand(
             SubCommand::with_name(SKIPLIST_READ)
                 .about("read skiplist index")
-                .args_from_usage(
-                    "<BLOBSTORE_KEY>  'Blobstore key from where to read the skiplist'",
+                .arg(
+                    Arg::with_name("BLOBSTORE_KEY")
+                        .required(true)
+                        .index(1)
+                        .help("Blobstore key from where to read the skiplist"),
                 ),
         )
 }
@@ -65,6 +76,7 @@ pub async fn subcommand_skiplist<'a>(
                 .value_of("BLOBSTORE_KEY")
                 .expect("blobstore key is not specified")
                 .to_string();
+            let rebuild = sub_m.is_present("rebuild");
 
             args::init_cachelib(fb, &matches, None);
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -72,7 +84,7 @@ pub async fn subcommand_skiplist<'a>(
             let repo = args::open_repo(fb, &logger, &matches);
             repo.join(sql_changesets)
                 .and_then(move |(repo, sql_changesets)| {
-                    build_skiplist_index(ctx, repo, key, logger, sql_changesets)
+                    build_skiplist_index(ctx, repo, key, logger, sql_changesets, rebuild)
                 })
                 .from_err()
                 .boxify()
@@ -117,6 +129,7 @@ fn build_skiplist_index<S: ToString>(
     key: S,
     logger: Logger,
     sql_changesets: SqlChangesets,
+    force_full_rebuild: bool,
 ) -> BoxFuture<(), Error> {
     let blobstore = repo.get_blobstore();
     // skiplist will jump up to 2^9 changesets
@@ -124,8 +137,11 @@ fn build_skiplist_index<S: ToString>(
     // Index all changesets
     let max_index_depth = 20000000000;
     let key = key.to_string();
-    let maybe_skiplist_fut =
-        read_skiplist_index(ctx.clone(), repo.clone(), key.clone(), logger.clone());
+    let maybe_skiplist_fut = if force_full_rebuild {
+        ok(None).right_future()
+    } else {
+        read_skiplist_index(ctx.clone(), repo.clone(), key.clone(), logger.clone()).left_future()
+    };
 
     let cs_fetcher_skiplist = maybe_skiplist_fut.and_then({
         cloned!(ctx, logger, repo);
