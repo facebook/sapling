@@ -30,9 +30,10 @@ use mercurial_types::{
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepoPath};
 use std::{collections::HashMap, convert::TryFrom};
+use tunables::tunables;
 
-#[derive(Clone, Debug)]
-struct PreparedRootFilenode {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreparedRootFilenode {
     pub filenode: HgFileNodeId,
     pub p1: Option<HgFileNodeId>,
     pub p2: Option<HgFileNodeId>,
@@ -91,10 +92,16 @@ impl TryFrom<PreparedFilenode> for PreparedRootFilenode {
 }
 
 /// Derives filenodes that are stores in Filenodes object (usually in a database).
-/// Note: that should be called only for public commits!
-#[derive(Clone, Debug)]
-pub struct FilenodesOnlyPublic {
-    root_filenode: Option<PreparedRootFilenode>,
+/// Note: that should be derived only for public commits!
+///
+/// Filenodes might be disabled, in that case FilenodesOnlyPublic will always return
+/// FilenodesOnlyPublic::Disabled enum variant.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FilenodesOnlyPublic {
+    Present {
+        root_filenode: Option<PreparedRootFilenode>,
+    },
+    Disabled,
 }
 
 impl BonsaiDerived for FilenodesOnlyPublic {
@@ -112,6 +119,11 @@ impl BonsaiDerived for FilenodesOnlyPublic {
         _parents: Vec<Self>,
     ) -> BoxFuture<Self, Error> {
         async move {
+            // TODO(stash): remove this check when filenodes start returning FilenodeResult
+            if tunables().get_filenodes_disabled() {
+                return Ok(FilenodesOnlyPublic::Disabled);
+            }
+
             let filenodes = generate_all_filenodes(&ctx, &repo, bonsai.get_changeset_id()).await?;
 
             if filenodes.is_empty() {
@@ -119,7 +131,7 @@ impl BonsaiDerived for FilenodesOnlyPublic {
                 // same as one of the parents (that can happen if this commit is empty).
                 // In that case we don't need to insert a root filenode - it will be inserted
                 // when parent is derived.
-                Ok(FilenodesOnlyPublic {
+                Ok(FilenodesOnlyPublic::Present {
                     root_filenode: None,
                 })
             } else {
@@ -136,7 +148,7 @@ impl BonsaiDerived for FilenodesOnlyPublic {
                             .compat()
                             .await?;
 
-                        Ok(FilenodesOnlyPublic {
+                        Ok(FilenodesOnlyPublic::Present {
                             root_filenode: Some(root_filenode),
                         })
                     }
@@ -319,12 +331,16 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
                     let repo = &repo;
                     let ctx = &ctx;
                     move |cs_id| async move {
+                        // TODO(stash): remove this check when filenodes start returning FilenodeResult
+                        if tunables().get_filenodes_disabled() {
+                            return Ok(Some((cs_id, FilenodesOnlyPublic::Disabled)));
+                        }
                         let maybe_root_filenode = fetch_root_filenode(&ctx, cs_id, &repo).await?;
 
                         Ok(maybe_root_filenode.map(move |filenode| {
                             (
                                 cs_id,
-                                FilenodesOnlyPublic {
+                                FilenodesOnlyPublic::Present {
                                     root_filenode: Some(filenode),
                                 },
                             )
@@ -344,7 +360,13 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
     fn put(&self, ctx: CoreContext, _csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
         let filenodes = self.repo.get_filenodes();
         let repo_id = self.repo.get_repoid();
-        match id.root_filenode {
+
+        let root_filenode = match id {
+            FilenodesOnlyPublic::Present { root_filenode } => root_filenode,
+            FilenodesOnlyPublic::Disabled => None,
+        };
+
+        match root_filenode {
             Some(root_filenode) => filenodes
                 .add_filenodes(ctx.clone(), vec![root_filenode.into()], repo_id)
                 .boxify(),
@@ -426,9 +448,11 @@ async fn fetch_root_manifest_id(
 mod tests {
     use super::*;
     use fbinit::FacebookInit;
+    use maplit::hashmap;
     use mononoke_types::FileType;
     use slog::info;
     use tests_utils::CreateCommitContext;
+    use tunables::{with_tunables, MononokeTunables};
 
     async fn verify_filenodes(
         ctx: &CoreContext,
@@ -636,5 +660,34 @@ mod tests {
     fn derive_only_empty_commits(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new()?;
         runtime.block_on_std(test_derive_only_empty_commits(fb))
+    }
+
+    #[fbinit::test]
+    fn derive_disabled_filenodes(fb: FacebookInit) -> Result<(), Error> {
+        let tunables = MononokeTunables::default();
+        tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
+
+        with_tunables(tunables, || {
+            let mut runtime = tokio_compat::runtime::Runtime::new()?;
+            runtime.block_on_std(test_derive_disabled_filenodes(fb))
+        })
+    }
+
+    async fn test_derive_disabled_filenodes(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let cs = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
+
+        let mapping = FilenodesOnlyPublic::mapping(&ctx, &repo);
+        let res = mapping.get(ctx.clone(), vec![cs]).compat().await?;
+
+        assert_eq!(res.get(&cs).unwrap(), &FilenodesOnlyPublic::Disabled);
+
+        let derived = FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), cs)
+            .compat()
+            .await?;
+        assert_eq!(derived, FilenodesOnlyPublic::Disabled);
+
+        Ok(())
     }
 }
