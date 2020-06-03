@@ -17,6 +17,8 @@ use dag::Id as Vertex;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 
+const INSERT_MAX: usize = 1_000;
+
 #[derive(Clone)]
 pub struct IdMap(SqlConnections);
 
@@ -77,42 +79,81 @@ impl IdMap {
         vertex: Vertex,
         cs_id: ChangesetId,
     ) -> Result<()> {
-        // TODO(sfilip): add tests
-        let result =
-            InsertIdMapEntry::query(&self.0.write_connection, &[(&repo_id, &vertex.0, &cs_id)])
+        self.insert_many(repo_id, vec![(vertex, cs_id)]).await
+    }
+
+    pub async fn insert_many(
+        &self,
+        repo_id: RepositoryId,
+        mut mappings: Vec<(Vertex, ChangesetId)>,
+    ) -> Result<()> {
+        mappings.sort();
+        for chunk in mappings.chunks(INSERT_MAX) {
+            let mut to_insert = Vec::with_capacity(chunk.len());
+            for (vertex, cs_id) in chunk {
+                to_insert.push((&repo_id, &vertex.0, cs_id));
+            }
+            let mut transaction = self.0.write_connection.start_transaction().compat().await?;
+            let query_result = InsertIdMapEntry::query_with_transaction(transaction, &to_insert)
                 .compat()
-                .await?;
-        if result.affected_rows() != 1 {
-            let stored =
-                SelectChangesetId::query(&self.0.read_master_connection, &repo_id, &vertex.0)
-                    .compat()
-                    .await?;
-            match stored.as_slice() {
-                &[] => {
-                    return Err(format_err!(
-                        "Failed to insert entry ({} -> {}) in Idmap",
-                        vertex,
-                        cs_id
-                    ))
+                .await;
+            match query_result {
+                Err(err) => {
+                    // transaction is "lost" to the query
+                    return Err(err.context(format_err!(
+                        "inserting many IdMap entries for repository {}",
+                        repo_id
+                    )));
                 }
-                &[(store_cs_id,)] => {
-                    if store_cs_id != cs_id {
-                        return Err(format_err!(
-                            "Duplicate segmented changelog idmap entry {} \
-                                has different assignments: {} vs {}",
-                            vertex,
-                            cs_id,
-                            store_cs_id
-                        ));
+                Ok((t, insert_result)) => {
+                    transaction = t;
+                    // TODO(sfilip): batch fetches
+                    if insert_result.affected_rows() != chunk.len() as u64 {
+                        for (vertex, cs_id) in chunk {
+                            let (t, stored) = SelectChangesetId::query_with_transaction(
+                                transaction,
+                                &repo_id,
+                                &vertex.0,
+                            )
+                            .compat()
+                            .await?;
+                            transaction = t;
+                            match stored.as_slice() {
+                                [] => {
+                                    transaction.rollback().compat().await?;
+                                    return Err(format_err!(
+                                        "Failed to insert entry ({} -> {}) in Idmap",
+                                        vertex,
+                                        cs_id
+                                    ));
+                                }
+                                [(store_cs_id,)] => {
+                                    if store_cs_id != cs_id {
+                                        transaction.rollback().compat().await?;
+                                        return Err(format_err!(
+                                            "Duplicate segmented changelog idmap entry {} \
+                                                has different assignments: {} vs {}",
+                                            vertex,
+                                            cs_id,
+                                            store_cs_id
+                                        ));
+                                    }
+                                    // TODO(sfilip): log redundant insert call
+                                }
+                                _ => {
+                                    // found multiple entries with the same vertex assignment
+                                    transaction.rollback().compat().await?;
+                                    return Err(format_err!(
+                                        "IdMap vertex assigned to multiple changesets entries: {:?}",
+                                        stored
+                                    ));
+                                }
+                            };
+                        }
                     }
                 }
-                _ => {
-                    return Err(format_err!(
-                        "Duplicate segmented changelog idmap entries: {:?}",
-                        stored
-                    ))
-                }
-            };
+            }
+            transaction.commit().compat().await?;
         }
         Ok(())
     }
@@ -231,7 +272,9 @@ mod tests {
 
     use fbinit::FacebookInit;
 
-    use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
+    use mononoke_types_mocks::changesetid::{
+        FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
+    };
 
     #[fbinit::compat_test]
     async fn test_get_last_entry(_fb: FacebookInit) -> Result<()> {
@@ -248,6 +291,62 @@ mod tests {
             idmap.get_last_entry(repo_id).await?,
             Some((Vertex(3), THREES_CSID))
         );
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_insert_many(_fb: FacebookInit) -> Result<()> {
+        let repo_id = RepositoryId::new(0);
+        let idmap = IdMap::with_sqlite_in_memory()?;
+
+        assert_eq!(idmap.get_last_entry(repo_id).await?, None);
+
+        idmap.insert_many(repo_id, vec![]).await?;
+        idmap
+            .insert_many(
+                repo_id,
+                vec![
+                    (Vertex(1), ONES_CSID),
+                    (Vertex(2), TWOS_CSID),
+                    (Vertex(3), THREES_CSID),
+                ],
+            )
+            .await?;
+
+        assert_eq!(idmap.get_changeset_id(repo_id, Vertex(1)).await?, ONES_CSID);
+        assert_eq!(
+            idmap.get_changeset_id(repo_id, Vertex(3)).await?,
+            THREES_CSID
+        );
+
+        idmap
+            .insert_many(
+                repo_id,
+                vec![
+                    (Vertex(1), ONES_CSID),
+                    (Vertex(2), TWOS_CSID),
+                    (Vertex(3), THREES_CSID),
+                ],
+            )
+            .await?;
+        assert_eq!(idmap.get_changeset_id(repo_id, Vertex(2)).await?, TWOS_CSID);
+
+        idmap
+            .insert_many(
+                repo_id,
+                vec![(Vertex(1), ONES_CSID), (Vertex(4), FOURS_CSID)],
+            )
+            .await?;
+        assert_eq!(
+            idmap.get_changeset_id(repo_id, Vertex(4)).await?,
+            FOURS_CSID
+        );
+
+        assert!(idmap
+            .insert_many(repo_id, vec![(Vertex(1), FIVES_CSID)])
+            .await
+            .is_err());
 
         Ok(())
     }

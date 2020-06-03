@@ -72,6 +72,7 @@ impl Dag {
         }
 
         let low_vertex = dag::Group::MASTER.min_id();
+        // TODO(sfilip, T67734329): monitor MySql lag replication
         self.build(low_vertex, head, start_state).await?;
 
         Ok(())
@@ -174,10 +175,9 @@ impl Dag {
             .find_vertex(head)
             .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
 
-        // TODO(sfilip): batch operations
-        for (vertex, cs_id) in mem_idmap.iter() {
-            self.idmap.insert(self.repo_id, vertex, cs_id).await?;
-        }
+        self.idmap
+            .insert_many(self.repo_id, mem_idmap.iter().collect::<Vec<_>>())
+            .await?;
 
         let get_vertex_parents = |vertex: Vertex| -> Result<Vec<Vertex>> {
             let cs_id = match mem_idmap.find_changeset_id(vertex) {
