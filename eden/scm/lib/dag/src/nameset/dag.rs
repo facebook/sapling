@@ -55,6 +55,14 @@ impl fmt::Debug for DagSet {
 impl DagSet {
     pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdConvert + Send + Sync>) -> Self {
         let hints = Hints::default();
+        hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
+        hints.set_id_map(&map);
+        if spans.is_empty() {
+            hints.add_flags(Flags::EMPTY | Flags::ID_ASC);
+        } else {
+            hints.set_min_id(spans.min().unwrap());
+            hints.set_max_id(spans.max().unwrap());
+        }
         Self { spans, map, hints }
     }
 }

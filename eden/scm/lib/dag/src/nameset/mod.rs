@@ -46,7 +46,7 @@ impl NameSet {
 
     /// Creates an empty set.
     pub fn empty() -> Self {
-        Self::from_query(r#static::StaticSet::default())
+        Self::from_query(r#static::StaticSet::empty())
     }
 
     /// Creates from a (short) list of known names.
@@ -398,10 +398,10 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&partial, &empty),
             [
-                "- Hints((empty))",
-                "  Hints((empty))",
-                "& Hints((empty))",
-                "  Hints((empty))",
+                "- Hints(ID_ASC)",
+                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
+                "& Hints(ID_ASC)",
+                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
                 "| Hints((empty))",
                 "  Hints((empty))"
             ]
@@ -409,9 +409,9 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&partial, &full),
             [
-                "- Hints((empty))",
-                "  Hints((empty))",
-                "& Hints((empty))",
+                "- Hints(ID_ASC)",
+                "  Hints(ID_DESC)",
+                "& Hints(ID_ASC)",
                 "  Hints(ID_ASC)",
                 "| Hints((empty))",
                 "  Hints((empty))"
@@ -420,9 +420,9 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&empty, &full),
             [
-                "- Hints((empty))",
-                "  Hints((empty))",
-                "& Hints((empty))",
+                "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
+                "  Hints(ID_DESC)",
+                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
                 "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
                 "| Hints((empty))",
                 "  Hints((empty))"
@@ -443,10 +443,10 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&bc, &ad),
             [
-                "- Hints((empty))",
-                "  Hints((empty))",
-                "& Hints((empty))",
-                "  Hints((empty))",
+                "- Hints(ID_DESC, 20..)",
+                "  Hints(ID_ASC, ..=40)",
+                "& Hints(ID_DESC, 20..=40)",
+                "  Hints(ID_ASC, 20..=40)",
                 "| Hints((empty))",
                 "  Hints((empty))"
             ]
@@ -457,12 +457,12 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&bc, &ad),
             [
-                "- Hints((empty))",
-                "  Hints((empty))",
-                "& Hints((empty))",
-                "  Hints((empty))",
-                "| Hints((empty))",
-                "  Hints((empty))"
+                "- Hints(ID_DESC, 20..=30)",
+                "  Hints(ID_ASC, 10..=40)",
+                "& Hints(ID_DESC, 20..=30)",
+                "  Hints(ID_ASC, 20..=30)",
+                "| Hints((empty), 10..=40)",
+                "  Hints((empty), 10..=40)"
             ]
         );
     }

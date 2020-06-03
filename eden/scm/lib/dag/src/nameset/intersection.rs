@@ -31,6 +31,34 @@ impl NameIter for Iter {}
 impl IntersectionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
         let hints = Hints::default();
+        hints.add_flags(
+            lhs.hints().flags()
+                & (Flags::EMPTY
+                    | Flags::ID_DESC
+                    | Flags::ID_ASC
+                    | Flags::TOPO_DESC
+                    | Flags::FILTER),
+        );
+        hints.inherit_id_map(&lhs.hints());
+        let compatible = hints.is_id_map_compatible(&rhs.hints());
+        match (lhs.hints().min_id(), rhs.hints().min_id(), compatible) {
+            (Some(id), None, _) | (Some(id), Some(_), false) | (None, Some(id), true) => {
+                hints.set_min_id(id);
+            }
+            (Some(id1), Some(id2), true) => {
+                hints.set_min_id(id1.max(id2));
+            }
+            (None, Some(_), false) | (None, None, _) => (),
+        }
+        match (lhs.hints().max_id(), rhs.hints().max_id(), compatible) {
+            (Some(id), None, _) | (Some(id), Some(_), false) | (None, Some(id), true) => {
+                hints.set_max_id(id);
+            }
+            (Some(id1), Some(id2), true) => {
+                hints.set_max_id(id1.min(id2));
+            }
+            (None, Some(_), false) | (None, None, _) => (),
+        }
         Self { lhs, rhs, hints }
     }
 }

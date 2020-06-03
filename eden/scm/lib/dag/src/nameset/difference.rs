@@ -31,6 +31,22 @@ impl NameIter for Iter {}
 impl DifferenceSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
         let hints = Hints::default();
+        // Inherit flags, min/max Ids from lhs.
+        hints.add_flags(
+            lhs.hints().flags()
+                & (Flags::EMPTY
+                    | Flags::ID_DESC
+                    | Flags::ID_ASC
+                    | Flags::TOPO_DESC
+                    | Flags::FILTER),
+        );
+        hints.inherit_id_map(&lhs.hints());
+        if let Some(id) = lhs.hints().min_id() {
+            hints.set_min_id(id);
+        }
+        if let Some(id) = lhs.hints().max_id() {
+            hints.set_max_id(id);
+        }
         Self { lhs, rhs, hints }
     }
 }

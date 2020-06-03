@@ -14,7 +14,6 @@ use std::any::Any;
 use std::fmt;
 
 /// A set backed by a concrete ordered set.
-#[derive(Default)]
 pub struct StaticSet(pub(crate) IndexSet<VertexName>, Hints);
 
 type Iter =
@@ -35,6 +34,13 @@ impl StaticSet {
         if names.is_empty() {
             hints.add_flags(Flags::EMPTY | Flags::ID_DESC | Flags::ID_ASC | Flags::TOPO_DESC);
         }
+        Self(names, hints)
+    }
+
+    pub fn empty() -> Self {
+        let names: IndexSet<VertexName> = Default::default();
+        let hints = Hints::default();
+        hints.add_flags(Flags::EMPTY | Flags::ID_DESC | Flags::ID_ASC | Flags::TOPO_DESC);
         Self(names, hints)
     }
 }
