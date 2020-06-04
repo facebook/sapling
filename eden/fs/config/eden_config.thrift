@@ -8,6 +8,7 @@
 namespace cpp2 facebook.eden
 namespace java com.facebook.eden.thrift
 namespace py facebook.eden.eden_config
+namespace py3 eden.fs.config
 
 /**
  * ConfigSource identifies the point of origin of a config setting.
