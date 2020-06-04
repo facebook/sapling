@@ -21,7 +21,7 @@ from typing import List, Optional, Tuple
 from bindings import configparser, dynamicconfig
 
 from ..hgext.extutil import runbgcommand
-from . import configitems, error, pycompat, util
+from . import configitems, encoding, error, pycompat, util
 from .encoding import unifromlocal, unitolocal
 from .i18n import _
 
@@ -594,13 +594,18 @@ def loaddynamicconfig(ui, path):
         ui.readconfig(hgrcdyn, path)
 
         generationtime = ui.configint("configs", "generationtime")
-        if generationtime != -1:
+        if generationtime != -1 and encoding.environ.get("HG_DEBUGDYNAMICCONFIG", "") != "1":
             mtimelimit = time.time() - generationtime
             if not os.path.exists(hgrcdyn) or os.lstat(hgrcdyn).st_mtime < mtimelimit:
                 # TODO: some how prevent kicking off the background process if
                 # the file is read-only or if the previous kick offs failed.
                 ui.debug("background generating dynamic config\n")
-                runbgcommand(["hg", "debugdynamicconfig"], os.environ.copy())
+                env = encoding.environ.copy()
+                # The environment variable prevents infiniteloops from
+                # debugdynamicconfig kicking itself off, or doing it via
+                # commands spawned from the telemetry wrapper.
+                env["HG_DEBUGDYNAMICCONFIG"] = "1"
+                runbgcommand(["hg", "debugdynamicconfig"], env)
 
 
 def validatedynamicconfig(ui):
