@@ -87,6 +87,7 @@ impl_into_thrift_error!(service::RepoResolveCommitPrefixExn);
 impl_into_thrift_error!(service::RepoListBookmarksExn);
 impl_into_thrift_error!(service::RepoCreateCommitExn);
 impl_into_thrift_error!(service::RepoStackInfoExn);
+impl_into_thrift_error!(service::CommitCommonBaseWithExn);
 impl_into_thrift_error!(service::CommitFileDiffsExn);
 impl_into_thrift_error!(service::CommitLookupExn);
 impl_into_thrift_error!(service::CommitInfoExn);

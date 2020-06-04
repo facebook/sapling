@@ -377,6 +377,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoListBookmarksParams,
         ) -> Result<thrift::RepoListBookmarksResponse, service::RepoListBookmarksExn>;
 
+        async fn commit_common_base_with(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitCommonBaseWithParams,
+        ) -> Result<thrift::CommitLookupResponse, service::CommitCommonBaseWithExn>;
+
         async fn commit_lookup(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitLookupParams,

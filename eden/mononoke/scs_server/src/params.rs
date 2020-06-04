@@ -107,6 +107,12 @@ impl AddScubaParams for thrift::CommitIsAncestorOfParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitCommonBaseWithParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add("other_commit", self.other_commit_id.to_string());
+    }
+}
+
 impl AddScubaParams for thrift::CommitLookupParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
         self.identity_schemes.add_scuba_params(scuba);

@@ -24,6 +24,42 @@ use crate::specifiers::SpecifierExt;
 const CONCURRENCY_LIMIT: usize = 100;
 
 impl SourceControlServiceImpl {
+    /// Returns the lowest common ancestor of two commits.
+    ///
+    /// In case of ambiguity (can happen with multiple merges of the same branches) returns the
+    /// common ancestor with lowest id out of those with highest generation number.
+    pub(crate) async fn commit_common_base_with(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitCommonBaseWithParams,
+    ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
+        let repo = self.repo(ctx, &commit.repo).await?;
+        let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
+        let other_changeset_specifier = ChangesetSpecifier::from_request(&params.other_commit_id)?;
+        let (changeset, other_changeset_id) = try_join!(
+            repo.changeset(changeset_specifier),
+            repo.resolve_specifier(other_changeset_specifier),
+        )?;
+        let changeset = changeset.ok_or_else(|| errors::commit_not_found(commit.description()))?;
+        let other_changeset_id = other_changeset_id.ok_or_else(|| {
+            errors::commit_not_found(format!(
+                "repo={} commit={}",
+                commit.repo.name,
+                params.other_commit_id.to_string()
+            ))
+        })?;
+        let lca = changeset.common_base_with(other_changeset_id).await?;
+        Ok(thrift::CommitLookupResponse {
+            exists: lca.is_some(),
+            ids: if let Some(lca) = lca {
+                Some(map_commit_identity(&lca, &params.identity_schemes).await?)
+            } else {
+                None
+            },
+        })
+    }
+
     /// Look up commit.
     pub(crate) async fn commit_lookup(
         &self,
