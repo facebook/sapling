@@ -81,11 +81,11 @@ pub fn get_file_history(
     repo: BlobRepo,
     filenode: HgFileNodeId,
     path: MPath,
-    max_depth: Option<u32>,
+    max_length: Option<u32>,
 ) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
     prefetch_history(ctx.clone(), repo.clone(), path.clone())
         .map(move |prefetched| {
-            get_file_history_using_prefetched(ctx, repo, filenode, path, max_depth, prefetched)
+            get_file_history_using_prefetched(ctx, repo, filenode, path, max_length, prefetched)
         })
         .flatten_stream()
 }
@@ -108,12 +108,15 @@ fn prefetch_history(
 
 /// Get the history of the file at the specified path, using the given
 /// prefetched history map as a cache to speed up the operation.
+///
+/// FIXME: max_legth parameter is not necessary. We can use .take() method on the stream
+/// i.e. get_file_history_using_prefetched().take(max_length)
 fn get_file_history_using_prefetched(
     ctx: CoreContext,
     repo: BlobRepo,
     startnode: HgFileNodeId,
     path: MPath,
-    max_depth: Option<u32>,
+    max_length: Option<u32>,
     prefetched_history: HashMap<HgFileNodeId, FilenodeInfo>,
 ) -> BoxStream<HgFileHistoryEntry, Error> {
     if startnode == HgFileNodeId::new(NULL_HASH) {
@@ -130,13 +133,13 @@ fn get_file_history_using_prefetched(
     // filenode individualy (perhaps not the end of the world?).
     stream::unfold(
         (startstate, seen_nodes, 0),
-        move |(mut nodes, mut seen_nodes, depth): (
+        move |(mut nodes, mut seen_nodes, length): (
             VecDeque<HgFileNodeId>,
             HashSet<HgFileNodeId>,
             u32,
         )| {
-            match max_depth {
-                Some(max_depth) if depth >= max_depth => return None,
+            match max_length {
+                Some(max_length) if length >= max_length => return None,
                 _ => {}
             }
 
@@ -174,7 +177,7 @@ fn get_file_history_using_prefetched(
                         .map(HgFileNodeId::new)
                         .filter(|p| seen_nodes.insert(*p)),
                 );
-                Ok((entry, (nodes, seen_nodes, depth + 1)))
+                Ok((entry, (nodes, seen_nodes, length + 1)))
             });
 
             Some(history)

@@ -76,12 +76,12 @@ impl HgFileContext {
     pub fn history(
         &self,
         path: MPath,
-        max_depth: Option<u32>,
+        max_length: Option<u32>,
     ) -> impl TryStream<Ok = HgFileHistoryEntry, Error = MononokeError> {
         let ctx = self.repo.ctx().clone();
         let blob_repo = self.repo.blob_repo().clone();
         let filenode_id = self.node_id();
-        get_file_history(ctx, blob_repo, filenode_id, path, max_depth)
+        get_file_history(ctx, blob_repo, filenode_id, path, max_length)
             .compat()
             .map_err(MononokeError::from)
     }

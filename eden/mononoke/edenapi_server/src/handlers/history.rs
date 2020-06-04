@@ -63,6 +63,8 @@ async fn get_history(
     // Get streams of history entries for all requested keys.
     let mut streams = Vec::with_capacity(request.keys.len());
     for key in request.keys {
+        // NOTE: request.depth is a confusing name - it's not the depth
+        // but rather a maximum length of the returned history.
         let entries = single_key_history(repo, &key, request.depth).await?;
         // Add the path of the current key to all items of the stream.
         // This is needed since the history entries of different keys
@@ -82,7 +84,7 @@ async fn get_history(
 async fn single_key_history(
     repo: &HgRepoContext,
     key: &Key,
-    depth: Option<u32>,
+    length: Option<u32>,
 ) -> Result<HistoryStream, HttpError> {
     let filenode_id = HgFileNodeId::new(HgNodeHash::from(key.hgid));
     let path = MPath::new(key.path.as_byte_slice()).map_err(HttpError::e400)?;
@@ -96,7 +98,7 @@ async fn single_key_history(
     // Fetch the file's history and convert the entries into
     // the expected on-the-wire format.
     let history = file
-        .history(path, depth)
+        .history(path, length)
         .map_err(HttpError::e500)
         // XXX: Use async block because TryStreamExt::and_then
         // requires the closure to return a TryFuture.
