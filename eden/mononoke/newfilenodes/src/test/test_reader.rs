@@ -8,8 +8,10 @@
 use anyhow::{format_err, Error};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use filenodes::{FilenodeInfo, PreparedFilenode};
+use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::compat::Future01CompatExt;
+use futures::FutureExt;
+use maplit::hashmap;
 use mercurial_types::HgFileNodeId;
 use mercurial_types_mocks::nodehash::{
     ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID, TWOS_FNID,
@@ -18,6 +20,7 @@ use mononoke_types::{MPath, RepoPath, RepositoryId};
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sql::queries;
 use sql::Connection;
+use tunables::{with_tunables_async, MononokeTunables};
 
 use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
 use crate::local_cache::{test::HashMapCache, LocalCache};
@@ -430,6 +433,7 @@ async fn assert_all_filenodes(
     let res = reader
         .get_all_filenodes_for_path(&ctx, repo_id, &path)
         .await?;
+    let res = res.do_not_handle_disabled_filenodes()?;
     assert_eq!(&res, expected);
     Ok(())
 }
@@ -880,3 +884,79 @@ filenodes_tests!(uncached_sharded_test, create_sharded, no_caching);
 
 filenodes_tests!(cached_unsharded_test, create_unsharded, with_caching);
 filenodes_tests!(cached_sharded_test, create_sharded, with_caching);
+
+#[fbinit::compat_test]
+async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (reader, writer) = build_reader_writer(create_sharded()?);
+    let reader = with_caching(reader);
+
+    do_add_filenodes(
+        &ctx,
+        &writer,
+        vec![
+            root_first_filenode(),
+            root_second_filenode(),
+            root_merge_filenode(),
+        ],
+        REPO_ZERO,
+    )
+    .await?;
+
+    do_add_filenodes(
+        &ctx,
+        &writer,
+        vec![file_a_first_filenode(), file_b_first_filenode()],
+        REPO_ZERO,
+    )
+    .await?;
+
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
+    let res = with_tunables_async(
+        tunables,
+        reader
+            .get_all_filenodes_for_path(&ctx, REPO_ZERO, &RepoPath::RootPath)
+            .boxed(),
+    )
+    .await?;
+
+    if let FilenodeResult::Present(_) = res {
+        panic!("expected FilenodeResult::Disabled");
+    }
+
+    let root_filenodes = vec![
+        root_first_filenode().info,
+        root_second_filenode().info,
+        root_merge_filenode().info,
+    ];
+
+    assert_all_filenodes(
+        &ctx,
+        &reader,
+        &RepoPath::RootPath,
+        REPO_ZERO,
+        &root_filenodes,
+    )
+    .await?;
+
+    // All filenodes are cached now, even with filenodes_disabled = true
+    // all filenodes should be returned
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
+    with_tunables_async(
+        tunables,
+        assert_all_filenodes(
+            &ctx,
+            &reader,
+            &RepoPath::RootPath,
+            REPO_ZERO,
+            &root_filenodes,
+        )
+        .boxed(),
+    )
+    .await?;
+
+    Ok(())
+}

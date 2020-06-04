@@ -10,10 +10,12 @@ include = ["src/**/*.rs"]
 blobrepo = { path = "../../blobrepo" }
 blobstore = { path = "../../blobstore" }
 context = { path = "../../server/context" }
+filenodes = { path = "../../filenodes" }
 filestore = { path = "../../filestore" }
 getbundle_response = { path = "../getbundle_response" }
 lz4-pyframe = { path = "../../../scm/lib/lz4-pyframe" }
 mercurial_types = { path = "../../mercurial/types" }
+mononoke_types = { path = "../../mononoke_types" }
 redactedblobstore = { path = "../../blobstore/redactedblobstore" }
 revisionstore_types = { path = "../../../scm/lib/revisionstore/types" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -26,7 +28,6 @@ thiserror = "1.0"
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
 manifest = { path = "../../manifest" }
-mononoke_types = { path = "../../mononoke_types" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 assert_matches = "1.3"

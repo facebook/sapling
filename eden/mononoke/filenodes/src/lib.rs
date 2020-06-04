@@ -146,7 +146,7 @@ pub trait Filenodes: Send + Sync {
         ctx: CoreContext,
         path: &RepoPath,
         repo_id: RepositoryId,
-    ) -> BoxFuture<Vec<FilenodeInfo>, Error>;
+    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error>;
 
     fn prime_cache(&self, ctx: &CoreContext, repo_id: RepositoryId, filenodes: &[PreparedFilenode]);
 }

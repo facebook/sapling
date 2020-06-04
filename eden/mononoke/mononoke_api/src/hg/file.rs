@@ -6,7 +6,7 @@
  */
 
 use async_trait::async_trait;
-use blobrepo::file_history::get_file_history;
+use blobrepo::file_history::get_file_history_maybe_incomplete;
 use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
 use futures::{
@@ -81,7 +81,7 @@ impl HgFileContext {
         let ctx = self.repo.ctx().clone();
         let blob_repo = self.repo.blob_repo().clone();
         let filenode_id = self.node_id();
-        get_file_history(ctx, blob_repo, filenode_id, path, max_length)
+        get_file_history_maybe_incomplete(ctx, blob_repo, filenode_id, path, max_length)
             .compat()
             .map_err(MononokeError::from)
     }
@@ -158,6 +158,7 @@ mod tests {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use fixtures::many_files_dirs;
+    use futures::TryStreamExt;
     use mercurial_types::{HgChangesetId, NULL_HASH};
 
     use crate::repo::{Repo, RepoContext};

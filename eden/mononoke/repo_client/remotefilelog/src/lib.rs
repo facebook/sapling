@@ -12,7 +12,7 @@ mod redaction;
 use std::{collections::HashSet, fmt};
 
 use anyhow::Error;
-use blobrepo::{file_history::get_file_history, BlobRepo};
+use blobrepo::{file_history::get_file_history_maybe_incomplete, BlobRepo};
 use blobstore::Loadable;
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
@@ -197,11 +197,9 @@ pub fn get_unordered_file_history_for_multiple_nodes(
     filenodes: HashSet<HgFileNodeId>,
     path: &MPath,
 ) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
-    select_all(
-        filenodes.into_iter().map(|filenode| {
-            get_file_history(ctx.clone(), repo.clone(), filenode, path.clone(), None)
-        }),
-    )
+    select_all(filenodes.into_iter().map(|filenode| {
+        get_file_history_maybe_incomplete(ctx.clone(), repo.clone(), filenode, path.clone(), None)
+    }))
     .filter({
         let mut used_filenodes = HashSet::new();
         move |entry| used_filenodes.insert(entry.filenode().clone())

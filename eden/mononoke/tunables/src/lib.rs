@@ -15,6 +15,7 @@ use std::time::Duration;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use cached_config::ConfigHandle;
+use futures::{future::poll_fn, Future, FutureExt};
 use once_cell::sync::OnceCell;
 use slog::{debug, warn, Logger};
 use std::sync::atomic::{AtomicBool, AtomicI64};
@@ -157,6 +158,22 @@ pub fn with_tunables<T>(new_tunables: MononokeTunables, f: impl FnOnce() -> T) -
     res
 }
 
+pub fn with_tunables_async<Out, Fut: Future<Output = Out> + Unpin>(
+    new_tunables: MononokeTunables,
+    mut fut: Fut,
+) -> impl Future<Output = Out> {
+    let new_tunables = Arc::new(new_tunables);
+    poll_fn(move |cx| {
+        TUNABLES_OVERRIDE.with(|t| *t.borrow_mut() = Some(new_tunables.clone()));
+
+        let res = fut.poll_unpin(cx);
+
+        TUNABLES_OVERRIDE.with(|tunables| *tunables.borrow_mut() = None);
+
+        res
+    })
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -242,5 +259,19 @@ mod test {
         assert_eq!(test.get_string().as_str(), "");
         test.update_strings(&d);
         assert_eq!(test.get_string().as_str(), "value");
+    }
+
+    #[fbinit::compat_test]
+    async fn test_with_tunables_async(_fb: fbinit::FacebookInit) {
+        let res = with_tunables_async(
+            MononokeTunables {
+                wishlist_write_qps: AtomicI64::new(2),
+                ..MononokeTunables::default()
+            },
+            async { tunables().get_wishlist_write_qps() }.boxed(),
+        )
+        .await;
+
+        assert_eq!(res, 2);
     }
 }

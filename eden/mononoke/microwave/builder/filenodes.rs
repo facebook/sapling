@@ -8,7 +8,7 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::{FilenodeInfo, Filenodes, PreparedFilenode};
+use filenodes::{FilenodeInfo, FilenodeResult, Filenodes, PreparedFilenode};
 use futures::{
     channel::mpsc::Sender,
     compat::Future01CompatExt,
@@ -128,7 +128,7 @@ impl Filenodes for MicrowaveFilenodes {
         _ctx: CoreContext,
         _path: &RepoPath,
         repo_id: RepositoryId,
-    ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
+    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
         // The rationale is a bit different to that in add() here, since this is a read method. The
         // idea here is that we do not expect cache warmup to call get_all_filenodes_maybe_stale,
         // so we don't do anything about it in Microwave (i.e. don't cache it). If cache warmup

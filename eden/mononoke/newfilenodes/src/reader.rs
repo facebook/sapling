@@ -24,8 +24,9 @@ use std::marker::PhantomData;
 use std::time::Duration;
 use thiserror::Error as DeriveError;
 use tokio::time::timeout;
+use tunables::tunables;
 
-use filenodes::{FilenodeInfo, PreparedFilenode};
+use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 
 use crate::connections::{AcquireReason, Connections};
 use crate::local_cache::{CacheKey, LocalCache};
@@ -228,14 +229,14 @@ impl FilenodesReader {
         ctx: &CoreContext,
         repo_id: RepositoryId,
         path: &RepoPath,
-    ) -> Result<Vec<FilenodeInfo>, Error> {
+    ) -> Result<FilenodeResult<Vec<FilenodeInfo>>, Error> {
         STATS::range_gets.add_value(1);
 
         let pwh = PathWithHash::from_repo_path(&path);
         let key = history_cache_key(repo_id, &pwh);
 
         if let Some(cached) = self.local_cache.get(&key) {
-            return Ok(cached.try_into()?);
+            return Ok(FilenodeResult::Present(cached.try_into()?));
         }
 
         let permit = self.shards.acquire_history(&path).await;
@@ -243,7 +244,7 @@ impl FilenodesReader {
 
         // See above for rationale here.
         if let Some(cached) = self.local_cache.get(&key) {
-            return Ok(cached.try_into()?);
+            return Ok(FilenodeResult::Present(cached.try_into()?));
         }
 
         STATS::range_local_cache_misses.add_value(1);
@@ -252,7 +253,7 @@ impl FilenodesReader {
         {
             // TODO: We should compress if this is too big.
             self.local_cache.fill(&key, &(&info).into());
-            return Ok(info);
+            return Ok(FilenodeResult::Present(info));
         }
 
         let cache_filler = HistoryCacheFiller {
@@ -273,7 +274,10 @@ impl FilenodesReader {
         )
         .await?;
 
-        Ok(res.try_into()?)
+        match res {
+            FilenodeResult::Present(res) => Ok(FilenodeResult::Present(res.try_into()?)),
+            FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+        }
     }
 
     pub fn prime_cache(
@@ -401,12 +405,16 @@ async fn select_history_from_sql(
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<CachedHistory, Error> {
+) -> Result<FilenodeResult<CachedHistory>, Error> {
+    if tunables().get_filenodes_disabled() {
+        return Ok(FilenodeResult::Disabled);
+    }
+
     let partial = select_partial_history(&connections, repo_id, &pwh, recorder).await?;
     let history = fill_paths(&connections, &pwh, repo_id, partial, recorder).await?;
     let history = CachedHistory { history };
     filler.fill(history.clone());
-    Ok(history)
+    Ok(FilenodeResult::Present(history))
 }
 
 async fn select_partial_history(

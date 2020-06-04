@@ -21,7 +21,7 @@ mod test;
 use anyhow::{Context, Error};
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::{FilenodeInfo, Filenodes, PreparedFilenode};
+use filenodes::{FilenodeInfo, FilenodeResult, Filenodes, PreparedFilenode};
 use futures::future::{FutureExt as _, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
 use mercurial_types::HgFileNodeId;
@@ -119,7 +119,7 @@ impl Filenodes for NewFilenodes {
         ctx: CoreContext,
         path: &RepoPath,
         repo_id: RepositoryId,
-    ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
+    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
         cloned!(self.reader, path);
 
         async move {

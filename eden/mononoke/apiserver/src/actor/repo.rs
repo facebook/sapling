@@ -1001,6 +1001,11 @@ impl MononokeRepo {
                 .and_then(move |path| {
                     debug!(&logger, "fetching history for key: {}", &key);
                     get_file_history(ctx, repo, filenode, path, depth)
+                        .and_then(|filenode_res| {
+                            let filenodes = filenode_res.do_not_handle_disabled_filenodes()?;
+                            Ok(iter_ok(filenodes))
+                        })
+                        .flatten_stream()
                         .and_then(move |entry| {
                             let entry = WireHistoryEntry::try_from(entry)?;
                             Ok((key.path.clone(), entry))

@@ -595,7 +595,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         path: RepoPath,
-    ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
+    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
         STATS::get_all_filenodes.add_value(1);
         self.filenodes
             .get_all_filenodes_maybe_stale(ctx, &path, self.repoid)
