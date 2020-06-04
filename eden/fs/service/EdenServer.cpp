@@ -1532,6 +1532,11 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->setNumIOWorkerThreads(FLAGS_thrift_num_workers);
   server_->setEnableCodel(FLAGS_thrift_enable_codel);
   server_->setMinCompressBytes(FLAGS_thrift_min_compress_bytes);
+  // Setting this allows us to to only do stopListening() on the stop() call
+  // and delay thread-pool join (stop cpu workers + stop workers) untill
+  // server object destruction. This specifically matters in the takeover
+  // shutdown code path.
+  server_->setStopWorkersOnStopListening(false);
 
   handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
   server_->setInterface(handler_);
@@ -1671,14 +1676,11 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
 
         shutdownSubscribers();
 
-        // Stop listening on the thrift socket. This call will wait for in
-        // process thrift requests to finish. We would like to wait for in
-        // process thrift calls to finish here in order to let calls like
-        // checkout still write to the overlay. In the future, we'd like to
+        // Stop the thrift server. In the future, we'd like to
         // keep listening and instead start internally queueing thrift calls
         // to pass with the takeover data below, while waiting here for
         // currently processing thrift calls to finish.
-        server_->stopListening();
+        server_->stop();
       })
       .thenTry([this, takeoverPromise = std::move(takeoverPromise)](
                    auto&& t) mutable {
@@ -1693,10 +1695,6 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
         takeover.lockFile = edenDir_.extractLock();
 
         takeover.thriftSocket = std::move(socket);
-
-        // Stop the thrift server.
-        server_->stopWorkers();
-        server_->stop();
 
         return std::move(takeover);
       });
