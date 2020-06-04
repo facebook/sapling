@@ -6,6 +6,8 @@
 
 import getpass
 import io
+import os.path
+import platform
 import socket
 import subprocess
 import sys
@@ -39,6 +41,7 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
         # can use RPMs as well.  If the RPM command fails this will just report that
         # and will continue reporting the rest of the rage data.
         print_rpm_version(out)
+    print_os_version(out)
 
     health_status = instance.check_health()
     if health_status.is_healthy():
@@ -78,6 +81,29 @@ def print_rpm_version(out: IO[bytes]) -> None:
         out.write(f"RPM Version             : {rpm_version}\n".encode("utf-8"))
     except Exception as e:
         out.write(f"Error getting the RPM version : {e}\n".encode("utf-8"))
+
+
+def print_os_version(out: IO[bytes]) -> None:
+    version = None
+    if sys.platform == "linux":
+        release_file_name = "/etc/os-release"
+        if os.path.isfile(release_file_name):
+            with open(release_file_name) as release_info_file:
+                release_info = {}
+                for line in release_info_file:
+                    parsed_line = line.rstrip().split("=")
+                    if len(parsed_line) == 2:
+                        release_info_piece, value = parsed_line
+                        release_info[release_info_piece] = value.strip('"')
+                if "PRETTY_NAME" in release_info:
+                    version = release_info["PRETTY_NAME"]
+    elif sys.platform == "darwin":
+        version = "MacOS " + platform.mac_ver()[0]
+
+    if not version:
+        version = platform.system() + " " + platform.version()
+
+    out.write(f"OS Version              : {version}\n".encode("utf-8"))
 
 
 def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
