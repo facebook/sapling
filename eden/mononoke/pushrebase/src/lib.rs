@@ -778,11 +778,11 @@ async fn find_changed_files(
     let file_changes = try_join_all(file_changes_futs).await?;
 
     let mut file_changes_union = file_changes
-                    .into_iter()
-                    .flat_map(|v| v)
-                    .collect::<HashSet<_>>()  // compute union
-                    .into_iter()
-                    .collect::<Vec<_>>();
+        .into_iter()
+        .flat_map(|v| v)
+        .collect::<HashSet<_>>() // compute union
+        .into_iter()
+        .collect::<Vec<_>>();
     file_changes_union.sort_unstable();
 
     Ok(file_changes_union)

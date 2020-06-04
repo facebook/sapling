@@ -74,21 +74,15 @@ impl ScrubHandler for StatsScrubHandler {
             None => ScubaValue::Null(NullScubaValue::Int),
         };
 
-        self.scuba.clone()
+        self.scuba
+            .clone()
             // If we start to run in multi-repo mode this will need to be prefix aware instead
             .add(REPO, self.repo_stats_key.clone())
             .add(BLOBSTORE_ID, blobstore_id)
             // TODO parse out NodeType from string key prefix if we can. Or better, make blobstore keys typed?
             .add(NODE_KEY, key)
             .add(CHECK_TYPE, "scrub_repair")
-            .add(
-                CHECK_FAIL,
-                if is_repaired {
-                    0
-                } else {
-                    1
-                },
-            )
+            .add(CHECK_FAIL, if is_repaired { 0 } else { 1 })
             .add("session", ctx.session().session_id().to_string())
             .add("ctime", ctime)
             .log();

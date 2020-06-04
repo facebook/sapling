@@ -213,12 +213,9 @@ where
                 // Let's use it as a proxy for the oldest underived commit
                 .map(|all_underived| all_underived.get(0).cloned())
                 .flatten()
-                .map(|cs_id| async move {
-                    cs_id
-                        .load(ctx.clone(), repo.blobstore())
-                        .compat()
-                        .await
-                }),
+                .map(
+                    |cs_id| async move { cs_id.load(ctx.clone(), repo.blobstore()).compat().await },
+                ),
         )
         .map(Ok)
         .try_buffer_unordered(100)

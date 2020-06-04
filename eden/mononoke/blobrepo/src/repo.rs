@@ -1269,12 +1269,10 @@ impl BlobRepo {
             .and_then({
                 cloned!(ctx, repo);
                 move |manifest_id| {
-                compute_changed_files(ctx, repo, manifest_id.clone(), mf_p1, mf_p2)
-                    .map(move |files| {
-                        (manifest_id, files)
-                    })
-
-            }})
+                    compute_changed_files(ctx, repo, manifest_id.clone(), mf_p1, mf_p2)
+                        .map(move |files| (manifest_id, files))
+                }
+            })
             // create changeset
             .and_then({
                 cloned!(ctx, repo, bcs);
@@ -1282,15 +1280,16 @@ impl BlobRepo {
                     let mut metadata = ChangesetMetadata {
                         user: bcs.author().to_string(),
                         time: *bcs.author_date(),
-                        extra: bcs.extra()
-                            .map(|(k, v)| {
-                                (k.as_bytes().to_vec(), v.to_vec())
-                            })
+                        extra: bcs
+                            .extra()
+                            .map(|(k, v)| (k.as_bytes().to_vec(), v.to_vec()))
                             .collect(),
                         comments: bcs.message().to_string(),
                     };
 
-                    metadata.record_step_parents(step_parents.into_iter().map(|blob| blob.get_changeset_id()));
+                    metadata.record_step_parents(
+                        step_parents.into_iter().map(|blob| blob.get_changeset_id()),
+                    );
 
                     let content = HgChangesetContent::new_from_parts(
                         hg_parents,
@@ -1304,14 +1303,16 @@ impl BlobRepo {
                     cs.save(ctx.clone(), repo.blobstore.clone())
                         .and_then({
                             cloned!(ctx, repo);
-                            move |_| repo.bonsai_hg_mapping.add(
-                                ctx,
-                                BonsaiHgMappingEntry {
-                                    repo_id: repo.get_repoid(),
-                                    hg_cs_id: cs_id,
-                                    bcs_id,
-                                },
-                            )
+                            move |_| {
+                                repo.bonsai_hg_mapping.add(
+                                    ctx,
+                                    BonsaiHgMappingEntry {
+                                        repo_id: repo.get_repoid(),
+                                        hg_cs_id: cs_id,
+                                        bcs_id,
+                                    },
+                                )
+                            }
                         })
                         .map(move |_| cs_id)
                         .boxify()

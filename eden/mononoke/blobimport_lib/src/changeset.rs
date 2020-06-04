@@ -391,46 +391,54 @@ impl UploadChangesets {
 
                     let entries = entries.map({
                         cloned!(blob_uploader);
-                        move |(path, entry)|  {
-                            blob_uploader.process((entry, path))
-                        }
+                        move |(path, entry)| blob_uploader.process((entry, path))
                     });
 
                     revlogcs
                         .join3(rootmf, entries.collect())
                         .map(move |(cs, rootmf, entries)| (revidx, csid, cs, rootmf, entries))
-                        .traced_with_id(&ctx.trace(), "parse changeset from revlog", trace_args!(), event_id)
+                        .traced_with_id(
+                            &ctx.trace(),
+                            "parse changeset from revlog",
+                            trace_args!(),
+                            event_id,
+                        )
                 }
             })
             .and_then({
                 cloned!(ctx);
                 move |(revidx, csid, cs, rootmf, entries)| {
-                let parents_from_revlog: Vec<_> = cs.parents().into_iter().map(HgChangesetId::new).collect();
+                    let parents_from_revlog: Vec<_> =
+                        cs.parents().into_iter().map(HgChangesetId::new).collect();
 
-                if let Some(parent_order) = fixed_parent_order.get(&HgChangesetId::new(csid.clone())) {
-                    let actual: HashSet<_> = parents_from_revlog.into_iter().collect();
-                    let expected: HashSet<_> = parent_order.iter().map(|csid| *csid).collect();
-                    if actual != expected {
-                        bail!(
-                            "Changeset {} has unexpected parents: actual {:?}\nexpected {:?}",
-                            csid,
-                            actual,
-                            expected
+                    if let Some(parent_order) =
+                        fixed_parent_order.get(&HgChangesetId::new(csid.clone()))
+                    {
+                        let actual: HashSet<_> = parents_from_revlog.into_iter().collect();
+                        let expected: HashSet<_> = parent_order.iter().map(|csid| *csid).collect();
+                        if actual != expected {
+                            bail!(
+                                "Changeset {} has unexpected parents: actual {:?}\nexpected {:?}",
+                                csid,
+                                actual,
+                                expected
+                            );
+                        }
+
+                        info!(
+                            ctx.logger(),
+                            "fixing parent order for {}: {:?}", csid, parent_order
                         );
+                        Ok((revidx, csid, cs, rootmf, entries, parent_order.clone()))
+                    } else {
+                        Ok((revidx, csid, cs, rootmf, entries, parents_from_revlog))
                     }
-
-                    info!(ctx.logger(), "fixing parent order for {}: {:?}", csid, parent_order);
-                    Ok((revidx, csid, cs, rootmf, entries, parent_order.clone()))
-                } else {
-                    Ok((revidx, csid, cs, rootmf, entries, parents_from_revlog))
                 }
-
-            }})
+            })
             .map(move |(revidx, csid, cs, rootmf, entries, parents)| {
                 let entries = stream::futures_unordered(entries).boxify();
 
                 let (p1handle, p2handle) = {
-
                     let mut parents = parents.into_iter().map(|p| {
                         let p = p.into_nodehash();
                         let maybe_handle = parent_changeset_handles.get(&p).cloned();
@@ -469,8 +477,11 @@ impl UploadChangesets {
                     // Repositories can contain case conflicts - we still need to import them
                     must_check_case_conflicts: false,
                 };
-                let cshandle =
-                    create_changeset.create(ctx.clone(), &blobrepo, ScubaSampleBuilder::with_discard());
+                let cshandle = create_changeset.create(
+                    ctx.clone(),
+                    &blobrepo,
+                    ScubaSampleBuilder::with_discard(),
+                );
                 parent_changeset_handles.insert(csid, cshandle.clone());
 
                 cloned!(ctx);
@@ -478,12 +489,19 @@ impl UploadChangesets {
 
                 // Uploading changeset and populate phases
                 // We know they are public.
-                oneshot::spawn(cshandle
-                    .get_completed_changeset()
-                    .with_context(move || format!("While uploading changeset: {}", csid))
-                    .from_err(), &executor)
-                    .and_then(move |shared| phases.add_reachable_as_public(ctx, vec![shared.0.get_changeset_id()]).map(move |_| (revidx, shared)))
-                    .boxify()
+                oneshot::spawn(
+                    cshandle
+                        .get_completed_changeset()
+                        .with_context(move || format!("While uploading changeset: {}", csid))
+                        .from_err(),
+                    &executor,
+                )
+                .and_then(move |shared| {
+                    phases
+                        .add_reachable_as_public(ctx, vec![shared.0.get_changeset_id()])
+                        .map(move |_| (revidx, shared))
+                })
+                .boxify()
             })
             // This is the number of changesets to upload in parallel. Keep it small to keep the database
             // load under control

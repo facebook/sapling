@@ -127,13 +127,15 @@ impl CachedBookmarks {
                 }
 
                 if cache_hit {
-                    STATS::cached_bookmarks_hits.add_value(1, (repoid.id().to_string(), ))
+                    STATS::cached_bookmarks_hits.add_value(1, (repoid.id().to_string(),))
                 } else {
-                    STATS::cached_bookmarks_misses.add_value(1, (repoid.id().to_string(), ))
+                    STATS::cached_bookmarks_misses.add_value(1, (repoid.id().to_string(),))
                 }
             })
             // create new cache if threre is no cache entry
-            .or_insert_with(|| Cache::new(ctx, repoid, self.bookmarks.clone(), now + self.ttl, true))
+            .or_insert_with(|| {
+                Cache::new(ctx, repoid, self.bookmarks.clone(), now + self.ttl, true)
+            })
             .clone()
     }
 
@@ -170,15 +172,18 @@ impl CachedBookmarks {
             .map(move |bookmarks| {
                 let result: Vec<_> = bookmarks
                     .range(range)
-                    .filter_map(move |(name, (hg_kind, changeset_id))| {
-                        match filter(hg_kind) {
+                    .filter_map(
+                        move |(name, (hg_kind, changeset_id))| match filter(hg_kind) {
                             true => {
-                                let bookmark = Bookmark { name: name.clone(), hg_kind: *hg_kind };
+                                let bookmark = Bookmark {
+                                    name: name.clone(),
+                                    hg_kind: *hg_kind,
+                                };
                                 Some((bookmark, *changeset_id))
-                            },
+                            }
                             false => None,
-                        }
-                    })
+                        },
+                    )
                     .collect();
                 stream::iter_ok(result)
             })

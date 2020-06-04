@@ -29,31 +29,31 @@ pub(crate) async fn collect_history(
 
     let history = if before_timestamp.is_some() || after_timestamp.is_some() {
         history_stream
-                .map(move |changeset| async move {
-                    let changeset = changeset?;
-                    let date = changeset.author_date().await?;
+            .map(move |changeset| async move {
+                let changeset = changeset?;
+                let date = changeset.author_date().await?;
 
-                    if let Some(after) = after_timestamp {
-                        if after > date.timestamp() {
-                            return Ok(None);
-                        }
+                if let Some(after) = after_timestamp {
+                    if after > date.timestamp() {
+                        return Ok(None);
                     }
-                    if let Some(before) = before_timestamp {
-                        if before < date.timestamp() {
-                            return Ok(None);
-                        }
+                }
+                if let Some(before) = before_timestamp {
+                    if before < date.timestamp() {
+                        return Ok(None);
                     }
+                }
 
-                    Ok(Some(changeset))
-                })
-                // to check the date we need to fetch changeset first, that can be expensive
-                // better to try doing it in parallel
-                .buffered(100)
-                .try_filter_map(|maybe_changeset| async move {
-                    Ok::<_, errors::ServiceError>(maybe_changeset)
-                })
-                .take(limit)
-                .left_stream()
+                Ok(Some(changeset))
+            })
+            // to check the date we need to fetch changeset first, that can be expensive
+            // better to try doing it in parallel
+            .buffered(100)
+            .try_filter_map(|maybe_changeset| async move {
+                Ok::<_, errors::ServiceError>(maybe_changeset)
+            })
+            .take(limit)
+            .left_stream()
     } else {
         history_stream.take(limit).right_stream()
     };

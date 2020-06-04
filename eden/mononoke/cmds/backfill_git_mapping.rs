@@ -52,7 +52,11 @@ pub async fn backfill<P: AsRef<Path>>(
         .and_then(|hg_cs_id| {
             cloned!(ctx, repo);
             async move {
-                let id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).compat().await?.ok_or(anyhow!("hg commit {} is missing", hg_cs_id))?;
+                let id = repo
+                    .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+                    .compat()
+                    .await?
+                    .ok_or(anyhow!("hg commit {} is missing", hg_cs_id))?;
                 Ok(id)
             }
         })
@@ -72,7 +76,8 @@ pub async fn backfill<P: AsRef<Path>>(
             cloned!(ctx, repo);
             async move {
                 repo.bonsai_git_mapping()
-                    .bulk_import_from_bonsai(ctx.clone(), &chunk).await
+                    .bulk_import_from_bonsai(ctx.clone(), &chunk)
+                    .await
             }
         })
         .await

@@ -185,7 +185,7 @@ fn check_one_file(
     let key = filestore::FetchKey::from(file_info.id);
     let sha256_check = filestore::get_metadata(repo.blobstore(), ctx.clone(), &key)
         .and_then(move |meta| meta.ok_or(ErrorKind::ContentMissing(key).into()))
-        .boxify()  // type is too large
+        .boxify() // type is too large
         .and_then(move |meta| {
             filestore::FetchKey::from(meta.sha256)
                 .load(ctx, repo.blobstore())

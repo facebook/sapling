@@ -91,7 +91,7 @@ where
         // backpressure into the chunks Stream.
         let contents = multiplexer.add(move |stream| {
             stream
-                .map_err(|e| -> Error { e })  // Coerce the Error value for our stream.
+                .map_err(|e| -> Error { e }) // Coerce the Error value for our stream.
                 .map(move |bytes| {
                     // NOTE: This is lazy to allow the hash computation for this chunk's ID to
                     // happen on a separate core.
@@ -102,7 +102,8 @@ where
 
                             // TODO: Convert this along with other store calls to impl Storable for
                             // MononokeId.
-                            blobstore.put(ctx, blob.id().blobstore_key(), blob.into())
+                            blobstore
+                                .put(ctx, blob.id().blobstore_key(), blob.into())
                                 .map(move |_| pointer)
                         }
                     });

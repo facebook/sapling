@@ -1430,11 +1430,19 @@ fn test_list_bookmark_log_entries(fb: FacebookInit) {
 
         assert_eq!(
             bookmarks
-            .list_bookmark_log_entries(ctx.clone(), name_1.clone(), REPO_ZERO, 3, None, Freshness::MostRecent)
-            .map(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
-            .collect()
-            .compat().await
-            .unwrap(),
+                .list_bookmark_log_entries(
+                    ctx.clone(),
+                    name_1.clone(),
+                    REPO_ZERO,
+                    3,
+                    None,
+                    Freshness::MostRecent
+                )
+                .map(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
+                .collect()
+                .compat()
+                .await
+                .unwrap(),
             vec![
                 (
                     Some(FIVES_CSID),
@@ -1459,11 +1467,19 @@ fn test_list_bookmark_log_entries(fb: FacebookInit) {
 
         assert_eq!(
             bookmarks
-            .list_bookmark_log_entries(ctx.clone(), name_1, REPO_ZERO, 3, Some(1), Freshness::MostRecent)
-            .map(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
-            .collect()
-            .compat().await
-            .unwrap(),
+                .list_bookmark_log_entries(
+                    ctx.clone(),
+                    name_1,
+                    REPO_ZERO,
+                    3,
+                    Some(1),
+                    Freshness::MostRecent
+                )
+                .map(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
+                .collect()
+                .compat()
+                .await
+                .unwrap(),
             vec![
                 (
                     Some(FOURS_CSID),

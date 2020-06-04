@@ -1495,134 +1495,152 @@ impl HgCommands for RepoClient {
         self.repo
             .readonly()
             // Assume read only if we have an error.
-            .or_else(|_| ok(RepoReadOnly::ReadOnly("Failed to fetch repo lock status".to_string())))
-            .and_then(move |read_write| client.command_future(ops::UNBUNDLE, |ctx, command_logger| {
-                let blobrepo = client.repo.blobrepo().clone();
-                let bookmark_attrs = client.repo.bookmark_attrs();
-                let lca_hint = client.repo.lca_hint().clone();
-                let infinitepush_params = client.repo.infinitepush().clone();
-                let infinitepush_writes_allowed = infinitepush_params.allow_writes;
-                let pushrebase_params = client.repo.pushrebase_params().clone();
-
-                let res = {
-                    cloned!(ctx);
+            .or_else(|_| {
+                ok(RepoReadOnly::ReadOnly(
+                    "Failed to fetch repo lock status".to_string(),
+                ))
+            })
+            .and_then(move |read_write| {
+                client.command_future(ops::UNBUNDLE, |ctx, command_logger| {
                     let blobrepo = client.repo.blobrepo().clone();
-                    let pushrebase_flags = pushrebase_params.flags.clone();
-                    async move {
-                        unbundle::resolve(
-                            &ctx,
-                            &blobrepo,
-                            infinitepush_writes_allowed,
-                            stream,
-                            read_write,
-                            maybe_full_content,
-                            pure_push_allowed,
-                            pushrebase_flags,
-                        )
-                        .await
+                    let bookmark_attrs = client.repo.bookmark_attrs();
+                    let lca_hint = client.repo.lca_hint().clone();
+                    let infinitepush_params = client.repo.infinitepush().clone();
+                    let infinitepush_writes_allowed = infinitepush_params.allow_writes;
+                    let pushrebase_params = client.repo.pushrebase_params().clone();
+
+                    let res = {
+                        cloned!(ctx);
+                        let blobrepo = client.repo.blobrepo().clone();
+                        let pushrebase_flags = pushrebase_params.flags.clone();
+                        async move {
+                            unbundle::resolve(
+                                &ctx,
+                                &blobrepo,
+                                infinitepush_writes_allowed,
+                                stream,
+                                read_write,
+                                maybe_full_content,
+                                pure_push_allowed,
+                                pushrebase_flags,
+                            )
+                            .await
+                        }
                     }
-                }
-                .boxed()
-                .compat()
-                .and_then({
-                    cloned!(ctx, blobrepo);
-                    move |action| {
-                        run_hooks(ctx, blobrepo, hook_manager, &action)
-                            .map(move |_| action)
-                    }
-                }).and_then({
-                    cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint);
-                    move |action| {
-                        match try_boxfuture!(client.maybe_get_push_redirector_for_action(&action)) {
+                    .boxed()
+                    .compat()
+                    .and_then({
+                        cloned!(ctx, blobrepo);
+                        move |action| {
+                            run_hooks(ctx, blobrepo, hook_manager, &action).map(move |_| action)
+                        }
+                    })
+                    .and_then({
+                        cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint);
+                        move |action| match try_boxfuture!(
+                            client.maybe_get_push_redirector_for_action(&action)
+                        ) {
                             Some(push_redirector) => {
                                 let ctx = ctx.with_mutated_scuba(|mut sample| {
-                                    sample.add("target_repo_name", push_redirector.repo.reponame().as_ref());
-                                    sample.add("target_repo_id", push_redirector.repo.repoid().id());
+                                    sample.add(
+                                        "target_repo_name",
+                                        push_redirector.repo.reponame().as_ref(),
+                                    );
+                                    sample
+                                        .add("target_repo_id", push_redirector.repo.repoid().id());
                                     sample
                                 });
-                                ctx.scuba().clone().log_with_msg("Push redirected to large repo", None);
+                                ctx.scuba()
+                                    .clone()
+                                    .log_with_msg("Push redirected to large repo", None);
                                 push_redirector
                                     .run_redirected_post_resolve_action_compat(ctx, action)
                                     .boxify()
                             }
-                            None => {
-                                async move {
-                                    let maybe_reverse_filler_queue = client.repo.maybe_reverse_filler_queue();
-                                    run_post_resolve_action(
-                                        &ctx,
-                                        &blobrepo,
-                                        &bookmark_attrs,
-                                        &*lca_hint,
-                                        &infinitepush_params,
-                                        &pushrebase_params,
-                                        maybe_reverse_filler_queue,
-                                        action,
-                                    )
-                                    .await
-                                }
-                                .boxed()
-                                .compat()
-                                .boxify()
+                            None => async move {
+                                let maybe_reverse_filler_queue =
+                                    client.repo.maybe_reverse_filler_queue();
+                                run_post_resolve_action(
+                                    &ctx,
+                                    &blobrepo,
+                                    &bookmark_attrs,
+                                    &*lca_hint,
+                                    &infinitepush_params,
+                                    &pushrebase_params,
+                                    maybe_reverse_filler_queue,
+                                    action,
+                                )
+                                .await
                             }
+                            .boxed()
+                            .compat()
+                            .boxify(),
                         }
-                    }
-                }).and_then({
-                    // There's a bookmarks race condition where the client requests bookmarks after we return commits to it,
-                    // and is then confused because the bookmarks refer to commits that it doesn't know about. Ultimately,
-                    // this is something we need to resolve by sending down the commits we know the client doesn't have,
-                    // or by getting bookmarks atomically with the commits we send back.
-                    //
-                    // This tries to minimise the duration of the bookmarks race condition - we've just updated bookmarks,
-                    // and now we fill the cache with new bookmark data, so that, with luck, the bookmark update we see
-                    // will just be from this client's push, rather than from a later push that came in during the RTT
-                    // needed to get the `listkeys` request from the client.
-                    //
-                    // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
-                    // depend on the reply part with a bookmark change in - T57874233
-                    cloned!(ctx, blobrepo);
-                    move |response| {
-                        // If this fails, we end up with a cold cache - but that just means we see the race and/or error again later
-                        update_pull_default_bookmarks_maybe_stale_cache(ctx, cached_pull_default_bookmarks_maybe_stale, blobrepo)
+                    })
+                    .and_then({
+                        // There's a bookmarks race condition where the client requests bookmarks after we return commits to it,
+                        // and is then confused because the bookmarks refer to commits that it doesn't know about. Ultimately,
+                        // this is something we need to resolve by sending down the commits we know the client doesn't have,
+                        // or by getting bookmarks atomically with the commits we send back.
+                        //
+                        // This tries to minimise the duration of the bookmarks race condition - we've just updated bookmarks,
+                        // and now we fill the cache with new bookmark data, so that, with luck, the bookmark update we see
+                        // will just be from this client's push, rather than from a later push that came in during the RTT
+                        // needed to get the `listkeys` request from the client.
+                        //
+                        // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
+                        // depend on the reply part with a bookmark change in - T57874233
+                        cloned!(ctx, blobrepo);
+                        move |response| {
+                            // If this fails, we end up with a cold cache - but that just means we see the race and/or error again later
+                            update_pull_default_bookmarks_maybe_stale_cache(
+                                ctx,
+                                cached_pull_default_bookmarks_maybe_stale,
+                                blobrepo,
+                            )
                             .then(|_| Ok(response))
-                    }
-                }).and_then({
-                    cloned!(ctx, reponame);
-                    move |response| {
-                        response.generate_bytes(
-                            ctx,
-                            blobrepo,
-                            reponame,
-                            pushrebase_params,
-                            lca_hint,
-                            lfs_params,
-                        )
-                        .from_err()
-                    }
-                });
+                        }
+                    })
+                    .and_then({
+                        cloned!(ctx, reponame);
+                        move |response| {
+                            response
+                                .generate_bytes(
+                                    ctx,
+                                    blobrepo,
+                                    reponame,
+                                    pushrebase_params,
+                                    lca_hint,
+                                    lfs_params,
+                                )
+                                .from_err()
+                        }
+                    });
 
-                res
-                    .inspect_err({
+                    res.inspect_err({
                         cloned!(reponame);
                         move |err| {
                             use unbundle::BundleResolverError::*;
                             match err {
                                 HookError(hooks) => {
-                                    let failed_hooks: HashSet<String> = hooks.iter().map(|fail| fail.get_hook_name().to_string()).collect();
+                                    let failed_hooks: HashSet<String> = hooks
+                                        .iter()
+                                        .map(|fail| fail.get_hook_name().to_string())
+                                        .collect();
 
                                     for failed_hook in failed_hooks {
-                                        STATS::push_hook_failure.add_value(
-                                            1, (reponame.clone(), failed_hook)
-                                        );
+                                        STATS::push_hook_failure
+                                            .add_value(1, (reponame.clone(), failed_hook));
                                     }
                                 }
                                 PushrebaseConflicts(..) => {
-                                    STATS::push_conflicts.add_value(1, (reponame, ));
+                                    STATS::push_conflicts.add_value(1, (reponame,));
                                 }
                                 RateLimitExceeded { .. } => {
-                                    STATS::rate_limits_exceeded.add_value(1, (reponame, ));
+                                    STATS::rate_limits_exceeded.add_value(1, (reponame,));
                                 }
                                 Error(..) => {
-                                    STATS::push_error.add_value(1, (reponame, ));
+                                    STATS::push_error.add_value(1, (reponame,));
                                 }
                             };
                         }
@@ -1631,13 +1649,14 @@ impl HgCommands for RepoClient {
                     .from_err()
                     .timeout(*TIMEOUT)
                     .map_err(process_timeout_error)
-                    .inspect(move |_| STATS::push_success.add_value(1, (reponame, )))
+                    .inspect(move |_| STATS::push_success.add_value(1, (reponame,)))
                     .traced(client.session.trace(), ops::UNBUNDLE, trace_args!())
                     .timed(move |stats, _| {
                         command_logger.without_wireproto().finalize_command(&stats);
                         Ok(())
                     })
-            }))
+                })
+            })
             .boxify()
     }
 

@@ -139,15 +139,14 @@ fn subcommand_round_trip(
         let invalid = invalid.clone();
         let errors = errors.clone();
         let ignored = ignored.clone();
-        repo
-            .map_err({
-                let logger = logger.clone();
-                move |err| {
-                    println!("{:?}", err);
-                    error!(logger, "ERROR: Failed to create repo: {}", err);
-                }
-            })
-            .and_then(move |repo| {
+        repo.map_err({
+            let logger = logger.clone();
+            move |err| {
+                println!("{:?}", err);
+                error!(logger, "ERROR: Failed to create repo: {}", err);
+            }
+        })
+        .and_then(move |repo| {
             let bonsai_verify = BonsaiMFVerify {
                 ctx: ctx.clone(),
                 logger: logger.clone(),
@@ -158,92 +157,89 @@ fn subcommand_round_trip(
                 debug_bonsai_diff,
             };
             bonsai_verify
-            .verify(start_points)
-            .and_then({
-                cloned!(ctx, logger);
-                move |(result, meta)| {
-                    let logger = logger.new(slog::o!["changeset_id" => format!("{}", meta.changeset_id)]);
+                .verify(start_points)
+                .and_then({
+                    cloned!(ctx, logger);
+                    move |(result, meta)| {
+                        let logger = logger
+                            .new(slog::o!["changeset_id" => format!("{}", meta.changeset_id)]);
 
-                    if !result.is_ignored() {
-                        let followed = follow_limit - meta.follow_remaining;
-                        if followed % 10000 == 0 {
-                            info!(
-                                logger,
-                                "Followed {} changesets, {} remaining",
-                                followed,
-                                meta.follow_remaining,
-                            );
-                        }
-                        if meta.follow_remaining == 0 {
-                            end_sender
-                                .send(meta.changeset_id)
-                                .expect("end_receiver is still alive");
-                        }
-                    }
-
-                    let fut = match &result {
-                        BonsaiMFVerifyResult::Valid { .. } => {
-                            debug!(logger, "VALID");
-                            valid.fetch_add(1, Ordering::Relaxed);
-                            Either::A(old_future::ok(()))
-                        }
-                        BonsaiMFVerifyResult::ValidDifferentId(difference) => {
-                            debug!(
-                                logger,
-                                "VALID but with a different hash: \
-                                expected manifest ID: {}, roundtrip ID: {}",
-                                difference.expected_mf_id,
-                                difference.roundtrip_mf_id,
-                            );
-                            valid.fetch_add(1, Ordering::Relaxed);
-                            Either::A(old_future::ok(()))
-                        }
-                        BonsaiMFVerifyResult::Invalid(difference) => {
-                            warn!(logger, "INVALID");
-                            info!(
-                                logger, "manifest hash differs";
-                                "expected manifest ID" => difference.expected_mf_id,
-                                "roundtrip ID" => difference.roundtrip_mf_id,
-                            );
-                            invalid.fetch_add(1, Ordering::Relaxed);
-                            if print_changes {
-                                let logger = logger.clone();
-                                let diff_fut = difference
-                                    .changes(ctx.clone())
-                                    .map(move |changed_entry| {
-                                        info!(
-                                            logger,
-                                            "Change: {:?}",
-                                            changed_entry,
-                                        );
-                                    })
-                                    .collect()
-                                    .map(|_| ());
-                                Either::B(diff_fut)
-                            } else {
-                                Either::A(old_future::ok(()))
+                        if !result.is_ignored() {
+                            let followed = follow_limit - meta.follow_remaining;
+                            if followed % 10000 == 0 {
+                                info!(
+                                    logger,
+                                    "Followed {} changesets, {} remaining",
+                                    followed,
+                                    meta.follow_remaining,
+                                );
+                            }
+                            if meta.follow_remaining == 0 {
+                                end_sender
+                                    .send(meta.changeset_id)
+                                    .expect("end_receiver is still alive");
                             }
                         }
-                        BonsaiMFVerifyResult::Ignored(..) => {
-                            ignored.fetch_add(1, Ordering::Relaxed);
-                            Either::A(old_future::ok(()))
-                        }
-                    };
 
-                    fut
-                }
-            })
-            .then(move |res| {
-                // collect() below will stop after the first error, but we care about all errors.
-                // So report them now and keep returning Ok.
-                if let Err(err) = &res {
-                    error!(logger, "ERROR: {}", DisplayChain::from(err));
-                    errors.fetch_add(1, Ordering::Relaxed);
-                }
-                Ok::<_, ()>(())
-            })
-            // collect to turn the stream into a future that will finish when the stream is done
-            .collect()
+                        let fut = match &result {
+                            BonsaiMFVerifyResult::Valid { .. } => {
+                                debug!(logger, "VALID");
+                                valid.fetch_add(1, Ordering::Relaxed);
+                                Either::A(old_future::ok(()))
+                            }
+                            BonsaiMFVerifyResult::ValidDifferentId(difference) => {
+                                debug!(
+                                    logger,
+                                    "VALID but with a different hash: \
+                                expected manifest ID: {}, roundtrip ID: {}",
+                                    difference.expected_mf_id,
+                                    difference.roundtrip_mf_id,
+                                );
+                                valid.fetch_add(1, Ordering::Relaxed);
+                                Either::A(old_future::ok(()))
+                            }
+                            BonsaiMFVerifyResult::Invalid(difference) => {
+                                warn!(logger, "INVALID");
+                                info!(
+                                    logger, "manifest hash differs";
+                                    "expected manifest ID" => difference.expected_mf_id,
+                                    "roundtrip ID" => difference.roundtrip_mf_id,
+                                );
+                                invalid.fetch_add(1, Ordering::Relaxed);
+                                if print_changes {
+                                    let logger = logger.clone();
+                                    let diff_fut = difference
+                                        .changes(ctx.clone())
+                                        .map(move |changed_entry| {
+                                            info!(logger, "Change: {:?}", changed_entry,);
+                                        })
+                                        .collect()
+                                        .map(|_| ());
+                                    Either::B(diff_fut)
+                                } else {
+                                    Either::A(old_future::ok(()))
+                                }
+                            }
+                            BonsaiMFVerifyResult::Ignored(..) => {
+                                ignored.fetch_add(1, Ordering::Relaxed);
+                                Either::A(old_future::ok(()))
+                            }
+                        };
+
+                        fut
+                    }
+                })
+                .then(move |res| {
+                    // collect() below will stop after the first error, but we care about all errors.
+                    // So report them now and keep returning Ok.
+                    if let Err(err) = &res {
+                        error!(logger, "ERROR: {}", DisplayChain::from(err));
+                        errors.fetch_add(1, Ordering::Relaxed);
+                    }
+                    Ok::<_, ()>(())
+                })
+                // collect to turn the stream into a future that will finish when the stream is done
+                .collect()
         })
         // discard to drop results since they've already been reported
         .discard()

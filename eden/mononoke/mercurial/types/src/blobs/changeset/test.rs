@@ -139,6 +139,6 @@ fn extras_roundtrip_prop(kv: BTreeMap<Vec<u8>, Vec<u8>>) -> TestResult {
 #[test]
 fn extras_roundtrip() {
     QuickCheck::new()
-        .tests(50)  // more takes too much time
+        .tests(50) // more takes too much time
         .quickcheck(extras_roundtrip_prop as fn(BTreeMap<Vec<u8>, Vec<u8>>) -> TestResult);
 }

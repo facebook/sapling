@@ -67,33 +67,39 @@ where
         + 'static
         + Send,
 {
-    s.map_ok(move |(walk_key, WalkPayloadMtime(mtime, nd), _progress_stats)| match nd {
-        Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream))) => {
-            cloned!(sampler);
-            file_bytes_stream
-                // Force file chunks to be loaded
-                .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
-                // We take the size from the sample rather than the stream as it
-                // includes thrift wrapper overhead so more closely matches store
-                .map_ok(move |_num_bytes| {
-                    let sample = sampler.complete_step(&walk_key);
-                    let size = ScrubStats::from(sample.as_ref());
-                    (walk_key, sample, mtime, Some(size))
-                })
-                .left_future()
-        }
-        _ => {
-            let sample = sampler.complete_step(&walk_key);
-            let size = ScrubStats::from(sample.as_ref());
-            future::ready(Ok((walk_key, sample, mtime, Some(size)))).right_future()
-        }
-    })
+    s.map_ok(
+        move |(walk_key, WalkPayloadMtime(mtime, nd), _progress_stats)| match nd {
+            Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream))) => {
+                cloned!(sampler);
+                file_bytes_stream
+                    // Force file chunks to be loaded
+                    .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
+                    // We take the size from the sample rather than the stream as it
+                    // includes thrift wrapper overhead so more closely matches store
+                    .map_ok(move |_num_bytes| {
+                        let sample = sampler.complete_step(&walk_key);
+                        let size = ScrubStats::from(sample.as_ref());
+                        (walk_key, sample, mtime, Some(size))
+                    })
+                    .left_future()
+            }
+            _ => {
+                let sample = sampler.complete_step(&walk_key);
+                let size = ScrubStats::from(sample.as_ref());
+                future::ready(Ok((walk_key, sample, mtime, Some(size)))).right_future()
+            }
+        },
+    )
     .try_buffer_unordered(scheduled_max)
     // Dump the data to disk
-    .map_ok(move |(WalkKeyOptPath(n, path), sample, mtime, stats)| match sample {
-        Some(sample) => move_node_files(output_dir.clone(), n.clone(), path, mtime, sample).map_ok(move |()| (n, Some(()), stats)).left_future(),
-        None => future::ok((n, Some(()), stats)).right_future(),
-    })
+    .map_ok(
+        move |(WalkKeyOptPath(n, path), sample, mtime, stats)| match sample {
+            Some(sample) => move_node_files(output_dir.clone(), n.clone(), path, mtime, sample)
+                .map_ok(move |()| (n, Some(()), stats))
+                .left_future(),
+            None => future::ok((n, Some(()), stats)).right_future(),
+        },
+    )
     .try_buffer_unordered(scheduled_max)
 }
 

@@ -215,12 +215,12 @@ impl MononokeApp {
             app = app
                 .arg(
                     Arg::with_name(REPO_ID)
-                    .long(REPO_ID)
-                    // This is an old form that some consumers use
-                    .alias("repo_id")
-                    .value_name("ID")
-                    .help("numeric ID of repository")
-                    .conflicts_with_all(repo_conflicts),
+                        .long(REPO_ID)
+                        // This is an old form that some consumers use
+                        .alias("repo_id")
+                        .value_name("ID")
+                        .help("numeric ID of repository")
+                        .conflicts_with_all(repo_conflicts),
                 )
                 .arg(
                     Arg::with_name(REPO_NAME)

@@ -392,18 +392,28 @@ mod tests {
 
         let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
-        let fut = bs.is_present(ctx.clone(), key.clone())
-                .map(|is_present| assert!(!is_present, "Blob should not exist yet"))
-                // Write a blob.
-                .and_then({cloned!(ctx, bs, key); move |()| bs.put(ctx, key, blobstore_bytes)})
-                // Read it back and verify it.
-                .and_then({cloned!(ctx, bs, key); move |()| bs.get(ctx, key)})
-                .map(move |bytes_out| {
-                    assert_eq!(&bytes_in.to_vec(), bytes_out.unwrap().as_raw_bytes());
-                })
-                .and_then({cloned!(ctx); move |()| bs.is_present(ctx, key)})
-                .map(|is_present| assert!(is_present, "Blob should exist now"))
-                .map_err(|err| panic!("{:#?}", err));
+        let fut = bs
+            .is_present(ctx.clone(), key.clone())
+            .map(|is_present| assert!(!is_present, "Blob should not exist yet"))
+            // Write a blob.
+            .and_then({
+                cloned!(ctx, bs, key);
+                move |()| bs.put(ctx, key, blobstore_bytes)
+            })
+            // Read it back and verify it.
+            .and_then({
+                cloned!(ctx, bs, key);
+                move |()| bs.get(ctx, key)
+            })
+            .map(move |bytes_out| {
+                assert_eq!(&bytes_in.to_vec(), bytes_out.unwrap().as_raw_bytes());
+            })
+            .and_then({
+                cloned!(ctx);
+                move |()| bs.is_present(ctx, key)
+            })
+            .map(|is_present| assert!(is_present, "Blob should exist now"))
+            .map_err(|err| panic!("{:#?}", err));
 
         fut.compat().await.unwrap()
     }

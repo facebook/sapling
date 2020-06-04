@@ -346,7 +346,10 @@ async fn fill_history(
                         // longer than the pointer
                         let chunk_ttl = Duration::from_secs(TTL_SEC + TTL_SEC_RAND);
 
-                        memcache.set_with_ttl(chunk_key, chunk, chunk_ttl).compat().await?;
+                        memcache
+                            .set_with_ttl(chunk_key, chunk, chunk_ttl)
+                            .compat()
+                            .await?;
 
                         Ok(pointer)
                     }

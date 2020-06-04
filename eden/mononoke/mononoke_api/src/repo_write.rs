@@ -369,7 +369,6 @@ impl RepoWriteContext {
             // Filter deletions that have a change at a path prefix. The
             // deletion is implicit from the change. (2)
             .filter(|(path, change)| {
-
                 change.change_type() != CreateChangeType::Delete
                     || !is_prefix_changed(path, &path_changes)
             })
