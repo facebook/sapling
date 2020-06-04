@@ -28,12 +28,13 @@ pub fn add_generations_by_bonsai(
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
 ) -> BonsaiInputStream {
     stream
-        .and_then(move |changesetid| {
+        .map(move |changesetid| {
             changeset_fetcher
                 .get_generation_number(ctx.clone(), changesetid)
                 .map(move |gen_id| (changesetid, gen_id))
                 .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
         })
+        .buffered(100)
         .boxify()
 }
 
