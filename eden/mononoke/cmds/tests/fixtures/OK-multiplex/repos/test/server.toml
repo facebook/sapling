@@ -11,7 +11,7 @@ multiplex_id = 1
 components = [
   { blobstore_id = 1, blobstore = { manifold = { manifold_bucket = "mononoke_prod" } } },
   { blobstore_id = 2, blobstore = { manifold = { manifold_bucket = "mononoke_prod_replica" } } },
-  { blobstore_id = 3, blobstore = { mysql = { mysql_shardmap = "mononoke_replica", mysql_shard_num=123 } } },
+  { blobstore_id = 3, blobstore = { mysql = { remote = { sharded = { shard_map = "mononoke_replica", shard_num=123 } } } } },
   { blobstore_id = 4, blobstore = { blob_files = { path = "/tmp/foo" } } },
 ]
 queue_db = { remote = { db_address = "xdb.foobar" } }

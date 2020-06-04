@@ -51,23 +51,9 @@ impl Convert for RawBlobstoreConfig {
                 bucket: raw.manifold_bucket,
                 prefix: raw.manifold_prefix,
             },
-            RawBlobstoreConfig::mysql(raw) => {
-                if let Some(remote) = raw.remote {
-                    BlobConfig::Mysql {
-                        remote: remote.convert()?,
-                    }
-                } else {
-                    BlobConfig::Mysql {
-                        remote: ShardableRemoteDatabaseConfig::Sharded(
-                            ShardedRemoteDatabaseConfig {
-                                shard_map: raw.mysql_shardmap.ok_or_else(|| anyhow!("mysql shard name must be specified"))?,
-                                shard_num: NonZeroUsize::new(raw.mysql_shard_num.ok_or_else(|| anyhow!("mysql shard num must be specified"))?.try_into()?)
-                                    .ok_or_else(|| anyhow!("mysql shard num must be specified and an integer larger than 0"))?,
-                            },
-                        ),
-                    }
-                }
-            }
+            RawBlobstoreConfig::mysql(raw) => BlobConfig::Mysql {
+                remote: raw.remote.convert()?,
+            },
             RawBlobstoreConfig::multiplexed(raw) => BlobConfig::Multiplexed {
                 multiplex_id: raw
                     .multiplex_id
