@@ -57,4 +57,6 @@ pub enum ErrorKind {
     CheckExistenceFailed(String, #[source] BlobRepoErrorCause),
     #[error("Unknown field in thrift encoding")]
     UknownSkiplistThriftEncoding,
+    #[error("Programming error: an unforssen state reached: {0}")]
+    ProgrammingError(&'static str),
 }

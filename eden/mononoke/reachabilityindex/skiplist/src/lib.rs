@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::min;
 #[deny(warnings)]
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -18,11 +19,13 @@ use context::{CoreContext, PerfCounterType};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::future::{join_all, loop_fn, ok, Future, Loop};
 use futures_old::IntoFuture;
+use futures_util::compat::Future01CompatExt;
+use futures_util::try_join;
 use maplit::{hashmap, hashset};
 use slog::{info, Logger};
 
 use changeset_fetcher::ChangesetFetcher;
-use mononoke_types::{ChangesetId, Generation};
+use mononoke_types::{ChangesetId, Generation, FIRST_GENERATION};
 
 use common::{
     advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists,
@@ -472,6 +475,22 @@ impl SkiplistIndex {
         }
     }
 
+    /// Returns true if there are any skip edges originating from changesets
+    /// in a node frontier.
+    pub fn has_any_skip_edges(&self, node_frontier: &NodeFrontier) -> bool {
+        node_frontier.iter().any(|(changeset, _)| {
+            if let Some(read_guard) = self.skip_list_edges.mapping.get(changeset) {
+                if let SkiplistNodeType::SkipEdges(_) = &*read_guard {
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        })
+    }
+
     pub fn get_all_skip_edges(&self) -> HashMap<ChangesetId, SkiplistNodeType> {
         self.skip_list_edges.mapping.clone().into_iter().collect()
     }
@@ -706,6 +725,154 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
     }
 }
 
+impl SkiplistIndex {
+    /// Helper for moving two frontiers in-sync which we do a lot for LCA computations.
+    async fn process_frontiers(
+        &self,
+        ctx: &CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        frontier1: &NodeFrontier,
+        frontier2: &NodeFrontier,
+        gen: Generation,
+    ) -> Result<(NodeFrontier, NodeFrontier), Error> {
+        try_join!(
+            self.lca_hint(
+                ctx.clone(),
+                changeset_fetcher.clone(),
+                frontier1.clone(),
+                gen,
+            )
+            .compat(),
+            self.lca_hint(
+                ctx.clone(),
+                changeset_fetcher.clone(),
+                frontier2.clone(),
+                gen,
+            )
+            .compat(),
+        )
+    }
+
+    /// Return lowest common ancestor of two changesets. In graphs with merges,
+    /// where there might be more than one such ancestor, this function is guaranteed to
+    /// return all the common ancestors with highest generation number.
+    pub async fn lca(
+        &self,
+        ctx: CoreContext,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        node1: ChangesetId,
+        node2: ChangesetId,
+    ) -> Result<Vec<ChangesetId>, Error> {
+        // When using skiplists we'll be only using the maximum skip size as in
+        // practice that's the only skip that's present.
+        let skip_step_size: u64 = 1 << (self.skip_list_edges.skip_edges_per_node - 1);
+
+        // STAGE 1: look for any common ancestor (not neccesarily lowest) while using
+        // skiplists as much as possible.
+
+        // Invariant:
+        // lca(node1, node2) == ∑ lca(nodef1, nodef2)
+        //                      ^(nodef1, nodef2) ∈ (frontier1 × frontier2)
+        let (mut frontier1, mut frontier2) = try_join!(
+            NodeFrontier::new_from_single_node(&ctx, changeset_fetcher.clone(), node1),
+            NodeFrontier::new_from_single_node(&ctx, changeset_fetcher.clone(), node2),
+        )?;
+
+        // Invariant: generation of lowest common ancestor is always <= gen
+        let mut gen = min(
+            frontier1
+                .max_gen()
+                .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?,
+            frontier2
+                .max_gen()
+                .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?,
+        )
+        .add(1);
+        let mut step = 1;
+
+        let mut ca_gen: Option<Generation> = None; // common ancestor's generation
+        loop {
+            // We start from advancing both frontiers up to generation=gen-step.
+            let candidate_gen = gen.checked_sub(step).unwrap_or(FIRST_GENERATION);
+            if candidate_gen == gen {
+                // We didn't advance the generation - let's throw.
+                Err(ErrorKind::ProgrammingError(
+                    "impossible state during LCA computation",
+                ))?
+            }
+            let (candidate_frontier1, candidate_frontier2) = self
+                .process_frontiers(
+                    &ctx,
+                    &changeset_fetcher,
+                    &frontier1,
+                    &frontier2,
+                    candidate_gen,
+                )
+                .await?;
+            let intersection = candidate_frontier1.intersection(&candidate_frontier2);
+            if intersection.is_empty() {
+                // Intersection is empty so we need to dig deeper. It's safe to advance the
+                // frontiers as there is no common node with generation higher than candidate_gen.
+                gen = candidate_gen;
+                frontier1 = candidate_frontier1;
+                frontier2 = candidate_frontier2;
+                if self.has_any_skip_edges(&frontier1) && self.has_any_skip_edges(&frontier2) {
+                    step = skip_step_size;
+                } else {
+                    // If there are no skip edges in both frontiers we don't even bother with
+                    // skipping further ahead.
+                    step = 1;
+                }
+            } else {
+                // Intersection is non-empty so we found a common ancestor.
+                ca_gen = Some(candidate_gen);
+                break;
+            }
+            debug_assert!(frontier1.max_gen() == frontier2.max_gen());
+            if frontier1
+                .max_gen()
+                .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?
+                == FIRST_GENERATION
+            {
+                break;
+            }
+        }
+
+        // In case of negative result we can return early.
+        let ca_gen = match ca_gen {
+            Some(ca_gen) => ca_gen,
+            None => {
+                return Ok(vec![]);
+            }
+        };
+
+        // STAGE 2: We know that lca has generation between `gen` and `ca_gen`. Let's find it.
+        //
+        // NOTE: Right now our skiplists allow us to only skip by 512 commits so the only way to reach
+        // closer than that is going one-by-one which is what we're doing here. In the future once we'll
+        // get more flexibility arround skips this could be changed to a binary search.
+        let mut gen = gen;
+        while gen >= ca_gen {
+            let (candidate_frontier1, candidate_frontier2) = self
+                .process_frontiers(&ctx, &changeset_fetcher, &frontier1, &frontier2, gen)
+                .await?;
+            let mut intersection = candidate_frontier1.intersection(&candidate_frontier2);
+            if let Some(lca) = intersection.remove_max_gen() {
+                let mut lca: Vec<_> = lca.into_iter().collect();
+                lca.sort();
+                return Ok(lca);
+            } else {
+                frontier1 = candidate_frontier1;
+                frontier2 = candidate_frontier2;
+                gen = gen.checked_sub(1).ok_or_else(|| {
+                    ErrorKind::ProgrammingError("impossible state during LCA computation")
+                })?;
+            }
+        }
+        Err(ErrorKind::ProgrammingError("impossible state during LCA computation").into())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::sync::{
@@ -726,7 +893,9 @@ mod test {
     use std::iter::FromIterator;
 
     use super::*;
-    use fixtures::{branch_wide, linear, merge_uneven, unshared_merge_even};
+    use fixtures::{
+        branch_even, branch_uneven, branch_wide, linear, merge_uneven, unshared_merge_even,
+    };
     use test_helpers::string_to_bonsai;
     use test_helpers::test_branch_wide_reachability;
     use test_helpers::test_linear_reachability;
@@ -2382,6 +2551,29 @@ mod test {
         );
     }
 
+    async fn test_lca(
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+        b1: &'static str,
+        b2: &'static str,
+        lca: Option<&'static str>,
+    ) {
+        let b1 = string_to_bonsai(ctx.clone(), &repo, b1).await;
+        let b2 = string_to_bonsai(ctx.clone(), &repo, b2).await;
+        let expected = if let Some(lca) = lca {
+            Some(string_to_bonsai(ctx.clone(), &repo, lca).await)
+        } else {
+            None
+        };
+        let lca = sli
+            .lca(ctx, repo.get_changeset_fetcher(), b1.clone(), b2.clone())
+            .await
+            .unwrap();
+
+        assert_eq!(lca, expected.into_iter().collect::<Vec<_>>());
+    }
+
     async fn test_is_ancestor(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
         let f = repo
             .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())
@@ -2459,6 +2651,119 @@ mod test {
         test_is_ancestor(ctx, repo, sli).await;
     }
 
+    async fn test_lca_branch_even(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+        test_lca(
+            ctx,
+            repo,
+            sli,
+            "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+            "16839021e338500b3cf7c9b871c8a07351697d68",
+            Some("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+        )
+        .await;
+    }
+
+    async fn test_lca_branch_uneven(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+        test_lca(
+            ctx,
+            repo,
+            sli,
+            "264f01429683b3dd8042cb3979e8bf37007118bc",
+            "16839021e338500b3cf7c9b871c8a07351697d68",
+            Some("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+        )
+        .await;
+    }
+
+    async fn test_lca_branch_uneven_with_ancestor(
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        test_lca(
+            ctx,
+            repo,
+            sli,
+            "264f01429683b3dd8042cb3979e8bf37007118bc",
+            "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
+            Some("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+        )
+        .await;
+    }
+
+    async fn test_lca_branch_wide_common_parent(
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        test_lca(
+            ctx,
+            repo,
+            sli,
+            "04decbb0d1a65789728250ddea2fe8d00248e01c",
+            "49f53ab171171b3180e125b918bd1cf0af7e5449",
+            Some("4685e9e62e4885d477ead6964a7600c750e39b03"),
+        )
+        .await;
+    }
+
+    async fn test_lca_branch_wide(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+        test_lca(
+            ctx,
+            repo,
+            sli,
+            "b6a8169454af58b4b72b3665f9aa0d25529755ff",
+            "49f53ab171171b3180e125b918bd1cf0af7e5449",
+            Some("ecba698fee57eeeef88ac3dcc3b623ede4af47bd"),
+        )
+        .await;
+    }
+
+    async fn test_lca_unshared_merge_even_some_result(
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        test_lca(
+            ctx,
+            repo,
+            sli,
+            "7fe9947f101acb4acf7d945e69f0d6ce76a81113",
+            "eee492dcdeaae18f91822c4359dd516992e0dbcd",
+            Some("eee492dcdeaae18f91822c4359dd516992e0dbcd"),
+        )
+        .await;
+    }
+
+    async fn test_lca_unshared_merge_even_empty_result(
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+    ) {
+        test_lca(
+            ctx,
+            repo,
+            sli,
+            "eee492dcdeaae18f91822c4359dd516992e0dbcd",
+            "0b94a2881dda90f0d64db5fae3ee5695a38e7c8f",
+            None,
+        )
+        .await;
+    }
+
+    async fn test_lca_first_generation(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+        test_lca(
+            ctx,
+            repo,
+            sli,
+            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+            "607314ef579bd2407752361ba1b0c1729d08b281",
+            Some("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
+        )
+        .await;
+    }
+
+    skiplist_test!(test_lca_first_generation, linear);
     skiplist_test!(query_reachability_hint_on_self_is_true, linear);
     skiplist_test!(query_reachability_to_higher_gen_is_false, linear);
     skiplist_test!(query_from_indexed_merge_node, unshared_merge_even);
@@ -2469,4 +2774,17 @@ mod test {
     skiplist_test!(process_frontier_on_wide_branch, branch_wide);
     skiplist_test!(test_is_ancestor_merge_uneven, merge_uneven);
     skiplist_test!(test_is_ancestor_unshared_merge_even, unshared_merge_even);
+    skiplist_test!(test_lca_branch_even, branch_even);
+    skiplist_test!(test_lca_branch_uneven, branch_uneven);
+    skiplist_test!(test_lca_branch_uneven_with_ancestor, branch_uneven);
+    skiplist_test!(test_lca_branch_wide_common_parent, branch_wide);
+    skiplist_test!(test_lca_branch_wide, branch_wide);
+    skiplist_test!(
+        test_lca_unshared_merge_even_some_result,
+        unshared_merge_even
+    );
+    skiplist_test!(
+        test_lca_unshared_merge_even_empty_result,
+        unshared_merge_even
+    );
 }

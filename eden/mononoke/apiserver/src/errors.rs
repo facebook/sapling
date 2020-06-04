@@ -161,6 +161,7 @@ impl From<ReachabilityIndexError> for ErrorKind {
             }
             e @ GenerationFetchFailed(_)
             | e @ ParentsFetchFailed(_)
+            | e @ ProgrammingError(_)
             | e @ UknownSkiplistThriftEncoding => ErrorKind::InternalError(e.into()),
         }
     }

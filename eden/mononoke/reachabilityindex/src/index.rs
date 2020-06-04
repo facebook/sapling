@@ -12,6 +12,8 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use futures_ext::BoxFuture;
+use futures_util::compat::Future01CompatExt;
+use maplit::{hashmap, hashset};
 
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
@@ -67,17 +69,27 @@ impl FromIterator<(ChangesetId, Generation)> for NodeFrontier {
 
 impl NodeFrontier {
     pub fn new(input: HashMap<Generation, HashSet<ChangesetId>>) -> Self {
-        let mut gen_map = HashMap::new();
         let mut generations = UniqueHeap::new();
-        for (gen, set) in input {
-            gen_map.insert(gen, set);
-            generations.push(gen);
+        for (gen, _) in input.iter() {
+            generations.push(gen.clone());
         }
 
         Self {
-            gen_map,
+            gen_map: input,
             generations,
         }
+    }
+
+    pub async fn new_from_single_node(
+        ctx: &CoreContext,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        node: ChangesetId,
+    ) -> Result<Self, Error> {
+        let gen = changeset_fetcher
+            .get_generation_number(ctx.clone(), node)
+            .compat()
+            .await?;
+        Ok(Self::new(hashmap! {gen => hashset!{node}}))
     }
 
     pub fn get(&self, gen: &Generation) -> Option<&HashSet<ChangesetId>> {
@@ -115,6 +127,34 @@ impl NodeFrontier {
 
     pub fn len(&self) -> usize {
         self.gen_map.len()
+    }
+
+    /// Returns a new node frontier that contains only the nodes that are
+    /// present in both: `self` and `other`.
+    pub fn intersection(&self, other: &NodeFrontier) -> NodeFrontier {
+        let mut res = Self::new(hashmap! {});
+        for (gen, self_changesets) in self.gen_map.iter() {
+            if let Some(other_changesets) = other.gen_map.get(gen) {
+                let res_changesets: HashSet<_> = self_changesets
+                    .intersection(other_changesets)
+                    .cloned()
+                    .collect();
+                if !res_changesets.is_empty() {
+                    res.gen_map.insert(gen.clone(), res_changesets.clone());
+                    res.generations.push(gen.clone());
+                }
+            }
+        }
+        res
+    }
+
+    /// Simple iterator over all nodes in the frontier, doesn't guarantee any ordering.
+    pub fn iter(&self) -> impl Iterator<Item = (&ChangesetId, Generation)> {
+        self.gen_map.iter().flat_map(|(gen, changesets)| {
+            changesets
+                .iter()
+                .map(move |changeset| (changeset, gen.clone()))
+        })
     }
 }
 

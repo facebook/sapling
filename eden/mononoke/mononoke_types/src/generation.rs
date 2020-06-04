@@ -16,6 +16,8 @@ use serde_derive::Serialize;
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct Generation(u64);
 
+pub const FIRST_GENERATION: Generation = Generation(1);
+
 impl Generation {
     /// Creates new generation number
     pub fn new(gen: u64) -> Self {
@@ -38,5 +40,22 @@ impl Generation {
         let Generation(self_gen) = self;
         let Generation(other_gen) = other;
         self_gen.checked_sub(other_gen)
+    }
+
+    /// Subtracts value from generation number, returns None if the result is not a valid
+    /// generation number.
+    pub fn checked_sub(&self, value: u64) -> Option<Generation> {
+        let Generation(self_gen) = self;
+        let res = self_gen.checked_sub(value);
+        if res == Some(0) {
+            return None;
+        }
+        res.map(Generation::new)
+    }
+
+    /// Adds a value to generation number
+    pub fn add(&self, value: u64) -> Generation {
+        let Generation(self_gen) = self;
+        Generation::new(self_gen + value)
     }
 }
