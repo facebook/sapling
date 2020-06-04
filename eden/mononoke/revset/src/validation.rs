@@ -79,6 +79,7 @@ mod test {
     use crate::setcommon::NotReadyEmptyStream;
     use crate::tests::TestChangesetFetcher;
     use fbinit::FacebookInit;
+    use futures::{compat::Stream01CompatExt, stream::StreamExt as _};
     use futures_ext::StreamExt;
     use revset_test_helper::{assert_changesets_sequence, single_changeset_id, string_to_bonsai};
     use std::sync::Arc;
@@ -104,33 +105,22 @@ mod test {
 
     #[fbinit::test]
     fn slow_ready_validates(fb: FacebookInit) {
+        // Tests that we handle an input staying at NotReady for a while without panicking
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            // Tests that we handle an input staying at NotReady for a while without panicing
-            let repeats = 10;
             let repo = Arc::new(linear::getrepo(fb).await);
 
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+
             let mut nodestream = ValidateNodeStream::new(
                 ctx,
-                NotReadyEmptyStream::new(repeats).boxify(),
+                NotReadyEmptyStream::new(10).boxify(),
                 &changeset_fetcher,
             )
-            .boxify();
+            .compat();
 
-            // Keep polling until we should be done.
-            for _ in 0..repeats + 1 {
-                match nodestream.poll() {
-                    Ok(Async::Ready(None)) => return,
-                    Ok(Async::NotReady) => (),
-                    x => panic!("Unexpected poll result {:?}", x),
-                }
-            }
-            panic!(
-                "Set difference of something that's not ready {} times failed to complete",
-                repeats
-            );
+            assert!(nodestream.next().await.is_none());
         });
     }
 

@@ -179,6 +179,7 @@ mod test {
     use context::CoreContext;
     use failure_ext::err_downcast;
     use fbinit::FacebookInit;
+    use futures::{compat::Stream01CompatExt, stream::StreamExt as _};
     use futures_ext::StreamExt;
     use futures_old::executor::spawn;
     use revset_test_helper::assert_changesets_sequence;
@@ -383,30 +384,17 @@ mod test {
 
     #[fbinit::test]
     fn slow_ready_intersect_nothing(fb: FacebookInit) {
+        // Tests that we handle an input staying at NotReady for a while without panicking
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            // Tests that we handle an input staying at NotReady for a while without panicing
-            let repeats = 10;
             let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
-            let inputs: Vec<BonsaiNodeStream> = vec![NotReadyEmptyStream::new(repeats).boxify()];
+            let inputs: Vec<BonsaiNodeStream> = vec![NotReadyEmptyStream::new(10).boxify()];
             let mut nodestream =
                 IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter())
-                    .boxify();
-
-            // Keep polling until we should be done.
-            for _ in 0..repeats + 1 {
-                match nodestream.poll() {
-                    Ok(Async::Ready(None)) => return,
-                    Ok(Async::NotReady) => (),
-                    x => panic!("Unexpected poll result {:?}", x),
-                }
-            }
-            panic!(
-                "Intersect of something that's not ready {} times failed to complete",
-                repeats
-            );
+                    .compat();
+            assert!(nodestream.next().await.is_none());
         });
     }
 

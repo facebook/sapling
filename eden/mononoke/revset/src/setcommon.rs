@@ -5,18 +5,12 @@
  * GNU General Public License version 2.
  */
 
-#[cfg(test)]
-use anyhow::bail;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures_ext::{BoxStream, StreamExt};
 use futures_old::future::Future;
 use futures_old::stream::Stream;
-#[cfg(test)]
-use mercurial_types::HgNodeHash;
 use mononoke_types::{ChangesetId, Generation};
-#[cfg(test)]
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::errors::*;
@@ -66,57 +60,65 @@ pub fn poll_all_inputs<T>(
 }
 
 #[cfg(test)]
-pub struct NotReadyEmptyStream<T> {
-    pub poll_count: usize,
-    __phantom: PhantomData<T>,
-}
+mod test_utils {
+    use super::*;
 
-#[cfg(test)]
-impl<T> NotReadyEmptyStream<T> {
-    pub fn new(poll_count: usize) -> Self {
-        Self {
-            poll_count,
-            __phantom: PhantomData,
+    use anyhow::bail;
+    use mercurial_types::HgNodeHash;
+    use std::marker::PhantomData;
+    use tokio::prelude::task;
+
+    pub struct NotReadyEmptyStream<T> {
+        pub poll_count: usize,
+        __phantom: PhantomData<T>,
+    }
+
+    impl<T> NotReadyEmptyStream<T> {
+        pub fn new(poll_count: usize) -> Self {
+            Self {
+                poll_count,
+                __phantom: PhantomData,
+            }
+        }
+    }
+
+    impl<T> Stream for NotReadyEmptyStream<T> {
+        type Item = T;
+        type Error = Error;
+
+        fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+            if self.poll_count == 0 {
+                Ok(Async::Ready(None))
+            } else {
+                self.poll_count -= 1;
+                task::current().notify();
+                Ok(Async::NotReady)
+            }
+        }
+    }
+
+    pub struct RepoErrorStream<T> {
+        pub item: T,
+    }
+
+    impl Stream for RepoErrorStream<HgNodeHash> {
+        type Item = HgNodeHash;
+        type Error = Error;
+
+        fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+            bail!(ErrorKind::RepoNodeError(self.item));
+        }
+    }
+
+    impl Stream for RepoErrorStream<ChangesetId> {
+        type Item = ChangesetId;
+        type Error = Error;
+
+        fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+            bail!(ErrorKind::RepoChangesetError(self.item));
         }
     }
 }
 
 #[cfg(test)]
-impl<T> Stream for NotReadyEmptyStream<T> {
-    type Item = T;
-    type Error = Error;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        if self.poll_count == 0 {
-            Ok(Async::Ready(None))
-        } else {
-            self.poll_count -= 1;
-            Ok(Async::NotReady)
-        }
-    }
-}
-
-#[cfg(test)]
-pub struct RepoErrorStream<T> {
-    pub item: T,
-}
-
-#[cfg(test)]
-impl Stream for RepoErrorStream<HgNodeHash> {
-    type Item = HgNodeHash;
-    type Error = Error;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        bail!(ErrorKind::RepoNodeError(self.item));
-    }
-}
-
-#[cfg(test)]
-impl Stream for RepoErrorStream<ChangesetId> {
-    type Item = ChangesetId;
-    type Error = Error;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        bail!(ErrorKind::RepoChangesetError(self.item));
-    }
-}
+pub use test_utils::{NotReadyEmptyStream, RepoErrorStream};
