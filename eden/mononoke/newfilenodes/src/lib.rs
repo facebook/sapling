@@ -11,8 +11,8 @@ mod local_cache;
 mod reader;
 mod remote_cache;
 mod shards;
+mod sql_timeout_knobs;
 mod structs;
-mod tunables;
 mod writer;
 
 #[cfg(test)]
@@ -31,7 +31,7 @@ use thiserror::Error as DeriveError;
 
 pub use builder::NewFilenodesBuilder;
 use reader::FilenodesReader;
-pub use tunables::disable_sql_timeouts;
+pub use sql_timeout_knobs::disable_sql_timeouts;
 use writer::FilenodesWriter;
 
 #[derive(Debug, DeriveError)]
