@@ -101,16 +101,20 @@ class TempFileManager:
         exc_value: Optional[BaseException],
         tb: Optional[types.TracebackType],
     ) -> None:
-        self.cleanup()
+        self.cleanup(exc_type is not None)
 
-    def cleanup(self) -> None:
+    def cleanup(self, failure: bool = False) -> None:
         temp_dir = self._temp_dir
         if temp_dir is None:
             return
 
-        if os.environ.get("EDEN_TEST_NO_CLEANUP"):
+        cleanup_mode = os.environ.get("EDEN_TEST_CLEANUP", "always").lower()
+        if cleanup_mode in ("0", "no", "false") or (
+            failure and cleanup_mode == "success-only"
+        ):
             print(f"Leaving behind eden test directory {temp_dir}")
-        cleanup_tmp_dir(temp_dir)
+        else:
+            cleanup_tmp_dir(temp_dir)
         self._temp_dir = None
 
     def make_temp_dir(self, prefix: Optional[str] = None) -> Path:
