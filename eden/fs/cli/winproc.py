@@ -15,10 +15,10 @@ from . import proc_utils_win
 from .config import EdenInstance
 
 
-def start_edenfs_service(_cmd: List[str]) -> int:
-    script = Path(sys.executable).parent.parent / "scripts" / "startservice.ps1"
-    cmd = ["powershell.exe", str(script)]
-    return subprocess.call(cmd)
+def start_edenfs_service(cmd: List[str]) -> int:
+    cmdline = subprocess.list2cmdline(cmd)
+    proc_utils_win.create_process_shim(cmdline)
+    return 0
 
 
 def run_edenfs_foreground(cmd: List[str]) -> int:
