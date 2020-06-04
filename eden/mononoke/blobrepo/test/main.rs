@@ -7,6 +7,7 @@
 
 #![deny(warnings)]
 
+mod file_history_test;
 mod tracing_blobstore;
 mod utils;
 

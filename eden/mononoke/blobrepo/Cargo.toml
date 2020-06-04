@@ -37,6 +37,7 @@ scuba_ext = { path = "../common/scuba_ext" }
 topo_sort = { path = "../common/topo_sort" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -56,13 +57,14 @@ uuid = { version = "0.8.1", features = ["v4"] }
 benchmark_lib = { path = "../benchmark" }
 blobrepo_factory = { path = "factory" }
 cmdlib = { path = "../cmdlib" }
+derived_data = { path = "../derived_data" }
+derived_data_filenodes = { path = "../derived_data/filenodes" }
 fixtures = { path = "../tests/fixtures" }
 memblob = { path = "../blobstore/memblob" }
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 tests_utils = { path = "../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 ascii = "1.0"
 assert_matches = "1.3"
 bytes = { version = "0.5", features = ["serde"] }
