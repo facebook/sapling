@@ -322,6 +322,30 @@ impl ChangesetContext {
         Ok(is_ancestor_of)
     }
 
+    /// Returns the lowest common ancestor of two commits.
+    ///
+    /// In case of ambiguity (can happen with multiple merges of the same branches) returns the
+    /// common ancestor with lowest id out of those with highest generation number.
+    pub async fn common_base_with(
+        &self,
+        other_commit: ChangesetId,
+    ) -> Result<Option<ChangesetContext>, MononokeError> {
+        let lca = self
+            .repo()
+            .skiplist_index()
+            .lca(
+                self.ctx().clone(),
+                self.repo().blob_repo().get_changeset_fetcher(),
+                self.id,
+                other_commit,
+            )
+            .await?;
+        Ok(lca
+            .iter()
+            .next()
+            .map(|id| Self::new(self.repo.clone(), *id)))
+    }
+
     /// Returns differences between this changeset and some other changeset.
     ///
     /// `self` is considered the "new" changeset (so files missing there are "Removed")
