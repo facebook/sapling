@@ -125,11 +125,12 @@ class visibleheads(object):
         # in self.heads for heads that have not changed.
         unfi = repo.unfiltered()
         if len(newheads) > 1:
+            hasnode = repo.changelog.nodemap.__contains__
             realnewheads = list(
                 unfi.nodes(
                     "%ld",
                     unfi.changelog.index2.headsancestors(
-                        list(unfi.revs("%ln", newheads))
+                        list(unfi.revs("%ln", [h for h in newheads if hasnode(h)]))
                     ),
                 )
             )
@@ -226,7 +227,8 @@ class visibleheads(object):
         hidden = set(repo._phasecache.getrevset(repo, (phases.draft, phases.secret)))
         rfunc = repo.changelog.rev
         pfunc = repo.changelog.parentrevs
-        visible = [rfunc(n) for n in self.heads]
+        hasnode = repo.changelog.nodemap.__contains__
+        visible = [rfunc(n) for n in self.heads if hasnode(n)]
         hidden.difference_update(visible)
         while visible:
             for p in pfunc(visible.pop()):
