@@ -1074,6 +1074,15 @@ class hgbuildpy(build_py):
 
         build_py.run(self)
 
+        # Find and delete stale pyc files
+        for package in packages:
+            path = pjoin(self.build_lib, package.replace(".", "/"))
+            for pycpath in glob.glob(pjoin(path, "*.pyc")):
+                pypath = pycpath[:-1]
+                if not os.path.exists(pypath):
+                    self.warn("removing stale %s" % pycpath)
+                    tryunlink(pycpath)
+
         buildpyzip(self.distribution).run()
 
 
