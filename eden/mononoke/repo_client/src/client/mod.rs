@@ -315,6 +315,11 @@ impl UndesiredPathLogger {
             self.ctx
                 .perf_counters()
                 .add_to_counter(PerfCounterType::UndesiredFileFetch, 1);
+
+            self.ctx
+                .scuba()
+                .clone()
+                .log_with_msg("Undesired file fetch", format!("{:?}", path));
         }
     }
 
