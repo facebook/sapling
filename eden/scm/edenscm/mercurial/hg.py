@@ -193,12 +193,6 @@ def repository(ui, path="", create=False, presetupfuncs=None):
     repo = peer.local()
     if not repo:
         raise error.Abort(_("repository '%s' is not local") % (path or peer.url()))
-    if visibility.tracking(repo):
-        ui.log(
-            "visibility",
-            "repo visibility is tracked through visible heads",
-            visibility_tracking=True,
-        )
     return repo.filtered("visible")
 
 
