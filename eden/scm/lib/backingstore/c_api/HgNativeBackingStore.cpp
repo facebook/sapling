@@ -11,6 +11,7 @@
 #include <folly/String.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
+#include <cstddef>
 #include <memory>
 #include <stdexcept>
 
@@ -29,6 +30,33 @@ std::unique_ptr<folly::IOBuf> bytesToIOBuf(RustCBytes* bytes) {
         rust_cbytes_free(reinterpret_cast<RustCBytes*>(userData));
       },
       reinterpret_cast<void*>(bytes));
+}
+
+/**
+ * A helper function to make it easier to work with FFI function pointers. Only
+ * non-capturing lambdas can be used as FFI function pointers. To bypass this
+ * restriction, we pass in the pointer to the capturing function opaquely.
+ * Whenever we get called to process the result, we call that capturing
+ * function instead.
+ */
+template <typename Fn>
+void getBlobBatchCallback(
+    RustBackingStore* store,
+    RustRequest* request,
+    uintptr_t size,
+    bool local,
+    Fn&& fn) {
+  rust_backingstore_get_blob_batch(
+      store,
+      request,
+      size,
+      local,
+      // We need to take address of the function, not to forward it.
+      // @lint-ignore HOWTOEVEN MissingStdForward
+      &fn,
+      [](void* fn, size_t index, RustCFallibleBase result) {
+        (*static_cast<Fn*>(fn))(index, result);
+      });
 }
 } // namespace
 
@@ -70,6 +98,71 @@ std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
   }
 
   return bytesToIOBuf(result.unwrap().release());
+}
+
+void HgNativeBackingStore::getBlobBatch(
+    const std::vector<std::pair<folly::ByteRange, folly::ByteRange>>& requests,
+    bool local,
+    std::function<void(size_t, std::unique_ptr<folly::IOBuf>)>&& resolve) {
+  size_t count = requests.size();
+
+  XLOG(DBG7) << "Import blobs with size:" << count;
+
+  std::vector<RustRequest> raw_requests;
+  raw_requests.reserve(count);
+
+  for (auto& request : requests) {
+    auto& name = request.first;
+    auto& node = request.second;
+
+    raw_requests.emplace_back(RustRequest{
+        name.data(),
+        name.size(),
+        node.data(),
+    });
+
+    XLOGF(
+        DBG9,
+        "Processing path=\"{}\" ({}) node={} ({:p})",
+        name.data(),
+        name.size(),
+        folly::hexlify(node),
+        node.data());
+  }
+
+  getBlobBatchCallback(
+      store_.get(),
+      raw_requests.data(),
+      count,
+      local,
+      [resolve, requests, count](size_t index, RustCFallibleBase raw_result) {
+        RustCFallible<RustCBytes> result(
+            std::move(raw_result), rust_cbytes_free);
+
+        if (result.isError()) {
+          // TODO: It would be nice if we can differentiate not found error with
+          // other errors.
+          auto error = result.getError();
+          XLOGF(
+              DBG6,
+              "Failed to import path=\"{}\" node={} from EdenAPI (batch {}/{}): {}",
+              folly::StringPiece{requests[index].first},
+              folly::hexlify(requests[index].second),
+              index,
+              count,
+              error);
+        } else {
+          auto content = bytesToIOBuf(result.unwrap().release());
+          XLOGF(
+              DBG6,
+              "Imported path=\"{}\" node={} from EdenAPI (batch: {}/{})",
+              folly::StringPiece{requests[index].first},
+              folly::hexlify(requests[index].second),
+              index,
+              count);
+          resolve(index, std::move(content));
+        }
+      });
 }
 
 std::shared_ptr<RustTree> HgNativeBackingStore::getTree(folly::ByteRange node) {
