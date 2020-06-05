@@ -210,17 +210,8 @@ HgImporter::HgImporter(
   helperOut_ = helper_.parentFd(HELPER_PIPE_FD);
 #else
 
-  auto childInPipe = std::make_unique<Pipe>(nullptr, true);
-  auto childOutPipe = std::make_unique<Pipe>(nullptr, true);
-
-  if (!SetHandleInformation(
-          childInPipe->writeHandle(), HANDLE_FLAG_INHERIT, 0)) {
-    throw std::runtime_error("Failed to set the handle attributes");
-  }
-  if (!SetHandleInformation(
-          childOutPipe->readHandle(), HANDLE_FLAG_INHERIT, 0)) {
-    throw std::runtime_error("Failed to set the handle attributes");
-  }
+  auto childInPipe = std::make_unique<Pipe>();
+  auto childOutPipe = std::make_unique<Pipe>();
 
   cmd.push_back("--out-fd");
   cmd.push_back(folly::to<string>((intptr_t)childOutPipe->writeHandle()));

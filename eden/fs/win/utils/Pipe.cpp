@@ -19,19 +19,13 @@
 namespace facebook {
 namespace eden {
 
-// Pipe constructor will either use security attr or the inherit flag.
-// If the security attribute is nullptr it will create one and will use the
-// inherit flag for it.
-Pipe::Pipe(PSECURITY_ATTRIBUTES securityAttr, bool inherit) {
+Pipe::Pipe() {
   auto sec = SECURITY_ATTRIBUTES();
-  if (securityAttr == nullptr) {
-    sec.nLength = sizeof(sec);
-    sec.bInheritHandle = inherit;
-    sec.lpSecurityDescriptor = nullptr;
-    securityAttr = &sec;
-  }
+  sec.nLength = sizeof(sec);
+  sec.bInheritHandle = false;
+  sec.lpSecurityDescriptor = nullptr;
 
-  if (!CreatePipe(&readHandle_, &writeHandle_, securityAttr, NULL)) {
+  if (!CreatePipe(&readHandle_, &writeHandle_, &sec, 0)) {
     throw makeWin32ErrorExplicit(GetLastError(), "Failed to create a pipe");
   }
   XLOG(DBG5) << "Handle Created: Read: " << readHandle_

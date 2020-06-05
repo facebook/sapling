@@ -14,7 +14,7 @@ namespace eden {
 
 class Pipe {
  public:
-  Pipe(PSECURITY_ATTRIBUTES securityAttr, bool inherit);
+  Pipe();
   ~Pipe();
   HANDLE readHandle() {
     return readHandle_;

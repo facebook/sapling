@@ -34,13 +34,67 @@ void Subprocess::createSubprocess(
   childInPipe_ = std::move(childInPipe);
   childOutPipe_ = std::move(childOutPipe);
 
-  PROCESS_INFORMATION procInfo;
-  STARTUPINFOA startupInfo;
+  if (!SetHandleInformation(
+          childInPipe_->readHandle(),
+          HANDLE_FLAG_INHERIT,
+          HANDLE_FLAG_INHERIT)) {
+    throw std::system_error(
+        GetLastError(), std::system_category(), "SetHandleInformation failed");
+  }
+  if (!SetHandleInformation(
+          childOutPipe_->writeHandle(),
+          HANDLE_FLAG_INHERIT,
+          HANDLE_FLAG_INHERIT)) {
+    throw std::system_error(
+        GetLastError(), std::system_category(), "SetHandleInformation failed");
+  }
+
+  HANDLE handles[2] = {childInPipe_->readHandle(),
+                       childOutPipe_->writeHandle()};
+
+  PROCESS_INFORMATION procInfo{};
+  STARTUPINFOEXA startupInfo{};
   bool status = FALSE;
 
-  ZeroMemory(&procInfo, sizeof(PROCESS_INFORMATION));
-  ZeroMemory(&startupInfo, sizeof(STARTUPINFO));
-  startupInfo.cb = sizeof(STARTUPINFO);
+  startupInfo.StartupInfo.cb = sizeof(STARTUPINFOEXA);
+
+  SIZE_T size;
+  InitializeProcThreadAttributeList(nullptr, 1, 0, &size);
+
+  startupInfo.lpAttributeList = (LPPROC_THREAD_ATTRIBUTE_LIST)malloc(size);
+  if (startupInfo.lpAttributeList == nullptr) {
+    throw std::bad_alloc();
+  }
+
+  SCOPE_EXIT {
+    free(startupInfo.lpAttributeList);
+  };
+
+  if (!InitializeProcThreadAttributeList(
+          startupInfo.lpAttributeList, 1, 0, &size)) {
+    throw std::system_error(
+        GetLastError(),
+        std::system_category(),
+        "InitializeProcThreadAttributeList failed");
+  }
+
+  SCOPE_EXIT {
+    DeleteProcThreadAttributeList(startupInfo.lpAttributeList);
+  };
+
+  if (!UpdateProcThreadAttribute(
+          startupInfo.lpAttributeList,
+          0,
+          PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+          &handles,
+          sizeof(handles),
+          nullptr,
+          nullptr)) {
+    throw std::system_error(
+        GetLastError(),
+        std::system_category(),
+        "UpdateProcThreadAttribute failed");
+  }
 
   string cmdToProcess;
   for (auto& str : cmd) {
@@ -55,10 +109,10 @@ void Subprocess::createSubprocess(
       nullptr,
       nullptr,
       TRUE, // inherit the handles
-      0,
+      EXTENDED_STARTUPINFO_PRESENT,
       nullptr,
       currentDir,
-      &startupInfo,
+      &startupInfo.StartupInfo,
       &procInfo);
 
   if (!status) {
