@@ -345,8 +345,10 @@ class EdenInstance:
         """Return the paths of the set mount points stored in config.json"""
         return [str(path) for path in self._get_directory_map().keys()]
 
-    def get_thrift_client(self) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(str(self._config_dir))
+    def get_thrift_client(self, timeout=None) -> eden.thrift.EdenClient:
+        return eden.thrift.create_thrift_client(
+            eden_dir=str(self._config_dir), timeout=timeout
+        )
 
     def get_checkout_info(self, path: Union[Path, str]) -> collections.OrderedDict:
         """
@@ -581,14 +583,13 @@ Do you want to run `eden mount %s` instead?"""
 
     def unmount(self, path: str) -> None:
         """Ask edenfs to unmount the specified checkout."""
-        with self.get_thrift_client() as client:
-            # In some cases edenfs can take a long time unmounting while it waits for
-            # inodes to become unreferenced.  Ideally we should have edenfs timeout and
-            # forcibly clean up the mount point in this situation.
-            #
-            # For now at least time out here so the CLI commands do not hang in this
-            # case.
-            client._socket.setTimeout(15000)
+        # In some cases edenfs can take a long time unmounting while it waits for
+        # inodes to become unreferenced.  Ideally we should have edenfs timeout and
+        # forcibly clean up the mount point in this situation.
+        #
+        # For now at least time out here so the CLI commands do not hang in this
+        # case.
+        with self.get_thrift_client(timeout=15) as client:
             client.unmount(os.fsencode(path))
 
     def destroy_mount(self, path: Union[Path, str]) -> None:
@@ -623,7 +624,7 @@ Do you want to run `eden mount %s` instead?"""
         Returns a HealthStatus object containing health information.
         """
         return util.check_health(
-            lambda: self.get_thrift_client(), self._config_dir, timeout=timeout
+            self.get_thrift_client, self._config_dir, timeout=timeout
         )
 
     def get_log_path(self) -> Path:

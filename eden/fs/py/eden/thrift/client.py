@@ -59,28 +59,12 @@ class EdenClient(EdenService.Client):
       be used in with statements.
     """
 
-    def __init__(self, eden_dir=None, socket_path=None):
-        # type: (Optional[str], Optional[str]) -> None
-        if socket_path is not None:
-            self._socket_path = socket_path
-        elif eden_dir is not None:
-            self._socket_path = os.path.join(eden_dir, SOCKET_PATH)
-        else:
-            raise TypeError("one of eden_dir or socket_path is required")
-        if sys.platform == "win32":
-            self._socket = WinTSocket(unix_socket=self._socket_path)
-        else:
-            self._socket = TSocket(unix_socket=self._socket_path)
-
-        # We used to set a timeout here, but picking the right duration is hard,
-        # and safely retrying an arbitrary thrift call may not be safe.  So we
-        # just leave the client with no timeout.
-        # self.set_timeout(60)
-        self.set_timeout(None)
-        transport = THeaderTransport(self._socket)
+    def __init__(self, socket_path, transport, protocol):
+        # type: (str, THeaderTransport, THeaderProtocol) -> None
+        self._socket_path = socket_path
         self._transport = transport  # type: Optional[THeaderTransport]
-        self._protocol = THeaderProtocol(transport)
-        super(EdenClient, self).__init__(self._protocol)
+
+        super(EdenClient, self).__init__(protocol)
 
     def __enter__(self):
         # type: () -> EdenClient
@@ -143,24 +127,36 @@ class EdenClient(EdenService.Client):
             else:
                 raise
 
-    def set_timeout(self, timeout):
-        # type: (Optional[float]) -> None
-        if timeout is None:
-            timeout_ms = None
-        else:
-            timeout_ms = timeout * 1000
-        self.set_timeout_ms(timeout_ms)
 
-    def set_timeout_ms(self, timeout_ms):
-        # type: (Optional[float]) -> None
-        self._socket.setTimeout(timeout_ms)
-
-
-def create_thrift_client(eden_dir=None, socket_path=None):
-    # type: (Optional[str], Optional[str]) -> EdenClient
-    """Construct a thrift client to speak to the running eden server
+def create_thrift_client(eden_dir=None, socket_path=None, timeout=None):
+    # type: (Optional[str], Optional[str], Optional[float]) -> EdenClient
+    """
+    Construct a thrift client to speak to the running eden server
     instance associated with the specified mount point.
 
     @return Returns a context manager for EdenService.Client.
     """
-    return EdenClient(eden_dir=eden_dir, socket_path=socket_path)
+
+    if socket_path is not None:
+        pass
+    elif eden_dir is not None:
+        socket_path = os.path.join(eden_dir, SOCKET_PATH)
+    else:
+        raise TypeError("one of eden_dir or socket_path is required")
+    if sys.platform == "win32":
+        socket = WinTSocket(unix_socket=socket_path)
+    else:
+        socket = TSocket(unix_socket=socket_path)
+
+    # We used to set a default timeout here, but picking the right duration is hard,
+    # and safely retrying an arbitrary thrift call may not be safe.  So we
+    # just leave the client with no timeout, unless one is given.
+    if timeout is None:
+        timeout_ms = None
+    else:
+        timeout_ms = timeout * 1000
+    socket.setTimeout(timeout_ms)
+
+    transport = THeaderTransport(socket)
+    protocol = THeaderProtocol(transport)
+    return EdenClient(socket_path, transport, protocol)

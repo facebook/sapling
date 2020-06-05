@@ -124,8 +124,8 @@ class EdenFS(object):
             return
         self.shutdown()
 
-    def get_thrift_client(self) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(str(self._eden_dir))
+    def get_thrift_client(self, timeout=None) -> eden.thrift.EdenClient:
+        return eden.thrift.create_thrift_client(str(self._eden_dir), timeout=timeout)
 
     def run_cmd(
         self,
@@ -198,7 +198,7 @@ class EdenFS(object):
         health = util.wait_for_daemon_healthy(
             proc=process,
             config_dir=self._eden_dir,
-            get_client=lambda: self.get_thrift_client(),
+            get_client=self.get_thrift_client,
             timeout=timeout,
         )
         return health.is_healthy()
@@ -229,7 +229,7 @@ class EdenFS(object):
         util.wait_for_daemon_healthy(
             proc=process,
             config_dir=self._eden_dir,
-            get_client=lambda: self.get_thrift_client(),
+            get_client=self.get_thrift_client,
             timeout=timeout,
             exclude_pid=takeover_from,
         )

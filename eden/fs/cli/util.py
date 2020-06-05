@@ -163,7 +163,7 @@ def _create_dead_health_status() -> HealthStatus:
 
 
 def check_health(
-    get_client: Callable[[], eden.thrift.EdenClient],
+    get_client: Callable[..., eden.thrift.EdenClient],
     config_dir: Path,
     timeout: Optional[float] = None,
 ) -> HealthStatus:
@@ -180,8 +180,7 @@ def check_health(
     status = fb303_status.DEAD
     uptime = None
     try:
-        with get_client() as client:
-            client.set_timeout(timeout)
+        with get_client(timeout=timeout) as client:
             info = client.getDaemonInfo()
             pid = info.pid
             status_value = info.status
@@ -214,7 +213,7 @@ def check_health(
 def wait_for_daemon_healthy(
     proc: subprocess.Popen,
     config_dir: Path,
-    get_client: Callable[[], eden.thrift.EdenClient],
+    get_client: Callable[..., eden.thrift.EdenClient],
     timeout: float,
     exclude_pid: Optional[int] = None,
 ) -> HealthStatus:

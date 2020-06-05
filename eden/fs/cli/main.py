@@ -1538,8 +1538,7 @@ re-open these files after Eden is restarted.
         daemon.wait_for_shutdown(pid, timeout=timeout)
 
     def _do_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:
-        with instance.get_thrift_client() as client:
-            client.set_timeout(timeout)
+        with instance.get_thrift_client(timeout=timeout) as client:
             try:
                 stop_aux_processes(client)
             except Exception:
@@ -1685,8 +1684,9 @@ class StopCmd(Subcmd):
         pid = None
         try:
             try:
-                with instance.get_thrift_client() as client:
-                    client.set_timeout(self.__thrift_timeout(args))
+                with instance.get_thrift_client(
+                    timeout=self.__thrift_timeout(args)
+                ) as client:
                     pid = client.getPid()
                     stop_aux_processes(client)
                     # Ask the client to shutdown
