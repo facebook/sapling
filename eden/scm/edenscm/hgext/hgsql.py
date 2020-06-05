@@ -1477,6 +1477,12 @@ def wraprepo(repo):
                 if datalen % maxrowsize != 0 or datalen == 0:
                     chunkcount += 1
 
+                if len(path) > 512:
+                    raise util.Abort(
+                        "invalid path '%s': paths must be not longer than 512 characters"
+                        % path
+                    )
+
                 # We keep row size down by breaking large revisions down into
                 # smaller chunks.
                 while chunk == 0 or start < len(data1):
