@@ -13,7 +13,7 @@ use gotham_derive::NewMiddleware;
 use gotham_ext::error::HttpError;
 use permission_checker::MononokeIdentitySet;
 use rand::Rng;
-use stats_facebook::service_data::{get_service_data_singleton, ServiceData, ServiceDataWrapper};
+use stats::prelude::*;
 use std::convert::TryInto;
 use std::pin::Pin;
 use std::time::Duration;
@@ -24,6 +24,12 @@ use crate::errors::ErrorKind;
 use crate::middleware::ClientIdentity;
 
 use super::util::http_error_to_handler_error;
+
+define_stats! {
+    // We use a dynamic singleton counter here instead of direct usage of FB API to make use of
+    // the OSS friendly API.
+    throttle_counter: dynamic_singleton_counter("{}", (key: String)),
+}
 
 // NOTE: Our Throttling middleware is implemented as Gotham middleware for 3 reasons:
 // - It needs to replace responses.
@@ -52,14 +58,13 @@ impl Middleware for ThrottleMiddleware {
         } else {
             None
         };
-        let service_data = get_service_data_singleton(self.fb);
 
         for limit in self.handle.get().throttle_limits().iter() {
             if !limit_applies_to_client(&limit, &identities) {
                 continue;
             }
 
-            if let Some(err) = is_limit_exceeded(&service_data, &limit.counter(), limit.limit()) {
+            if let Some(err) = is_limit_exceeded(self.fb, &limit.counter(), limit.limit()) {
                 let err = HttpError::e429(err);
 
                 let sleep_ms: u64 = limit.sleep_ms().try_into().unwrap_or(0);
@@ -82,13 +87,9 @@ impl Middleware for ThrottleMiddleware {
     }
 }
 
-fn is_limit_exceeded(
-    service_data: &ServiceDataWrapper,
-    key: &str,
-    limit: i64,
-) -> Option<ErrorKind> {
+fn is_limit_exceeded(fb: FacebookInit, key: &str, limit: i64) -> Option<ErrorKind> {
     // NOTE: This checks local limits for this individual process by looking at fb303 counters.
-    match service_data.get_counter(&key) {
+    match STATS::throttle_counter.get_value(fb, (key.to_owned(),)) {
         Some(value) if value > limit => Some(ErrorKind::Throttled(key.to_string(), value, limit)),
         _ => None,
     }

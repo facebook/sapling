@@ -39,7 +39,6 @@ use phases::Phase;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use stats::prelude::*;
-use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -51,7 +50,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-const STATS_PREFIX: &str = "mononoke.walker.validate";
 pub const NODES: &'static str = "nodes";
 pub const EDGES: &'static str = "edges";
 pub const PASS: &'static str = "pass";
@@ -73,6 +71,7 @@ define_stats! {
     prefix = "mononoke.walker.validate";
     // e.g. mononoke.walker.validate.testrepo.hg_link_node_populated.pass
     walker_validate: dynamic_timeseries("{}.{}.{}", (repo: String, check: &'static str, status: &'static str); Rate, Sum),
+    last_completed: dynamic_singleton_counter("{}.{}.last_completed.{}", (repo: String, check: &'static str, status: &'static str)),
 }
 
 pub const DEFAULT_CHECK_TYPES: &[CheckType] = &[
@@ -355,19 +354,13 @@ impl ValidateProgressState {
     }
 
     fn report_progress_stats(&self) {
-        let service_data = get_service_data_singleton(self.fb);
         // Per check type
         for (k, v) in self.stats_by_type.iter() {
             for (desc, value) in &[(PASS, v.pass), (FAIL, v.fail), (EDGES, v.edges)] {
-                service_data.set_counter(
-                    &format!(
-                        "{}.{}.{}.last_completed.{}",
-                        STATS_PREFIX,
-                        self.repo_stats_key,
-                        k.stats_key(),
-                        desc,
-                    ),
+                STATS::last_completed.set_value(
+                    self.fb,
                     *value as i64,
+                    (self.repo_stats_key.clone(), k.stats_key(), desc),
                 );
             }
         }
@@ -378,12 +371,10 @@ impl ValidateProgressState {
             (NODES, TOTAL, self.checked_nodes),
             (EDGES, TOTAL, self.total_checks.edges),
         ] {
-            service_data.set_counter(
-                &format!(
-                    "{}.{}.{}.last_completed.{}",
-                    STATS_PREFIX, self.repo_stats_key, stat, desc,
-                ),
+            STATS::last_completed.set_value(
+                self.fb,
                 *value as i64,
+                (self.repo_stats_key.clone(), stat, desc),
             );
         }
     }

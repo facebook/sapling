@@ -1,0 +1,59 @@
+[package]
+name = "walker"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../blobrepo" }
+blobrepo_factory = { path = "../blobrepo/factory" }
+blobstore = { path = "../blobstore" }
+blobstore_factory = { path = "../blobstore/factory" }
+bookmarks = { path = "../bookmarks" }
+bounded_traversal = { path = "../common/bounded_traversal" }
+cmdlib = { path = "../cmdlib" }
+context = { path = "../server/context" }
+derived_data = { path = "../derived_data" }
+derived_data_filenodes = { path = "../derived_data/filenodes" }
+filenodes = { path = "../filenodes" }
+filestore = { path = "../filestore" }
+fsnodes = { path = "../derived_data/fsnodes" }
+mercurial_types = { path = "../mercurial/types" }
+metaconfig_types = { path = "../metaconfig/types" }
+mononoke_types = { path = "../mononoke_types" }
+multiplexedblob = { path = "../blobstore/multiplexedblob" }
+newfilenodes = { path = "../newfilenodes" }
+phases = { path = "../phases" }
+prefixblob = { path = "../blobstore/prefixblob" }
+samplingblob = { path = "../blobstore/samplingblob" }
+scuba_ext = { path = "../common/scuba_ext" }
+sql_ext = { path = "../common/rust/sql_ext" }
+async_compression = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+arc-interner = "0.4"
+array-init = "0.1"
+bytes = { version = "0.5", features = ["serde"] }
+clap = "2.33"
+dashmap = "3.11.0"
+derive_more = "0.99.3"
+filetime = "0.2.9"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+hex = "0.4"
+inlinable_string = "0.1"
+itertools = "0.8"
+lazy_static = "1.0"
+once_cell = "1.2"
+percent-encoding = "2.1"
+regex = "1.3.7"
+slog = { version = "2.5", features = ["max_level_debug"] }
+thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }

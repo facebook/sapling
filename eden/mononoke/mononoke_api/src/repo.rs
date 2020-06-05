@@ -46,7 +46,7 @@ use slog::{debug, error, Logger};
 #[cfg(test)]
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
-use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
+use stats::prelude::*;
 use std::collections::HashSet;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use warm_bookmarks_cache::WarmBookmarksCache;
@@ -62,10 +62,21 @@ use crate::specifiers::{
 };
 use crate::tree::{TreeContext, TreeId};
 
-const COMMON_COUNTER_PREFIX: &'static str = "mononoke.api";
-const STALENESS_INFIX: &'static str = "staleness.secs";
-const MISSING_FROM_CACHE_INFIX: &'static str = "missing_from_cache";
-const MISSING_FROM_REPO_INFIX: &'static str = "missing_from_repo";
+define_stats! {
+    prefix = "mononoke.api";
+    staleness: dynamic_singleton_counter(
+        "staleness.secs.{}.{}",
+        (repoid: ::mononoke_types::RepositoryId, bookmark: String)
+    ),
+    missing_from_cache: dynamic_singleton_counter(
+        "missing_from_cache.{}.{}",
+        (repoid: ::mononoke_types::RepositoryId, bookmark: String)
+    ),
+    missing_from_repo: dynamic_singleton_counter(
+        "missing_from_repo.{}.{}",
+        (repoid: ::mononoke_types::RepositoryId, bookmark: String)
+    ),
+}
 
 pub(crate) struct Repo {
     pub(crate) name: String,
@@ -288,24 +299,17 @@ impl Repo {
         }
     }
 
-    fn set_counter(&self, ctx: &CoreContext, name: &dyn AsRef<str>, value: i64) {
-        get_service_data_singleton(ctx.fb).set_counter(name, value);
-    }
-
     fn report_bookmark_missing_from_cache(&self, ctx: &CoreContext, bookmark: &BookmarkName) {
         error!(
             ctx.logger(),
             "Monitored bookmark does not exist in the cache: {}", bookmark
         );
 
-        let counter_name = format!(
-            "{}.{}.{}.{}",
-            COMMON_COUNTER_PREFIX,
-            MISSING_FROM_CACHE_INFIX,
-            self.blob_repo.get_repoid(),
-            bookmark,
+        STATS::missing_from_cache.set_value(
+            ctx.fb,
+            1,
+            (self.blob_repo.get_repoid(), bookmark.to_string()),
         );
-        self.set_counter(ctx, &counter_name, 1);
     }
 
     fn report_bookmark_missing_from_repo(&self, ctx: &CoreContext, bookmark: &BookmarkName) {
@@ -314,14 +318,11 @@ impl Repo {
             "Monitored bookmark does not exist in the repo: {}", bookmark
         );
 
-        let counter_name = format!(
-            "{}.{}.{}.{}",
-            COMMON_COUNTER_PREFIX,
-            MISSING_FROM_REPO_INFIX,
-            self.blob_repo.get_repoid(),
-            bookmark,
+        STATS::missing_from_repo.set_value(
+            ctx.fb,
+            1,
+            (self.blob_repo.get_repoid(), bookmark.to_string()),
         );
-        self.set_counter(ctx, &counter_name, 1);
     }
 
     fn report_bookmark_staleness(
@@ -338,14 +339,11 @@ impl Repo {
             staleness
         );
 
-        let counter_name = format!(
-            "{}.{}.{}.{}",
-            COMMON_COUNTER_PREFIX,
-            STALENESS_INFIX,
-            self.blob_repo.get_repoid(),
-            bookmark,
+        STATS::staleness.set_value(
+            ctx.fb,
+            staleness,
+            (self.blob_repo.get_repoid(), bookmark.to_string()),
         );
-        self.set_counter(ctx, &counter_name, staleness);
     }
 
     async fn report_bookmark_age_difference(

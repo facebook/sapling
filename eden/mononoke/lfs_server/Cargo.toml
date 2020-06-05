@@ -1,0 +1,58 @@
+[package]
+name = "lfs_server"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../blobrepo" }
+blobrepo_factory = { path = "../blobrepo/factory" }
+blobstore = { path = "../blobstore" }
+cmdlib = { path = "../cmdlib" }
+context = { path = "../server/context" }
+filestore = { path = "../filestore" }
+gotham_ext = { path = "../gotham_ext" }
+lfs_protocol = { path = "../lfs_protocol" }
+metaconfig_parser = { path = "../metaconfig/parser" }
+mononoke_types = { path = "../mononoke_types" }
+permission_checker = { path = "../permission_checker" }
+redactedblobstore = { path = "../blobstore/redactedblobstore" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+async-trait = "0.1.29"
+bytes = { version = "0.5", features = ["serde"] }
+clap = "2.33"
+dns-lookup = "1.0"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-util = "0.3"
+gotham = { version = "=0.5.0-dev", default-features = false }
+gotham_derive = "=0.5.0-dev"
+http = "0.2"
+hyper = "0.13"
+hyper-openssl = "0.8"
+itertools = "0.8"
+maplit = "1.0"
+mime = "0.3.14"
+rand = { version = "0.7", features = ["small_rng"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+slog = { version = "2.5", features = ["max_level_debug"] }
+thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
+tokio-openssl = "0.4"
+
+[dev-dependencies]
+mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+assert_matches = "1.3"
+futures-old = { package = "futures", version = "0.1" }
+pretty_assertions = "0.6"
+tokio-compat = "0.1"

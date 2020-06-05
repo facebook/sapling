@@ -1,0 +1,64 @@
+[package]
+name = "mononoke_api"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blame = { path = "../derived_data/blame" }
+blobrepo = { path = "../blobrepo" }
+blobrepo_factory = { path = "../blobrepo/factory" }
+blobstore = { path = "../blobstore" }
+blobstore_factory = { path = "../blobstore/factory" }
+bookmarks = { path = "../bookmarks" }
+changeset_info = { path = "../derived_data/changeset_info" }
+context = { path = "../server/context" }
+cross_repo_sync = { path = "../commit_rewriting/cross_repo_sync" }
+derived_data = { path = "../derived_data" }
+fastlog = { path = "../derived_data/fastlog" }
+filenodes = { path = "../filenodes" }
+filestore = { path = "../filestore" }
+fsnodes = { path = "../derived_data/fsnodes" }
+hgproto = { path = "../hgproto" }
+manifest = { path = "../manifest" }
+mercurial_types = { path = "../mercurial/types" }
+metaconfig_parser = { path = "../metaconfig/parser" }
+metaconfig_types = { path = "../metaconfig/types" }
+mononoke_types = { path = "../mononoke_types" }
+permission_checker = { path = "../permission_checker" }
+reachabilityindex = { path = "../reachabilityindex" }
+remotefilelog = { path = "../repo_client/remotefilelog" }
+repo_client = { path = "../repo_client" }
+revset = { path = "../revset" }
+skiplist = { path = "../reachabilityindex/skiplist" }
+sql_ext = { path = "../common/rust/sql_ext" }
+synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping" }
+unodes = { path = "../derived_data/unodes" }
+warm_bookmarks_cache = { path = "../bookmarks/warm_bookmarks_cache" }
+xdiff = { path = "../../scm/lib/xdiff" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+async-trait = "0.1.29"
+bytes = { version = "0.5", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+itertools = "0.8"
+maplit = "1.0"
+slog = { version = "2.5", features = ["max_level_debug"] }
+thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
+
+[dev-dependencies]
+cross_repo_sync_test_utils = { path = "../commit_rewriting/cross_repo_sync/test_utils" }
+fixtures = { path = "../tests/fixtures" }
+sql_construct = { path = "../common/sql_construct" }
+tests_utils = { path = "../tests/utils" }
+assert_matches = "1.3"
+tokio-compat = "0.1"
