@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/futures/Promise.h>
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/LocalStore.h"
@@ -33,6 +34,16 @@ class HgDatapackStore {
   std::unique_ptr<Blob> getBlobRemote(
       const Hash& id,
       const HgProxyHash& hgInfo);
+
+  /**
+   * Import multiple blobs at once. The vector parameters have to be the same
+   * length. Promises passed in will be resolved if a blob is successfully
+   * imported. Otherwise the promise will be left untouched.
+   */
+  void getBlobBatch(
+      const std::vector<Hash>& ids,
+      const std::vector<HgProxyHash>& hashes,
+      std::vector<folly::Promise<std::unique_ptr<Blob>>*> promises);
 
   std::unique_ptr<Tree> getTree(
       const RelativePath& path,

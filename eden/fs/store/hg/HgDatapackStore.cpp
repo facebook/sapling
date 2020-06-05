@@ -109,15 +109,54 @@ std::unique_ptr<Blob> HgDatapackStore::getBlobRemote(
   return nullptr;
 }
 
-std::unique_ptr<Tree> HgDatapackStore::getTree(
-    const RelativePath& path,
-    const Hash& manifestId,
-    const Hash& edenTreeId,
-    LocalStore::WriteBatch* writeBatch) {
-  if (auto tree = store_.getTree(manifestId.getBytes())) {
-    return fromRawTree(tree.get(), edenTreeId, path, writeBatch);
+void HgDatapackStore::getBlobBatch(
+    const std::vector<Hash>& ids,
+    const std::vector<HgProxyHash>& hashes,
+    std::vector<folly::Promise<std::unique_ptr<Blob>>*> promises) {
+  std::vector<Hash> blobhashes;
+  std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
+
+  size_t count = hashes.size();
+  requests.reserve(count);
+  blobhashes.reserve(count);
+
+  // `.revHash()` will return an owned `Hash` and `getBytes()` will return a
+  // reference to that newly created `Hash`. We need to store these `Hash` to
+  // avoid storing invalid pointers in `requests`. For a similar reason, we
+  // cannot use iterator-based loop here otherwise the reference we get will be
+  // pointing to the iterator.
+  for (size_t i = 0; i < count; i++) {
+    blobhashes.emplace_back(hashes[i].revHash());
   }
 
+  auto blobhash = blobhashes.begin();
+  auto hash = hashes.begin();
+  for (; blobhash != blobhashes.end(); blobhash++, hash++) {
+    CHECK(hash != hashes.end());
+    requests.emplace_back(std::make_pair<>(
+        folly::ByteRange{hash->path().stringPiece()}, blobhash->getBytes()));
+  }
+
+  store_.getBlobBatch(
+      requests,
+      false,
+      [promises = std::move(promises), ids, requests](
+          size_t index, std::unique_ptr<folly::IOBuf> content) {
+        XLOGF(
+            DBG9,
+            "Imported name={} node={}",
+            folly::StringPiece{requests[index].first},
+            folly::hexlify(requests[index].second));
+        auto blob = std::make_unique<Blob>(ids[index], *content);
+        promises[index]->setValue(std::move(blob));
+      });
+}
+
+std::unique_ptr<Tree> HgDatapackStore::getTree(
+    const RelativePath&,
+    const Hash&,
+    const Hash&,
+    LocalStore::WriteBatch*) {
   return nullptr;
 }
 

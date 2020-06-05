@@ -55,15 +55,24 @@ HgQueuedBackingStore::~HgQueuedBackingStore() {
 void HgQueuedBackingStore::processBlobImportRequests(
     std::vector<HgImportRequest>&& requests) {
   std::vector<Hash> hashes;
+  std::vector<folly::Promise<HgImportRequest::BlobImport::Response>*> promises;
+
   folly::stop_watch<std::chrono::milliseconds> watch;
   hashes.reserve(requests.size());
+  promises.reserve(requests.size());
 
   XLOG(DBG4) << "Processing blob import batch size=" << requests.size();
 
   for (auto& request : requests) {
     auto& hash = request.getRequest<HgImportRequest::BlobImport>()->hash;
-    XLOG(DBG4) << "Processing blob request for " << hash;
+    auto* promise = request.getPromise<HgImportRequest::BlobImport::Response>();
+    XLOGF(
+        DBG4,
+        "Processing blob request for {} ({:p})",
+        hash.toString(),
+        static_cast<void*>(promise));
     hashes.emplace_back(hash);
+    promises.emplace_back(promise);
   }
 
   auto proxyHashesTry =
@@ -85,49 +94,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
 
   auto proxyHashes = proxyHashesTry.value();
 
-  // logic:
-  // check with hgcache with the Rust code, if it does not exist there, try
-  // hgimporthelper and mononoke if possible
-
-  {
-    // check hgcache
-    auto request = requests.begin();
-    auto proxyHash = proxyHashes.begin();
-    auto& stats = stats_->getHgBackingStoreStatsForCurrentThread();
-    size_t count = 0;
-
-    XCHECK_EQ(requests.size(), proxyHashes.size());
-    for (; request != requests.end();) {
-      auto hash = request->getRequest<HgImportRequest::BlobImport>()->hash;
-
-      if (auto blob = backingStore_->getBlobFromHgCache(hash, *proxyHash)) {
-        XLOG(DBG4) << "Imported blob from hgcache for " << hash;
-        request->getPromise<decltype(blob)>()->setValue(std::move(blob));
-        stats.hgBackingStoreGetBlob.addValue(watch.elapsed().count());
-        count += 1;
-
-        // Swap-and-pop, removing fulfilled request from the list.
-        // It is fine to call `.back()` here because if we are in the loop
-        // `requests` are guaranteed to be nonempty.
-        // @lint-ignore HOWTOEVEN ParameterUncheckedArrayBounds
-        std::swap(*request, requests.back());
-        requests.pop_back();
-
-        // Same reason as above, if `proxyHashes` is empty it would be caught
-        // by the XHCECK_EQ call above.
-        // @lint-ignore HOWTOEVEN LocalUncheckedArrayBounds
-        std::swap(*proxyHash, proxyHashes.back());
-        proxyHashes.pop_back();
-      } else {
-        request++;
-        proxyHash++;
-      }
-    }
-
-    XLOG(DBG4) << "Fetched " << count << " requests from hgcache";
-  }
-
-  // TODO: check EdenAPI
+  backingStore_->getDatapackStore().getBlobBatch(hashes, proxyHashes, promises);
 
   {
     auto request = requests.begin();
@@ -137,6 +104,13 @@ void HgQueuedBackingStore::processBlobImportRequests(
 
     XCHECK_EQ(requests.size(), proxyHashes.size());
     for (; request != requests.end(); request++, proxyHash++) {
+      if (request->getPromise<HgImportRequest::BlobImport::Response>()
+              ->isFulfilled()) {
+        stats_->getHgBackingStoreStatsForCurrentThread()
+            .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
+        continue;
+      }
+
       futures.emplace_back(
           backingStore_->fetchBlobFromHgImporter(*proxyHash)
               .defer([request = std::move(*request), watch, stats = stats_](
