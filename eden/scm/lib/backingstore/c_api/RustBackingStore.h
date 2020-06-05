@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<0c58deb4a184da0c06e390219f491aa6>>
+ * @generated SignedSource<<73be5ea0efc629a3d97af92a1eb36494>>
  *
  */
 
@@ -101,6 +101,12 @@ operator folly::ByteRange() const {
 }
 };
 
+struct RustRequest {
+  const uint8_t *path;
+  uintptr_t length;
+  const uint8_t *node;
+};
+
 struct RustTreeEntry {
   RustCBytes hash;
   RustCBytes name;
@@ -127,6 +133,13 @@ RustCFallibleBase rust_backingstore_get_blob(RustBackingStore *store,
                                                          const uint8_t *node,
                                                          uintptr_t node_len,
                                                          bool local);
+
+void rust_backingstore_get_blob_batch(RustBackingStore *store,
+                                      const RustRequest *requests,
+                                      uintptr_t size,
+                                      bool local,
+                                      void *data,
+                                      void (*resolve)(void*, uintptr_t, RustCFallibleBase));
 
 RustCFallibleBase rust_backingstore_get_tree(RustBackingStore *store,
                                                        const uint8_t *node,

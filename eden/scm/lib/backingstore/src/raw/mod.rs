@@ -14,9 +14,11 @@ mod backingstore;
 mod cbytes;
 mod cfallible;
 mod init;
+mod request;
 mod tests;
 mod tree;
 
 pub use cbytes::CBytes;
 pub use cfallible::CFallible;
+pub use request::Request;
 pub use tree::Tree;

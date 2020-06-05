@@ -8,12 +8,14 @@
 //! Provides the c-bindings for `crate::backingstore`.
 
 use anyhow::{ensure, Error, Result};
-use libc::{c_char, size_t};
+use libc::{c_char, c_void, size_t};
 use std::convert::TryInto;
+use std::vec::Vec;
 use std::{slice, str};
+use types::Key;
 
 use crate::backingstore::BackingStore;
-use crate::raw::{CBytes, CFallible, Tree};
+use crate::raw::{CBytes, CFallible, Request, Tree};
 
 fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Result<&'a [U]> {
     ensure!(!ptr.is_null(), "string ptr is null");
@@ -80,6 +82,29 @@ pub extern "C" fn rust_backingstore_get_blob(
     local: bool,
 ) -> CFallible<CBytes> {
     backingstore_get_blob(store, name, name_len, node, node_len, local).into()
+}
+
+#[no_mangle]
+pub extern "C" fn rust_backingstore_get_blob_batch(
+    store: *mut BackingStore,
+    requests: *const Request,
+    size: usize,
+    local: bool,
+    data: *mut c_void,
+    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallible<CBytes>),
+) {
+    assert!(!store.is_null());
+    let store = unsafe { &*store };
+    let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
+    let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
+
+    store.get_blob_batch(keys, local, |idx, result| {
+        let result = result
+            .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
+            .map(CBytes::from_vec)
+            .map(|result| Box::into_raw(Box::new(result)));
+        unsafe { resolve(data, idx, result.into()) };
+    });
 }
 
 fn backingstore_get_tree(
