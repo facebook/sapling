@@ -12,6 +12,7 @@ Create an ondisk bundlestore in .hg/scratchbranches
   $ cp $HGRCPATH $TESTTMP/defaulthgrc
   $ setupcommon
   $ enable infinitepush pushrebase
+  $ setconfig visibility.enabled=false
   $ hg init repo
   $ cd repo
 

@@ -13,6 +13,7 @@ feature.require(["py2"])
 
 
 sh % "setconfig 'experimental.evolution='"
+sh % "setconfig 'visibility.enabled=false'"
 sh % "enable absorb"
 
 sh % "cat" << r"""

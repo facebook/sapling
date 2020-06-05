@@ -11,6 +11,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # TODO: Make this test compatibile with obsstore enabled.
 sh % "setconfig 'experimental.evolution='"
+sh % "setconfig 'visibility.enabled=false'"
 # Test rebase --continue with rebasestate written by legacy client
 
 sh % "cat" << r"""

@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ setconfig visibility.enabled=false
 test stripping of filelogs where the linkrev doesn't always increase
 
   $ hg init orig

@@ -3,6 +3,8 @@
 
   $ disable treemanifest
   $ configure dummyssh
+  $ setconfig visibility.enabled=false
+
 Test exchange of common information using bundle2
 
 
@@ -36,6 +38,7 @@ enable obsolescence
   > txnclose.env = sh -c  "HG_LOCAL= printenv.py txnclose"
   > pushkey= sh "$TESTTMP/bundle2-pushkey-hook.sh"
   > EOF
+  $ setconfig visibility.enabled=false
 
 The extension requires a repo (currently unused)
 

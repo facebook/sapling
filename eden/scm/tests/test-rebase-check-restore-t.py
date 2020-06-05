@@ -19,6 +19,7 @@ rebase=
 [phases]
 publish=False
 """ >> "$HGRCPATH"
+sh % "setconfig 'visibility.enabled=false'"
 
 
 sh % "hg init a"

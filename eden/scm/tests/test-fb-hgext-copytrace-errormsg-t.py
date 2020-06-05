@@ -39,5 +39,4 @@ sh % "hg rebase -s 1 -d ." == r"""
 sh % "hg rebase --abort" == "rebase aborted"
 sh % "hg rebase -s 1 -d . --config=experimental.copytrace=on" == r"""
     rebasing 812796267395 "2"
-    merging 2 and 1 to 2
-    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/812796267395-81e11405-rebase.hg"""
+    merging 2 and 1 to 2"""

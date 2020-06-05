@@ -37,6 +37,8 @@ fatelog = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsandmar
 fatelogjson = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsandmarkers|json}\n")}'
 fatelogkw = log -G -T '{node|short}\n{if(obsfate, "{obsfate % "  Obsfate: {fate}\n"}")}'
 fatelogcount = log -G -T '{node|short} {succsandmarkers}'
+[visibility]
+enabled = False
 """ >> "$HGRCPATH"
 
 

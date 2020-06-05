@@ -2,7 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
+  $ setconfig visibility.enabled=false
 
   $ enable convert
   $ setconfig convert.hg.saverev=False

@@ -8,8 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-
-
 # TODO: Make this test compatibile with obsstore enabled.
 sh % "setconfig 'experimental.evolution='"
 
@@ -20,6 +18,8 @@ rebase=
 remotenames=
 tweakdefaults=
 """ >> "$HGRCPATH"
+
+sh % "setconfig 'visibility.enabled=false'"
 
 # Run test
 sh % "hg init repo"

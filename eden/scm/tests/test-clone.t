@@ -3,6 +3,7 @@
 
   $ disable treemanifest
   $ configure dummyssh
+  $ setconfig 'visibility.enabled=false'
 
 Prepare repo a:
 

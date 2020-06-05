@@ -8,6 +8,7 @@ pushrebase.
   $ disable treemanifest
   $ . "$TESTDIR/hgsql/library.sh"
   $ setconfig hgsql.verbose=True
+  $ setconfig visibility.enabled=False
   $ setconfig pushrebase.verbose=True
   $ enable pushrebase
   $ enable strip

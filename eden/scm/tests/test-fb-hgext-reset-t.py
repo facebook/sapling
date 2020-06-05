@@ -19,6 +19,8 @@ reset=
 evolution=
 """ >> "$HGRCPATH"
 
+sh % "setconfig 'visibility.enabled=false'"
+
 sh % "hg init repo"
 sh % "cd repo"
 

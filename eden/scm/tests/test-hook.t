@@ -9,6 +9,8 @@ commit hooks can see env vars
   >     ui.write('%s Python hook: %s\n' % (hooktype, ','.join(sorted(kwargs))))
   > EOF
 
+  $ setconfig visibility.enabled=false
+
   $ hg init a
   $ cd a
   $ readconfig <<EOF

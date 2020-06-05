@@ -8,9 +8,9 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-
-
 # Verify ancestry data is readable by mergedrivers by looking at mergestate:
+
+sh % "setconfig 'visibility.enabled=false'"
 
 sh % "newrepo"
 sh % "enable rebase"

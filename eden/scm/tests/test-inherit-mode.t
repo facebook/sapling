@@ -111,6 +111,7 @@ new directories are setgid
   00660 ./.hg/store/undo.bookmarks
   00660 ./.hg/store/undo.phaseroots
   00660 ./.hg/store/undo.visibleheads
+  006?? ./.hg/store/visibleheads (glob)
   00700 ./.hg/treestate/
   00600 ./.hg/treestate/* (glob)
   00660 ./.hg/undo.backup.dirstate

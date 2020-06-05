@@ -769,7 +769,7 @@ Even when the chain include missing node
 
 XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be okay)
   $ enable amend
-  $ hg hide 3 -q
+  $ hg hide 3 -q --hidden
 
   $ hg log -G
   @  5:1a79b7535141 D
