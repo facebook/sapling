@@ -78,6 +78,7 @@ from .. import (
     upgrade,
     util,
     vfs as vfsmod,
+    visibility,
 )
 from ..i18n import _, _x
 from ..node import bin, hex, nullhex, nullid, nullrev, short
@@ -2056,6 +2057,9 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                     metadata=metadata,
                     ui=ui,
                 )
+                unfi = repo.unfiltered()
+                if prec in unfi:
+                    visibility.remove(unfi, [prec])
                 tr.close()
             except ValueError as exc:
                 raise error.Abort(_("bad obsmarker input: %s") % exc)
