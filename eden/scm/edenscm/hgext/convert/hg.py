@@ -273,17 +273,18 @@ class mercurial_sink(common.converter_sink):
         if commit.rev and commit.saverev:
             extra["convert_revision"] = commit.rev
 
+        unfi = self.repo.unfiltered()
         while parents:
             p1 = p2
             p2 = parents.pop(0)
-            p1ctx = self.repo[p1]
+            p1ctx = unfi[p1]
             p2ctx = None
             if p2 != nodemod.nullid:
-                p2ctx = self.repo[p2]
+                p2ctx = unfi[p2]
             fileset = set(files)
             if full:
-                fileset.update(self.repo[p1])
-                fileset.update(self.repo[p2])
+                fileset.update(unfi[p1])
+                fileset.update(unfi[p2])
 
             if p2ctx:
                 p2files = set(cleanp2)
@@ -292,7 +293,7 @@ class mercurial_sink(common.converter_sink):
                     fileset.add(file)
 
             ctx = context.memctx(
-                self.repo,
+                unfi,
                 (p1, p2),
                 text,
                 fileset,
@@ -304,31 +305,31 @@ class mercurial_sink(common.converter_sink):
 
             # We won't know if the conversion changes the node until after the
             # commit, so copy the source's phase for now.
-            self.repo.ui.setconfig(
+            unfi.ui.setconfig(
                 "phases", "new-commit", phases.phasenames[commit.phase], "convert"
             )
 
-            with self.repo.transaction("convert") as tr:
-                node = nodemod.hex(self.repo.commitctx(ctx))
+            with unfi.transaction("convert") as tr:
+                node = nodemod.hex(unfi.commitctx(ctx))
 
                 # If the node value has changed, but the phase is lower than
                 # draft, set it back to draft since it hasn't been exposed
                 # anywhere.
                 if commit.rev != node:
-                    ctx = self.repo[node]
+                    ctx = unfi[node]
                     if ctx.phase() < phases.draft:
-                        phases.registernew(self.repo, tr, phases.draft, [ctx.node()])
+                        phases.registernew(unfi, tr, phases.draft, [ctx.node()])
 
             text = "(octopus merge fixup)\n"
             p2 = node
 
         if self.filemapmode and nparents == 1:
-            mfl = self.repo.manifestlog
-            mnode = self.repo.changelog.read(nodemod.bin(p2))[0]
+            mfl = unfi.manifestlog
+            mnode = unfi.changelog.read(nodemod.bin(p2))[0]
             closed = "close" in commit.extra
             if not closed and not mfl[m1node].read().diff(mfl[mnode].read()):
                 self.ui.status(_("filtering out empty revision\n"))
-                self.repo.rollback(force=True)
+                unfi.rollback(force=True)
                 return parent
         return p2
 
