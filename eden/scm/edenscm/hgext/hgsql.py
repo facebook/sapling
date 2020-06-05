@@ -170,6 +170,16 @@ def cansyncwithsql(repo):
 
 
 def uisetup(ui):
+    # hgsql is incompatible with visibleheads - hgsql always wants all heads.
+    ui.setconfig("visibility", "enabled", "false", "hgsql")
+    # hgsql is incompatible with narrow-heads - hgsql always wants all heads.
+    ui.setconfig("experimental", "narrow-heads", "false", "hgsql")
+    # hgsql wants the legacy revlog access for changelog.
+    ui.setconfig("experimental", "rust-commits-changelog", "false", "hgsql")
+    # hgsql does not want any kind of filtering - everything is public.
+    ui.setconfig("mutation", "enabled", "false", "hgsql")
+    ui.setconfig("experimental", "evolution", "obsolete", "hgsql")
+
     if ishgsqlbypassed(ui):
         return
 
