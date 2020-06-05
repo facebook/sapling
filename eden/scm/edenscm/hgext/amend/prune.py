@@ -27,6 +27,7 @@ from edenscm.mercurial import (
     repair,
     scmutil,
     util,
+    visibility,
 )
 from edenscm.mercurial.i18n import _
 
@@ -224,6 +225,9 @@ def prune(ui, repo, *revs, **opts):
 
         # create markers
         obsolete.createmarkers(repo, relations, metadata=metadata, operation="prune")
+
+        # hide nodes
+        visibility.remove(repo, [c.node() for c in precs])
 
         # informs that changeset have been pruned
         ui.status(_("%i changesets pruned\n") % len(precs))
