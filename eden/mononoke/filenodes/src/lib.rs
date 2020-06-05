@@ -48,6 +48,7 @@ pub struct FilenodeInfo {
 // read path i.e. serving "hg pull"/"hg update" then it should not rely on
 // filenodes being available and it needs to have a workaround.
 #[derive(Debug)]
+#[must_use]
 pub enum FilenodeResult<T> {
     Present(T),
     Disabled,

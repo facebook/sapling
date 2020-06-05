@@ -101,7 +101,8 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
     // A local miss should fill the remote cache:
     reader
         .get_all_filenodes_for_path(&ctx, REPO_ZERO, &path)
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
 
     let key = history_cache_key(REPO_ZERO, &PathWithHash::from_repo_path(&path));
     wait_for_history(&reader.remote_cache, &key).await?;
@@ -110,7 +111,8 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
     reader.remote_cache = make_test_cache();
     reader
         .get_all_filenodes_for_path(&ctx, REPO_ZERO, &path)
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
     let r = wait_for_history(&reader.remote_cache, &key).await;
     assert!(r.is_err());
 
