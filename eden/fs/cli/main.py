@@ -110,10 +110,21 @@ class InfoCmd(Subcmd):
 
 @subcmd("du", "Show disk space usage for a checkout")
 class DiskUsageCmd(Subcmd):
+
     isatty = sys.stdout and sys.stdout.isatty()
     # Escape sequence to move the cursor left to the start of the line
     # and then clear to the end of that line.
     MOVE_TO_SOL_CLEAR_TO_EOL = "\r\x1b[K" if isatty else ""
+    aggregated_usage_counts = {
+        "materialized": 0,
+        "ignored": 0,
+        "redirection": 0,
+        "backing": 0,
+        "shared": 0,
+        "fsck": 0,
+        "legacy": 0,
+    }
+    color_out = ui.get_output()
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -134,22 +145,55 @@ Please use `hg clean --all` to remove them.
             )
         instance = None
 
-        if len(mounts) == 0:
+        if not mounts:
             instance = get_eden_instance(args)
             if not instance:
-                raise subcmd_mod.CmdError(f"no Eden instance found.")
+                raise subcmd_mod.CmdError("no Eden instance found\n")
             mounts = list(instance.get_mount_paths())
-            if not len(mounts):
-                raise subcmd_mod.CmdError(f"no Eden mount found.")
+            if not mounts:
+                raise subcmd_mod.CmdError("no Eden mount found\n")
 
         backing_repos = set()
+        all_redirections = set()
 
+        self.underlined("Mounts")
+
+        # print all mounts together.
+        for mount in mounts:
+            print(mount)
+
+        # loop again because fsck details for each mount
+        # are printed if exist
         for mount in mounts:
             instance, checkout, _rel_path = require_checkout(args, mount)
             config = checkout.get_config()
             backing_repos.add(config.backing_repo)
 
             self.usage_for_mount(mount, args, clean)
+
+        self.underlined("Redirections")
+
+        for mount in mounts:
+            instance, checkout, _rel_path = require_checkout(args, mount)
+            self.usage_for_redirections(checkout, all_redirections, clean)
+
+        if not all_redirections:
+            print("No redirection")
+
+        if not clean and all_redirections:
+            for redir in all_redirections:
+                print(redir)
+            print(
+                """
+To reclaim space from buck-out directories, run `buck clean` from the
+parent of the buck-out directory.
+"""
+            )
+
+        if backing_repos:
+            self.underlined("Backing repos ")
+            for backing in backing_repos:
+                print(backing)
 
         for backing in backing_repos:
             self.backing_usage(backing)
@@ -171,90 +215,75 @@ Please use `hg clean --all` to remove them.
         underline = "-" * len(message)
         print(f"\n{message}\n{underline}\n")
 
-    def usage_for_dir(self, label, path) -> None:
-        if self.isatty:
-            print(f"Computing usage of {label}...", end="", flush=True)
+    def usage_for_dir(
+        self, path, usage_type: str, print_label: Optional[str] = None
+    ) -> None:
         usage = self.du(path)
-        print(f"{self.MOVE_TO_SOL_CLEAR_TO_EOL}{label}: {format_size(usage)}")
+        if usage_type in self.aggregated_usage_counts.keys():
+            self.aggregated_usage_counts[usage_type] += usage
+        if print_label:
+            print(f"{self.MOVE_TO_SOL_CLEAR_TO_EOL}{print_label}: {format_size(usage)}")
 
     def backing_usage(self, backing_repo: Path) -> None:
-        self.underlined(f"Backing repo: {backing_repo}")
-        print(
-            """
-CAUTION! You can lose work and break things by manually deleting data
-from the backing repo directory!
-"""
-        )
-        self.usage_for_dir("Overall usage", backing_repo)
+
+        self.usage_for_dir(backing_repo, "backing")
 
         top_dirs = os.listdir(backing_repo)
         if ".hg" in top_dirs:
             hg_dir = backing_repo / ".hg"
             lfs_dir = hg_dir / "store" / "lfs"
-            self.usage_for_dir("          .hg", hg_dir)
             if os.path.exists(lfs_dir):
-                self.usage_for_dir("    LFS cache", lfs_dir)
                 print(
                     f"""
-Reclaim space from the LFS cache directory by running:
+            Reclaim space from the LFS cache directory by running:
 
-    hg -R {backing_repo} gc
-"""
+                hg -R {backing_repo} gc
+            """
                 )
 
             if len(top_dirs) > 1:
                 print(
                     f"""
-Working copy detected in backing repo.  This is not generally useful
-and just takes up space.  You can make this a bare repo to reclaim
-space by running:
+    Working copy detected in backing repo.  This is not generally useful
+    and just takes up space.  You can make this a bare repo to reclaim
+    space by running:
 
-    hg -R {backing_repo} checkout null
-"""
+        hg -R {backing_repo} checkout null
+    """
                 )
 
     def shared_usage(self, instance: EdenInstance, clean: bool) -> None:
         logs_dir = instance.state_dir / "logs"
         storage_dir = instance.state_dir / "storage"
-
-        self.underlined("Data shared by all mounts")
-        self.usage_for_dir("Log files", logs_dir)
-        self.usage_for_dir("Storage engine", storage_dir)
+        self.underlined("Shared space")
+        self.usage_for_dir(logs_dir, "shared")
+        self.usage_for_dir(storage_dir, "shared")
         if clean:
-            print("\nCleaning the space used by the storage engine...")
+            print("Cleaning shared space used by the storage engine...")
             subprocess.check_call(["eden", "gc"])
-            # subprocess.check_call(["buck", "run", "edenfsctl", "gc"])
-
         else:
             print("\nRun `eden gc` to reduce the space used by the storage engine.")
 
-    def usage_for_redirections(self, checkout: EdenCheckout, clean: bool) -> None:
+    def usage_for_redirections(
+        self, checkout: EdenCheckout, redirection_repos: Set[str], clean: bool
+    ) -> None:
         redirections = redirect_mod.get_effective_redirections(checkout, mtab.new())
         seen_paths = set()
         if len(redirections) > 0:
-            print("Redirections:")
-
             for redir in redirections.values():
                 target = redir.expand_target_abspath(checkout)
                 seen_paths.add(target)
-                self.usage_for_dir(f"    {redir.repo_path}", target)
-                if clean:
-                    dirname, basename = os.path.split(redir.repo_path)
-                    parent = os.path.join(checkout.path, dirname)
-                    if basename == "buck-out":
-                        print(
-                            f"\nReclaiming space from redirection: {os.path.join(checkout.path, redir.repo_path)}"
-                        )
+                self.usage_for_dir(target, "redirection")
+
+                dirname, basename = os.path.split(redir.repo_path)
+                parent = os.path.join(checkout.path, dirname)
+                if basename == "buck-out":
+                    redir_full_path = os.path.join(checkout.path, redir.repo_path)
+                    redirection_repos.add(redir_full_path)
+                    if clean:
+                        print(f"\nReclaiming space from redirection: {redir_full_path}")
                         subprocess.check_call(["buck", "clean"], cwd=parent)
                         print("Space reclaimed.\n")
-
-            if not clean:
-                print(
-                    """
-To reclaim space from buck-out directories, run `buck clean` from the
-parent of the buck-out directory.
-"""
-                )
 
         # Deal with any legacy bind mounts that may have been made
         # obsolete by being migrated to redirections
@@ -266,8 +295,9 @@ parent of the buck-out directory.
                 if legacy_dir not in seen_paths:
                     if not legacy_dirs:
                         legacy_dirs.append(legacy_dir)
-                        print("Legacy bind mounts:")
-                    self.usage_for_dir(f"    {legacy_dir}", legacy_dir)
+                    self.usage_for_dir(
+                        legacy_dir, "legacy", print_label=f"    {legacy_dir}"
+                    )
 
         if legacy_dirs:
             print(
@@ -279,32 +309,22 @@ Legacy bind mount dirs listed above are unused and can be removed!
     def usage_for_mount(
         self, mount: str, args: argparse.Namespace, clean: bool
     ) -> None:
-        self.underlined(f"Mount: {mount}")
 
         instance, checkout, _rel_path = require_checkout(args, mount)
 
         client_dir = checkout.state_dir
         overlay_dir = os.path.join(client_dir, "local")
 
-        self.usage_for_dir("Materialized files", overlay_dir)
+        self.usage_for_dir(overlay_dir, "materialized")
         with instance.get_thrift_client() as client:
-            if self.isatty:
-                print(f"Computing usage of ignored files...", end="", flush=True)
             scm_status = client.getScmStatus(
                 bytes(checkout.path), True, checkout.get_snapshot().encode()
             )
-            ignored_usage = 0
-            buckd_usage = 0
-            pyc_usage = 0
+
             for rel_path, _file_status in scm_status.entries.items():
                 try:
                     st = os.lstat(os.path.join(bytes(checkout.path), rel_path))
-                    if b".buckd" in rel_path:
-                        buckd_usage += st.st_size
-                    elif rel_path.endswith(b".pyc"):
-                        pyc_usage += st.st_size
-                    else:
-                        ignored_usage += st.st_size
+                    self.aggregated_usage_counts["ignored"] += st.st_size
                 except FileNotFoundError:
                     # Status can show files that were present in the overlay
                     # before a redirection was mounted over the top of it,
@@ -313,36 +333,19 @@ Legacy bind mount dirs listed above are unused and can be removed!
                     # between the status call and our attempt to stat it.
                     # Just absorb the error here and ignore it.
                     pass
-            print(f"{self.MOVE_TO_SOL_CLEAR_TO_EOL}", end="")
-            print(
-                f"  Ignored .buckd state: {format_size(buckd_usage)}    (see T37376291)"
-            )
-            print(f"    Ignored .pyc files: {format_size(pyc_usage)}")
-            print(f"   Other Ignored files: {format_size(ignored_usage)}")
-
-        print(
-            """
-Materialized files will be de-materialized once committed.
-Use `hg status -i` to see Ignored files, `hg clean --all` to remove them
-but be careful: it will remove untracked files as well!
-It is best to use `eden redirect` or the `mkscratch` utility to relocate
-files outside the repo rather than to ignore and clean them up.
-"""
-        )
 
         fsck_dir = os.path.join(client_dir, "fsck")
         if os.path.exists(fsck_dir):
-            self.usage_for_dir("fsck recovered files", fsck_dir)
-            print(
-                f"""
-A filesytem check recovered data and stored it at:
-   {fsck_dir}
-If you have recovered all that you need from it, you can remove that
-directory to reclaim the disk space.
-"""
-            )
-
-        self.usage_for_redirections(checkout, clean)
+            self.usage_for_dir(fsck_dir, "fsck")
+            if clean:
+                print(
+                    f"""
+        A filesytem check recovered data and stored it at:
+           {fsck_dir}
+        If you have recovered all that you need from it, you can remove that
+        directory to reclaim the disk space.
+        """
+                )
 
 
 @subcmd("pid", "Print the daemon's process ID if running")
