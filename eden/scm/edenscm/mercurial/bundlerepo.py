@@ -59,7 +59,10 @@ class bundlerevlog(revlog.revlog):
         # To differentiate a rev in the bundle from a rev in the revlog, we
         # check revision against repotiprev.
         opener = vfsmod.readonlyvfs(opener)
-        revlog.revlog.__init__(self, opener, indexfile, index2=True)
+        # only use index2 for changelog, which is known to be non-inlined and
+        # non-deltaed.
+        index2 = indexfile.startswith("00changelog")
+        revlog.revlog.__init__(self, opener, indexfile, index2=index2)
         self.bundle = cgunpacker
         n = len(self)
         self.repotiprev = n - 1
@@ -99,7 +102,8 @@ class bundlerevlog(revlog.revlog):
                 node,
             )
             self.index.insert(-1, e)
-            self.index2.insert(node, [p for p in (p1rev, p2rev) if p >= 0])
+            if index2:
+                self.index2.insert(node, [p for p in (p1rev, p2rev) if p >= 0])
             self.nodemap[node] = n
             self.bundlerevs.add(n)
             self.bundleheads.add(n)
