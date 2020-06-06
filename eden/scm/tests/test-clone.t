@@ -3,7 +3,6 @@
 
   $ disable treemanifest
   $ configure dummyssh
-  $ setconfig 'visibility.enabled=false'
 
 Prepare repo a:
 
@@ -69,8 +68,9 @@ No update, with debug option:
   progress: linking: 8
   progress: linking: 9
   progress: linking: 10
+  progress: linking: 11
   progress: linking (end)
-  linked 10 files
+  linked 11 files
   progress: migrating commit data: 1/11 commits (9.09%)
   progress: migrating commit data: 2/11 commits (18.18%)
   progress: migrating commit data: 3/11 commits (27.27%)
