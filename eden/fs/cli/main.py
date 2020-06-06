@@ -136,13 +136,8 @@ class DiskUsageCmd(Subcmd):
         mounts = args.mounts
         clean = args.clean
 
-        if clean:
-            print(
-                """
-WARNING: --clean option doesn't remove ignored files.
-Please use `hg clean --all` to remove them.
-"""
-            )
+        color_out = self.color_out
+
         instance = None
 
         if not mounts:
@@ -152,6 +147,18 @@ Please use `hg clean --all` to remove them.
             mounts = list(instance.get_mount_paths())
             if not mounts:
                 raise subcmd_mod.CmdError("no Eden mount found\n")
+
+        if clean:
+            color_out.write(
+                """
+WARNING: --clean option doesn't remove ignored files.
+Materialized files will be de-materialized once committed.
+Use `hg status -i` to see Ignored files, `hg clean --all`
+to remove them but be careful: it will remove untracked files as well!
+It is best to use `eden redirect` or the `mkscratch` utility to relocate
+files outside the repo rather than to ignore and clean them up.\n""",
+                fg=color_out.YELLOW,
+            )
 
         backing_repos = set()
         all_redirections = set()
@@ -191,9 +198,17 @@ parent of the buck-out directory.
             )
 
         if backing_repos:
-            self.underlined("Backing repos ")
+            self.underlined("Backing repos")
             for backing in backing_repos:
                 print(backing)
+
+            color_out.write(
+                """
+CAUTION: You can lose work and break things by manually deleting data
+from the backing repo directory!
+""",
+                fg=color_out.YELLOW,
+            )
 
         for backing in backing_repos:
             self.backing_usage(backing)
@@ -201,7 +216,51 @@ parent of the buck-out directory.
         if instance:
             self.shared_usage(instance, clean)
 
+        self.make_summary(clean)
+
         return 0
+
+    def make_summary(self, clean):
+        self.underlined("Summary")
+        type_labels = {
+            "materialized": "Materialized files",
+            "redirection": "Redirections",
+            "ignored": "Ignored files",
+            "backing": "Backing repos",
+            "shared": "Shared space",
+            "legacy": "Legacy bind mounts",
+            "fsck": "Filesystem Check recovered files",
+        }
+        clean_labels = {
+            "materialized": "Not cleaned. Please see WARNING above",
+            "redirection": "Cleaned",
+            "ignored": "Not cleaned. Please see WARNING above",
+            "backing": "Not cleaned. Please see CAUTION above",
+            "shared": "Cleaned",
+            "legacy": "Not cleaned. Directories listed above. \
+            Check and remove manually",
+            "fsck": "Not cleaned. Directories listed above. \
+            Check and remove manually",
+        }
+
+        # align colons. type_label for fsck is long, so
+        # space for left align is longer when fsck usage
+        # is printed.
+        if self.aggregated_usage_counts["fsck"]:
+            f = "{0:>33}: {1:<10}"
+        else:
+            f = "{0:>20}: {1:<10}"
+
+        for key, value in self.aggregated_usage_counts.items():
+            type_label = type_labels[key]
+            clean_label = clean_labels[key] if clean else ""
+            if value:
+                self.color_out.write(f.format(type_label, format_size(value)))
+                if clean_label == "Cleaned":
+                    self.color_out.writeln(clean_label, fg=self.color_out.GREEN)
+                else:
+                    self.color_out.writeln(clean_label, fg=self.color_out.YELLOW)
+        self.color_out.writeln("")
 
     def du(self, path) -> int:
         cp = subprocess.run(["du", "-skxc", path], stdout=subprocess.PIPE)
@@ -235,21 +294,21 @@ parent of the buck-out directory.
             if os.path.exists(lfs_dir):
                 print(
                     f"""
-            Reclaim space from the LFS cache directory by running:
+Reclaim space from the LFS cache directory by running:
 
-                hg -R {backing_repo} gc
-            """
+hg -R {backing_repo} gc
+"""
                 )
 
             if len(top_dirs) > 1:
                 print(
                     f"""
-    Working copy detected in backing repo.  This is not generally useful
-    and just takes up space.  You can make this a bare repo to reclaim
-    space by running:
+Working copy detected in backing repo.  This is not generally useful
+and just takes up space.  You can make this a bare repo to reclaim
+space by running:
 
-        hg -R {backing_repo} checkout null
-    """
+hg -R {backing_repo} checkout null
+"""
                 )
 
     def shared_usage(self, instance: EdenInstance, clean: bool) -> None:
@@ -340,11 +399,11 @@ Legacy bind mount dirs listed above are unused and can be removed!
             if clean:
                 print(
                     f"""
-        A filesytem check recovered data and stored it at:
-           {fsck_dir}
-        If you have recovered all that you need from it, you can remove that
-        directory to reclaim the disk space.
-        """
+A filesytem check recovered data and stored it at:
+{fsck_dir}
+If you have recovered all that you need from it, you can remove that
+directory to reclaim the disk space.
+"""
                 )
 
 
