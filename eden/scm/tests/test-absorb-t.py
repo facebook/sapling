@@ -13,7 +13,6 @@ feature.require(["py2"])
 
 
 sh % "setconfig 'experimental.evolution='"
-sh % "setconfig 'visibility.enabled=false'"
 sh % "enable absorb"
 
 sh % "cat" << r"""
@@ -109,14 +108,13 @@ sh % "hg absorb --apply-changes" == r"""
     ad8b8b7 commit 4
     5c5f952 commit 2
     4ec16f8 commit 1
-    saved backup bundle to * (glob)
     2 of 2 chunks applied"""
 sh % "hg annotate a" == r"""
-    0: 1a
-    1: 2b
-    2: 3
-    3: 4d
-    4: 5e"""
+    5: 1a
+    6: 2b
+    7: 3
+    8: 4d
+    9: 5e"""
 
 # Delete a few lines and related commits will be removed if they will be empty:
 
@@ -137,28 +135,27 @@ sh % "hg absorb -a" == r"""
     84e5416 commit 5
     ff5d556 commit 3
     f548282 commit 1
-    saved backup bundle to * (glob)
     3 of 3 chunks applied"""
 sh % "hg annotate a" == r"""
-    1: 2b
-    2: 4d"""
+    11: 2b
+    12: 4d"""
 sh % "hg log -T '{rev} {desc}\\n' -Gp" == r"""
-    @  2 commit 4
+    @  12 commit 4
     |  diff -r 1cae118c7ed8 -r 58a62bade1c6 a
-    |  --- a/a	Thu Jan 01 00:00:00 1970 +0000
-    |  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+    |  --- a/a Thu Jan 01 00:00:00 1970 +0000
+    |  +++ b/a Thu Jan 01 00:00:00 1970 +0000
     |  @@ -1,1 +1,2 @@
     |   2b
     |  +4d
     |
-    o  1 commit 2
+    o  11 commit 2
     |  diff -r 84add69aeac0 -r 1cae118c7ed8 a
-    |  --- a/a	Thu Jan 01 00:00:00 1970 +0000
-    |  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+    |  --- a/a Thu Jan 01 00:00:00 1970 +0000
+    |  +++ b/a Thu Jan 01 00:00:00 1970 +0000
     |  @@ -0,0 +1,1 @@
     |  +2b
     |
-    o  0 commit 1"""
+    o  10 commit 1"""
 
 # Non 1:1 map changes will be ignored:
 
@@ -183,27 +180,27 @@ insert aftert 4d
 sh % "hg absorb -aq"
 sh % "hg status"
 sh % "hg annotate a" == r"""
-    1: insert before 2b
-    1: 2b
-    2: 4d
-    2: insert aftert 4d"""
+    13: insert before 2b
+    13: 2b
+    14: 4d
+    14: insert aftert 4d"""
 
 # Bookmarks are moved:
 
-sh % "hg bookmark -r 1 b1"
-sh % "hg bookmark -r 2 b2"
+sh % "hg bookmark -r '.^' b1" == ""
+sh % "hg bookmark -r '.' b2" == ""
 sh % "hg bookmark ba"
 sh % "hg bookmarks" == r"""
-       b1                        1:b35060a57a50
-       b2                        2:946e4bc87915
-     * ba                        2:946e4bc87915"""
+    b1                        13:b35060a57a50
+      b2                        14:946e4bc87915
+    * ba                        14:946e4bc87915"""
 sh % "sedi s/insert/INSERT/ a"
 sh % "hg absorb -aq"
 sh % "hg status"
 sh % "hg bookmarks" == r"""
-       b1                        1:a4183e9b3d31
-       b2                        2:c9b20c925790
-     * ba                        2:c9b20c925790"""
+    b1                        15:a4183e9b3d31
+      b2                        16:c9b20c925790
+    * ba                        16:c9b20c925790"""
 
 # Non-mofified files are ignored:
 
@@ -228,7 +225,6 @@ sh % "hg absorb -a" == r"""
     2 changesets affected
     c9b20c9 commit 4
     a4183e9 commit 2
-    saved backup bundle to * (glob)
     2 of 2 chunks applied"""
 sh % "hg status" == r"""
     A c
@@ -236,7 +232,7 @@ sh % "hg status" == r"""
 
 # Public commits will not be changed:
 
-sh % "hg phase -p 1"
+sh % "hg phase -p '.^^'"
 sh % "sedi s/Insert/insert/ a"
 sh % "hg absorb -n" == r"""
     showing changes for a
@@ -260,20 +256,19 @@ sh % "hg absorb -a" == r"""
 
     1 changeset affected
     85b4e0e commit 4
-    saved backup bundle to * (glob)
     1 of 2 chunks applied"""
 sh % "hg diff -U 0" == r"""
     diff -r 1c8eadede62a a
-    --- a/a	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/a	* (glob)
+    --- a/a Thu Jan 01 00:00:00 1970 +0000
+    +++ b/a Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +1,1 @@
     -Insert before 2b
     +insert before 2b"""
 sh % "hg annotate a" == r"""
-    1: Insert before 2b
-    1: 2b
-    2: 4d
-    2: insert aftert 4d"""
+    18: Insert before 2b
+    18: 2b
+    21: 4d
+    21: insert aftert 4d"""
 
 # Make working copy clean:
 
@@ -294,19 +289,19 @@ sh % "hg merge -q m1"
 sh % "hg commit -m merge"
 sh % "hg bookmark -d m1"
 sh % "hg log -G -T '{rev} {desc} {phase}\\n'" == r"""
-    @    6 merge draft
+    @    25 merge draft
     |\
-    | o  5 m2 draft
+    | o  24 m2 draft
     | |
-    o |  4 m1 draft
+    o |  23 m1 draft
     |/
-    o  3 b draft
+    o  22 b draft
     |
-    o  2 commit 4 draft
+    o  21 commit 4 draft
     |
-    o  1 commit 2 public
+    o  18 commit 2 public
     |
-    o  0 commit 1 public"""
+    o  10 commit 1 public"""
 sh % "echo 2" >> "m1"
 sh % "echo 2" >> "m2"
 sh % "hg absorb -a" == r"""
@@ -343,7 +338,6 @@ sh % "hg absorb -a a" == r"""
     2 changesets affected
     4472dd5 commit a 2
     6905bbb commit a 1
-    saved backup bundle to * (glob)
     1 of 1 chunk applied"""
 sh % "hg status" == "M b"
 sh % "hg absorb -a --exclude b" == r"""
@@ -360,7 +354,6 @@ sh % "hg absorb -a b" == r"""
     2 changesets affected
     61782db commit b 2
     2517e37 commit b 1
-    saved backup bundle to * (glob)
     1 of 1 chunk applied"""
 sh % "hg status"
 sh % "cat a b" == r"""
@@ -373,10 +366,10 @@ sh % "cat a b" == r"""
 
 sh % "sedi s/Line/line/ a b"
 sh % "hg log -T '{rev}:{node} {desc}\\n'" == r"""
-    3:712d16a8f445834e36145408eabc1d29df05ec09 commit b 2
-    2:74cfa6294160149d60adbf7582b99ce37a4597ec commit b 1
-    1:28f10dcf96158f84985358a2e5d5b3505ca69c22 commit a 2
-    0:f9a81da8dc53380ed91902e5b82c1b36255a4bd0 commit a 1"""
+    9:712d16a8f445834e36145408eabc1d29df05ec09 commit b 2
+    8:74cfa6294160149d60adbf7582b99ce37a4597ec commit b 1
+    5:28f10dcf96158f84985358a2e5d5b3505ca69c22 commit a 2
+    4:f9a81da8dc53380ed91902e5b82c1b36255a4bd0 commit a 1"""
 sh % "hg --config 'absorb.maxstacksize=1' absorb -n" == r"""
     absorb: only the recent 1 changesets will be analysed
     showing changes for a
@@ -423,10 +416,10 @@ sh % "hg --config 'absorb.maxstacksize=3' sf -a" == r"""
     28f10dc commit a 2
     2 of 2 chunks applied"""
 sh % "hg log -T '{rev}:{node|short} {desc} {get(extras, \"absorb_source\")}\\n'" == r"""
-    6:cbc0c676ae8f commit b 2  (trailing space)
-    5:071dee819ad0 commit b 1  (trailing space)
-    4:4faf555e5598 commit a 2  (trailing space)
-    0:f9a81da8dc53 commit a 1"""
+    12:cbc0c676ae8f commit b 2 
+    11:071dee819ad0 commit b 1 
+    10:4faf555e5598 commit a 2 
+    4:f9a81da8dc53 commit a 1"""
 sh % "hg absorb -a" == r"""
     showing changes for a
             @@ -0,1 +0,1 @@
@@ -437,10 +430,10 @@ sh % "hg absorb -a" == r"""
     f9a81da commit a 1
     1 of 1 chunk applied"""
 sh % "hg log -T '{rev}:{node|short} {desc} {get(extras, \"absorb_source\")}\\n'" == r"""
-    10:a478955a9e03 commit b 2  (trailing space)
-    9:7380d5e6fab8 commit b 1  (trailing space)
-    8:4472dd5179eb commit a 2  (trailing space)
-    7:6905bbb02e4e commit a 1"""
+    3:a478955a9e03 commit b 2 
+    2:7380d5e6fab8 commit b 1 
+    1:4472dd5179eb commit a 2 
+    0:6905bbb02e4e commit a 1"""
 
 # Test config option absorb.amendflags and running as a sub command of amend:
 
