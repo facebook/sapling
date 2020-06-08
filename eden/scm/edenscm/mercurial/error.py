@@ -151,6 +151,10 @@ class Abort(Hint, Context, Component, Exception):
     exitcode = 255
 
 
+class DeprecatedError(Abort):
+    __bytes__ = _tobytes
+
+
 class UncommitedChangesAbort(Abort):
     """Raised if there are uncommited changs and the command requires a clean
     working copy

@@ -26,7 +26,7 @@ import sys
 import tempfile
 import time
 import traceback
-from enum import Enum
+from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import bindings
@@ -154,6 +154,19 @@ _unset = uiconfig._unset
 
 # _reqexithandlers: callbacks run at the end of a request
 _reqexithandlers = []
+
+
+class deprecationlevel(IntEnum):
+    # Logs usage of the deprecated code path
+    Log = 0
+    # Prints a warning on usage of the deprecated code path
+    Warn = 1
+    # Inserts a 2 second sleep to the deprecated code path
+    Slow = 2
+    # Throws an exception, but a config can be used to opt in to the deprecated feature
+    Optin = 3
+    # Throws a non-bypassable exception
+    Block = 4
 
 
 class ui(object):
@@ -1502,6 +1515,77 @@ class ui(object):
             pass
 
         self._logsample(service, *origmsg, **opts)
+
+    def deprecate(
+        self, name, message, maxlevel=deprecationlevel.Log, startstr=None, endstr=None
+    ):
+        """marks a code path as deprecated
+
+        The default behavior is to simply log the usage of the deprecated path,
+        but `maxlevel` can be used to specify stricter deprecation strategies.
+
+        If `start` and `end` are provided, the deprecation level will be slowly
+        increased over the course of the `start` and `end` time, reaching the
+        specified `maxlevel` at the end time.
+        """
+        level = maxlevel
+        if startstr is not None and endstr is not None:
+            now = time.time()
+            start = util.parsedate(startstr)[0]
+            end = util.parsedate(endstr)[0]
+            # Linearly interpolate to get the current level
+            percent = float(now - start) / float(end - start)
+            level = max(0, min(int(percent * maxlevel), maxlevel))
+
+        self.log(
+            "deprecated",
+            message,
+            feature=name,
+            level=int(level),
+            version=util.version(),
+        )
+
+        bypassed = self.configbool("deprecated", "bypass-%s" % name)
+        if level == deprecationlevel.Block:
+            raise error.DeprecatedError(
+                _("feature '%s' is disabled: %s") % (name, message)
+            )
+        elif level == deprecationlevel.Optin and not bypassed:
+            hint = (
+                _(
+                    "set config `deprecated.bypass-%s=True` to temporarily bypass this block"
+                )
+                % name
+            )
+            if endstr is not None and maxlevel == deprecationlevel.Block:
+                hint = _(
+                    "set config `deprecated.bypass-%s=True` to bypass this block, but note the feature will be completely disabled on %s"
+                ) % (name, endstr)
+            raise error.DeprecatedError(
+                _("feature '%s' is disabled: %s") % (name, message), hint=hint
+            )
+        elif level >= deprecationlevel.Slow and not bypassed:
+            self.warn(
+                _(
+                    "warning: sleeping for 2 seconds because feature '%s' is deprecated: %s\n"
+                )
+                % (name, message)
+            )
+            self.warn(
+                _(
+                    "note: the feature will be completely disabled soon, so please migrate off\n"
+                )
+            )
+            time.sleep(2)
+        elif level >= deprecationlevel.Warn:
+            self.warn(_("warning: feature '%s' is deprecated: %s\n") % (name, message))
+            self.warn(
+                _(
+                    "note: the feature will be completely disabled soon, so please migrate off\n"
+                )
+            )
+        else:
+            self.develwarn(_("feature '%s' is deprecated: %s\n") % (name, message))
 
     def _computesamplingfilters(self):
         filtermap = {}

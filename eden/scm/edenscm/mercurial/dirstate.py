@@ -125,8 +125,11 @@ class dirstate(object):
             opener.makedirs("treestate")
             self._mapcls = treestate.treestatemap
         elif istreedirstate:
+            ui.deprecate("treedirstate", "treedirstate is replaced by treestate")
             self._mapcls = treedirstate.treedirstatemap
         else:
+            if "eden" not in repo.requirements:
+                ui.deprecate("dirstatemap", "dirstatemap is replaced by treestate")
             self._mapcls = dirstatemap
         self._fs = filesystem.physicalfilesystem(root, self)
 

@@ -681,6 +681,9 @@ def branch(repo, subset, x):
 def bumped(repo, subset, x):
     msg = "'bumped()' is deprecated, " "use 'phasedivergent()'"
     repo.ui.deprecwarn(msg, "4.4")
+    repo.ui.deprecate(
+        "bumped-revset", "bumped() has been replaced with phasedivergent()"
+    )
 
     return phasedivergent(repo, subset, x)
 
@@ -929,6 +932,9 @@ def destination(repo, subset, x):
 def divergent(repo, subset, x):
     msg = "'divergent()' is deprecated, " "use 'contentdivergent()'"
     repo.ui.deprecwarn(msg, "4.4")
+    repo.ui.deprecate(
+        "divergent-revset", "divergent() has been replaced with contentdivergent()"
+    )
 
     return contentdivergent(repo, subset, x)
 
@@ -2320,6 +2326,7 @@ def _substringmatcher(pattern, casesensitive=True):
 def unstable(repo, subset, x):
     msg = "'unstable()' is deprecated, " "use 'orphan()'"
     repo.ui.deprecwarn(msg, "4.4")
+    repo.ui.deprecate("unstable-revset", "unstable() has been replaced with orphan()")
 
     return orphan(repo, subset, x)
 

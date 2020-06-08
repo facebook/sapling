@@ -981,6 +981,9 @@ def showtroubles(repo, **args):
     """
     msg = "'troubles' is deprecated, " "use 'instabilities'"
     repo.ui.deprecwarn(msg, "4.4")
+    repo.ui.deprecate(
+        "troubles-template", "troubles has been replaced with instabilities"
+    )
 
     return showinstabilities(repo=repo, **args)
 

@@ -934,30 +934,35 @@ def allsuccessors(obsstore, nodes, ignoreflags=0):
 def marker(repo, data):
     movemsg = "obsolete.marker moved to obsutil.marker"
     repo.ui.deprecwarn(movemsg, "4.3")
+    repo.ui.deprecate("obsolete.marker", movemsg)
     return obsutil.marker(repo, data)
 
 
 def getmarkers(repo, nodes=None, exclusive=False):
     movemsg = "obsolete.getmarkers moved to obsutil.getmarkers"
     repo.ui.deprecwarn(movemsg, "4.3")
+    repo.ui.deprecate("obsolete.getmarkers", movemsg)
     return obsutil.getmarkers(repo, nodes=nodes, exclusive=exclusive)
 
 
 def exclusivemarkers(repo, nodes):
     movemsg = "obsolete.exclusivemarkers moved to obsutil.exclusivemarkers"
     repo.ui.deprecwarn(movemsg, "4.3")
+    repo.ui.deprecate("obsolete.exclusivemarkers", movemsg)
     return obsutil.exclusivemarkers(repo, nodes)
 
 
 def foreground(repo, nodes):
     movemsg = "obsolete.foreground moved to obsutil.foreground"
     repo.ui.deprecwarn(movemsg, "4.3")
+    repo.ui.deprecate("obsolete.foreground", movemsg)
     return obsutil.foreground(repo, nodes)
 
 
 def successorssets(repo, initialnode, cache=None):
     movemsg = "obsolete.successorssets moved to obsutil.successorssets"
     repo.ui.deprecwarn(movemsg, "4.3")
+    repo.ui.deprecate("obsolete.successorssets", movemsg)
     return obsutil.successorssets(repo, initialnode, cache=cache)
 
 
@@ -1049,6 +1054,7 @@ def _computeobsoleteset(repo):
 def _computeunstableset(repo):
     msg = "'unstable' volatile set is deprecated, " "use 'orphan'"
     repo.ui.deprecwarn(msg, "4.4")
+    repo.ui.deprecate("unstable-obsolete-set", msg)
 
     return _computeorphanset(repo)
 
@@ -1088,6 +1094,7 @@ def _computeextinctset(repo):
 def _computebumpedset(repo):
     msg = "'bumped' volatile set is deprecated, " "use 'phasedivergent'"
     repo.ui.deprecwarn(msg, "4.4")
+    repo.ui.deprecate("obsolete.bumped", msg)
 
     return _computephasedivergentset(repo)
 
@@ -1121,6 +1128,7 @@ def _computephasedivergentset(repo):
 def _computedivergentset(repo):
     msg = "'divergent' volatile set is deprecated, " "use 'contentdivergent'"
     repo.ui.deprecwarn(msg, "4.4")
+    repo.ui.deprecate("obsolete.divergent", msg)
 
     return _computecontentdivergentset(repo)
 
