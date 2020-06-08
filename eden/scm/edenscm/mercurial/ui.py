@@ -194,6 +194,7 @@ class ui(object):
             self._tweaked = src._tweaked
             self._outputui = src._outputui
             self._terminaloutput = src._terminaloutput
+            self.streampager = src.streampager
 
             self.environ = src.environ
             self.callhooks = src.callhooks
@@ -214,6 +215,7 @@ class ui(object):
             self.pageractive = False
             self._disablepager = False
             self._tweaked = False
+            self.streampager = None
 
             # shared read-only environment
             self.environ = encoding.environ
@@ -877,11 +879,13 @@ class ui(object):
         assert isinstance(self.ferr, util.refcell)
         origfout = self.fout.swap(stream(pager.write))
         origferr = self.ferr.swap(stream(pager.write_err))
+        self.streampager = pager
 
         @self.atexit
         def waitpager():
             with self.timeblockedsection("pager"):
                 pager.close()
+            self.streampager = None
             self.fout.swap(origfout)
             self.ferr.swap(origferr)
             encoding.outputencoding = origencoding

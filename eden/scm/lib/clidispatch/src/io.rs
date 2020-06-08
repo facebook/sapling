@@ -17,6 +17,7 @@ pub struct IO {
     pub input: Box<dyn Read>,
     pub output: Box<dyn Write>,
     pub error: Option<Box<dyn Write>>,
+    pub progress: Option<Box<dyn Write>>,
 
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
 }
@@ -52,6 +53,7 @@ impl IO {
             input: Box::new(input),
             output: Box::new(output),
             error: error.map(|e| Box::new(e) as Box<dyn Write>),
+            progress: None,
             pager_handle: None,
         }
     }
@@ -72,6 +74,14 @@ impl IO {
         Ok(())
     }
 
+    pub fn write_progress(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
+        let data = data.as_ref();
+        if let Some(ref mut progress) = self.progress {
+            progress.write_all(data)?;
+        }
+        Ok(())
+    }
+
     pub fn flush(&mut self) -> io::Result<()> {
         self.output.flush()?;
         if let Some(ref mut error) = self.error {
@@ -85,6 +95,7 @@ impl IO {
             input: Box::new(io::stdin()),
             output: Box::new(io::stdout()),
             error: Some(Box::new(io::stderr())),
+            progress: None,
             pager_handle: None,
         }
     }
@@ -115,15 +126,18 @@ impl IO {
 
         let (out_read, out_write) = pipe();
         let (err_read, err_write) = pipe();
+        let (prg_read, prg_write) = pipe();
 
         self.flush()?;
         self.output = Box::new(out_write);
         self.error = Some(Box::new(err_write));
+        self.progress = Some(Box::new(prg_write));
 
         self.pager_handle = Some(spawn(|| {
             pager
                 .add_output_stream(out_read, "")?
-                .add_error_stream(err_read, "")?;
+                .add_error_stream(err_read, "")?
+                .set_progress_stream(prg_read);
             pager.run()?;
             Ok(())
         }));
@@ -138,6 +152,7 @@ impl Drop for IO {
         // Drop the output and error. This sends EOF to pager.
         self.output = Box::new(Vec::new());
         self.error = None;
+        self.progress = None;
         // Wait for the pager.
         let mut handle = None;
         mem::swap(&mut handle, &mut self.pager_handle);

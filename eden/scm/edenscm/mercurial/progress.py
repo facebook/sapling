@@ -155,11 +155,19 @@ class baserenderer(object):
         self.printed = False
         self.configwidth = bar._ui.config("progress", "width", default=None)
 
-    def _flusherr(self):
-        _eintrretry(self._bar._ui.ferr.flush)
-
-    def _writeerr(self, msg):
-        _eintrretry(self._bar._ui.ferr.write, msg)
+    def _writeprogress(self, msg, flush=False):
+        ui = self._bar._ui
+        if ui.streampager is not None:
+            msg = msg.strip("\r\n") + "\f"
+            try:
+                ui.streampager.write_progress(msg)
+            except IOError:
+                # IOError can happen if the pager has just exited.  Ignore it.
+                pass
+        else:
+            _eintrretry(ui.ferr.write, msg)
+            if flush:
+                _eintrretry(ui.ferr.flush)
 
     def width(self):
         ui = self._bar._ui
@@ -175,13 +183,13 @@ class baserenderer(object):
     def clear(self):
         if not self.printed:
             return
-        self._writeerr("\r%s\r" % (" " * self.width()))
+        self._writeprogress("\r%s\r" % (" " * self.width()))
 
     def complete(self):
         if not self.printed:
             return
         self.show(time.time())
-        self._writeerr("\n")
+        self._writeprogress("\n")
 
 
 class classicrenderer(baserenderer):
@@ -269,8 +277,7 @@ class classicrenderer(baserenderer):
             out = spacejoin(head, prog, tail)
         else:
             out = spacejoin(head, tail)
-        self._writeerr("\r" + encoding.trim(out, termwidth))
-        self._flusherr()
+        self._writeprogress("\r" + encoding.trim(out, termwidth), flush=True)
 
 
 class fancyrenderer(baserenderer):
@@ -393,8 +400,7 @@ class fancyrenderer(baserenderer):
             ],
         )
         line = self._applyspans(self._bar._ui, line, spans)
-        self._writeerr("\r" + line + "\r")
-        self._flusherr()
+        self._writeprogress("\r" + line + "\r", flush=True)
 
 
 class nullrenderer(baserenderer):
