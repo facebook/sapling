@@ -2879,9 +2879,9 @@ def xunit_time(t):
     # The TestPilot documentation says to follow the JUnit spec, which says time
     # should be in seconds, but that's not quite what TestPilot actually does
     # (see D2822375: it expects the time in milliseconds). There's other code at
-    # Facebook that relies on the TESTPILOT_PROCESS to identify if we're running
+    # Facebook that relies on the TPX to identify if we're running
     # tests, so it should be reasonably safe (albeit hacky) to rely on this.
-    if os.environ.get("TESTPILOT_PROCESS"):
+    if os.environ.get("TESTPILOT_PROCESS") or os.environ.get("TPX"):
         t = t * 1000
     return "%.3f" % t
 
