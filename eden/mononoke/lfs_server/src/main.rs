@@ -241,7 +241,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let test_acl_checker = if !test_idents.is_empty() {
         Some(ArcPermissionChecker::from(
-            PermissionCheckerBuilder::whitelist_checker(test_idents),
+            PermissionCheckerBuilder::allowlist_checker(test_idents),
         ))
     } else {
         None

@@ -30,8 +30,8 @@ impl PermissionCheckerBuilder {
         Box::new(AlwaysReject {})
     }
 
-    pub fn whitelist_checker(whitelist: MononokeIdentitySet) -> BoxPermissionChecker {
-        Box::new(WhitelistChecker { whitelist })
+    pub fn allowlist_checker(allowlist: MononokeIdentitySet) -> BoxPermissionChecker {
+        Box::new(AllowlistChecker { allowlist })
     }
 }
 
@@ -53,13 +53,13 @@ impl PermissionChecker for AlwaysReject {
     }
 }
 
-struct WhitelistChecker {
-    whitelist: MononokeIdentitySet,
+struct AllowlistChecker {
+    allowlist: MononokeIdentitySet,
 }
 
 #[async_trait]
-impl PermissionChecker for WhitelistChecker {
+impl PermissionChecker for AllowlistChecker {
     async fn check_set(&self, accessors: &MononokeIdentitySet, _actions: &[&str]) -> Result<bool> {
-        Ok(!self.whitelist.is_disjoint(accessors))
+        Ok(!self.allowlist.is_disjoint(accessors))
     }
 }

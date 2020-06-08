@@ -60,13 +60,13 @@ impl ClientIdentity {
 
 #[derive(Clone)]
 pub struct ClientIdentityMiddleware {
-    trusted_proxy_whitelist: Arc<MononokeIdentitySet>,
+    trusted_proxy_allowlist: Arc<MononokeIdentitySet>,
 }
 
 impl ClientIdentityMiddleware {
     pub fn new(trusted_proxy_idents: MononokeIdentitySet) -> Self {
         Self {
-            trusted_proxy_whitelist: Arc::new(trusted_proxy_idents),
+            trusted_proxy_allowlist: Arc::new(trusted_proxy_idents),
         }
     }
 
@@ -75,7 +75,7 @@ impl ClientIdentityMiddleware {
         cert_idents: MononokeIdentitySet,
         headers: &HeaderMap,
     ) -> Option<MononokeIdentitySet> {
-        let is_trusted_proxy = !self.trusted_proxy_whitelist.is_disjoint(&cert_idents);
+        let is_trusted_proxy = !self.trusted_proxy_allowlist.is_disjoint(&cert_idents);
         if is_trusted_proxy {
             request_identities_from_headers(&headers)
         } else {

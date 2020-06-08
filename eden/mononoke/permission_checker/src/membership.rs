@@ -30,8 +30,8 @@ impl MembershipCheckerBuilder {
         Box::new(NeverMember {})
     }
 
-    pub fn whitelist_checker(whitelist: MononokeIdentitySet) -> BoxMembershipChecker {
-        Box::new(WhitelistChecker { whitelist })
+    pub fn allowlist_checker(allowlist: MononokeIdentitySet) -> BoxMembershipChecker {
+        Box::new(AllowlistChecker { allowlist })
     }
 }
 
@@ -53,13 +53,13 @@ impl MembershipChecker for NeverMember {
     }
 }
 
-struct WhitelistChecker {
-    whitelist: MononokeIdentitySet,
+struct AllowlistChecker {
+    allowlist: MononokeIdentitySet,
 }
 
 #[async_trait]
-impl MembershipChecker for WhitelistChecker {
+impl MembershipChecker for AllowlistChecker {
     async fn is_member(&self, identities: &MononokeIdentitySet) -> Result<bool> {
-        Ok(!self.whitelist.is_disjoint(identities))
+        Ok(!self.allowlist.is_disjoint(identities))
     }
 }

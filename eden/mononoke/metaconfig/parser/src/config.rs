@@ -22,9 +22,9 @@ use ascii::AsciiString;
 use fbinit::FacebookInit;
 use itertools::Itertools;
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction,
-    HgsqlGlobalrevsName, HgsqlName, Redaction, RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig,
-    StorageConfig, WhitelistEntry,
+    AllowlistEntry, CommitSyncConfig, CommitSyncDirection, CommonConfig,
+    DefaultSmallToLargeCommitSyncPathAction, HgsqlGlobalrevsName, HgsqlName, Redaction, RepoConfig,
+    RepoReadOnly, SmallRepoCommitSyncConfig, StorageConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use repos::{
@@ -108,10 +108,10 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
         .whitelist_entry
         .unwrap_or_default()
         .into_iter()
-        .map(|whitelist_entry| {
-            let has_tier = whitelist_entry.tier.is_some();
+        .map(|allowlist_entry| {
+            let has_tier = allowlist_entry.tier.is_some();
             let has_identity = {
-                if whitelist_entry.identity_data.is_none() ^ whitelist_entry.identity_type.is_none()
+                if allowlist_entry.identity_data.is_none() ^ allowlist_entry.identity_type.is_none()
                 {
                     return Err(ConfigurationError::InvalidFileStructure(
                         "identity type and data must be specified".into(),
@@ -119,7 +119,7 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
                     .into());
                 }
 
-                whitelist_entry.identity_type.is_some()
+                allowlist_entry.identity_type.is_some()
             };
 
             if has_tier && has_identity {
@@ -136,15 +136,15 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
                 .into());
             }
 
-            if whitelist_entry.tier.is_some() {
+            if allowlist_entry.tier.is_some() {
                 tiers_num += 1;
-                Ok(WhitelistEntry::Tier(whitelist_entry.tier.unwrap()))
+                Ok(AllowlistEntry::Tier(allowlist_entry.tier.unwrap()))
             } else {
-                let identity_type = whitelist_entry.identity_type.unwrap();
+                let identity_type = allowlist_entry.identity_type.unwrap();
 
-                Ok(WhitelistEntry::HardcodedIdentity {
+                Ok(AllowlistEntry::HardcodedIdentity {
                     ty: identity_type,
-                    data: whitelist_entry.identity_data.unwrap(),
+                    data: allowlist_entry.identity_data.unwrap(),
                 })
             }
         })
@@ -1231,8 +1231,8 @@ mod test {
             repoconfig.common,
             CommonConfig {
                 security_config: vec![
-                    WhitelistEntry::Tier("tier1".to_string()),
-                    WhitelistEntry::HardcodedIdentity {
+                    AllowlistEntry::Tier("tier1".to_string()),
+                    AllowlistEntry::HardcodedIdentity {
                         ty: "username".to_string(),
                         data: "user".to_string(),
                     },

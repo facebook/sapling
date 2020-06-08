@@ -38,8 +38,8 @@ use sql::mysql_async::{
 
 /// Single entry that
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum WhitelistEntry {
-    /// Hardcoded whitelisted identity name i.e. USER (identity type) stash (identity data)
+pub enum AllowlistEntry {
+    /// Hardcoded allowed identity name i.e. USER (identity type) stash (identity data)
     HardcodedIdentity {
         /// Identity type
         ty: String,
@@ -54,7 +54,7 @@ pub enum WhitelistEntry {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CommonConfig {
     /// Who can interact with Mononoke
-    pub security_config: Vec<WhitelistEntry>,
+    pub security_config: Vec<AllowlistEntry>,
     /// Parent category to use for load limiting
     pub loadlimiter_category: Option<String>,
     /// Scuba table for logging redacted file accesses

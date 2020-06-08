@@ -32,7 +32,7 @@ Env = Dict[str, str]
 
 SUITE = "run-tests"
 
-EPHEMERAL_DB_WHITELIST = {
+EPHEMERAL_DB_ALLOWLIST = {
     "test-init.t",
     "test-lookup.t",
     "test-mononoke-admin.t",
@@ -43,9 +43,9 @@ EPHEMERAL_DB_WHITELIST = {
     "test-infinitepush-mutation.t",
 }
 
-# At this time, all tests support the network blackhole (except when ephemeral
-# MySQL is used)
-NETWORK_BLACKHOLE_BLACKLIST: Set[str] = {
+# At this time, all tests support the network void script (except when
+# ephemeral MySQL is used)
+DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-commitcloud-forwardfiller.t",
     "test-commitcloud-reversefiller.t",
 }
@@ -65,7 +65,7 @@ class TestFlags(NamedTuple):
     verbose: bool
     debug: bool
     keep_tmpdir: bool
-    blackhole: bool
+    disable_all_network_access: bool
 
     def runner_args(self) -> Args:
         r = []
@@ -92,16 +92,16 @@ class TestFlags(NamedTuple):
         if self.interactive:
             r["interactive"] = True
 
-        if self.blackhole:
-            incompatible_tests = set(tests) & set(NETWORK_BLACKHOLE_BLACKLIST)
+        if self.disable_all_network_access:
+            incompatible_tests = set(tests) & set(DISABLE_ALL_NETWORK_ACCESS_SKIPLIST)
             if incompatible_tests:
                 logging.warning(
-                    "Not enabling blackhole because incompatible "
+                    "Not enabling network void because incompatible "
                     "tests are to be run: %s",
                     " ".join(incompatible_tests),
                 )
             else:
-                r["blackhole"] = True
+                r["disable_all_network_access"] = True
 
         return r
 
@@ -196,7 +196,7 @@ def _hg_runner(
     manifest_env: ManifestEnv,
     extra_args: Args,
     extra_env: Env,
-    blackhole: bool = False,
+    disable_all_network_access: bool = False,
     interactive: bool = False,
     quiet: bool = False,
 ):
@@ -218,7 +218,7 @@ def _hg_runner(
             *extra_args,
         ]
 
-        # The network blackhole script breaks opt mode PAR binaries, so that
+        # The network void script breaks opt mode PAR binaries, so that
         # breaks hg's run tests (that is because /tmp has the wrong owner,
         # because we are running in a user namespace), so we don't enable it if
         # we're running in opt. This is necessary ...  but it's also kinda meh
@@ -229,8 +229,8 @@ def _hg_runner(
         # - The fact that this binary was built in mode/opt does not
         # necessarily mean that the hg run tests binary was. It's a decent
         # approximation, though.
-        if blackhole and not is_mode_opt_buck_binary():
-            args.insert(0, manifest_env["NETWORK_BLACKHOLE"])
+        if disable_all_network_access and not is_mode_opt_buck_binary():
+            args.insert(0, manifest_env["DISABLE_ALL_NETWORK_ACCESS"])
 
         env = os.environ.copy()
         env.update(
@@ -270,7 +270,7 @@ def discover_tests(manifest_env: Env, mysql: bool):
                 all_tests.append(child.get("name"))
 
     if mysql:
-        all_tests = [t for t in all_tests if t in EPHEMERAL_DB_WHITELIST]
+        all_tests = [t for t in all_tests if t in EPHEMERAL_DB_ALLOWLIST]
 
     return all_tests
 
@@ -428,7 +428,7 @@ def run(
         verbose,
         debug,
         keep_tmpdir,
-        blackhole=not mysql,  # NOTE: We need network to talk to MySQL
+        disable_all_network_access=not mysql,  # NOTE: We need network to talk to MySQL
     )
 
     selected_tests: List[str] = []
