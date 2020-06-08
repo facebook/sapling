@@ -47,9 +47,15 @@ pub enum MononokeError {
     InvalidRequest(String),
     #[error("permission denied: {mode} access to repo {reponame} not permitted for {identities}")]
     PermissionDenied {
-        mode: &'static str,
+        mode: String,
         identities: String,
         reponame: String,
+    },
+    #[error("permission denied: access to repo {reponame} on behalf of {service_identity} not permitted for {identities}")]
+    ServicePermissionDenied {
+        identities: String,
+        reponame: String,
+        service_identity: String,
     },
     #[error("not available: {0}")]
     NotAvailable(String),

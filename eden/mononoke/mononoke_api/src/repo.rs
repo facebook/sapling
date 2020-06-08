@@ -25,8 +25,9 @@ use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::future::{try_join, try_join_all};
-use futures::StreamExt as NewStreamExt;
+use futures::future::try_join_all;
+use futures::stream::StreamExt as NewStreamExt;
+use futures::try_join;
 use futures_ext::StreamExt;
 use futures_old::stream::{self, Stream};
 use itertools::Itertools;
@@ -55,7 +56,7 @@ use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::{FileContext, FileId};
 use crate::hg::HgRepoContext;
-use crate::repo_write::RepoWriteContext;
+use crate::repo_write::{PermissionsModel, RepoWriteContext};
 use crate::specifiers::{
     ChangesetId, ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution,
     HgChangesetId,
@@ -88,7 +89,8 @@ pub(crate) struct Repo {
     pub(crate) service_config: SourceControlServiceParams,
     // Needed to report stats
     pub(crate) monitoring_config: Option<SourceControlServiceMonitoring>,
-    pub(crate) perm_checker: ArcPermissionChecker,
+    pub(crate) repo_permission_checker: ArcPermissionChecker,
+    pub(crate) service_permission_checker: ArcPermissionChecker,
     pub(crate) commit_sync_config: Option<CommitSyncConfig>,
 }
 
@@ -169,11 +171,20 @@ impl Repo {
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-        let perm_checker = async {
-            match &config.hipster_acl {
-                Some(acl) => PermissionCheckerBuilder::acl_for_repo(fb, acl).await,
-                None => Ok(PermissionCheckerBuilder::always_allow()),
-            }
+        let repo_permission_checker = async {
+            let checker = match &config.hipster_acl {
+                Some(acl) => PermissionCheckerBuilder::acl_for_repo(fb, acl).await?,
+                None => PermissionCheckerBuilder::always_allow(),
+            };
+            Ok(ArcPermissionChecker::from(checker))
+        };
+
+        let service_permission_checker = async {
+            let checker = match &config.source_control_service.service_write_hipster_acl {
+                Some(acl) => PermissionCheckerBuilder::acl_for_tier(fb, acl).await?,
+                None => PermissionCheckerBuilder::always_allow(),
+            };
+            Ok(ArcPermissionChecker::from(checker))
         };
 
         let skiplist_index = fetch_skiplist_index(
@@ -183,13 +194,25 @@ impl Repo {
         )
         .compat();
 
-        let warm_bookmarks_cache = Arc::new(
-            WarmBookmarksCache::new(ctx.clone(), blob_repo.clone())
-                .compat()
-                .await?,
-        );
+        let warm_bookmarks_cache = async {
+            Ok(Arc::new(
+                WarmBookmarksCache::new(ctx.clone(), blob_repo.clone())
+                    .compat()
+                    .await?,
+            ))
+        };
 
-        let (perm_checker, skiplist_index) = try_join(perm_checker, skiplist_index).await?;
+        let (
+            repo_permission_checker,
+            service_permission_checker,
+            skiplist_index,
+            warm_bookmarks_cache,
+        ) = try_join!(
+            repo_permission_checker,
+            service_permission_checker,
+            skiplist_index,
+            warm_bookmarks_cache,
+        )?;
 
         Ok(Self {
             name,
@@ -199,7 +222,8 @@ impl Repo {
             synced_commit_mapping,
             service_config,
             monitoring_config,
-            perm_checker: ArcPermissionChecker::from(perm_checker),
+            repo_permission_checker,
+            service_permission_checker,
             commit_sync_config: config.commit_sync_config,
         })
     }
@@ -222,7 +246,12 @@ impl Repo {
             synced_commit_mapping,
             service_config: Default::default(),
             monitoring_config,
-            perm_checker: ArcPermissionChecker::from(PermissionCheckerBuilder::always_allow()),
+            repo_permission_checker: ArcPermissionChecker::from(
+                PermissionCheckerBuilder::always_allow(),
+            ),
+            service_permission_checker: ArcPermissionChecker::from(
+                PermissionCheckerBuilder::always_allow(),
+            ),
             commit_sync_config,
         }
     }
@@ -280,7 +309,12 @@ impl Repo {
                 ..Default::default()
             },
             monitoring_config: None,
-            perm_checker: ArcPermissionChecker::from(PermissionCheckerBuilder::always_allow()),
+            repo_permission_checker: ArcPermissionChecker::from(
+                PermissionCheckerBuilder::always_allow(),
+            ),
+            service_permission_checker: ArcPermissionChecker::from(
+                PermissionCheckerBuilder::always_allow(),
+            ),
             commit_sync_config,
         })
     }
@@ -484,23 +518,16 @@ impl Repo {
         maybe_gen_num.ok_or(format_err!("gen num for {} not found", cs_id))
     }
 
-    // The mode attribue is of type PermMode rather than &static str because the latter gives
-    // compilation error described in here: https://github.com/rust-lang/rust/issues/63033
-    async fn check_permissions(
-        &self,
-        ctx: &CoreContext,
-        mode: PermMode,
-    ) -> Result<(), MononokeError> {
-        let mode = match mode {
-            PermMode::Read => "read",
-            PermMode::Write => "write",
-        };
-
+    async fn check_permissions(&self, ctx: &CoreContext, mode: &str) -> Result<(), MononokeError> {
         let identities = ctx.identities();
         let identities =
             identities.map_or_else(|| Cow::Owned(MononokeIdentitySet::new()), Cow::Borrowed);
 
-        if !self.perm_checker.check_set(&*identities, &[mode]).await? {
+        if !self
+            .repo_permission_checker
+            .check_set(&*identities, &[mode])
+            .await?
+        {
             debug!(
                 ctx.logger(),
                 "Permission denied: {} access to {}", mode, self.name
@@ -511,18 +538,45 @@ impl Repo {
                 identities.iter().join(",")
             };
             return Err(MononokeError::PermissionDenied {
-                mode,
+                mode: mode.to_string(),
                 identities,
                 reponame: self.name.clone(),
             });
         }
         Ok(())
     }
-}
 
-enum PermMode {
-    Read,
-    Write,
+    async fn check_service_permissions(
+        &self,
+        ctx: &CoreContext,
+        service_identity: String,
+    ) -> Result<(), MononokeError> {
+        let identities = ctx.identities();
+        let identities =
+            identities.map_or_else(|| Cow::Owned(MononokeIdentitySet::new()), Cow::Borrowed);
+
+        if !self
+            .service_permission_checker
+            .check_set(&*identities, &[&service_identity])
+            .await?
+        {
+            debug!(
+                ctx.logger(),
+                "Permission denied: access to {} on behalf of {}", self.name, service_identity,
+            );
+            let identities = if identities.is_empty() {
+                "<none>".to_string()
+            } else {
+                identities.iter().join(",")
+            };
+            return Err(MononokeError::ServicePermissionDenied {
+                identities,
+                reponame: self.name.clone(),
+                service_identity,
+            });
+        }
+        Ok(())
+    }
 }
 
 #[derive(Default)]
@@ -535,7 +589,7 @@ pub struct Stack {
 impl RepoContext {
     pub(crate) async fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
         // Check the user is permitted to access this repo.
-        repo.check_permissions(&ctx, PermMode::Read).await?;
+        repo.check_permissions(&ctx, "read").await?;
         Ok(Self { repo, ctx })
     }
 
@@ -948,16 +1002,36 @@ impl RepoContext {
     pub async fn write(self) -> Result<RepoWriteContext, MononokeError> {
         if !self.repo.service_config.permit_writes {
             return Err(MononokeError::InvalidRequest(String::from(
-                "service writes are not enabled for this repo",
+                "source control service writes are not enabled for this repo",
             )));
         }
 
         // Check the user is permitted to write to this repo.
+        self.repo.check_permissions(&self.ctx, "write").await?;
+
+        Ok(RepoWriteContext::new(self, PermissionsModel::AllowAnyWrite))
+    }
+
+    /// Get a write context to make changes to this repository on behalf of a service.
+    pub async fn service_write(
+        self,
+        service_identity: String,
+    ) -> Result<RepoWriteContext, MononokeError> {
+        if !self.repo.service_config.permit_service_writes {
+            return Err(MononokeError::InvalidRequest(String::from(
+                "source control service writes are not enabled for this repo",
+            )));
+        }
+
+        // Check the user is permitted to speak for the named service.
         self.repo
-            .check_permissions(&self.ctx, PermMode::Write)
+            .check_service_permissions(&self.ctx, service_identity.clone())
             .await?;
 
-        Ok(RepoWriteContext::new(self))
+        Ok(RepoWriteContext::new(
+            self,
+            PermissionsModel::ServiceIdentity(service_identity),
+        ))
     }
 
     /// Get an HgRepoContext to access this repo's data in Mercurial-specific formats.
