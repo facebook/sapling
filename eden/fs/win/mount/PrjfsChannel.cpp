@@ -93,21 +93,9 @@ namespace facebook {
 namespace eden {
 
 PrjfsChannel::PrjfsChannel(EdenMount* mount)
-    : root_{mount->getPath()}, dispatcher_{*mount}, mountId_{Guid::generate()} {
-  XLOG(INFO) << sformat(
-      "Creating PrjfsChannel, mount ({}), MountPath ({})", mount, root_);
-
-  // Setup mount root folder
-  auto winPath = edenToWinPath(root_.stringPiece());
-  HRESULT result = PrjMarkDirectoryAsPlaceholder(
-      winPath.c_str(), nullptr, nullptr, mountId_);
-
-  if (FAILED(result) &&
-      result != HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
-    throw makeHResultErrorExplicit(
-        result, sformat("Failed to setup the mount point({})", root_));
-  }
-}
+    : root_{mount->getPath()},
+      dispatcher_{*mount},
+      mountId_{Guid::generate()} {}
 
 PrjfsChannel::~PrjfsChannel() {
   if (isRunning_) {
@@ -149,7 +137,17 @@ void PrjfsChannel::start() {
   DCHECK(dispatcher->isValidDispatcher());
 
   auto winPath = edenToWinPath(root_.stringPiece());
-  HRESULT result = PrjStartVirtualizing(
+
+  auto result = PrjMarkDirectoryAsPlaceholder(
+      winPath.c_str(), nullptr, nullptr, mountId_);
+
+  if (FAILED(result) &&
+      result != HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
+    throw makeHResultErrorExplicit(
+        result, sformat("Failed to setup the mount point({})", root_));
+  }
+
+  result = PrjStartVirtualizing(
       winPath.c_str(), &callbacks, dispatcher, &startOpts, &mountChannel_);
 
   if (FAILED(result)) {
