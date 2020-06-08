@@ -22,9 +22,9 @@ use fastlog::{list_file_history, FastlogError, HistoryAcrossDeletions};
 use filestore::FetchKey;
 use futures::compat::Future01CompatExt;
 use futures::future::{FutureExt, Shared};
-use futures::stream::Stream;
+use futures::stream::{Stream, TryStreamExt};
+use futures::try_join;
 use futures_old::Future as FutureLegacy;
-use futures_util::{try_join, TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
     Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, ManifestUnodeId,

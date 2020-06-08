@@ -56,7 +56,8 @@ pub use crate::errors::MononokeError;
 pub use crate::file::{FileContext, FileId, FileMetadata, FileType};
 pub use crate::path::MononokePath;
 pub use crate::repo::RepoContext;
-pub use crate::repo_write::{CreateChange, CreateCopyInfo, RepoWriteContext};
+pub use crate::repo_write::create_changeset::{CreateChange, CreateCopyInfo};
+pub use crate::repo_write::RepoWriteContext;
 pub use crate::specifiers::{
     ChangesetId, ChangesetIdPrefix, ChangesetPrefixSpecifier, ChangesetSpecifier,
     ChangesetSpecifierPrefixResolution, Globalrev, HgChangesetId, HgChangesetIdPrefix,
@@ -122,7 +123,7 @@ impl Mononoke {
         ctx: CoreContext,
         repos: impl IntoIterator<Item = (String, BlobRepo)>,
     ) -> Result<Self, Error> {
-        use futures_util::stream::{FuturesOrdered, TryStreamExt};
+        use futures::stream::{FuturesOrdered, TryStreamExt};
         let repos = repos
             .into_iter()
             .map(move |(name, repo)| {
@@ -152,7 +153,7 @@ impl Mononoke {
             ),
         >,
     ) -> Result<Self, Error> {
-        use futures_util::stream::{FuturesOrdered, TryStreamExt};
+        use futures::stream::{FuturesOrdered, TryStreamExt};
         let repos = repos
             .into_iter()
             .map(

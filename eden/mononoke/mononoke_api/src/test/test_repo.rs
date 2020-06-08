@@ -18,8 +18,8 @@ use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures::compat::Future01CompatExt;
+use futures::stream::TryStreamExt;
 use futures_old::Future;
-use futures_util::stream::TryStreamExt;
 
 use crate::{
     changeset_path_diff::ChangesetPathDiffContext, ChangesetId, ChangesetIdPrefix,

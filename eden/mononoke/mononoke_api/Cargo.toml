@@ -48,7 +48,6 @@ bytes = { version = "0.5", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-futures-util = "0.3"
 itertools = "0.8"
 maplit = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
