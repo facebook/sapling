@@ -532,9 +532,7 @@ impl BlobRepo {
         node: HgFileNodeId,
     ) -> impl Future<Item = FilenodeResult<Option<FilenodeInfo>>, Error = Error> {
         let path = path.clone();
-        self.filenodes
-            .get_filenode(ctx, &path, node, self.repoid)
-            .map(FilenodeResult::Present)
+        self.filenodes.get_filenode(ctx, &path, node, self.repoid)
     }
 
     pub fn get_filenode(

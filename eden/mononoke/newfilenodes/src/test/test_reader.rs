@@ -37,9 +37,13 @@ async fn check_roundtrip(
     payload: PreparedFilenode,
 ) -> Result<(), Error> {
     assert_eq!(
-        reader
-            .get_filenode(&ctx, repo_id, &payload.path, payload.info.filenode)
-            .await?,
+        async {
+            let res = reader
+                .get_filenode(&ctx, repo_id, &payload.path, payload.info.filenode)
+                .await?;
+            res.do_not_handle_disabled_filenodes()
+        }
+        .await?,
         None
     );
 
@@ -48,9 +52,13 @@ async fn check_roundtrip(
         .await?;
 
     assert_eq!(
-        reader
-            .get_filenode(&ctx, repo_id, &payload.path, payload.info.filenode)
-            .await?,
+        async {
+            let res = reader
+                .get_filenode(&ctx, repo_id, &payload.path, payload.info.filenode)
+                .await?;
+            res.do_not_handle_disabled_filenodes()
+        }
+        .await?,
         Some(payload.info),
     );
 
@@ -403,6 +411,7 @@ async fn assert_no_filenode(
     repo_id: RepositoryId,
 ) -> Result<(), Error> {
     let res = reader.get_filenode(&ctx, repo_id, path, hash).await?;
+    let res = res.do_not_handle_disabled_filenodes()?;
     assert!(res.is_none());
     Ok(())
 }
@@ -418,6 +427,7 @@ async fn assert_filenode(
     let res = reader
         .get_filenode(&ctx, repo_id, path, hash)
         .await?
+        .do_not_handle_disabled_filenodes()?
         .ok_or(format_err!("not found: {}", hash))?;
     assert_eq!(res, expected);
     Ok(())
@@ -958,5 +968,60 @@ async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result
     )
     .await?;
 
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_get_filenode_with_disabled(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (reader, writer) = build_reader_writer(create_sharded()?);
+    let reader = with_caching(reader);
+
+    do_add_filenodes(&ctx, &writer, vec![root_first_filenode()], REPO_ZERO).await?;
+
+    let payload_info = root_first_filenode().info;
+
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
+    let res = with_tunables_async(
+        tunables,
+        reader
+            .get_filenode(&ctx, REPO_ZERO, &RepoPath::RootPath, payload_info.filenode)
+            .boxed(),
+    )
+    .await?;
+
+    if let FilenodeResult::Present(_) = res {
+        panic!("expected FilenodeResult::Disabled");
+    }
+
+    assert_filenode(
+        &ctx,
+        &reader,
+        &RepoPath::root(),
+        ONES_FNID,
+        REPO_ZERO,
+        root_first_filenode().info,
+    )
+    .await?;
+
+    // The filenode are cached now, even with filenodes_disabled = true
+    // all filenodes should be returned
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
+    with_tunables_async(
+        tunables,
+        assert_filenode(
+            &ctx,
+            &reader,
+            &RepoPath::root(),
+            ONES_FNID,
+            REPO_ZERO,
+            root_first_filenode().info,
+        )
+        .boxed(),
+    )
+    .await?;
     Ok(())
 }

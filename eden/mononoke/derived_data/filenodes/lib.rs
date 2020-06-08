@@ -413,7 +413,9 @@ async fn fetch_root_filenode(
                 repo.get_repoid(),
             )
             .compat()
-            .await?;
+            .await?
+            // TODO(stash): do not fail but return FilenodesOnlyPublic::Disabled
+            .do_not_handle_disabled_filenodes()?;
 
         maybe_info
             .map(|info| {

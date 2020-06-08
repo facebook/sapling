@@ -99,7 +99,7 @@ impl Filenodes for NewFilenodes {
         path: &RepoPath,
         filenode_id: HgFileNodeId,
         repo_id: RepositoryId,
-    ) -> BoxFuture<Option<FilenodeInfo>, Error> {
+    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error> {
         cloned!(self.reader, path);
 
         async move {

@@ -146,14 +146,14 @@ impl FilenodesReader {
         repo_id: RepositoryId,
         path: &RepoPath,
         filenode: HgFileNodeId,
-    ) -> Result<Option<FilenodeInfo>, Error> {
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error> {
         STATS::gets.add_value(1);
 
         let pwh = PathWithHash::from_repo_path(&path);
         let key = filenode_cache_key(repo_id, &pwh, &filenode);
 
         if let Some(cached) = self.local_cache.get(&key) {
-            return Ok(Some(cached.try_into()?));
+            return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
         }
 
         let permit = self.shards.acquire_filenodes(&path, filenode).await;
@@ -162,7 +162,7 @@ impl FilenodesReader {
         // Now that we acquired the permit, check our cache again, in case the previous permit
         // owner just filed the cache with the filenode we're looking for.
         if let Some(cached) = self.local_cache.get(&key) {
-            return Ok(Some(cached.try_into()?));
+            return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
         }
 
         STATS::get_local_cache_misses.add_value(1);
@@ -170,7 +170,7 @@ impl FilenodesReader {
         if let Some(info) = enforce_remote_cache_timeout(self.remote_cache.get_filenode(&key)).await
         {
             self.local_cache.fill(&key, &(&info).into());
-            return Ok(Some(info));
+            return Ok(FilenodeResult::Present(Some(info)));
         }
 
         let cache_filler = FilenodeCacheFiller {
@@ -192,10 +192,13 @@ impl FilenodesReader {
         )
         .await
         {
-            Ok(Some(res)) => {
-                return Ok(Some(res.try_into()?));
+            Ok(FilenodeResult::Disabled) => {
+                return Ok(FilenodeResult::Disabled);
             }
-            Ok(None)
+            Ok(FilenodeResult::Present(Some(res))) => {
+                return Ok(FilenodeResult::Present(Some(res.try_into()?)));
+            }
+            Ok(FilenodeResult::Present(None))
             | Err(ErrorKind::FixedCopyInfoMissing(_))
             | Err(ErrorKind::PathNotFound(_)) => {
                 // If the filenode wasn't found, or its copy info was missing, it might be present
@@ -221,7 +224,13 @@ impl FilenodesReader {
         )
         .await?;
 
-        return res.map(|r| r.try_into()).transpose();
+        match res {
+            FilenodeResult::Present(res) => {
+                let res = res.map(|res| res.try_into()).transpose()?;
+                Ok(FilenodeResult::Present(res))
+            }
+            FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+        }
     }
 
     pub async fn get_all_filenodes_for_path(
@@ -325,13 +334,17 @@ async fn select_filenode_from_sql(
     pwh: &PathWithHash<'_>,
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<Option<CachedFilenode>, ErrorKind> {
+) -> Result<FilenodeResult<Option<CachedFilenode>>, ErrorKind> {
+    if tunables().get_filenodes_disabled() {
+        return Ok(FilenodeResult::Disabled);
+    }
+
     let partial = select_partial_filenode(connections, repo_id, pwh, filenode, recorder).await?;
 
     let partial = match partial {
         Some(partial) => partial,
         None => {
-            return Ok(None);
+            return Ok(FilenodeResult::Present(None));
         }
     };
 
@@ -342,13 +355,13 @@ async fn select_filenode_from_sql(
     {
         Some(ret) => ret,
         None => {
-            return Ok(None);
+            return Ok(FilenodeResult::Present(None));
         }
     };
 
     filler.fill(ret.clone());
 
-    Ok(Some(ret))
+    Ok(FilenodeResult::Present(Some(ret)))
 }
 
 async fn select_partial_filenode(

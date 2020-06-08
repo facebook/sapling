@@ -89,7 +89,7 @@ impl Filenodes for MicrowaveFilenodes {
         path: &RepoPath,
         filenode_id: HgFileNodeId,
         repo_id: RepositoryId,
-    ) -> BoxFuture<Option<FilenodeInfo>, Error> {
+    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error> {
         cloned!(self.inner, mut self.recorder, path);
 
         // NOTE: Receiving any other repo_id here would be a programming error, so we block it. See
@@ -105,7 +105,8 @@ impl Filenodes for MicrowaveFilenodes {
             let info = inner
                 .get_filenode(ctx, &path, filenode_id, repo_id)
                 .compat()
-                .await?;
+                .await?
+                .do_not_handle_disabled_filenodes()?;
 
             if let Some(ref info) = info {
                 recorder
@@ -116,7 +117,7 @@ impl Filenodes for MicrowaveFilenodes {
                     .await?;
             }
 
-            Ok(info)
+            Ok(FilenodeResult::Present(info))
         }
         .boxed()
         .compat()

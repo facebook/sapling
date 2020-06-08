@@ -140,7 +140,7 @@ pub trait Filenodes: Send + Sync {
         path: &RepoPath,
         filenode: HgFileNodeId,
         repo_id: RepositoryId,
-    ) -> BoxFuture<Option<FilenodeInfo>, Error>;
+    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error>;
 
     fn get_all_filenodes_maybe_stale(
         &self,

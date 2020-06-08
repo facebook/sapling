@@ -61,14 +61,16 @@ async fn test_filenode_fill(fb: FacebookInit) -> Result<(), Error> {
     // A local miss should fill the remote cache:
     reader
         .get_filenode(&ctx, REPO_ZERO, &path, info.filenode)
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
     wait_for_filenode(&reader.remote_cache, &key).await?;
 
     // A local hit should not fill the remote cache:
     reader.remote_cache = make_test_cache();
     reader
         .get_filenode(&ctx, REPO_ZERO, &path, info.filenode)
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
     let r = wait_for_filenode(&reader.remote_cache, &key).await;
     assert!(r.is_err());
 

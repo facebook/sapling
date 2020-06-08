@@ -222,7 +222,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
         path: &RepoPath,
         filenode: HgFileNodeId,
         repo_id: RepositoryId,
-    ) -> BoxFuture<Option<FilenodeInfo>, Error> {
+    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error> {
         delay(
             self.get_dist,
             self.inner.get_filenode(ctx, path, filenode, repo_id),
