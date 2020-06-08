@@ -39,7 +39,9 @@ define_stats! {
     prefix = "mononoke.filenodes";
     gets: timeseries(Sum),
     gets_master: timeseries(Sum),
+    gets_disabled: timeseries(Sum),
     range_gets: timeseries(Sum),
+    range_gets_disabled: timeseries(Sum),
     path_gets: timeseries(Sum),
     get_local_cache_misses: timeseries(Sum),
     range_local_cache_misses: timeseries(Sum),
@@ -336,6 +338,7 @@ async fn select_filenode_from_sql(
     recorder: &PerfCounterRecorder<'_>,
 ) -> Result<FilenodeResult<Option<CachedFilenode>>, ErrorKind> {
     if tunables().get_filenodes_disabled() {
+        STATS::gets_disabled.add_value(1);
         return Ok(FilenodeResult::Disabled);
     }
 
@@ -420,6 +423,7 @@ async fn select_history_from_sql(
     recorder: &PerfCounterRecorder<'_>,
 ) -> Result<FilenodeResult<CachedHistory>, Error> {
     if tunables().get_filenodes_disabled() {
+        STATS::range_gets_disabled.add_value(1);
         return Ok(FilenodeResult::Disabled);
     }
 

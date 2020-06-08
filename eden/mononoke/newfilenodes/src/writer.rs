@@ -24,6 +24,7 @@ use futures::compat::Future01CompatExt;
 define_stats! {
     prefix = "mononoke.filenodes";
     adds: timeseries(Rate, Sum, Count),
+    adds_disabled: timeseries(Rate, Sum, Count),
 }
 
 #[derive(Debug, Eq, DeriveError, PartialEq)]
@@ -91,6 +92,7 @@ impl FilenodesWriter {
         replace: bool,
     ) -> Result<FilenodeResult<()>, Error> {
         if tunables().get_filenodes_disabled() {
+            STATS::adds_disabled.add_value(1);
             return Ok(FilenodeResult::Disabled);
         }
 
