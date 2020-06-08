@@ -54,7 +54,7 @@ pub trait DerivedUtils: Send + Sync + 'static {
         csid: ChangesetId,
     ) -> BoxFuture<String, Error>;
 
-    fn derive_batch(
+    fn backfill_batch_dangerous(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
@@ -118,7 +118,18 @@ where
             .boxify()
     }
 
-    fn derive_batch(
+    /// !!!!This function is dangerous and should be used with care!!!!
+    /// In particular it might corrupt the data if it tries to derive data that
+    /// depends on another derived data (e.g. blame depends on unodes) and both
+    /// of them are not derived.
+    /// For example, if unodes and blame are both underived and we are trying
+    /// to derive blame then unodes mapping might be inserted in the blobstore
+    /// before all unodes were derived.
+    ///
+    /// This function should be safe to use only if derived data doesn't depend
+    /// on another derived data (e.g. unodes) or if this dependency is already derived
+    /// (e.g. deriving blame when unodes are already derived).
+    fn backfill_batch_dangerous(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,

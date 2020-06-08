@@ -52,12 +52,23 @@ fn derive_data_for_csids(
     for data_type in derived_data_types {
         let derived_utils = derived_data_utils(repo.clone(), data_type)?;
 
-        derivations.push(
-            derived_utils
-                .derive_batch(ctx.clone(), repo.clone(), csids.clone())
+        let mut futs = vec![];
+        for csid in &csids {
+            let fut = derived_utils
+                .derive(ctx.clone(), repo.clone(), *csid)
                 .map(|_| ())
-                .compat(),
-        );
+                .compat();
+            futs.push(fut);
+        }
+
+        derivations.push(async move {
+            // Call functions sequentially because derived data is sequential
+            // so there's no point in trying to derive it in parallel
+            for f in futs {
+                f.await?;
+            }
+            Result::<_, Error>::Ok(())
+        });
     }
 
     Ok(async move {

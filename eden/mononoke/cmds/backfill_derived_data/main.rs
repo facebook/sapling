@@ -394,7 +394,7 @@ async fn subcommand_backfill(
             warmup::warmup(ctx, repo, derived_data_type, &chunk).await?;
 
             derived_utils
-                .derive_batch(ctx.clone(), repo.clone(), chunk)
+                .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk)
                 .compat()
                 .await?;
             Result::<_, Error>::Ok(chunk_size)
@@ -619,7 +619,7 @@ mod tests {
         let bcs_id = maybe_bcs_id.unwrap();
 
         let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
-        runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), vec![bcs_id]))?;
+        runtime.block_on(derived_utils.backfill_batch_dangerous(ctx, repo, vec![bcs_id]))?;
 
         Ok(())
     }
@@ -648,8 +648,12 @@ mod tests {
         let pending =
             runtime.block_on(derived_utils.pending(ctx.clone(), repo.clone(), batch.clone()))?;
         assert_eq!(pending.len(), hg_cs_ids.len());
-        runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), batch.clone()))?;
-        let pending = runtime.block_on(derived_utils.pending(ctx.clone(), repo, batch))?;
+        runtime.block_on(derived_utils.backfill_batch_dangerous(
+            ctx.clone(),
+            repo.clone(),
+            batch.clone(),
+        ))?;
+        let pending = runtime.block_on(derived_utils.pending(ctx, repo, batch))?;
         assert_eq!(pending.len(), 0);
 
         Ok(())
@@ -675,8 +679,11 @@ mod tests {
         let bcs_id = maybe_bcs_id.unwrap();
 
         let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
-        let res =
-            runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), vec![bcs_id]));
+        let res = runtime.block_on(derived_utils.backfill_batch_dangerous(
+            ctx.clone(),
+            repo.clone(),
+            vec![bcs_id],
+        ));
         // Deriving should fail because blobstore writes fail
         assert!(res.is_err());
 
@@ -688,7 +695,7 @@ mod tests {
         let maybe_bcs_id =
             runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), second_hg_cs_id))?;
         let bcs_id = maybe_bcs_id.unwrap();
-        runtime.block_on(derived_utils.derive_batch(ctx.clone(), repo.clone(), vec![bcs_id]))?;
+        runtime.block_on(derived_utils.backfill_batch_dangerous(ctx, repo, vec![bcs_id]))?;
 
         Ok(())
     }
