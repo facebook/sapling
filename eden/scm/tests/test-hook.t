@@ -9,8 +9,7 @@ commit hooks can see env vars
   >     ui.write('%s Python hook: %s\n' % (hooktype, ','.join(sorted(kwargs))))
   > EOF
 
-  $ setconfig visibility.enabled=false
-
+FIXME: hg tip should not require '--hidden' to see pending commits in hooks
   $ hg init a
   $ cd a
   $ readconfig <<EOF
@@ -19,7 +18,7 @@ commit hooks can see env vars
   > commit.b = sh -c "HG_LOCAL= HG_TAG= printenv.py commit.b"
   > precommit = sh -c  "HG_LOCAL= HG_NODE= HG_TAG= printenv.py precommit"
   > pretxncommit = sh -c "HG_LOCAL= HG_TAG= printenv.py pretxncommit"
-  > pretxncommit.tip = hg -q tip
+  > pretxncommit.tip = hg -q tip --hidden
   > pre-identify = sh -c "printenv.py pre-identify 1"
   > pre-cat = sh -c "printenv.py pre-cat"
   > post-cat = sh -c "printenv.py post-cat"
@@ -132,7 +131,7 @@ pretxncommit hook can see changeset, can roll back txn, changeset no
 more there after
 
   $ cat >> .hg/hgrc <<EOF
-  > pretxncommit.forbid0 = sh -c "hg tip -q"
+  > pretxncommit.forbid0 = sh -c "hg tip -q --hidden"
   > pretxncommit.forbid1 = sh -c "printenv.py pretxncommit.forbid 1"
   > EOF
   $ echo z > z
@@ -173,10 +172,12 @@ more there after
   requires
   undo
   undo.backup.fncache
+  undo.backup.visibleheads
   undo.backupfiles
   undo.bookmarks
   undo.phaseroots
   undo.visibleheads
+  visibleheads
 
 
 precommit hook can prevent commit
@@ -744,8 +745,8 @@ This also creates the `to` repo for the next test block.
 new commits must be visible in pretxnchangegroup (issue3428)
 
   $ echo '[hooks]' >> to/.hg/hgrc
-  $ echo 'prechangegroup = hg --traceback tip' >> to/.hg/hgrc
-  $ echo 'pretxnchangegroup = hg --traceback tip' >> to/.hg/hgrc
+  $ echo 'prechangegroup = hg --traceback tip --hidden' >> to/.hg/hgrc
+  $ echo 'pretxnchangegroup = hg --traceback tip --hidden' >> to/.hg/hgrc
   $ echo a >> to/a
  (trigger zstore migration)
   $ hg --cwd to log
