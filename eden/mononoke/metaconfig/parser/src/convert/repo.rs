@@ -5,23 +5,25 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::{BTreeSet, HashMap};
 use std::convert::TryInto;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use bookmarks_types::BookmarkName;
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, ComparableRegex,
     DerivedDataConfig, HookBypass, HookConfig, HookManagerParams, HookParams,
     InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
-    PushrebaseParams, SourceControlServiceMonitoring, SourceControlServiceParams, StorageConfig,
-    UnodeVersion, WireprotoLoggingConfig,
+    PushrebaseParams, ServiceWriteRestrictions, SourceControlServiceMonitoring,
+    SourceControlServiceParams, StorageConfig, UnodeVersion, WireprotoLoggingConfig,
 };
+use mononoke_types::MPath;
 use regex::Regex;
 use repos::{
     RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawDerivedDataConfig,
     RawHookConfig, RawHookManagerParams, RawInfinitepushParams, RawLfsParams, RawPushParams,
-    RawPushrebaseParams, RawSourceControlServiceMonitoring, RawSourceControlServiceParams,
-    RawUnodeVersion, RawWireprotoLoggingConfig,
+    RawPushrebaseParams, RawServiceWriteRestrictions, RawSourceControlServiceMonitoring,
+    RawSourceControlServiceParams, RawUnodeVersion, RawWireprotoLoggingConfig,
 };
 
 use crate::convert::Convert;
@@ -258,8 +260,62 @@ impl Convert for RawSourceControlServiceParams {
     type Output = SourceControlServiceParams;
 
     fn convert(self) -> Result<Self::Output> {
+        let service_write_restrictions = self
+            .service_write_restrictions
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(name, raw)| Ok((name, raw.convert()?)))
+            .collect::<Result<HashMap<_, _>>>()?;
+
         Ok(SourceControlServiceParams {
             permit_writes: self.permit_writes,
+            permit_service_writes: self.permit_service_writes,
+            service_write_hipster_acl: self.service_write_hipster_acl,
+            service_write_restrictions,
+        })
+    }
+}
+
+impl Convert for RawServiceWriteRestrictions {
+    type Output = ServiceWriteRestrictions;
+
+    fn convert(self) -> Result<Self::Output> {
+        let RawServiceWriteRestrictions {
+            permitted_methods,
+            permitted_path_prefixes,
+            permitted_bookmarks,
+            permitted_bookmark_regex,
+            ..
+        } = self;
+
+        let permitted_methods = permitted_methods.into_iter().collect();
+
+        let permitted_path_prefixes = permitted_path_prefixes
+            .map(|raw| {
+                raw.into_iter()
+                    .map(|path| MPath::new_opt(path.as_bytes()))
+                    .collect::<Result<BTreeSet<_>>>()
+            })
+            .transpose()?
+            .unwrap_or_default();
+
+        let permitted_bookmarks = permitted_bookmarks
+            .unwrap_or_default()
+            .into_iter()
+            .collect();
+
+        let permitted_bookmark_regex = permitted_bookmark_regex
+            .as_deref()
+            .map(Regex::new)
+            .transpose()
+            .context("invalid service write permitted bookmark regex")?
+            .map(ComparableRegex::new);
+
+        Ok(ServiceWriteRestrictions {
+            permitted_methods,
+            permitted_path_prefixes,
+            permitted_bookmarks,
+            permitted_bookmark_regex,
         })
     }
 }

@@ -1164,6 +1164,9 @@ mod test {
                 hipster_acl: Some("foo/test".to_string()),
                 source_control_service: SourceControlServiceParams {
                     permit_writes: false,
+                    permit_service_writes: false,
+                    service_write_hipster_acl: None,
+                    service_write_restrictions: Default::default(),
                 },
                 source_control_service_monitoring: Some(SourceControlServiceMonitoring {
                     bookmarks_to_report_age: vec![

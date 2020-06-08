@@ -220,9 +220,7 @@ impl Repo {
             skiplist_index,
             warm_bookmarks_cache,
             synced_commit_mapping,
-            service_config: SourceControlServiceParams {
-                permit_writes: false,
-            },
+            service_config: Default::default(),
             monitoring_config,
             perm_checker: ArcPermissionChecker::from(PermissionCheckerBuilder::always_allow()),
             commit_sync_config,
@@ -279,6 +277,7 @@ impl Repo {
             synced_commit_mapping,
             service_config: SourceControlServiceParams {
                 permit_writes: true,
+                ..Default::default()
             },
             monitoring_config: None,
             perm_checker: ArcPermissionChecker::from(PermissionCheckerBuilder::always_allow()),

@@ -13,7 +13,7 @@
 
 use anyhow::{anyhow, Error, Result};
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, HashMap, HashSet},
     fmt, mem,
     num::NonZeroU64,
     num::NonZeroUsize,
@@ -1008,16 +1008,47 @@ impl Default for WireprotoLoggingConfig {
 /// Source Control Service options
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SourceControlServiceParams {
-    /// whether writes are permitted
+    /// Whether writes are permitted.
     pub permit_writes: bool,
+
+    /// Whether writes by services are permitted.
+    pub permit_service_writes: bool,
+
+    /// ACL name for determining permissions to act as a service.  If service
+    /// writes are permitted (`permit_service_writes = true`) and this is
+    /// `None`, then any client may act as any service.
+    pub service_write_hipster_acl: Option<String>,
+
+    /// Map from service identity to the restrictions that apply for that service
+    pub service_write_restrictions: HashMap<String, ServiceWriteRestrictions>,
 }
 
 impl Default for SourceControlServiceParams {
     fn default() -> Self {
         SourceControlServiceParams {
             permit_writes: false,
+            permit_service_writes: false,
+            service_write_hipster_acl: None,
+            service_write_restrictions: HashMap::new(),
         }
     }
+}
+
+/// Restrictions on writes for services.
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct ServiceWriteRestrictions {
+    /// The service is permissed to call these methods
+    pub permitted_methods: HashSet<String>,
+
+    /// The service is permitted to modify files with these path prefixes.
+    pub permitted_path_prefixes: BTreeSet<Option<MPath>>,
+
+    /// The service is permitted to modify these bookmarks.
+    pub permitted_bookmarks: HashSet<String>,
+
+    /// The service is permitted to modify bookmarks that match this regex in addition
+    /// to those specified by `permitted_bookmarks`.
+    pub permitted_bookmark_regex: Option<ComparableRegex>,
 }
 
 /// Configuration for health monitoring of the Source Control Service
