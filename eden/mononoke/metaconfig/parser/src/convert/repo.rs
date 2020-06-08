@@ -10,11 +10,11 @@ use std::convert::TryInto;
 use anyhow::{anyhow, Result};
 use bookmarks_types::BookmarkName;
 use metaconfig_types::{
-    BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, DerivedDataConfig,
-    HookBypass, HookConfig, HookManagerParams, HookParams, InfinitepushNamespace,
-    InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams,
-    SourceControlServiceMonitoring, SourceControlServiceParams, StorageConfig, UnodeVersion,
-    WireprotoLoggingConfig,
+    BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, ComparableRegex,
+    DerivedDataConfig, HookBypass, HookConfig, HookManagerParams, HookParams,
+    InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
+    PushrebaseParams, SourceControlServiceMonitoring, SourceControlServiceParams, StorageConfig,
+    UnodeVersion, WireprotoLoggingConfig,
 };
 use regex::Regex;
 use repos::{
@@ -135,7 +135,7 @@ impl Convert for RawBookmarkConfig {
         let bookmark_or_regex = match (self.regex, self.name) {
             (None, Some(name)) => BookmarkOrRegex::Bookmark(BookmarkName::new(name).unwrap()),
             (Some(regex), None) => match Regex::new(&regex) {
-                Ok(regex) => BookmarkOrRegex::Regex(regex),
+                Ok(regex) => BookmarkOrRegex::Regex(ComparableRegex::new(regex)),
                 Err(err) => {
                     return Err(ConfigurationError::InvalidConfig(format!(
                         "invalid bookmark regex: {}",
@@ -154,7 +154,11 @@ impl Convert for RawBookmarkConfig {
 
         let hooks = self.hooks.into_iter().map(|rbmh| rbmh.hook_name).collect();
         let only_fast_forward = self.only_fast_forward;
-        let allowed_users = self.allowed_users.map(|re| Regex::new(&re)).transpose()?;
+        let allowed_users = self
+            .allowed_users
+            .map(|re| Regex::new(&re))
+            .transpose()?
+            .map(ComparableRegex::new);
         let rewrite_dates = self.rewrite_dates;
 
         Ok(BookmarkParams {

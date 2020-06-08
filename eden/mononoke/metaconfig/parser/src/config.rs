@@ -1079,7 +1079,7 @@ mod test {
                         bookmark: BookmarkName::new("master").unwrap().into(),
                         hooks: vec!["hook1".to_string(), "rust:rusthook".to_string()],
                         only_fast_forward: false,
-                        allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap()),
+                        allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap().into()),
                         rewrite_dates: None,
                     },
                     BookmarkParams {

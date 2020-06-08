@@ -117,7 +117,7 @@ impl HookManager {
                 self.bookmark_hooks.insert(bookmark, hooks);
             }
             BookmarkOrRegex::Regex(regex) => {
-                self.regex_hooks.push((regex, hooks));
+                self.regex_hooks.push((regex.into_inner(), hooks));
             }
         }
     }

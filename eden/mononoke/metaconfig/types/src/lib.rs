@@ -17,6 +17,7 @@ use std::{
     fmt, mem,
     num::NonZeroU64,
     num::NonZeroUsize,
+    ops::Deref,
     path::PathBuf,
     str,
     str::FromStr,
@@ -35,6 +36,49 @@ use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
+
+/// A Regex that can be compared against other Regexes.
+///
+/// Regexes are compared using the string they were constructed from.  This is not
+/// a semantic comparison, so Regexes that are functionally equivalent may compare
+/// as different if they were constructed from different specifications.
+#[derive(Debug, Clone)]
+pub struct ComparableRegex(Regex);
+
+impl ComparableRegex {
+    /// Wrap a Regex so that it is comparable.
+    pub fn new(regex: Regex) -> ComparableRegex {
+        ComparableRegex(regex)
+    }
+
+    /// Extract the inner Regex from the wrapper.
+    pub fn into_inner(self) -> Regex {
+        self.0
+    }
+}
+
+impl From<Regex> for ComparableRegex {
+    fn from(regex: Regex) -> ComparableRegex {
+        ComparableRegex(regex)
+    }
+}
+
+impl Deref for ComparableRegex {
+    type Target = Regex;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl PartialEq for ComparableRegex {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str().eq(other.as_str())
+    }
+}
+
+impl Eq for ComparableRegex {}
 
 /// Single entry that
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -227,12 +271,12 @@ impl Default for HookManagerParams {
 }
 
 /// Configuration might be done for a single bookmark or for all bookmarks matching a regex
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BookmarkOrRegex {
     /// Matches a single bookmark
     Bookmark(BookmarkName),
     /// Matches bookmarks with a regex
-    Regex(Regex),
+    Regex(ComparableRegex),
 }
 
 impl BookmarkOrRegex {
@@ -245,19 +289,6 @@ impl BookmarkOrRegex {
     }
 }
 
-impl PartialEq for BookmarkOrRegex {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (BookmarkOrRegex::Bookmark(ref b1), BookmarkOrRegex::Bookmark(ref b2)) => b1.eq(b2),
-            (BookmarkOrRegex::Regex(ref r1), BookmarkOrRegex::Regex(ref r2)) => {
-                r1.as_str().eq(r2.as_str())
-            }
-            _ => false,
-        }
-    }
-}
-impl Eq for BookmarkOrRegex {}
-
 impl From<BookmarkName> for BookmarkOrRegex {
     fn from(b: BookmarkName) -> Self {
         BookmarkOrRegex::Bookmark(b)
@@ -266,7 +297,7 @@ impl From<BookmarkName> for BookmarkOrRegex {
 
 impl From<Regex> for BookmarkOrRegex {
     fn from(r: Regex) -> Self {
-        BookmarkOrRegex::Regex(r)
+        BookmarkOrRegex::Regex(ComparableRegex(r))
     }
 }
 
@@ -328,7 +359,7 @@ impl BookmarkAttrs {
 }
 
 /// Configuration for a bookmark
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct BookmarkParams {
     /// The bookmark
     pub bookmark: BookmarkOrRegex,
@@ -339,24 +370,8 @@ pub struct BookmarkParams {
     /// Whether to rewrite dates for pushrebased commits or not
     pub rewrite_dates: Option<bool>,
     /// Only users matching this pattern will be allowed to move this bookmark
-    pub allowed_users: Option<Regex>,
+    pub allowed_users: Option<ComparableRegex>,
 }
-
-impl PartialEq for BookmarkParams {
-    fn eq(&self, other: &Self) -> bool {
-        let allowed_users_eq = match (&self.allowed_users, &other.allowed_users) {
-            (None, None) => true,
-            (Some(left), Some(right)) => left.as_str() == right.as_str(),
-            _ => false,
-        };
-        allowed_users_eq
-            && (self.bookmark == other.bookmark)
-            && (self.hooks == other.hooks)
-            && (self.only_fast_forward == other.only_fast_forward)
-    }
-}
-
-impl Eq for BookmarkParams {}
 
 /// The type of the hook
 #[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
@@ -854,21 +869,13 @@ pub struct Bundle2ReplayParams {
 }
 
 /// Regex for valid branches that Infinite Pushes can be directed to.
-#[derive(Debug, Clone)]
-pub struct InfinitepushNamespace(Regex);
-
-impl PartialEq for InfinitepushNamespace {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.as_str() == other.0.as_str()
-    }
-}
-
-impl Eq for InfinitepushNamespace {}
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct InfinitepushNamespace(ComparableRegex);
 
 impl InfinitepushNamespace {
     /// Instantiate a new InfinitepushNamespace
     pub fn new(regex: Regex) -> Self {
-        Self(regex)
+        Self(ComparableRegex(regex))
     }
 
     /// Returns whether a given Bookmark matches this namespace.
