@@ -510,6 +510,8 @@ def _analyzewrapper(orig, x, ui):
         and (x[0] in ("range", "rangepre", "rangepost"))
         and x != ("rangepre", ("symbol", "."))
     ):
+        if not util.istest():
+            ui.deprecate("single-colon-revset", "':' is deprecated in revsets")
         msg = ui.config("tweakdefaults", "singlecolonmsg")
         if abort:
             raise error.Abort("%s" % msg)

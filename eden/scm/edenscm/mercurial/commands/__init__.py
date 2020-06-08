@@ -1270,6 +1270,8 @@ def branch(ui, repo, label=None, **opts):
     For now, it always prints "default" or raise an exception if NAME or -C is
     provided.
     """
+    if not util.istest():
+        ui.deprecate("hg-branch", "branches are deprecated at Facebook")
     hintutil.trigger("branch-command-deprecate")
     if not opts.get("clean") and not label:
         ui.write("%s\n" % repo.dirstate.branch())
@@ -2978,6 +2980,10 @@ def heads(ui, repo, *branchrevs, **opts):
 
     Returns 0 if matching heads are found, 1 if not.
     """
+    if not util.istest():
+        ui.deprecate(
+            "hg-heads", "heads is deprecated - use `hg log -r 'head()'` instead"
+        )
 
     start = None
     if "rev" in opts:
@@ -3143,6 +3149,11 @@ def histgrep(ui, repo, pattern, *pats, **opts):
 
     Returns 0 if a match is found, 1 otherwise.
     """
+    if not util.istest():
+        ui.deprecate(
+            "hg-histgrep",
+            "histgrep is deprecated because it does not scale - use diffgrep instead",
+        )
     if not pats and not ui.configbool("histgrep", "allowfullrepogrep"):
         m = _("can't run histgrep on the whole repo, please provide filenames")
         h = _("this is disabled to avoid very slow greps over the whole repo")
@@ -3426,7 +3437,10 @@ def identify(
 
     Returns 0 if successful.
     """
-
+    if not util.istest():
+        ui.deprecate(
+            "hg-identify", "identify is deprecated - use `hg whereami` instead"
+        )
     if not repo and not source:
         raise error.Abort(_("there is no Mercurial repository here " "(.hg not found)"))
 
@@ -3834,6 +3848,8 @@ def incoming(ui, repo, source="default", **opts):
 
     Raises an error if enableincomingoutgoing is set to FALSE.
     """
+    if not util.istest():
+        ui.deprecate("hg-incoming", "incoming is deprecated")
 
     if not ui.configbool("ui", "enableincomingoutgoing"):
         raise error.Abort(_("incoming is not supported for this repository"))
@@ -4395,6 +4411,8 @@ def outgoing(ui, repo, dest=None, **opts):
 
     Returns 0 if there are outgoing changes, 1 otherwise.
     """
+    if not util.istest():
+        ui.deprecate("hg-outgoing", "outgoing is deprecated")
     if not ui.configbool("ui", "enableincomingoutgoing"):
         raise error.Abort(_("outgoing is not supported for this repository"))
 
@@ -4457,6 +4475,10 @@ def parents(ui, repo, file_=None, **opts):
 
     Returns 0 on success.
     """
+    if not util.istest():
+        ui.deprecate(
+            "hg-parents", "parents is deprecated - use `hg log -r 'parents(.)'` instead"
+        )
 
     ctx = scmutil.revsingle(repo, opts.get("rev"), None)
 
@@ -5025,6 +5047,8 @@ def record(ui, repo, *pats, **opts):
       ? - display help
 
     This command is not available when committing a merge."""
+    if not util.istest():
+        ui.deprecate("hg-record", "record is deprecated - use `hg commit -i` instead")
 
     if not ui.interactive():
         raise error.Abort(_("running non-interactively, use %s instead") % "commit")
@@ -5535,6 +5559,8 @@ def rollback(ui, repo, **opts):
 
     Returns 0 on success, 1 if no rollback data is available.
     """
+    if not util.istest():
+        ui.deprecate("hg-rollback", "rollback is deprecated because it is unsafe")
     if not ui.configbool("ui", "rollback"):
         raise error.Abort(
             _("rollback is disabled because it is unsafe"),
@@ -5921,6 +5947,10 @@ def summary(ui, repo, **opts):
 
     Returns 0 on success.
     """
+    if not util.istest():
+        ui.deprecate(
+            "hg-summary", "summary is deprecated - use `hg sl` and `hg status` instead"
+        )
 
     ui.pager("summary")
     ctx = repo[None]
@@ -6180,6 +6210,8 @@ def tag(ui, repo, name1, *names, **opts):
 
     This command is deprecated.
     """
+    if not util.istest():
+        ui.deprecate("hg-tag", "tag is deprecated")
     ui.warn(_("error: the tag command has been deprecated - it is now a no-op\n"))
     return 1
 
@@ -6190,6 +6222,8 @@ def tags(ui, repo, **opts):
 
     This command is deprecated.
     """
+    if not util.istest():
+        ui.deprecate("hg-tags", "tags is deprecated")
     ui.warn(_("error: the tags command has been deprecated - it is now a no-op\n"))
     return 1
 
@@ -6219,6 +6253,8 @@ def tip(ui, repo, **opts):
 
     Returns 0 on success.
     """
+    if not util.istest():
+        ui.deprecate("hg-tip", "tip is deprecated")
     displayer = cmdutil.show_changeset(ui, repo, opts)
     displayer.show(repo["tip"])
     displayer.close()
