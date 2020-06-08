@@ -1253,9 +1253,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                     std::move(result).exception());
               }
 
-#ifdef _WIN32
-              return makeFuture<shared_ptr<EdenMount>>(std::move(edenMount));
-#else
               // Now that we've started the workers, arrange to call
               // mountFinished once the pool is torn down.
               auto finishFuture =
@@ -1274,6 +1271,10 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                 return makeFuture<std::shared_ptr<EdenMount>>(
                     std::move(edenMount));
               } else {
+#ifdef _WIN32
+                return makeFuture<std::shared_ptr<EdenMount>>(
+                    std::move(edenMount));
+#else
                 // Perform all of the bind mounts associated with the
                 // client.  We don't need to do this for the takeover
                 // case as they are already mounted.
@@ -1286,11 +1287,10 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                       return edenMount;
                     })
                     .via(getServerState()->getThreadPool().get());
+#endif
               }
             })
             .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
-              // TODO: Include this to work on Windows when getting the event
-              // logging working.
               FinishedMount event;
               event.repo_type = edenMount->getConfig()->getRepoType();
               event.repo_source =
@@ -1300,10 +1300,13 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                   std::chrono::duration<double>{mountStopWatch.elapsed()}
                       .count();
               event.success = !t.hasException();
+#ifndef _WIN32
               event.clean = edenMount->getOverlay()->hadCleanStartup();
+#else
+              event.clean = true;
+#endif
               serverState_->getStructuredLogger()->logEvent(event);
               return makeFuture(std::move(t));
-#endif
             });
       });
 }
