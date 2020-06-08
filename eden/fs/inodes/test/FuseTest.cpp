@@ -69,7 +69,7 @@ TEST(FuseTest, initMount) {
   fuse->close();
 
   auto fuseCompletionFuture =
-      testMount.getEdenMount()->getFuseCompletionFuture();
+      testMount.getEdenMount()->getChannelCompletionFuture();
 
   // TestMount has a manual executor, but the fuse channel thread enqueues
   // the work. Wait for the future to complete, driving the ManualExecutor
@@ -136,7 +136,7 @@ TEST(FuseTest, destroyWithInitRace) {
 
     // Call startFuse() on the test mount.
     initFuture = testMount.getEdenMount()->startChannel(false);
-    completionFuture = testMount.getEdenMount()->getFuseCompletionFuture();
+    completionFuture = testMount.getEdenMount()->getChannelCompletionFuture();
 
     // Send the FUSE INIT request.
     auto reqID = fuse->sendInitRequest();

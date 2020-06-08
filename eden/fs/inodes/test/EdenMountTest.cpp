@@ -792,7 +792,7 @@ TEST(EdenMount, unmountIsIdempotent) {
       .getVia(testMount.getServerExecutor().get());
   SCOPE_EXIT {
     fuse->close();
-    mount.getFuseCompletionFuture().within(kTimeout).getVia(
+    mount.getChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
   };
 
@@ -821,7 +821,7 @@ TEST(EdenMount, concurrentUnmountCallsWaitForExactlyOneFuseUnmount) {
       .getVia(testMount.getServerExecutor().get());
   SCOPE_EXIT {
     fuse->close();
-    mount.getFuseCompletionFuture().within(kTimeout).getVia(
+    mount.getChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
   };
 
@@ -859,7 +859,7 @@ TEST(EdenMount, unmountUnmountsIfMounted) {
 
   mount.unmount().get(kTimeout);
   SCOPE_EXIT {
-    mount.getFuseCompletionFuture().within(kTimeout).getVia(
+    mount.getChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
   };
 
@@ -880,7 +880,7 @@ TEST(EdenMount, unmountUnmountsIfTookOver) {
 
   mount.unmount().get(kTimeout);
   SCOPE_EXIT {
-    mount.getFuseCompletionFuture().within(kTimeout).getVia(
+    mount.getChannelCompletionFuture().within(kTimeout).getVia(
         testMount.getServerExecutor().get());
   };
   EXPECT_TRUE(mountDelegate->wasFuseUnmountEverCalled())
@@ -1118,7 +1118,7 @@ TEST(EdenMountState, newMountIsRunningAndOldMountIsShutDownAfterFuseTakeover) {
   oldMount.getFuseChannel()->takeoverStop();
 
   TakeoverData::MountInfo takeoverData =
-      oldMount.getFuseCompletionFuture().within(kTimeout).getVia(
+      oldMount.getChannelCompletionFuture().within(kTimeout).getVia(
           oldTestMount.getServerExecutor().get());
   oldMount.shutdown(/*doTakeover=*/true).get(kTimeout);
   newMount.takeoverFuse(FuseChannelData{std::move(takeoverData.fuseFD), {}});

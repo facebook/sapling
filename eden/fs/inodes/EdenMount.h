@@ -221,7 +221,7 @@ class EdenMount {
    * concurrently:
    *
    * * The future returned by unmount() is fulfilled successfully.
-   * * The future returned by getFuseCompletionFuture() is fulfilled.
+   * * The future returned by getChannelCompletionFuture() is fulfilled.
    *
    * If startChannel() is in progress, unmount() can cancel startChannel().
    *
@@ -604,15 +604,15 @@ class EdenMount {
   void takeoverFuse(FuseChannelData takeoverData);
 
   /**
-   * Obtains a future that will complete once the fuse channel has wound down.
+   * Obtains a future that will complete once the channel has wound down.
    *
    * This method may be called at any time, but the returned future will only be
    * fulfilled if startChannel() completes successfully.  If startChannel()
-   * fails or is never called, the future returned by getFuseCompletionFuture()
-   * will never complete.
+   * fails or is never called, the future returned by
+   * getChannelCompletionFuture() will never complete.
    */
   FOLLY_NODISCARD folly::Future<TakeoverData::MountInfo>
-  getFuseCompletionFuture();
+  getChannelCompletionFuture();
 
   Owner getOwner() const {
     return *owner_.rlock();
@@ -848,8 +848,8 @@ class EdenMount {
    * Signal to unmount() that fuseMount() or takeoverFuse() has started.
    *
    * beginMount() returns a reference to
-   * *mountingUnmountingState_->fuseMountPromise. To signal that the fuseMount()
-   * has completed, set the promise's value (or exception) without
+   * *mountingUnmountingState_->channelMountPromise. To signal that the
+   * fuseMount() has completed, set the promise's value (or exception) without
    * mountingUnmountingState_'s lock held.
    *
    * If unmount() was called in the past, beginMount() throws
@@ -890,7 +890,7 @@ class EdenMount {
 
   /**
    * A promise associated with the future returned from
-   * EdenMount::getFuseCompletionFuture() that completes when the
+   * EdenMount::getChannelCompletionFuture() that completes when the
    * fuseChannel has no work remaining and can be torn down.
    * The future yields the underlying fuseDevice descriptor; it can
    * be passed on during graceful restart or simply closed if we're
@@ -899,7 +899,7 @@ class EdenMount {
    * so that the subsequent privilegedFuseUnmount() call won't block
    * waiting on us for a response.
    */
-  folly::Promise<TakeoverData::MountInfo> fuseCompletionPromise_;
+  folly::Promise<TakeoverData::MountInfo> channelCompletionPromise_;
 
   /**
    * Eden server state shared across multiple mount points.
@@ -978,8 +978,8 @@ class EdenMount {
   folly::Synchronized<struct timespec> lastCheckoutTime_;
 
   struct MountingUnmountingState {
-    bool fuseMountStarted() const noexcept;
-    bool unmountStarted() const noexcept;
+    bool channelMountStarted() const noexcept;
+    bool channelUnmountStarted() const noexcept;
 
     /**
      * Whether or not the mount(2) syscall has been called (via fuseMount).
@@ -1000,7 +1000,7 @@ class EdenMount {
      * umount(8) is called by another process, the file system will not be
      * mounted.
      */
-    std::optional<folly::Promise<folly::Unit>> fuseMountPromise;
+    std::optional<folly::Promise<folly::Unit>> channelMountPromise;
 
     /**
      * Whether or not unmount has been called.
@@ -1016,7 +1016,7 @@ class EdenMount {
      * The state of this variable might not reflect whether the file system is
      * unmounted.
      */
-    std::optional<folly::SharedPromise<folly::Unit>> unmountPromise;
+    std::optional<folly::SharedPromise<folly::Unit>> channelUnmountPromise;
   };
 
   folly::Synchronized<MountingUnmountingState> mountingUnmountingState_;

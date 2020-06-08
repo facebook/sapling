@@ -1258,15 +1258,16 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 #else
               // Now that we've started the workers, arrange to call
               // mountFinished once the pool is torn down.
-              auto finishFuture = edenMount->getFuseCompletionFuture().thenTry(
-                  [this,
-                   edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
-                    std::optional<TakeoverData::MountInfo> optTakeover;
-                    if (takeover.hasValue()) {
-                      optTakeover = std::move(takeover.value());
-                    }
-                    mountFinished(edenMount.get(), std::move(optTakeover));
-                  });
+              auto finishFuture =
+                  edenMount->getChannelCompletionFuture().thenTry(
+                      [this, edenMount](
+                          folly::Try<TakeoverData::MountInfo>&& takeover) {
+                        std::optional<TakeoverData::MountInfo> optTakeover;
+                        if (takeover.hasValue()) {
+                          optTakeover = std::move(takeover.value());
+                        }
+                        mountFinished(edenMount.get(), std::move(optTakeover));
+                      });
 
               if (doTakeover) {
                 // The bind mounts are already mounted in the takeover case
@@ -1347,7 +1348,6 @@ void EdenServer::mountFinished(
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   unregisterStats(edenMount);
 
-#ifndef _WIN32
   // Save the unmount and takover Promises
   folly::SharedPromise<Unit> unmountPromise;
   std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
@@ -1389,9 +1389,6 @@ void EdenServer::mountFinished(
           mountPoints->erase(it);
         }
       });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {

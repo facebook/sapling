@@ -612,14 +612,15 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
 folly::Future<folly::Unit> EdenMount::unmount() {
   return folly::makeFutureWith([this] {
     auto mountingUnmountingState = mountingUnmountingState_.wlock();
-    if (mountingUnmountingState->unmountStarted()) {
-      return mountingUnmountingState->unmountPromise->getFuture();
+    if (mountingUnmountingState->channelUnmountStarted()) {
+      return mountingUnmountingState->channelUnmountPromise->getFuture();
     }
-    mountingUnmountingState->unmountPromise.emplace();
-    if (!mountingUnmountingState->fuseMountStarted()) {
+    mountingUnmountingState->channelUnmountPromise.emplace();
+    if (!mountingUnmountingState->channelMountStarted()) {
       return folly::makeFuture();
     }
-    auto mountFuture = mountingUnmountingState->fuseMountPromise->getFuture();
+    auto mountFuture =
+        mountingUnmountingState->channelMountPromise->getFuture();
     mountingUnmountingState.unlock();
 
     return std::move(mountFuture)
@@ -632,9 +633,9 @@ folly::Future<folly::Unit> EdenMount::unmount() {
         })
         .thenTry([this](Try<Unit> && result) noexcept->folly::Future<Unit> {
           auto mountingUnmountingState = mountingUnmountingState_.wlock();
-          DCHECK(mountingUnmountingState->unmountPromise.has_value());
+          DCHECK(mountingUnmountingState->channelUnmountPromise.has_value());
           folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
-              &*mountingUnmountingState->unmountPromise;
+              &*mountingUnmountingState->channelUnmountPromise;
           mountingUnmountingState.unlock();
 
           unsafeUnmountPromise->setTry(Try<Unit>{result});
@@ -1186,8 +1187,8 @@ std::string EdenMount::getCounterName(CounterName name) {
              << static_cast<std::underlying_type_t<CounterName>>(name);
 }
 
-folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
-  return fuseCompletionPromise_.getFuture();
+folly::Future<TakeoverData::MountInfo> EdenMount::getChannelCompletionFuture() {
+  return channelCompletionPromise_.getFuture();
 }
 
 folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
@@ -1264,7 +1265,8 @@ folly::Future<folly::File> EdenMount::fuseMount(bool readOnly) {
                     return folly::makeFuture<folly::File>(
                         fuseDevice.exception());
                   }
-                  if (mountingUnmountingState_.rlock()->unmountStarted()) {
+                  if (mountingUnmountingState_.rlock()
+                          ->channelUnmountStarted()) {
                     fuseDevice->close();
                     return serverState_->getPrivHelper()
                         ->fuseUnmount(mountPath.stringPiece())
@@ -1295,23 +1297,23 @@ folly::Future<folly::File> EdenMount::fuseMount(bool readOnly) {
 
 folly::Promise<folly::Unit>& EdenMount::beginMount() {
   auto mountingUnmountingState = mountingUnmountingState_.wlock();
-  if (mountingUnmountingState->fuseMountPromise.has_value()) {
+  if (mountingUnmountingState->channelMountPromise.has_value()) {
     EDEN_BUG() << __func__ << " unexpectedly called more than once";
   }
-  if (mountingUnmountingState->unmountStarted()) {
+  if (mountingUnmountingState->channelUnmountStarted()) {
     throw EdenMountCancelled{};
   }
-  mountingUnmountingState->fuseMountPromise.emplace();
-  // N.B. Return a reference to the lock-protected fuseMountPromise member,
+  mountingUnmountingState->channelMountPromise.emplace();
+  // N.B. Return a reference to the lock-protected channelMountPromise member,
   // then release the lock. This is safe for two reasons:
   //
-  // * *fuseMountPromise will never be destructed (e.g. by calling
-  //   std::optional<>::reset()) or reassigned. (fuseMountPromise never goes
+  // * *channelMountPromise will never be destructed (e.g. by calling
+  //   std::optional<>::reset()) or reassigned. (channelMountPromise never goes
   //   from `has_value() == true` to `has_value() == false`.)
   //
   // * folly::Promise is self-synchronizing; getFuture() can be called
   //   concurrently with setValue()/setException().
-  return *mountingUnmountingState->fuseMountPromise;
+  return *mountingUnmountingState->channelMountPromise;
 }
 
 void EdenMount::createFuseChannel(folly::File fuseDevice) {
@@ -1346,7 +1348,7 @@ void EdenMount::fuseInitSuccessful(
 
         std::vector<AbsolutePath> bindMounts;
 
-        fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
+        channelCompletionPromise_.setValue(TakeoverData::MountInfo(
             getPath(),
             config_->getClientDirectory(),
             bindMounts,
@@ -1357,7 +1359,7 @@ void EdenMount::fuseInitSuccessful(
       })
       .thenError([this](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "session complete with err: " << ew.what();
-        fuseCompletionPromise_.setException(std::move(ew));
+        channelCompletionPromise_.setException(std::move(ew));
       });
 }
 
@@ -1451,12 +1453,13 @@ void EdenMount::treePrefetchFinished() noexcept {
   XDCHECK_NE(uint64_t{0}, oldValue);
 }
 
-bool EdenMount::MountingUnmountingState::fuseMountStarted() const noexcept {
-  return fuseMountPromise.has_value();
+bool EdenMount::MountingUnmountingState::channelMountStarted() const noexcept {
+  return channelMountPromise.has_value();
 }
 
-bool EdenMount::MountingUnmountingState::unmountStarted() const noexcept {
-  return unmountPromise.has_value();
+bool EdenMount::MountingUnmountingState::channelUnmountStarted() const
+    noexcept {
+  return channelUnmountPromise.has_value();
 }
 
 EdenMountCancelled::EdenMountCancelled()
