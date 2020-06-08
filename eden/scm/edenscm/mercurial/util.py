@@ -491,6 +491,23 @@ def versiontuple(v=None, n=4):
         return (vints[0], vints[1], vints[2], extra)
 
 
+def caller():
+    """returns an identifier for the caller of this Mercurial command
+
+    This will generally be the user name of the current caller, but may be a
+    service owner identifier as set by HG_CALLER_ID.
+    """
+    # TODO: We should enforce that services set HG_CALLER_ID to their oncall. We
+    # could possibly require this is HGPLAIN is set.
+    caller = encoding.environ.get("HG_CALLER_ID")
+    if caller is None:
+        import getpass
+
+        caller = getpass.getuser()
+
+    return caller
+
+
 def cachefunc(func):
     """cache the result of function calls"""
     # XXX doesn't handle keywords args

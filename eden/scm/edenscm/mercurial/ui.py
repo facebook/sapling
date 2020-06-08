@@ -1537,12 +1537,14 @@ class ui(object):
             percent = float(now - start) / float(end - start)
             level = max(0, min(int(percent * maxlevel), maxlevel))
 
+        caller = util.caller()
         self.log(
             "deprecated",
             message,
             feature=name,
             level=int(level),
             version=util.version(),
+            caller=caller,
         )
 
         bypassed = self.configbool("deprecated", "bypass-%s" % name)
