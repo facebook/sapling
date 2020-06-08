@@ -44,7 +44,6 @@
 #ifdef _WIN32
 #include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h" // @manual
 #include "eden/fs/win/store/WinStore.h" // @manual
-#include "eden/fs/win/testharness/TestFsChannel.h" // @manual
 #include "eden/fs/win/utils/Guid.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #else
@@ -175,9 +174,6 @@ void TestMount::initialize(
 
 void TestMount::initializeEdenMount() {
   edenMount_->initialize().getVia(serverExecutor_.get());
-#ifdef _WIN32
-  edenMount_->setFsChannel(std::make_unique<TestFsChannel>());
-#endif
 }
 
 void TestMount::createMountWithoutInitializing(
@@ -305,9 +301,6 @@ void TestMount::remount() {
       serverState_,
       std::move(journal));
   edenMount_->initialize().getVia(serverExecutor_.get());
-#ifdef _WIN32
-  edenMount_->setFsChannel(std::make_unique<TestFsChannel>());
-#endif
 }
 
 #ifndef _WIN32

@@ -3019,8 +3019,9 @@ void TreeInode::cleanupPrjfsCache(PathComponentPiece name) {
     auto optParent = getPath();
     if (optParent.has_value()) {
       auto relPath = optParent.value() + name;
-      getMount()->getFsChannel()->removeCachedFile(
-          edenToWinPath(relPath.stringPiece()).c_str());
+      if (auto* channel = getMount()->getFsChannel()) {
+        channel->removeCachedFile(edenToWinPath(relPath.stringPiece()).c_str());
+      }
       XLOGF(DBG4, "removeCachedFile {}", relPath.stringPiece());
     } else {
       XLOG(ERR) << "Failed to get the Inode path to clean up the FS cache";

@@ -320,11 +320,6 @@ class EdenMount {
   FsChannel* getFsChannel() const {
     return fsChannel_.get();
   }
-
-  void setFsChannel(std::unique_ptr<FsChannel> fsChannel) {
-    fsChannel_ = std::move(fsChannel);
-  }
-
 #else
   /**
    * Return the EdenDispatcher used for this mount.

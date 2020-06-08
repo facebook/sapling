@@ -1206,7 +1206,7 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
       NOT_IMPLEMENTED();
     }
 
-    setFsChannel(std::make_unique<PrjfsChannel>(this));
+    fsChannel_ = std::make_unique<PrjfsChannel>(this);
     fsChannel_->start();
     createRepoConfig(
         getPath(),
