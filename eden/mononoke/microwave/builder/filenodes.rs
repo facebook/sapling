@@ -47,7 +47,7 @@ impl Filenodes for MicrowaveFilenodes {
         _ctx: CoreContext,
         _info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture<FilenodeResult<()>, Error> {
         // Microwave normally should never be writing. If it is writing, then that's likely a bug
         // that warants attention, and it is preferable to panic and wait for a fix. Since
         // Microwave isn't on the critical path for anything, and can do its job perfectly well
@@ -75,7 +75,7 @@ impl Filenodes for MicrowaveFilenodes {
         _ctx: CoreContext,
         _info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture<FilenodeResult<()>, Error> {
         // Same as above
         unimplemented!(
             "MicrowaveFilenodes: unexpected add_or_replace_filenodes in repo {}",

@@ -58,7 +58,7 @@ impl Filenodes for NewFilenodes {
         ctx: CoreContext,
         info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture<FilenodeResult<()>, Error> {
         cloned!(self.writer);
 
         async move {
@@ -78,7 +78,7 @@ impl Filenodes for NewFilenodes {
         ctx: CoreContext,
         info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture<FilenodeResult<()>, Error> {
         cloned!(self.writer);
 
         async move {

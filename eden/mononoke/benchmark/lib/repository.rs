@@ -199,7 +199,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
         ctx: CoreContext,
         info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture<FilenodeResult<()>, Error> {
         delay(self.put_dist, self.inner.add_filenodes(ctx, info, repo_id)).boxify()
     }
 
@@ -208,7 +208,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
         ctx: CoreContext,
         info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture<FilenodeResult<()>, Error> {
         delay(
             self.put_dist,
             self.inner.add_or_replace_filenodes(ctx, info, repo_id),

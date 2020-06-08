@@ -50,7 +50,8 @@ async fn test_filenode_fill(fb: FacebookInit) -> Result<(), Error> {
             }],
             false,
         )
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
 
     let key = filenode_cache_key(
         REPO_ZERO,
@@ -98,7 +99,8 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
             }],
             false,
         )
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
 
     // A local miss should fill the remote cache:
     reader

@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use context::CoreContext;
-use filenodes::PreparedFilenode;
+use filenodes::{FilenodeResult, PreparedFilenode};
 use futures::future;
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
@@ -16,6 +16,7 @@ use sql::{queries, Connection};
 use stats::prelude::*;
 use std::collections::HashSet;
 use thiserror::Error as DeriveError;
+use tunables::tunables;
 
 use crate::structs::{PathBytes, PathHash, PathHashBytes};
 use futures::compat::Future01CompatExt;
@@ -56,7 +57,7 @@ impl FilenodesWriter {
         repo_id: RepositoryId,
         filenodes: Vec<PreparedFilenode>,
         replace: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<FilenodeResult<()>, Error> {
         STATS::adds.add_value(filenodes.len() as i64);
 
         let shard_count = self.write_connections.len();
@@ -71,9 +72,15 @@ impl FilenodesWriter {
             })
             .collect::<Vec<_>>();
 
-        future::try_join_all(futs).await?;
+        let res = future::try_join_all(futs).await?;
 
-        Ok(())
+        for r in res {
+            if let FilenodeResult::Disabled = r {
+                return Ok(FilenodeResult::Disabled);
+            }
+        }
+
+        Ok(FilenodeResult::Present(()))
     }
 
     async fn insert_filenode_group(
@@ -82,7 +89,11 @@ impl FilenodesWriter {
         shard_number: usize,
         filenodes: Vec<(PathHash, PreparedFilenode)>,
         replace: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<FilenodeResult<()>, Error> {
+        if tunables().get_filenodes_disabled() {
+            return Ok(FilenodeResult::Disabled);
+        }
+
         for chunk in filenodes.chunks(self.chunk_size) {
             let read_conn = &self.read_connections[shard_number];
             let write_conn = &self.write_connections[shard_number];
@@ -90,7 +101,7 @@ impl FilenodesWriter {
             insert_filenodes(&write_conn, repo_id, chunk, replace).await?;
         }
 
-        Ok(())
+        Ok(FilenodeResult::Present(()))
     }
 }
 

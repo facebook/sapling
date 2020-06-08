@@ -125,14 +125,14 @@ pub trait Filenodes: Send + Sync {
         ctx: CoreContext,
         info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
-    ) -> BoxFuture<(), Error>;
+    ) -> BoxFuture<FilenodeResult<()>, Error>;
 
     fn add_or_replace_filenodes(
         &self,
         ctx: CoreContext,
         info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
-    ) -> BoxFuture<(), Error>;
+    ) -> BoxFuture<FilenodeResult<()>, Error>;
 
     fn get_filenode(
         &self,

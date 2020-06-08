@@ -49,7 +49,8 @@ async fn check_roundtrip(
 
     writer
         .insert_filenodes(&ctx, repo_id, vec![payload.clone()], false)
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
 
     assert_eq!(
         async {
@@ -108,7 +109,8 @@ async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
 
     writer
         .insert_filenodes(&ctx, REPO_ZERO, vec![from.clone()], false)
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
 
     let payload = PreparedFilenode {
         path: RepoPath::FilePath(MPath::new(b"test")?),
@@ -137,7 +139,8 @@ async fn test_repo_ids(fb: FacebookInit) -> Result<(), Error> {
 
     writer
         .insert_filenodes(&ctx, REPO_ZERO, vec![payload.clone()], false)
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
 
     assert_filenode(
         &ctx,
@@ -192,7 +195,8 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
         vec![copied_from_filenode(), copied_filenode()],
         false,
     )
-    .await?;
+    .await?
+    .do_not_handle_disabled_filenodes()?;
 
     FilenodesWriter::new(
         SQLITE_INSERT_CHUNK_SIZE,
@@ -205,7 +209,8 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
         vec![copied_from_filenode(), copied_filenode()],
         false,
     )
-    .await?;
+    .await?
+    .do_not_handle_disabled_filenodes()?;
 
     // Now, delete the copy info from the replica.
     DeleteCopyInfo::query(&replica).compat().await?;
@@ -244,7 +249,8 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
         vec![copied_from_filenode(), copied_filenode()],
         false,
     )
-    .await?;
+    .await?
+    .do_not_handle_disabled_filenodes()?;
 
     FilenodesWriter::new(
         SQLITE_INSERT_CHUNK_SIZE,
@@ -257,7 +263,8 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
         vec![copied_from_filenode(), copied_filenode()],
         false,
     )
-    .await?;
+    .await?
+    .do_not_handle_disabled_filenodes()?;
 
     // Now, delete the copy info from the replica.
     DeletePaths::query(&replica).compat().await?;
@@ -389,7 +396,8 @@ async fn do_add_filenodes(
 ) -> Result<(), Error> {
     writer
         .insert_filenodes(&ctx, repo_id, to_insert, false)
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
     Ok(())
 }
 

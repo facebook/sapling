@@ -13,7 +13,7 @@ use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use filenodes::{FilenodeInfo, PreparedFilenode};
+use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::try_join_all,
@@ -30,7 +30,6 @@ use mercurial_types::{
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepoPath};
 use std::{collections::HashMap, convert::TryFrom};
-use tunables::tunables;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreparedRootFilenode {
@@ -119,11 +118,6 @@ impl BonsaiDerived for FilenodesOnlyPublic {
         _parents: Vec<Self>,
     ) -> BoxFuture<Self, Error> {
         async move {
-            // TODO(stash): remove this check when filenodes start returning FilenodeResult
-            if tunables().get_filenodes_disabled() {
-                return Ok(FilenodesOnlyPublic::Disabled);
-            }
-
             let filenodes = generate_all_filenodes(&ctx, &repo, bonsai.get_changeset_id()).await?;
 
             if filenodes.is_empty() {
@@ -143,14 +137,17 @@ impl BonsaiDerived for FilenodesOnlyPublic {
                     (Some(root_filenode), None) => {
                         let filenodes = repo.get_filenodes();
                         let repo_id = repo.get_repoid();
-                        filenodes
+                        let filenode_res = filenodes
                             .add_filenodes(ctx.clone(), non_roots, repo_id)
                             .compat()
                             .await?;
 
-                        Ok(FilenodesOnlyPublic::Present {
-                            root_filenode: Some(root_filenode),
-                        })
+                        match filenode_res {
+                            FilenodeResult::Present(()) => Ok(FilenodesOnlyPublic::Present {
+                                root_filenode: Some(root_filenode),
+                            }),
+                            FilenodeResult::Disabled => Ok(FilenodesOnlyPublic::Disabled),
+                        }
                     }
                     _ => Err(format_err!("expected exactly one root, found {:?}", roots)),
                 }
@@ -331,11 +328,13 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
                     let repo = &repo;
                     let ctx = &ctx;
                     move |cs_id| async move {
-                        // TODO(stash): remove this check when filenodes start returning FilenodeResult
-                        if tunables().get_filenodes_disabled() {
-                            return Ok(Some((cs_id, FilenodesOnlyPublic::Disabled)));
-                        }
-                        let maybe_root_filenode = fetch_root_filenode(&ctx, cs_id, &repo).await?;
+                        let filenode_res = fetch_root_filenode(&ctx, cs_id, &repo).await?;
+                        let maybe_root_filenode = match filenode_res {
+                            FilenodeResult::Present(maybe_root_filenode) => maybe_root_filenode,
+                            FilenodeResult::Disabled => {
+                                return Ok(Some((cs_id, FilenodesOnlyPublic::Disabled)))
+                            }
+                        };
 
                         Ok(maybe_root_filenode.map(move |filenode| {
                             (
@@ -369,6 +368,12 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
         match root_filenode {
             Some(root_filenode) => filenodes
                 .add_filenodes(ctx.clone(), vec![root_filenode.into()], repo_id)
+                .map(|res| match res {
+                    // If filenodes are disabled then just return success
+                    // but use explicit match here in case we add more variants
+                    // to FilenodeResult enum
+                    FilenodeResult::Present(()) | FilenodeResult::Disabled => (),
+                })
                 .boxify(),
             None => old_future::ok(()).boxify(),
         }
@@ -379,7 +384,7 @@ async fn fetch_root_filenode(
     ctx: &CoreContext,
     cs_id: ChangesetId,
     repo: &BlobRepo,
-) -> Result<Option<PreparedRootFilenode>, Error> {
+) -> Result<FilenodeResult<Option<PreparedRootFilenode>>, Error> {
     // If hg changeset is not generated, then root filenode can't possible be generated
     // Check it and return None if hg changeset is not generated
     let maybe_hg_cs_id = repo
@@ -388,7 +393,7 @@ async fn fetch_root_filenode(
         .compat()
         .await?;
     if maybe_hg_cs_id.is_none() {
-        return Ok(None);
+        return Ok(FilenodeResult::Present(None));
     }
 
     let mf_id = fetch_root_manifest_id(ctx, &cs_id, repo).await?;
@@ -397,15 +402,15 @@ async fn fetch_root_filenode(
     let mf_id = mf_id.into_nodehash();
     let filenodes = repo.get_filenodes();
     if mf_id == NULL_HASH {
-        Ok(Some(PreparedRootFilenode {
+        Ok(FilenodeResult::Present(Some(PreparedRootFilenode {
             filenode: HgFileNodeId::new(NULL_HASH),
             p1: None,
             p2: None,
             copyfrom: None,
             linknode: HgChangesetId::new(NULL_HASH),
-        }))
+        })))
     } else {
-        let maybe_info = filenodes
+        let filenode_res = filenodes
             .get_filenode(
                 ctx.clone(),
                 &RepoPath::RootPath,
@@ -413,18 +418,22 @@ async fn fetch_root_filenode(
                 repo.get_repoid(),
             )
             .compat()
-            .await?
-            // TODO(stash): do not fail but return FilenodesOnlyPublic::Disabled
-            .do_not_handle_disabled_filenodes()?;
+            .await?;
 
-        maybe_info
-            .map(|info| {
-                PreparedRootFilenode::try_from(PreparedFilenode {
-                    path: RepoPath::RootPath,
-                    info,
-                })
-            })
-            .transpose()
+        match filenode_res {
+            FilenodeResult::Present(maybe_info) => {
+                let info = maybe_info
+                    .map(|info| {
+                        PreparedRootFilenode::try_from(PreparedFilenode {
+                            path: RepoPath::RootPath,
+                            info,
+                        })
+                    })
+                    .transpose()?;
+                Ok(FilenodeResult::Present(info))
+            }
+            FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+        }
     }
 }
 
@@ -679,16 +688,15 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
         let cs = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
+        let derived = FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), cs)
+            .compat()
+            .await?;
+        assert_eq!(derived, FilenodesOnlyPublic::Disabled);
 
         let mapping = FilenodesOnlyPublic::mapping(&ctx, &repo);
         let res = mapping.get(ctx.clone(), vec![cs]).compat().await?;
 
         assert_eq!(res.get(&cs).unwrap(), &FilenodesOnlyPublic::Disabled);
-
-        let derived = FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), cs)
-            .compat()
-            .await?;
-        assert_eq!(derived, FilenodesOnlyPublic::Disabled);
 
         Ok(())
     }

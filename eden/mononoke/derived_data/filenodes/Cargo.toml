@@ -22,7 +22,6 @@ mononoke_types = { path = "../../mononoke_types" }
 phases = { path = "../../phases" }
 repo_blobstore = { path = "../../blobrepo/repo_blobstore" }
 revset = { path = "../../revset" }
-tunables = { path = "../../tunables" }
 unodes = { path = "../unodes" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -47,3 +46,4 @@ blobrepo_factory = { path = "../../blobrepo/factory" }
 fixtures = { path = "../../tests/fixtures" }
 test_utils = { path = "../../manifest/test_utils" }
 tests_utils = { path = "../../tests/utils" }
+tunables = { path = "../../tunables" }
