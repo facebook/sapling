@@ -3,7 +3,6 @@
   $ disable treemanifest
 TODO: configure mutation
   $ configure noevolution dummyssh
-  $ . helpers-usechg.sh
 
 Setup
 

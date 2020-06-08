@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ . helpers-usechg.sh
 
   $ hg init
   $ echo a > a

@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
 Test rebase with evolution
 See test-rebase-mutation.t for the equivalent test with mutation & visibility.

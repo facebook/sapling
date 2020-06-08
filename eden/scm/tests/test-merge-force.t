@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ . helpers-usechg.sh
 
 Set up a base, local, and remote changeset, as well as the working copy state.
 Files names are of the form base_remote_local_working-copy. For example,

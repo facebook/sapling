@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
 initial
   $ hg init test-a

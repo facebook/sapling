@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ . helpers-usechg.sh
   $ disable treemanifest
 
   $ . "$TESTDIR/library.sh"

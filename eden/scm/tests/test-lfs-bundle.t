@@ -16,7 +16,6 @@ It is interesting because rev 2 could have been stored as LFS in the repo, and
 non-LFS in the bundle; or vice-versa.
 
 Init:
-  $ . helpers-usechg.sh
 
   $ enable lfs remotefilelog
   $ setconfig lfs.url=file://$TESTTMP/remote remotefilelog.cachepath=$TESTTMP/cache

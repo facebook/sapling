@@ -9,10 +9,7 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-
-
 sh % "setconfig 'extensions.treemanifest=!'"
-sh % ". helpers-usechg.sh"
 
 # Test for changeset ba7c74081861
 # (update dirstate correctly for non-branchmerge updates)

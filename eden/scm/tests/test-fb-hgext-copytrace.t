@@ -4,7 +4,6 @@
   $ disable treemanifest
   $ enable copytrace rebase shelve
   $ setconfig experimental.copytrace=off
-  $ . helpers-usechg.sh
 
   $ initclient() {
   >   setconfig copytrace.remote=false copytrace.enablefilldb=true copytrace.fastcopytrace=true

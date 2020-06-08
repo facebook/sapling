@@ -8,8 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-sh % ". helpers-usechg.sh"
-
 # Set up test environment.
 
 

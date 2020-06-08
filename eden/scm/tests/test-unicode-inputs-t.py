@@ -12,7 +12,6 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % ". helpers-usechg.sh"
 sh % "setmodernconfig"
 
 sh % "hg init repo"

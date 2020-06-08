@@ -16,7 +16,6 @@ feature.require(["py2"])
 
 # TODO: Make this test compatibile with obsstore enabled.
 sh % "setconfig 'experimental.evolution='"
-sh % ". helpers-usechg.sh"
 
 
 sh % "cat" << r"""

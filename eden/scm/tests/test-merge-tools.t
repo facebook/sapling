@@ -2,7 +2,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
 test merge-tools configuration - mostly exercising filemerge.py
 

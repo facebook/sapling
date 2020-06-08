@@ -2,7 +2,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
 ==================================
 Basic testing for the push command

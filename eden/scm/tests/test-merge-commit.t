@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
 Check that renames are correctly saved by a commit after a merge
 

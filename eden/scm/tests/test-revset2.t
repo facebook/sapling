@@ -2,7 +2,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
   $ enable commitextras
   $ setconfig ui.allowemptycommit=1

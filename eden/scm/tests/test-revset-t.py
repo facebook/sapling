@@ -14,8 +14,6 @@ from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 feature.require(["py2"])
 
 
-sh % ". helpers-usechg.sh"
-
 sh % "enable commitextras"
 sh % "setconfig 'ui.allowemptycommit=1'"
 

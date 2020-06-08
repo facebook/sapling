@@ -12,7 +12,6 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "setconfig 'extensions.treemanifest=!'"
-sh % ". helpers-usechg.sh"
 
 sh % "cat" << r"""
 [extdiff]

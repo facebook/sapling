@@ -12,8 +12,6 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 feature.require(["py2"])
 
 
-sh % ". helpers-usechg.sh"
-
 # Log on empty repository: checking consistency
 
 sh % "hg init empty"

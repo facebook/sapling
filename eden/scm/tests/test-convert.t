@@ -1,7 +1,6 @@
 #require py2
 #chg-compatible
 
-  $ . helpers-usechg.sh
 
   $ enable convert
   $ setconfig convert.hg.saverev=False

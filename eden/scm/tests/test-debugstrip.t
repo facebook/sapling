@@ -3,7 +3,6 @@
 TODO: configure mutation
   $ configure noevolution
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
   $ setconfig format.usegeneraldelta=yes
 

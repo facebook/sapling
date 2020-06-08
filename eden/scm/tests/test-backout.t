@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ . helpers-usechg.sh
 
   $ hg init basic
   $ cd basic

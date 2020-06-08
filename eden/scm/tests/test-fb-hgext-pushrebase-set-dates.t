@@ -6,7 +6,6 @@
 #testcases nostackpush stackpush
   $ disable treemanifest
   $ configure noevolution dummyssh
-  $ . helpers-usechg.sh
 
   $ . "$TESTDIR/library.sh"
   $ getmysqldb

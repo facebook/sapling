@@ -4,7 +4,6 @@
 TODO: configure mutation
   $ configure noevolution dummyssh
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
   $ . "$TESTDIR/library.sh"
   $ getmysqldb

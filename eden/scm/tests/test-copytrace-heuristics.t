@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ . helpers-usechg.sh
   $ configure evolution
   $ enable rebase shelve
 

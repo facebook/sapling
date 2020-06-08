@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
   $ HGMERGE=true; export HGMERGE
 

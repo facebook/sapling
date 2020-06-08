@@ -1,7 +1,6 @@
 #require py2
 #chg-compatible
 
-  $ . helpers-usechg.sh
 
   $ enable rebase
   $ setconfig phases.publish=false

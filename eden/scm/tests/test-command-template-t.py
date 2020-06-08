@@ -19,7 +19,6 @@ from edenscm.mercurial import namespaces
 
 
 sh % "setconfig 'extensions.treemanifest=!'"
-sh % ". helpers-usechg.sh"
 
 sh % "setconfig 'ui.allowemptycommit=1'"
 

@@ -9,8 +9,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % ". helpers-usechg.sh"
-
 # test that we don't interrupt the merge session if
 # a file-level merge failed
 

@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ . helpers-usechg.sh
 
   $ hg init t
   $ cd t

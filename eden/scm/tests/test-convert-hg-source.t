@@ -2,7 +2,6 @@
 #require execbit
 
   $ disable treemanifest
-  $ . helpers-usechg.sh
 
   $ enable convert
   $ setconfig convert.hg.saverev=False

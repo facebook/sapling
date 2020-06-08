@@ -26,8 +26,6 @@ def dircontent():
     return "\n".join(output)
 
 
-sh % ". helpers-usechg.sh"
-
 sh % "hg init repo"
 sh % "cd repo"
 sh % "echo 123" > "a"
