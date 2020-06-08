@@ -19,8 +19,6 @@ reset=
 evolution=
 """ >> "$HGRCPATH"
 
-sh % "setconfig 'visibility.enabled=false'"
-
 sh % "hg init repo"
 sh % "cd repo"
 
@@ -36,9 +34,7 @@ sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""
     @  66ee28d0328c foo
     |
     o  b292c1e3311f"""
-sh % "hg reset '.^'" == r"""
-    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-reset.hg
-    1 changeset hidden"""
+sh % "hg reset '.^'" == "1 changeset hidden"
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == "@  b292c1e3311f foo"
 sh % "hg diff" == r"""
     diff -r b292c1e3311f x
@@ -52,21 +48,14 @@ sh % "hg diff" == r"""
 
 sh % "hg commit -qAm y"
 
-sh % "hg reset --clean '.^'" == r"""
-    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-reset.hg
-    1 changeset hidden"""
+sh % "hg reset --clean '.^'" == "1 changeset hidden"
 sh % "hg diff"
 
 # Reset should recover from backup bundles (with correct phase)
 
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == "@  b292c1e3311f foo"
 sh % "hg phase -p b292c1e3311f"
-sh % "hg reset --clean 66ee28d0328c" == r"""
-    searching for changes
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 1 changes to 1 files"""
+sh % "hg reset --clean 66ee28d0328c" == ""
 sh % "hg log -G -T '{node|short} {bookmarks} {phase}\\n'" == r"""
     @  66ee28d0328c foo draft
     |
@@ -116,33 +105,19 @@ sh % "hg up tip" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (leaving bookmark foo)"""
 sh % "hg book -d foo"
-sh % "hg reset '.^'" == r"""
-    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-reset.hg
-    1 changeset hidden"""
+sh % "hg reset '.^'" == "1 changeset hidden"
 sh % "hg book foo"
 
 # Reset to bookmark with - in the name
 
-sh % "hg reset 66ee28d0328c" == r"""
-    searching for changes
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 1 changes to 1 files"""
+sh % "hg reset 66ee28d0328c" == ""
 sh % "hg book foo-bar -r '.^'"
-sh % "hg reset foo-bar" == r"""
-    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-reset.hg
-    1 changeset hidden"""
+sh % "hg reset foo-bar" == "1 changeset hidden"
 sh % "hg book -d foo-bar"
 
 # Verify file status after reset
 
-sh % "hg reset -C 66ee28d0328c" == r"""
-    searching for changes
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 1 changes to 1 files"""
+sh % "hg reset -C 66ee28d0328c" == ""
 sh % "touch toberemoved"
 sh % "hg commit -qAm 'add file for removal'"
 sh % "echo z" >> "x"
@@ -150,16 +125,12 @@ sh % "touch tobeadded"
 sh % "hg add tobeadded"
 sh % "hg rm toberemoved"
 sh % "hg commit -m 'to be reset'"
-sh % "hg reset '.^'" == r"""
-    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d36bf00ac47e-375e6009-reset.hg
-    1 changeset hidden"""
+sh % "hg reset '.^'" == "1 changeset hidden"
 sh % "hg status" == r"""
     M x
     ! toberemoved
     ? tobeadded"""
-sh % "hg reset -C 66ee28d0328c" == r"""
-    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34fb347b2aae-c2a02721-reset.hg
-    1 changeset hidden"""
+sh % "hg reset -C 66ee28d0328c" == "1 changeset hidden"
 
 # Reset + Obsolete tests
 
@@ -196,9 +167,9 @@ sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""
     o  b292c1e3311f"""
 # Reset to the commit your on is a no-op
 sh % "hg status"
-sh % "hg log -r . -T '{rev}\\n'" == "2"
+sh % "hg log -r . -T '{rev}\\n'" == "4"
 sh % "hg reset ."
-sh % "hg log -r . -T '{rev}\\n'" == "2"
+sh % "hg log -r . -T '{rev}\\n'" == "4"
 sh % "hg debugdirstate" == r"""
     n 644          0 * a (glob)
     n 644          0 * tobeadded (glob)

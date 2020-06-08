@@ -11,7 +11,6 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # TODO: Make this test compatibile with obsstore enabled.
 sh % "setconfig 'experimental.evolution='"
-sh % "setconfig 'visibility.enabled=false'"
 sh % "cat" << r"""
 [extensions]
 rebase=
@@ -55,16 +54,14 @@ sh % "tglog" == r"""
 
 sh % "hg up -q -C 2"
 
-sh % "hg rebase" == r"""
-    rebasing 87c180a611f2 "l1"
-    saved backup bundle to $TESTTMP/a/.hg/strip-backup/87c180a611f2-a5be192d-rebase.hg"""
+sh % "hg rebase" == 'rebasing 87c180a611f2 "l1"'
 
 sh % "tglog" == r"""
-    @  4: b1152cc99655 'l1'
+    @  5: b1152cc99655 'l1'
     |
-    o  3: 225af64d03e6 'r2'
+    o  4: 225af64d03e6 'r2'
     |
-    o  2: 8d0a8c99b309 'r1'
+    o  3: 8d0a8c99b309 'r1'
     |
     o  1: 56daeba07f4b 'c2'
     |
@@ -106,17 +103,16 @@ sh % "tglog" == r"""
 
 sh % "hg up -q -C 3"
 
-sh % "hg rebase" == r"""
+sh % "hg rebase" == r'''
     rebasing 87c180a611f2 "l1"
-    rebasing 1ac923b736ef "l2"
-    saved backup bundle to $TESTTMP/b/.hg/strip-backup/87c180a611f2-b980535c-rebase.hg"""
+    rebasing 1ac923b736ef "l2"'''
 
 sh % "tglog" == r"""
-    @  4: 023181307ed0 'l2'
+    @  6: 023181307ed0 'l2'
     |
-    o  3: 913ab52b43b4 'l1'
+    o  5: 913ab52b43b4 'l1'
     |
-    o  2: 8d0a8c99b309 'r1'
+    o  4: 8d0a8c99b309 'r1'
     |
     o  1: 56daeba07f4b 'c2'
     |

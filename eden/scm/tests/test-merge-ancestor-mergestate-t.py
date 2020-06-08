@@ -10,7 +10,6 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # Verify ancestry data is readable by mergedrivers by looking at mergestate:
 
-sh % "setconfig 'visibility.enabled=false'"
 
 sh % "newrepo"
 sh % "enable rebase"
@@ -48,27 +47,25 @@ sh % "hg rebase -s A -d 0" == r"""
     rebasing 09810f6b52c0 "F" (F)
     rebasing 3ff755c5931b "C" (C)
     rebasing dc7f2675f9ab "D" (D)
-    rebasing 5eb863826611 "E" (E)
-    saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/19c6d3b0d8fb-a2cf1ad8-rebase.hg"""
+    rebasing 5eb863826611 "E" (E)"""
 sh % "showgraph" == r"""
-    o  7 e71547946f82 E
+    o  13 e71547946f82 E
     |
-    o  6 264c021e8fc6 D
+    o  12 264c021e8fc6 D
     |
-    o  5 34e41e21cd9d C
+    o  11 34e41e21cd9d C
     |
-    | o  4 aa431a9572c1 F
+    | o  10 aa431a9572c1 F
     |/
-    o  3 01ba3ad89eb7 B
+    o  9 01ba3ad89eb7 B
     |
-    o  2 622e2d864a27 A
+    o  8 622e2d864a27 A
     |
-    | o  1 520a9f665f6e b
+    | o  2 520a9f665f6e b
     |
     @  0 9309aa3b805a driver"""
 sh % "hg rebase -r aa431a9572c1 -d e71547946f82" == r"""
     rebasing aa431a9572c1 "F" (F)
     ancestor nodes = ['01ba3ad89eb70070d81f052c0c40a3877c2ba5d8']
-    ancestor revs = [3]
-    merging file
-    saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/aa431a9572c1-13824be1-rebase.hg"""
+    ancestor revs = [9]
+    merging file"""

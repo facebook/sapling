@@ -19,8 +19,6 @@ remotenames=
 tweakdefaults=
 """ >> "$HGRCPATH"
 
-sh % "setconfig 'visibility.enabled=false'"
-
 # Run test
 sh % "hg init repo"
 sh % "cd repo"
@@ -35,6 +33,4 @@ sh % "hg up '.^'" == r"""
 sh % "touch c"
 sh % "hg commit -Aqm c"
 sh % "hg bookmark C -t AB"
-sh % "hg rebase" == r"""
-    rebasing d5e255ef74f8 "c" (C)
-    saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d5e255ef74f8-7d2cc323-rebase.hg"""
+sh % "hg rebase" == 'rebasing d5e255ef74f8 "c" (C)'

@@ -18,8 +18,6 @@ rebase=
 tweakdefaults=
 """ >> "$HGRCPATH"
 
-sh % "setconfig 'visibility.enabled=false'"
-
 sh % "hg init repo"
 sh % "echo a" > "repo/a"
 sh % "hg -R repo commit -qAm a"
@@ -47,19 +45,18 @@ sh % "echo x" > "x"
 sh % "hg commit -qAm x"
 sh % "echo c" > "../repo/c"
 sh % "hg -R ../repo commit -qAm c"
-sh % "hg pull --rebase -d default" == r"""
+sh % "hg pull --rebase -d default" == r'''
     pulling from $TESTTMP/repo
     searching for changes
     adding changesets
     adding manifests
     adding file changes
     added 1 changesets with 1 changes to 1 files
-    rebasing 86d71924e1d0 "x"
-    saved backup bundle to $TESTTMP/clone/.hg/strip-backup/86d71924e1d0-48875604-rebase.hg"""
+    rebasing 86d71924e1d0 "x"'''
 sh % "hg log -G -T '{rev} {desc}'" == r"""
-    @  3 x
+    @  4 x
     |
-    o  2 c
+    o  3 c
     |
     o  1 b
     |

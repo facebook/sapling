@@ -11,7 +11,6 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # TODO: Make this test compatibile with obsstore enabled.
 sh % "setconfig 'experimental.evolution='"
-sh % "setconfig 'visibility.enabled=false'"
 # Test rebase --continue with rebasestate written by legacy client
 
 sh % "cat" << r"""
@@ -58,20 +57,18 @@ sh % "hg rebase --continue" == r"""
     rebasing 6f7a236de685 "D" (D)
     rebasing de008c61a447 "E" (E)
     rebasing d2fa1c02b240 "G" (G)
-    rebasing 6582e6951a9c "H" (H)
-    warning: orphaned descendants detected, not stripping c1e6b162678d, de008c61a447
-    saved backup bundle to $TESTTMP/.hg/strip-backup/6f7a236de685-9880a3dc-rebase.hg"""
+    rebasing 6582e6951a9c "H" (H)"""
 
 sh % "hg log -G -T '{rev}:{node|short} {desc}\\n'" == r"""
-    o  11:721b8da0a708 H
+    o  14:721b8da0a708 H
     |
-    o  10:9d65695ec3c2 G
+    o  13:9d65695ec3c2 G
     |
-    o  9:21c8397a5d68 E
+    o  12:21c8397a5d68 E
     |
-    | o  8:fc52970345e8 D
+    | o  11:fc52970345e8 D
     | |
-    | o  7:eac96551b107 B
+    | o  10:eac96551b107 B
     |/
     | o  6:bd5548558fcf C
     | |

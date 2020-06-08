@@ -19,7 +19,6 @@ rebase=
 [phases]
 publish=False
 """ >> "$HGRCPATH"
-sh % "setconfig 'visibility.enabled=false'"
 
 
 sh % "hg init a"
@@ -141,12 +140,10 @@ sh % "rm A.orig"
 sh % "hg resolve -m A" == r"""
     (no more unresolved files)
     continue: hg rebase --continue"""
-sh % "hg rebase --continue" == r"""
-    rebasing 3225f3ea730a "F"
-    saved backup bundle to $TESTTMP/a2/.hg/strip-backup/3225f3ea730a-289ce185-rebase.hg"""
+sh % "hg rebase --continue" == 'rebasing 3225f3ea730a "F"'
 
 sh % "tglogp" == r"""
-    @  5: 530bc6058bd0 draft 'F'
+    @  6: 530bc6058bd0 draft 'F'
     |
     o  4: ae36e8e3dfd7 draft 'E'
     |
