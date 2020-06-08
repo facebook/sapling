@@ -124,3 +124,19 @@ Check that we pull/update from the read path, regardless of the write path prese
   adding file changes
   added 2 changesets with 2 changes to 4 files
   $ cd ..
+
+Check that infinitepush writes can be disabled by a config
+  $ cat >> "$TESTTMP/repo1/.hg/hgrc" <<EOF
+  > [infinitepush]
+  > server.acceptwrites=False
+  > EOF
+  $ cd "$TESTTMP/client"
+  $ mkcommit ababagalamaga
+  $ hg push -r . --to scratch/ababagalamaga --create --config paths.infinitepush-write=ssh://user@dummy/repo1
+  pushing to ssh://user@dummy/repo1
+  searching for changes
+  remote: infinitepush writes are disabled on this server
+  abort: push failed on remote
+  [255]
+
+
