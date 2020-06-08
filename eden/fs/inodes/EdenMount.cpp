@@ -1202,12 +1202,8 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
     boost::filesystem::create_directories(boostMountPath);
 
 #ifdef _WIN32
-    if (readOnly) {
-      NOT_IMPLEMENTED();
-    }
-
     fsChannel_ = std::make_unique<PrjfsChannel>(this);
-    fsChannel_->start();
+    fsChannel_->start(getPath(), readOnly);
     createRepoConfig(
         getPath(),
         serverState_->getSocketPath(),

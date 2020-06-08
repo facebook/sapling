@@ -28,7 +28,7 @@ class PrjfsChannel : public FsChannel {
 
   PrjfsChannel(EdenMount* mount);
   ~PrjfsChannel();
-  void start();
+  void start(AbsolutePath mountPath, bool readOnly);
   void stop();
 
   /**
@@ -62,7 +62,6 @@ class PrjfsChannel : public FsChannel {
   //
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 
-  const AbsolutePath& root_;
   EdenDispatcher dispatcher_;
   Guid mountId_;
   bool isRunning_{false};

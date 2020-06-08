@@ -17,7 +17,7 @@ class FsChannel {
 
   FsChannel(){};
   virtual ~FsChannel() = default;
-  virtual void start() = 0;
+  virtual void start(AbsolutePath mountPath, bool readOnly) = 0;
   virtual void stop() = 0;
 
   virtual void removeCachedFile(RelativePathPiece path) = 0;

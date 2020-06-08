@@ -93,9 +93,7 @@ namespace facebook {
 namespace eden {
 
 PrjfsChannel::PrjfsChannel(EdenMount* mount)
-    : root_{mount->getPath()},
-      dispatcher_{*mount},
-      mountId_{Guid::generate()} {}
+    : dispatcher_{*mount}, mountId_{Guid::generate()} {}
 
 PrjfsChannel::~PrjfsChannel() {
   if (isRunning_) {
@@ -103,7 +101,11 @@ PrjfsChannel::~PrjfsChannel() {
   }
 }
 
-void PrjfsChannel::start() {
+void PrjfsChannel::start(AbsolutePath mountPath, bool readOnly) {
+  if (readOnly) {
+    NOT_IMPLEMENTED();
+  }
+
   auto callbacks = PRJ_CALLBACKS();
   auto options = PRJ_STARTVIRTUALIZING_OPTIONS();
   callbacks.StartDirectoryEnumerationCallback = startEnumeration;
@@ -132,11 +134,11 @@ void PrjfsChannel::start() {
   auto dispatcher = getDispatcher();
   XLOG(INFO) << sformat(
       "Starting PrjfsChannel Path ({}) Dispatcher (0x{:x})",
-      root_,
+      mountPath,
       uintptr_t(dispatcher));
   DCHECK(dispatcher->isValidDispatcher());
 
-  auto winPath = edenToWinPath(root_.stringPiece());
+  auto winPath = edenToWinPath(mountPath.stringPiece());
 
   auto result = PrjMarkDirectoryAsPlaceholder(
       winPath.c_str(), nullptr, nullptr, mountId_);
@@ -144,7 +146,7 @@ void PrjfsChannel::start() {
   if (FAILED(result) &&
       result != HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
     throw makeHResultErrorExplicit(
-        result, sformat("Failed to setup the mount point({})", root_));
+        result, sformat("Failed to setup the mount point({})", mountPath));
   }
 
   result = PrjStartVirtualizing(
@@ -154,11 +156,17 @@ void PrjfsChannel::start() {
     throw makeHResultErrorExplicit(result, "Failed to start the mount point");
   }
 
+  XLOG(INFO) << sformat(
+      "Started PrjfsChannel Path ({}): (0x{:x})",
+      mountPath,
+      uintptr_t(mountChannel_));
+
   isRunning_ = true;
 }
 
 void PrjfsChannel::stop() {
-  XLOG(INFO) << sformat("Stopping PrjfsChannel ({})", root_);
+  XLOG(INFO) << sformat(
+      "Stopping PrjfsChannel (0x{:x})", uintptr_t(mountChannel_));
   DCHECK(isRunning_);
   PrjStopVirtualizing(mountChannel_);
   isRunning_ = false;
@@ -171,7 +179,7 @@ void PrjfsChannel::stop() {
 void PrjfsChannel::deleteFile(
     RelativePathPiece path,
     PRJ_UPDATE_TYPES updateFlags) {
-  auto winPath = edenToWinPath((root_ + path).stringPiece());
+  auto winPath = edenToWinPath(path.stringPiece());
   PRJ_UPDATE_FAILURE_CAUSES failureReason;
   HRESULT hr = PrjDeleteFile(
       mountChannel_, winPath.c_str(), updateFlags, &failureReason);
