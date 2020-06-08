@@ -72,23 +72,17 @@ void PrjfsChannel::start() {
   callbacks.NotificationCallback = notification;
   callbacks.QueryFileNameCallback = queryFileName;
 
+  PRJ_NOTIFICATION_MAPPING notificationMappings[] = {
+      {PRJ_NOTIFY_NEW_FILE_CREATED | PRJ_NOTIFY_FILE_OVERWRITTEN |
+           PRJ_NOTIFY_FILE_RENAMED |
+           PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_MODIFIED |
+           PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_DELETED,
+       L""},
+      {PRJ_NOTIFY_SUPPRESS_NOTIFICATIONS, L".hg"},
+      {PRJ_NOTIFY_SUPPRESS_NOTIFICATIONS, L".eden"},
+  };
+
   PRJ_STARTVIRTUALIZING_OPTIONS startOpts = {};
-  PRJ_NOTIFICATION_MAPPING notificationMappings[3] = {};
-
-  notificationMappings[0].NotificationRoot = L"";
-  notificationMappings[0].NotificationBitMask = PRJ_NOTIFY_NEW_FILE_CREATED |
-      PRJ_NOTIFY_FILE_OVERWRITTEN | PRJ_NOTIFY_FILE_RENAMED |
-      PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_MODIFIED |
-      PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_DELETED;
-
-  notificationMappings[1].NotificationRoot = L".hg";
-  notificationMappings[1].NotificationBitMask =
-      PRJ_NOTIFY_SUPPRESS_NOTIFICATIONS;
-
-  notificationMappings[2].NotificationRoot = L".eden";
-  notificationMappings[2].NotificationBitMask =
-      PRJ_NOTIFY_SUPPRESS_NOTIFICATIONS;
-
   startOpts.NotificationMappings = notificationMappings;
   startOpts.NotificationMappingsCount =
       folly::to_narrow(std::size(notificationMappings));
