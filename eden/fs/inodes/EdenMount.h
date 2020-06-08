@@ -223,13 +223,13 @@ class EdenMount {
    * * The future returned by unmount() is fulfilled successfully.
    * * The future returned by getFuseCompletionFuture() is fulfilled.
    *
-   * If startFuse() is in progress, unmount() can cancel startFuse().
+   * If startChannel() is in progress, unmount() can cancel startChannel().
    *
-   * If startFuse() is in progress, unmount() might wait for startFuse() to
-   * finish before calling umount(2).
+   * If startChannel() is in progress, unmount() might wait for startChannel()
+   * to finish before calling umount(2).
    *
-   * If neither startFuse() nor takeoverFuse() has been called, unmount()
-   * finishes successfully without calling umount(2). Thereafter, startFuse()
+   * If neither startChannel() nor takeoverFuse() has been called, unmount()
+   * finishes successfully without calling umount(2). Thereafter, startChannel()
    * and takeoverFuse() will both fail with an EdenMountCancelled exception.
    *
    * unmount() is idempotent: If unmount() has already been called, this
@@ -577,20 +577,20 @@ class EdenMount {
    * successfully mounted, or as soon as the mount fails (state transitions
    * to RUNNING or FUSE_ERROR).
    *
-   * If unmount() is called before startFuse() is called, then startFuse()
+   * If unmount() is called before startChannel() is called, then startChannel()
    * does the following:
    *
-   * * startFuse() does not attempt to mount the filesystem
+   * * startChannel() does not attempt to mount the filesystem
    * * The returned Future is fulfilled with an EdenMountCancelled exception
    *
-   * If unmount() is called while startFuse() is in progress, then startFuse()
-   * does the following:
+   * If unmount() is called while startChannel() is in progress, then
+   * startChannel() does the following:
    *
    * * The filesystem is unmounted (if it was mounted)
    * * The returned Future is fulfilled with an
    *   FuseDeviceUnmountedDuringInitialization exception
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> startFuse(bool readOnly);
+  FOLLY_NODISCARD folly::Future<folly::Unit> startChannel(bool readOnly);
 
   /**
    * Take over a FUSE channel for an existing mount point.
@@ -607,9 +607,9 @@ class EdenMount {
    * Obtains a future that will complete once the fuse channel has wound down.
    *
    * This method may be called at any time, but the returned future will only be
-   * fulfilled if startFuse() completes successfully.  If startFuse() fails or
-   * is never called, the future returned by getFuseCompletionFuture() will
-   * never complete.
+   * fulfilled if startChannel() completes successfully.  If startChannel()
+   * fails or is never called, the future returned by getFuseCompletionFuture()
+   * will never complete.
    */
   FOLLY_NODISCARD folly::Future<TakeoverData::MountInfo>
   getFuseCompletionFuture();
@@ -679,7 +679,6 @@ class EdenMount {
    * The following functions are to start and stop Eden Mount on Windows. They
    * setup and destroy the ProjectedFS channel.
    */
-  void start();
   void stop();
 
   /**
@@ -988,11 +987,12 @@ class EdenMount {
      * Use this promise to wait for fuseMount to finish.
      *
      * * Empty optional: fuseMount/mount(2) has not been called yet.
-     *   (startFuse/fuseMount can be called.)
+     *   (startChannel/fuseMount can be called.)
      * * Unfulfilled: fuseMount is in progress.
-     * * Fulfilled with Unit: fuseMount completed successfully (via startFuse),
-     *   or we took over the FUSE device from another process (via
-     *   takeoverFuse). (startFuse or takeoverFuse can still be in progress.)
+     * * Fulfilled with Unit: fuseMount completed successfully (via
+     *   startChannel), or we took over the FUSE device from another process
+     *   (via takeoverFuse). (startChannel or takeoverFuse can still be in
+     *   progress.)
      * * Fulfilled with error: fuseMount failed, or fuseMount was cancelled.
      *
      * The state of this variable might not reflect whether the file system is

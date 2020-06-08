@@ -179,7 +179,7 @@ void TestMount::initializeEdenMount() {
 #endif
   edenMount_->initialize().getVia(serverExecutor_.get());
 #ifdef _WIN32
-  edenMount_->start();
+  edenMount_->startChannel(false);
 #endif
 }
 
@@ -269,11 +269,11 @@ void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {
   constexpr auto kTimeout = 10s;
   CHECK(edenMount_) << "Call initialize() before calling " << __func__;
   registerFakeFuse(fuse);
-  auto startFuseFuture = edenMount_->startFuse(false);
+  auto startChannelFuture = edenMount_->startChannel(false);
   fuse->sendInitRequest();
   fuse->recvResponse();
   drainServerExecutor();
-  std::move(startFuseFuture).get(kTimeout);
+  std::move(startChannelFuture).get(kTimeout);
 }
 #endif
 
@@ -312,7 +312,7 @@ void TestMount::remount() {
 #endif
   edenMount_->initialize().getVia(serverExecutor_.get());
 #ifdef _WIN32
-  edenMount_->start();
+  edenMount_->startChannel(false);
 #endif
 }
 

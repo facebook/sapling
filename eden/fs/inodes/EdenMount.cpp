@@ -268,14 +268,6 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
 }
 
 #ifdef _WIN32
-void EdenMount::start() {
-  transitionState(State::INITIALIZED, State::RUNNING);
-  fsChannel_->start();
-  createRepoConfig(
-      getPath(), serverState_->getSocketPath(), config_->getClientDirectory());
-  XLOGF(INFO, "Started EdenMount (0x{:x})", reinterpret_cast<uintptr_t>(this));
-}
-
 void EdenMount::stop() {
   transitionState(State::RUNNING, State::INITIALIZED);
   fsChannel_->stop();
@@ -1197,8 +1189,7 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
   return fuseCompletionPromise_.getFuture();
 }
 
-#ifndef _WIN32
-folly::Future<folly::Unit> EdenMount::startFuse(bool readOnly) {
+folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
   return folly::makeFutureWith([&]() {
     transitionState(
         /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);
@@ -1208,6 +1199,22 @@ folly::Future<folly::Unit> EdenMount::startFuse(bool readOnly) {
     boost::filesystem::path boostMountPath{getPath().value()};
     boost::filesystem::create_directories(boostMountPath);
 
+#ifdef _WIN32
+    if (readOnly) {
+      NOT_IMPLEMENTED();
+    }
+
+    fsChannel_->start();
+    createRepoConfig(
+        getPath(),
+        serverState_->getSocketPath(),
+        config_->getClientDirectory());
+    XLOGF(
+        INFO, "Started EdenMount (0x{:x})", reinterpret_cast<uintptr_t>(this));
+    transitionState(State::STARTING, State::RUNNING);
+
+    return folly::makeFuture();
+#else
     return fuseMount(readOnly)
         .thenValue([this](folly::File&& fuseDevice) {
           createFuseChannel(std::move(fuseDevice));
@@ -1220,9 +1227,11 @@ folly::Future<folly::Unit> EdenMount::startFuse(bool readOnly) {
           transitionToFuseInitializationErrorState();
           return makeFuture<folly::Unit>(std::move(ew));
         });
+#endif
   });
 }
 
+#ifndef _WIN32
 void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
   transitionState(State::INITIALIZED, State::STARTING);
 

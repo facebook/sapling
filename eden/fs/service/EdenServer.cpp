@@ -1150,19 +1150,17 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
 #endif // __linux__
 }
 
-#ifndef _WIN32
-folly::Future<folly::Unit> EdenServer::performFreshFuseStart(
+folly::Future<folly::Unit> EdenServer::performFreshStart(
     std::shared_ptr<EdenMount> edenMount,
     bool readOnly) {
   // Start up the fuse workers.
-  return edenMount->startFuse(readOnly);
+  return edenMount->startChannel(readOnly);
 }
-#endif // !_WIN32
 
-#ifndef _WIN32
-Future<Unit> EdenServer::performTakeoverFuseStart(
+Future<Unit> EdenServer::performTakeoverStart(
     std::shared_ptr<EdenMount> edenMount,
     TakeoverData::MountInfo&& info) {
+#ifndef _WIN32
   std::vector<std::string> bindMounts;
   for (const auto& bindMount : info.bindMounts) {
     bindMounts.emplace_back(bindMount.value());
@@ -1172,13 +1170,17 @@ Future<Unit> EdenServer::performTakeoverFuseStart(
   return std::move(future).thenValue([this,
                                       edenMount = std::move(edenMount),
                                       info = std::move(info)](auto&&) mutable {
-    return completeTakeoverFuseStart(std::move(edenMount), std::move(info));
+    return completeTakeoverStart(std::move(edenMount), std::move(info));
   });
+#else
+  NOT_IMPLEMENTED();
+#endif
 }
 
-Future<Unit> EdenServer::completeTakeoverFuseStart(
+Future<Unit> EdenServer::completeTakeoverStart(
     std::shared_ptr<EdenMount> edenMount,
     TakeoverData::MountInfo&& info) {
+#ifndef _WIN32
   FuseChannelData channelData;
   channelData.fd = std::move(info.fuseFD);
   channelData.connInfo = info.connInfo;
@@ -1186,8 +1188,10 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
   // Start up the fuse workers.
   return folly::makeFutureWith(
       [&] { edenMount->takeoverFuse(std::move(channelData)); });
-}
+#else
+  NOT_IMPLEMENTED();
 #endif // !_WIN32
+}
 
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<CheckoutConfig> initialConfig,
@@ -1224,14 +1228,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       doTakeover ? std::make_optional(optionalTakeover->inodeMap)
                  : std::nullopt);
 
-#ifdef _WIN32
-  (void)
-      mountStopWatch; // TODO: log to StructuredLogger once supported on Windows
-  return std::move(initFuture).thenValue([edenMount](folly::Unit) {
-    edenMount->start();
-    return edenMount;
-  });
-#else
   // Now actually begin starting the mount point
   return std::move(initFuture)
       .thenTry([this,
@@ -1248,9 +1244,9 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
           return makeFuture<shared_ptr<EdenMount>>(
               std::move(result).exception());
         }
-        return (optionalTakeover ? performTakeoverFuseStart(
+        return (optionalTakeover ? performTakeoverStart(
                                        edenMount, std::move(*optionalTakeover))
-                                 : performFreshFuseStart(edenMount, readOnly))
+                                 : performFreshStart(edenMount, readOnly))
             .thenTry([edenMount, doTakeover, this](
                          folly::Try<Unit>&& result) mutable {
               // Call mountFinished() if an error occurred during FUSE
@@ -1261,6 +1257,9 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                     std::move(result).exception());
               }
 
+#ifdef _WIN32
+              return makeFuture<shared_ptr<EdenMount>>(std::move(edenMount));
+#else
               // Now that we've started the workers, arrange to call
               // mountFinished once the pool is torn down.
               auto finishFuture = edenMount->getFuseCompletionFuture().thenTry(
@@ -1307,9 +1306,9 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               event.clean = edenMount->getOverlay()->hadCleanStartup();
               serverState_->getStructuredLogger()->logEvent(event);
               return makeFuture(std::move(t));
+#endif
             });
       });
-#endif
 }
 
 Future<Unit> EdenServer::unmount(StringPiece mountPath) {
