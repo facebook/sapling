@@ -97,25 +97,8 @@ PrjfsChannel::PrjfsChannel(EdenMount* mount)
   XLOG(INFO) << sformat(
       "Creating PrjfsChannel, mount ({}), MountPath ({})", mount, root_);
 
-  //
-  // The root will be created by the cli before calling mount. Make sure it
-  // is created else create it.
-  //
-  auto winPath = edenToWinPath(root_.stringPiece());
-  if (!CreateDirectoryW(winPath.c_str(), nullptr)) {
-    DWORD error = GetLastError();
-    if (error != ERROR_ALREADY_EXISTS) {
-      throw makeWin32ErrorExplicit(
-          error, sformat("Failed to create the mount point ({})", root_));
-    }
-  } else {
-    XLOG(INFO) << sformat(
-        "Mount point did not exist created new ({}), MountPath ({})",
-        mount,
-        root_);
-  }
-
   // Setup mount root folder
+  auto winPath = edenToWinPath(root_.stringPiece());
   HRESULT result = PrjMarkDirectoryAsPlaceholder(
       winPath.c_str(), nullptr, nullptr, mountId_);
 
