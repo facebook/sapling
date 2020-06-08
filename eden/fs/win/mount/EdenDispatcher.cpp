@@ -395,7 +395,7 @@ void EdenDispatcher::notification(
 
         // TODO(puneetk): We could add the file origin information in the
         // DirEntry and refer to that before calling removeDeletedFile.
-        getMount().getFsChannel()->removeDeletedFile(callbackData.FilePathName);
+        getMount().getFsChannel()->removeDeletedFile(relPath);
         break;
       }
 
@@ -406,7 +406,7 @@ void EdenDispatcher::notification(
         // TODO(puneetk): (same as above) We could add the file origin
         // information in the DirEntry and refer to that before calling
         // removeDeletedFile.
-        getMount().getFsChannel()->removeDeletedFile(callbackData.FilePathName);
+        getMount().getFsChannel()->removeDeletedFile(relPath);
         break;
     }
   } catch (const std::exception& ex) {

@@ -22,42 +22,36 @@ namespace facebook {
 namespace eden {
 
 PrjfsChannel::PrjfsChannel(EdenMount* mount)
-    : mount_{mount},
-      dispatcher_{*mount},
-      mountId_{Guid::generate()},
-      winPath_{edenToWinPath(mount->getPath().value())} {
+    : root_{mount->getPath()}, dispatcher_{*mount}, mountId_{Guid::generate()} {
   XLOG(INFO) << sformat(
-      "Creating PrjfsChannel, mount ({}), MountPath ({})",
-      mount,
-      mount->getPath());
+      "Creating PrjfsChannel, mount ({}), MountPath ({})", mount, root_);
 
   //
   // The root will be created by the cli before calling mount. Make sure it
   // is created else create it.
   //
-  if (!CreateDirectoryW(winPath_.c_str(), nullptr)) {
+  auto winPath = edenToWinPath(root_.stringPiece());
+  if (!CreateDirectoryW(winPath.c_str(), nullptr)) {
     DWORD error = GetLastError();
     if (error != ERROR_ALREADY_EXISTS) {
       throw makeWin32ErrorExplicit(
-          error,
-          sformat("Failed to create the mount point ({})", mount->getPath()));
+          error, sformat("Failed to create the mount point ({})", root_));
     }
   } else {
     XLOG(INFO) << sformat(
         "Mount point did not exist created new ({}), MountPath ({})",
         mount,
-        mount->getPath());
+        root_);
   }
 
   // Setup mount root folder
   HRESULT result = PrjMarkDirectoryAsPlaceholder(
-      winPath_.c_str(), nullptr, nullptr, mountId_);
+      winPath.c_str(), nullptr, nullptr, mountId_);
 
   if (FAILED(result) &&
       result != HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
     throw makeHResultErrorExplicit(
-        result,
-        sformat("Failed to setup the mount point({})", mount->getPath()));
+        result, sformat("Failed to setup the mount point({})", root_));
   }
 }
 
@@ -96,17 +90,19 @@ void PrjfsChannel::start() {
       PRJ_NOTIFY_SUPPRESS_NOTIFICATIONS;
 
   startOpts.NotificationMappings = notificationMappings;
-  startOpts.NotificationMappingsCount = std::size(notificationMappings);
+  startOpts.NotificationMappingsCount =
+      folly::to_narrow(std::size(notificationMappings));
 
   auto dispatcher = getDispatcher();
   XLOG(INFO) << sformat(
       "Starting PrjfsChannel Path ({}) Dispatcher (0x{:x})",
-      mount_->getPath(),
+      root_,
       uintptr_t(dispatcher));
   DCHECK(dispatcher->isValidDispatcher());
 
+  auto winPath = edenToWinPath(root_.stringPiece());
   HRESULT result = PrjStartVirtualizing(
-      winPath_.c_str(), &callbacks, dispatcher, &startOpts, &mountChannel_);
+      winPath.c_str(), &callbacks, dispatcher, &startOpts, &mountChannel_);
 
   if (FAILED(result)) {
     throw makeHResultErrorExplicit(result, "Failed to start the mount point");
@@ -116,7 +112,7 @@ void PrjfsChannel::start() {
 }
 
 void PrjfsChannel::stop() {
-  XLOG(INFO) << sformat("Stopping PrjfsChannel ({})", mount_->getPath());
+  XLOG(INFO) << sformat("Stopping PrjfsChannel ({})", root_);
   DCHECK(isRunning_);
   PrjStopVirtualizing(mountChannel_);
   isRunning_ = false;
@@ -197,15 +193,17 @@ HRESULT PrjfsChannel::notification(
 }
 
 void PrjfsChannel::deleteFile(
-    const wchar_t* path,
+    RelativePathPiece path,
     PRJ_UPDATE_TYPES updateFlags) {
+  auto winPath = edenToWinPath((root_ + path).stringPiece());
   PRJ_UPDATE_FAILURE_CAUSES failureReason;
-  HRESULT hr = PrjDeleteFile(mountChannel_, path, updateFlags, &failureReason);
+  HRESULT hr = PrjDeleteFile(
+      mountChannel_, winPath.c_str(), updateFlags, &failureReason);
   if (hr != S_OK) {
     XLOGF(
         DBG6,
         "Failed to delete disk file {} reason: {} error: {}",
-        winToEdenPath(path),
+        path,
         static_cast<uint32_t>(failureReason),
         hr);
     // We aren't maintainting the information about which files were created
@@ -216,14 +214,14 @@ void PrjfsChannel::deleteFile(
   }
 }
 
-void PrjfsChannel::removeCachedFile(const wchar_t* path) {
+void PrjfsChannel::removeCachedFile(RelativePathPiece path) {
   deleteFile(
       path,
       PRJ_UPDATE_ALLOW_DIRTY_METADATA | PRJ_UPDATE_ALLOW_DIRTY_DATA |
           PRJ_UPDATE_ALLOW_READ_ONLY | PRJ_UPDATE_ALLOW_TOMBSTONE);
 }
 
-void PrjfsChannel::removeDeletedFile(const wchar_t* path) {
+void PrjfsChannel::removeDeletedFile(RelativePathPiece path) {
   deleteFile(path, PRJ_UPDATE_ALLOW_TOMBSTONE);
 }
 

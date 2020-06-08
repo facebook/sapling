@@ -34,7 +34,7 @@ class PrjfsChannel : public FsChannel {
    * Remove files from the Projected FS cache. removeCachedFile() doesn't care
    * about the file state and will remove file in any state.
    */
-  void removeCachedFile(const wchar_t* path) override;
+  void removeCachedFile(RelativePathPiece path) override;
 
   /**
    * Remove tombstones from the Projected FS cache. Tombstones are Windows
@@ -42,7 +42,7 @@ class PrjfsChannel : public FsChannel {
    * removeDeletedFile() doesn't care about the file state and will remove file
    * in any state.
    */
-  void removeDeletedFile(const wchar_t* path) override;
+  void removeDeletedFile(RelativePathPiece path) override;
 
  private:
   static HRESULT CALLBACK startEnumeration(
@@ -79,7 +79,7 @@ class PrjfsChannel : public FsChannel {
   static void CALLBACK
   cancelOperation(const PRJ_CALLBACK_DATA* callbackData) noexcept;
 
-  void deleteFile(const wchar_t* path, PRJ_UPDATE_TYPES updateFlags);
+  void deleteFile(RelativePathPiece path, PRJ_UPDATE_TYPES updateFlags);
 
  private:
   /**
@@ -101,11 +101,10 @@ class PrjfsChannel : public FsChannel {
   // Channel to talk to projectedFS.
   //
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
-  const EdenMount* mount_;
 
+  const AbsolutePath& root_;
   EdenDispatcher dispatcher_;
   Guid mountId_;
-  std::wstring winPath_;
   bool isRunning_{false};
 };
 

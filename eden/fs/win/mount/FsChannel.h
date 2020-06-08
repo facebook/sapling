@@ -20,8 +20,8 @@ class FsChannel {
   virtual void start() = 0;
   virtual void stop() = 0;
 
-  virtual void removeCachedFile(const wchar_t* path) = 0;
-  virtual void removeDeletedFile(const wchar_t* path) = 0;
+  virtual void removeCachedFile(RelativePathPiece path) = 0;
+  virtual void removeDeletedFile(RelativePathPiece path) = 0;
 };
 
 } // namespace eden
