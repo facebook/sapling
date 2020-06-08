@@ -5,11 +5,8 @@
  * GNU General Public License version 2.
  */
 
-#include "PrjfsChannel.h"
-#include "folly/portability/Windows.h"
-
+#include "eden/fs/win/mount/PrjfsChannel.h"
 #include <folly/logging/xlog.h>
-#include <string>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
 #include "eden/fs/win/utils/Guid.h"
@@ -17,6 +14,80 @@
 #include "eden/fs/win/utils/WinError.h"
 
 using folly::sformat;
+
+namespace {
+
+using facebook::eden::EdenDispatcher;
+
+static EdenDispatcher* getDispatcher(
+    const PRJ_CALLBACK_DATA* callbackData) noexcept {
+  DCHECK(callbackData);
+  auto dispatcher = static_cast<EdenDispatcher*>(callbackData->InstanceContext);
+  DCHECK(dispatcher);
+  DCHECK(dispatcher->isValidDispatcher());
+  return dispatcher;
+}
+
+static HRESULT startEnumeration(
+    const PRJ_CALLBACK_DATA* callbackData,
+    const GUID* enumerationId) noexcept {
+  return getDispatcher(callbackData)
+      ->startEnumeration(*callbackData, *enumerationId);
+}
+
+static HRESULT endEnumeration(
+    const PRJ_CALLBACK_DATA* callbackData,
+    const GUID* enumerationId) noexcept {
+  getDispatcher(callbackData)->endEnumeration(*enumerationId);
+  return S_OK;
+}
+
+static HRESULT getEnumerationData(
+    const PRJ_CALLBACK_DATA* callbackData,
+    const GUID* enumerationId,
+    PCWSTR searchExpression,
+    PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept {
+  return getDispatcher(callbackData)
+      ->getEnumerationData(
+          *callbackData,
+          *enumerationId,
+          searchExpression,
+          dirEntryBufferHandle);
+}
+
+static HRESULT getPlaceholderInfo(
+    const PRJ_CALLBACK_DATA* callbackData) noexcept {
+  return getDispatcher(callbackData)->getFileInfo(*callbackData);
+}
+
+static HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
+  return getDispatcher(callbackData)->queryFileName(*callbackData);
+}
+
+static HRESULT getFileData(
+    const PRJ_CALLBACK_DATA* callbackData,
+    UINT64 byteOffset,
+    UINT32 length) noexcept {
+  return getDispatcher(callbackData)
+      ->getFileData(*callbackData, byteOffset, length);
+}
+
+static HRESULT notification(
+    const PRJ_CALLBACK_DATA* callbackData,
+    BOOLEAN isDirectory,
+    PRJ_NOTIFICATION notificationType,
+    PCWSTR destinationFileName,
+    PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept {
+  getDispatcher(callbackData)
+      ->notification(
+          *callbackData,
+          isDirectory,
+          notificationType,
+          destinationFileName,
+          *notificationParameters);
+  return S_OK;
+}
+} // namespace
 
 namespace facebook {
 namespace eden {
@@ -115,76 +186,6 @@ void PrjfsChannel::stop() {
 
 // TODO: We need to add an extra layer to absorb all the exceptions generated in
 // Eden from leaking into FS. This would come in soon.
-
-EdenDispatcher* PrjfsChannel::getDispatcher(
-    const PRJ_CALLBACK_DATA* callbackData) noexcept {
-  DCHECK(callbackData);
-  auto dispatcher = static_cast<EdenDispatcher*>(callbackData->InstanceContext);
-  DCHECK(dispatcher);
-  DCHECK(dispatcher->isValidDispatcher());
-  return dispatcher;
-}
-
-HRESULT PrjfsChannel::startEnumeration(
-    const PRJ_CALLBACK_DATA* callbackData,
-    const GUID* enumerationId) noexcept {
-  return getDispatcher(callbackData)
-      ->startEnumeration(*callbackData, *enumerationId);
-}
-
-HRESULT PrjfsChannel::endEnumeration(
-    const PRJ_CALLBACK_DATA* callbackData,
-    const GUID* enumerationId) noexcept {
-  getDispatcher(callbackData)->endEnumeration(*enumerationId);
-  return S_OK;
-}
-
-HRESULT PrjfsChannel::getEnumerationData(
-    const PRJ_CALLBACK_DATA* callbackData,
-    const GUID* enumerationId,
-    PCWSTR searchExpression,
-    PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept {
-  return getDispatcher(callbackData)
-      ->getEnumerationData(
-          *callbackData,
-          *enumerationId,
-          searchExpression,
-          dirEntryBufferHandle);
-}
-
-HRESULT PrjfsChannel::getPlaceholderInfo(
-    const PRJ_CALLBACK_DATA* callbackData) noexcept {
-  return getDispatcher(callbackData)->getFileInfo(*callbackData);
-}
-
-HRESULT PrjfsChannel::queryFileName(
-    const PRJ_CALLBACK_DATA* callbackData) noexcept {
-  return getDispatcher(callbackData)->queryFileName(*callbackData);
-}
-
-HRESULT PrjfsChannel::getFileData(
-    const PRJ_CALLBACK_DATA* callbackData,
-    UINT64 byteOffset,
-    UINT32 length) noexcept {
-  return getDispatcher(callbackData)
-      ->getFileData(*callbackData, byteOffset, length);
-}
-
-HRESULT PrjfsChannel::notification(
-    const PRJ_CALLBACK_DATA* callbackData,
-    BOOLEAN isDirectory,
-    PRJ_NOTIFICATION notificationType,
-    PCWSTR destinationFileName,
-    PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept {
-  getDispatcher(callbackData)
-      ->notification(
-          *callbackData,
-          isDirectory,
-          notificationType,
-          destinationFileName,
-          *notificationParameters);
-  return S_OK;
-}
 
 void PrjfsChannel::deleteFile(
     RelativePathPiece path,

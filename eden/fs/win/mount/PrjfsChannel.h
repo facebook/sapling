@@ -6,6 +6,7 @@
  */
 
 #pragma once
+
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h>
@@ -45,48 +46,7 @@ class PrjfsChannel : public FsChannel {
   void removeDeletedFile(RelativePathPiece path) override;
 
  private:
-  static HRESULT CALLBACK startEnumeration(
-      const PRJ_CALLBACK_DATA* callbackData,
-      const GUID* enumerationId) noexcept;
-
-  static HRESULT CALLBACK endEnumeration(
-      const PRJ_CALLBACK_DATA* callbackData,
-      const GUID* enumerationId) noexcept;
-
-  static HRESULT CALLBACK getEnumerationData(
-      const PRJ_CALLBACK_DATA* callbackData,
-      const GUID* enumerationId,
-      PCWSTR searchExpression,
-      PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept;
-
-  static HRESULT CALLBACK
-  getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept;
-
-  static HRESULT CALLBACK
-  queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept;
-
-  static HRESULT CALLBACK getFileData(
-      const PRJ_CALLBACK_DATA* callbackData,
-      UINT64 byteOffset,
-      UINT32 length) noexcept;
-  static HRESULT CALLBACK notification(
-      const PRJ_CALLBACK_DATA* callbackData,
-      BOOLEAN isDirectory,
-      PRJ_NOTIFICATION notificationType,
-      PCWSTR destinationFileName,
-      PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept;
-
-  static void CALLBACK
-  cancelOperation(const PRJ_CALLBACK_DATA* callbackData) noexcept;
-
   void deleteFile(RelativePathPiece path, PRJ_UPDATE_TYPES updateFlags);
-
- private:
-  /**
-   * getDispatcher fetches the EdenDispatcher from the Projectedfs request.
-   */
-  static EdenDispatcher* getDispatcher(
-      const PRJ_CALLBACK_DATA* callbackData) noexcept;
 
   /**
    * getDispatcher() return the EdenDispatcher stored with in this object.
