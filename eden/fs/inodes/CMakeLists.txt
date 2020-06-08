@@ -47,6 +47,7 @@ if (WIN32)
   target_link_libraries(
     eden_inodes
     PUBLIC
+      eden_win
       eden_win_utils
   )
 else()

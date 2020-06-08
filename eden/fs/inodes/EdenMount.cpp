@@ -51,6 +51,7 @@
 
 #ifdef _WIN32
 #include "eden/fs/inodes/win/RepoConfig.h" // @manual
+#include "eden/fs/win/mount/PrjfsChannel.h" // @manual
 #else
 #include <folly/File.h>
 #include <folly/Subprocess.h>
@@ -1204,6 +1205,7 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
       NOT_IMPLEMENTED();
     }
 
+    setFsChannel(std::make_unique<PrjfsChannel>(this));
     fsChannel_->start();
     createRepoConfig(
         getPath(),

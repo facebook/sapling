@@ -174,12 +174,9 @@ void TestMount::initialize(
 }
 
 void TestMount::initializeEdenMount() {
-#ifdef _WIN32
-  edenMount_->setFsChannel(std::make_unique<TestFsChannel>());
-#endif
   edenMount_->initialize().getVia(serverExecutor_.get());
 #ifdef _WIN32
-  edenMount_->startChannel(false);
+  edenMount_->setFsChannel(std::make_unique<TestFsChannel>());
 #endif
 }
 
@@ -307,12 +304,9 @@ void TestMount::remount() {
       blobCache_,
       serverState_,
       std::move(journal));
-#ifdef _WIN32
-  edenMount_->setFsChannel(std::make_unique<TestFsChannel>());
-#endif
   edenMount_->initialize().getVia(serverExecutor_.get());
 #ifdef _WIN32
-  edenMount_->startChannel(false);
+  edenMount_->setFsChannel(std::make_unique<TestFsChannel>());
 #endif
 }
 

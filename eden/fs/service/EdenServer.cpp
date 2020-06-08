@@ -1219,10 +1219,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 
   registerStats(edenMount);
 
-#ifdef _WIN32
-  edenMount->setFsChannel(std::make_unique<PrjfsChannel>(edenMount.get()));
-#endif
-
   const bool doTakeover = optionalTakeover.has_value();
   auto initFuture = edenMount->initialize(
       doTakeover ? std::make_optional(optionalTakeover->inodeMap)
