@@ -23,11 +23,11 @@
 
   $ hg testdeprecate 1
   warning: feature 'test-feature' is deprecated: blah blah message
-  note: the feature will be completely disabled sooned, so please migrate off
+  note: the feature will be completely disabled soon, so please migrate off
 
   $ hg testdeprecate 2
   warning: sleeping for 2 seconds because feature 'test-feature' is deprecated: blah blah message
-  note: the feature will be completely disabled sooned, so please migrate off
+  note: the feature will be completely disabled soon, so please migrate off
 
   $ hg testdeprecate 3
   abort: feature 'test-feature' is disabled: blah blah message
@@ -36,7 +36,7 @@
 
   $ hg testdeprecate 3 --config deprecated.bypass-test-feature=True
   warning: feature 'test-feature' is deprecated: blah blah message
-  note: the feature will be completely disabled sooned, so please migrate off
+  note: the feature will be completely disabled soon, so please migrate off
 
   $ hg testdeprecate 4
   abort: feature 'test-feature' is disabled: blah blah message
