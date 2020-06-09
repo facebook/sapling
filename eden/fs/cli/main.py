@@ -17,11 +17,10 @@ import typing
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
-import eden.thrift
 import thrift.transport
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import check_health_using_lockfile, wait_for_instance_healthy
-from eden.thrift import EdenNotRunningError
+from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import GlobParams, MountInfo as ThriftMountInfo, MountState
 from fb303_core.ttypes import fb303_status
@@ -1340,7 +1339,7 @@ def stop_aux_processes_for_path(repo_path: str) -> None:
     unmount_redirections_for_path(repo_path)
 
 
-def stop_aux_processes(client: eden.thrift.EdenClient) -> None:
+def stop_aux_processes(client: EdenClient) -> None:
     """Tear down processes that will hold onto file handles and prevent shutdown
     for all mounts"""
 

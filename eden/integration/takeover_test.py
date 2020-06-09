@@ -15,7 +15,7 @@ from typing import Dict, Optional
 
 import pexpect
 from eden.fs.cli.util import get_pid_using_lockfile, poll_until
-from eden.thrift import EdenClient
+from eden.thrift.legacy import EdenClient
 from facebook.eden.ttypes import FaultDefinition, UnblockFaultArg
 from fb303_core.ttypes import fb303_status
 
@@ -246,7 +246,7 @@ class TakeoverTest(testcase.EdenRepoTest):
         )
 
     def test_takeover_preserves_inode_numbers_for_open_nonmaterialized_files(
-        self
+        self,
     ) -> None:
         hello = os.path.join(self.mount, "tree/hello")
 

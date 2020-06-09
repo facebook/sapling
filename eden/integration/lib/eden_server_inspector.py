@@ -7,7 +7,7 @@
 import os
 from typing import Iterable
 
-import eden.thrift
+from eden.thrift.legacy import EdenClient
 from facebook.eden.ttypes import TimeSpec
 
 from . import edenclient
@@ -25,7 +25,7 @@ class EdenServerInspector(object):
         self._eden = eden
         self._mount_point = mount_point
 
-    def create_thrift_client(self) -> eden.thrift.EdenClient:
+    def create_thrift_client(self) -> EdenClient:
         return self._eden.get_thrift_client()
 
     def unload_inode_for_path(self, path: str = "") -> None:

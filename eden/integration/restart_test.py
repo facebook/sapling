@@ -9,11 +9,10 @@ import sys
 import typing
 from typing import Optional
 
-import eden.thrift
-import eden.thrift.client
 import pexpect
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
+from eden.thrift.legacy import SOCKET_PATH, EdenClient, create_thrift_client
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, PexpectSpawnType, pexpect_spawn
@@ -77,8 +76,8 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         p.wait()
         self.assertEqual(p.exitstatus, 0)
 
-    def _get_thrift_client(self) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(str(self.eden_dir))
+    def _get_thrift_client(self) -> EdenClient:
+        return create_thrift_client(str(self.eden_dir))
 
     def test_restart(self) -> None:
         self._start_fake_edenfs()
@@ -210,9 +209,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
 
         # Rename the thrift socket so that "eden restart" will not be able to
         # communicate with the existing daemon.
-        (self.eden_dir / eden.thrift.client.SOCKET_PATH).rename(
-            self.eden_dir / "old.socket"
-        )
+        (self.eden_dir / SOCKET_PATH).rename(self.eden_dir / "old.socket")
 
         # "eden restart" should not restart if it cannot confirm the current health of
         # edenfs.

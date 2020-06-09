@@ -11,7 +11,7 @@ import signal
 import subprocess
 import typing
 
-import eden.thrift
+from eden.thrift.legacy import create_thrift_client
 
 from .find_executables import FindExe
 
@@ -87,5 +87,5 @@ class FakeEdenFS(typing.ContextManager[int]):
 
 
 def get_fake_edenfs_argv(eden_dir: pathlib.Path) -> typing.List[str]:
-    with eden.thrift.create_thrift_client(str(eden_dir)) as client:
+    with create_thrift_client(str(eden_dir)) as client:
         return client.getDaemonInfo().commandLine

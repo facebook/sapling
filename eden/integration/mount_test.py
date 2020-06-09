@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -12,7 +11,7 @@ from pathlib import Path
 from typing import Optional, Set
 
 from eden.fs.cli.util import poll_until
-from eden.thrift import EdenClient, EdenNotRunningError
+from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden.ttypes import (
     EdenError,
     EdenErrorType,

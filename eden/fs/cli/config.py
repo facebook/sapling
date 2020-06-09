@@ -21,9 +21,9 @@ import typing
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Type, Union, cast
 
-import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 import toml
+from eden.thrift.legacy import EdenClient, create_thrift_client
 
 from . import configinterpolator, configutil, telemetry, util, version
 from .util import (
@@ -345,10 +345,8 @@ class EdenInstance:
         """Return the paths of the set mount points stored in config.json"""
         return [str(path) for path in self._get_directory_map().keys()]
 
-    def get_thrift_client(self, timeout=None) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(
-            eden_dir=str(self._config_dir), timeout=timeout
-        )
+    def get_thrift_client(self, timeout=None) -> EdenClient:
+        return create_thrift_client(eden_dir=str(self._config_dir), timeout=timeout)
 
     def get_checkout_info(self, path: Union[Path, str]) -> collections.OrderedDict:
         """

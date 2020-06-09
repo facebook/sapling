@@ -54,7 +54,7 @@ if sys.version_info < (2, 7, 6):
 # loaded, and only throwing ImportError later when you actually try to use
 # them.
 with demandimport.deactivated():
-    import eden.thrift as eden_thrift_module
+    import eden.thrift.legacy as eden_thrift_module
     import facebook.eden.ttypes as eden_ttypes
 
 create_thrift_client = eden_thrift_module.create_thrift_client

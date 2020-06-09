@@ -29,7 +29,7 @@ from typing import (
 
 import eden.config
 from eden.test_support.testcase import EdenTestCaseBase
-from eden.thrift import EdenClient
+from eden.thrift.legacy import EdenClient
 
 from . import blacklist, edenclient, gitrepo, hgrepo, repobase
 from .find_executables import FindExe

@@ -17,8 +17,8 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Dict, List, Optional, Union, cast
 
-import eden.thrift
 from eden.fs.cli import util
+from eden.thrift.legacy import EdenClient, create_thrift_client
 from facebook.eden.ttypes import MountState
 
 from .find_executables import FindExe
@@ -124,8 +124,8 @@ class EdenFS(object):
             return
         self.shutdown()
 
-    def get_thrift_client(self, timeout=None) -> eden.thrift.EdenClient:
-        return eden.thrift.create_thrift_client(str(self._eden_dir), timeout=timeout)
+    def get_thrift_client(self, timeout=None) -> EdenClient:
+        return create_thrift_client(str(self._eden_dir), timeout=timeout)
 
     def run_cmd(
         self,
@@ -469,7 +469,7 @@ class EdenFS(object):
         return results
 
     def get_mount_state(
-        self, mount: pathlib.Path, client: Optional[eden.thrift.EdenClient] = None
+        self, mount: pathlib.Path, client: Optional[EdenClient] = None
     ) -> Optional[MountState]:
         """
         Query edenfs over thrift for the state of the specified mount.

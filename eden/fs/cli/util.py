@@ -18,8 +18,8 @@ import typing
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, TypeVar, Union
 
-import eden.thrift
 import thrift.transport
+from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden.ttypes import TreeInodeDebugInfo
 from fb303_core.ttypes import fb303_status
 from thrift import Thrift
@@ -163,7 +163,7 @@ def _create_dead_health_status() -> HealthStatus:
 
 
 def check_health(
-    get_client: Callable[..., eden.thrift.EdenClient],
+    get_client: Callable[..., EdenClient],
     config_dir: Path,
     timeout: Optional[float] = None,
 ) -> HealthStatus:
@@ -191,10 +191,7 @@ def check_health(
             assert status_value is not None
             status = status_value
             uptime = info.uptime
-    except (
-        eden.thrift.EdenNotRunningError,
-        thrift.transport.TTransport.TTransportException,
-    ):
+    except (EdenNotRunningError, thrift.transport.TTransport.TTransportException):
         # It is possible that the edenfs process is running, but the Thrift
         # server is not running. This could be during the startup, shutdown,
         # or takeover of the edenfs process. As a backup to requesting the
@@ -213,7 +210,7 @@ def check_health(
 def wait_for_daemon_healthy(
     proc: subprocess.Popen,
     config_dir: Path,
-    get_client: Callable[..., eden.thrift.EdenClient],
+    get_client: Callable[..., EdenClient],
     timeout: float,
     exclude_pid: Optional[int] = None,
 ) -> HealthStatus:

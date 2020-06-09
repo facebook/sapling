@@ -7,7 +7,7 @@
 import time
 from pathlib import Path
 
-from eden.thrift import EdenClient
+from eden.thrift.legacy import EdenClient
 from facebook.eden.eden_config.ttypes import (
     ConfigReloadBehavior,
     ConfigSource,
