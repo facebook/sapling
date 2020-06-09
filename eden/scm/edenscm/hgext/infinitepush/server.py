@@ -464,8 +464,11 @@ def processparts(orig, repo, op, unbundler):
     if unbundler.params.get("infinitepush") != "True":
         return orig(repo, op, unbundler)
 
-    if not repo.ui.configbool("infinitepush", "server.acceptwrites", True):
-        raise error.Abort("infinitepush writes are disabled on this server")
+    denywrites = repo.ui.config("infinitepush", "server.denywrites", "")
+    if denywrites != "":
+        msg = "infinitepush writes are disabled on this server: %s"
+        msg = msg % (denywrites,)
+        raise error.Abort(msg)
 
     # Cross-Backend sync bundles are sent forward between hg and Mononoke
     # and don't need to be preserved in queues to further sync, to

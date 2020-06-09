@@ -128,14 +128,14 @@ Check that we pull/update from the read path, regardless of the write path prese
 Check that infinitepush writes can be disabled by a config
   $ cat >> "$TESTTMP/repo1/.hg/hgrc" <<EOF
   > [infinitepush]
-  > server.acceptwrites=False
+  > server.denywrites=very good reason
   > EOF
   $ cd "$TESTTMP/client"
   $ mkcommit ababagalamaga
   $ hg push -r . --to scratch/ababagalamaga --create --config paths.infinitepush-write=ssh://user@dummy/repo1
   pushing to ssh://user@dummy/repo1
   searching for changes
-  remote: infinitepush writes are disabled on this server
+  remote: infinitepush writes are disabled on this server: very good reason
   abort: push failed on remote
   [255]
 
