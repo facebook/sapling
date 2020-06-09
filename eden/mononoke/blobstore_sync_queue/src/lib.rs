@@ -188,9 +188,8 @@ queries! {
         timestamp: Timestamp,
         operation_key: OperationKey,
     )) {
-        insert_or_ignore,
-        "{insert_or_ignore}
-         INTO blobstore_sync_queue (blobstore_key, blobstore_id, multiplex_id, add_timestamp, operation_key)
+        none,
+        "INSERT INTO blobstore_sync_queue (blobstore_key, blobstore_id, multiplex_id, add_timestamp, operation_key)
          VALUES {values}"
     }
 
