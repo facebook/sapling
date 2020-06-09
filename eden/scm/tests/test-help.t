@@ -1057,6 +1057,8 @@ Test list of internal help commands
    debugsetparents
                  manually set the parents of the current working directory
    debugshell    (no help text available)
+   debugsmallcommitmetadata
+                 store string metadata for a commit
    debugssl      test a secure connection to a server
    debugstatus   common performance issues for status
    debugstore    print information about blobstore

@@ -69,6 +69,7 @@ from .. import (
     scmutil,
     setdiscovery,
     simplemerge,
+    smallcommitmetadata,
     smartset,
     sslutil,
     streamclone,
@@ -2944,6 +2945,102 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 
     with repo.wlock():
         repo.setparents(r1, r2)
+
+
+@command(
+    "debugsmallcommitmetadata",
+    [
+        ("r", "rev", "", _("revision to tag"), _("REV")),
+        ("c", "category", "", _("metadata category")),
+        ("d", "delete", False, _("delete")),
+    ]
+    + cmdutil.formatteropts,
+    "[OPTS] [VALUE]",
+)
+def debugsmallcommitmetadata(ui, repo, value="", **opts):
+    """store string metadata for a commit
+    
+    Stores local-only, size-limited string metadata for a commit with a string
+    category. Newly added entries replace older ones. This store is intended
+    for temporary, non-critical information; anything you add may be removed
+    at any time.
+    """
+    commitmeta = repo.smallcommitmetadata
+
+    node = None
+    if opts.get("rev"):
+        node = scmutil.revsingle(repo, opts.get("rev")).node()
+
+    category = opts.get("category") or None
+
+    delete = opts.get("delete")
+    if delete and value:
+        raise error.Abort(_("delete is not supported when storing a value\n"))
+
+    if value and not (node and category):
+        raise error.Abort(
+            _(
+                "both 'category' and a valid 'rev' must be provided when storing a value\n"
+            )
+        )
+
+    def formatitem(fm, node, category, value):
+        fm.startitem()
+        fm.plain("%s" % short(node))
+        fm.data(node=hex(node))
+        fm.write("category", " %s: ", category)
+        fm.write("value", "%r", value)
+        fm.plain("\n")
+
+    fm = ui.formatter("debugsmallcommitmetadata", opts)
+    if value:
+        # Write mode
+        evicted = commitmeta.store(node, category, value)
+        if evicted is not None:
+            fm.plain(_("Evicted the following entry to stay below limit:\n"))
+            formatitem(fm, evicted[0][0], evicted[0][1], evicted[1])
+    elif delete:
+        if node is None or category is None:
+            # Delete multiple
+            if node is None and category is None:
+                entries = commitmeta.clear()
+            else:
+                entries = commitmeta.finddelete(node=node, category=category)
+            fm.plain(_("Deleted the following entries:\n"))
+            for ((node_, category_), value_) in entries.items():
+                formatitem(fm, node_, category_, value_)
+        else:
+            # Delete single
+            try:
+                deletedentry = commitmeta.delete(node, category)
+                fm.plain(_("Deleted the following entry:\n"))
+                formatitem(fm, node, category, deletedentry)
+            except KeyError:
+                ui.warn(
+                    _("failed to delete entry, the specified entry does not exist.\n")
+                )
+    else:
+        if node is None or category is None:
+            # Read multiple
+            if node is None and category is None:
+                entries = commitmeta.contents
+            else:
+                entries = commitmeta.find(node=node, category=category)
+            fm.plain(_("Found the following entries:\n"))
+            for ((node_, category_), value_) in entries.items():
+                formatitem(fm, node_, category_, value_)
+        else:
+            # Read single
+            try:
+                entry = commitmeta.read(node, category)
+                fm.plain(_("Found the following entry:\n"))
+                formatitem(fm, node, category, entry)
+            except KeyError:
+                ui.warn(
+                    _("failed to read entry, the specified entry does not exist.\n")
+                )
+    fm.end()
+    commitmeta.write()
 
 
 @command("debugssl", [], "[SOURCE]", optionalrepo=True)

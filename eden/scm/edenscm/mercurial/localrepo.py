@@ -62,6 +62,7 @@ from . import (
     revset,
     revsetlang,
     scmutil,
+    smallcommitmetadata,
     store,
     transaction,
     treestate,
@@ -579,6 +580,8 @@ class localrepository(object):
         self._transref = self._lockref = self._wlockref = None
 
         self.connectionpool = connectionpool.connectionpool(self)
+
+        self._smallcommitmetadata = None
 
         # A cache for various files under .hg/ that tracks file changes,
         # (used by the filecache decorator)
@@ -2781,6 +2784,15 @@ class localrepository(object):
         Called at the end of pull if pull.automigrate is true
         """
         pass
+
+    @property
+    def smallcommitmetadata(self):
+        # Load smallcommitmetdata lazily because it is rarely used.
+        if self._smallcommitmetadata is None:
+            self._smallcommitmetadata = smallcommitmetadata.smallcommitmetadata(
+                self.cachevfs, self.ui.configint("smallcommitmetadata", "entrylimit")
+            )
+        return self._smallcommitmetadata
 
 
 # used to avoid circular references so destructors work

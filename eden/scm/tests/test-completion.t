@@ -157,6 +157,7 @@ Show debug commands if there are no other candidates
   debugsendunbundle
   debugsetparents
   debugshell
+  debugsmallcommitmetadata
   debugssl
   debugstatus
   debugstore
@@ -363,6 +364,7 @@ Show all commands + options
   debugsendunbundle: 
   debugsetparents: 
   debugshell: command
+  debugsmallcommitmetadata: rev, category, delete, template
   debugssl: 
   debugstatus: nonnormal
   debugstore: content

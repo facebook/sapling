@@ -1144,6 +1144,19 @@ def obsfateverb(context, mapping, args):
         raise error.ParseError(errmsg)
 
 
+@templatefunc("smallcommitmeta(category)")
+def showsmallcommitmeta(context, mapping, args):
+    """String. The small commit metadata in the provided category associated with the changeset."""
+    category = evalstring(context, mapping, args[0])
+    repo = mapping["repo"]
+    ctx = mapping["ctx"]
+    commitmeta = repo.smallcommitmetadata
+    try:
+        return commitmeta.read(ctx.node(), category)
+    except KeyError:
+        return ""
+
+
 @templatefunc("capitalize(word)")
 def capitalize(context, mapping, args):
     """Capitalize the first letter"""
