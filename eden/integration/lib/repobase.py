@@ -7,7 +7,7 @@
 import datetime
 import errno
 import os
-from typing import List, Optional
+from typing import AnyStr, List, Optional
 
 
 class Repository(object):
@@ -94,7 +94,7 @@ class Repository(object):
             self.mkdir(dirname)
 
     def write_file(
-        self, path: str, contents: str, mode: Optional[int] = None, add: bool = True
+        self, path: str, contents: AnyStr, mode: Optional[int] = None, add: bool = True
     ) -> None:
         """
         Create or overwrite a file with the given contents.
@@ -105,8 +105,12 @@ class Repository(object):
             mode = 0o644
 
         full_path = self.get_path(path)
-        with open(full_path, "w") as f:
-            f.write(contents)
+        if isinstance(contents, bytes):
+            with open(full_path, "wb") as f:
+                f.write(contents)
+        else:
+            with open(full_path, "w") as f:
+                f.write(contents)
 
         os.chmod(full_path, mode)
 
