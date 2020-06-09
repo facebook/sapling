@@ -7,14 +7,17 @@
 
 CREATE TABLE `data` (
   `id` VARCHAR(255) NOT NULL,
-  `type` TINYINT NOT NULL,
-  `value` BLOB NOT NULL,
+  `creation_time` BIGINT NOT NULL,
+  `chunk_id` VARCHAR(255) NOT NULL,
+  `chunk_count` INT UNSIGNED NOT NULL,
+  `chunking_method` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`)
 );
 
 CREATE TABLE `chunk` (
   `id` VARCHAR(255) NOT NULL,
-  `chunk_id` INT UNSIGNED NOT NULL,
+  `creation_time` TIMESTAMP DEFAULT CURRENT NOT NULL,
+  `chunk_num` INT UNSIGNED NOT NULL,
   `value` BLOB NOT NULL,
-  PRIMARY KEY (`id`, `chunk_id`)
+  PRIMARY KEY (`id`, `chunk_num`)
 );

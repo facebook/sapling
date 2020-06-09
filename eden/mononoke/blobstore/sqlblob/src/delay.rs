@@ -11,10 +11,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use anyhow::Error;
-
-use futures::future::{FutureExt, TryFutureExt};
-use futures_old::Future as OldFuture;
 use rand::{thread_rng, Rng};
 use stats::prelude::*;
 use tokio::sync::watch;
@@ -59,36 +55,31 @@ impl BlobDelay {
         }
     }
 
-    pub fn delay(&self) -> impl OldFuture<Item = (), Error = Error> {
+    pub async fn delay(&self) {
         let mut lag_receiver = self.lag_receiver.clone();
-        let entity = self.entity.clone();
-        async move {
-            let start_time = Instant::now();
-            while let Some(raw_lag) = lag_receiver.recv().await {
-                if raw_lag < MAX_LAG {
-                    if start_time.elapsed() > Duration::from_secs(1) {
-                        // No jittering for short delays, but jitter us about a bit if we've seen
-                        // lag and waited for it to die down, so that next request is random
-                        jitter_delay(raw_lag).await;
-                    }
-                    break;
+        let start_time = Instant::now();
+
+        while let Some(raw_lag) = lag_receiver.recv().await {
+            if raw_lag < MAX_LAG {
+                if start_time.elapsed() > Duration::from_secs(1) {
+                    // No jittering for short delays, but jitter us about a bit if we've seen
+                    // lag and waited for it to die down, so that next request is random
+                    jitter_delay(raw_lag).await;
                 }
-                if let Some(entity) = &entity {
-                    let raw_lag_ms = raw_lag.as_millis().try_into();
-                    if let Ok(raw_lag_ms) = raw_lag_ms {
-                        STATS::raw_lag_ms.add_value(raw_lag_ms, (entity.clone(),))
-                    }
+                break;
+            }
+            if let Some(entity) = &self.entity {
+                let raw_lag_ms = raw_lag.as_millis().try_into();
+                if let Ok(raw_lag_ms) = raw_lag_ms {
+                    STATS::raw_lag_ms.add_value(raw_lag_ms, (entity.clone(),))
                 }
             }
-            if let Some(entity) = &entity {
-                let total_delay_ms = start_time.elapsed().as_millis().try_into();
-                if let Ok(total_delay_ms) = total_delay_ms {
-                    STATS::total_delay_ms.add_value(total_delay_ms, (entity.clone(),));
-                }
-            }
-            Ok(())
         }
-        .boxed()
-        .compat()
+        if let Some(entity) = &self.entity {
+            let total_delay_ms = start_time.elapsed().as_millis().try_into();
+            if let Ok(total_delay_ms) = total_delay_ms {
+                STATS::total_delay_ms.add_value(total_delay_ms, (entity.clone(),));
+            }
+        }
     }
 }

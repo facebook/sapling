@@ -8,15 +8,12 @@ include = ["schema/**/*.sql", "src/**/*.rs"]
 
 [dependencies]
 blobstore = { path = ".." }
-cacheblob = { path = "../cacheblob" }
 context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
 sql_ext = { path = "../../common/rust/sql_ext" }
-sqlblob-thrift = { path = "if" }
 bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

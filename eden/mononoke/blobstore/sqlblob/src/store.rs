@@ -9,18 +9,11 @@ use std::hash::Hasher;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
-use anyhow::{bail, format_err, Error};
-use fbthrift::compact_protocol;
-use futures_ext::FutureExt;
-use futures_old::prelude::*;
+use anyhow::{format_err, Error};
+use bytes::BytesMut;
+use futures::compat::Future01CompatExt;
 use sql::{queries, Connection};
 use twox_hash::XxHash32;
-
-use blobstore::BlobstoreGetData;
-use mononoke_types::BlobstoreBytes;
-use sqlblob_thrift::InChunk;
-
-use crate::{i32_to_non_zero_usize, DataEntry};
 
 mod types {
     use sql::mysql_async::{
@@ -30,33 +23,29 @@ mod types {
 
     type FromValueResult<T> = Result<T, FromValueError>;
 
-    #[derive(Clone)]
-    pub enum DataType {
-        Data,
-        InChunk,
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub enum ChunkingMethod {
+        ByContentHashBlake2,
     }
 
-    impl From<DataType> for Value {
-        fn from(dtype: DataType) -> Self {
+    impl From<ChunkingMethod> for Value {
+        fn from(dtype: ChunkingMethod) -> Self {
             match dtype {
-                DataType::Data => Value::Int(1),
-                DataType::InChunk => Value::Int(2),
+                ChunkingMethod::ByContentHashBlake2 => Value::Int(1),
             }
         }
     }
 
-    impl ConvIr<DataType> for DataType {
+    impl ConvIr<ChunkingMethod> for ChunkingMethod {
         fn new(v: Value) -> FromValueResult<Self> {
             match v {
-                Value::Int(1) => Ok(DataType::Data),
-                Value::Bytes(ref b) if b == b"1" => Ok(DataType::Data),
-                Value::Int(2) => Ok(DataType::InChunk),
-                Value::Bytes(ref b) if b == b"2" => Ok(DataType::InChunk),
+                Value::Int(1) => Ok(ChunkingMethod::ByContentHashBlake2),
+                Value::Bytes(ref b) if b == b"1" => Ok(ChunkingMethod::ByContentHashBlake2),
                 v => Err(FromValueError(v)),
             }
         }
 
-        fn commit(self) -> DataType {
+        fn commit(self) -> ChunkingMethod {
             self
         }
 
@@ -65,55 +54,64 @@ mod types {
         }
     }
 
-    impl FromValue for DataType {
-        type Intermediate = DataType;
+    impl FromValue for ChunkingMethod {
+        type Intermediate = ChunkingMethod;
     }
 }
 
-use self::types::DataType;
+pub use self::types::ChunkingMethod;
 
 queries! {
-    write InsertData(values: (id: &str, dtype: DataType, value: &[u8])) {
+    write InsertData(values: (id: &str, ctime: i64, chunk_id: &str, chunk_count: u32, chunking_method: ChunkingMethod)) {
         insert_or_ignore,
         "{insert_or_ignore} INTO data (
             id
-            , type
-            , value
+            , creation_time
+            , chunk_id
+            , chunk_count
+            , chunking_method
         ) VALUES {values}"
     }
 
-    write InsertChunk(values: (id: &str, chunk_id: u32, value: &[u8])) {
+    write InsertChunk(values: (id: &str, chunk_num: u32, value: &[u8])) {
         insert_or_ignore,
         "{insert_or_ignore} INTO chunk (
             id
-            , chunk_id
+            , chunk_num
             , value
         ) VALUES {values}"
     }
 
-    read SelectData(id: String) -> (DataType, Vec<u8>) {
-        "SELECT type, value
+    read SelectData(id: &str) -> (i64, Vec<u8>, u32, ChunkingMethod) {
+        "SELECT creation_time, chunk_id, chunk_count, chunking_method
          FROM data
          WHERE id = {id}"
     }
 
-    read SelectIsDataPresent(id: String) -> (i32) {
+    read SelectIsDataPresent(id: &str) -> (i32) {
         "SELECT 1
          FROM data
          WHERE id = {id}"
     }
 
-    read SelectChunk(id: String, chunk_id: u32) -> (Vec<u8>) {
+    read SelectChunk(id: &str, chunk_num: u32) -> (Vec<u8>) {
         "SELECT value
          FROM chunk
          WHERE id = {id}
-           AND chunk_id = {chunk_id}"
+           AND chunk_num = {chunk_num}"
     }
+}
+
+pub struct Chunked {
+    pub id: String,
+    pub count: u32,
+    pub ctime: i64,
+    pub chunking_method: ChunkingMethod,
 }
 
 #[derive(Clone)]
 pub(crate) struct DataSqlStore {
-    shard_num: NonZeroUsize,
+    shard_count: NonZeroUsize,
     write_connection: Arc<Vec<Connection>>,
     read_connection: Arc<Vec<Connection>>,
     read_master_connection: Arc<Vec<Connection>>,
@@ -121,101 +119,93 @@ pub(crate) struct DataSqlStore {
 
 impl DataSqlStore {
     pub(crate) fn new(
-        shard_num: NonZeroUsize,
+        shard_count: NonZeroUsize,
         write_connection: Arc<Vec<Connection>>,
         read_connection: Arc<Vec<Connection>>,
         read_master_connection: Arc<Vec<Connection>>,
     ) -> Self {
         Self {
-            shard_num,
+            shard_count,
             write_connection,
             read_connection,
             read_master_connection,
         }
     }
 
-    pub(crate) fn get(&self, key: &str) -> impl Future<Item = Option<DataEntry>, Error = Error> {
-        let key = key.to_owned();
-        let shard_id = self.shard(&key);
-        let read_master_connection = self.read_master_connection[shard_id - 1].clone();
-
-        SelectData::query(&self.read_connection[shard_id - 1], &key)
-            .and_then(move |rows| match rows.into_iter().next() {
-                Some(row) => Ok(Some(row)).into_future().left_future(),
-                None => SelectData::query(&read_master_connection, &key)
-                    .map(|rows| rows.into_iter().next())
-                    .right_future(),
-            })
-            .and_then(move |rows| match rows.into_iter().next() {
-                None => Ok(None),
-                Some((DataType::Data, value)) => {
-                    Ok(Some(DataEntry::Data(BlobstoreGetData::from_bytes(value))))
-                }
-                Some((DataType::InChunk, value)) => match compact_protocol::deserialize(value) {
-                    Ok(InChunk::num_of_chunks(num_of_chunks)) => {
-                        match i32_to_non_zero_usize(num_of_chunks) {
-                            None => bail!("Encoded number of chunks was invalid"),
-                            Some(num_of_chunks) => Ok(Some(DataEntry::InChunk(num_of_chunks))),
-                        }
-                    }
-                    Err(_) | Ok(InChunk::UnknownField(_)) => {
-                        bail!("Failed to deserialize InChunk data")
-                    }
-                },
-            })
-    }
-
-    pub(crate) fn put(
-        &self,
-        key: &str,
-        entry: &DataEntry,
-    ) -> impl Future<Item = (), Error = Error> {
+    pub(crate) async fn get(&self, key: &str) -> Result<Option<Chunked>, Error> {
         let shard_id = self.shard(key);
 
-        let (dtype, value) = match entry {
-            DataEntry::Data(ref value) => (DataType::Data, BlobstoreBytes::from(value.clone())),
-            DataEntry::InChunk(num_of_chunks) => {
-                let in_chunk_meta = InChunk::num_of_chunks(num_of_chunks.get() as i32);
-                let in_chunk_meta = compact_protocol::serialize(&in_chunk_meta);
-                (DataType::InChunk, BlobstoreBytes::from_bytes(in_chunk_meta))
+        let rows = {
+            let rows = SelectData::query(&self.read_connection[shard_id - 1], &key)
+                .compat()
+                .await?;
+            if rows.is_empty() {
+                SelectData::query(&self.read_master_connection[shard_id - 1], &key)
+                    .compat()
+                    .await?
+            } else {
+                rows
             }
         };
 
-        InsertData::query(
-            &self.write_connection[shard_id - 1],
-            &[(&key, &dtype, &value.into_bytes().as_ref())],
-        )
-        .map(|_| ())
+        Ok(rows
+            .into_iter()
+            .next()
+            .map(|(ctime, chunk_id, chunk_count, chunking_method)| Chunked {
+                id: String::from_utf8_lossy(&chunk_id).to_string(),
+                count: chunk_count,
+                ctime,
+                chunking_method,
+            }))
     }
 
-    pub(crate) fn is_present(&self, key: &str) -> impl Future<Item = bool, Error = Error> {
-        let key = key.to_owned();
-        let shard_id = self.shard(&key);
-        let read_master_connection = self.read_master_connection[shard_id - 1].clone();
+    pub(crate) async fn put(
+        &self,
+        key: &str,
+        ctime: i64,
+        chunk_id: &str,
+        chunk_count: u32,
+        chunking_method: ChunkingMethod,
+    ) -> Result<(), Error> {
+        let shard_id = self.shard(key);
 
-        SelectIsDataPresent::query(&self.read_connection[shard_id - 1], &key).and_then(
-            move |rows| {
-                if rows.into_iter().next().is_some() {
-                    Ok(true).into_future().left_future()
-                } else {
-                    SelectIsDataPresent::query(&read_master_connection, &key)
-                        .map(|rows| rows.into_iter().next().is_some())
-                        .right_future()
-                }
-            },
+        InsertData::query(
+            &self.write_connection[shard_id - 1],
+            &[(&key, &ctime, &chunk_id, &chunk_count, &chunking_method)],
         )
+        .compat()
+        .await?;
+        Ok(())
+    }
+
+    pub(crate) async fn is_present(&self, key: &str) -> Result<bool, Error> {
+        let shard_id = self.shard(key);
+
+        let rows = {
+            let rows = SelectIsDataPresent::query(&self.read_connection[shard_id - 1], &key)
+                .compat()
+                .await?;
+            if rows.is_empty() {
+                SelectIsDataPresent::query(&self.read_master_connection[shard_id - 1], &key)
+                    .compat()
+                    .await?
+            } else {
+                rows
+            }
+        };
+        Ok(!rows.is_empty())
     }
 
     fn shard(&self, key: &str) -> usize {
         let mut hasher = XxHash32::with_seed(0);
         hasher.write(key.as_bytes());
-        ((hasher.finish() % self.shard_num.get() as u64) + 1) as usize
+        ((hasher.finish() % self.shard_count.get() as u64) + 1) as usize
     }
 }
 
 #[derive(Clone)]
 pub(crate) struct ChunkSqlStore {
-    shard_num: NonZeroUsize,
+    shard_count: NonZeroUsize,
     write_connection: Arc<Vec<Connection>>,
     read_connection: Arc<Vec<Connection>>,
     read_master_connection: Arc<Vec<Connection>>,
@@ -223,66 +213,67 @@ pub(crate) struct ChunkSqlStore {
 
 impl ChunkSqlStore {
     pub(crate) fn new(
-        shard_num: NonZeroUsize,
+        shard_count: NonZeroUsize,
         write_connection: Arc<Vec<Connection>>,
         read_connection: Arc<Vec<Connection>>,
         read_master_connection: Arc<Vec<Connection>>,
     ) -> Self {
         Self {
-            shard_num,
+            shard_count,
             write_connection,
             read_connection,
             read_master_connection,
         }
     }
 
-    pub(crate) fn get(
+    pub(crate) async fn get(
         &self,
-        key: &str,
-        chunk_id: u32,
-    ) -> impl Future<Item = BlobstoreGetData, Error = Error> {
-        let key = key.to_owned();
-        let shard_id = self.shard(&key, chunk_id);
-        let read_master_connection = self.read_master_connection[shard_id - 1].clone();
+        id: &str,
+        chunk_num: u32,
+        chunking_method: ChunkingMethod,
+    ) -> Result<BytesMut, Error> {
+        let shard_id = self.shard(id, chunk_num, chunking_method);
 
-        SelectChunk::query(&self.read_connection[shard_id - 1], &key, &chunk_id).and_then(
-            move |rows| match rows.into_iter().next() {
-                Some((value,)) => Ok(BlobstoreGetData::from_bytes(value))
-                    .into_future()
-                    .left_future(),
-                None => SelectChunk::query(&read_master_connection, &key, &chunk_id)
-                    .and_then(move |rows| match rows.into_iter().next() {
-                        Some((value,)) => Ok(BlobstoreGetData::from_bytes(value)),
-                        None => Err(format_err!(
-                            "Missing chunk with id {} shard {}",
-                            chunk_id,
-                            shard_id
-                        )),
-                    })
-                    .right_future(),
-            },
-        )
+        let rows = {
+            let rows = SelectChunk::query(&self.read_connection[shard_id - 1], &id, &chunk_num)
+                .compat()
+                .await?;
+            if rows.is_empty() {
+                SelectChunk::query(&self.read_master_connection[shard_id - 1], &id, &chunk_num)
+                    .compat()
+                    .await?
+            } else {
+                rows
+            }
+        };
+        rows.into_iter()
+            .next()
+            .map(|(value,)| (&*value).into())
+            .ok_or_else(|| format_err!("Missing chunk with id {} shard {}", chunk_num, shard_id))
     }
 
-    pub(crate) fn put(
+    pub(crate) async fn put(
         &self,
         key: &str,
-        chunk_id: u32,
+        chunk_num: u32,
+        chunking_method: ChunkingMethod,
         value: &[u8],
-    ) -> impl Future<Item = (), Error = Error> {
-        let shard_id = self.shard(key, chunk_id);
+    ) -> Result<(), Error> {
+        let shard_id = self.shard(key, chunk_num, chunking_method);
 
         InsertChunk::query(
             &self.write_connection[shard_id - 1],
-            &[(&key, &chunk_id, &value)],
+            &[(&key, &chunk_num, &value)],
         )
-        .map(|_| ())
+        .compat()
+        .await?;
+        Ok(())
     }
 
-    fn shard(&self, key: &str, chunk_id: u32) -> usize {
+    fn shard(&self, key: &str, chunk_id: u32, _chunking_method: ChunkingMethod) -> usize {
         let mut hasher = XxHash32::with_seed(0);
         hasher.write(key.as_bytes());
         hasher.write_u32(chunk_id);
-        ((hasher.finish() % self.shard_num.get() as u64) + 1) as usize
+        ((hasher.finish() % self.shard_count.get() as u64) + 1) as usize
     }
 }
