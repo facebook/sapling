@@ -391,30 +391,30 @@ mod tests {
 
         let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
-        let fut = bs
-            .is_present(ctx.clone(), key.clone())
-            .map(|is_present| assert!(!is_present, "Blob should not exist yet"))
-            // Write a blob.
-            .and_then({
-                cloned!(ctx, bs, key);
-                move |()| bs.put(ctx, key, blobstore_bytes)
-            })
-            // Read it back and verify it.
-            .and_then({
-                cloned!(ctx, bs, key);
-                move |()| bs.get(ctx, key)
-            })
-            .map(move |bytes_out| {
-                assert_eq!(&bytes_in.to_vec(), bytes_out.unwrap().as_raw_bytes());
-            })
-            .and_then({
-                cloned!(ctx);
-                move |()| bs.is_present(ctx, key)
-            })
-            .map(|is_present| assert!(is_present, "Blob should exist now"))
-            .map_err(|err| panic!("{:#?}", err));
+        assert!(
+            !bs.is_present(ctx.clone(), key.clone())
+                .compat()
+                .await
+                .unwrap(),
+            "Blob should not exist yet"
+        );
 
-        fut.compat().await.unwrap()
+        // Write a fresh blob
+        bs.put(ctx.clone(), key.clone(), blobstore_bytes)
+            .compat()
+            .await
+            .unwrap();
+        // Read back and verify
+        let bytes_out = bs.get(ctx.clone(), key.clone()).compat().await.unwrap();
+        assert_eq!(&bytes_in.to_vec(), bytes_out.unwrap().as_raw_bytes());
+
+        assert!(
+            bs.is_present(ctx.clone(), key.clone())
+                .compat()
+                .await
+                .unwrap(),
+            "Blob should exist now"
+        );
     }
 
     #[fbinit::compat_test]
@@ -431,27 +431,32 @@ mod tests {
 
         let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
-        let fut = bs
-            .is_present(ctx.clone(), key.clone())
-            .map(|is_present| assert!(!is_present, "Blob should not exist yet"))
-            // Write a blob.
-            .and_then({
-                cloned!(ctx, bs, key, blobstore_bytes);
-                move |()| bs.put(ctx, key, blobstore_bytes)
-            })
-            // Write it again
-            .and_then({
-                cloned!(ctx, bs, key);
-                move |()| bs.put(ctx, key, blobstore_bytes)
-            })
-            .and_then({
-                cloned!(ctx);
-                move |()| bs.is_present(ctx, key)
-            })
-            .map(|is_present| assert!(is_present, "Blob should exist now"))
-            .map_err(|err| panic!("{:#?}", err));
+        assert!(
+            !bs.is_present(ctx.clone(), key.clone())
+                .compat()
+                .await
+                .unwrap(),
+            "Blob should not exist yet"
+        );
 
-        fut.compat().await.unwrap()
+        // Write a fresh blob
+        bs.put(ctx.clone(), key.clone(), blobstore_bytes.clone())
+            .compat()
+            .await
+            .unwrap();
+        // Write it again
+        bs.put(ctx.clone(), key.clone(), blobstore_bytes.clone())
+            .compat()
+            .await
+            .unwrap();
+
+        assert!(
+            bs.is_present(ctx.clone(), key.clone())
+                .compat()
+                .await
+                .unwrap(),
+            "Blob should exist now"
+        );
     }
 
     #[fbinit::compat_test]
