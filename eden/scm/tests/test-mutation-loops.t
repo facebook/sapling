@@ -1,4 +1,3 @@
-#require py2
   $ enable amend rebase remotenames
   $ setconfig experimental.evolution=obsolete
   $ setconfig experimental.narrow-heads=true

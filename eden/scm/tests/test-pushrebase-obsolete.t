@@ -1,5 +1,4 @@
 #chg-compatible
-#require py2
 
   $ configure modern
   $ enable pushrebase
