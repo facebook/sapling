@@ -386,16 +386,21 @@ void EdenDispatcher::notification(
       case PRJ_NOTIFICATION_FILE_RENAMED: {
         auto destFile = wideCharToEdenRelativePath(destinationFileName);
         XLOGF(DBG6, "RENAMED {} -> {}", relPath, destFile);
-        getMount().renameFile(relPath, destFile);
+
+        if (!destFile.empty()) {
+          getMount().renameFile(relPath, destFile);
+        }
 
         // The Prjfs could create a Tombstones for the original file. If the
         // Tombstone will be created or not depends on the origin of the file.
         // We do not have that info here, so we try to remove the Tombstone and
         // not worry about the failures.
 
-        // TODO(puneetk): We could add the file origin information in the
-        // DirEntry and refer to that before calling removeDeletedFile.
-        getMount().getFsChannel()->removeDeletedFile(relPath);
+        if (!relPath.empty()) {
+          // TODO(puneetk): We could add the file origin information in the
+          // DirEntry and refer to that before calling removeDeletedFile.
+          getMount().getFsChannel()->removeDeletedFile(relPath);
+        }
         break;
       }
 
