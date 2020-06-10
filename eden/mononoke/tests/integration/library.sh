@@ -1110,6 +1110,10 @@ function hgmn {
   hg --config ui.ssh="$DUMMYSSH" --config paths.default=ssh://user@dummy/$REPONAME --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
 }
 
+function hgmn_local {
+  hg --config ui.ssh="${TEST_FIXTURES}/nossh.sh" "$@"
+}
+
 function hgmn_show {
   echo "LOG $*"
   hgmn log --template 'node:\t{node}\np1node:\t{p1node}\np2node:\t{p2node}\nauthor:\t{author}\ndate:\t{date}\ndesc:\t{desc}\n\n{diff()}' -r "$@"

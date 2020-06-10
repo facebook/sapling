@@ -30,6 +30,7 @@ bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 hyper = "0.13"
 hyper-tls = "0.4"
+ipnetwork = "0.15"
 itertools = "0.8"
 lazy_static = "1.0"
 maplit = "1.0"

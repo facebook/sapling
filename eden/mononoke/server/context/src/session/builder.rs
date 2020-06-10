@@ -12,6 +12,7 @@ use permission_checker::MononokeIdentitySet;
 use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use session_id::SessionId;
 use sshrelay::SshEnvVars;
+use std::net::IpAddr;
 use std::sync::Arc;
 use tracing::TraceContext;
 
@@ -48,6 +49,7 @@ impl SessionContainerBuilder {
                 load_limiter: None,
                 blobstore_write_limiter: None,
                 blobstore_read_limiter: None,
+                user_ip: None,
             },
         }
     }
@@ -93,5 +95,10 @@ impl SessionContainerBuilder {
 
     pub fn blobstore_write_limiter(&mut self, limiter: AsyncLimiter) {
         self.inner.blobstore_write_limiter = Some(limiter);
+    }
+
+    pub fn user_ip(mut self, value: impl Into<Option<IpAddr>>) -> Self {
+        self.inner.user_ip = value.into();
+        self
     }
 }

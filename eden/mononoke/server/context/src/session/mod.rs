@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use load_limiter::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric};
@@ -13,6 +14,7 @@ use scuba_ext::ScubaSampleBuilder;
 use session_id::SessionId;
 use slog::Logger;
 use sshrelay::SshEnvVars;
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::TraceContext;
@@ -40,6 +42,7 @@ struct SessionContainerInner {
     load_limiter: Option<BoxLoadLimiter>,
     blobstore_write_limiter: Option<AsyncLimiter>,
     blobstore_read_limiter: Option<AsyncLimiter>,
+    user_ip: Option<IpAddr>,
 }
 
 impl SessionContainer {
@@ -71,6 +74,10 @@ impl SessionContainer {
 
     pub fn user_unix_name(&self) -> &Option<String> {
         &self.inner.user_unix_name
+    }
+
+    pub fn user_ip(&self) -> &Option<IpAddr> {
+        &self.inner.user_ip
     }
 
     pub fn source_hostname(&self) -> &Option<String> {

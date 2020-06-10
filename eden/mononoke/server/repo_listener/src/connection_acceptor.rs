@@ -254,6 +254,7 @@ fn accept(
                                 stdio,
                                 load_limiting_config,
                                 pushredirect_config,
+                                addr.ip(),
                             )
                             .map(Ok)
                             .boxed()

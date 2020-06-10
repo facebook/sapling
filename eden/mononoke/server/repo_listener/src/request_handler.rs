@@ -33,6 +33,7 @@ use sshrelay::{Priority, SenderBytesWrite, SshEnvVars, Stdio};
 use stats::prelude::*;
 use std::convert::TryInto;
 use std::mem;
+use std::net::IpAddr;
 use std::num::NonZeroU32;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -117,6 +118,7 @@ pub async fn request_handler(
     stdio: Stdio,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
+    addr: IpAddr,
 ) {
     let Stdio {
         stdin,
@@ -198,13 +200,25 @@ pub async fn request_handler(
         LoadLimiterBuilder::build(fb, throttle_limits, rate_limits, category)
     });
 
+    let client_ip = ssh_env_vars
+        .ssh_client
+        .as_ref()
+        .and_then(|ssh_client| {
+            // Parse SSH_CLIENT, if provided by the trusted peer.
+            let raw = ssh_client.split_whitespace().next()?;
+            let ip = raw.parse().ok()?;
+            Some(ip)
+        })
+        .unwrap_or(addr); // Fallback to the peer's IP.
+
     let mut session_builder = SessionContainer::builder(fb)
         .session_id(session_id)
         .trace(trace.clone())
         .user_unix_name(preamble.misc.get("unix_username").cloned())
         .source_hostname(client_hostname)
         .ssh_env_vars(ssh_env_vars)
-        .load_limiter(load_limiter);
+        .load_limiter(load_limiter)
+        .user_ip(client_ip);
 
     set_blobstore_limiters(&mut session_builder, priority).await;
 
