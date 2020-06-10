@@ -5,6 +5,7 @@ use std::path::Path;
 
 use thrift_compiler::Config;
 
+#[rustfmt::skip]
 fn main() {
     let out_dir = env::var_os("OUT_DIR").expect("OUT_DIR env not provided");
     let out_dir: &Path = out_dir.as_ref();
