@@ -690,3 +690,76 @@ Test ondemand downloading trees with a limited depth
   fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
   A subdir/x
+
+  $ cd ..
+
+Make a second repo with some flat manifests and some treeonly manifests, then
+push it to the treeonly and verify it can be pushed. This simulates merging an
+old repository into another repo.
+
+  $ hginit secondmaster
+  $ cd secondmaster
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase=
+  > remotenames=
+  > treemanifest=
+  > [remotefilelog]
+  > server=True
+  > shallowtrees=True
+  > [treemanifest]
+  > treeonly=False
+  > sendtrees=False
+  > server=True
+  > EOF
+  $ mkdir second_dir
+  $ echo s >> second_dir/s
+  $ hg commit -qAm 'flat manifest commit'
+  $ cat >> .hg/hgrc <<EOF
+  > [treemanifest]
+  > treeonly=True
+  > sendtrees=True
+  > EOF
+  $ echo s >> second_dir/s
+  $ hg commit -qAm 'treeonly manifest commit'
+  $ cd ..
+
+  $ hgcloneshallow ssh://user@dummy/secondmaster secondclient -q
+  fetching tree '' dcf227dd21f37ac6b3848ab69ee0d0910dbb4071, found via 0a0cac7a2bb2
+  2 trees fetched over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ cd secondclient
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase=
+  > remotenames=
+  > treemanifest=
+  > EOF
+
+  $ hg push --config extensions.pushrebase=! ssh://user@dummy/master -f --allow-anon
+  pushing to ssh://user@dummy/master
+  searching for changes
+  warning: repository is unrelated
+  2 trees fetched over * (glob)
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 2 changesets with 2 changes to 1 files
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+
+  $ hg log -G -T '{node}'
+  @  0a0cac7a2bb2ff6613da8280f7f356863cee022b
+  |
+  o  03e23940cb22c80ad0d5abf1d4dc8f31dec3b945
+  
+  $ hg -R ../master log -G -T '{node}'
+  o  0a0cac7a2bb2ff6613da8280f7f356863cee022b
+  |
+  o  03e23940cb22c80ad0d5abf1d4dc8f31dec3b945
+  
+  o  dad1be7841274c8bc9fe4772c99e52833240f715
+  |
+  | @  098a163f13ea73eb83a2bd8b426560575e1e91eb
+  |/
+  o  d618f764f9a11819b57268f02604ec1d311afc4c
+  

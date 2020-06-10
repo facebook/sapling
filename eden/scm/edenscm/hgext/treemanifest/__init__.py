@@ -2132,7 +2132,7 @@ def _registerbundle2parts():
                 p1, p2, linknode, copyfrom = wirepackstore.getnodeinfo("", node)
                 newtree = rustmanifest.treemanifest(datastore, node)
 
-                mfl.add(mfl.ui, newtree, p1, p2, linknode, tr=tr)
+                mfl.add(mfl.ui, newtree, p1, p2, linknode, tr=tr, overridenode=node)
             return
 
         if part.params.get("cache", "False") == "True":
