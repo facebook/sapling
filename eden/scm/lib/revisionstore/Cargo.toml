@@ -15,6 +15,7 @@ bytes = { version = "0.5", features = ["serde"] }
 byteorder = "1.2.7"
 configparser = { path = "../configparser" }
 edenapi = { path = "../edenapi" }
+edenapi_types = { path = "../edenapi/types" }
 futures = "0.3"
 hex = "0.4"
 indexedlog = { path = "../indexedlog" }

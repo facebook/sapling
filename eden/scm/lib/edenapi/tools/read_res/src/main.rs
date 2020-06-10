@@ -21,10 +21,8 @@ use anyhow::{anyhow, Result};
 use serde::de::DeserializeOwned;
 use structopt::StructOpt;
 
-use types::{
-    api::{DataResponse, HistoryResponse},
-    Key, Parents, RepoPathBuf, Validity, WireHistoryEntry,
-};
+use edenapi_types::{DataResponse, HistoryResponse, Validity, WireHistoryEntry};
+use types::{Key, Parents, RepoPathBuf};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "read_res", about = "Read the content of EdenAPI responses")]

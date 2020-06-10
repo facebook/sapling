@@ -9,12 +9,11 @@
 
 use serde_derive::{Deserialize, Serialize};
 
+use types::{hgid::HgId, key::Key, path::RepoPathBuf};
+
 use crate::{
     dataentry::DataEntry,
-    hgid::HgId,
     historyentry::{HistoryEntry, WireHistoryEntry},
-    key::Key,
-    path::RepoPathBuf,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -115,13 +114,19 @@ impl TreeRequest {
 mod tests {
     use super::*;
 
-    use crate::{
+    use bytes::Bytes;
+
+    use types::{
         hgid::mocks::{AS, BS, CS, ONES, THREES, TWOS},
         key::mocks::{BAR_KEY, BAZ_KEY, FOO_KEY},
         nodeinfo::NodeInfo,
         parents::Parents,
         testutil::*,
     };
+
+    fn data_entry(key: Key, data: impl AsRef<[u8]>) -> DataEntry {
+        DataEntry::new(key, Bytes::copy_from_slice(data.as_ref()), Parents::None)
+    }
 
     #[test]
     fn data_iter() {

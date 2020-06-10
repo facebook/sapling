@@ -12,13 +12,11 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
+use edenapi_types::{DataEntry, DataRequest, DataResponse};
 use gotham_ext::{error::HttpError, response::BytesBody};
 use mercurial_types::HgNodeHash;
 use mononoke_api::hg::{HgDataContext, HgDataId, HgRepoContext};
-use types::{
-    api::{DataRequest, DataResponse},
-    DataEntry, Key,
-};
+use types::Key;
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;

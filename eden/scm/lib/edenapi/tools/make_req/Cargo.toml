@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+edenapi_types = { path = "../../types" }
 serde_json = "1.0"
 serde_cbor = "0.11"
 structopt = "0.3"

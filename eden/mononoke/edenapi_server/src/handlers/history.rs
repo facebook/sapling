@@ -17,14 +17,12 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
+use edenapi_types::{HistoryRequest, HistoryResponse, WireHistoryEntry};
 use gotham_ext::{error::HttpError, response::BytesBody};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api::hg::HgRepoContext;
 use mononoke_types::MPath;
-use types::{
-    api::{HistoryRequest, HistoryResponse},
-    Key, WireHistoryEntry,
-};
+use types::Key;
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;

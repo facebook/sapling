@@ -12,7 +12,8 @@ use bytes::Bytes;
 
 use configparser::config::ConfigSet;
 use edenapi::{ApiResult, DownloadStats, EdenApi, ProgressFn};
-use types::{HgId, HistoryEntry, Key, NodeInfo, RepoPathBuf};
+use edenapi_types::HistoryEntry;
+use types::{HgId, Key, NodeInfo, RepoPathBuf};
 
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},

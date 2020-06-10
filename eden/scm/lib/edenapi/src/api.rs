@@ -7,7 +7,8 @@
 
 use bytes::Bytes;
 
-use types::{HgId, HistoryEntry, Key, RepoPathBuf};
+use edenapi_types::HistoryEntry;
+use types::{HgId, Key, RepoPathBuf};
 
 use crate::errors::ApiResult;
 use crate::progress::ProgressFn;

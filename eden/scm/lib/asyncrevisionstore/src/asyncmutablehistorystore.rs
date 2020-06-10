@@ -13,8 +13,9 @@ use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
 use cloned::cloned;
+use edenapi_types::HistoryEntry;
 use revisionstore::HgIdMutableHistoryStore;
-use types::{HistoryEntry, Key, NodeInfo};
+use types::{Key, NodeInfo};
 
 pub struct AsyncHgIdMutableHistoryStore<T: HgIdMutableHistoryStore> {
     inner: Option<T>,

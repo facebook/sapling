@@ -20,12 +20,11 @@ use serde::{de::DeserializeOwned, Serialize};
 use serde_cbor::Deserializer;
 use url::Url;
 
-use driver::MultiDriver;
-use handler::Collector;
-use types::{
-    api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
-    DataEntry, HgId, HistoryEntry, Key, RepoPathBuf, Validity, WireHistoryEntry,
+use edenapi_types::{
+    DataEntry, DataRequest, DataResponse, HistoryEntry, HistoryRequest, HistoryResponse,
+    TreeRequest, Validity, WireHistoryEntry,
 };
+use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::EdenApi;
 use crate::config::{ClientCreds, Config};
@@ -35,6 +34,9 @@ use crate::stats::DownloadStats;
 
 mod driver;
 mod handler;
+
+use self::driver::MultiDriver;
+use self::handler::Collector;
 
 mod paths {
     pub const HEALTH_CHECK: &str = "/health_check";

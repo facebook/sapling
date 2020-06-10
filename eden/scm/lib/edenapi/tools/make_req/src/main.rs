@@ -24,10 +24,8 @@ use anyhow::{anyhow, ensure, Result};
 use serde_json::Value;
 use structopt::StructOpt;
 
-use types::{
-    api::{DataRequest, HistoryRequest, TreeRequest},
-    HgId, Key, RepoPathBuf,
-};
+use edenapi_types::{DataRequest, HistoryRequest, TreeRequest};
+use types::{HgId, Key, RepoPathBuf};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "make_req", about = "Make EdenAPI CBOR request payloads")]

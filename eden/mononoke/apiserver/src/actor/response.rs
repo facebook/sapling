@@ -16,10 +16,8 @@ use serde::{Deserialize, Serialize};
 use tokio::{self, sync::mpsc};
 use tokio_compat::runtime::TaskExecutor;
 
-use types::{
-    api::{DataResponse, HistoryResponse},
-    DataEntry, RepoPathBuf, WireHistoryEntry,
-};
+use edenapi_types::{DataEntry, DataResponse, HistoryResponse, WireHistoryEntry};
+use types::RepoPathBuf;
 
 use super::file_stream::FileStream;
 use super::model::{Changeset, Entry, EntryLight, EntryWithSizeAndContentHash};

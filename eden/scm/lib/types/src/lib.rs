@@ -7,11 +7,8 @@
 
 //! Common types used by sibling crates
 
-pub mod api;
-pub mod dataentry;
 pub mod errors;
 pub mod hgid;
-pub mod historyentry;
 pub mod key;
 pub mod mutation;
 pub mod node;
@@ -20,9 +17,7 @@ pub mod parents;
 pub mod path;
 pub mod sha;
 
-pub use crate::dataentry::{DataEntry, Validity};
 pub use crate::hgid::HgId;
-pub use crate::historyentry::{HistoryEntry, WireHistoryEntry};
 pub use crate::key::Key;
 pub use crate::node::Node;
 pub use crate::nodeinfo::NodeInfo;

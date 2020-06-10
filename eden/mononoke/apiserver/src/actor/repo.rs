@@ -42,6 +42,10 @@ use time_ext::DurationExt;
 use tokio_compat::runtime::TaskExecutor;
 use unodes::RootUnodeManifestId;
 
+use edenapi_types::{
+    DataEntry, DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest,
+    WireHistoryEntry,
+};
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobEntry},
     fetch_manifest_envelope,
@@ -53,10 +57,7 @@ use metaconfig_types::{
 };
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::prelude::*;
-use types::{
-    api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
-    DataEntry, Key, RepoPathBuf, WireHistoryEntry,
-};
+use types::{Key, RepoPathBuf};
 use warm_bookmarks_cache::WarmBookmarksCache;
 
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};

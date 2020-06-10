@@ -7,15 +7,12 @@
 
 use std::{collections::HashSet, str::FromStr};
 
-use bytes::Bytes;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
 
 use crate::{
-    dataentry::DataEntry,
     hgid::HgId,
     key::Key,
-    parents::Parents,
     path::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf},
 };
 
@@ -63,10 +60,6 @@ pub fn key(path: &str, hexnode: &str) -> Key {
 /// The null hgid id is special and it's semantics vary. A null key contains a null hgid id.
 pub fn null_key(path: &str) -> Key {
     Key::new(repo_path_buf(path), HgId::null_id().clone())
-}
-
-pub fn data_entry(key: Key, data: impl AsRef<[u8]>) -> DataEntry {
-    DataEntry::new(key, Bytes::copy_from_slice(data.as_ref()), Parents::None)
 }
 
 pub fn generate_repo_paths<G: Gen>(count: usize, qc_gen: &mut G) -> Vec<RepoPathBuf> {

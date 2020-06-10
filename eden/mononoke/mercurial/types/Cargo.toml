@@ -9,6 +9,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 blobstore = { path = "../../blobstore" }
 context = { path = "../../server/context" }
+edenapi_types = { path = "../../../scm/lib/edenapi/types" }
 filestore = { path = "../../filestore" }
 manifest = { path = "../../manifest" }
 mercurial-thrift = { path = "if" }

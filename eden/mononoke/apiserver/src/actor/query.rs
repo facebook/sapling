@@ -18,7 +18,7 @@ use apiserver_thrift::types::{
     MononokeGetTreeParams, MononokeIsAncestorParams, MononokeListDirectoryParams,
     MononokeListDirectoryUnodesParams, MononokeRevision,
 };
-use types::api::{DataRequest, HistoryRequest, TreeRequest};
+use edenapi_types::{DataRequest, HistoryRequest, TreeRequest};
 
 #[derive(Debug, Clone, Serialize)]
 pub enum Revision {

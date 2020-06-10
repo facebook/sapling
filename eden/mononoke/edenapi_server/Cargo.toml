@@ -10,6 +10,7 @@ include = ["src/**/*.rs"]
 blobrepo_factory = { path = "../blobrepo/factory" }
 cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
+edenapi_types = { path = "../../scm/lib/edenapi/types" }
 gotham_ext = { path = "../gotham_ext" }
 mercurial_types = { path = "../mercurial/types" }
 mononoke_api = { path = "../mononoke_api" }

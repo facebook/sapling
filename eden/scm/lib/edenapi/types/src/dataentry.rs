@@ -10,7 +10,7 @@ use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
-use crate::{hgid::HgId, key::Key, parents::Parents};
+use types::{hgid::HgId, key::Key, parents::Parents};
 
 /// Tombstone string to replace the content of blacklisted files with
 /// TODO(T48685378): Handle redacted content in a less hacky way

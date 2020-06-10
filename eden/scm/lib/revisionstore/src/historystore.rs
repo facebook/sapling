@@ -9,7 +9,8 @@ use std::{ops::Deref, path::PathBuf};
 
 use anyhow::Result;
 
-use types::{HistoryEntry, Key, NodeInfo};
+use edenapi_types::HistoryEntry;
+use types::{Key, NodeInfo};
 
 use crate::{localstore::LocalStore, types::StoreKey};
 

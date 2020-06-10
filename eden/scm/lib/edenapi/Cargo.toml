@@ -20,6 +20,7 @@ serde = "1.0.89"
 serde_cbor = "0.11"
 thiserror = "1.0.5"
 tracing = "0"
+edenapi_types = { path = "types" }
 types = { path = "../types" }
 url = "2.1.0"
 

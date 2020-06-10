@@ -15,13 +15,13 @@
 
 use anyhow::Error;
 use bytes_old::Bytes;
+use edenapi_types::TreeRequest;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use mononoke_types::MPath;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fmt::{self, Debug};
 use std::sync::Mutex;
-use types::api::TreeRequest;
 
 pub mod batch;
 mod commands;

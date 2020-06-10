@@ -7,7 +7,7 @@
 
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{hgid::HgId, key::Key, nodeinfo::NodeInfo, parents::Parents, path::RepoPathBuf};
+use types::{hgid::HgId, key::Key, nodeinfo::NodeInfo, parents::Parents, path::RepoPathBuf};
 
 /// Structure containing the fields corresponding to a HistoryPack's
 /// in-memory representation of a history entry. Useful for adding
