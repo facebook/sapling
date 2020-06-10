@@ -361,7 +361,7 @@ class getpackclient(object):
                         missingids.update(datastore.getmissing(fileids))
                         missingids.update(historystore.getmissing(fileids))
 
-                        fileids = missingids
+                        fileids = list(missingids)
 
                         self.ui.warn(
                             _(
