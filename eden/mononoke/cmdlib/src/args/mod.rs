@@ -9,7 +9,7 @@ mod cache;
 #[cfg(fbcode_build)]
 mod facebook;
 
-pub use self::cache::{add_cachelib_args, init_cachelib, WITH_CONTENT_SHA1_CACHE};
+pub use self::cache::{add_cachelib_args, init_cachelib};
 
 use std::collections::{HashMap, HashSet};
 use std::io;

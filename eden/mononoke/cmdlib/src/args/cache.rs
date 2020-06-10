@@ -14,7 +14,6 @@ const CACHE_SIZE_GB: &str = "cache-size-gb";
 const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";
 const MAX_PROCESS_SIZE: &str = "max-process-size";
 const MIN_PROCESS_SIZE: &str = "min-process-size";
-pub const WITH_CONTENT_SHA1_CACHE: &str = "with-content-sha1-cache";
 const SKIP_CACHING: &str = "skip-caching";
 const CACHELIB_ONLY_BLOBSTORE: &str = "cachelib-only-blobstore";
 const READONLY_STORAGE: &str = "readonly-storage";
@@ -43,10 +42,6 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     (
         "idmapping-cache-size",
         "override size of the bonsai/hg mapping cache",
-    ),
-    (
-        "content-sha1-cache-size",
-        "override size of the content SHA1 cache",
     ),
     (PHASES_CACHE_SIZE, "override size of the phases cache"),
     (
@@ -102,11 +97,6 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
             .takes_value(true)
             .value_name("SIZE")
             .help(&*MIN_PROCESS_SIZE_HELP),
-    )
-    .arg(
-        Arg::with_name(WITH_CONTENT_SHA1_CACHE)
-            .long(WITH_CONTENT_SHA1_CACHE)
-            .help("[Mononoke API Server only] enable content SHA1 cache"),
     )
     .arg(
         Arg::with_name(SKIP_CACHING)
@@ -172,10 +162,6 @@ pub fn init_cachelib<'a>(
         if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
             settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
         }
-        settings.with_content_sha1_cache = matches.is_present(WITH_CONTENT_SHA1_CACHE);
-        if let Some(content_sha1_cache_size) = matches.value_of("content-sha1-cache-size") {
-            settings.content_sha1_cache_size = Some(content_sha1_cache_size.parse().unwrap());
-        }
         if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
             settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
         }
@@ -212,8 +198,6 @@ pub(crate) struct CachelibSettings {
     pub filenodes_cache_size: Option<usize>,
     pub filenodes_history_cache_size: Option<usize>,
     pub idmapping_cache_size: Option<usize>,
-    pub with_content_sha1_cache: bool,
-    pub content_sha1_cache_size: Option<usize>,
     pub blob_cache_size: Option<usize>,
     pub phases_cache_size: Option<usize>,
 }
@@ -231,8 +215,6 @@ impl Default for CachelibSettings {
             filenodes_cache_size: None,
             filenodes_history_cache_size: None,
             idmapping_cache_size: None,
-            with_content_sha1_cache: false,
-            content_sha1_cache_size: None,
             blob_cache_size: None,
             phases_cache_size: None,
         }
