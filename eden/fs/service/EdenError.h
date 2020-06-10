@@ -12,6 +12,7 @@
 #include <folly/Range.h>
 #include <system_error>
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/utils/Utf8.h"
 
 namespace facebook {
 namespace eden {
@@ -30,8 +31,8 @@ EdenError newEdenError(
     EdenErrorType errorType,
     Arg1&& msg,
     Args&&... args) {
-  auto e = EdenError(folly::to<std::string>(
-      std::forward<Arg1>(msg), std::forward<Args>(args)...));
+  auto e = EdenError{ensureValidUtf8(folly::to<std::string>(
+      std::forward<Arg1>(msg), std::forward<Args>(args)...))};
   e.set_errorCode(errorCode);
   e.set_errorType(errorType);
   return e;
@@ -51,7 +52,8 @@ EdenError newEdenError(
 template <class... Args>
 EdenError
 newEdenError(EdenErrorType errorType, folly::StringPiece msg, Args&&... args) {
-  auto e = EdenError(folly::to<std::string>(msg, std::forward<Args>(args)...));
+  auto e = EdenError{ensureValidUtf8(
+      folly::to<std::string>(msg, std::forward<Args>(args)...))};
   e.set_errorType(errorType);
   return e;
 }
