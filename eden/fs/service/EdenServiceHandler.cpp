@@ -389,7 +389,7 @@ void EdenServiceHandler::resetParentCommits(
       INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, logHash(parents->parent1));
   ParentCommits edenParents;
   edenParents.parent1() = hashFromThrift(parents->parent1);
-  if (parents->__isset.parent2) {
+  if (parents->parent2_ref()) {
     edenParents.parent2() =
         hashFromThrift(parents->parent2_ref().value_unchecked());
   }
