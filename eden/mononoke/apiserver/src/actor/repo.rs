@@ -986,7 +986,7 @@ impl MononokeRepo {
         &self,
         ctx: CoreContext,
         keys: Vec<Key>,
-        depth: Option<u32>,
+        length: Option<u32>,
         stream: Option<TaskExecutor>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::eden_get_history.add_value(1);
@@ -1001,7 +1001,7 @@ impl MononokeRepo {
                 .into_future()
                 .and_then(move |path| {
                     debug!(&logger, "fetching history for key: {}", &key);
-                    get_file_history(ctx, repo, filenode, path, depth)
+                    get_file_history(ctx, repo, filenode, path, length)
                         .and_then(|filenode_res| {
                             let filenodes = filenode_res.do_not_handle_disabled_filenodes()?;
                             Ok(iter_ok(filenodes))
@@ -1160,11 +1160,14 @@ impl MononokeRepo {
                 stream,
             } => self.eden_get_data(ctx, keys, if stream { Some(executor) } else { None }),
             EdenGetHistory {
-                request: HistoryRequest { keys, depth },
+                request: HistoryRequest { keys, length },
                 stream,
-            } => {
-                self.eden_get_history(ctx, keys, depth, if stream { Some(executor) } else { None })
-            }
+            } => self.eden_get_history(
+                ctx,
+                keys,
+                length,
+                if stream { Some(executor) } else { None },
+            ),
             EdenGetTrees {
                 request: DataRequest { keys },
                 stream,

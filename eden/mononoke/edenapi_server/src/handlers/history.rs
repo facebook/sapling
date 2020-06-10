@@ -60,9 +60,7 @@ async fn get_history(
     // Get streams of history entries for all requested keys.
     let mut streams = Vec::with_capacity(request.keys.len());
     for key in request.keys {
-        // NOTE: request.depth is a confusing name - it's not the depth
-        // but rather a maximum length of the returned history.
-        let entries = single_key_history(repo, &key, request.depth).await?;
+        let entries = single_key_history(repo, &key, request.length).await?;
         // Add the path of the current key to all items of the stream.
         // This is needed since the history entries of different keys
         // may be arbitrarily interleaved later.

@@ -62,7 +62,7 @@ Create and send file data request.
               hgid: HgId("672343a6daad357b926cd84a5a44a011ad029e5f"),
           },
       ],
-      depth: None,
+      length: None,
   }
   $ sslcurl -s "$EDENAPI_URI/repo/history" -d@req.cbor > res.cbor
 

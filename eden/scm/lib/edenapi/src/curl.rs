@@ -203,7 +203,7 @@ impl EdenApi for EdenApiCurlClient {
         let chunks = keys.into_iter().chunks(batch_size);
         let requests = (&chunks).into_iter().map(|batch| HistoryRequest {
             keys: batch.collect(),
-            depth: max_depth,
+            length: max_depth,
         });
 
         let mut multi = self.multi.lock();

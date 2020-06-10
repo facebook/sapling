@@ -85,7 +85,7 @@ fn parse_data_req(json: &Value) -> Result<DataRequest> {
 ///
 /// The request is represented as a JSON object containing a required
 /// "keys" field consisting of an array of path/filenode pairs (similar
-/// to a data request) as well as an optional depth parameter.
+/// to a data request) as well as an optional length parameter.
 ///
 /// Example request:
 ///
@@ -96,7 +96,7 @@ fn parse_data_req(json: &Value) -> Result<DataRequest> {
 ///         ["path/to/file_2", "7dcd6ede35eaaa5b1b16a341b19993e59f9b0dbf"],
 ///         ["path/to/file_3", "218d708a9f8c3e37cfd7ab916c537449ac5419cd"],
 ///       ],
-///       "depth": 1
+///       "length": 1
 ///     }
 ///     ```
 ///
@@ -104,7 +104,10 @@ fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
     let json = json
         .as_object()
         .ok_or_else(|| anyhow!("input must be a JSON object"))?;
-    let depth = json.get("depth").and_then(|d| d.as_u64()).map(|d| d as u32);
+    let length = json
+        .get("length")
+        .and_then(|d| d.as_u64())
+        .map(|d| d as u32);
     let keys = {
         let json_keys = json
             .get("keys")
@@ -112,7 +115,7 @@ fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
         parse_keys(json_keys)?
     };
 
-    Ok(HistoryRequest { keys, depth })
+    Ok(HistoryRequest { keys, length })
 }
 
 /// Parse a `TreeRequest` from JSON.

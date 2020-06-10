@@ -46,7 +46,7 @@ impl IntoIterator for DataResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HistoryRequest {
     pub keys: Vec<Key>,
-    pub depth: Option<u32>,
+    pub length: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
