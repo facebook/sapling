@@ -1690,6 +1690,34 @@ def truncate(fd, offset):
             raise
 
 
+def truncatefile(fname, vfs, size, checkambig=None):
+    """Truncate a file to 'size'
+
+    Will first attempt to truncate it in place, if that fails, a copy of the
+    file is performed.
+    """
+
+    try:
+        with vfs(fname, "ab", checkambig=checkambig) as fp:
+            truncate(fp, size)
+
+        return
+    except IOError as e:
+        if not pycompat.iswindows:
+            raise
+
+        if e.errno != errno.EACCES:
+            raise
+
+    if vfs.exists(fname):
+        filepath = vfs.join(fname)
+        # TODO: Instead of copying and then truncating, only copy the first size bytes.
+        copyfile(filepath, filepath + ".new")
+        with vfs(fname + ".new", "ab", checkambig=checkambig) as fp:
+            truncate(fp, size)
+        rename(filepath + ".new", filepath)
+
+
 class filestat(object):
     """help to exactly detect change of a file
 

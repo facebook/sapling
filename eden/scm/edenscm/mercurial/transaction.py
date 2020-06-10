@@ -62,9 +62,7 @@ def _playback(
         if o or not unlink:
             checkambig = checkambigfiles and (f, "") in checkambigfiles
             try:
-                fp = opener(f, "ab", checkambig=checkambig)
-                util.truncate(fp, o)
-                fp.close()
+                util.truncatefile(f, opener, o, checkambig=checkambig)
             except IOError:
                 report(_("failed to truncate %s\n") % f)
                 raise

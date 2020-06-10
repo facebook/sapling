@@ -5,6 +5,7 @@ TODO: configure mutation
   $ configure noevolution
   $ enable undo rebase
   $ setconfig phases.publish=false format.usegeneraldelta=yes
+  $ setconfig experimental.mmapindexthreshold=1000G
 
   $ hg init a
   $ cd a
