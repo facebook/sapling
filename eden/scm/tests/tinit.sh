@@ -182,6 +182,9 @@ disable() {
   for name in "$@"
   do
     setconfig "extensions.$name=!"
+    if [[ $name == "treemanifest" ]]; then
+        setconfig treemanifest.sendtrees=False treemanifest.treeonly=False
+    fi
   done
 }
 

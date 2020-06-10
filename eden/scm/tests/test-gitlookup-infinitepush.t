@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "gitlookup= " >> $HGRCPATH

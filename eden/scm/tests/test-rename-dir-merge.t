@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ hg init t
   $ cd t
 

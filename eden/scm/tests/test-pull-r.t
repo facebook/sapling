@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ configure dummyssh
   $ hg init repo
   $ cd repo

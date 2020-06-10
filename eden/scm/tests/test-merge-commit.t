@@ -1,7 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
-
 Check that renames are correctly saved by a commit after a merge
 
 Test with the merge on 3 having the rename on the local parent

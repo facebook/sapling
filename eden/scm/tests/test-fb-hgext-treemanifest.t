@@ -110,6 +110,23 @@ Test rebasing a stack of commits results in a pack with all the trees
   0d05c20bb7eb53dbfe91f834ed3f0c26ca6ca655
   8289b85c6a307a5a64ffe3bd80bd7998775c787a
   $ hg debugdatapack .hg/store/packs/manifests/*.datapack
+  .hg/store/packs/manifests/20c4a2261c2e7b9985385ca10219670dc10a6aef:
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  a4e2f032ee0f  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  0d05c20bb7eb  000000000000  92            (missing)
+  
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  ad0a48a2ec1e  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  8289b85c6a30  000000000000  92            (missing)
+  
   .hg/store/packs/manifests/3f3f675f03d1d5c32ce32a7ca749309fb59f4c9e:
   subdir:
   Node          Delta Base    Delta Length  Blob Size

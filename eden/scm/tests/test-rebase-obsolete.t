@@ -1,7 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
-
 Test rebase with evolution
 See test-rebase-mutation.t for the equivalent test with mutation & visibility.
 

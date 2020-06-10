@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 
 Setup the test
   $ . "$TESTDIR/library.sh"

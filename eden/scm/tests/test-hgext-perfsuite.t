@@ -3,7 +3,6 @@
 
 TODO: configure mutation
   $ configure noevolution
-  $ disable treemanifest
 #require symlink execbit
   $ enable amend perfsuite rebase
   $ setconfig perfsuite.rebase.masterdistance=1 perfsuite.immrebase.masterdistance=0

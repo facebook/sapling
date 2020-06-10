@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ enable remotenames
   $ setconfig remotenames.rename.default=remote remotenames.disallowedto="^remote/"
 

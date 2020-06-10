@@ -2,7 +2,6 @@
 
 #require jq
   $ configure dummyssh evolution
-  $ disable treemanifest
   $ enable amend commitcloud infinitepush rebase remotenames share smartlog
 
   $ setconfig infinitepush.branchpattern="re:scratch/.*"

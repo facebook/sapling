@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 Set up extension and repos
   $ enable remotenames
   $ hg init repo1

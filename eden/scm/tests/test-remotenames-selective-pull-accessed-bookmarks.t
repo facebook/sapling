@@ -5,7 +5,6 @@
   $ mkdir $LOGDIR
 
   $ configure dummyssh
-  $ disable treemanifest
   $ enable remotenames
 
   $ enable sampling

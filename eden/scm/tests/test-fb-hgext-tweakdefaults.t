@@ -1,7 +1,6 @@
 #require py2
 #chg-compatible
 
-  $ disable treemanifest
 TODO: configure mutation
   $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"

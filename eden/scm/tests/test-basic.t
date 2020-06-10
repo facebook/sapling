@@ -15,6 +15,8 @@ Create a repository:
   remotefilelog.reponame=reponame-default
   remotefilelog.cachepath=$TESTTMP/default-hgcache
   treemanifest.flatcompat=True
+  treemanifest.sendtrees=False
+  treemanifest.treeonly=False
   treemanifest.rustmanifest=True
   ui.slash=True
   ui.interactive=False

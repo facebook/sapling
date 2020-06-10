@@ -5,7 +5,6 @@
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=testrepo
   $ setconfig mutation.record=true mutation.enabled=true
-  $ disable treemanifest
   $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
 

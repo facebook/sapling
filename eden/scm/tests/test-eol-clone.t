@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 #require no-fsmonitor
 
 Testing cloning with the EOL extension

@@ -1,7 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
-
   $ hg init repo
   $ cd repo
 

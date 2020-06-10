@@ -3,7 +3,6 @@
 
 # Initial setup
   $ enable rebase snapshot
-  $ disable treemanifest
   $ setconfig visibility.enabled=true
 
 # Prepare server and client repos.

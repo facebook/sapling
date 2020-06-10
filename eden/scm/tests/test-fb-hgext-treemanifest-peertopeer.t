@@ -62,48 +62,6 @@ Create client1 - it will have both server commits
   b7cac023ec87107fd7c501085ba31c96485d802d.dataidx
   b7cac023ec87107fd7c501085ba31c96485d802d.datapack
 
-Pushing with treemanifest disabled does not produce trees
-(disable demand import so treemanifest.py is forced to load)
-  $ HGDEMANDIMPORT=disable hg push -q ../client2
-  2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ ls ../client2/.hg/store/packs/manifests || true
-  * $ENOENT$ (glob)
-
-  $ hg -R ../client2 debugstrip -q -r 'tip^^'
-  $ rm -rf ../client2/.hg/store/packs
-  $ clearcache
-
-Pushing with sendtrees=False does nothing and doesnt download any trees to the
-cache.
-# Prefetch client2 so we dont see any downloads related to what the target
-# already has.
-  $ hg -R ../client2 prefetch -r 'all()'
-  2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ cp ../client2/.hg/hgrc ../client2/.hg/hgrc.bak
-  $ cat >> ../client2/.hg/hgrc <<EOF
-  > [remotefilelog]
-  > cachepath=$CACHEDIR/cache2
-  > EOF
-
-# Push and expect only one bulk download of trees
-  $ hg push -q ssh://user@dummy/client2
-  4 trees fetched over * (glob)
-  remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  $ ls_l $CACHEDIR/master/packs/manifests
-  -r--r--r--    1196 1b69dc04d7f9d9825351f0af940c80f956e372b9.histidx
-  -r--r--r--     183 1b69dc04d7f9d9825351f0af940c80f956e372b9.histpack
-  -r--r--r--    1114 878a145025fb3997b91efd9bb5f384e27d81f327.dataidx
-  -r--r--r--     219 878a145025fb3997b91efd9bb5f384e27d81f327.datapack
-  -r--r--r--    1252 940bb8bf7ddf4196fff7fd1e837cbed98cb19c19.histidx
-  -r--r--r--     347 940bb8bf7ddf4196fff7fd1e837cbed98cb19c19.histpack
-  -r--r--r--    1194 ab051d0b748fd193f5a4b2721359aa8588bc6d6e.dataidx
-  -r--r--r--     437 ab051d0b748fd193f5a4b2721359aa8588bc6d6e.datapack
-  $ hg -R ../client2 debugstrip -q -r 'tip^^'
-  $ rm -rf ../client2/.hg/store/packs
-  $ mv ../client2/.hg/hgrc.bak ../client2/.hg/hgrc
   $ clearcache
 
 Pushing p2p with sendtrees=True puts the received packs in the local pack store
@@ -119,7 +77,7 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   > EOF
 
 # Push and expect downloads of both public trees (in arbitrary order)
-  $ hg push -q ssh://user@dummy/client2 --config treemanifest.sendtrees=True --config treemanifest.treeonly=True
+  $ hg push -q ssh://user@dummy/client2
   fetching tree '' *, based on 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 54609f68e211 (glob)
   2 trees fetched over * (glob)
   fetching tree '' *, based on *, found via 54609f68e211 (glob)

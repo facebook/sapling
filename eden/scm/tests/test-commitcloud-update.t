@@ -2,7 +2,6 @@
 
   $ configure evolution
   $ enable amend
-  $ disable treemanifest
 
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

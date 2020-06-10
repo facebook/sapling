@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure dummyssh
-  $ disable treemanifest
   $ enable remotenames
 
 Set up repos

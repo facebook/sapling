@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure dummyssh
-  $ disable treemanifest
   $ enable amend rebase histedit fbhistedit phabdiff absorb
   $ setconfig ui.interactive=true
   $ setconfig experimental.evolution=obsolete

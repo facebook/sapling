@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 #require unix-permissions no-root no-windows
 
 Prepare

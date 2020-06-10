@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure dummyssh
-  $ disable treemanifest
   $ enable amend rebase
   $ setconfig ui.interactive=true
 

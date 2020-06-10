@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 #require execbit
 
   $ umask 027

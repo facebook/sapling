@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure mutation
-  $ disable treemanifest
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit rebase

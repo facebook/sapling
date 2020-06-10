@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ CACHEDIR=`pwd`/hgcache
   $ setconfig treemanifest.treeonly=False
 

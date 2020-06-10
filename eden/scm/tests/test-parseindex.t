@@ -1,7 +1,6 @@
 #require py2
 #chg-compatible
 
-  $ disable treemanifest
 
   $ hg init a
   $ cd a

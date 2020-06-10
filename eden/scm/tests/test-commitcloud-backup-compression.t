@@ -27,3 +27,6 @@ Check the commit is compressed
   Stream params: {Compression: GZ}
   changegroup -- {version: 02}
       7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      1 data items, 1 history items
+      18ef3a36d0cecdc332a8f5ee468ffe6e330279fe 

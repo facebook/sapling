@@ -586,8 +586,7 @@ def wraprepo(repo):
 
         def _restrictcapabilities(self, caps):
             caps = super(treerepository, self)._restrictcapabilities(caps)
-            if self.svfs.treemanifestserver:
-                caps = _addservercaps(self, caps)
+            caps = _addservercaps(self, caps)
             return caps
 
         @perftrace.tracefunc("On-Demand Fetch Trees")

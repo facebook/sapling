@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure evolution
-  $ disable treemanifest
   $ enable copytrace rebase shelve
   $ setconfig experimental.copytrace=off
 

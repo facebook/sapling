@@ -1,7 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
-
   $ enable convert
 
   $ glog()

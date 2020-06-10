@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ readconfig <<EOF
   > [alias]
   > tlog = log --template "{rev}:{node|short}: '{desc}'\n"

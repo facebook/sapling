@@ -1,4 +1,3 @@
-  $ disable treemanifest
   $ setconfig devel.legacy.exchange=bookmarks
 
 Setup

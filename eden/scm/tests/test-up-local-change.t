@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ HGMERGE=true; export HGMERGE
 
   $ hg init r1

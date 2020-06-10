@@ -3,7 +3,6 @@
 
 # Initial setup
   $ enable amend rebase snapshot smartlog
-  $ disable treemanifest
   $ setconfig smartlog.hide-before="0 0"
   $ setconfig visibility.enabled=true
 

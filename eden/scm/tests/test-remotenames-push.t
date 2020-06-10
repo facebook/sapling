@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   > mkcommit()
   > {
   >    echo $1 > $1

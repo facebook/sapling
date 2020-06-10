@@ -1,4 +1,3 @@
-  $ disable treemanifest
 #require no-fsmonitor
 
 setup

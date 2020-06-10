@@ -1,7 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
-
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon

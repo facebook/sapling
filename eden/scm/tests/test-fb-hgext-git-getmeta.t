@@ -2,7 +2,6 @@
 
 #chg-compatible
 
-  $ disable treemanifest
 #testcases onlymapdelta.true onlymapdelta.false
 
   $ configure dummyssh

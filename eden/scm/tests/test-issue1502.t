@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 https://bz.mercurial-scm.org/1502
 
 Initialize repository

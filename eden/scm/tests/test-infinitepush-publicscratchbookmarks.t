@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure dummyssh
-  $ disable treemanifest
   $ enable infinitepush remotenames
   $ setconfig remotenames.hoist=default 'remotenames.autopullhoistpattern=re:.*'
   $ setconfig infinitepush.branchpattern="re:scratch/.+"

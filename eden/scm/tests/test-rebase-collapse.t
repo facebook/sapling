@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure mutation
-  $ disable treemanifest
   $ enable rebase strip
   $ setconfig phases.publish=0
 

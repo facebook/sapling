@@ -2,7 +2,6 @@
 
 #chg-compatible
 
-  $ disable treemanifest
 #require symlink
 #testcases treestate-on treestate-off
 

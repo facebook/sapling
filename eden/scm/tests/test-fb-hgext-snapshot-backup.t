@@ -3,7 +3,6 @@
 
 # Initial setup
   $ enable rebase snapshot
-  $ disable treemanifest
   $ setconfig visibility.enabled=true
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

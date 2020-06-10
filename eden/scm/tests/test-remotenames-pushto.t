@@ -2,7 +2,6 @@
 
 #chg-compatible
 
-  $ disable treemanifest
 TODO: configure mutation
   $ configure noevolution
 Set up extension and repos

@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ enable remotenames
   $ enable amend
   $ setconfig remotenames.fastheaddiscovery=True

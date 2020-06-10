@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 #require execbit
 
 Create extension that can disable exec checks:

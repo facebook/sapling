@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure evolution
-  $ disable treemanifest
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit rebase

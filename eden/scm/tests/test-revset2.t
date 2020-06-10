@@ -1,8 +1,6 @@
 #require py2
 #chg-compatible
 
-  $ disable treemanifest
-
   $ enable commitextras
   $ setconfig ui.allowemptycommit=1
 

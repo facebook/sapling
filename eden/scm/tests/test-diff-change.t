@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 Testing diff --change
 
   $ hg init a

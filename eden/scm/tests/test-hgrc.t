@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
 hide outer repo
   $ hg init
 

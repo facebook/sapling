@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ hg init a
   $ cd a
   $ echo a > a
