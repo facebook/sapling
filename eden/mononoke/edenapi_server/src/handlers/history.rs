@@ -21,13 +21,12 @@ use edenapi_types::{HistoryRequest, HistoryResponse, WireHistoryEntry};
 use gotham_ext::{error::HttpError, response::BytesBody};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api::hg::HgRepoContext;
-use mononoke_types::MPath;
 use types::Key;
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
 
-use super::util::{cbor_mime, get_repo, get_request_body};
+use super::util::{cbor_mime, get_repo, get_request_body, to_mononoke_path};
 
 type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, HttpError>>;
 
@@ -85,7 +84,10 @@ async fn single_key_history(
     length: Option<u32>,
 ) -> Result<HistoryStream, HttpError> {
     let filenode_id = HgFileNodeId::new(HgNodeHash::from(key.hgid));
-    let path = MPath::new(key.path.as_byte_slice()).map_err(HttpError::e400)?;
+    let path = to_mononoke_path(&key.path).map_err(HttpError::e400)?;
+    let mpath = path.into_mpath().ok_or_else(|| {
+        HttpError::e400(anyhow!("empty path given for filenode: {}", &filenode_id))
+    })?;
 
     let file = repo
         .file(filenode_id)
@@ -96,7 +98,7 @@ async fn single_key_history(
     // Fetch the file's history and convert the entries into
     // the expected on-the-wire format.
     let history = file
-        .history(path, length)
+        .history(mpath, length)
         .map_err(HttpError::e500)
         // XXX: Use async block because TryStreamExt::and_then
         // requires the closure to return a TryFuture.

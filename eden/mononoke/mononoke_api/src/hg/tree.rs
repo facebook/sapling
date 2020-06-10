@@ -54,7 +54,7 @@ impl HgTreeContext {
 
     /// Get the content for this tree manifest node in the format expected
     /// by Mercurial's data storage layer.
-    fn content_bytes(&self) -> Bytes {
+    pub fn content_bytes(&self) -> Bytes {
         self.envelope.contents().clone()
     }
 }

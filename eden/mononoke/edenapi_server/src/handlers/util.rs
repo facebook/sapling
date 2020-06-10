@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Error};
 use bytes::Bytes;
 use gotham::state::{FromState, State};
 use http::HeaderMap;
@@ -14,7 +14,9 @@ use mime::Mime;
 use once_cell::sync::Lazy;
 
 use gotham_ext::{body_ext::BodyExt, error::HttpError};
-use mononoke_api::hg::HgRepoContext;
+use mononoke_api::{hg::HgRepoContext, path::MononokePath};
+use mononoke_types::MPath;
+use types::{RepoPath, RepoPathBuf};
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
@@ -46,4 +48,16 @@ pub async fn get_request_body(state: &mut State) -> Result<Bytes, HttpError> {
         .map_err(HttpError::e400)?
         .await
         .map_err(HttpError::e400)
+}
+
+pub fn to_mononoke_path(path: impl AsRef<RepoPath>) -> Result<MononokePath, Error> {
+    let mpath = MPath::new_opt(path.as_ref().as_byte_slice())?;
+    Ok(MononokePath::new(mpath))
+}
+
+pub fn to_hg_path(path: &MononokePath) -> Result<RepoPathBuf, Error> {
+    Ok(match path.as_mpath() {
+        Some(mpath) => RepoPathBuf::from_utf8(mpath.to_vec())?,
+        None => RepoPathBuf::new(),
+    })
 }

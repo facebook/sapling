@@ -27,6 +27,7 @@ use crate::context::ServerContext;
 mod data;
 mod history;
 mod repos;
+mod subtree;
 mod util;
 
 pub fn build_router(ctx: ServerContext) -> Router {
@@ -51,6 +52,10 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/history")
             .with_path_extractor::<history::HistoryParams>()
             .to(history_handler);
+        route
+            .post("/:repo/subtree")
+            .with_path_extractor::<subtree::SubTreeParams>()
+            .to(subtree_handler);
     })
 }
 
@@ -89,6 +94,14 @@ pub fn trees_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
 pub fn history_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = history::history(&mut state).await;
+        build_response(res, state)
+    }
+    .boxed()
+}
+
+pub fn subtree_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
+    async move {
+        let res = subtree::subtree(&mut state).await;
         build_response(res, state)
     }
     .boxed()
