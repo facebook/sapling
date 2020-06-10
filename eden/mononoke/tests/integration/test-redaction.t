@@ -376,23 +376,3 @@ Updating to a commit with censored files works in getpackv2 repo
   $ hgmn up -q 064d994d0240
   $ cat c
   This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
-
-Start API server
-  $ setup_no_ssl_apiserver
-  $ cat >> $TESTTMP/repo-pull-edenapi/.hg/hgrc << EOF
-  > [remotefilelog]
-  > reponame = repo
-  > fetchpacks=True
-  > getpackversion=1
-  > [edenapi]
-  > enabled=True
-  > url = $APISERVER
-  > EOF
-
-Updating to a commit with censored files works in edenapi-enabled repo
-  $ cd $TESTTMP/repo-pull-edenapi
-  $ hgmn pull -q
-  $ hgmn up 064d994d0240 |  grep "encountered error during HTTPS fetching"
-  [1]
-  $ cat c
-  This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.

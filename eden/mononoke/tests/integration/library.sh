@@ -873,12 +873,6 @@ function lfs_import {
   --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
 }
 
-function setup_no_ssl_apiserver {
-  APISERVER_PORT=$(get_free_socket)
-  no_ssl_apiserver --http-host "127.0.0.1" --http-port "$APISERVER_PORT"
-  wait_for_apiserver --no-ssl
-}
-
 function s_client {
     /usr/local/fbcode/platform007/bin/openssl s_client \
         -connect localhost:$MONONOKE_SOCKET \
@@ -886,49 +880,6 @@ function s_client {
         -cert "${TEST_CERTDIR}/localhost.crt" \
         -key "${TEST_CERTDIR}/localhost.key" \
         -ign_eof "$@"
-}
-
-function apiserver {
-  GLOG_minloglevel=5 "$MONONOKE_APISERVER" "$@" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --without-skiplist \
-    --ssl-ca "$TEST_CERTDIR/root-ca.crt" \
-    --ssl-private-key "$TEST_CERTDIR/localhost.key" \
-    --ssl-certificate "$TEST_CERTDIR/localhost.crt" \
-    --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
-    "${COMMON_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
-  export APISERVER_PID=$!
-  echo "$APISERVER_PID" >> "$DAEMON_PIDS"
-}
-
-function no_ssl_apiserver {
-  GLOG_minloglevel=5 "$MONONOKE_APISERVER" "$@" \
-   --without-skiplist \
-   --mononoke-config-path "$TESTTMP/mononoke-config" \
-   "${COMMON_ARGS[@]}" >> "$TESTTMP/apiserver.out" 2>&1 &
-  echo $! >> "$DAEMON_PIDS"
-}
-
-function wait_for_apiserver {
-  for _ in $(seq 1 200); do
-    if [[ -a "$TESTTMP/apiserver.out" ]]; then
-      PORT=$(grep "Listening to" < "$TESTTMP/apiserver.out" | grep -Po "(\\d+)\$") && break
-    fi
-    sleep 0.1
-  done
-
-  if [[ -z "$PORT" ]]; then
-    echo "error: Mononoke API Server is not started"
-    cat "$TESTTMP/apiserver.out"
-    exit 1
-  fi
-
-  export APIHOST="localhost:$PORT"
-  export APISERVER
-  APISERVER="https://localhost:$PORT"
-  if [[ ($# -eq 1 && "$1" == "--no-ssl") ]]; then
-    APISERVER="http://localhost:$PORT"
-  fi
 }
 
 function start_and_wait_for_scs_server {
