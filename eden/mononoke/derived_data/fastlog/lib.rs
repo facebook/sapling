@@ -32,4 +32,4 @@ mod thrift {
 pub use mapping::{
     fetch_parent_root_unodes, ErrorKind, FastlogParent, RootFastlog, RootFastlogMapping,
 };
-pub use ops::{list_file_history, prefetch_history, FastlogError, HistoryAcrossDeletions};
+pub use ops::{list_file_history, FastlogError, HistoryAcrossDeletions};

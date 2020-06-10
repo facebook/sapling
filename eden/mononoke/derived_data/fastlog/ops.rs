@@ -18,7 +18,6 @@ use futures::{
     future::{self, FutureExt as NewFutureExt, TryFutureExt},
     stream::{self, Stream as NewStream},
 };
-use futures_old::Future;
 use futures_stats::futures03::TimedFutureExt;
 use futures_util::{StreamExt, TryStreamExt};
 use manifest::{Entry, ManifestOps};
@@ -26,7 +25,7 @@ use maplit::hashset;
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::future::Future as NewFuture;
+use std::future::Future;
 use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
@@ -117,7 +116,7 @@ pub async fn list_file_history<Terminator, TFut>(
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError>
 where
     Terminator: Fn(ChangesetId) -> TFut + 'static + Clone + Send + Sync,
-    TFut: NewFuture<Output = Result<bool, Error>> + Send,
+    TFut: Future<Output = Result<bool, Error>> + Send,
 {
     let mut top_history = vec![];
     // get unode entry
@@ -229,30 +228,21 @@ async fn fetch_linknodes_and_update_graph(
 }
 
 /// Returns history for a given unode if it exists.
-///
-/// TODO(aida): This is no longer a public API, however APIServer still uses it.
-/// Needs to be changed after APIServer will be deprecated.
-pub fn prefetch_history(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn prefetch_history(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     unode_entry: UnodeEntry,
-) -> impl Future<Item = Option<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error = Error> {
+) -> Result<Option<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(repo.get_blobstore());
-    async move {
-        let maybe_fastlog_batch =
-            fetch_fastlog_batch_by_unode_id(&ctx, &blobstore, unode_entry).await?;
-        match maybe_fastlog_batch {
-            Some(fastlog_batch) => {
-                let res = fetch_flattened(&fastlog_batch, ctx, blobstore)
-                    .compat()
-                    .await?;
-                Ok(Some(res))
-            }
-            None => Ok(None),
-        }
+    let maybe_fastlog_batch = fetch_fastlog_batch_by_unode_id(ctx, &blobstore, unode_entry).await?;
+    if let Some(fastlog_batch) = maybe_fastlog_batch {
+        let res = fetch_flattened(&fastlog_batch, ctx.clone(), blobstore)
+            .compat()
+            .await?;
+        Ok(Some(res))
+    } else {
+        Ok(None)
     }
-    .boxed()
-    .compat()
 }
 
 type UnodeEntry = Entry<ManifestUnodeId, FileUnodeId>;
@@ -455,7 +445,7 @@ async fn do_history_unfold<Terminator, TFut>(
 ) -> Result<(Vec<ChangesetId>, Option<TraversalState>), Error>
 where
     Terminator: Fn(ChangesetId) -> TFut + Clone,
-    TFut: NewFuture<Output = Result<bool, Error>>,
+    TFut: Future<Output = Result<bool, Error>>,
 {
     let TraversalState {
         history_graph,
@@ -667,9 +657,7 @@ async fn prefetch_fastlog_by_changeset(
         .ok_or_else(|| format_err!("Unode entry is not found {:?} {:?}", changeset_id, path))?;
 
     // optimistically try to fetch history for a unode
-    let fastlog_batch_opt = prefetch_history(ctx.clone(), repo.clone(), entry.clone())
-        .compat()
-        .await?;
+    let fastlog_batch_opt = prefetch_history(ctx, repo, entry.clone()).await?;
     if let Some(batch) = fastlog_batch_opt {
         return Ok(batch);
     }
@@ -679,9 +667,7 @@ async fn prefetch_fastlog_by_changeset(
     RootFastlog::derive(ctx.clone(), repo.clone(), changeset_id.clone())
         .compat()
         .await?;
-    let fastlog_batch_opt = prefetch_history(ctx.clone(), repo.clone(), entry)
-        .compat()
-        .await?;
+    let fastlog_batch_opt = prefetch_history(ctx, repo, entry).await?;
     fastlog_batch_opt
         .ok_or_else(|| format_err!("Fastlog data is not found {:?} {:?}", changeset_id, path))
 }
