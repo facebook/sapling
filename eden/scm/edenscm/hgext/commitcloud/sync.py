@@ -458,7 +458,9 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     # be visible might be hidden still, and some commits that should be
     # hidden might still be visible.  Create local obsmarkers to resolve
     # this.
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+    if obsolete.isenabled(repo, obsolete.createmarkersopt) and not repo.ui.configbool(
+        "mutation", "proxy-obsstore"
+    ):
         unfi = repo.unfiltered()
         # Commits that are only visible in the cloud are commits that are
         # ancestors of the cloud heads but are hidden locally.

@@ -578,6 +578,106 @@ def _checkinvalidmarkers(markers):
             )
 
 
+class mutationobsstore(object):
+    """obsstore-compatible API backed by mutation store"""
+
+    def __init__(self, mutationstore):
+        from . import mutation  # avoid cycles
+
+        self._mutationentry = mutation.mutationstore.mutationentry
+        self._store = mutationstore
+        self.caches = {}
+
+    def __iter__(self):
+        return iter([])
+
+    def __len__(self):
+        return 1
+
+    def __nonzero__(self):
+        return True
+
+    @property
+    def readonly(self):
+        return False
+
+    def create(
+        self,
+        transaction,
+        prec,
+        succs=(),
+        flag=0,
+        parents=None,
+        date=None,
+        metadata=None,
+        ui=None,
+    ):
+        if "date" not in metadata and date is None and ui:
+            date = ui.configdate("devel", "default-date")
+        self.add(transaction, [(prec, succs, flag, metadata, date, parents)])
+
+    def add(self, transaction, markers):
+        store = self._store
+        mutationentry = self._mutationentry
+        for m in markers:
+            # Convert marker to mutation entry
+            prec, succs, flag, metadata, date, parents = m
+            if not succs:
+                continue
+            metadata = dict(metadata or ())
+            if date is None:
+                if "date" in metadata:
+                    date = util.parsedate(metadata.pop("date"))
+                elif util.istest():
+                    date = (0, 0)
+                else:
+                    date = util.makedate()
+            op = metadata.pop("operation", transaction.desc)
+            user = metadata.pop("user")
+            extra = [(encodeutf8(k), encodeutf8(v)) for k, v in sorted(metadata.items())]
+            entry = mutationentry(
+                succ=succs[0],
+                preds=[prec],
+                split=succs[1:] or None,
+                op=op,
+                user=user,
+                time=date[0],
+                tz=date[1],
+                extra=extra,
+            )
+            # Insert
+            if not store.has(entry.succ()):
+                store.add(entry)
+        transaction.addfinalize("mutation", lambda _tr: store.flush())
+
+    def mergemarkers(self, transaction, data):
+        """merge a binary stream of markers inside the obsstore
+
+        Returns the number of new markers added."""
+        version, markers = _readmarkers(data)
+        return self.add(transaction, markers)
+
+    @propertycache
+    def successors(self):
+        # Use revsets instead.
+        return {}
+
+    @property
+    def precursors(self):
+        return {}
+
+    @propertycache
+    def predecessors(self):
+        return {}
+
+    @propertycache
+    def children(self):
+        return {}
+
+    def relevantmarkers(self, nodes):
+        return []
+
+
 class obsstore(object):
     """Store obsolete markers
 
@@ -829,6 +929,10 @@ class obsstore(object):
 
 def makestore(ui, repo):
     """Create an obsstore instance from a repo."""
+    if ui.configbool("mutation", "proxy-obsstore"):
+        mutationstore = getattr(repo, "_mutationstore", None)
+        if mutationstore is not None:
+            return mutationobsstore(mutationstore)
     # read default format for new obsstore.
     # developer config: format.obsstore-version
     defaultformat = ui.configint("format", "obsstore-version")
