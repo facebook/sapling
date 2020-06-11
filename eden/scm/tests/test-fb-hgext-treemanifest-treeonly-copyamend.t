@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ setconfig treemanifest.flatcompat=False
   $ . "$TESTDIR/library.sh"
 

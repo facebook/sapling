@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
 #require rmcwd
 
 Ensure that dirsync does not cause an abort when cwd goes missing

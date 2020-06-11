@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable morestatus fbhistedit histedit rebase reset
   $ setconfig morestatus.show=true
   $ cat >> $TESTTMP/breakupdate.py << EOF

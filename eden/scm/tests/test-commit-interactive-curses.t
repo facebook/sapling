@@ -1,8 +1,7 @@
 #require py2
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
 #require tic
 
 Set up a repo

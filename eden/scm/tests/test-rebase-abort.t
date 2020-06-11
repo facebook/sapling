@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ enable rebase
   $ setconfig phases.publish=false
 

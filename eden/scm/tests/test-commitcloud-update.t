@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable amend
 
   $ . "$TESTDIR/library.sh"

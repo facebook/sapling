@@ -4,7 +4,7 @@ Testing templating for histedit command
 
 Setup
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable histedit
 
   $ hg init repo

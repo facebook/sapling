@@ -2,7 +2,7 @@
 
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable amend fbhistedit histedit rebase
 
   $ initrepo ()

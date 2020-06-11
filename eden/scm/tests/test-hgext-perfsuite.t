@@ -1,8 +1,8 @@
 #require py2
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
+
 #require symlink execbit
   $ enable amend perfsuite rebase
   $ setconfig perfsuite.rebase.masterdistance=1 perfsuite.immrebase.masterdistance=0

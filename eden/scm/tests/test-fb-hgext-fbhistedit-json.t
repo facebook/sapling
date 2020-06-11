@@ -4,7 +4,7 @@ Tests JSON Input support for histedit
 
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable fbhistedit histedit rebase
 
   $ initrepo ()

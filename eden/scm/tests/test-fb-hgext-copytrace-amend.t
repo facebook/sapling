@@ -1,7 +1,7 @@
 #require py2
 #chg-compatible
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable amend copytrace rebase shelve
   $ setconfig experimental.copytrace=off
 

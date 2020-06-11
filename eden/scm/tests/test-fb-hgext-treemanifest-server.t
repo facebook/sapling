@@ -6,8 +6,7 @@
 #testcases vfscachestore simplecachestore
   $ setconfig treemanifest.flatcompat=False
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"
 
 

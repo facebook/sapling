@@ -4,7 +4,7 @@
 
 Setup
 
-  $ configure dummyssh evolution
+  $ configure mutation-norecord dummyssh
   $ enable remotenames pushrebase
   $ setconfig ui.username="nobody <no.reply@fb.com>"
 

@@ -1,5 +1,4 @@
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
 Test mergedriver invalidation with IMM.
 
   $ newrepo

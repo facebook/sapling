@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
 Tests the --noconflict rebase flag
 
   $ enable amend morestatus rebase

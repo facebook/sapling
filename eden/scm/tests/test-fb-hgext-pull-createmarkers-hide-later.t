@@ -3,7 +3,7 @@
 
 Setup
 
-  $ configure evolution dummyssh
+  $ configure mutation-norecord dummyssh
   $ enable amend pullcreatemarkers pushrebase rebase remotenames
   $ setconfig ui.username="nobody <no.reply@fb.com>" experimental.rebaseskipobsolete=true
   $ setconfig remotenames.allownonfastforward=true

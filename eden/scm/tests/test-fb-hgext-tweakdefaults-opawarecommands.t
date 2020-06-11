@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ enable amend rebase tweakdefaults
-  $ configure evolution
+  $ configure mutation-norecord
 
 Setup repo
   $ hg init opawarerepo

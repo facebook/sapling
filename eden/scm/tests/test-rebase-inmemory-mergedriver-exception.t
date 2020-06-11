@@ -1,5 +1,4 @@
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
 Test a mergedriver that raises exceptions in its preprocess() hook:
 
   $ newrepo

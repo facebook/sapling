@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable rebase shelve
 
 Test for the heuristic copytracing algorithm

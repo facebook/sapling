@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable copytrace rebase shelve
   $ setconfig experimental.copytrace=off
 

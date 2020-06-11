@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable amend directaccess
   $ newrepo
   $ drawdag <<'EOS'

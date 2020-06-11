@@ -1,7 +1,7 @@
 #chg-compatible
 
 #require jq
-  $ configure dummyssh evolution
+  $ configure mutation-norecord dummyssh
   $ enable amend commitcloud infinitepush rebase remotenames share smartlog
 
   $ setconfig infinitepush.branchpattern="re:scratch/.*"

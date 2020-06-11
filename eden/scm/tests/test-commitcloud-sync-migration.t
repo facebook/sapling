@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure dummyssh evolution
+  $ configure mutation-norecord dummyssh
   $ disable treemanifest
   $ enable amend directaccess commitcloud infinitepush rebase remotenames
   $ setconfig remotefilelog.reponame=server

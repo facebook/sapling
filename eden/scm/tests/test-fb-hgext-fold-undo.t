@@ -2,7 +2,7 @@
 
 Set up test environment.
 This test confirms cacheinvalidation in hg fold.
-  $ configure evolution
+  $ configure mutation-norecord
   $ enable amend rebase undo
   $ reset() {
   >   cd ..

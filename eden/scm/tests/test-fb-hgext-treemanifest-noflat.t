@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"
 
 This file tests that normal mercurial operations never read the flat manifests
