@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 from edenscm.mercurial import (
+    autopull,
     error,
     extensions,
     mutation,
@@ -78,8 +79,9 @@ def unamend(ui, repo, **opts):
         raise error.Abort(e % len(prednodes))
     prednode = prednodes[0]
 
-    if extensions.enabled().get("commitcloud", False):
-        repo.revs("cloudremote(%s)" % nodemod.hex(prednode))
+    if prednode not in unfi:
+        # Trigger autopull.
+        autopull.trypull(unfi, [nodemod.hex(prednode)])
 
     predctx = unfi[prednode]
 

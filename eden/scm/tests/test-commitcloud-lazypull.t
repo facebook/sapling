@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure dummyssh evolution
+  $ configure dummyssh mutation-norecord
   $ disable treemanifest
   $ enable amend commitcloud infinitepush rebase remotenames share
   $ setconfig infinitepush.branchpattern="re:scratch/.*" commitcloud.hostname=testhost
@@ -104,18 +104,8 @@ Sync from the second client and `hg unamend` there
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
-  $ hg unamend --config extensions.commitcloud=!
-  abort: unknown revision '1cf4a5a0e8fc41ef1289e833ebdb22d754c080ac'!
-  [255]
-
-
   $ hg unamend
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 1 files
+  pulling '1cf4a5a0e8fc41ef1289e833ebdb22d754c080ac' from 'ssh://user@dummy/server'
 
   $ tglog
   @  2: 1cf4a5a0e8fc 'feature1'
@@ -136,33 +126,38 @@ Sync from the second client and `hg unamend` there
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
-  commitcloud: current revision b68dd726c6c6 has been moved remotely to 1cf4a5a0e8fc
-  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
-  [commitcloud]
-  updateonmove = true
-  to your .hgrc config file
-  hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
   $ tglog
   @  2: b68dd726c6c6 'feature1 renamed'
   |
-  | o  1: 1cf4a5a0e8fc 'feature1'
+  | x  1: 1cf4a5a0e8fc 'feature1'
   |/
   o  0: d20a80d4def3 'base'
   
-Amend twice, unamend, then unhide.  This causes a cycle in the obsgraph.
+Amend twice, unamend, then unhide
   $ hg up -q 1cf4a5a0e8fc
   $ hg amend -m "feature1 renamed2"
   $ hg amend -m "feature1 renamed3"
   $ hg unamend
   $ hg unhide 74b668b6b779
-  $ hg cloud sync
+  $ tglog
+  o  4: 74b668b6b779 'feature1 renamed3'
+  |
+  | @  3: cb45bbd0ae75 'feature1 renamed2'
+  |/
+  o  0: d20a80d4def3 'base'
+  
+  $ P=1 hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at cb45bbd0ae75
   backing up stack rooted at 74b668b6b779
   commitcloud: commits synchronized
   finished in * sec (glob)
-  commitcloud: current revision cb45bbd0ae75 has been replaced remotely with multiple revisions
-  (run 'hg update HASH' to go to the desired revision)
+  commitcloud: current revision cb45bbd0ae75 has been moved remotely to 74b668b6b779
+  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
+  [commitcloud]
+  updateonmove = true
+  to your .hgrc config file
+  hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
   remote: pushing 1 commit:
   remote:     cb45bbd0ae75  feature1 renamed2
   remote: pushing 1 commit:
@@ -184,5 +179,9 @@ Now cloud sync in the other client.  The cycle means we can't reliably pick a de
   added 1 changesets with 0 changes to 1 files
   commitcloud: commits synchronized
   finished in * sec (glob)
-  commitcloud: current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions
-  (run 'hg update HASH' to go to the desired revision)
+  commitcloud: current revision 1cf4a5a0e8fc has been moved remotely to 74b668b6b779
+  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
+  [commitcloud]
+  updateonmove = true
+  to your .hgrc config file
+  hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
