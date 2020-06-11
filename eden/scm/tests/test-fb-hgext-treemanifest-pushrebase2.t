@@ -110,4 +110,3 @@ Push treeonly merge commit to a treeonly server
   remote:     b634a5228cef  Merge 2
   remote: 4 new changesets from the server will be downloaded
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  obsoleted 3 changesets

@@ -1350,48 +1350,6 @@ class simplekeyvaluefile(object):
             fp.write("".join(lines).encode("utf-8"))
 
 
-_reportobsoletedsource = ["debugobsolete", "pull", "push", "serve", "unbundle"]
-
-
-def registersummarycallback(repo, otr, txnname=""):
-    """register a callback to issue a summary after the transaction is closed
-    """
-
-    def txmatch(sources):
-        return any(txnname.startswith(source) for source in sources)
-
-    categories = []
-
-    def reportsummary(func):
-        """decorator for report callbacks."""
-        # The repoview life cycle is shorter than the one of the actual
-        # underlying repository. So the filtered object can die before the
-        # weakref is used leading to troubles. We keep a reference to the
-        # unfiltered object and restore the filtering when retrieving the
-        # repository through the weakref.
-        filtername = repo.filtername
-        reporef = weakref.ref(repo.unfiltered())
-
-        def wrapped(tr):
-            repo = reporef()
-            if filtername:
-                repo = repo.filtered(filtername)
-            func(repo, tr)
-
-        newcat = "%2i-txnreport" % len(categories)
-        otr.addpostclose(newcat, wrapped)
-        categories.append(newcat)
-        return wrapped
-
-    if txmatch(_reportobsoletedsource):
-
-        @reportsummary
-        def reportobsoleted(repo, tr):
-            obsoleted = obsutil.getobsoleted(repo, tr)
-            if obsoleted:
-                repo.ui.status(_("obsoleted %i changesets\n") % len(obsoleted))
-
-
 def nodesummaries(repo, nodes, maxnumnodes=4):
     if len(nodes) <= maxnumnodes or repo.ui.verbose:
         return " ".join(short(h) for h in nodes)

@@ -14,8 +14,6 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-
-
 def listcommitandmanifesthashes(rev):
     # returns dictionary from descrition to commit node and manifest node
     # { commit_name: (commit_hash, manifest_hash)}
@@ -156,8 +154,7 @@ sh % "hg push --to=master -r $F" == r"""
     adding file changes
     added 2 changesets with 0 changes to 4 files
     2 new obsolescence markers
-    updating bookmark master
-    obsoleted 2 changesets"""
+    updating bookmark master"""
 
 sh % "hg files -r master" == r"""
     x/a
@@ -244,8 +241,7 @@ sh % "hg push --to=master -r $J" == r"""
     adding file changes
     added 4 changesets with 0 changes to 2 files
     4 new obsolescence markers
-    updating bookmark master
-    obsoleted 4 changesets"""
+    updating bookmark master"""
 
 # Check server after pushrebasing the branch whose parent is E
 sh % "cd $TESTTMP/serverpushrebasemerge"

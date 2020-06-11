@@ -89,7 +89,6 @@ Push all pulled commit to backup
   adding file changes
   added 1 changesets with 0 changes to 1 files
   updating bookmark master
-  obsoleted 1 changesets
   $ hg cloud backup
   backing up stack rooted at 9b3ead1d8005
   commitcloud: backed up 2 commits

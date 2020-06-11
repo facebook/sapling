@@ -55,7 +55,6 @@ Make server treeonly and push trees to it
   remote:     0560779f58ae  D
   remote: 2 new changesets from the server will be downloaded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  obsoleted 2 changesets
 
   $ tglog --stat -l 2
   @  5: d9ee86e3acc1 'D'   sub/C |  1 +

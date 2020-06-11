@@ -2183,7 +2183,7 @@ evolution.createmarkers=True
 """ >> "$HGRCPATH"
 
 node = sh.hg("log", "-r8", "-T{node}")
-sh % ("hg debugobsolete '%s'" % node) == "obsoleted 1 changesets"
+sh % ("hg debugobsolete '%s'" % node) == ""
 sh % "hg log -G --print-revset" == r"""
     []
     []"""

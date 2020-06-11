@@ -95,7 +95,6 @@ Push in from the client.
   remote:     b41b83f633d8  merge alpha and beta
   remote: 6 new changesets from the server will be downloaded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  obsoleted 3 changesets
   $ log
   @    merge alpha and beta [public:9:8c1abab9fd04]
   |\

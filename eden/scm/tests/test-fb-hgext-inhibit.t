@@ -16,7 +16,6 @@
   $ B2=`HGPLAIN=1 hg log -r B2 -T '{node}' --hidden`
 
   $ hg debugobsolete $B2 $B1 -d '1 0'
-  obsoleted 1 changesets
   $ hg log -G -T '{desc}' --hidden
   x  B2
   |

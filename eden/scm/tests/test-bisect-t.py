@@ -558,7 +558,7 @@ evolution.createmarkers=True
 # ---------------------
 
 cln = (sh % "hg id --debug -i -r tip").output
-sh % "hg debugobsolete {}".format(cln) == "obsoleted 1 changesets"
+sh % "hg debugobsolete {}".format(cln) == ""
 sh % "hg bisect --reset"
 sh % "hg bisect --good 15"
 sh % "hg bisect --bad 30" == r"""

@@ -527,7 +527,7 @@ sh % "hg shelve" == r"""
     shelved as default
     0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
 arg = sh.hg("--debug", "id", "-i", "-r", "1")
-sh % ("hg debugobsolete %s" % arg) == "obsoleted 1 changesets"
+sh % ("hg debugobsolete %s" % arg) == ""
 sh % "hg unshelve" == "unshelving change 'default'"
 
 # Unshelve should leave unknown files alone (issue4113)

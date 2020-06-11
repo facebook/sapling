@@ -319,7 +319,6 @@ Sync the amended commit to the other client
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files
-  obsoleted 2 changesets
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 02f6fc2b7154 has been moved remotely to 48610b1a7ec0
@@ -387,7 +386,6 @@ Expected result: the message telling that revision has been moved to another rev
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 2 files
-  obsoleted 1 changesets
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 48610b1a7ec0 has been moved remotely to 41f3b9359864
@@ -448,7 +446,6 @@ Expected result: client2 should be moved to the amended version
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files
-  obsoleted 1 changesets
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 41f3b9359864 has been moved remotely to 8134e74ecdc8
@@ -566,7 +563,6 @@ Expected result: client2 should be moved to fada67350ab0
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 3 files
-  obsoleted 1 changesets
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision abd5311ab3c6 has been moved remotely to fada67350ab0
@@ -1077,7 +1073,6 @@ Sync this onto the second client, the remote bookmarks don't change.
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 3 files
-  obsoleted 2 changesets
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog
@@ -1134,7 +1129,6 @@ Rebase the commits again, and resync to the first client.
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 3 files
-  obsoleted 2 changesets
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog

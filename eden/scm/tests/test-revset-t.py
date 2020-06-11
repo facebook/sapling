@@ -1800,7 +1800,7 @@ sh % "hg log -r '0:wdir()' -T '{rev}:{node} {shortest(node, 3)}\\n'" == r"""
     3:fff48a9b9de34a4d64120c29548214c67980ade3 fff4
     4:ffff85cff0ff78504fcdc3c0bc10de0c65379249 ffff8
     2147483647:ffffffffffffffffffffffffffffffffffffffff fffff"""
-sh % "hg debugobsolete fffbae3886c8fbb2114296380d276fd37715d571" == "obsoleted 1 changesets"
+sh % "hg debugobsolete fffbae3886c8fbb2114296380d276fd37715d571" == ""
 
 sh % "hg debugrevspec '0:wdir() & fff'" == r"""
     abort: 00changelog.i@fff: ambiguous identifier!

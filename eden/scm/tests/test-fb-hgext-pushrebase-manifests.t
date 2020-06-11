@@ -160,7 +160,6 @@ blocking. There shouldn't be any "[client1 push]" output here.
   [client2 push] remote:     4ab7e28729f6  c2 => yyy (second)
   [client2 push] remote: 2 new changesets from the server will be downloaded
   [client2 push] 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [client2 push] obsoleted 1 changesets
   $ log
   @  c2 => yyy (second) [public:d732e3c60e5e]
   |
@@ -197,7 +196,6 @@ Check that the first push is still running/blocked...
   [client1 push] remote: read flat manifest :(
   [client1 push] remote: 4 new changesets from the server will be downloaded
   [client1 push] 2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [client1 push] obsoleted 2 changesets
 
 Verify the proper commit order. (Note: The received commits here shouldn't be
 draft; see t16967599).

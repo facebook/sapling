@@ -830,6 +830,5 @@ from the cloud workspace, but the sync should still work.
   adding file changes
   added 1 changesets with 0 changes to 3 files
   f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
-  obsoleted 1 changesets
   commitcloud: commits synchronized
   finished in 0.00 sec

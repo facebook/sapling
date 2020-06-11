@@ -1528,7 +1528,7 @@ evolution.createmarkers=True
 sh % "hg log '--template={rev}:{node}\\n'" == r"""
     1:a765632148dc55d38c35c4f247c618701886cb2f
     0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05"""
-sh % "hg debugobsolete a765632148dc55d38c35c4f247c618701886cb2f" == "obsoleted 1 changesets"
+sh % "hg debugobsolete a765632148dc55d38c35c4f247c618701886cb2f" == ""
 sh % "hg up null -q"
 sh % "hg log '--template={rev}:{node}\\n'" == "0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05"
 sh % "hg log '--template={rev}:{node}\\n' --hidden" == r"""
@@ -1574,7 +1574,7 @@ sh % "hg log --template '{rev}:{node}\\n'" == r"""
 
 sh % "hg bookmark -d 'X@foo'"
 sh % "hg up null -q"
-sh % "hg debugobsolete 9f758d63dcde62d547ebfb08e1e7ee96535f2b05" == "obsoleted 1 changesets"
+sh % "hg debugobsolete 9f758d63dcde62d547ebfb08e1e7ee96535f2b05" == ""
 sh % "echo f" > "b"
 sh % "hg ci -Amb -d '2 0'" == "adding b"
 sh % "echo f" >> "b"
@@ -1957,7 +1957,7 @@ sh % "hg log -Gf a" == r"""
 # (hide the changeset)
 
 sh % "hg log -T '{node}\\n' -r 1" == "2294ae80ad8447bc78383182eeac50cb049df623"
-sh % "hg debugobsolete 2294ae80ad8447bc78383182eeac50cb049df623" == "obsoleted 1 changesets"
+sh % "hg debugobsolete 2294ae80ad8447bc78383182eeac50cb049df623" == ""
 sh % "hg log -G" == r"""
     o  changeset:   4:50b9b36e9c5d
     |  user:        test
@@ -2001,7 +2001,7 @@ sh % "hg log -G a" == r"""
 # Even when a head revision is linkrev-shadowed.
 
 sh % "hg log -T '{node}\\n' -r 4" == "50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2"
-sh % "hg debugobsolete 50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2" == "obsoleted 1 changesets"
+sh % "hg debugobsolete 50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2" == ""
 sh % "hg log -G a" == r"""
     @  changeset:   3:15b2327059e5
     :  user:        test

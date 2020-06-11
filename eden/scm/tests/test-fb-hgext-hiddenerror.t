@@ -8,7 +8,6 @@ Create hidden changeset.
   $ hg init repo && cd repo
   $ hg debugbuilddag +1
   $ hg debugobsolete 1ea73414a91b0920940797d8fc6a11e447f8ea1e
-  obsoleted 1 changesets
 
 Test default error message.
   $ hg log -r 0

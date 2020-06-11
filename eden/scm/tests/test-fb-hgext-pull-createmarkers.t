@@ -80,7 +80,6 @@ The first client works on several diffs while the second client lands one of her
   remote:     d5895ab36037  add e
   remote: 4 new changesets from the server will be downloaded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  obsoleted 3 changesets
 
 Here we strip commits 6, 7, 8 to simulate what happens with landcastle, the
 push doesn't directly go to the server
@@ -119,7 +118,6 @@ the remote
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 3 files
-  obsoleted 3 changesets
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
   o  8 "add e
   |
@@ -162,7 +160,6 @@ changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files
-  obsoleted 1 changesets
 
 (Note: pullcreatemarkers created two markers, however only one of them was
 counted in the message as the first commit had previously been obsoleted
