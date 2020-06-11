@@ -1,21 +1,9 @@
 #chg-compatible
 
-#chg-compatible
-
-#testcases obsstore-off obsstore-on mutation
-
   $ enable amend
   $ setconfig diff.git=1
 
-#if obsstore-on
-  $ configure evolution
-#endif
-#if obsstore-off
-  $ configure noevolution
-#endif
-#if mutation
   $ configure mutation-norecord
-#endif
 
 Basic amend
 
@@ -31,26 +19,6 @@ Basic amend
   $ echo 2 >> B
 
   $ hg amend
-#if obsstore-off
-  $ hg log -p -G --hidden -T '{rev} {node|short} {desc}\n'
-  @  1 be169c7e8dbe B
-  |  diff --git a/B b/B
-  |  new file mode 100644
-  |  --- /dev/null
-  |  +++ b/B
-  |  @@ -0,0 +1,1 @@
-  |  +B2
-  |
-  o  0 426bada5c675 A
-     diff --git a/A b/A
-     new file mode 100644
-     --- /dev/null
-     +++ b/A
-     @@ -0,0 +1,1 @@
-     +A
-     \ No newline at end of file
-  
-#else
   $ hg log -p -G --hidden -T '{rev} {node|short} {desc}\n'
   @  2 be169c7e8dbe B
   |  diff --git a/B b/B
@@ -78,8 +46,6 @@ Basic amend
      +A
      \ No newline at end of file
   
-#endif
-
 Nothing changed
 
   $ hg amend
@@ -166,12 +132,9 @@ Amend in the middle of a stack
   $ hg update -q B
   $ echo 2 >> B
   $ hg amend
-  warning: orphaned descendants detected, not stripping 112478962961 (obsstore-off !)
   hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
 
-#if obsstore-on
-
   $ hg log -T '{rev} {node|short} {desc}\n' -G
   @  3 be169c7e8dbe B
   |
@@ -181,20 +144,6 @@ Amend in the middle of a stack
   |/
   o  0 426bada5c675 A
   
-#endif
-#if mutation
-
-  $ hg log -T '{rev} {node|short} {desc}\n' -G
-  @  3 be169c7e8dbe B
-  |
-  | o  2 26805aba1e60 C
-  | |
-  | x  1 112478962961 B
-  |/
-  o  0 426bada5c675 A
-  
-#endif
-
 Cannot amend public changeset
 
   $ hg phase -r A --public
