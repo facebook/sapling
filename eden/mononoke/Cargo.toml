@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    ".",
     "backsyncer",
     "benchmark",
     "blobimport_lib",
@@ -47,6 +48,7 @@ members = [
     "changesets/if",
     "cmdlib",
     "cmdlib/x_repo",
+    "cmds/blobrepo_checker",
     "commit_rewriting/bookmark_renaming",
     "commit_rewriting/cross_repo_sync",
     "commit_rewriting/cross_repo_sync/test_utils",
@@ -83,6 +85,8 @@ members = [
     "git/git_types",
     "git/git_types/if",
     "git/gitimport",
+    "gotham_ext",
+    "hgcli",
     "hgproto",
     "hook_tailer",
     "hooks",

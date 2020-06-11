@@ -1,0 +1,32 @@
+[package]
+name = "gotham_ext"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+permission_checker = { path = "../permission_checker" }
+anyhow = "1.0"
+async-trait = "0.1.29"
+bytes = { version = "0.5", features = ["serde"] }
+failure = "0.1"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+gotham = { version = "=0.5.0-dev", default-features = false }
+gotham_derive = "=0.5.0-dev"
+hex = "0.4"
+http = "0.2"
+hyper = "0.13"
+itertools = "0.8"
+lazy_static = "1.0"
+mime = "0.3.14"
+openssl = "0.10"
+percent-encoding = "2.1"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_derive = "1.0"
+serde_json = "1.0"
+
+[dev-dependencies]
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tokio = { version = "=0.2.13", features = ["full"] }

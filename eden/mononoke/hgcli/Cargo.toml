@@ -1,0 +1,33 @@
+[package]
+name = "hgcli"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+context = { path = "../server/context" }
+scuba_ext = { path = "../common/scuba_ext" }
+sshrelay = { path = "../sshrelay" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+bytes = { version = "0.4", features = ["serde"] }
+clap = "2.33"
+dns-lookup = "1.0"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+libc = "0.2"
+openssl = "0.10"
+slog = { version = "2.5", features = ["max_level_debug"] }
+slog-term = "2.4.2"
+tokio = "0.1"
+tokio-compat = "0.1"
+tokio-io = "0.1"
+tokio-openssl = "0.2"
+users = "0.9"
