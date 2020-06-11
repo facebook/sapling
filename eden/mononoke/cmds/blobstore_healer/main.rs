@@ -10,7 +10,6 @@
 
 mod dummy;
 mod healer;
-mod replication_lag;
 
 use anyhow::{bail, format_err, Context, Error, Result};
 use blobstore::Blobstore;
@@ -31,12 +30,11 @@ use healer::Healer;
 use lazy_static::lazy_static;
 use metaconfig_types::{BlobConfig, LocalDatabaseConfig, MetadataDatabaseConfig, StorageConfig};
 use mononoke_types::DateTime;
-use replication_lag::wait_for_replication;
 use slog::{info, o, warn};
 use sql::Connection;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::myrouter_ready;
-use sql_ext::{facebook::MysqlOptions, open_sqlite_path};
+use sql_ext::{facebook::MysqlOptions, open_sqlite_path, replication_lag::wait_for_replication};
 use sql_facebook::{myrouter, raw};
 use std::collections::HashMap;
 use std::sync::Arc;

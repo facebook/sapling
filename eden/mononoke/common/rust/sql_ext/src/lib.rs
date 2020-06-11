@@ -7,6 +7,7 @@
 
 #[cfg(not(fbcode_build))]
 mod oss;
+pub mod replication_lag;
 mod sqlite;
 
 use sql::{Connection, Transaction};

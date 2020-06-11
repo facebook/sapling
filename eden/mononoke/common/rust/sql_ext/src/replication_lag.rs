@@ -11,7 +11,7 @@ use futures::compat::Future01CompatExt;
 use futures::future;
 use slog::{info, Logger};
 use sql::Connection;
-use sql_facebook::ext::ConnectionFbExt;
+use sql_common::ext::ConnectionExt;
 use std::time::Duration;
 use tokio::time;
 
