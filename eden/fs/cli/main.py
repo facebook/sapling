@@ -35,6 +35,7 @@ from . import (
     filesystem,
     mtab,
     proc_utils,
+    rage as rage_mod,
     redirect as redirect_mod,
     stats as stats_mod,
     subcmd as subcmd_mod,
@@ -54,7 +55,7 @@ from .util import ShutdownError, print_stderr
 if sys.platform == "win32":
     from . import winproc
 else:
-    from . import fsck as fsck_mod, rage as rage_mod
+    from . import fsck as fsck_mod
 
 
 subcmd = subcmd_mod.Decorator()

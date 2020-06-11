@@ -4,6 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import csv
 import getpass
 import io
 import os.path
@@ -12,15 +13,13 @@ import socket
 import subprocess
 import sys
 import traceback
+from datetime import datetime
 from pathlib import Path
-from typing import IO
+from typing import IO, List, Tuple
 
 from . import (
     debug as debug_mod,
     doctor as doctor_mod,
-    filesystem,
-    mtab,
-    proc_utils,
     redirect as redirect_mod,
     stats as stats_mod,
     ui as ui_mod,
@@ -35,7 +34,7 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
         f"Hostname                : {socket.gethostname()}\n"
         f"Version                 : {version_mod.get_current_version()}\n"
     )
-    out.write(header.encode("utf-8"))
+    out.write(header.encode())
     if sys.platform != "win32":
         # We attempt to report the RPM version on Linux as well as Mac, since Mac OS
         # can use RPMs as well.  If the RPM command fails this will just report that
@@ -50,7 +49,10 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
         out.write(b"uptime: ")
         debug_mod.do_uptime(instance, out)
 
-    print_eden_doctor_report(instance, out)
+    if sys.platform != "win32":
+        # TODO(zeyi): fix `eden doctor` on Windows
+        print_eden_doctor_report(instance, out)
+
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
 
@@ -69,7 +71,8 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
         out.write(b"\nMount point info for path %s:\n" % checkout_path.encode())
         for k, v in instance.get_checkout_info(checkout_path).items():
             out.write("{:>10} : {}\n".format(k, v).encode())
-    if health_status.is_healthy():
+    if health_status.is_healthy() and sys.platform != "win32":
+        # TODO(zeyi): enable this when memory usage collecting is implemented on Windows
         with io.StringIO() as stats_stream:
             stats_mod.do_stats_general(instance, out=stats_stream)
             out.write(stats_stream.getvalue().encode())
@@ -78,9 +81,9 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
 def print_rpm_version(out: IO[bytes]) -> None:
     try:
         rpm_version = version_mod.get_installed_eden_rpm_version()
-        out.write(f"RPM Version             : {rpm_version}\n".encode("utf-8"))
+        out.write(f"RPM Version             : {rpm_version}\n".encode())
     except Exception as e:
-        out.write(f"Error getting the RPM version : {e}\n".encode("utf-8"))
+        out.write(f"Error getting the RPM version : {e}\n".encode())
 
 
 def print_os_version(out: IO[bytes]) -> None:
@@ -134,31 +137,59 @@ def print_tail_of_log_file(path: Path, out: IO[bytes]) -> None:
         out.write(b"Error reading the log file: %s\n" % str(e).encode())
 
 
+def _get_running_eden_process_windows() -> List[Tuple[str, str, str, str, str, str]]:
+    output = subprocess.check_output(
+        [
+            "wmic",
+            "process",
+            "where",
+            "name like '%eden%'",
+            "get",
+            "processid,parentprocessid,creationdate,commandline",
+            "/format:csv",
+        ]
+    )
+    reader = csv.reader(io.StringIO(output.decode().strip()))
+    next(reader)  # skip column header
+    lines = []
+    for line in reader:
+        start_time: datetime = datetime.strptime(line[2][:-4], "%Y%m%d%H%M%S.%f")
+        elapsed = str(datetime.now() - start_time)
+        # (pid, ppid, start_time, etime, comm)
+        lines.append(
+            (line[4], line[3], start_time.strftime("%b %d %H:%M"), elapsed, line[1])
+        )
+    return lines
+
+
 def print_running_eden_process(out: IO[bytes]) -> None:
     try:
         out.write(b"\nList of running Eden processes:\n")
-        # Note well: `comm` must be the last column otherwise it will be
-        # truncated to ~12 characters wide on darwin, which is useless
-        # because almost everything is started via an absolute path
-        output = subprocess.check_output(
-            ["ps", "-eo", "pid,ppid,start_time,etime,comm"]
-            if sys.platform == "linux"
-            else ["ps", "-Awwx", "-eo", "pid,ppid,start,etime,comm"]
-        )
-        output = output.decode()
-        lines = output.split("\n")
-        format_str = "{:>20} {:>20} {:>10} {:>20} {}\n"
+        if sys.platform == "win32":
+            lines = _get_running_eden_process_windows()
+        else:
+            # Note well: `comm` must be the last column otherwise it will be
+            # truncated to ~12 characters wide on darwin, which is useless
+            # because almost everything is started via an absolute path
+            output = subprocess.check_output(
+                ["ps", "-eo", "pid,ppid,start_time,etime,comm"]
+                if sys.platform == "linux"
+                else ["ps", "-Awwx", "-eo", "pid,ppid,start,etime,comm"]
+            )
+            output = output.decode()
+            lines = [line.split() for line in output.split("\n") if "eden" in line]
+
+        format_str = "{:>20} {:>20} {:>20} {:>20} {}\n"
         out.write(
             format_str.format(
                 "Pid", "PPid", "Start Time", "Elapsed Time", "Command"
             ).encode()
         )
         for line in lines:
-            if "edenfs" in line:
-                word = line.split()
-                out.write(format_str.format(*word).encode())
+            out.write(format_str.format(*line).encode())
     except Exception as e:
         out.write(b"Error getting the eden processes: %s\n" % str(e).encode())
+        out.write(traceback.format_exc().encode() + b"\n")
 
 
 def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
@@ -175,6 +206,9 @@ def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
 
 
 def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
+    if sys.platform == "win32":
+        # TODO(zeyi): fix this once eden redirect is working on Windows
+        return
     try:
         out.write(b"\nedenfs redirections:\n")
         checkouts = instance.get_checkouts()
@@ -186,3 +220,4 @@ def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
             out.write(b"\t" + output.encode() + b"\n")
     except Exception as e:
         out.write(b"Error getting edenfs redirections %s\n" % str(e).encode())
+        out.write(traceback.format_exc().encode() + b"\n")
