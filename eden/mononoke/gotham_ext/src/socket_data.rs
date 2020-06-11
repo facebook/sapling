@@ -85,11 +85,8 @@ pub struct TlsCertificateIdentities {
 impl TlsCertificateIdentities {
     pub fn from_ssl(ssl: &SslRef) -> Option<Self> {
         let peer_certificate = ssl.peer_certificate()?;
-        let identities = identity_ext::x509::get_identities(&peer_certificate)
-            .ok()?
-            .into_iter()
-            .filter_map(|id| MononokeIdentity::try_from_identity(&id).ok())
-            .collect();
-        Some(Self { identities })
+        Some(Self {
+            identities: MononokeIdentity::try_from_x509(&peer_certificate).ok()?,
+        })
     }
 }

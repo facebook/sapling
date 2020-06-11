@@ -9,7 +9,6 @@ use gotham::state::{client_addr, FromState, State};
 use gotham_derive::StateData;
 use hyper::header::HeaderMap;
 use hyper::{Body, Response};
-use identity_ext::json::get_identities;
 use lazy_static::lazy_static;
 use percent_encoding::percent_decode;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
@@ -97,12 +96,7 @@ fn request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdenti
     let json_identities = percent_decode(encoded_identities.as_bytes())
         .decode_utf8()
         .ok()?;
-    let identities = get_identities(&json_identities)
-        .ok()?
-        .into_iter()
-        .filter_map(|id| MononokeIdentity::try_from_identity(&id).ok())
-        .collect();
-    Some(identities)
+    MononokeIdentity::try_from_json_encoded(&json_identities).ok()
 }
 
 fn request_client_correlator_from_headers(headers: &HeaderMap) -> Option<String> {

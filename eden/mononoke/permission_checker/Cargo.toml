@@ -11,4 +11,5 @@ fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 anyhow = "1.0"
 async-trait = "0.1.29"
 maplit = "1.0"
+openssl = "0.10"
 tokio = { version = "=0.2.13", features = ["full"] }
