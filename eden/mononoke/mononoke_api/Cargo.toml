@@ -32,9 +32,11 @@ reachabilityindex = { path = "../reachabilityindex" }
 remotefilelog = { path = "../repo_client/remotefilelog" }
 repo_client = { path = "../repo_client" }
 revset = { path = "../revset" }
+scuba_ext = { path = "../common/scuba_ext" }
 skiplist = { path = "../reachabilityindex/skiplist" }
 sql_ext = { path = "../common/rust/sql_ext" }
 synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping" }
+unbundle = { path = "../repo_client/unbundle" }
 unodes = { path = "../derived_data/unodes" }
 warm_bookmarks_cache = { path = "../bookmarks/warm_bookmarks_cache" }
 xdiff = { path = "../../scm/lib/xdiff" }

@@ -7,4 +7,5 @@
 
 mod test_history;
 mod test_repo;
-mod test_repo_write;
+mod test_repo_create_changeset;
+mod test_repo_move_bookmark;

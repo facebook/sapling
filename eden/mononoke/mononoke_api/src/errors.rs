@@ -57,6 +57,14 @@ pub enum MononokeError {
         reponame: String,
         service_identity: String,
     },
+    #[error(
+        "permission denied: service {service_identity} is not permitted to {action} in {reponame}"
+    )]
+    ServiceRestricted {
+        service_identity: String,
+        action: String,
+        reponame: String,
+    },
     #[error("not available: {0}")]
     NotAvailable(String),
     #[error("internal error: {0}")]

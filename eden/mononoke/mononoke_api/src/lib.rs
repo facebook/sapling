@@ -25,7 +25,9 @@ use synced_commit_mapping::SyncedCommitMapping;
 use warm_bookmarks_cache::WarmBookmarksCache;
 
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::{CommitSyncConfig, SourceControlServiceMonitoring};
+#[cfg(test)]
+use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::RepoConfig;
 
 use crate::repo::Repo;
 
@@ -187,8 +189,7 @@ impl Mononoke {
                 Arc<SkiplistIndex>,
                 Arc<WarmBookmarksCache>,
                 Arc<dyn SyncedCommitMapping>,
-                Option<SourceControlServiceMonitoring>,
-                Option<CommitSyncConfig>,
+                RepoConfig,
             ),
         >,
     ) -> Self {
@@ -202,8 +203,7 @@ impl Mononoke {
                         skiplist_index,
                         warm_bookmarks_cache,
                         synced_commit_mapping,
-                        monitoring_config,
-                        commit_sync_config,
+                        config,
                     )| {
                         (
                             name.clone(),
@@ -213,8 +213,7 @@ impl Mononoke {
                                 skiplist_index,
                                 warm_bookmarks_cache,
                                 synced_commit_mapping,
-                                monitoring_config,
-                                commit_sync_config,
+                                config,
                             )),
                         )
                     },

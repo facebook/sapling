@@ -32,16 +32,16 @@ use futures_ext::StreamExt;
 use futures_old::stream::{self, Stream};
 use itertools::Itertools;
 use mercurial_types::Globalrev;
-use metaconfig_types::{
-    CommitSyncConfig, CommonConfig, RepoConfig, SourceControlServiceMonitoring,
-    SourceControlServiceParams,
-};
+#[cfg(test)]
+use metaconfig_types::{CommitSyncConfig, SourceControlServiceParams};
+use metaconfig_types::{CommonConfig, RepoConfig};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     Generation,
 };
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
 use revset::AncestorsNodeStream;
+use scuba_ext::ScubaSampleBuilderExt;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
 #[cfg(test)]
@@ -86,12 +86,9 @@ pub(crate) struct Repo {
     pub(crate) warm_bookmarks_cache: Arc<WarmBookmarksCache>,
     // This doesn't really belong here, but until we have production mappings, we can't do a better job
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
-    pub(crate) service_config: SourceControlServiceParams,
-    // Needed to report stats
-    pub(crate) monitoring_config: Option<SourceControlServiceMonitoring>,
+    pub(crate) config: RepoConfig,
     pub(crate) repo_permission_checker: ArcPermissionChecker,
     pub(crate) service_permission_checker: ArcPermissionChecker,
-    pub(crate) commit_sync_config: Option<CommitSyncConfig>,
 }
 
 #[derive(Clone)]
@@ -153,8 +150,6 @@ impl Repo {
             &logger,
         )
         .await?;
-        let service_config = config.source_control_service.clone();
-        let monitoring_config = config.source_control_service_monitoring.clone();
 
         let builder = BlobrepoBuilder::new(
             fb,
@@ -220,11 +215,9 @@ impl Repo {
             skiplist_index,
             warm_bookmarks_cache,
             synced_commit_mapping,
-            service_config,
-            monitoring_config,
+            config,
             repo_permission_checker,
             service_permission_checker,
-            commit_sync_config: config.commit_sync_config,
         })
     }
 
@@ -235,8 +228,7 @@ impl Repo {
         skiplist_index: Arc<SkiplistIndex>,
         warm_bookmarks_cache: Arc<WarmBookmarksCache>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
-        monitoring_config: Option<SourceControlServiceMonitoring>,
-        commit_sync_config: Option<CommitSyncConfig>,
+        config: RepoConfig,
     ) -> Self {
         Self {
             name,
@@ -244,15 +236,13 @@ impl Repo {
             skiplist_index,
             warm_bookmarks_cache,
             synced_commit_mapping,
-            service_config: Default::default(),
-            monitoring_config,
+            config,
             repo_permission_checker: ArcPermissionChecker::from(
                 PermissionCheckerBuilder::always_allow(),
             ),
             service_permission_checker: ArcPermissionChecker::from(
                 PermissionCheckerBuilder::always_allow(),
             ),
-            commit_sync_config,
         }
     }
 
@@ -293,6 +283,14 @@ impl Repo {
         commit_sync_config: Option<CommitSyncConfig>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     ) -> Result<Self, Error> {
+        let config = RepoConfig {
+            commit_sync_config,
+            source_control_service: SourceControlServiceParams {
+                permit_writes: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
         let warm_bookmarks_cache = Arc::new(
             WarmBookmarksCache::new(ctx.clone(), blob_repo.clone())
                 .compat()
@@ -304,23 +302,18 @@ impl Repo {
             skiplist_index: Arc::new(SkiplistIndex::new()),
             warm_bookmarks_cache,
             synced_commit_mapping,
-            service_config: SourceControlServiceParams {
-                permit_writes: true,
-                ..Default::default()
-            },
-            monitoring_config: None,
+            config,
             repo_permission_checker: ArcPermissionChecker::from(
                 PermissionCheckerBuilder::always_allow(),
             ),
             service_permission_checker: ArcPermissionChecker::from(
                 PermissionCheckerBuilder::always_allow(),
             ),
-            commit_sync_config,
         })
     }
 
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
-        match self.monitoring_config.as_ref() {
+        match self.config.source_control_service_monitoring.as_ref() {
             None => Ok(()),
             Some(monitoring_config) => {
                 let reporting_futs = monitoring_config
@@ -621,6 +614,11 @@ impl RepoContext {
     /// The warm bookmarks cache for the referenced repository.
     pub(crate) fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
         &self.repo.warm_bookmarks_cache
+    }
+
+    /// The configuration for the referenced repository.
+    pub(crate) fn config(&self) -> &RepoConfig {
+        &self.repo.config
     }
 
     pub(crate) fn derive_changeset_info_enabled(&self) -> bool {
@@ -970,7 +968,7 @@ impl RepoContext {
         other: &Self,
         specifier: ChangesetSpecifier,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
-        let commit_sync_repos = match &self.repo.commit_sync_config {
+        let commit_sync_repos = match &self.config().commit_sync_config {
             Some(commit_sync_config) => CommitSyncRepos::new(
                 self.blob_repo().clone(),
                 other.blob_repo().clone(),
@@ -999,8 +997,8 @@ impl RepoContext {
     }
 
     /// Get a write context to make changes to this repository.
-    pub async fn write(self) -> Result<RepoWriteContext, MononokeError> {
-        if !self.repo.service_config.permit_writes {
+    pub async fn write(mut self) -> Result<RepoWriteContext, MononokeError> {
+        if !self.config().source_control_service.permit_writes {
             return Err(MononokeError::InvalidRequest(String::from(
                 "source control service writes are not enabled for this repo",
             )));
@@ -1009,15 +1007,25 @@ impl RepoContext {
         // Check the user is permitted to write to this repo.
         self.repo.check_permissions(&self.ctx, "write").await?;
 
+        self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
+            scuba.add("write_permissions_model", "any");
+            scuba
+        });
+
+        self.ctx
+            .scuba()
+            .clone()
+            .log_with_msg("Write request start", None);
+
         Ok(RepoWriteContext::new(self, PermissionsModel::AllowAnyWrite))
     }
 
     /// Get a write context to make changes to this repository on behalf of a service.
     pub async fn service_write(
-        self,
+        mut self,
         service_identity: String,
     ) -> Result<RepoWriteContext, MononokeError> {
-        if !self.repo.service_config.permit_service_writes {
+        if !self.config().source_control_service.permit_service_writes {
             return Err(MononokeError::InvalidRequest(String::from(
                 "source control service writes are not enabled for this repo",
             )));
@@ -1027,6 +1035,17 @@ impl RepoContext {
         self.repo
             .check_service_permissions(&self.ctx, service_identity.clone())
             .await?;
+
+        self.ctx = self.ctx.with_mutated_scuba(|mut scuba| {
+            scuba.add("write_permissions_model", "service");
+            scuba.add("service_identity", service_identity.as_str());
+            scuba
+        });
+
+        self.ctx
+            .scuba()
+            .clone()
+            .log_with_msg("Write request start", None);
 
         Ok(RepoWriteContext::new(
             self,
