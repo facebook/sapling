@@ -577,6 +577,18 @@ class replacementtracker(object):
             return orig(obsstore, transaction, data)
         return 0
 
+    def mutationmergemarkers(self, orig, obsstore, transaction, data):
+        # See 'mergemarker'. Record marker information to 'self.mapping'.
+        version, markers = obsolete._readmarkers(data)
+        if version == obsolete._fm1version:
+            # only support fm1 1:1 replacements for now, record prec -> sucs
+            for prec, sucs, flags, meta, date, parents in markers:
+                if len(sucs) == 1:
+                    self.mapping[prec] = sucs[0]
+        # Skip merging markers using the obsstore. Rely on mutation logic
+        # instead.
+        return 0
+
     def phasemove(self, orig, pushop, nodes, phase=phasesmod.public):
         """prevent replaced changesets from being marked public
 
@@ -625,12 +637,18 @@ class replacementtracker(object):
         wrapfunction(bundle2, "_processchangegroup", self.processchangegroup)
         wrapfunction(exchange, "_localphasemove", self.phasemove)
         wrapfunction(obsolete.obsstore, "mergemarkers", self.mergemarkers)
+        wrapfunction(
+            obsolete.mutationobsstore, "mergemarkers", self.mutationmergemarkers
+        )
 
     def __exit__(self, exctype, excvalue, traceback):
         unwrapfunction(exchange, "_pushdiscovery", self.pushdiscovery)
         unwrapfunction(bundle2, "_processchangegroup", self.processchangegroup)
         unwrapfunction(exchange, "_localphasemove", self.phasemove)
         unwrapfunction(obsolete.obsstore, "mergemarkers", self.mergemarkers)
+        unwrapfunction(
+            obsolete.mutationobsstore, "mergemarkers", self.mutationmergemarkers
+        )
 
 
 def _exchangesetup():
