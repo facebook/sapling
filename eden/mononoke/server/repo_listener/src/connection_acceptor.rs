@@ -173,24 +173,7 @@ fn accept(
             cloned!(root_log);
             move |sock| {
                 let identities = match sock.get_ref().ssl().peer_certificate() {
-                    Some(cert) => {
-                        #[cfg(fbcode_build)]
-                        {
-                            ::identity_ext::x509::get_identities(&cert).and_then(
-                                |identities| -> Result<MononokeIdentitySet> {
-                                    identities
-                                        .into_iter()
-                                        .map(|id| MononokeIdentity::try_from_identity(&id))
-                                        .collect()
-                                },
-                            )
-                        }
-                        #[cfg(not(fbcode_build))]
-                        {
-                            let _ = cert;
-                            Ok(MononokeIdentitySet::new())
-                        }
-                    }
+                    Some(cert) => MononokeIdentity::try_from_x509(&cert),
                     None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
                 };
 
