@@ -144,105 +144,10 @@ templatekeyword = registrar.templatekeyword()
 templatefunc = registrar.templatefunc()
 
 
-@templatekeyword("singlepublicsuccessor")
-def singlepublicsuccessor(repo, ctx, templ, **args):
-    """String. Get a single public successor for a
-    given node.  If there's none or more than one, return empty string.
-    This is intended to be used for "Landed as" marking
-    in `hg sl` output."""
-    if mutation.enabled(repo):
-        return ""
-    successorssets = obsutil.successorssets(repo, ctx.node())
-    unfiltered = repo.unfiltered()
-    ctxs = (unfiltered[n] for n in itertools.chain.from_iterable(successorssets))
-    public = (c.hex() for c in ctxs if not c.mutable() and c != ctx)
-    first = next(public, "")
-    second = next(public, "")
-
-    return "" if first and second else first
-
-
 @templatekeyword("shelveenabled")
 def shelveenabled(repo, ctx, **args):
     """Bool. Return true if shelve extension is enabled"""
     return "shelve" in extensions.enabled().keys()
-
-
-@templatekeyword("rebasesuccessors")
-def rebasesuccessors(repo, ctx, **args):
-    """Return all of the node's successors created as a result of rebase"""
-    if mutation.enabled(repo):
-        return ""
-    rsnodes = list(modifysuccessors(ctx, "rebase"))
-    return templatekw.showlist("rebasesuccessor", rsnodes, args)
-
-
-@templatekeyword("amendsuccessors")
-def amendsuccessors(repo, ctx, **args):
-    """Return all of the node's successors created as a result of amend"""
-    if mutation.enabled(repo):
-        return ""
-    asnodes = list(modifysuccessors(ctx, "amend"))
-    return templatekw.showlist("amendsuccessor", asnodes, args)
-
-
-@templatekeyword("splitsuccessors")
-def splitsuccessors(repo, ctx, **args):
-    """Return all of the node's successors created as a result of split"""
-    if mutation.enabled(repo):
-        return ""
-    asnodes = list(modifysuccessors(ctx, "split"))
-    return templatekw.showlist("splitsuccessor", asnodes, args)
-
-
-@templatekeyword("foldsuccessors")
-def foldsuccessors(repo, ctx, **args):
-    """Return all of the node's successors created as a result of fold"""
-    if mutation.enabled(repo):
-        return ""
-    asnodes = list(modifysuccessors(ctx, "fold"))
-    return templatekw.showlist("foldsuccessor", asnodes, args)
-
-
-@templatekeyword("histeditsuccessors")
-def histeditsuccessors(repo, ctx, **args):
-    """Return all of the node's successors created as a result of
-       histedit
-    """
-    if mutation.enabled(repo):
-        return ""
-    asnodes = list(modifysuccessors(ctx, "histedit"))
-    return templatekw.showlist("histeditsuccessor", asnodes, args)
-
-
-@templatekeyword("undosuccessors")
-def undosuccessors(repo, ctx, **args):
-    """Return all of the node's successors created as a result of undo"""
-    if mutation.enabled(repo):
-        return ""
-    asnodes = list(modifysuccessors(ctx, "undo"))
-    return templatekw.showlist("undosuccessor", asnodes, args)
-
-
-def successormarkers(ctx):
-    for data in ctx.repo().obsstore.successors.get(ctx.node(), ()):
-        yield obsutil.marker(ctx.repo(), data)
-
-
-def modifysuccessors(ctx, operation):
-    """Return all of the node's successors which were created as a result
-    of a given modification operation"""
-    repo = ctx.repo().filtered("visible")
-    for m in successormarkers(ctx):
-        if m.metadata().get("operation") == operation:
-            for node in m.succnodes():
-                try:
-                    repo[node]
-                except Exception:
-                    # filtered or unknown node
-                    pass
-                else:
-                    yield nodemod.hex(node)
 
 
 def sortnodes(nodes, parentfunc, masters):

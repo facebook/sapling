@@ -316,29 +316,6 @@ Test with two unrelated histories
   |    a2
   |
 
-Test singlepublicsuccessor  template keyword
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "rebase=" >> $HGRCPATH
-  $ echo "[experimental]" >> $HGRCPATH
-  $ echo "evolution=all" >> $HGRCPATH
-  $ cd ..
-  $ hg init kwrepo && cd kwrepo
-  $ echo a > a && hg ci -Am a
-  adding a
-  $ echo b > b && hg ci -Am b
-  adding b
-  $ hg up 0
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ echo c > c && hg ci -Am c
-  adding c
-  $ hg rebase -s 2 -d 1
-  rebasing d36c0562f908 "c"
-  $ hg phase -r 3 --public
-  $ hg smartlog -r 2 -T "SPS: {singlepublicsuccessor}" --hidden
-  x  SPS: 2b5806c2ca1e228838315bbffeb7d1504c38c9d6
-  |
-  o  SPS:
-  
 
 A draft stack at the top
   $ cd ..
@@ -495,18 +472,3 @@ Make sure public commits that are descendants of master are not drawn
   |    r1
   |
 
-Make sure the template keywords are documented correctly
-  $ hg help templates | egrep '(amend|fold|histedit|rebase|singlepublic|split|undo|node.s )'successor
-      amendsuccessors
-                    Return all of the node's successors created as a result of
-      foldsuccessors
-                    Return all of the node's successors created as a result of
-      histeditsuccessors
-                    Return all of the node's successors created as a result of
-      rebasesuccessors
-                    Return all of the node's successors created as a result of
-      singlepublicsuccessor
-      splitsuccessors
-                    Return all of the node's successors created as a result of
-      undosuccessors
-                    Return all of the node's successors created as a result of
