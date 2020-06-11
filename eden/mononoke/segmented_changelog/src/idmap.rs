@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 
 use anyhow::{format_err, Result};
-use futures::compat::Future01CompatExt;
-use sql::queries;
+use futures::{compat::Future01CompatExt, future, TryFutureExt};
+use sql::{queries, Connection};
 use sql_ext::SqlConnections;
 
 use dag::Id as Vertex;
@@ -36,6 +36,14 @@ queries! {
         SELECT idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
         WHERE idmap.repo_id = {repo_id} AND idmap.vertex = {vertex}
+        "
+    }
+
+    read SelectManyChangesetIds(repo_id: RepositoryId, >list vertex: u64) -> (u64, ChangesetId) {
+        "
+        SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
+        FROM segmented_changelog_idmap AS idmap
+        WHERE idmap.repo_id = {repo_id} AND idmap.vertex IN {vertex}
         "
     }
 
@@ -107,19 +115,23 @@ impl IdMap {
                 }
                 Ok((t, insert_result)) => {
                     transaction = t;
-                    // TODO(sfilip): batch fetches
                     if insert_result.affected_rows() != chunk.len() as u64 {
+                        let to_select: Vec<_> = chunk.iter().map(|v| (v.0).0).collect();
+                        let (t, rows) = SelectManyChangesetIds::query_with_transaction(
+                            transaction,
+                            &repo_id,
+                            &to_select[..],
+                        )
+                        .compat()
+                        .await?;
+                        transaction = t;
+                        let changeset_mappings = rows
+                            .into_iter()
+                            .map(|row| (Vertex(row.0), row.1))
+                            .collect::<HashMap<_, _>>();
                         for (vertex, cs_id) in chunk {
-                            let (t, stored) = SelectChangesetId::query_with_transaction(
-                                transaction,
-                                &repo_id,
-                                &vertex.0,
-                            )
-                            .compat()
-                            .await?;
-                            transaction = t;
-                            match stored.as_slice() {
-                                [] => {
+                            match changeset_mappings.get(vertex) {
+                                None => {
                                     transaction.rollback().compat().await?;
                                     return Err(format_err!(
                                         "Failed to insert entry ({} -> {}) in Idmap",
@@ -127,7 +139,7 @@ impl IdMap {
                                         cs_id
                                     ));
                                 }
-                                [(store_cs_id,)] => {
+                                Some(store_cs_id) => {
                                     if store_cs_id != cs_id {
                                         transaction.rollback().compat().await?;
                                         return Err(format_err!(
@@ -139,14 +151,6 @@ impl IdMap {
                                         ));
                                     }
                                     // TODO(sfilip): log redundant insert call
-                                }
-                                _ => {
-                                    // found multiple entries with the same vertex assignment
-                                    transaction.rollback().compat().await?;
-                                    return Err(format_err!(
-                                        "IdMap vertex assigned to multiple changesets entries: {:?}",
-                                        stored
-                                    ));
                                 }
                             };
                         }
@@ -163,16 +167,41 @@ impl IdMap {
         repo_id: RepositoryId,
         vertex: Vertex,
     ) -> Result<Option<ChangesetId>> {
-        let select = |connection| async move {
-            let rows = SelectChangesetId::query(connection, &repo_id, &vertex.0)
+        let result = self.find_many_changeset_ids(repo_id, vec![vertex]).await?;
+        Ok(result.get(&vertex).copied())
+    }
+
+    pub async fn find_many_changeset_ids(
+        &self,
+        repo_id: RepositoryId,
+        vertexes: Vec<Vertex>,
+    ) -> Result<HashMap<Vertex, ChangesetId>> {
+        let select_vertexes = |connection: &Connection, vertexes: &[u64]| {
+            SelectManyChangesetIds::query(connection, &repo_id, vertexes)
                 .compat()
-                .await?;
-            Ok(rows.into_iter().next().map(|r| r.0))
+                .and_then(|rows| {
+                    future::ok(
+                        rows.into_iter()
+                            .map(|row| (Vertex(row.0), row.1))
+                            .collect::<HashMap<_, _>>(),
+                    )
+                })
         };
-        match select(&self.0.read_connection).await? {
-            None => select(&self.0.read_master_connection).await,
-            Some(cs_id) => Ok(Some(cs_id)),
+        let to_query: Vec<_> = vertexes.iter().map(|v| v.0).collect();
+        let mut cs_ids = select_vertexes(&self.0.read_connection, &to_query).await?;
+        let not_found_in_replica: Vec<_> = vertexes
+            .iter()
+            .filter(|x| cs_ids.contains_key(x))
+            .map(|v| v.0)
+            .collect();
+        if !not_found_in_replica.is_empty() {
+            let from_master =
+                select_vertexes(&self.0.read_master_connection, &not_found_in_replica).await?;
+            for (k, v) in from_master {
+                cs_ids.insert(k, v);
+            }
         }
+        Ok(cs_ids)
     }
 
     pub async fn get_changeset_id(
@@ -270,6 +299,8 @@ impl MemIdMap {
 mod tests {
     use super::*;
 
+    use maplit::hashmap;
+
     use fbinit::FacebookInit;
 
     use mononoke_types_mocks::changesetid::{
@@ -347,6 +378,53 @@ mod tests {
             .insert_many(repo_id, vec![(Vertex(1), FIVES_CSID)])
             .await
             .is_err());
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_find_many_changeset_ids(_fb: FacebookInit) -> Result<()> {
+        let repo_id = RepositoryId::new(0);
+        let idmap = IdMap::with_sqlite_in_memory()?;
+
+        let response = idmap
+            .find_many_changeset_ids(repo_id, vec![Vertex(1), Vertex(2), Vertex(3), Vertex(6)])
+            .await?;
+        assert!(response.is_empty());
+
+        idmap
+            .insert_many(
+                repo_id,
+                vec![
+                    (Vertex(1), ONES_CSID),
+                    (Vertex(2), TWOS_CSID),
+                    (Vertex(3), THREES_CSID),
+                    (Vertex(4), FOURS_CSID),
+                    (Vertex(5), FIVES_CSID),
+                ],
+            )
+            .await?;
+
+        let response = idmap
+            .find_many_changeset_ids(repo_id, vec![Vertex(1), Vertex(2), Vertex(3), Vertex(6)])
+            .await?;
+        assert_eq!(
+            response,
+            hashmap![Vertex(1) => ONES_CSID, Vertex(2) => TWOS_CSID, Vertex(3) => THREES_CSID]
+        );
+
+        let response = idmap
+            .find_many_changeset_ids(repo_id, vec![Vertex(4), Vertex(5)])
+            .await?;
+        assert_eq!(
+            response,
+            hashmap![Vertex(4) => FOURS_CSID, Vertex(5) => FIVES_CSID]
+        );
+
+        let response = idmap
+            .find_many_changeset_ids(repo_id, vec![Vertex(6)])
+            .await?;
+        assert!(response.is_empty());
 
         Ok(())
     }
