@@ -41,7 +41,7 @@ fn test_parse() {
                     .collect()
             ),
             files: vec![MPath::new(b"mercurial/util.py").unwrap()],
-            comments: r#"util: warn when adding paths ending with \
+            message: r#"util: warn when adding paths ending with \
 
 Paths ending with \ will fail the verification introduced in 684a977c2ae0 when
 checking out on Windows ... and if it didn't fail it would probably not do what
@@ -70,7 +70,7 @@ the user expected."#
             time: DateTime::from_timestamp(1116031690, 25200).expect("valid timestamp"),
             extra: Extra(vec![].into_iter().collect()),
             files: vec![MPath::new(b"hgweb.py").unwrap()],
-            comments: r#"reorganize code into classes
+            message: r#"reorganize code into classes
 clean up html code for w3c validation
 "#
             .into(),

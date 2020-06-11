@@ -177,10 +177,10 @@ fn hg_changeset_diff(
                     ));
                 }
 
-                if left.comments() != right.comments() {
+                if left.message() != right.message() {
                     diff.diff.push(ChangesetAttrDiff::Comments(
-                        slice_to_str(left.comments()),
-                        slice_to_str(right.comments()),
+                        slice_to_str(left.message()),
+                        slice_to_str(right.message()),
                     ))
                 }
 

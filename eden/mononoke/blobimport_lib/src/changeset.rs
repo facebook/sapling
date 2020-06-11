@@ -463,8 +463,8 @@ impl UploadChangesets {
                         .expect(&format!("non-utf8 username for {}", csid)),
                     time: cs.time().clone(),
                     extra: cs.extra().clone(),
-                    comments: String::from_utf8(Vec::from(cs.comments()))
-                        .expect(&format!("non-utf8 comments for {}", csid)),
+                    message: String::from_utf8(Vec::from(cs.message()))
+                        .expect(&format!("non-utf8 message for {}", csid)),
                 };
                 let create_changeset = CreateChangeset {
                     expected_nodeid: Some(csid),

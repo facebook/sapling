@@ -198,7 +198,7 @@ pub fn create_changeset_no_parents(
         user: "author <author@fb.com>".into(),
         time: DateTime::from_timestamp(0, 0).expect("valid timestamp"),
         extra: BTreeMap::new(),
-        comments: "Test commit".into(),
+        message: "Test commit".into(),
     };
     let create_changeset = CreateChangeset {
         expected_nodeid: None,
@@ -228,7 +228,7 @@ pub fn create_changeset_one_parent(
         user: "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into(),
         time: DateTime::from_timestamp(1234, 0).expect("valid timestamp"),
         extra: BTreeMap::new(),
-        comments: "Child commit".into(),
+        message: "Child commit".into(),
     };
     let create_changeset = CreateChangeset {
         expected_nodeid: None,

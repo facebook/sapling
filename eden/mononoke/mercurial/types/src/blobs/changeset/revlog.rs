@@ -35,7 +35,7 @@ pub struct RevlogChangeset {
     pub time: DateTime,
     pub extra: Extra,
     pub files: Vec<MPath>,
-    pub comments: Vec<u8>,
+    pub message: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
@@ -185,7 +185,7 @@ impl RevlogChangeset {
         time: DateTime,
         extra: BTreeMap<Vec<u8>, Vec<u8>>,
         files: Vec<MPath>,
-        comments: Vec<u8>,
+        message: Vec<u8>,
     ) -> Self {
         let (p1, p2) = parents.get_nodes();
         Self {
@@ -196,7 +196,7 @@ impl RevlogChangeset {
             time,
             extra: Extra(extra),
             files,
-            comments,
+            message,
         }
     }
 
@@ -261,7 +261,7 @@ impl RevlogChangeset {
             time: DateTime::from_timestamp(0, 0).expect("this is a valid DateTime"),
             extra: Extra(BTreeMap::new()),
             files: Vec::new(),
-            comments: Vec::new(),
+            message: Vec::new(),
         }
     }
 
@@ -297,7 +297,7 @@ impl RevlogChangeset {
             time: DateTime::from_timestamp(0, 0).expect("this is a valid DateTime"),
             extra: Extra(BTreeMap::new()),
             files: Vec::new(),
-            comments: Vec::new(),
+            message: Vec::new(),
         };
 
         {
@@ -316,10 +316,10 @@ impl RevlogChangeset {
             ret.extra = extra;
 
             let mut files = Vec::new();
-            let mut comments = Vec::new();
+            let mut message = Vec::new();
 
-            // List of files followed by the comments. The file list is one entry
-            // per line, with a blank line delimiting the end. The comments are a single
+            // List of files followed by the message. The file list is one entry
+            // per line, with a blank line delimiting the end. The message is a single
             // binary blob with no internal structure, but we've already split it on '\n'
             // bounaries, so we can glue it back together to re-create the original content.
             //
@@ -333,12 +333,12 @@ impl RevlogChangeset {
                     }
                     files.push(MPath::new(line).context("invalid path in changelog")?)
                 } else {
-                    comments.push(line);
+                    message.push(line);
                 }
             }
 
             ret.files = files;
-            ret.comments = comments.join(&b'\n');
+            ret.message = message.join(&b'\n');
         }
 
         Ok(ret)
@@ -382,8 +382,8 @@ impl RevlogChangeset {
         &self.extra.0
     }
 
-    pub fn comments(&self) -> &[u8] {
-        self.comments.as_ref()
+    pub fn message(&self) -> &[u8] {
+        self.message.as_ref()
     }
 
     pub fn files(&self) -> &[MPath] {
@@ -433,7 +433,7 @@ pub fn serialize_cs<W: Write>(cs: &RevlogChangeset, out: &mut W) -> Result<()> {
         write!(out, "{}\n", f)?;
     }
     write!(out, "\n")?;
-    out.write_all(&cs.comments())?;
+    out.write_all(&cs.message())?;
 
     Ok(())
 }

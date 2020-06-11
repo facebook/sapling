@@ -306,7 +306,7 @@ pub async fn upload_changeset(
         user: String::from_utf8(revlog_cs.user().into())?,
         time: revlog_cs.time().clone(),
         extra: revlog_cs.extra().clone(),
-        comments: String::from_utf8(revlog_cs.comments().into())?,
+        message: String::from_utf8(revlog_cs.message().into())?,
     };
 
     // DO NOT try to comute p1 and p2 concurrently!

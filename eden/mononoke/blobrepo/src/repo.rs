@@ -1282,7 +1282,7 @@ impl BlobRepo {
                             .extra()
                             .map(|(k, v)| (k.as_bytes().to_vec(), v.to_vec()))
                             .collect(),
-                        comments: bcs.message().to_string(),
+                        message: bcs.message().to_string(),
                     };
 
                     metadata.record_step_parents(

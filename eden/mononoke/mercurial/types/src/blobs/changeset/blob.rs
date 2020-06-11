@@ -26,7 +26,7 @@ pub struct ChangesetMetadata {
     pub user: String,
     pub time: DateTime,
     pub extra: BTreeMap<Vec<u8>, Vec<u8>>,
-    pub comments: String,
+    pub message: String,
 }
 
 impl ChangesetMetadata {
@@ -57,7 +57,7 @@ pub struct HgChangesetContent {
     time: DateTime,
     extra: Extra,
     files: Vec<MPath>,
-    comments: Vec<u8>,
+    message: Vec<u8>,
 }
 
 impl HgChangesetContent {
@@ -77,7 +77,7 @@ impl HgChangesetContent {
             time: cs_metadata.time,
             extra: Extra::new(cs_metadata.extra),
             files,
-            comments: cs_metadata.comments.into_bytes(),
+            message: cs_metadata.message.into_bytes(),
         }
     }
 
@@ -90,7 +90,7 @@ impl HgChangesetContent {
             time: revlogcs.time,
             extra: revlogcs.extra,
             files: revlogcs.files,
-            comments: revlogcs.comments,
+            message: revlogcs.message,
         }
     }
 
@@ -127,7 +127,7 @@ impl HgChangesetContent {
             write!(out, "{}\n", f)?;
         }
         write!(out, "\n")?;
-        out.write_all(&self.comments)?;
+        out.write_all(&self.message)?;
 
         Ok(())
     }
@@ -230,8 +230,8 @@ impl HgBlobChangeset {
         self.content.extra.as_ref()
     }
 
-    pub fn comments(&self) -> &[u8] {
-        &self.content.comments
+    pub fn message(&self) -> &[u8] {
+        &self.content.message
     }
 
     pub fn files(&self) -> &[MPath] {
@@ -282,13 +282,13 @@ impl Loadable for HgChangesetId {
 
 impl Display for HgBlobChangeset {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let comments = self.comments();
-        let title_end = comments
+        let message = self.message();
+        let title_end = message
             .iter()
             .enumerate()
             .find(|(_, &c)| c == b'\n')
             .map(|(i, _)| i)
-            .unwrap_or(comments.len());
+            .unwrap_or(message.len());
 
         write!(
             f,
@@ -296,7 +296,7 @@ impl Display for HgBlobChangeset {
             self.changesetid,
             String::from_utf8_lossy(&self.user()),
             self.time().as_chrono().to_rfc2822(),
-            String::from_utf8_lossy(&self.comments()[0..title_end])
+            String::from_utf8_lossy(&self.message()[0..title_end])
         )
     }
 }

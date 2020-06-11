@@ -370,7 +370,7 @@ async fn create_hg_changeset_part(
                 cs.time().clone(),
                 cs.extra().clone(),
                 cs.files().into(),
-                cs.comments().into(),
+                cs.message().into(),
             );
 
             let mut v = Vec::new();
