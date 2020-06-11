@@ -7,7 +7,6 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    ops::Deref,
     sync::Arc,
 };
 
@@ -253,6 +252,8 @@ impl StartState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::ops::Deref;
 
     use fbinit::FacebookInit;
 

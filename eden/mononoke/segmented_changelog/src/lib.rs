@@ -12,4 +12,4 @@
 ///!
 ///! Data structures and algorithms for a commit graph used by source control.
 pub mod dag;
-mod idmap;
+pub mod idmap;
