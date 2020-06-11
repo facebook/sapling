@@ -380,9 +380,9 @@ checking split/divergence.
   |/
   @  1dafc0b43612
   |
-  | x  c9476255bc2a (Undone as 1dafc0, 1dafc0)
+  | x  c9476255bc2a
   |/
-  | x  2dca609174c2 (Undone as 1dafc0)
+  | x  2dca609174c2
   |/
   o  0a3dd3e15e65
   |

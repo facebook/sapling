@@ -168,6 +168,7 @@ more there after
   journal.phaseroots
   journal.visibleheads
   metalog
+  mutation
   phaseroots
   requires
   undo

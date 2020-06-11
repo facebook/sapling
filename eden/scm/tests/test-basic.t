@@ -12,6 +12,7 @@ Create a repository:
   extensions.treemanifest=!
   format.use-zstore-commit-data=true
   fsmonitor.detectrace=1 (fsmonitor !)
+  mutation.record=False
   remotefilelog.reponame=reponame-default
   remotefilelog.cachepath=$TESTTMP/default-hgcache
   treemanifest.flatcompat=True

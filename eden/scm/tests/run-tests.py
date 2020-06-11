@@ -69,6 +69,11 @@ import xml.dom.minidom as minidom
 
 
 try:
+    import features
+except ImportError:
+    features = None
+
+try:
     import Queue as queue
 except ImportError:
     import queue
@@ -1255,7 +1260,10 @@ class Test(unittest.TestCase):
         env = self._getenv()
         self._genrestoreenv(env)
         self._daemonpids.append(env["DAEMON_PIDS"])
-        self._createhgrc(env["HGRCPATH"].rsplit(os.pathsep.encode("utf-8"), 1)[-1])
+        hgrcpath = env["HGRCPATH"].rsplit(os.pathsep.encode("utf-8"), 1)[-1]
+        self._createhgrc(hgrcpath)
+        if features:
+            features.setup(self.name.split()[0], hgrcpath)
 
         vlog("# Test", self.name)
         vlog("# chg in use: %s" % self._usechg)
