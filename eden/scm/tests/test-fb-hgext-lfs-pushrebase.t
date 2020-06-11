@@ -1,8 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
 
   $ . "$TESTDIR/library.sh"
 
@@ -171,6 +170,7 @@ TODO: configure mutation
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
 # This should work even if the HG server does not have access to LFS server

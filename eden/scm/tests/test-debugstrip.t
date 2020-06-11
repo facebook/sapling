@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ disable treemanifest
 
   $ setconfig format.usegeneraldelta=yes
@@ -858,22 +857,21 @@ Test high-level scmutil.cleanupnodes API
   >                 scmutil.cleanupnodes(repo, nodes('((B::)+I+Z)-D2'), 'replace')
   > EOF
   $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
-  warning: orphaned descendants detected, not stripping 112478962961, 1fc8102cda62, 26805aba1e60
 
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
-  o  8:1473d4b996d1 G2 G G2 b-F@divergent3 b-G
+  o  12:1473d4b996d1 G2 G G2 b-F@divergent3 b-G
   |
-  | o  7:d11b3456a873 F2 F F2 b-F
+  | o  11:d11b3456a873 F2 F F2 b-F
   | |
-  | o  5:5cb05ba470a7 H H
+  | o  8:5cb05ba470a7 H H
   |/|
-  | o  3:7fb047a69f22 E E b-F@divergent1
+  | o  4:7fb047a69f22 E E b-F@divergent1
   | |
-  | | o  6:7c78f703e465 D2 D D2 b-D
+  | | o  10:7c78f703e465 D2 D D2 b-D
   | | |
-  | | o  4:26805aba1e60 C
+  | | o  6:26805aba1e60 C
   | | |
-  | | o  2:112478962961 B
+  | | o  3:112478962961 B
   | |/
   o |  1:1fc8102cda62 G
    /
@@ -883,23 +881,23 @@ Test high-level scmutil.cleanupnodes API
      A                         0:426bada5c675
      B                         0:426bada5c675
      C                         0:426bada5c675
-     D                         6:7c78f703e465
-     D2                        6:7c78f703e465
-     E                         3:7fb047a69f22
-     F                         7:d11b3456a873
-     F2                        7:d11b3456a873
-     G                         8:1473d4b996d1
-     G2                        8:1473d4b996d1
-     H                         5:5cb05ba470a7
+     D                         10:7c78f703e465
+     D2                        10:7c78f703e465
+     E                         4:7fb047a69f22
+     F                         11:d11b3456a873
+     F2                        11:d11b3456a873
+     G                         12:1473d4b996d1
+     G2                        12:1473d4b996d1
+     H                         8:5cb05ba470a7
      I                         0:426bada5c675
      Z                         -1:000000000000
      b-B                       0:426bada5c675
      b-C                       0:426bada5c675
-     b-D                       6:7c78f703e465
-     b-F                       7:d11b3456a873
-     b-F@divergent1            3:7fb047a69f22
-     b-F@divergent3            8:1473d4b996d1
-     b-G                       8:1473d4b996d1
+     b-D                       10:7c78f703e465
+     b-F                       11:d11b3456a873
+     b-F@divergent1            4:7fb047a69f22
+     b-F@divergent3            12:1473d4b996d1
+     b-G                       12:1473d4b996d1
      b-I                       0:426bada5c675
      b-Z                       -1:000000000000
 
@@ -926,11 +924,11 @@ we have reusable code here
   | |
   | | o  10:7c78f703e465 D2 D D2 b-D
   | | |
-  | | x  6:26805aba1e60 C
+  | | o  6:26805aba1e60 C
   | | |
-  | | x  3:112478962961 B
+  | | o  3:112478962961 B
   | |/
-  x |  1:1fc8102cda62 G
+  o |  1:1fc8102cda62 G
    /
   o  0:426bada5c675 A A B C I b-B b-C b-I
   

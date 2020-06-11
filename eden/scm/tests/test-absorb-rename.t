@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ enable absorb
   $ setconfig diff.git=1
 
@@ -39,13 +38,13 @@ rename a to b, then b to a
   $ hg status
 
   $ hg annotate -ncf a
-  0 5d1c5620e6f2 a: 1a
-  1 9a14ffe67ae9 b: 2a
-  2 9191d121a268 a: 3a
+  3 5d1c5620e6f2 a: 1a
+  4 9a14ffe67ae9 b: 2a
+  5 9191d121a268 a: 3a
 
 when the first changeset is public
 
-  $ hg phase --public -r 0
+  $ hg phase --public -r 3
 
   $ sedi 's/a/A/' a
 
@@ -146,7 +145,7 @@ copy b to a
   $ hg absorb -aq
 
   $ hg log -G -p -T '{rev}:{node|short} {desc}\n'
-  @  1:70606019f91b cp
+  @  3:70606019f91b cp
   |  diff --git a/b b/a
   |  rename from b
   |  rename to a
@@ -165,7 +164,7 @@ copy b to a
   |  +1
   |  +3c
   |
-  o  0:bfb67c3539c1 1
+  o  2:bfb67c3539c1 1
      diff --git a/b b/b
      new file mode 100644
      --- /dev/null
@@ -178,7 +177,7 @@ run absorb again would apply the change to c
   $ hg absorb -aq
 
   $ hg log -G -p -T '{rev}:{node|short} {desc}\n'
-  @  1:8bd536cce368 cp
+  @  4:8bd536cce368 cp
   |  diff --git a/b b/a
   |  rename from b
   |  rename to a
@@ -197,7 +196,7 @@ run absorb again would apply the change to c
   |  +1c
   |  +3c
   |
-  o  0:bfb67c3539c1 1
+  o  2:bfb67c3539c1 1
      diff --git a/b b/b
      new file mode 100644
      --- /dev/null
@@ -245,7 +244,7 @@ run absorb again would apply the change to c
    2e
 
   $ hg log -G -p -T '{rev}:{node|short} {desc}\n'
-  @  2:34be9b0c786e mv
+  @  5:34be9b0c786e mv
   |  diff --git a/c b/c
   |  deleted file mode 100644
   |  --- a/c
@@ -257,7 +256,7 @@ run absorb again would apply the change to c
   |  rename from a
   |  rename to e
   |
-  o  1:13e56db5948d cp
+  o  4:13e56db5948d cp
   |  diff --git a/b b/a
   |  rename from b
   |  rename to a
@@ -285,7 +284,7 @@ run absorb again would apply the change to c
   |   1d
   |  +4d
   |
-  o  0:0037613a5dc6 1
+  o  3:0037613a5dc6 1
      diff --git a/b b/b
      new file mode 100644
      --- /dev/null

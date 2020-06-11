@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable fbhistedit histedit rebase
@@ -48,15 +47,15 @@ Use histedit to graft an extra commit into current history
   > EOF
 
   $ tglogp
-  @  7: fc9a25c1b8af draft 'c'
+  @  8: fc9a25c1b8af draft 'c'
   |
-  o  6: efc3ff9af0d1 draft 'e'
+  o  7: efc3ff9af0d1 draft 'e'
   |
-  | o  5: 1eb7eda15cd7 draft 'f'
+  | o  6: 1eb7eda15cd7 draft 'f'
   | |
-  | o  4: 581a2eefdc84 draft 'e'
+  | x  5: 581a2eefdc84 draft 'e'
   | |
-  | o  3: 331acda6ee00 draft 'd'
+  | o  4: 331acda6ee00 draft 'd'
   | |
   o |  2: c87fe1ae405f draft 'b'
   | |

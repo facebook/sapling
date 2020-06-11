@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable fbhistedit histedit rebase
@@ -300,17 +299,18 @@ Multiple exec commands must work
   o  cb9a9f314b8b a
   
 
-abort on a failing command, e.g when we have children
+abort on a failing command, e.g an unknown commit
 
   $ hg histedit 177f92b77385 --commands - 2>&1 << EOF| fixbundle
   > pick 177f92b77385 c
   > pick 055a42cdd887 d
   > pick e860deea161a e
-  > exec echo "added" > added && hg add added && hg commit --amend
+  > exec echo "added" > added && hg foo -q
   > pick 652413bf663e f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  abort: cannot amend changeset with children
+  unknown command 'foo'
+  (use 'hg help' to get help)
 
   $ hg histedit --abort
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -381,9 +381,9 @@ Test continue a stopped histedit
   |
   | o  652413bf663e f
   | |
-  | o  e860deea161a e
+  | x  e860deea161a e
   | |
-  | o  055a42cdd887 d
+  | x  055a42cdd887 d
   |/
   o  177f92b77385 c
   |
@@ -401,9 +401,9 @@ Test continue a stopped histedit
   |
   | o  652413bf663e f
   | |
-  | o  e860deea161a e
+  | x  e860deea161a e
   | |
-  | o  055a42cdd887 d
+  | x  055a42cdd887 d
   |/
   o  177f92b77385 c
   |

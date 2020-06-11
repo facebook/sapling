@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure evolution dummyssh
+  $ configure mutation-norecord dummyssh
   $ enable amend crdump remotenames
   $ showgraph() {
   >   hg log --graph --hidden -T "{rev} {desc|firstline}" | sed \$d
@@ -75,23 +75,6 @@ Test obsolete markers
                   "bin2"
               ],
               "node": "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8",
-              "obsolete": [
-                  {
-                      "date": [
-                          0.0,
-                          0
-                      ],
-                      "flag": 0,
-                      "metadata": {
-                          "operation": "amend",
-                          "user": "test"
-                      },
-                      "prednode": "6370cd64643d547e11c6bc91920bca7b44ea21b5",
-                      "succnodes": [
-                          "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8"
-                      ]
-                  }
-              ],
               "p1": {
                   "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
               },

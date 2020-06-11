@@ -1,6 +1,5 @@
   $ setconfig treemanifest.flatcompat=False
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
 
   $ . "$TESTDIR/library.sh"
 
@@ -105,8 +104,6 @@ Test that pushrebase hooks can access the commit data
   $ cd ..
 
   $ hg clone -q ssh://user@dummy/master hook_client
-  fetching tree '' *, based on b25ede39b5168327f0596fcf74d1ff53842bad2a, found via * (glob)
-  1 trees fetched over * (glob)
   $ cd hook_client
   $ hg up -q master
   $ echo baz >> subdir/a
@@ -133,7 +130,5 @@ Push an empty commit with no trees
   $ hg push --to master --rev . --config treemanifest.sendtrees=True
   pushing to ssh://user@dummy/master
   searching for changes
-  fetching tree '' *, based on *, found via * (glob)
-  1 trees fetched over * (glob)
   remote: pushing 1 changeset:
   remote:     *  Empty commit (glob)

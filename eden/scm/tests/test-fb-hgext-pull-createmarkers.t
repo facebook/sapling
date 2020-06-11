@@ -4,7 +4,7 @@
 
 Setup
 
-  $ configure evolution dummyssh
+  $ configure mutation-norecord dummyssh
   $ enable amend pullcreatemarkers pushrebase rebase remotenames
   $ setconfig ui.username="nobody <no.reply@fb.com>" experimental.rebaseskipobsolete=true
   $ setconfig remotenames.allownonfastforward=true
@@ -96,15 +96,6 @@ the remote
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
   o  5 "add b"
   |
-  | o  4 "add e
-  | |
-  | |  Differential Revision: https://phabricator.fb.com/D131"
-  | o  3 "add d
-  | |
-  | |  Differential Revision: https://phabricator.intern.facebook.com/D124"
-  | o  2 "add c
-  |/
-  |    Differential Revision: https://phabricator.fb.com/D123"
   @  1 "add secondcommit"
   |
   o  0 "add initial"

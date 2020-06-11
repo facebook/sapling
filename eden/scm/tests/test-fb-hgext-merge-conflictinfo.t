@@ -1,8 +1,7 @@
 #require py2
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ enable conflictinfo rebase
 
 1) Make the repo
@@ -340,7 +339,7 @@ Test case 3: Source changed, dest moved
   $ hg rebase -d 2 -s 1
   rebasing ec87889f5f90 "source"
   merging file_newloc and file to file_newloc
-  $ hg up -q 2 # source
+  $ hg up -q 'desc(source)' # source
   $ cat file_newloc # Should follow:
   change
   $ hg resolve --tool=internal:dumpjson --all
@@ -415,7 +414,7 @@ Test case 5: Source moved, dest changed
   $ hg rebase -d 2 -s 1
   rebasing e6e7483a8950 "source"
   merging file and file_newloc to file_newloc
-  $ hg up 2
+  $ hg up 'desc(source)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cat file_newloc
   change

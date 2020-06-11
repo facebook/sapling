@@ -1,7 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
+  $ configure mutation-norecord
   $ enable rebase
 
 initialize repository
@@ -42,7 +41,7 @@ rebase
   rebasing 2ae46b1d99a7 "3" (two)
 
   $ hg log
-  changeset:   3:42e5ed2cdcf4
+  changeset:   4:42e5ed2cdcf4
   bookmark:    two
   parent:      1:925d80f479bb
   user:        test
@@ -85,8 +84,8 @@ aborted rebase should restore active bookmark.
   rebase aborted
   $ hg bookmark
      one                       1:925d80f479bb
-   * three                     4:dd7c838e8362
-     two                       3:42e5ed2cdcf4
+   * three                     5:dd7c838e8362
+     two                       4:42e5ed2cdcf4
 
 after aborted rebase, restoring a bookmark that has been removed should not fail
 
@@ -101,4 +100,4 @@ after aborted rebase, restoring a bookmark that has been removed should not fail
   rebase aborted
   $ hg bookmark
      one                       1:925d80f479bb
-     two                       3:42e5ed2cdcf4
+     two                       4:42e5ed2cdcf4

@@ -2,7 +2,7 @@
 
 Test uncommit - set up the config
 
-  $ configure evolution
+  $ configure mutation-norecord
 
 Build up a repo
 
@@ -269,9 +269,9 @@ Partial uncommit in the middle, does not move bookmark
   | | |/
   | | o  3:6db330d65db434145c0b59d291853e9a84719b24 added file-abcd
   | | |
-  | | x  2:abf2df566fc193b3ac34d946e63c1583e4d4732b added file-abc
+  | | o  2:abf2df566fc193b3ac34d946e63c1583e4d4732b added file-abc
   | |/
-  | x  1:69a232e754b08d568c4899475faf2eb44b857802 added file-ab
+  | o  1:69a232e754b08d568c4899475faf2eb44b857802 added file-ab
   |/
   o  0:3004d2d9b50883c1538fc754a3aeb55f1b4084f6 added file-a
   

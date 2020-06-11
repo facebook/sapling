@@ -5,7 +5,7 @@
 
 #testcases nostackpush stackpush
   $ disable treemanifest
-  $ configure noevolution dummyssh
+  $ configure mutation-norecord dummyssh
 
   $ . "$TESTDIR/library.sh"
   $ getmysqldb
@@ -91,13 +91,12 @@ Make a push from the client
   remote: pushing 1 changeset:
   remote:     772868146114  client push
   remote: 2 new changesets from the server will be downloaded
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
-  o  client push [draft:a8078509f8d1]
+  @  client push [public:a8078509f8d1]
   |
-  o  server commit [draft:bb4844f92c89]
+  o  server commit [public:bb4844f92c89]
   |
-  | @  client push [draft:772868146114]
-  |/
   o  initial [public:2bb9d20e471c]
   
 Apply a bundle on the second server via the command line
@@ -167,12 +166,10 @@ Push a stack
   |
   o  stack push 1 [draft:c661726b7d93]
   |
-  o  client push [draft:a8078509f8d1]
+  o  client push [public:a8078509f8d1]
   |
-  o  server commit [draft:bb4844f92c89]
+  o  server commit [public:bb4844f92c89]
   |
-  | o  client push [draft:772868146114]
-  |/
   o  initial [public:2bb9d20e471c]
   
   $ hg log -r '.^::.' -T '{node}\n'
