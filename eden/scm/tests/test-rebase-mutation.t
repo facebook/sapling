@@ -1416,7 +1416,6 @@ was skipped
   $ hg bookmarks
      mybook                    3:be1832deae9a
   $ hg debugobsolete --rev tip
-  1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc be1832deae9ac531caa7438b8dcf6055a122cd8e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
 
 Obsoleted working parent and bookmark could be moved if an ancestor of working
 parent gets moved:

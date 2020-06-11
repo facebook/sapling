@@ -82,11 +82,6 @@ Test revive works inside a transaction
   x  0 A 426bada5c675
   
   $ hg debugobsolete
-  112478962961147124edd43549aedd1a335e44bf b18e25de2cf5fc4699a029ed635882849e53ef73 4b61ff5c62e28cff36152201967390a6e7375604 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'split', 'user': 'test'}
-  4b61ff5c62e28cff36152201967390a6e7375604 ad6717a6a58e34efe818b17b745fb04e0d17d49e 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'amend', 'user': 'test'}
-  ad6717a6a58e34efe818b17b745fb04e0d17d49e 0 {b18e25de2cf5fc4699a029ed635882849e53ef73} (Thu Jan 01 00:00:02 1970 +0000) {'operation': 'prune', 'user': 'test'}
-  b18e25de2cf5fc4699a029ed635882849e53ef73 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'prune', 'user': 'test'}
-  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 0 {0000000000000000000000000000000000000000} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'prune', 'user': 'test'}
   $ hg revivetest 'obsolete()' --config extensions.revivetest=$TESTTMP/revivetest.py
   A is revived
   B is revived
@@ -120,7 +115,6 @@ Test date is set correctly
   $ hg commit --amend -m G1 --config devel.default-date='123456 0'
   $ hg unamend --config extensions.amend=
   $ hg debugobsolete | tail -1
-  b7e6ea8355346dbbedcb23188c3a5de400e780ae cf43ad9da869111bee585c5475aefe61f6f74649 0 (Fri Jan 02 10:17:37 1970 +0000) {'user': 'test'}
   $ echo 2 >> G
 
 Do not use a mocked date
@@ -132,6 +126,5 @@ Do not use a mocked date
   $ hg commit --amend -m G2
   $ hg unamend --config extensions.amend=
   $ hg debugobsolete | tail -1
-  51313a3d2b65bd2cbc4828a7309af84eb5914bdb cf43ad9da869111bee585c5475aefe61f6f74649 0 (*) {'user': 'test'} (glob)
   $ hg debugobsolete | tail -1 | grep ' 1970 +0000'
   [1]

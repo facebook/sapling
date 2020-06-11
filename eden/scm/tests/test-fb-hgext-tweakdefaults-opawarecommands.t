@@ -14,7 +14,6 @@ Check amend metadata
   adding a
   $ echo aa > a && hg amend
   $ hg debugobsolete
-  09d39afb522a08bdb03dc231608f7a3488ab4edc * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'} (glob)
 
 Check rebase metadata
   $ hg book -r . destination
@@ -25,5 +24,3 @@ Check rebase metadata
   $ hg rebase -r . -d destination
   rebasing 1e9a3c00cbe9 "b"
   $ hg debugobsolete
-  09d39afb522a08bdb03dc231608f7a3488ab4edc * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'} (glob)
-  * * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'} (glob)

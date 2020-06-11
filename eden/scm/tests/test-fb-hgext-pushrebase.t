@@ -438,8 +438,6 @@ With evolution enabled, should set obsolescence markers
   searching for changes
   no changes found
   $ hg debugobsolete | sort
-  9467a8ee5d0d993ba68d94946c9d4a3cae8d31ff 0d76868c25e6789734c06e056f235e1fa223da74 * (glob)
-  e73acfaeee82005b2379f82efb73123cbb74a733 d53a62ed14be0980584e1f92f9c47031ef806a62 * (glob)
   $ hg up d53a62ed14be
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log

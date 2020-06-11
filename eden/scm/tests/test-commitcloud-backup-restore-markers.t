@@ -159,7 +159,6 @@ Clone fresh repo and try to restore from backup
    (re)
   note: background backup is currently disabled so your commits are not being backed up.
   $ hg debugobsolete
-  9b3ead1d8005d305582e9d72eb8a4c8959873249 0 {c255e4a1ae9dd17d77787816cff012162a122798} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
   $ cd ..
 

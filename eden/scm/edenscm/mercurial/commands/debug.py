@@ -1991,7 +1991,7 @@ def debugnamecomplete(ui, repo, *args):
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
     """create arbitrary obsolete marker
 
-    With no arguments, displays the list of obsolescence markers."""
+    With no arguments, do nothing."""
 
     def parsenodeid(s):
         try:
@@ -2068,39 +2068,6 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                 tr.release()
         finally:
             l.release()
-    else:
-        if opts["rev"]:
-            revs = scmutil.revrange(repo, opts["rev"])
-            nodes = [repo[r].node() for r in revs]
-            markers = list(
-                obsutil.getmarkers(repo, nodes=nodes, exclusive=opts["exclusive"])
-            )
-            markers.sort(key=lambda x: x._data)
-        else:
-            markers = obsutil.getmarkers(repo)
-
-        markerstoiter = markers
-        isrelevant = lambda m: True
-        if opts.get("rev") and opts.get("index"):
-            markerstoiter = obsutil.getmarkers(repo)
-            markerset = set(markers)
-            isrelevant = lambda m: m in markerset
-
-        fm = ui.formatter("debugobsolete", opts)
-        for i, m in enumerate(markerstoiter):
-            if not isrelevant(m):
-                # marker can be irrelevant when we're iterating over a set
-                # of markers (markerstoiter) which is bigger than the set
-                # of markers we want to display (markers)
-                # this can happen if both --index and --rev options are
-                # provided and thus we need to iterate over all of the markers
-                # to get the correct indices, but only display the ones that
-                # are relevant to --rev value
-                continue
-            fm.startitem()
-            ind = i if opts.get("index") else None
-            cmdutil.showmarker(fm, m, index=ind)
-        fm.end()
 
 
 @command("debugpreviewbindag")
