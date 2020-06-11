@@ -15,6 +15,7 @@ use sql_ext::SqlConnections;
 use dag::Id as Vertex;
 use stats::prelude::*;
 
+use context::{CoreContext, PerfCounterType};
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 
@@ -92,15 +93,17 @@ impl SqlConstructFromMetadataDatabaseConfig for IdMap {}
 impl IdMap {
     pub async fn insert(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         vertex: Vertex,
         cs_id: ChangesetId,
     ) -> Result<()> {
-        self.insert_many(repo_id, vec![(vertex, cs_id)]).await
+        self.insert_many(ctx, repo_id, vec![(vertex, cs_id)]).await
     }
 
     pub async fn insert_many(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         mut mappings: Vec<(Vertex, ChangesetId)>,
     ) -> Result<()> {
@@ -111,6 +114,8 @@ impl IdMap {
             for (vertex, cs_id) in chunk {
                 to_insert.push((&repo_id, &vertex.0, cs_id));
             }
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlWrites);
             let mut transaction = self.0.write_connection.start_transaction().compat().await?;
             let query_result = InsertIdMapEntry::query_with_transaction(transaction, &to_insert)
                 .compat()
@@ -174,15 +179,19 @@ impl IdMap {
 
     pub async fn find_changeset_id(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         vertex: Vertex,
     ) -> Result<Option<ChangesetId>> {
-        let result = self.find_many_changeset_ids(repo_id, vec![vertex]).await?;
+        let result = self
+            .find_many_changeset_ids(ctx, repo_id, vec![vertex])
+            .await?;
         Ok(result.get(&vertex).copied())
     }
 
     pub async fn find_many_changeset_ids(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         vertexes: Vec<Vertex>,
     ) -> Result<HashMap<Vertex, ChangesetId>> {
@@ -198,6 +207,8 @@ impl IdMap {
                 })
         };
         STATS::find_changeset_id.add_value(vertexes.len() as i64);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let to_query: Vec<_> = vertexes.iter().map(|v| v.0).collect();
         let mut cs_ids = select_vertexes(&self.0.read_connection, &to_query).await?;
         let not_found_in_replica: Vec<_> = vertexes
@@ -206,6 +217,8 @@ impl IdMap {
             .map(|v| v.0)
             .collect();
         if !not_found_in_replica.is_empty() {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
             let from_master =
                 select_vertexes(&self.0.read_master_connection, &not_found_in_replica).await?;
             for (k, v) in from_master {
@@ -217,16 +230,18 @@ impl IdMap {
 
     pub async fn get_changeset_id(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         vertex: Vertex,
     ) -> Result<ChangesetId> {
-        self.find_changeset_id(repo_id, vertex)
+        self.find_changeset_id(ctx, repo_id, vertex)
             .await?
             .ok_or_else(|| format_err!("Failed to find segmented changelog id {} in IdMap", vertex))
     }
 
     pub async fn find_vertex(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<Vertex>> {
@@ -237,23 +252,37 @@ impl IdMap {
                 .await?;
             Ok(rows.into_iter().next().map(|r| Vertex(r.0)))
         };
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         match select(&self.0.read_connection).await? {
-            None => select(&self.0.read_master_connection).await,
+            None => {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
+                select(&self.0.read_master_connection).await
+            }
             Some(v) => Ok(Some(v)),
         }
     }
 
-    pub async fn get_vertex(&self, repo_id: RepositoryId, cs_id: ChangesetId) -> Result<Vertex> {
-        self.find_vertex(repo_id, cs_id)
+    pub async fn get_vertex(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        cs_id: ChangesetId,
+    ) -> Result<Vertex> {
+        self.find_vertex(ctx, repo_id, cs_id)
             .await?
             .ok_or_else(|| format_err!("Failed to find find changeset id {} in IdMap", cs_id))
     }
 
     pub async fn get_last_entry(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<Option<(Vertex, ChangesetId)>> {
         STATS::get_last_entry.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectLastEntry::query(&self.0.read_connection, &repo_id)
             .compat()
             .await?;
@@ -321,18 +350,19 @@ mod tests {
     };
 
     #[fbinit::compat_test]
-    async fn test_get_last_entry(_fb: FacebookInit) -> Result<()> {
+    async fn test_get_last_entry(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
         let idmap = IdMap::with_sqlite_in_memory()?;
 
-        assert_eq!(idmap.get_last_entry(repo_id).await?, None);
+        assert_eq!(idmap.get_last_entry(&ctx, repo_id).await?, None);
 
-        idmap.insert(repo_id, Vertex(1), ONES_CSID).await?;
-        idmap.insert(repo_id, Vertex(2), TWOS_CSID).await?;
-        idmap.insert(repo_id, Vertex(3), THREES_CSID).await?;
+        idmap.insert(&ctx, repo_id, Vertex(1), ONES_CSID).await?;
+        idmap.insert(&ctx, repo_id, Vertex(2), TWOS_CSID).await?;
+        idmap.insert(&ctx, repo_id, Vertex(3), THREES_CSID).await?;
 
         assert_eq!(
-            idmap.get_last_entry(repo_id).await?,
+            idmap.get_last_entry(&ctx, repo_id).await?,
             Some((Vertex(3), THREES_CSID))
         );
 
@@ -340,15 +370,17 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn test_insert_many(_fb: FacebookInit) -> Result<()> {
+    async fn test_insert_many(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
         let idmap = IdMap::with_sqlite_in_memory()?;
 
-        assert_eq!(idmap.get_last_entry(repo_id).await?, None);
+        assert_eq!(idmap.get_last_entry(&ctx, repo_id).await?, None);
 
-        idmap.insert_many(repo_id, vec![]).await?;
+        idmap.insert_many(&ctx, repo_id, vec![]).await?;
         idmap
             .insert_many(
+                &ctx,
                 repo_id,
                 vec![
                     (Vertex(1), ONES_CSID),
@@ -358,14 +390,18 @@ mod tests {
             )
             .await?;
 
-        assert_eq!(idmap.get_changeset_id(repo_id, Vertex(1)).await?, ONES_CSID);
         assert_eq!(
-            idmap.get_changeset_id(repo_id, Vertex(3)).await?,
+            idmap.get_changeset_id(&ctx, repo_id, Vertex(1)).await?,
+            ONES_CSID
+        );
+        assert_eq!(
+            idmap.get_changeset_id(&ctx, repo_id, Vertex(3)).await?,
             THREES_CSID
         );
 
         idmap
             .insert_many(
+                &ctx,
                 repo_id,
                 vec![
                     (Vertex(1), ONES_CSID),
@@ -374,21 +410,25 @@ mod tests {
                 ],
             )
             .await?;
-        assert_eq!(idmap.get_changeset_id(repo_id, Vertex(2)).await?, TWOS_CSID);
+        assert_eq!(
+            idmap.get_changeset_id(&ctx, repo_id, Vertex(2)).await?,
+            TWOS_CSID
+        );
 
         idmap
             .insert_many(
+                &ctx,
                 repo_id,
                 vec![(Vertex(1), ONES_CSID), (Vertex(4), FOURS_CSID)],
             )
             .await?;
         assert_eq!(
-            idmap.get_changeset_id(repo_id, Vertex(4)).await?,
+            idmap.get_changeset_id(&ctx, repo_id, Vertex(4)).await?,
             FOURS_CSID
         );
 
         assert!(idmap
-            .insert_many(repo_id, vec![(Vertex(1), FIVES_CSID)])
+            .insert_many(&ctx, repo_id, vec![(Vertex(1), FIVES_CSID)])
             .await
             .is_err());
 
@@ -396,17 +436,23 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn test_find_many_changeset_ids(_fb: FacebookInit) -> Result<()> {
+    async fn test_find_many_changeset_ids(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
         let idmap = IdMap::with_sqlite_in_memory()?;
 
         let response = idmap
-            .find_many_changeset_ids(repo_id, vec![Vertex(1), Vertex(2), Vertex(3), Vertex(6)])
+            .find_many_changeset_ids(
+                &ctx,
+                repo_id,
+                vec![Vertex(1), Vertex(2), Vertex(3), Vertex(6)],
+            )
             .await?;
         assert!(response.is_empty());
 
         idmap
             .insert_many(
+                &ctx,
                 repo_id,
                 vec![
                     (Vertex(1), ONES_CSID),
@@ -419,7 +465,11 @@ mod tests {
             .await?;
 
         let response = idmap
-            .find_many_changeset_ids(repo_id, vec![Vertex(1), Vertex(2), Vertex(3), Vertex(6)])
+            .find_many_changeset_ids(
+                &ctx,
+                repo_id,
+                vec![Vertex(1), Vertex(2), Vertex(3), Vertex(6)],
+            )
             .await?;
         assert_eq!(
             response,
@@ -427,7 +477,7 @@ mod tests {
         );
 
         let response = idmap
-            .find_many_changeset_ids(repo_id, vec![Vertex(4), Vertex(5)])
+            .find_many_changeset_ids(&ctx, repo_id, vec![Vertex(4), Vertex(5)])
             .await?;
         assert_eq!(
             response,
@@ -435,7 +485,7 @@ mod tests {
         );
 
         let response = idmap
-            .find_many_changeset_ids(repo_id, vec![Vertex(6)])
+            .find_many_changeset_ids(&ctx, repo_id, vec![Vertex(6)])
             .await?;
         assert!(response.is_empty());
 

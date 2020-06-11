@@ -50,15 +50,16 @@ impl Dag {
     // TODO(sfilip): error scenarios
     pub async fn location_to_changeset_id(
         &self,
+        ctx: &CoreContext,
         known: ChangesetId,
         distance: u64,
     ) -> Result<ChangesetId> {
         STATS::location_to_changeset_id.add_value(1);
-        let known_vertex = self.idmap.get_vertex(self.repo_id, known).await?;
+        let known_vertex = self.idmap.get_vertex(ctx, self.repo_id, known).await?;
         let dist_ancestor_vertex = self.iddag.first_ancestor_nth(known_vertex, distance)?;
         let dist_ancestor = self
             .idmap
-            .get_changeset_id(self.repo_id, dist_ancestor_vertex)
+            .get_changeset_id(ctx, self.repo_id, dist_ancestor_vertex)
             .await?;
         Ok(dist_ancestor)
     }
@@ -82,7 +83,7 @@ impl Dag {
 
         let low_vertex = dag::Group::MASTER.min_id();
         // TODO(sfilip, T67734329): monitor MySql lag replication
-        self.build(low_vertex, head, start_state).await?;
+        self.build(ctx, low_vertex, head, start_state).await?;
 
         Ok(())
     }
@@ -122,11 +123,11 @@ impl Dag {
 
         let low_vertex = self
             .idmap
-            .get_last_entry(self.repo_id)
+            .get_last_entry(ctx, self.repo_id)
             .await?
             .map_or_else(|| dag::Group::MASTER.min_id(), |(vertex, _)| vertex + 1);
 
-        self.build(low_vertex, head, start_state).await?;
+        self.build(ctx, low_vertex, head, start_state).await?;
 
         Ok(())
     }
@@ -139,13 +140,14 @@ impl Dag {
     ) -> Result<(ChangesetId, Vec<ChangesetId>, Option<Vertex>)> {
         let (parents, vertex) = try_join!(
             changeset_fetcher.get_parents(ctx.clone(), cs_id).compat(),
-            self.idmap.find_vertex(self.repo_id, cs_id)
+            self.idmap.find_vertex(ctx, self.repo_id, cs_id)
         )?;
         Ok((cs_id, parents, vertex))
     }
 
     async fn build(
         &mut self,
+        ctx: &CoreContext,
         low_vertex: Vertex,
         head: ChangesetId,
         start_state: StartState,
@@ -186,7 +188,7 @@ impl Dag {
             .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
 
         self.idmap
-            .insert_many(self.repo_id, mem_idmap.iter().collect::<Vec<_>>())
+            .insert_many(ctx, self.repo_id, mem_idmap.iter().collect::<Vec<_>>())
             .await?;
 
         let get_vertex_parents = |vertex: Vertex| -> Result<Vec<Vertex>> {
@@ -349,8 +351,14 @@ mod tests {
                 .compat()
                 .await?;
             for parent in parents {
-                let parent_vertex = dag.idmap.get_vertex(blobrepo.get_repoid(), parent).await?;
-                let vertex = dag.idmap.get_vertex(blobrepo.get_repoid(), cs_id).await?;
+                let parent_vertex = dag
+                    .idmap
+                    .get_vertex(&ctx, blobrepo.get_repoid(), parent)
+                    .await?;
+                let vertex = dag
+                    .idmap
+                    .get_vertex(&ctx, blobrepo.get_repoid(), cs_id)
+                    .await?;
                 assert!(parent_vertex < vertex);
             }
         }
@@ -392,7 +400,9 @@ mod tests {
         setup_phases(&ctx, &blobrepo, known_cs_id).await?;
         let dag = Dag::new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs_id).await?;
 
-        let answer = dag.location_to_changeset_id(known_cs_id, distance).await?;
+        let answer = dag
+            .location_to_changeset_id(&ctx, known_cs_id, distance)
+            .await?;
         let expected_cs_id = resolve_cs_id(&ctx, &blobrepo, expected).await?;
         assert_eq!(answer, expected_cs_id);
 
@@ -443,7 +453,9 @@ mod tests {
             dag.build_incremental_from_blobrepo(&ctx, &blobrepo, known_cs)
                 .await?;
             let distance: u64 = 4;
-            let answer = dag.location_to_changeset_id(known_cs, distance).await?;
+            let answer = dag
+                .location_to_changeset_id(&ctx, known_cs, distance)
+                .await?;
             let expected_cs =
                 resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
             assert_eq!(answer, expected_cs);
@@ -458,7 +470,9 @@ mod tests {
             dag.build_incremental_from_blobrepo(&ctx, &blobrepo, known_cs)
                 .await?;
             let distance: u64 = 5;
-            let answer = dag.location_to_changeset_id(known_cs, distance).await?;
+            let answer = dag
+                .location_to_changeset_id(&ctx, known_cs, distance)
+                .await?;
             let expected_cs =
                 resolve_cs_id(&ctx, &blobrepo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
             assert_eq!(answer, expected_cs);
@@ -479,7 +493,9 @@ mod tests {
         dag.build_all_from_blobrepo(&ctx, &blobrepo, known_cs)
             .await?;
         let distance: u64 = 2;
-        let answer = dag.location_to_changeset_id(known_cs, distance).await?;
+        let answer = dag
+            .location_to_changeset_id(&ctx, known_cs, distance)
+            .await?;
         let expected_cs =
             resolve_cs_id(&ctx, &blobrepo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
         assert_eq!(answer, expected_cs);
@@ -490,7 +506,9 @@ mod tests {
         dag.build_incremental_from_blobrepo(&ctx, &blobrepo, known_cs)
             .await?;
         let distance: u64 = 3;
-        let answer = dag.location_to_changeset_id(known_cs, distance).await?;
+        let answer = dag
+            .location_to_changeset_id(&ctx, known_cs, distance)
+            .await?;
         let expected_cs =
             resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
         assert_eq!(answer, expected_cs);
@@ -515,13 +533,17 @@ mod tests {
         let dag2 = Dag::new_build_all_from_blobrepo(&ctx, &blobrepo2, known_cs2).await?;
 
         let distance: u64 = 4;
-        let answer = dag1.location_to_changeset_id(known_cs1, distance).await?;
+        let answer = dag1
+            .location_to_changeset_id(&ctx, known_cs1, distance)
+            .await?;
         let expected_cs_id =
             resolve_cs_id(&ctx, &blobrepo1, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
         assert_eq!(answer, expected_cs_id);
 
         let distance: u64 = 2;
-        let answer = dag2.location_to_changeset_id(known_cs2, distance).await?;
+        let answer = dag2
+            .location_to_changeset_id(&ctx, known_cs2, distance)
+            .await?;
         let expected_cs_id =
             resolve_cs_id(&ctx, &blobrepo2, "d7542c9db7f4c77dab4b315edd328edf1514952f").await?;
         assert_eq!(answer, expected_cs_id);
