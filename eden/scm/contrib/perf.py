@@ -62,10 +62,6 @@ try:
 except ImportError:
     pass
 try:
-    from edenscm.mercurial import obsolete  # since 2.3 (or ad0d6c2b3279)
-except ImportError:
-    pass
-try:
     from edenscm.mercurial import registrar  # since 3.7 (or 37d50250b696)
 
     dir(registrar)  # forcibly load it
@@ -1601,62 +1597,6 @@ def perfrevset(ui, repo, expr, clear=False, contexts=False, **opts):
                 pass
 
     timer(d)
-    fm.end()
-
-
-@command(
-    "perfvolatilesets",
-    [("", "clear-obsstore", False, "drop obsstore between each call.")] + formatteropts,
-)
-def perfvolatilesets(ui, repo, *names, **opts):
-    """benchmark the computation of various volatile set
-
-    Volatile set computes element related to filtering and obsolescence."""
-    timer, fm = gettimer(ui, opts)
-    repo = repo.unfiltered()
-
-    def getobs(name):
-        def d():
-            repo.invalidatevolatilesets()
-            if opts["clear_obsstore"]:
-                clearfilecache(repo, "obsstore")
-            obsolete.getrevs(repo, name)
-
-        return d
-
-    allobs = sorted(obsolete.cachefuncs)
-    if names:
-        allobs = [n for n in allobs if n in names]
-
-    for name in allobs:
-        timer(getobs(name), title=name)
-
-    def getfiltered(name):
-        def d():
-            repo.invalidatevolatilesets()
-            if opts["clear_obsstore"]:
-                clearfilecache(repo, "obsstore")
-            repoview.filterrevs(repo, name)
-
-        return d
-
-    allfilter = sorted(repoview.filtertable)
-    if names:
-        allfilter = [n for n in allfilter if n in names]
-
-    for name in allfilter:
-        timer(getfiltered(name), title=name)
-    fm.end()
-
-
-@command("perfloadmarkers")
-def perfloadmarkers(ui, repo):
-    """benchmark the time to parse the on-disk markers for a repo
-
-    Result is the number of markers in the repo."""
-    timer, fm = gettimer(ui)
-    svfs = getsvfs(repo)
-    timer(lambda: len(obsolete.obsstore(svfs)))
     fm.end()
 
 

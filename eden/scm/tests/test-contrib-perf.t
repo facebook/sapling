@@ -84,8 +84,6 @@ perfstatus
                  (no help text available)
    perfheads     (no help text available)
    perfindex     (no help text available)
-   perfloadmarkers
-                 benchmark the time to parse the on-disk markers for a repo
    perflog       (no help text available)
    perflookup    (no help text available)
    perflrucachedict
@@ -115,8 +113,6 @@ perfstatus
    perfstatus    (no help text available)
    perftemplating
                  (no help text available)
-   perfvolatilesets
-                 benchmark the computation of various volatile set
    perfwalk      (no help text available)
    perfwrite     microbenchmark ui.write
   $ hg perfaddremove
@@ -142,7 +138,6 @@ perfstatus
   $ hg perffncachewrite
   $ hg perfheads
   $ hg perfindex
-  $ hg perfloadmarkers
   $ hg perflog
   $ hg perflookup 2
   $ hg perflrucache
@@ -161,6 +156,5 @@ perfstatus
   $ hg perfstartup
   $ hg perfstatus
   $ hg perftemplating
-  $ hg perfvolatilesets
   $ hg perfwalk
   $ hg perfparents
