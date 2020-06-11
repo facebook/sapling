@@ -76,7 +76,7 @@ sh % "hg clone supported clone-dst" == r"""
     abort: repository requires features unknown to this Mercurial: featuresetup-test!
     (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
     [255]"""
-sh % "hg clone --pull supported clone-dst" == r"""
+sh % "hg clone --pull supported clone2-dst" == r"""
     abort: required features are not supported in the destination: featuresetup-test
     [255]"""
 
