@@ -809,7 +809,11 @@ def convertfromobsmarkers(repo):
 
 
 def automigrate(repo):
-    if enabled(repo) and repo.ui.configbool("mutation", "automigrate"):
+    if (
+        enabled(repo)
+        and repo.ui.configbool("mutation", "automigrate")
+        and not repo.ui.configbool("mutation", "proxy-obsstore")
+    ):
         msg = _(
             "checking for new obsmarkers to migrate to the mutation store (https://fburl.com/hgmutation)\n"
         )

@@ -11,7 +11,6 @@ mutationblacklist = """
     test-commitcloud-sync-bookmarks.t
     test-commitcloud-sync-oscillation.t
     test-commitcloud-sync.t
-    test-common-commands-fb.t
     test-debugstrip.t
     test-fb-hgext-hiddenerror.t
     test-fb-hgext-pushrebase.t
