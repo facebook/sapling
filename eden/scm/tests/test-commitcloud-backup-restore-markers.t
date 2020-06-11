@@ -142,14 +142,12 @@ Clone fresh repo and try to restore from backup
   : o  changeset:   4:3969cd9723d1
   : |  user:        test
   : |  date:        Thu Jan 01 00:00:00 1970 +0000
-  : |  instability: orphan
   : |  summary:     add c
   : |
-  : x  changeset:   3:9b3ead1d8005
+  : o  changeset:   3:9b3ead1d8005
   :/   parent:      0:c255e4a1ae9d
   :    user:        test
   :    date:        Thu Jan 01 00:00:00 1970 +0000
-  :    obsolete:    pruned
   :    summary:     add b
   :
   o  changeset:   0:c255e4a1ae9d

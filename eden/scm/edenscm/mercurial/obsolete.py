@@ -79,7 +79,7 @@ import struct
 
 from edenscmnative import parsers
 
-from . import error, node, obsutil, perftrace, phases, pycompat, util
+from . import error, node, obsutil, perftrace, phases, pycompat, util, visibility
 from .i18n import _
 from .pycompat import encodeutf8, range
 
@@ -634,7 +634,9 @@ class mutationobsstore(object):
                     date = util.makedate()
             op = metadata.pop("operation", transaction.desc)
             user = metadata.pop("user")
-            extra = [(encodeutf8(k), encodeutf8(v)) for k, v in sorted(metadata.items())]
+            extra = [
+                (encodeutf8(k), encodeutf8(v)) for k, v in sorted(metadata.items())
+            ]
             entry = mutationentry(
                 succ=succs[0],
                 preds=[prec],
@@ -1138,11 +1140,15 @@ def _computeobsoleteset(repo):
         markersbysuccessor = repo.obsstore.predecessors.get
         markersbypredecessor = repo.obsstore.successors.get
         result = set()
+
+        hasvisibility = visibility.tracking(repo)
+
         for r in _mutablerevs(repo):
             n = getnode(r)
             m1s = markersbypredecessor(n)
             m2s = markersbysuccessor(n)
-            if m1s:
+            # prune markers are ignored if visibility is on.
+            if m1s and (not hasvisibility or any(m[1] for m in m1s)):
                 if m2s:
                     # marker: (prec, [succ], flag, meta, (date, timezone), parent)
                     d1 = max(m[4][0] for m in m1s)

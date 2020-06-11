@@ -209,7 +209,7 @@ Rebase + backup. Make sure that two heads were deleted and head was saved
   |/
   | o  d5609f7fa63352da538eeffbe3ffabed1779aafc ontopofobsoleted
   | |
-  | x  361e89f06232897a098e3a11c49d9d8987da469d obsoletedcommit
+  | o  361e89f06232897a098e3a11c49d9d8987da469d obsoletedcommit
   | |
   | o  94a60f5ad8b2e007240007edab982b3638a3f38d newcommit
   |/
@@ -260,7 +260,7 @@ Make a few public commits. Make sure we don't backup them
   |/
   | o  d5609f7fa63352da538eeffbe3ffabed1779aafc ontopofobsoleted draft
   | |
-  | x  361e89f06232897a098e3a11c49d9d8987da469d obsoletedcommit draft
+  | o  361e89f06232897a098e3a11c49d9d8987da469d obsoletedcommit draft
   | |
   | o  94a60f5ad8b2e007240007edab982b3638a3f38d newcommit draft
   |/
