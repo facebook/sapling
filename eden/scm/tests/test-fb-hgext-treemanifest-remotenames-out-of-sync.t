@@ -108,7 +108,6 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  1 new obsolescence markers
   updating bookmark master
   remote: pushing 1 changeset:
   remote:     e68715a0fc4c  x4

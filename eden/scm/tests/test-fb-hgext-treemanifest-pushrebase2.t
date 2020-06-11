@@ -102,7 +102,6 @@ Push treeonly merge commit to a treeonly server
   adding manifests
   adding file changes
   added 4 changesets with 9 changes to 9 files
-  3 new obsolescence markers
   updating bookmark foo
   remote: pushing 3 changesets:
   remote:     a1d68bae23ee  Edit file

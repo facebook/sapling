@@ -153,7 +153,6 @@ sh % "hg push --to=master -r $F" == r"""
     adding manifests
     adding file changes
     added 2 changesets with 0 changes to 4 files
-    2 new obsolescence markers
     updating bookmark master"""
 
 sh % "hg files -r master" == r"""
@@ -240,7 +239,6 @@ sh % "hg push --to=master -r $J" == r"""
     adding manifests
     adding file changes
     added 4 changesets with 0 changes to 2 files
-    4 new obsolescence markers
     updating bookmark master"""
 
 # Check server after pushrebasing the branch whose parent is E
