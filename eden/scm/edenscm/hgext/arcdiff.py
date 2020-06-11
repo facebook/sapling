@@ -9,6 +9,7 @@
 import os
 
 from edenscm.mercurial import (
+    autopull,
     commands,
     error,
     extensions,
@@ -131,8 +132,7 @@ def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
 
 
 def _maybepull(repo, hexrev):
-    if extensions.enabled().get("commitcloud", False):
-        repo.revs("cloudremote(%s)" % hexrev)
+    autopull.trypull(repo, [hexrev])
 
 
 def _diff(orig, ui, repo, *pats, **opts):

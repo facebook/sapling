@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure dummyssh evolution
+  $ configure dummyssh mutation-norecord
   $ disable treemanifest
   $ enable amend arcdiff commitcloud infinitepush rebase remotenames share
   $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py"
@@ -151,16 +151,16 @@ Test for `hg diff --since-last-submit`
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-submit --config extensions.commitcloud=!
-  abort: unknown revision 'a8080066a666ffa51c0a171e87d5a0396ecb559a'!
-  [255]
+  pulling 'a8080066a666ffa51c0a171e87d5a0396ecb559a' from 'ssh://user@dummy/server'
+  diff -r a8080066a666 -r 95847be64d6a feature2.body.txt
+  --- a/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -Hello feature2
+  +Hello feature2 update
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-submit
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 3 files
+  pulling 'a8080066a666ffa51c0a171e87d5a0396ecb559a' from 'ssh://user@dummy/server'
   diff -r a8080066a666 -r 95847be64d6a feature2.body.txt
   --- a/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
   +++ b/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
@@ -187,14 +187,9 @@ Test for `hg diff --since-last-submit`
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -r 'lastsubmitted(.)' -T '{node} {desc}'  --config extensions.commitcloud=!
-  abort: unknown revision 'a8080066a666ffa51c0a171e87d5a0396ecb559a'!
-  [255]
+  pulling 'a8080066a666ffa51c0a171e87d5a0396ecb559a' from 'ssh://user@dummy/server'
+  a8080066a666ffa51c0a171e87d5a0396ecb559a Differential Revision: https://phabricator.fb.com/D1 (no-eol)
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log --hidden -r 'lastsubmitted(.)' -T '{node} {desc}'
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 3 files
+  pulling 'a8080066a666ffa51c0a171e87d5a0396ecb559a' from 'ssh://user@dummy/server'
   a8080066a666ffa51c0a171e87d5a0396ecb559a Differential Revision: https://phabricator.fb.com/D1 (no-eol)
