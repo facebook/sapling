@@ -49,7 +49,7 @@ use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use slog::debug;
+use slog::{debug, info, o};
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
@@ -61,6 +61,7 @@ use tunables::tunables;
 mod errors;
 
 pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
+pub const GETBUNDLE_COMMIT_NUM_WARN: u64 = 1_000_000;
 
 define_stats! {
     prefix = "mononoke.getbundle_response";
@@ -285,6 +286,21 @@ async fn find_commits_to_send(
         heads,
         excludes,
     )
+    .inspect({
+        let mut i = 0;
+        let mut notified = false;
+        move |_| {
+            i += 1;
+            if i > GETBUNDLE_COMMIT_NUM_WARN && !notified {
+                info!(
+                    ctx.logger(),
+                    "your repository is out of date and pulling new commits might take a long time. \
+                    Please consider recloning your repository since it might be much faster"
+                    ; o!("remote" => "true")
+                );
+                notified = true;
+            }
+    }})
     .collect()
     .compat()
     .await?;
