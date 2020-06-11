@@ -389,7 +389,8 @@ where
                     res?;
                     break;
                 } else {
-                    let _ = tokio::time::delay_for(Duration::from_millis(backoff_ms)).await;
+                    let sleep = rand::random::<u64>() % backoff_ms;
+                    let _ = tokio::time::delay_for(Duration::from_millis(sleep)).await;
 
                     backoff_ms *= 2;
                     if backoff_ms >= 1000 {

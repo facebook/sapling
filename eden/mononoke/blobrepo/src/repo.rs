@@ -1192,7 +1192,8 @@ impl BlobRepo {
                                         future::ok(Loop::Break(Some(hg_cs_id))).left_future()
                                     }
                                     None => {
-                                        tokio::time::delay_for(Duration::from_millis(backoff_ms))
+                                        let sleep = rand::random::<u64>() % backoff_ms;
+                                        tokio::time::delay_for(Duration::from_millis(sleep))
                                             .then(|_| new_future::ready(Ok(())))
                                             .compat()
                                             .then(move |_: Result<(), Error>| {
