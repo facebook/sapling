@@ -1194,7 +1194,7 @@ sh % "echo 2" >> "file"
 sh % "hg shelve" == r"""
     shelved as default
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "hg debugstrip -r 1 --config 'experimental.evolution=!' --hidden" == "obsolete feature not enabled but 1 markers found!"
+sh % "hg debugstrip -r 1 --config 'experimental.evolution=!' --hidden" == ""
 sh % "hg unshelve" == r"""
     unshelving change 'default'
     abort: shelved node 49351a7ca59142b32064896a48f50bdecccf8ea0 not found in repo

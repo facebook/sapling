@@ -49,7 +49,7 @@ sh % "hg debugmetalog" == r"""
     |  1970-01-01 00:00:00 +0000: E (added by metaedit -mE1)
     |  1970-01-01 00:00:00 +0000: . (added by metaedit -mE1)
     |
-    | o  a6c8ab8ac0c6 E
+    | x  a6c8ab8ac0c6 E
     |/   1970-01-01 00:00:00 +0000: E (removed by metaedit -mE1)
     |    1970-01-01 00:00:00 +0000: E (added by debugdrawdag)
     |    1970-01-01 00:00:00 +0000: . (removed by metaedit -mE1)

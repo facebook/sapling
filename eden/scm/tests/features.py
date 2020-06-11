@@ -30,11 +30,8 @@ mutationblacklist = """
     test-rebase-dest.t
     test-rebase-obsolete.t
     test-revset2.t
-    test-debugmetalog-t.py
     test-globalrevs-t.py
     test-obsmarker-template-t.py
-    test-rebase-legacy-t.py
-    test-shelve-t.py
 """.split()
 
 
