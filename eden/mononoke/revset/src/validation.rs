@@ -88,9 +88,10 @@ mod test {
     fn validate_accepts_single_node(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let head_csid =
                 string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
@@ -108,10 +109,9 @@ mod test {
         // Tests that we handle an input staying at NotReady for a while without panicking
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
-
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
+                Arc::new(TestChangesetFetcher::new(repo));
 
             let mut nodestream = ValidateNodeStream::new(
                 ctx,
@@ -137,7 +137,8 @@ mod test {
                 .chain(single_changeset_id(ctx.clone(), head_csid.clone(), &repo));
 
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
+                Arc::new(TestChangesetFetcher::new((*repo).clone()));
+
             let mut nodestream =
                 ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();
 
@@ -169,8 +170,10 @@ mod test {
                 string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await,
                 &repo,
             ));
+
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
+                Arc::new(TestChangesetFetcher::new((*repo).clone()));
+
             let mut nodestream =
                 ValidateNodeStream::new(ctx, nodestream.boxify(), &changeset_fetcher).boxify();
 

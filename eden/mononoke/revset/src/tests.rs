@@ -19,11 +19,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct TestChangesetFetcher {
-    repo: Arc<BlobRepo>,
+    repo: BlobRepo,
 }
 
 impl TestChangesetFetcher {
-    pub fn new(repo: Arc<BlobRepo>) -> Self {
+    pub fn new(repo: BlobRepo) -> Self {
         Self { repo }
     }
 }

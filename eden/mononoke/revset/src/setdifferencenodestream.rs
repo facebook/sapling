@@ -140,9 +140,10 @@ mod test {
     fn difference_identical_node(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let changeset = string_to_bonsai(fb, &repo, hash).await;
@@ -161,9 +162,10 @@ mod test {
     fn difference_node_and_empty(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let changeset = string_to_bonsai(fb, &repo, hash).await;
@@ -182,9 +184,10 @@ mod test {
     fn difference_empty_and_node(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let bcs_id =
                 string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
@@ -205,9 +208,10 @@ mod test {
     fn difference_two_nodes(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let bcs_id_1 = string_to_bonsai(
                 fb,
@@ -237,9 +241,10 @@ mod test {
     fn difference_error_node(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let changeset = string_to_bonsai(fb, &repo, hash).await;
@@ -273,11 +278,12 @@ mod test {
         // Tests that we handle an input staying at NotReady for a while without panicking
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
+                Arc::new(TestChangesetFetcher::new(repo));
+
             let mut nodestream = SetDifferenceNodeStream::new(
-                ctx.clone(),
+                ctx,
                 &changeset_fetcher,
                 NotReadyEmptyStream::new(10).boxify(),
                 NotReadyEmptyStream::new(10).boxify(),
@@ -292,9 +298,10 @@ mod test {
     fn difference_union_with_single_node(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let inputs = get_single_bonsai_streams(
                 ctx.clone(),
@@ -341,9 +348,10 @@ mod test {
     fn difference_single_node_with_union(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let inputs = get_single_bonsai_streams(
                 ctx.clone(),
@@ -380,9 +388,10 @@ mod test {
     fn difference_merge_even(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(merge_even::getrepo(fb).await);
+            let repo = merge_even::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             // Top three commits in my hg log -G -r 'all()' output
             let inputs = get_single_bonsai_streams(
@@ -439,9 +448,10 @@ mod test {
     fn difference_merge_uneven(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(merge_uneven::getrepo(fb).await);
+            let repo = merge_uneven::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             // Merge commit, and one from each branch
             let inputs = get_single_bonsai_streams(

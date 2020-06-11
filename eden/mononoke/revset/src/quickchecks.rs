@@ -139,7 +139,7 @@ mod test {
         pub fn as_revset(&self, ctx: CoreContext, repo: Arc<BlobRepo>) -> BonsaiNodeStream {
             let mut output: Vec<BonsaiNodeStream> = Vec::with_capacity(self.rp_entries.len());
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
+                Arc::new(TestChangesetFetcher::new((*repo).clone()));
             for entry in self.rp_entries.iter() {
                 let next_node = ValidateNodeStream::new(
                     ctx.clone(),
@@ -405,9 +405,10 @@ mod test {
                 async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
 
-                    let repo = Arc::new($repo::getrepo(fb).await);
+                    let repo = $repo::getrepo(fb).await;
                     let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                         Arc::new(TestChangesetFetcher::new(repo.clone()));
+                    let repo = Arc::new(repo);
 
                     let all_changesets = get_changesets_from_repo(ctx.clone(), &*repo).await;
 

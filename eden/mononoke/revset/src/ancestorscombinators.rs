@@ -374,9 +374,10 @@ mod test {
     fn empty_ancestors_combinators(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let stream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
                 ctx.clone(),
@@ -408,9 +409,10 @@ mod test {
     fn linear_ancestors_with_excludes(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 ctx.clone(),
@@ -435,9 +437,10 @@ mod test {
     fn linear_ancestors_with_excludes_empty(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 ctx.clone(),
@@ -456,9 +459,10 @@ mod test {
     fn ancestors_union(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(merge_uneven::getrepo(fb).await);
+            let repo = merge_uneven::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
                 ctx.clone(),
@@ -495,9 +499,10 @@ mod test {
     fn merge_ancestors_from_merge_excludes(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(merge_uneven::getrepo(fb).await);
+            let repo = merge_uneven::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 ctx.clone(),
@@ -529,9 +534,10 @@ mod test {
     fn merge_ancestors_from_merge_excludes_union(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(merge_uneven::getrepo(fb).await);
+            let repo = merge_uneven::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let nodestream = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
                 ctx.clone(),

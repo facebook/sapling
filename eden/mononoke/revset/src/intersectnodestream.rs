@@ -190,9 +190,10 @@ mod test {
     fn intersect_identical_node(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let head_csid = string_to_bonsai(fb, &repo, hash).await;
@@ -214,9 +215,10 @@ mod test {
     fn intersect_three_different_nodes(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let bcs_a947 =
                 string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
@@ -243,9 +245,10 @@ mod test {
     fn intersect_three_identical_nodes(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let bcs_d0a =
                 string_to_bonsai(fb, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await;
@@ -266,9 +269,10 @@ mod test {
     fn intersect_nesting(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let bcs_3c15 =
                 string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await;
@@ -298,9 +302,10 @@ mod test {
     fn intersection_of_unions(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let hash1 = "d0a361e9022d226ae52f689667bd7d212a19cfe0";
             let hash2 = "3c15267ebf11807f3d772eb891272b911ec68759";
@@ -339,9 +344,10 @@ mod test {
     fn intersect_error_node(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
             let changeset = string_to_bonsai(fb, &repo, hash).await;
@@ -371,9 +377,10 @@ mod test {
     fn intersect_nothing(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             let inputs: Vec<BonsaiNodeStream> = vec![];
             let nodestream =
@@ -387,13 +394,13 @@ mod test {
         // Tests that we handle an input staying at NotReady for a while without panicking
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb).await);
+            let repo = linear::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
-                Arc::new(TestChangesetFetcher::new(repo.clone()));
+                Arc::new(TestChangesetFetcher::new(repo));
+
             let inputs: Vec<BonsaiNodeStream> = vec![NotReadyEmptyStream::new(10).boxify()];
             let mut nodestream =
-                IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter())
-                    .compat();
+                IntersectNodeStream::new(ctx, &changeset_fetcher, inputs.into_iter()).compat();
             assert!(nodestream.next().await.is_none());
         });
     }
@@ -402,9 +409,10 @@ mod test {
     fn intersect_unshared_merge_even(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(unshared_merge_even::getrepo(fb).await);
+            let repo = unshared_merge_even::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             // Post-merge, merge, and both unshared branches
             let inputs = get_single_bonsai_streams(
@@ -455,9 +463,10 @@ mod test {
     fn intersect_unshared_merge_uneven(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(unshared_merge_uneven::getrepo(fb).await);
+            let repo = unshared_merge_uneven::getrepo(fb).await;
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
+            let repo = Arc::new(repo);
 
             // Post-merge, merge, and both unshared branches
             let inputs = get_single_bonsai_streams(
