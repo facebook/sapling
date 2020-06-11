@@ -98,7 +98,6 @@ have to try it both ways. (It might be nice to change that.)
   $ hg rebase -r A+B -d .
   rebasing 93f95d9ff88f "A" (A)
   rebasing fc2212436a6e "B" (B)
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/fc2212436a6e-2ac0b0a5-rebase.hg
 
 Without IMM, you can see we try to merge FILE twice (once in preprocess() and once later),
 and it fails:

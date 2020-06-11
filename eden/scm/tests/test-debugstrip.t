@@ -78,7 +78,6 @@ TODO: configure mutation
   summary:     e
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 4
   changeset:   3:65bd5f99a4a3
   parent:      1:ef3a871183d7
@@ -95,7 +94,6 @@ TODO: configure mutation
   summary:     e
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 3
   changeset:   1:ef3a871183d7
   user:        test
@@ -110,7 +108,6 @@ TODO: configure mutation
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 1, strip 4
   changeset:   1:ef3a871183d7
   user:        test
@@ -125,7 +122,6 @@ TODO: configure mutation
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 2
   changeset:   3:443431ffac4f
   user:        test
@@ -142,7 +138,6 @@ TODO: configure mutation
   summary:     c
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update 4, strip 1
   changeset:   0:9ab35a2d17cb
   user:        test
@@ -152,7 +147,6 @@ TODO: configure mutation
   $ teststrip null 4
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   % before update null, strip 4
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   % after update null, strip 4
 
   $ hg log
@@ -194,7 +188,6 @@ TODO: configure mutation
 
   $ hg --traceback debugstrip 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/264128213d29-0b39d6bf-backup.hg
   $ hg parents
   changeset:   1:ef3a871183d7
   user:        test
@@ -264,7 +257,6 @@ before strip of merge parent
   
   $ hg debugstrip 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
 
 after strip of merge parent
 
@@ -311,7 +303,6 @@ after strip of merge parent
 2 is parent of 3, only one strip should happen
 
   $ hg debugstrip "roots(2)" 3
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg log -G
   @  changeset:   2:264128213d29
   |  user:        test
@@ -360,7 +351,6 @@ Failed hook while applying "saveheads" bundle.
 
   $ hg debugstrip 2 --config hooks.pretxnchangegroup.bad=false
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   transaction abort!
   rollback completed
   strip failed, backup bundle stored in '$TESTTMP/test/.hg/strip-backup/*-backup.hg' (glob)
@@ -400,7 +390,6 @@ Failed hook while applying "saveheads" bundle.
 2 different branches: 2 strips
 
   $ hg debugstrip 2 4
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg log -G
   o  changeset:   2:65bd5f99a4a3
   |  user:        test
@@ -423,7 +412,6 @@ Failed hook while applying "saveheads" bundle.
 
   $ hg debugstrip 1 "2|4"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ restore
 
 verify fncache is kept up-to-date
@@ -435,7 +423,6 @@ verify fncache is kept up-to-date
   data/bar.i
   $ hg debugstrip tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ cat .hg/store/fncache
   data/bar.i
 
@@ -459,7 +446,6 @@ Strip adds, removes, modifies with --keep
   $ hg commit -mc
   $ hg status
   $ hg debugstrip --keep tip
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg status
   ! bar
   ? c
@@ -473,7 +459,6 @@ Strip adds, removes, modifies with --keep
   $ echo b > b
   $ echo d > d
   $ hg debugstrip --keep tip
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg status
   M b
   ! bar
@@ -494,7 +479,6 @@ stripping many nodes on a complex graph (issue3299)
   $ cd issue3299
   $ hg debugbuilddag '@a.:a@b.:b.:x<a@a.:a<b@b.:b<a@a.:a'
   $ hg debugstrip 'not ancestors(x)'
-  saved backup bundle to $TESTTMP/issue3299/.hg/strip-backup/*-backup.hg (glob)
 
 test hg debugstrip -B bookmark
 
@@ -520,7 +504,6 @@ test hg debugstrip -B bookmark
   [255]
   $ hg debugstrip -B todelete
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
   bookmark 'todelete' deleted
   $ hg id -ir dcbb326fdec2
   abort: unknown revision 'dcbb326fdec2'!
@@ -535,7 +518,6 @@ test hg debugstrip -B bookmark
      singlenode1               13:43227190fef8
      singlenode2               13:43227190fef8
   $ hg debugstrip -B multipledelete1 -B multipledelete2
-  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
   bookmark 'multipledelete1' deleted
   bookmark 'multipledelete2' deleted
   $ hg id -ir e46a4836065c
@@ -545,7 +527,6 @@ test hg debugstrip -B bookmark
   abort: unknown revision 'b4594d867745'!
   [255]
   $ hg debugstrip -B singlenode1 -B singlenode2
-  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
   bookmark 'singlenode1' deleted
   bookmark 'singlenode2' deleted
   $ hg id -ir 43227190fef8
@@ -561,7 +542,6 @@ test hg debugstrip -B bookmark
   abort: bookmark not found: 'unknownbookmark'
   [255]
   $ hg debugstrip -B delete
-  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
   bookmark 'delete' deleted
   $ hg id -ir 6:2702dd0c91e7
   abort: unknown revision '2702dd0c91e7'!
@@ -596,12 +576,10 @@ Verify bundles don't get overwritten:
   $ hg commit -Aqm b
   $ hg debugstrip -r 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/doublebundle/.hg/strip-backup/3903775176ed-e68910bd-backup.hg
   $ ls .hg/strip-backup
   3903775176ed-e68910bd-backup.hg
   $ hg pull -q -r 3903775176ed .hg/strip-backup/3903775176ed-e68910bd-backup.hg
   $ hg debugstrip -r 0
-  saved backup bundle to $TESTTMP/doublebundle/.hg/strip-backup/3903775176ed-54390173-backup.hg
   $ ls .hg/strip-backup
   3903775176ed-54390173-backup.hg
   3903775176ed-e68910bd-backup.hg
@@ -702,7 +680,6 @@ check strip behavior
   bundle2-output-bundle: "HG20", (1 params) 2 parts total
   bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
-  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/6625a5168474-345bb43d-backup.hg
   $ hg log -G
   o  changeset:   2:5c51d8d6557d
   |  user:        test
@@ -768,7 +745,6 @@ Check that the phase cache is properly invalidated after a strip with bookmark.
   $ hg book -r tip blah
   $ hg debugstrip ".^" --config extensions.crash=$TESTTMP/stripstalephasecache.py
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/8f0b4384875c-4fa10deb-backup.hg
   $ hg up -C 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
@@ -788,7 +764,6 @@ Error during post-close callback of the strip transaction
   >     repo.__class__ = crashstriprepo
   > EOF
   $ hg debugstrip tip --config extensions.crash=$TESTTMP/crashstrip.py
-  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg
   strip failed, backup bundle stored in '$TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg'
   abort: boom
   [255]
@@ -831,7 +806,6 @@ Use delayedstrip to strip inside a transaction
   > EOF
   $ hg testdelayedstrip --config extensions.t=$TESTTMP/delayedstrip.py
   warning: orphaned descendants detected, not stripping 08ebfeb61bac, 112478962961, 7fb047a69f22
-  saved backup bundle to $TESTTMP/delayedstrip/.hg/strip-backup/f585351a92f8-17475721-I.hg
 
   $ hg log -G -T '{rev}:{node|short} {desc}' -r 'sort(all(), topo)'
   @  6:2f2d51af6205 J
@@ -885,7 +859,6 @@ Test high-level scmutil.cleanupnodes API
   > EOF
   $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
   warning: orphaned descendants detected, not stripping 112478962961, 1fc8102cda62, 26805aba1e60
-  saved backup bundle to $TESTTMP/scmutilcleanup/.hg/strip-backup/f585351a92f8-73fb7c03-replace.hg
 
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
   o  8:1473d4b996d1 G2 G G2 b-F@divergent3 b-G
@@ -986,7 +959,6 @@ Test that obsmarkers are restored even when not using generaldelta
   cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   $ hg debugstrip .
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/issue5678/.hg/strip-backup/489bac576828-bef27e14-backup.hg
   $ hg unbundle -q .hg/strip-backup/*
   $ hg debugobsolete
   cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}

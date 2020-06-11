@@ -97,5 +97,4 @@ we expect to see "generators version = NEW".
   generators version = NEW
   new_required_arg = new_required
   note: rebase of 2:* created no changes to commit (glob)
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/*-rebase.hg (glob)
 

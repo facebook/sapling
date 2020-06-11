@@ -270,7 +270,6 @@ Verify strip -k resets dirstate correctly
    4 files changed, 4 insertions(+), 2 deletions(-)
   
   $ hg debugstrip -r . -k
-  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/39278f7c08a9-ce59e002-backup.hg (glob)
   $ hg status
   M show
   ? show2

@@ -124,7 +124,6 @@ Test pushing only flat manifests without pushrebase creates trees
        0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
        1        50      62      0       1 22c7050fc6d1 5fbe397e5ac6 000000000000
   $ hg -R ../master debugstrip -r tip
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/af56a207a2d7-529d209b-backup.hg
   $ hg phase -dfr .
 
 Test pushing only flat fails if forcetreereceive is on
@@ -222,7 +221,6 @@ Test stripping trees
        1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
   $ hg debugstrip -r tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/158d5964f506-73555d7d-backup.hg
   $ hg debugindex .hg/store/00manifesttree.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
@@ -251,7 +249,6 @@ Test stripping merge commits where filelogs arent affected
 - Verify rev 3 (from the merge commit) is gone after the strip
   $ hg debugstrip -r tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/9f5a7a12b9ff-4c1164ca-backup.hg
   $ hg debugindex .hg/store/meta/subdir/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
@@ -424,7 +421,6 @@ Stripping in a treeonly server
   $ ls -l .hg/store/00manifesttree.i
   * 366 * .hg/store/00manifesttree.i (glob)
   $ hg debugstrip -r tip --config treemanifest.blocksendflat=False
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/aa3c39e8a706-26b0df45-backup.hg
   $ ls -l .hg/store/meta/subdir2/00manifest.i
   * 108 * .hg/store/meta/subdir2/00manifest.i (glob)
   $ ls -l .hg/store/00manifesttree.i

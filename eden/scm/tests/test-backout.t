@@ -264,7 +264,6 @@ external hook process
 
   $ hg update -q -C 2
   $ hg debugstrip 3
-  saved backup bundle to * (glob)
 
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
@@ -300,7 +299,6 @@ invocation of the hook to be examined)
 
   $ hg update -q -C 2
   $ hg debugstrip 3
-  saved backup bundle to * (glob)
 
   $ cat >> .hg/hgrc <<EOF
   > [hooks]

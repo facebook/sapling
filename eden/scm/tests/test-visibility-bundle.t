@@ -34,7 +34,6 @@ Bundle up some of the commits and strip them from the repo.
   7 changesets found
 
   $ hg debugstrip -r "children($B)::"
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/33441538d4aa-0bf456f0-backup.hg
 
 The heads are changed when looking at the bundle.
 

@@ -85,7 +85,6 @@ push doesn't directly go to the server
 
   $ hg debugstrip 6
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/d446b1b2be43-516f7371-backup.hg (glob)
 
 We update to commit 1 to avoid keeping 2, 3, and 4 visible with inhibit
 

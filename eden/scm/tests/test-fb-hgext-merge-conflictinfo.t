@@ -340,7 +340,6 @@ Test case 3: Source changed, dest moved
   $ hg rebase -d 2 -s 1
   rebasing ec87889f5f90 "source"
   merging file_newloc and file to file_newloc
-  saved backup bundle to $TESTTMP/cornercases/foo/foo/foo/foo/.hg/strip-backup/ec87889f5f90-e39a76b8-rebase.hg (glob)
   $ hg up -q 2 # source
   $ cat file_newloc # Should follow:
   change
@@ -416,7 +415,6 @@ Test case 5: Source moved, dest changed
   $ hg rebase -d 2 -s 1
   rebasing e6e7483a8950 "source"
   merging file and file_newloc to file_newloc
-  saved backup bundle to $TESTTMP/cornercases/foo/foo/foo/foo/.hg/strip-backup/e6e7483a8950-8e128ac2-rebase.hg (glob)
   $ hg up 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cat file_newloc

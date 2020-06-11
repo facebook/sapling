@@ -54,7 +54,6 @@ bookmarks updated?
 strip to revision 1
 
   $ hg debugstrip 1
-  saved backup bundle to $TESTTMP/.hg/strip-backup/*-backup.hg (glob)
 
 list bookmarks
 

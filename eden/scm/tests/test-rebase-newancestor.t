@@ -46,7 +46,6 @@ TODO: configure mutation
   merging a
   rebasing 30ae917c0e4f "C"
   merging a
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0f4f7cb4f549-82b3b163-rebase.hg
 
   $ tglog
   o  3: 25773bc4b4b0 'C'
@@ -112,7 +111,6 @@ Full rebase all the way back from branching point:
   note: rebase of 6:da5b1609fcb1 created no changes to commit
   rebasing bea5bcfda5f9 "devmerge2"
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
-  saved backup bundle to $TESTTMP/ancestor-merge/.hg/strip-backup/1e48f4172d62-cc446d63-rebase.hg
   $ tglog
   o  5: f66b059fae0f 'dev2'
   |
@@ -139,7 +137,6 @@ Grafty cherry picking rebasing:
   note: rebase of 6:da5b1609fcb1 created no changes to commit
   rebasing bea5bcfda5f9 "devmerge2"
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
-  saved backup bundle to $TESTTMP/ancestor-merge-2/.hg/strip-backup/aeae94a564c6-2b0faa8a-rebase.hg
   $ tglog
   o  5: 9cdc50ee9a9d 'dev2'
   |
@@ -205,7 +202,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   
   $ hg rebase -r 4 -d 2
   rebasing 6990226659be "merge p1 3=outside p2 1=ancestor"
-  saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/6990226659be-4d67a0d3-rebase.hg
   $ hg tip
   changeset:   5:cca50676b1c5
   parent:      2:a60552eb93fb
@@ -216,7 +212,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   
   $ hg rebase -r 4 -d 2
   rebasing a57575f79074 "merge p1 1=ancestor p2 3=outside"
-  saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/a57575f79074-385426e5-rebase.hg
   $ hg tip
   changeset:   5:f9daf77ffe76
   parent:      2:a60552eb93fb
@@ -271,7 +266,6 @@ rebase of merge of ancestors
        199 (changelog)
        216 (manifests)
        182  other
-  saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/4c5f12f25ebe-f46990e5-rebase.hg
   1 changesets found
   uncompressed size of bundle content:
        254 (changelog)
@@ -338,7 +332,6 @@ The warning does not get printed if there is no unwanted change detected:
   rebasing c1e6b162678d "B" (B)
   rebasing d6003a550c2c "C" (C)
   rebasing c8f78076273e "D" (D)
-  saved backup bundle to $TESTTMP/dual-merge-base2/.hg/strip-backup/d6003a550c2c-6f1424b6-rebase.hg
   $ hg manifest -r 'desc(D)'
   B
   C
@@ -359,7 +352,6 @@ The merge base could be different from old p1 (changed parent becomes new p1):
   $ hg rebase -r D+F -d Z
   rebasing 004dc1679908 "D" (D)
   rebasing 4be4cbf6f206 "F" (F)
-  saved backup bundle to $TESTTMP/chosen-merge-base1/.hg/strip-backup/004dc1679908-06a66a3c-rebase.hg
   $ hg manifest -r 'desc(F)'
   C
   D
@@ -380,7 +372,6 @@ The merge base could be different from old p1 (changed parent becomes new p1):
   $ hg rebase -r E+F -d Z
   rebasing 974e4943c210 "E" (E)
   rebasing 4be4cbf6f206 "F" (F)
-  saved backup bundle to $TESTTMP/chosen-merge-base2/.hg/strip-backup/974e4943c210-b2874da5-rebase.hg
   $ hg manifest -r 'desc(F)'
   B
   D

@@ -39,7 +39,6 @@ Create two masters
 Stripping normally should fail
 
   $ hg debugstrip -r 1
-  saved backup bundle to $TESTTMP/master2/.hg/strip-backup/d34c38483be9-3839604f-backup.hg (glob)
   transaction abort!
   rollback completed
   strip failed, backup bundle stored in '$TESTTMP/master2/.hg/strip-backup/d34c38483be9-3839604f-backup.hg'
@@ -68,7 +67,6 @@ Strip using sqlstrip
   $ hg --cwd master2 sqlstrip --i-know-what-i-am-doing 1
   *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   stripping locally
-  saved backup bundle to $TESTTMP/master2/.hg/strip-backup/bc3a71defa4a-f38e411b-sqlstrip.hg (glob)
   stripping from the database
   deleting old references
   deleting revision data
@@ -123,7 +121,6 @@ Run sqlstrip on master as well
   $ hg sqlstrip --i-know-what-i-am-doing 1
   *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   stripping locally
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-f38e411b-sqlstrip.hg (glob)
   stripping from the database
   deleting old references
   deleting revision data
@@ -168,7 +165,6 @@ Strip everything. No revlog revisions should remain in the database:
   $ hg sqlstrip --i-know-what-i-am-doing 0
   *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   stripping locally
-  saved backup bundle to $TESTTMP/master2/.hg/strip-backup/bc3a71defa4a-eccbc5b4-sqlstrip.hg
   stripping from the database
   deleting old references
   deleting revision data

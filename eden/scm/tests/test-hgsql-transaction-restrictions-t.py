@@ -31,7 +31,6 @@ sh % "hg pull -q ../client"
 # Verify strip fails in a db repo
 
 sh % "hg debugstrip -r tip" == r"""
-    saved backup bundle to $TESTTMP/master/.hg/strip-backup/b292c1e3311f-9981e2ad-backup.hg (glob)
     transaction abort!
     rollback completed
     strip failed, backup bundle stored in '$TESTTMP/master/.hg/strip-backup/b292c1e3311f-9981e2ad-backup.hg'

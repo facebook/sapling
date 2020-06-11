@@ -99,7 +99,6 @@ test stripping of filelogs where the linkrev doesn't always increase
   >     echo
   > done
   % Trying to strip revision 0
-  saved backup bundle to $TESTTMP/0/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests
@@ -108,7 +107,6 @@ test stripping of filelogs where the linkrev doesn't always increase
   7 files, 4 changesets, 15 total revisions
   
   % Trying to strip revision 1
-  saved backup bundle to $TESTTMP/1/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests
@@ -117,7 +115,6 @@ test stripping of filelogs where the linkrev doesn't always increase
   7 files, 4 changesets, 14 total revisions
   
   % Trying to strip revision 2
-  saved backup bundle to $TESTTMP/2/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests
@@ -126,7 +123,6 @@ test stripping of filelogs where the linkrev doesn't always increase
   7 files, 4 changesets, 14 total revisions
   
   % Trying to strip revision 3
-  saved backup bundle to $TESTTMP/3/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests
@@ -135,7 +131,6 @@ test stripping of filelogs where the linkrev doesn't always increase
   7 files, 4 changesets, 19 total revisions
   
   % Trying to strip revision 4
-  saved backup bundle to $TESTTMP/4/.hg/strip-backup/*-backup.hg (glob)
   % Verifying
   checking changesets
   checking manifests

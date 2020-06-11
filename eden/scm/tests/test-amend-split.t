@@ -184,7 +184,6 @@ Split with multiple children and using hash.
 
 Split using revset.
   $ hg debugstrip 18
-  saved backup bundle to * (glob)
   $ hg split "children(.)" << EOF
   > y
   > y

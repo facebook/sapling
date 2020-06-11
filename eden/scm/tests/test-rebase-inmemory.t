@@ -160,7 +160,6 @@ cleanly.
   1 files updated, 0 files merged, 5 files removed, 0 files unresolved
   $ hg rebase -r 4 -d .
   rebasing 0666f6a71f74 "change a's flags"
-  saved backup bundle to $TESTTMP/repo1/repo3/.hg/strip-backup/0666f6a71f74-a2618702-rebase.hg
   $ hg up -q tip
   $ ls -l a | cut -c -10
   -rwxr-xr-x
@@ -220,7 +219,6 @@ Allow the working copy parent to be rebased with IMM:
   $ hg rebase -r . -d 2
   rebasing in-memory!
   rebasing 844a7de3e617 "c"
-  saved backup bundle to $TESTTMP/repo1/repo2/.hg/strip-backup/844a7de3e617-108d0332-rebase.hg
   $ tglog
   @  4: 6f55b7035492 'c'
   |

@@ -786,7 +786,6 @@ pretxnclose hook failure should abort the transaction
   > EOF
   $ hg debugstrip -r 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to * (glob)
   transaction abort!
   rollback completed
   strip failed, backup bundle stored in * (glob)

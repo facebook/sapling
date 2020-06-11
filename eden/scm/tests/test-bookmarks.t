@@ -766,7 +766,6 @@ test stripping a non-checked-out but bookmarked revision
   (leaving bookmark should-end-on-two)
   $ hg book four
   $ hg debugstrip 3
-  saved backup bundle to * (glob)
 should-end-on-two should end up pointing to revision 2, as that's the
 tipmost surviving ancestor of the stripped revision.
   $ hg log --graph

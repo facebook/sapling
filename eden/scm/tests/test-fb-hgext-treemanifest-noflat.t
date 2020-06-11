@@ -71,4 +71,3 @@ This file tests that normal mercurial operations never read the flat manifests
   rebasing 667a26a14261 "modify b"
   fetching tree '' 9486c937c5894f8f2adbaa0b589e8df5022217c9, based on 5ce27016a79d253c34c64aebd35bfb09605ad3ee, found via 77dc854aeab9
   1 trees fetched over * (glob)
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/667a26a14261-d769c687-rebase.hg (glob)

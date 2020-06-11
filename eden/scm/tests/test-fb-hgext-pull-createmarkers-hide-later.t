@@ -78,7 +78,6 @@ Strip the commits we just landed.
   $ hg update -r 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg debugstrip -r 6
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/e0672eeeb97c-d1aa7ddd-backup.hg (glob)
 
 Here pull should now detect commits 2 and 3 as landed, but it won't be able to
 hide them since there is a non-hidden successor.
@@ -136,7 +135,6 @@ And strip the commit we just landed.
   $ hg update -r 7
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugstrip -r 9
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/296f9d37d5c1-9c9e6ffd-backup.hg (glob)
 
 Here pull should now detect commit 4 has been landed.  It should hide this
 commit, and should also hide 3 and 2, which were previously landed, but up

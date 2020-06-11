@@ -43,7 +43,6 @@ Confirm rebase without a merge behaves the same:
   $ hg rebase -r tip -d .~1 --noconflict
   rebasing in-memory!
   rebasing 955ac081fc7c "g" (g)
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/955ac081fc7c-77e57574-rebase.hg
 
 Confirm the flag fails without IMM:
 
@@ -76,7 +75,6 @@ Confirm that it rebases a three-way merge, but no conflict:
   rebasing in-memory!
   rebasing 12cba56c6d27 "extend to 10"
   merging a
-  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/12cba56c6d27-14ff6d99-rebase.hg
   $ hg cat -r tip a | wc -l | xargs
   11
 

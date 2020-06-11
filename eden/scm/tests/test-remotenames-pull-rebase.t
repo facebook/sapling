@@ -90,7 +90,6 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   nothing to rebase
   $ hg rebase -d 3
   rebasing 6a7c7fb59c1e "localcommit" (bmnottracking)
-  saved backup bundle to $TESTTMP/localrepo/.hg/strip-backup/6a7c7fb59c1e-55f908e9-*.hg (glob)
   $ printdag
   @  localcommit | bmnottracking |
   |
@@ -189,7 +188,6 @@ Test pull with --rebase and --tool
   added 1 changesets with 2 changes to 2 files
   rebasing 1d01e32a0efb "somelocalchanges" (tracking2)
   merging editedbyboth
-  saved backup bundle to $TESTTMP/localrepo/.hg/strip-backup/*.hg (glob)
   $ printdag
   @  somelocalchanges | tracking2 |
   |

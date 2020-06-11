@@ -28,7 +28,7 @@ Rebase will add a rebase_source
 (The 'rebasing' is extra output in Mercurial 3.3+)
 
   $ hg --config extensions.rebase= rebase -s 1 -d 2 | grep -v '^rebasing '
-  saved backup bundle to $TESTTMP/*.hg (glob)
+  [1]
   $ hg up 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 

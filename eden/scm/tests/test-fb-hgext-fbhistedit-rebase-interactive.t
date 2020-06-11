@@ -61,7 +61,6 @@ Simple rebase with -s and -d
   $ hg update 8
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ HGEDITOR=true hg rebase -i -s 8 -d 5
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/cf7e1bc6a982-9ce57ee5-histedit.hg (glob)
 
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
   @  9:bb8affa27bd8 i
@@ -101,7 +100,6 @@ Try to rebase with conflict (also check -d without -s)
   (no more unresolved files)
   continue: hg histedit --continue
   $ hg histedit --continue
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/8d0611d6e5f2-0e0da94b-histedit.hg (glob)
 
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
   @  9:b6ca70f8129d conflict f
@@ -129,7 +127,6 @@ Rebase with base
   $ hg update 7
   2 files updated, 0 files merged, 5 files removed, 0 files unresolved
   $ HGEDITOR=true hg rebase -i -b . -d 9
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/0ba40a7dd69a-033489e1-histedit.hg (glob)
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
   @  9:50cf975d06ef h
   |

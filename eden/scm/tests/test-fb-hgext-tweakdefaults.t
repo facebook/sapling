@@ -84,7 +84,6 @@ Empty rebase fails
   [255]
   $ hg rebase -d 2
   rebasing 7b4cb4e1674c "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7b4cb4e1674c-f22b5b1e-rebase.hg (glob)
 
 Empty rebase returns exit code 0:
 
@@ -502,7 +501,6 @@ Test rebase with showupdated=True
   $ hg rebase -r 1 -d 2
   rebasing 0e067c57feba "b"
   0e067c57feba -> a602e0d56f83 "b"
-  saved backup bundle to $TESTTMP/showupdated/.hg/strip-backup/0e067c57feba-ca6d05e3-rebase.hg (glob)
 
 Test rebase with showupdate=True and a lot of source revisions
   $ hg up -q 0
@@ -561,7 +559,6 @@ Test rebase with showupdate=True and a lot of source revisions
   d5e255ef74f8 -> 72d850a207d5 "c"
   ...
   ee71024c6e8c -> 0c42bb4bf23f "2"
-  saved backup bundle to $TESTTMP/showupdated/.hg/strip-backup/6e3ddf6f49ef-4b18babd-rebase.hg (glob)
 
 Test rebase with showupdate=True and a long commit message
   $ touch longfile && hg add -q
@@ -569,4 +566,3 @@ Test rebase with showupdate=True and a long commit message
   $ hg rebase -d 1
   rebasing e915a57d67db "This is a long commit message which will be truncated."
   e915a57d67db -> 5444f740ff6c "This is a long commit message which will be tru..."
-  saved backup bundle to $TESTTMP/showupdated/.hg/strip-backup/e915a57d67db-ad3372b5-rebase.hg (glob)

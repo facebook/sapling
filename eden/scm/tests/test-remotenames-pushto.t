@@ -50,7 +50,6 @@ Test that config changes what is pushed by default
   [255]
   $ hg debugstrip d36c0562f908 d2ae7f538514
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/d36c0562f908-ccf5bddc-*.hg (glob)
 
 Test that config allows anonymous heads to be pushed
 
@@ -185,7 +184,6 @@ Test that local must have rev of remote to push --to without --non-forward-move
   $ hg up -r 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugstrip -r headb
-  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/1846eede8b68-61b88d4a-*.hg (glob)
   $ hg book -d headb
   $ hg push --to @ -r headc
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
@@ -205,7 +203,6 @@ Clean up repo1
   o  0 a
   
   $ hg debugstrip 2
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/cc61aa6be3dc-73e4f2eb-*.hg (glob)
   $ cd ../repo2
 
 Test that rebasing and pushing works as expected
@@ -241,7 +238,6 @@ Test that rebasing and pushing works as expected
   (no more unresolved files)
   $ hg --config extensions.rebase= rebase --continue
   rebasing cc61aa6be3dc "c" (headc)
-  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/cc61aa6be3dc-73e4f2eb-*.hg (glob)
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
   o  2 c headc
   |

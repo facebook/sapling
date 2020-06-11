@@ -237,10 +237,8 @@
   21f46f2721e7  000000000000  000000000000  d6868642b790  
   $ hg debugstrip -r '.^'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/609547eda446-b26b56a8-backup.hg (glob)
   $ hg -R ../master debugstrip -r '.^'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/609547eda446-b26b56a8-backup.hg (glob)
 
   $ rm -rf $TESTTMP/hgcache/master/packs
   $ cp -R $TESTTMP/backuppacks $TESTTMP/hgcache/master/packs

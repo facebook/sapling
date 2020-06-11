@@ -56,7 +56,6 @@ Test rebasing a single commit that changes flags:
   $ hg rebase -r 1 -d .
   rebasing 5f41048406b0 "move"
   merging foo and foo_newloc to foo_newloc
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/5f41048406b0-6cf73300-rebase.hg
   $ hg up tip
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ tellmeabout foo_newloc

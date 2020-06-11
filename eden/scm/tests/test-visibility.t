@@ -49,7 +49,6 @@ Simple creation and amending of draft commits
 
   $ hg debugstrip -r . --config amend.safestrip=False
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/* (glob)
   $ tglogp --hidden
   @  4: bc066ca12b45 draft 'draft1 amend1'
   |

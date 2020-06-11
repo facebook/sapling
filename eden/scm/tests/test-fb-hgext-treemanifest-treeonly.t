@@ -133,7 +133,6 @@ Make a local tree-only draft commit
 Tree-only amend
   $ echo >> subdir/x
   $ hg commit --amend
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/43903a6bf43f-712cb952-amend.hg (glob)
 # amend commit was added
   $ ls_l .hg/store/packs/manifests | wc -l
   \s*12 (re)
@@ -236,7 +235,6 @@ Test rebasing treeonly commits
   continue: hg rebase --continue
   $ hg rebase --continue
   rebasing abc828a8166c "hybrid flat+tree commit"
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/abc828a8166c-26189234-rebase.hg (glob)
 
 Test histedit treeonly commits
   $ hg up -q bb62fe710976
@@ -247,7 +245,6 @@ Test histedit treeonly commits
   > pick 3d62f4200ab6 add y
   > pick bb62fe710976 hybrid flat+tree commit
   > EOF
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/bb62fe710976-52ac100d-histedit.hg (glob)
   $ hg log -l 2 -G -T '{desc}'
   @  hybrid flat+tree commit
   |
@@ -281,7 +278,6 @@ commits
   (use 'hg debugindex -h' to get help)
   $ hg debugstrip -r .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/41373853bc69-c732668d-backup.hg
 
 Test peer-to-peer push/pull of tree only commits
   $ cd ..
@@ -567,7 +563,6 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
    1 files changed, 1 insertions(+), 0 deletions(-)
   
   $ hg -R ../master debugstrip -r tip~3
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/41bd8aa2aeb7-4ba57e03-backup.hg
   $ hg phase -dfr tip~3
 
 Test pushing from a treeonly client to a treeonly server *with* pushrebase
@@ -600,7 +595,6 @@ Test pushing from a treeonly client to a treeonly server *with* pushrebase
 Strip the pushed commits + the recently made commit from the server
   $ hg -R ../master debugstrip -r '.:'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/7253109af085-5cce35c9-backup.hg
 
 Reset the phase of the local commits to draft
   $ hg phase -fd 2::
@@ -614,7 +608,6 @@ Test histedit with changing commits in the middle
   $ hg histedit '.^' --commands $TESTTMP/commands --config extensions.histedit= --config extensions.fbhistedit=
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: orphaned descendants detected, not stripping 06f5aa20a0d4
-  saved backup bundle to $TESTTMP/client2/.hg/strip-backup/5f0bc1aaff22-2d1d80a0-histedit.hg
 
 Reset the server back to hybrid mode
   $ cd ../master

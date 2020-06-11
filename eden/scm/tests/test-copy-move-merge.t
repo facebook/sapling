@@ -87,7 +87,6 @@ Test disabling copy tracing
 
   $ hg debugstrip -r .
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/t/.hg/strip-backup/550bd84c0cd3-fc575957-backup.hg
   $ hg up -qC 2
   $ hg rebase --keep -d 1 -b 2 --config extensions.rebase= --config experimental.copytrace=off --config ui.interactive=True << EOF
   > c
@@ -127,7 +126,6 @@ Verify disabling copy tracing still keeps copies from rebase source
   
   $ hg rebase -d . -b 2 --config extensions.rebase= --config experimental.copytrace=off
   rebasing 6adcf8c12e7d "copy b->x"
-  saved backup bundle to $TESTTMP/copydisable/.hg/strip-backup/6adcf8c12e7d-ce4b3e75-rebase.hg
   $ hg up -q 3
   $ hg log -f x -T '{rev} {desc}\n'
   3 copy b->x
@@ -160,7 +158,6 @@ Verify we duplicate existing copies, instead of detecting them
   
   $ hg rebase -d 2 -s 3 --config extensions.rebase= --config experimental.copytrace=off
   rebasing 47e1a9e6273b "copy a->b (2)"
-  saved backup bundle to $TESTTMP/copydisable3/.hg/strip-backup/47e1a9e6273b-2d099c59-rebase.hg
 
   $ hg log -G -f b
   @  changeset:   3:76024fb4b05b

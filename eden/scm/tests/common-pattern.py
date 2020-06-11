@@ -98,9 +98,6 @@ _winpathfixes = [
     br"\S+\\\S+: not recording move .+",
     # reverting s\a
     br"(?m)^reverting (?!subrepo ).*\\.*",
-    # saved backup bundle to
-    #     $TESTTMP\test\.hg\strip-backup/443431ffac4f-2fc5398a-backup.hg
-    br"(?m)^saved backup bundle to \$TESTTMP.*\.hg",
     # no changes made to subrepo s\ss since last push to ../tcc/s/ss
     br"(?m)^no changes made to subrepo \S+\\\S+ since.*",
     # changeset 5:9cc5aa7204f0: stuff/maybelarge.dat references missing

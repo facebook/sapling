@@ -279,9 +279,7 @@ sh % "hg status --verbose" == r"""
 sh % "echo c" >> "e"
 sh % "hg ci -mtest"
 
-sh % "hg debugstrip ." == r"""
-    1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-    saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)"""
+sh % "hg debugstrip ." == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 
 # Graft again:
 

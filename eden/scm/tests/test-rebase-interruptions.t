@@ -304,7 +304,6 @@ Test rebase interrupted by hooks
   $ hg rebase --continue
   already rebased 965c486023db "C" as 401ccec5e39f
   rebasing a0b2430ebfb8 "F"
-  saved backup bundle to $TESTTMP/hook-precommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg
   $ tglogp
   @  6: 6e92a149ac6b secret 'F'
   |
@@ -359,7 +358,6 @@ Test rebase interrupted by hooks
   $ hg rebase --continue
   already rebased 965c486023db "C" as 401ccec5e39f
   rebasing a0b2430ebfb8 "F"
-  saved backup bundle to $TESTTMP/hook-pretxncommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg
   $ tglogp
   @  6: 6e92a149ac6b secret 'F'
   |
@@ -409,7 +407,6 @@ Test rebase interrupted by hooks
   $ hg rebase --continue
   already rebased 965c486023db "C" as 401ccec5e39f
   rebasing a0b2430ebfb8 "F"
-  saved backup bundle to $TESTTMP/hook-pretxnclose/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg
   $ tglogp
   @  6: 6e92a149ac6b secret 'F'
   |
@@ -452,7 +449,6 @@ Make sure merge state is cleaned up after a no-op rebase merge (issue5494)
   $ hg rebase --continue
   rebasing fdaca8533b86 "b"
   note: rebase of 1:fdaca8533b86 created no changes to commit
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/fdaca8533b86-7fd70513-rebase.hg
   $ hg resolve --list
   $ test -f .hg/merge
   [1]

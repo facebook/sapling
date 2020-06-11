@@ -144,7 +144,6 @@
   > EOF
 
   $ hg -R master --config hgsql.bypass=True debugstrip -r tip
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/2fbb8bb2b903-cf7ff44e-backup.hg (glob)
   $ hg -R client pull --ssh "sh ssh.sh" "ssh://user@dummy/$TESTTMP/master"
   pulling from ssh://user@dummy/$TESTTMP/master
   searching for changes

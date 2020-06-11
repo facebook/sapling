@@ -137,11 +137,9 @@ Check that we did not generate any check:heads parts
   
   $ hg debugstrip -r 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/server/.hg/strip-backup/6a6d9484552c-65c69aee-backup.hg
 
   $ cd ../client
   $ hg debugstrip 3
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/add0c792bfce-c3f42717-backup.hg
   $ hg up 0e3997dc0733
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
@@ -169,7 +167,6 @@ Push using changegroup2
   $ cd ../client
   $ hg debugstrip 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/46a2df24e272-1b034f5b-backup.hg (glob)
   $ hg pull
   pulling from ssh://user@dummy/server
   searching for changes
@@ -245,7 +242,6 @@ Stack with conflict in tail should abort
 
   $ hg debugstrip 5
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/11a6a93eb344-7140e689-backup.hg (glob)
   $ cd ../server
   $ log
   @  a => baz [draft:fb983dc509b6]
@@ -279,7 +275,6 @@ Stack with conflict in head should abort
 
   $ hg debugstrip 5
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/98788efd81b0-93572e45-backup.hg (glob)
 
   $ cd ../server
   $ log

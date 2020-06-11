@@ -62,8 +62,6 @@ TODO: configure mutation
   adding v/f/r/aac
   adding z/y/x/aae
   
-  stdout: saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/20b2121f9781-5b3ae32a-amend.hg
-  
   ran 'amend' in * sec (glob)
   stdout: ! u/r/l/aaa
   ? h/o/v/aag
@@ -76,14 +74,12 @@ TODO: configure mutation
   
   ran 'revert' in * sec (glob)
   stdout: rebasing b17a0147d61c "test commit"
-  saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/b17a0147d61c-bd5f50f4-rebase.hg
   
   ran 'rebase' in * sec (glob)
   stdout: 1 files updated, 0 files merged, 10 files removed, 0 files unresolved
   (activating bookmark master)
   
   stdout: rebasing f8d4b0697695 "test commit"
-  saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/f8d4b0697695-7388783a-rebase.hg
   
   ran 'immrebase' in * sec (glob)
   stdout: pulling from $TESTTMP/repo1

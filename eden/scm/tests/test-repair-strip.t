@@ -47,7 +47,6 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
-  saved backup bundle
   transaction abort!
   failed to truncate data/b.i
   rollback failed - please run hg recover
@@ -102,7 +101,6 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
-  saved backup bundle
   transaction abort!
   failed to truncate 00manifest.i
   rollback failed - please run hg recover

@@ -764,7 +764,6 @@ Even when the chain include missing node
   $ hg add D
   $ hg commit -m D
   $ hg --hidden debugstrip -r 'desc(B1)'
-  saved backup bundle to $TESTTMP/obsskip/.hg/strip-backup/86f6414ccda7-b1c452ee-backup.hg
 
 XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be okay)
   $ enable amend

@@ -24,7 +24,6 @@ Run with a correct revlog
 Run with incorrect local revlogs
 
   $ hg debugstrip -r 1 --config hgsql.bypass=True
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/7c3bad9141dc-81844e36-backup.hg (glob)
   $ hg unbundle --config hgsql.bypass=True $TESTTMP/master/.hg/strip-backup/7c3bad9141dc-81844e36-backup.hg
   adding changesets
   adding manifests

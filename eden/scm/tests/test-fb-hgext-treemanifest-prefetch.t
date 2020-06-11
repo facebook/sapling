@@ -215,7 +215,6 @@ Test prefetching when a draft commit is marked public
   M dir/x
   $ hg debugstrip -r 3
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/b6308255e316-b2a7dcf7-backup.hg
 
   $ clearcache
   $ mv $TESTTMP/cachedir.bak/* $CACHEDIR

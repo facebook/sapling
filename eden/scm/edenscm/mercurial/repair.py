@@ -186,7 +186,6 @@ def strip(ui, repo, nodelist, backup=True, topic="backup"):
     node = nodelist[-1]
     if backup:
         backupfile = _bundle(repo, stripbases, repo.heads(), node, topic)
-        repo.ui.status(_("saved backup bundle to %s\n") % vfs.join(backupfile))
         repo.ui.log("backupbundle", "saved backup bundle to %s\n", vfs.join(backupfile))
     tmpbundlefile = None
     if saveheads:

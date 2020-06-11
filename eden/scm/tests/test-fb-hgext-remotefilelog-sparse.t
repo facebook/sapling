@@ -49,7 +49,6 @@
 
   $ printf "[remotefilelog]\npullprefetch=bookmark()\n" >> .hg/hgrc
   $ hg debugstrip tip
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/876b1317060d-b2e91d8d-backup.hg (glob)
 
   $ hg sparse --delete z
 

@@ -57,7 +57,6 @@ TODO: configure mutation
 
   $ hg rebase -d 1
   rebasing 0632994590a8 "xx"
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/0632994590a8-0bc786d8-rebase.hg (glob)
   $ hg log -f x --template "{node|short}\n"
   81deab2073bc
   b292c1e3311f
@@ -67,14 +66,12 @@ TODO: configure mutation
 
   $ hg rebase -d 0 -r 2
   rebasing 81deab2073bc "xx"
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/81deab2073bc-80cb4fda-rebase.hg (glob)
   $ hg log -f x --template "{node|short}\n"
   b3fca10fb42d
   b292c1e3311f
 
   $ hg rebase -d 1 -r 2
   rebasing b3fca10fb42d "xx"
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/b3fca10fb42d-da73a0c7-rebase.hg (glob)
 
   $ cd ..
 
@@ -114,7 +111,6 @@ TODO: configure mutation
   rebasing 4549721d828f "xx2"
   note: rebase of 1:4549721d828f created no changes to commit
   rebasing 5ef6d97e851c "xxy"
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/4549721d828f-b084e33c-rebase.hg (glob)
   $ hg log -f x --template '{node|short}\n'
   4ae8e31c85ef
   0632994590a8

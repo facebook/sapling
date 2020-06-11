@@ -52,7 +52,6 @@ Create a tracking bookmark
   (no more unresolved files)
   $ hg rebase --continue
   rebasing dea4e1d2ca0e "b" (b)
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/dea4e1d2ca0e-a7f1cee1-*.hg (glob)
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}'
   @  2 b b
   |
@@ -233,7 +232,6 @@ Test implicit rebase destination
    * c                         5:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
   $ hg rebase
   rebasing ff58066d17c3 "d" (c)
-  saved backup bundle to $TESTTMP/repo2/.hg/strip-backup/ff58066d17c3-470dd0be-*.hg (glob)
   $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
   @  5 8d13dc14fef1 c
   |
