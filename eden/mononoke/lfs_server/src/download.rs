@@ -23,7 +23,7 @@ use redactedblobstore::has_redaction_root_cause;
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;
-use crate::http::StreamBody;
+use crate::http::LfsStreamBody;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 
@@ -79,7 +79,7 @@ async fn fetch_by_key(
         stream.right_stream()
     };
 
-    Ok(StreamBody::new(
+    Ok(LfsStreamBody::new(
         stream,
         size,
         mime::APPLICATION_OCTET_STREAM,

@@ -7,20 +7,13 @@
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures::{
-    channel::mpsc,
-    stream::{Stream, StreamExt},
-};
+use futures::Stream;
 use gotham::state::State;
 use gotham_ext::{
     error::HttpError,
-    response::{ResponseContentLength, TryIntoResponse},
-    signal_stream::SignalStream,
+    response::{StreamBody, TryIntoResponse},
 };
-use hyper::{
-    header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
-    Body, Response, StatusCode,
-};
+use hyper::{Body, Response};
 use mime::Mime;
 
 use crate::errors::LfsServerContextErrorKind;
@@ -37,57 +30,25 @@ impl From<LfsServerContextErrorKind> for HttpError {
     }
 }
 
-pub struct StreamBody<S> {
-    stream: S,
-    content_length: u64,
-    mime: Mime,
-}
+/// Wrapper around `gotham_ext::StreamBody` that will signal the
+/// current `RequestContext`'s post-request callback upon completion.
+pub struct LfsStreamBody<S>(StreamBody<S>);
 
-impl<S> StreamBody<S> {
+impl<S> LfsStreamBody<S> {
     pub fn new(stream: S, content_length: u64, mime: Mime) -> Self {
-        Self {
-            stream,
-            content_length,
-            mime,
-        }
+        Self(StreamBody::new(stream, mime).content_length(content_length))
     }
 }
 
-impl<S> TryIntoResponse for StreamBody<S>
+impl<S> TryIntoResponse for LfsStreamBody<S>
 where
     S: Stream<Item = Result<Bytes, Error>> + Send + 'static,
 {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        let Self {
-            stream,
-            content_length,
-            mime,
-        } = self;
-
-        state.put(ResponseContentLength(content_length));
-
-        let mime_header: HeaderValue = mime.as_ref().parse()?;
-
-        // This is kind of annoying, but right now Hyper requires a Body's stream to be Sync (even
-        // though it doesn't actually need it). For now, we have to work around by spawning the
-        // stream on its own task, and giving Hyper a channel that receives from it. Note that the
-        // map(Ok) is here because we want to forward Result<Bytes, Error> instances over our
-        // stream.
-        let (sender, receiver) = mpsc::channel(0);
-        tokio::spawn(stream.map(Ok).forward(sender));
-
-        let stream = if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
-            let sender = ctx.delay_post_request();
-            SignalStream::new(receiver, sender).left_stream()
-        } else {
-            receiver.right_stream()
-        };
-
-        Response::builder()
-            .header(CONTENT_TYPE, mime_header)
-            .header(CONTENT_LENGTH, content_length)
-            .status(StatusCode::OK)
-            .body(Body::wrap_stream(stream))
-            .map_err(Error::from)
+        match state.try_borrow_mut::<RequestContext>() {
+            Some(ctx) => self.0.signal(ctx.delay_post_request()),
+            None => self.0,
+        }
+        .try_into_response(state)
     }
 }
