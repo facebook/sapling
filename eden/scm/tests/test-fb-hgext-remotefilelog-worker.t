@@ -22,7 +22,7 @@ Shallow clone
 
   $ clone master shallow --noupdate
   $ cd shallow
-  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True extensions.amend= rebase.experimental.inmemory=True
+  $ setconfig remotefilelog.useruststore=True extensions.amend= rebase.experimental.inmemory=True
   $ hg up master
   fetching tree '' 6b8f81b9651010925578ea56a4129930688cbf98, found via baeb6587a441
   1 trees fetched over 0.00s

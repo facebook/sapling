@@ -1679,7 +1679,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         return (
             "remotefilelog" in repo.requirements
             and repo.fileslog._ruststore
-            and repo.ui.configbool("worker", "rustworkers")
             and not wctx.isinmemory()
         )
 

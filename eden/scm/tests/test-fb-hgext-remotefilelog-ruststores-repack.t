@@ -6,7 +6,7 @@
 
   $ clone master shallow --noupdate
   $ cd shallow
-  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True remotefilelog.localdatarepack=True
+  $ setconfig remotefilelog.useruststore=True remotefilelog.localdatarepack=True
 
   $ echo x > x
   $ hg commit -qAm x
@@ -65,7 +65,7 @@ Test that we can repack packs into indexedlog
   $ ls $CACHEDIR/master/packs | grep datapack
   102e9c722b8edc89ad9e5a488ad8e5347bc7e213.datapack
   $ cd shallow2
-  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True remotefilelog.localdatarepack=True
+  $ setconfig remotefilelog.useruststore=True remotefilelog.localdatarepack=True
 
 # Verify repack turns packs into indexedlog
   $ setconfig remotefilelog.write-hgcache-to-indexedlog=True

@@ -5,7 +5,7 @@
   $ newserver master
   $ clone master shallow
   $ cd shallow
-  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True
+  $ setconfig remotefilelog.useruststore=True
   $ setconfig remotefilelog.lfs=True lfs.threshold=10B lfs.url=file:$TESTTMP/lfs
 
   $ $PYTHON <<'EOF'

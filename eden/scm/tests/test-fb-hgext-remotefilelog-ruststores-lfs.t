@@ -8,7 +8,7 @@
 
   $ clone master shallow --noupdate
   $ cd shallow
-  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True remotefilelog.localdatarepack=True lfs.moveafterupload=True
+  $ setconfig remotefilelog.useruststore=True remotefilelog.localdatarepack=True lfs.moveafterupload=True
 
 # First, let's generate some LFS blobs on the server
   $ setconfig extensions.lfs= lfs.threshold=10B lfs.url=file:$TESTTMP/lfs-server/
@@ -86,7 +86,7 @@
 
   $ clone master shallow --noupdate
   $ cd shallow
-  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True remotefilelog.localdatarepack=True lfs.moveafterupload=True
+  $ setconfig remotefilelog.useruststore=True remotefilelog.localdatarepack=True lfs.moveafterupload=True
 
 # Let's validate that both the LFS extension, and the remotefilelog LFS can co-exist when pulling blobs
   $ setconfig extensions.lfs= lfs.threshold=10B lfs.url=file:$TESTTMP/lfs-server/ remotefilelog.lfs=True

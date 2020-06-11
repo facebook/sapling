@@ -7,7 +7,6 @@
   $ configure modern
 #if rustupdater
   $ setconfig remotefilelog.useruststore=True
-  $ setconfig worker.rustworkers=True
 #endif
 
   $ newserver server1
