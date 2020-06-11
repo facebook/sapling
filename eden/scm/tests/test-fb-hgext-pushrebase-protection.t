@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ disable treemanifest
 Setup
 
   $ configure dummyssh
