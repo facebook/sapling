@@ -36,6 +36,17 @@ impl AddScubaParams for thrift::ListReposParams {}
 
 impl AddScubaParams for thrift::RepoCreateCommitParams {}
 
+impl AddScubaParams for thrift::RepoMoveBookmarkParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add("bookmark_name", self.bookmark.as_str());
+        scuba.add("commit", self.target.to_string());
+        scuba.add(
+            "param_allow_non_fast_forward_move",
+            self.allow_non_fast_forward_move as i32,
+        );
+    }
+}
+
 impl AddScubaParams for thrift::RepoListBookmarksParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
         scuba.add("param_include_scratch", self.include_scratch as i32);

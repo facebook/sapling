@@ -466,5 +466,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             repo: thrift::RepoSpecifier,
             params: thrift::RepoStackInfoParams,
         ) -> Result<thrift::RepoStackInfoResponse, service::RepoStackInfoExn>;
+
+        async fn repo_move_bookmark(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoMoveBookmarkParams,
+        ) -> Result<thrift::RepoMoveBookmarkResponse, service::RepoMoveBookmarkExn>;
     }
 }

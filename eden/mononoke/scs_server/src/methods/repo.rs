@@ -390,4 +390,38 @@ impl SourceControlServiceImpl {
             ),
         }
     }
+
+    pub(crate) async fn repo_move_bookmark(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoMoveBookmarkParams,
+    ) -> Result<thrift::RepoMoveBookmarkResponse, errors::ServiceError> {
+        let repo = self.repo(ctx, &repo).await?;
+        let repo = match params.service_identity {
+            Some(service_identity) => repo.service_write(service_identity).await?,
+            None => repo.write().await?,
+        };
+        let bookmark = &params.bookmark;
+        let target = &params.target;
+        let changeset_specifier = ChangesetSpecifier::from_request(target)?;
+        let changeset = repo
+            .changeset(changeset_specifier)
+            .await?
+            .ok_or_else(|| errors::commit_not_found(target.to_string()))?;
+
+        // TODO(mbthomas): provide a way for the client to optionally specify the old value
+        let old_changeset = repo.resolve_bookmark(bookmark).await?.ok_or_else(|| {
+            errors::invalid_request(format!("bookmark {} does not exist", bookmark))
+        })?;
+
+        repo.move_bookmark(
+            bookmark,
+            changeset.id(),
+            old_changeset.id(),
+            params.allow_non_fast_forward_move,
+        )
+        .await?;
+        Ok(thrift::RepoMoveBookmarkResponse {})
+    }
 }
