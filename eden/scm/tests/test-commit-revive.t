@@ -1,7 +1,6 @@
 #chg-compatible
 
-  $ configure evolution
-  $ enable amend
+  $ configure modern
 
 "import" can revive a commit
 
@@ -16,12 +15,14 @@
   $ hg export $B > $TESTTMP/b.patch
 
   $ hg hide -q $B
-  $ hg log -r 'obsolete()' --hidden -T '{desc}'
-  B (no-eol)
+  $ hg log -r 'all()' -T '{desc}\n'
+  A
 
   $ hg up -q $A
   $ hg import -q --exact $TESTTMP/b.patch
-  $ hg log -r 'obsolete()' --hidden -T '{desc}'
+  $ hg log -r 'all()' -T '{desc}\n'
+  A
+  B
 
 "commit" can revive a commit
 
@@ -30,9 +31,9 @@
   $ hg commit --config ui.allowemptycommit=1 -m A
 
   $ hg hide -q .
-  $ hg log -r 'obsolete()' --hidden -T '{desc}'
-  A (no-eol)
+  $ hg log -r 'all()' -T '{desc}\n'
 
   $ hg commit --config ui.allowemptycommit=1 -m A
-  $ hg log -r 'obsolete()' --hidden -T '{desc}'
+  $ hg log -r 'all()' -T '{desc}\n'
+  A
 
