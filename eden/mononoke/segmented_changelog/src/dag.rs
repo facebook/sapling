@@ -20,6 +20,7 @@ use futures::{
 use maplit::hashset;
 
 use dag::{self, Id as Vertex, InProcessIdDag};
+use stats::prelude::*;
 
 use bulkops::fetch_all_public_changesets;
 use changeset_fetcher::ChangesetFetcher;
@@ -29,6 +30,13 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use phases::SqlPhases;
 
 use crate::idmap::{IdMap, MemIdMap};
+
+define_stats! {
+    prefix = "mononoke.segmented_changelog";
+    build_all_graph: timeseries(Sum),
+    build_incremental: timeseries(Sum),
+    location_to_changeset_id: timeseries(Sum),
+}
 
 // Note. The equivalent graph in the scm/lib/dag crate is `NameDag`.
 pub struct Dag {
@@ -45,6 +53,7 @@ impl Dag {
         known: ChangesetId,
         distance: u64,
     ) -> Result<ChangesetId> {
+        STATS::location_to_changeset_id.add_value(1);
         let known_vertex = self.idmap.get_vertex(self.repo_id, known).await?;
         let dist_ancestor_vertex = self.iddag.first_ancestor_nth(known_vertex, distance)?;
         let dist_ancestor = self
@@ -61,6 +70,7 @@ impl Dag {
         phases: &SqlPhases,
         head: ChangesetId,
     ) -> Result<()> {
+        STATS::build_all_graph.add_value(1);
         let changeset_entries: Vec<ChangesetEntry> =
             fetch_all_public_changesets(ctx, self.repo_id, changesets, phases)
                 .try_collect()
@@ -83,6 +93,7 @@ impl Dag {
         changeset_fetcher: &dyn ChangesetFetcher,
         head: ChangesetId,
     ) -> Result<()> {
+        STATS::build_incremental.add_value(1);
         let mut visited = HashSet::new();
         let mut start_state = StartState::new();
         {

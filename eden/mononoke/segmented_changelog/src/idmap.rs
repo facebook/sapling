@@ -13,9 +13,18 @@ use sql::{queries, Connection};
 use sql_ext::SqlConnections;
 
 use dag::Id as Vertex;
+use stats::prelude::*;
 
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+
+define_stats! {
+    prefix = "mononoke.segmented_changelog.idmap";
+    insert: timeseries(Sum),
+    find_changeset_id: timeseries(Sum),
+    find_vertex: timeseries(Sum),
+    get_last_entry: timeseries(Sum),
+}
 
 const INSERT_MAX: usize = 1_000;
 
@@ -95,6 +104,7 @@ impl IdMap {
         repo_id: RepositoryId,
         mut mappings: Vec<(Vertex, ChangesetId)>,
     ) -> Result<()> {
+        STATS::insert.add_value(mappings.len() as i64);
         mappings.sort();
         for chunk in mappings.chunks(INSERT_MAX) {
             let mut to_insert = Vec::with_capacity(chunk.len());
@@ -187,6 +197,7 @@ impl IdMap {
                     )
                 })
         };
+        STATS::find_changeset_id.add_value(vertexes.len() as i64);
         let to_query: Vec<_> = vertexes.iter().map(|v| v.0).collect();
         let mut cs_ids = select_vertexes(&self.0.read_connection, &to_query).await?;
         let not_found_in_replica: Vec<_> = vertexes
@@ -219,6 +230,7 @@ impl IdMap {
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<Vertex>> {
+        STATS::find_vertex.add_value(1);
         let select = |connection| async move {
             let rows = SelectVertex::query(connection, &repo_id, &cs_id)
                 .compat()
@@ -241,6 +253,7 @@ impl IdMap {
         &self,
         repo_id: RepositoryId,
     ) -> Result<Option<(Vertex, ChangesetId)>> {
+        STATS::get_last_entry.add_value(1);
         let rows = SelectLastEntry::query(&self.0.read_connection, &repo_id)
             .compat()
             .await?;
