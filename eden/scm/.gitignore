@@ -18,9 +18,9 @@
 .cargo/config
 .shim/
 tests/.coverage*
-tests/.testtimes*
-tests/comprehensive/.testtimes*
-fb/tests/.testtimes*
+tests/.test*
+tests/comprehensive/.test*
+fb/tests/.test*
 tests/.hypothesis
 tests/hypothesis-generated
 tests/annotated

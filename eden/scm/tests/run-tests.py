@@ -2926,17 +2926,37 @@ class TextTestRunner(unittest.TextTestRunner):
         ignored = len(result.ignored)
 
         with iolock:
-            self.stream.writeln("")
+            self.stream.write("\n%s\n" % ("-" * 70))
 
-            if not self._runner.options.noskips:
-                for test, msg in result.skipped:
-                    formatted = "Skipped %s: %s\n" % (test.name, msg)
-                    self.stream.write(highlightmsg(formatted, result.color))
-            for test, msg in result.failures:
-                formatted = "Failed %s: %s\n" % (test.name, msg)
-                self.stream.write(highlightmsg(formatted, result.color))
-            for test, msg in result.errors:
-                self.stream.writeln("Errored %s: %s" % (test.name, msg))
+            for title, tests in [
+                ("Skipped", result.skipped),
+                ("Failed", result.failures),
+                ("Errored", result.errors),
+            ]:
+                if not tests:
+                    continue
+                # Group by failure messages.
+                messages = sorted({msg for _test, msg in tests})
+                for message in messages:
+                    # Normalize "test-foo.t (case bar)" to filename "test-foo.t".
+                    names = sorted(
+                        {test.name.split()[0] for test, msg in tests if msg == message}
+                    )
+                    self.stream.write(
+                        "%s %s tests (%s):\n" % (title, len(names), message)
+                    )
+                    # Print the file names without noises (ex. why test are failed).
+                    # The file names can be copy-pasted to adhoc scripts like
+                    # `hg revert $FILENAMES`.
+                    for name in names:
+                        self.stream.write("  %s\n" % (name,))
+                    self.stream.write("\n")
+                    # Also write the file names to temporary files.  So it can be
+                    # used in adhoc scripts like `hg revert $(cat .testfailed)`.
+                    with open(".test%s" % title.lower(), "a") as f:
+                        for name in names:
+                            f.write(name + "\n")
+                        f.write("\n")
 
             if self._runner.options.xunit:
                 with open(self._runner.options.xunit, "wb") as xuf:
