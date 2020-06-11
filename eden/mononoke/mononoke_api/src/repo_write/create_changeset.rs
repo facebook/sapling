@@ -291,6 +291,8 @@ impl RepoWriteContext {
         extra: BTreeMap<String, Vec<u8>>,
         changes: BTreeMap<MononokePath, CreateChange>,
     ) -> Result<ChangesetContext, MononokeError> {
+        self.check_method_permitted("create_changeset")?;
+
         // Merge rules are not validated yet, so only a single parent is supported.
         if parents.len() != 1 {
             return Err(MononokeError::InvalidRequest(String::from(

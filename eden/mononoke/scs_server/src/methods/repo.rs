@@ -163,7 +163,11 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoCreateCommitParams,
     ) -> Result<thrift::RepoCreateCommitResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo).await?.write().await?;
+        let repo = self.repo(ctx, &repo).await?;
+        let repo = match params.service_identity {
+            Some(service_identity) => repo.service_write(service_identity).await?,
+            None => repo.write().await?,
+        };
 
         let parents: Vec<_> = params
             .parents
