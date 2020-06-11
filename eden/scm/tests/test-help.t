@@ -291,7 +291,6 @@ Test extension help:
                      (no help text available)
        chistedit
        churn         command to display statistics about repository history
-       cleanobsstore
        clienttelemetry
                      provide information about the client in server telemetry
        clindex       (no help text available)
