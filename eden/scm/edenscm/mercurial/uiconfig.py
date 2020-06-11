@@ -594,7 +594,10 @@ def loaddynamicconfig(ui, path):
         ui.readconfig(hgrcdyn, path)
 
         generationtime = ui.configint("configs", "generationtime")
-        if generationtime != -1 and encoding.environ.get("HG_DEBUGDYNAMICCONFIG", "") != "1":
+        if (
+            generationtime != -1
+            and encoding.environ.get("HG_DEBUGDYNAMICCONFIG", "") != "1"
+        ):
             mtimelimit = time.time() - generationtime
             if not os.path.exists(hgrcdyn) or os.lstat(hgrcdyn).st_mtime < mtimelimit:
                 # TODO: some how prevent kicking off the background process if
@@ -605,7 +608,7 @@ def loaddynamicconfig(ui, path):
                 # debugdynamicconfig kicking itself off, or doing it via
                 # commands spawned from the telemetry wrapper.
                 env["HG_DEBUGDYNAMICCONFIG"] = "1"
-                runbgcommand(["hg", "debugdynamicconfig"], env)
+                runbgcommand(["hg", "--cwd", path, "debugdynamicconfig"], env)
 
 
 def validatedynamicconfig(ui):
