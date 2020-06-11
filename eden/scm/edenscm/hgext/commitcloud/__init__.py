@@ -129,9 +129,6 @@ Configs::
     # of smartlog.
     enablestatus = False
 
-    # Enable creating obsolete markers when backup is restored.
-    createlandedasmarkers = False
-
     # Number of backups to list by default in getavailablebackups
     backuplistlimit = 10
 """

@@ -661,12 +661,6 @@ def cloudrestorebackup(ui, repo, dest=None, **opts):
         result = pullcmd(ui, repo, **pullopts)
         maxrevafterpull = len(repo.changelog)
 
-        if ui.config("infinitepushbackup", "createlandedasmarkers", False):
-            pullcreatemarkers = extensions.find("pullcreatemarkers")
-            pullcreatemarkers.createmarkers(
-                result, repo, maxrevbeforepull, maxrevafterpull, fromdrafts=False
-            )
-
         changes = []
         for name, hexnode in pycompat.iteritems(bookmarks):
             if hexnode in repo:
