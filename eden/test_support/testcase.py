@@ -6,11 +6,27 @@
 
 import contextlib
 import unittest
+import warnings
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 from . import environment_variable as env_module
 from .temporary_directory import TempFileManager
+
+
+@contextlib.contextmanager
+def no_warnings(self: unittest.TestCase):
+    with warnings.catch_warnings(record=True) as wlist:
+        yield
+
+    if wlist:
+        msgs = [
+            warnings.formatwarning(
+                cast(str, w.message), w.category, w.filename, w.lineno, w.line
+            )
+            for w in wlist
+        ]
+        self.fail("Warnings detected during test:\n" + "".join(msgs))
 
 
 class EdenTestCaseBase(unittest.TestCase):
@@ -29,6 +45,18 @@ class EdenTestCaseBase(unittest.TestCase):
         self.temp_mgr = self.exit_stack.enter_context(
             TempFileManager(self._get_tmp_prefix())
         )
+
+    def _callSetUp(self):
+        with no_warnings(self):
+            return super()._callSetUp()
+
+    def _callTearDown(self):
+        with no_warnings(self):
+            return super()._callTearDown()
+
+    def _callTestMethod(self, testMethod):
+        with no_warnings(self):
+            return super()._callTestMethod(testMethod)
 
     def _get_tmp_prefix(self) -> str:
         """Get a prefix to use for the test's temporary directory name. """

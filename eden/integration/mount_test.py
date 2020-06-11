@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -156,6 +157,8 @@ class MountTest(testcase.EdenRepoTest):
 
             self._wait_for_mount_running(client)
             self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
+
+            mount_proc.wait()
 
     def _assert_thrift_calls_fail_during_mount_init(self, client: EdenClient) -> None:
         error_regex = "mount point .* is still initializing"

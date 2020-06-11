@@ -32,7 +32,8 @@ class XattrTest(testcase.EdenRepoTest):
     def test_get_sha1_xattr(self) -> None:
         filename = os.path.join(self.mount, "hello")
         xattr = os.getxattr(filename, "user.sha1")
-        contents = open(filename, "rb").read()
+        with open(filename, "rb") as f:
+            contents = f.read()
         expected_sha1 = sha1(contents)
         self.assertEqual(expected_sha1, xattr)
 
@@ -57,7 +58,8 @@ class XattrTest(testcase.EdenRepoTest):
 
         filename = os.path.join(self.mount, "hello")
         xattrs = getallxattrs(filename)
-        contents = open(filename, "rb").read()
+        with open(filename, "rb") as f:
+            contents = f.read()
         expected_sha1 = sha1(contents)
         self.assertEqual({}, xattrs)
 
@@ -67,6 +69,7 @@ class XattrTest(testcase.EdenRepoTest):
 
         filename = os.path.join(self.mount, "hello")
         xattr = os.getxattr(filename, "user.sha1")
-        contents = open(filename, "rb").read()
+        with open(filename, "rb") as f:
+            contents = f.read()
         expected_sha1 = sha1(contents)
         self.assertEqual(expected_sha1, xattr)
