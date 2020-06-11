@@ -113,6 +113,7 @@ void HgRepo::enableTreeManifest(AbsolutePathPiece cacheDirectory) {
   appendToHgrc(
       "[extensions]\n"
       "remotefilelog =\n"
+      "remotenames =\n"
       "treemanifest =\n"
       "[treemanifest]\n"
       "treeonly = true\n"
