@@ -178,12 +178,16 @@ def createmarkers(pullres, repo, start, stop, fromdrafts=True):
             mutationentries = []
             tohide = []
             for (pred, succs) in tocreate:
-                if succs and not mutation.lookup(unfi, succs[0].node()):
-                    mutationentries.append(
-                        mutation.createsyntheticentry(
-                            unfi, [pred.node()], succs[0].node(), "land"
-                        )
+                if not succs:
+                    continue
+                mutdag = mutation.getdag(repo, succs[0].node())
+                if pred.node() in mutdag.all():
+                    continue
+                mutationentries.append(
+                    mutation.createsyntheticentry(
+                        unfi, [pred.node()], succs[0].node(), "land"
                     )
+                )
                 tohide.append(pred.node())
             if mutation.enabled(unfi):
                 mutation.recordentries(unfi, mutationentries, skipexisting=False)

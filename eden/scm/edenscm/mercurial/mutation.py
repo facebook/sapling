@@ -154,6 +154,11 @@ def recordentries(repo, entries, skipexisting=True):
     return count
 
 
+def getdag(repo, *nodes):
+    """Get 1:1 mutation subgraph for selected nodes"""
+    return repo._mutationstore.getdag(nodes)
+
+
 def lookup(repo, node):
     """Look up mutation information for the given node"""
     return repo._mutationstore.get(node)
