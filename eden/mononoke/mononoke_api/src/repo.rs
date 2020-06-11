@@ -221,31 +221,6 @@ impl Repo {
         })
     }
 
-    /// Temporary function to create directly from parts.
-    pub(crate) fn new_from_parts(
-        name: String,
-        blob_repo: BlobRepo,
-        skiplist_index: Arc<SkiplistIndex>,
-        warm_bookmarks_cache: Arc<WarmBookmarksCache>,
-        synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
-        config: RepoConfig,
-    ) -> Self {
-        Self {
-            name,
-            blob_repo,
-            skiplist_index,
-            warm_bookmarks_cache,
-            synced_commit_mapping,
-            config,
-            repo_permission_checker: ArcPermissionChecker::from(
-                PermissionCheckerBuilder::always_allow(),
-            ),
-            service_permission_checker: ArcPermissionChecker::from(
-                PermissionCheckerBuilder::always_allow(),
-            ),
-        }
-    }
-
     #[cfg(test)]
     /// Construct a Repo from a test BlobRepo
     pub(crate) async fn new_test(ctx: CoreContext, blob_repo: BlobRepo) -> Result<Self, Error> {

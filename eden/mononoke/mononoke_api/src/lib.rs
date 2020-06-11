@@ -12,22 +12,15 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::future;
 use futures::future::try_join_all;
-use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
 use sql_ext::facebook::MysqlOptions;
-use synced_commit_mapping::SyncedCommitMapping;
-use warm_bookmarks_cache::WarmBookmarksCache;
 
 use metaconfig_parser::RepoConfigs;
-#[cfg(test)]
-use metaconfig_types::CommitSyncConfig;
-use metaconfig_types::RepoConfig;
 
 use crate::repo::Repo;
 
@@ -37,7 +30,6 @@ pub mod changeset_path_diff;
 pub mod errors;
 pub mod file;
 pub mod hg;
-pub mod legacy;
 pub mod path;
 pub mod repo;
 pub mod repo_write;
@@ -46,8 +38,6 @@ pub mod tree;
 
 #[cfg(test)]
 mod test;
-
-pub use crate::legacy::get_content_by_path;
 
 pub use crate::changeset::{ChangesetContext, Generation};
 pub use crate::changeset_path::{
@@ -119,109 +109,6 @@ impl Mononoke {
         Ok(Self { repos })
     }
 
-    /// Create a Mononoke instance for testing.
-    #[cfg(test)]
-    async fn new_test(
-        ctx: CoreContext,
-        repos: impl IntoIterator<Item = (String, BlobRepo)>,
-    ) -> Result<Self, Error> {
-        use futures::stream::{FuturesOrdered, TryStreamExt};
-        let repos = repos
-            .into_iter()
-            .map(move |(name, repo)| {
-                cloned!(ctx);
-                async move {
-                    Repo::new_test(ctx.clone(), repo)
-                        .await
-                        .map(move |repo| (name, Arc::new(repo)))
-                }
-            })
-            .collect::<FuturesOrdered<_>>()
-            .try_collect()
-            .await?;
-
-        Ok(Self { repos })
-    }
-
-    #[cfg(test)]
-    async fn new_test_xrepo(
-        ctx: CoreContext,
-        repos: impl IntoIterator<
-            Item = (
-                String,
-                BlobRepo,
-                CommitSyncConfig,
-                Arc<dyn SyncedCommitMapping>,
-            ),
-        >,
-    ) -> Result<Self, Error> {
-        use futures::stream::{FuturesOrdered, TryStreamExt};
-        let repos = repos
-            .into_iter()
-            .map(
-                move |(name, repo, commit_sync_config, synced_commit_maping)| {
-                    cloned!(ctx);
-                    async move {
-                        Repo::new_test_xrepo(
-                            ctx.clone(),
-                            repo,
-                            commit_sync_config,
-                            synced_commit_maping,
-                        )
-                        .await
-                        .map(move |repo| (name, Arc::new(repo)))
-                    }
-                },
-            )
-            .collect::<FuturesOrdered<_>>()
-            .try_collect()
-            .await?;
-
-        Ok(Self { repos })
-    }
-
-    /// Temporary function to create directly from parts.
-    pub fn new_from_parts(
-        repos: impl IntoIterator<
-            Item = (
-                String,
-                BlobRepo,
-                Arc<SkiplistIndex>,
-                Arc<WarmBookmarksCache>,
-                Arc<dyn SyncedCommitMapping>,
-                RepoConfig,
-            ),
-        >,
-    ) -> Self {
-        Self {
-            repos: repos
-                .into_iter()
-                .map(
-                    |(
-                        name,
-                        blob_repo,
-                        skiplist_index,
-                        warm_bookmarks_cache,
-                        synced_commit_mapping,
-                        config,
-                    )| {
-                        (
-                            name.clone(),
-                            Arc::new(Repo::new_from_parts(
-                                name,
-                                blob_repo,
-                                skiplist_index,
-                                warm_bookmarks_cache,
-                                synced_commit_mapping,
-                                config,
-                            )),
-                        )
-                    },
-                )
-                .collect(),
-        }
-    }
-
     /// Start a request on a repository.
     pub async fn repo(
         &self,
@@ -247,5 +134,74 @@ impl Mononoke {
             .map(|(_, repo)| async move { repo.report_monitoring_stats(ctx).await })
             .collect();
         try_join_all(reporting_futs).await.map(|_| ())
+    }
+}
+
+#[cfg(test)]
+mod test_impl {
+    use super::*;
+    use blobrepo::BlobRepo;
+    use metaconfig_types::CommitSyncConfig;
+    use synced_commit_mapping::SyncedCommitMapping;
+
+    impl Mononoke {
+        /// Create a Mononoke instance for testing.
+        pub(crate) async fn new_test(
+            ctx: CoreContext,
+            repos: impl IntoIterator<Item = (String, BlobRepo)>,
+        ) -> Result<Self, Error> {
+            use futures::stream::{FuturesOrdered, TryStreamExt};
+            let repos = repos
+                .into_iter()
+                .map(move |(name, repo)| {
+                    cloned!(ctx);
+                    async move {
+                        Repo::new_test(ctx.clone(), repo)
+                            .await
+                            .map(move |repo| (name, Arc::new(repo)))
+                    }
+                })
+                .collect::<FuturesOrdered<_>>()
+                .try_collect()
+                .await?;
+
+            Ok(Self { repos })
+        }
+
+        pub(crate) async fn new_test_xrepo(
+            ctx: CoreContext,
+            repos: impl IntoIterator<
+                Item = (
+                    String,
+                    BlobRepo,
+                    CommitSyncConfig,
+                    Arc<dyn SyncedCommitMapping>,
+                ),
+            >,
+        ) -> Result<Self, Error> {
+            use futures::stream::{FuturesOrdered, TryStreamExt};
+            let repos = repos
+                .into_iter()
+                .map(
+                    move |(name, repo, commit_sync_config, synced_commit_maping)| {
+                        cloned!(ctx);
+                        async move {
+                            Repo::new_test_xrepo(
+                                ctx.clone(),
+                                repo,
+                                commit_sync_config,
+                                synced_commit_maping,
+                            )
+                            .await
+                            .map(move |repo| (name, Arc::new(repo)))
+                        }
+                    },
+                )
+                .collect::<FuturesOrdered<_>>()
+                .try_collect()
+                .await?;
+
+            Ok(Self { repos })
+        }
     }
 }
