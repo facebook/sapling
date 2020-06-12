@@ -7,7 +7,7 @@
 
 use std::convert::TryFrom;
 
-use anyhow::anyhow;
+use anyhow::Context;
 use futures::{
     stream::{BoxStream, FuturesUnordered},
     StreamExt, TryStreamExt,
@@ -23,8 +23,9 @@ use mononoke_api::hg::HgRepoContext;
 use types::Key;
 
 use crate::context::ServerContext;
+use crate::errors::{ErrorKind, MononokeErrorExt};
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_response, get_repo, parse_cbor_request, to_mononoke_path};
+use crate::utils::{cbor_response, get_repo, parse_cbor_request, to_mpath};
 
 type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, HttpError>>;
 
@@ -52,16 +53,17 @@ async fn get_history(
 ) -> Result<HistoryResponse, HttpError> {
     let chunk_stream = FuturesUnordered::new();
     for key in request.keys {
+        // Save the path for inclusion in the response.
+        let path = key.path.clone();
+
         // Build a stream of history entries for a single file.
-        let entry_stream = single_key_history(repo, &key, request.length).await?;
+        let entry_stream = single_key_history(repo, key, request.length).await?;
 
         // Build a future that buffers the stream and resolves
         // to a HistoryResponseChunk for this file.
         let chunk_fut = async {
-            Ok(HistoryResponseChunk {
-                path: key.path,
-                entries: entry_stream.try_collect().await?,
-            })
+            let entries = entry_stream.try_collect().await?;
+            Ok(HistoryResponseChunk { path, entries })
         };
 
         chunk_stream.push(chunk_fut);
@@ -76,26 +78,27 @@ async fn get_history(
 
 async fn single_key_history(
     repo: &HgRepoContext,
-    key: &Key,
+    key: Key,
     length: Option<u32>,
 ) -> Result<HistoryStream, HttpError> {
     let filenode_id = HgFileNodeId::new(HgNodeHash::from(key.hgid));
-    let path = to_mononoke_path(&key.path).map_err(HttpError::e400)?;
-    let mpath = path.into_mpath().ok_or_else(|| {
-        HttpError::e400(anyhow!("empty path given for filenode: {}", &filenode_id))
-    })?;
+    let mpath = to_mpath(&key.path)
+        .map_err(HttpError::e400)?
+        .context(ErrorKind::UnexpectedEmptyPath)
+        .map_err(HttpError::e400)?;
 
     let file = repo
         .file(filenode_id)
         .await
-        .map_err(HttpError::e500)?
-        .ok_or_else(|| HttpError::e404(anyhow!("file not found: {:?}", &key)))?;
+        .map_err(|e| e.into_http_error(ErrorKind::DataFetchFailed(key.clone())))?
+        .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))
+        .map_err(HttpError::e404)?;
 
     // Fetch the file's history and convert the entries into
     // the expected on-the-wire format.
     let history = file
         .history(mpath, length)
-        .map_err(HttpError::e500)
+        .map_err(move |e| e.into_http_error(ErrorKind::HistoryFetchFailed(key.clone())))
         // XXX: Use async block because TryStreamExt::and_then
         // requires the closure to return a TryFuture.
         .and_then(|entry| async { WireHistoryEntry::try_from(entry).map_err(HttpError::e500) })

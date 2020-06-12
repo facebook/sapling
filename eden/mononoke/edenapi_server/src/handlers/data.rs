@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::anyhow;
+use anyhow::Context;
 use futures::{stream::FuturesUnordered, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -18,6 +18,7 @@ use mononoke_api::hg::{HgDataContext, HgDataId, HgRepoContext};
 use types::Key;
 
 use crate::context::ServerContext;
+use crate::errors::{ErrorKind, MononokeErrorExt};
 use crate::middleware::RequestContext;
 use crate::utils::{cbor_response, get_repo, parse_cbor_request};
 
@@ -64,8 +65,9 @@ async fn get_data_entry<ID: HgDataId>(
     let ctx = id
         .context(repo)
         .await
-        .map_err(HttpError::e500)?
-        .ok_or_else(|| HttpError::e404(anyhow!("key not found: {:?}", &key)))?;
+        .map_err(|e| e.into_http_error(ErrorKind::DataFetchFailed(key.clone())))?
+        .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))
+        .map_err(HttpError::e404)?;
 
     let data = ctx.content().await.map_err(HttpError::e500)?;
     let parents = ctx.hg_parents().into();

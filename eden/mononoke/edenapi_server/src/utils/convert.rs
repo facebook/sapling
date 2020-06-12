@@ -19,10 +19,12 @@
 //! in implentation, it is possible that conversion failures may occur
 //! in practice.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use mononoke_api::path::MononokePath;
 use mononoke_types::MPath;
 use types::{RepoPath, RepoPathBuf};
+
+use crate::errors::ErrorKind;
 
 /// Convert a Mercurial `RepoPath` or `RepoPathBuf` into a `MononokePath`.
 /// The input will be copied due to differences in data representation.
@@ -33,14 +35,16 @@ pub fn to_mononoke_path(path: impl AsRef<RepoPath>) -> Result<MononokePath> {
 /// Convert a Mercurial `RepoPath` or `RepoPathBuf` into an `Option<MPath>`.
 /// The input will be copied due to differences in data representation.
 pub fn to_mpath(path: impl AsRef<RepoPath>) -> Result<Option<MPath>> {
-    MPath::new_opt(path.as_ref().as_byte_slice())
+    let path_bytes = path.as_ref().as_byte_slice();
+    MPath::new_opt(path_bytes).with_context(|| ErrorKind::InvalidPath(path_bytes.to_vec()))
 }
 
 /// Convert a `MononokePath` into a Mercurial `RepoPathBuf`.
 /// The input will be copied due to differences in data representation.
 pub fn to_hg_path(path: &MononokePath) -> Result<RepoPathBuf> {
-    Ok(match path.as_mpath() {
-        Some(mpath) => RepoPathBuf::from_utf8(mpath.to_vec())?,
-        None => RepoPathBuf::new(),
-    })
+    let path_bytes = match path.as_mpath() {
+        Some(mpath) => mpath.to_vec(),
+        None => return Ok(RepoPathBuf::new()),
+    };
+    RepoPathBuf::from_utf8(path_bytes.clone()).context(ErrorKind::InvalidPath(path_bytes))
 }

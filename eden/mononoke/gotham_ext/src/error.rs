@@ -67,6 +67,13 @@ impl HttpError {
         }
     }
 
+    pub fn e503<E: Into<Error>>(err: E) -> Self {
+        Self {
+            error: err.into(),
+            status_code: StatusCode::SERVICE_UNAVAILABLE,
+        }
+    }
+
     /// Turn this error into a type corresponding to the return type
     /// of a Gotham handler, so that it may be directly returned from
     /// a handler function.

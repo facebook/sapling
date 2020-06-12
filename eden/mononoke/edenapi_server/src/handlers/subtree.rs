@@ -21,6 +21,7 @@ use mononoke_api::{
 use types::Key;
 
 use crate::context::ServerContext;
+use crate::errors::{ErrorKind, MononokeErrorExt};
 use crate::middleware::RequestContext;
 use crate::utils::{cbor_response, get_repo, parse_cbor_request, to_hg_path, to_mononoke_path};
 
@@ -73,7 +74,7 @@ async fn get_complete_subtree(
 
     let entries = repo
         .trees_under_path(path, root_nodes, base_nodes, request.depth)
-        .map_err(HttpError::e500)
+        .map_err(|e| e.into_http_error(ErrorKind::SubtreeRequestFailed))
         .and_then(move |(tree, path)| async {
             // XXX: Even though this function isn't async, we need to
             // use an async block because `and_then()` requires a Future.

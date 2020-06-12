@@ -43,6 +43,7 @@ use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use secure_utils::SslConfig;
 
 mod context;
+mod errors;
 mod handlers;
 mod middleware;
 mod utils;

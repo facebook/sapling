@@ -7,12 +7,14 @@
 
 //! cbor.rs - Utilities for working with CBOR data in HTTP requests and responses.
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use bytes::Bytes;
 use gotham::state::State;
 use mime::Mime;
 use once_cell::sync::Lazy;
 use serde::{de::DeserializeOwned, Serialize};
+
+use crate::errors::ErrorKind;
 
 use gotham_ext::{
     error::HttpError,
@@ -28,7 +30,9 @@ pub fn cbor_mime() -> Mime {
 }
 
 pub fn to_cbor_bytes<S: Serialize>(s: S) -> Result<Bytes, Error> {
-    Ok(serde_cbor::to_vec(&s)?.into())
+    serde_cbor::to_vec(&s)
+        .map(Bytes::from)
+        .context(ErrorKind::SerializationFailed)
 }
 
 pub fn cbor_response<S: Serialize>(s: S) -> Result<impl TryIntoResponse, HttpError> {
@@ -38,5 +42,7 @@ pub fn cbor_response<S: Serialize>(s: S) -> Result<impl TryIntoResponse, HttpErr
 
 pub async fn parse_cbor_request<R: DeserializeOwned>(state: &mut State) -> Result<R, HttpError> {
     let body = get_request_body(state).await?;
-    serde_cbor::from_slice(&body).map_err(HttpError::e400)
+    serde_cbor::from_slice(&body)
+        .context(ErrorKind::DeserializationFailed)
+        .map_err(HttpError::e400)
 }
