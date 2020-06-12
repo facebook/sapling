@@ -11,8 +11,8 @@
 // - OSS cargo build: build.rs used, does not run Thrift compiler, use existing
 //   generated files.
 
-use std::fs::{self};
-use std::io::{self};
+use std::fs;
+use std::io;
 use std::path::Path;
 use std::process::Command;
 
@@ -57,7 +57,7 @@ fn generate_thrift_subcrates(thrift_units: &[ThriftUnit]) -> io::Result<()> {
             .arg("-I")
             .arg(fbcode_path)
             .arg("-gen")
-            .arg("mstch_rust")
+            .arg("mstch_rust:serde")
             .arg("-out")
             .arg(&out_path)
             .arg(&thrift_source_path)
@@ -92,6 +92,8 @@ anyhow = "1"
 async-trait = "0.1"
 fbthrift = {{ path = "../../../../../thrift/lib/rust" }}
 futures = "0.3"
+serde = {{ version = "1", features = ["derive"] }}
+serde_derive = "1.0"
 thiserror = "1"
 {}"#,
                 "g", unit.name, deps
