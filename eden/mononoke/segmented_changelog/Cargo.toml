@@ -1,0 +1,35 @@
+[package]
+name = "segmented_changelog"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["schemas/**/*.sql", "src/**/*.rs"]
+
+[dependencies]
+bulkops = { path = "../bulkops" }
+changeset_fetcher = { path = "../blobrepo/changeset_fetcher" }
+changesets = { path = "../changesets" }
+context = { path = "../server/context" }
+dag = { path = "../../scm/lib/dag" }
+mononoke_types = { path = "../mononoke_types" }
+phases = { path = "../phases" }
+sql_construct = { path = "../common/sql_construct" }
+sql_ext = { path = "../common/rust/sql_ext" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+maplit = "1.0"
+
+[dev-dependencies]
+blobrepo = { path = "../blobrepo" }
+fixtures = { path = "../tests/fixtures" }
+mercurial_types = { path = "../mercurial/types" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+revset = { path = "../revset" }
+tests_utils = { path = "../tests/utils" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+tokio-compat = "0.1"

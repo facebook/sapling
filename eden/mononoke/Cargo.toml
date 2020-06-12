@@ -136,6 +136,7 @@ members = [
     "repo_client/wirepack",
     "revset",
     "revset/revset-test-helper",
+    "segmented_changelog",
     "server",
     "server/context",
     "server/monitoring",

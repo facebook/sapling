@@ -91,6 +91,7 @@ impl SqlConstruct for IdMap {
 impl SqlConstructFromMetadataDatabaseConfig for IdMap {}
 
 impl IdMap {
+    #[cfg(test)]
     pub async fn insert(
         &self,
         ctx: &CoreContext,
