@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::iter::FromIterator;
+
 use serde_derive::{Deserialize, Serialize};
 
 use types::{hgid::HgId, key::Key, nodeinfo::NodeInfo, parents::Parents, path::RepoPathBuf};
 
-/// Structure containing the fields corresponding to a HistoryPack's
+/// Structure containing the fields corresponding to the client's
 /// in-memory representation of a history entry. Useful for adding
-/// new entries to a MutableHistoryPack.
+/// new entries to client-side data structures.
 #[derive(
     Clone,
     Debug,
@@ -64,12 +66,6 @@ impl HistoryEntry {
     }
 }
 
-impl From<(WireHistoryEntry, RepoPathBuf)> for HistoryEntry {
-    fn from((entry, path): (WireHistoryEntry, RepoPathBuf)) -> Self {
-        Self::from_wire(entry, path)
-    }
-}
-
 /// History entry structure containing fields corresponding to
 /// a single history record in Mercurial's loose file format.
 /// This format contains less information than a HistoryEntry
@@ -113,6 +109,70 @@ impl From<HistoryEntry> for WireHistoryEntry {
             linknode: entry.nodeinfo.linknode,
             copyfrom,
         }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoryRequest {
+    pub keys: Vec<Key>,
+    pub length: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoryResponse {
+    pub chunks: Vec<HistoryResponseChunk>,
+}
+
+impl HistoryResponse {
+    pub fn new(chunks: impl IntoIterator<Item = HistoryResponseChunk>) -> Self {
+        Self::from_iter(chunks)
+    }
+}
+
+impl FromIterator<HistoryResponseChunk> for HistoryResponse {
+    fn from_iter<I: IntoIterator<Item = HistoryResponseChunk>>(chunks: I) -> Self {
+        Self {
+            chunks: chunks.into_iter().collect(),
+        }
+    }
+}
+
+impl IntoIterator for HistoryResponse {
+    type Item = HistoryEntry;
+    type IntoIter = Box<dyn Iterator<Item = HistoryEntry> + Send + 'static>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Box::new(self.chunks.into_iter().flatten())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoryResponseChunk {
+    pub path: RepoPathBuf,
+    pub entries: Vec<WireHistoryEntry>,
+}
+
+impl HistoryResponseChunk {
+    pub fn new(path: RepoPathBuf, entries: impl IntoIterator<Item = WireHistoryEntry>) -> Self {
+        Self {
+            path,
+            entries: entries.into_iter().collect(),
+        }
+    }
+}
+
+impl IntoIterator for HistoryResponseChunk {
+    type Item = HistoryEntry;
+    type IntoIter = Box<dyn Iterator<Item = HistoryEntry> + Send + 'static>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let path = self.path;
+        let iter = self
+            .entries
+            .into_iter()
+            .map(move |entry| HistoryEntry::from_wire(entry, path.clone()));
+
+        Box::new(iter)
     }
 }
 
@@ -182,12 +242,12 @@ mod tests {
         fn history_entry_roundtrip(entry: HistoryEntry) -> bool {
             let path = entry.key.path.clone();
             let wire = WireHistoryEntry::from(entry.clone());
-            let roundtrip = HistoryEntry::from((wire, path));
+            let roundtrip = HistoryEntry::from_wire(wire, path);
             entry == roundtrip
         }
 
         fn wire_entry_roundtrip(wire: WireHistoryEntry, path: RepoPathBuf) -> bool {
-            let entry = HistoryEntry::from((wire.clone(), path));
+            let entry = HistoryEntry::from_wire(wire.clone(), path);
             let roundtrip = WireHistoryEntry::from(entry);
             wire == roundtrip
         }

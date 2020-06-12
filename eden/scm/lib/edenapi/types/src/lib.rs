@@ -7,12 +7,12 @@
 
 #![deny(warnings)]
 
-pub mod api;
-pub mod dataentry;
-pub mod historyentry;
+pub mod data;
+pub mod history;
+pub mod tree;
 
-pub use crate::api::{
-    DataRequest, DataResponse, HistoryRequest, HistoryResponse, HistoryResponseChunk, TreeRequest,
+pub use crate::data::{DataEntry, DataRequest, DataResponse, Validity};
+pub use crate::history::{
+    HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
 };
-pub use crate::dataentry::{DataEntry, Validity};
-pub use crate::historyentry::{HistoryEntry, WireHistoryEntry};
+pub use crate::tree::TreeRequest;

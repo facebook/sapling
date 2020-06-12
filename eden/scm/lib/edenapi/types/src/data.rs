@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::iter::FromIterator;
+
 use anyhow::{format_err, Error};
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
@@ -119,5 +121,38 @@ impl DataEntry {
         }
 
         Validity::Valid
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DataRequest {
+    pub keys: Vec<Key>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DataResponse {
+    pub entries: Vec<DataEntry>,
+}
+
+impl DataResponse {
+    pub fn new(entries: impl IntoIterator<Item = DataEntry>) -> Self {
+        Self::from_iter(entries)
+    }
+}
+
+impl FromIterator<DataEntry> for DataResponse {
+    fn from_iter<I: IntoIterator<Item = DataEntry>>(entries: I) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
+    }
+}
+
+impl IntoIterator for DataResponse {
+    type Item = DataEntry;
+    type IntoIter = std::vec::IntoIter<DataEntry>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.entries.into_iter()
     }
 }

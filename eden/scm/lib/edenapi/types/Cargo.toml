@@ -6,7 +6,7 @@ version = "0.1.0"
 include = ["src/**/*.rs"]
 
 [features]
-default = []
+default = ["for-tests"]
 for-tests = []
 
 [dependencies]
