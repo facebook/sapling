@@ -341,7 +341,7 @@ void TestMount::remountGracefully() {
       blobCache_,
       serverState_,
       std::move(journal));
-  edenMount_->initialize(takeoverData).getVia(serverExecutor_.get());
+  edenMount_->initialize(nullptr, takeoverData).getVia(serverExecutor_.get());
 }
 #endif
 

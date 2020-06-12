@@ -655,9 +655,16 @@ OverlayChecker::OverlayChecker(
 
 OverlayChecker::~OverlayChecker() {}
 
-void OverlayChecker::scanForErrors() {
-  XLOG(INFO) << "Starting fsck scan on overlay " << fs_->getLocalDir();
-  readInodes();
+void OverlayChecker::scanForErrors(
+    const std::function<void(std::string)>& progressCallback) {
+  auto fsck_start_msg = folly::to<std::string>(
+      "Starting fsck scan on overlay ", fs_->getLocalDir());
+  XLOG(INFO) << fsck_start_msg;
+
+  if (auto callback = progressCallback) {
+    callback(fsck_start_msg);
+  }
+  readInodes(progressCallback);
   linkInodeChildren();
   scanForParentErrors();
   checkNextInodeNumber();
@@ -845,7 +852,8 @@ PathComponent OverlayChecker::findChildName(
   return PathComponent(folly::to<string>("[missing_child(", child, ")]"));
 }
 
-void OverlayChecker::readInodes() {
+void OverlayChecker::readInodes(
+    const std::function<void(std::string)>& progressCallback) {
   // Walk through all of the sharded subdirectories
   uint32_t progress10pct = 0;
   std::array<char, 2> subdirBuffer;
@@ -854,8 +862,18 @@ void OverlayChecker::readInodes() {
     // Log a DBG2 message every 10% done
     uint32_t progress = (10 * shardID) / FsOverlay::kNumShards;
     if (progress > progress10pct) {
-      XLOG(DBG2) << "fsck:" << fs_->getLocalDir() << ": scan " << progress
-                 << "0% complete: " << inodes_.size() << " inodes scanned";
+      auto fsck_path_msg =
+          folly::to<std::string>("fsck:", fs_->getLocalDir(), ": ");
+      auto fsck_scanned_msg = folly::to<std::string>(
+          "scan ",
+          progress,
+          "0% complete: ",
+          inodes_.size(),
+          " inodes scanned");
+      XLOG(INFO) << fsck_path_msg << fsck_scanned_msg;
+      if (auto callback = progressCallback) {
+        callback(fsck_scanned_msg);
+      }
       progress10pct = progress;
     }
 

@@ -176,6 +176,7 @@ class EdenMount {
    * If takeover data is specified, it is used to initialize the inode map.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
+      std::function<void(std::string)>&& progressCallback = nullptr,
       const std::optional<SerializedInodeMap>& takeover = std::nullopt);
 
   /**

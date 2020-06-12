@@ -100,7 +100,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * - Upgrading the on-disk data from older formats if the Overlay was created
    *   by an older version of the software.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> initialize();
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> initialize(
+      std::function<void(std::string)>&& progressCallback = nullptr);
 
   /**
    * Closes the overlay. It is undefined behavior to access the
@@ -243,7 +244,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     std::vector<GCRequest> queue;
   };
 
-  void initOverlay();
+  void initOverlay(
+      const std::function<void(std::string)>& progressCallback = nullptr);
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);
 

@@ -31,6 +31,7 @@
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
+#include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
@@ -220,6 +221,7 @@ class EdenServer : private TakeoverHandler {
   FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> mount(
       std::unique_ptr<CheckoutConfig> initialConfig,
       bool readOnly,
+      std::function<void(std::string)>&& progressCallback = nullptr,
       std::optional<TakeoverData::MountInfo>&& optionalTakeover = std::nullopt);
 
   /**

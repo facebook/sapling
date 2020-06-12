@@ -333,6 +333,7 @@ void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
     auto initialConfig = CheckoutConfig::loadFromClientDirectory(
         AbsolutePathPiece{argument->mountPoint},
         AbsolutePathPiece{argument->edenClientPath});
+
     server_->mount(std::move(initialConfig), argument->readOnly).get();
   } catch (const EdenError& ex) {
     XLOG(ERR) << "Error: " << ex.what();

@@ -103,7 +103,8 @@ struct statfs Overlay::statFs() {
 }
 #endif // !_WIN32
 
-folly::SemiFuture<Unit> Overlay::initialize() {
+folly::SemiFuture<Unit> Overlay::initialize(
+    std::function<void(std::string)>&& progressCallback) {
   // The initOverlay() call is potentially slow, so we want to avoid
   // performing it in the current thread and blocking returning to our caller.
   //
@@ -111,9 +112,12 @@ folly::SemiFuture<Unit> Overlay::initialize() {
   // to simply use this existing thread to perform the initialization logic
   // before waiting for GC work to do.
   auto [initPromise, initFuture] = folly::makePromiseContract<Unit>();
-  gcThread_ = std::thread([this, promise = std::move(initPromise)]() mutable {
+
+  gcThread_ = std::thread([this,
+                           progressCallback = std::move(progressCallback),
+                           promise = std::move(initPromise)]() mutable {
     try {
-      initOverlay();
+      initOverlay(progressCallback);
     } catch (std::exception& ex) {
       XLOG(ERR) << "overlay initialization failed for "
                 << backingOverlay_.getLocalDir() << ": " << ex.what();
@@ -123,8 +127,8 @@ folly::SemiFuture<Unit> Overlay::initialize() {
     }
     promise.setValue();
 #ifndef _WIN32
-    // TODO: On Windows files are cached by the ProjectedFS. We need to clean
-    // the cached files while doing GC.
+    // TODO: On Windows files are cached by the ProjectedFS. We need to
+    // clean the cached files while doing GC.
 
     gcThread();
 #endif
@@ -132,7 +136,8 @@ folly::SemiFuture<Unit> Overlay::initialize() {
   return std::move(initFuture);
 }
 
-void Overlay::initOverlay() {
+void Overlay::initOverlay(
+    const std::function<void(std::string)>& progressCallback) {
   IORequest req{this};
   auto optNextInodeNumber = backingOverlay_.initOverlay(true);
   if (!optNextInodeNumber.has_value()) {
@@ -146,8 +151,9 @@ void Overlay::initOverlay() {
     // correct next inode number as it does so.
     XLOG(WARN) << "Overlay " << backingOverlay_.getLocalDir()
                << " was not shut down cleanly.  Performing fsck scan.";
+
     OverlayChecker checker(&backingOverlay_, std::nullopt);
-    checker.scanForErrors();
+    checker.scanForErrors(progressCallback);
     checker.repairErrors();
 
     optNextInodeNumber = checker.getNextInodeNumber();
@@ -208,7 +214,8 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     const auto& name = iter.first;
     const auto& value = iter.second;
 
-    bool isMaterialized = !value.hash_ref() || value.hash_ref().value().empty();
+    bool isMaterialized =
+        !value.hash_ref() || value.hash_ref().value_unchecked().empty();
     InodeNumber ino;
     if (value.inodeNumber) {
       ino = InodeNumber::fromThrift(value.inodeNumber);

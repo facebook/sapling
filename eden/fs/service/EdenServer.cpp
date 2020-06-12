@@ -852,7 +852,12 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
           auto initialConfig = CheckoutConfig::loadFromClientDirectory(
               AbsolutePathPiece{info.mountPath},
               AbsolutePathPiece{info.stateDirectory});
-          return mount(std::move(initialConfig), false, std::move(info));
+
+          return mount(
+              std::move(initialConfig),
+              false,
+              [logger](auto msg) { logger->log(msg); },
+              std::move(info));
         })
             .thenTry([logger, mountPath = info.mountPath](
                          folly::Try<std::shared_ptr<EdenMount>>&& result) {
@@ -911,7 +916,10 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
           auto initialConfig = CheckoutConfig::loadFromClientDirectory(
               AbsolutePathPiece{mountInfo.mountPoint},
               AbsolutePathPiece{mountInfo.edenClientPath});
-          return mount(std::move(initialConfig), false);
+
+          return mount(std::move(initialConfig), false, [logger](auto msg) {
+            logger->log(msg);
+          });
         })
             .thenTry([logger, mountPath = client.first.asString()](
                          folly::Try<std::shared_ptr<EdenMount>>&& result) {
@@ -1196,6 +1204,7 @@ Future<Unit> EdenServer::completeTakeoverStart(
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<CheckoutConfig> initialConfig,
     bool readOnly,
+    std::function<void(std::string)>&& progressCallback,
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
   folly::stop_watch<> mountStopWatch;
 
@@ -1220,7 +1229,9 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   registerStats(edenMount);
 
   const bool doTakeover = optionalTakeover.has_value();
+
   auto initFuture = edenMount->initialize(
+      std::move(progressCallback),
       doTakeover ? std::make_optional(optionalTakeover->inodeMap)
                  : std::nullopt);
 

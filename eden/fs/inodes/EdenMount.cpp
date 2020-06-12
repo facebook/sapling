@@ -219,13 +219,15 @@ EdenMount::EdenMount(
 }
 
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
+    std::function<void(std::string)>&& progressCallback,
     const std::optional<SerializedInodeMap>& takeover) {
   transitionState(State::UNINITIALIZED, State::INITIALIZING);
 
   return serverState_->getFaultInjector()
       .checkAsync("mount", getPath().stringPiece())
       .via(serverState_->getThreadPool().get())
-      .thenValue([this](auto&&) {
+      .thenValue([this, progressCallback = std::move(progressCallback)](
+                     auto&&) mutable {
         auto parents = config_->getParentCommits();
         parentInfo_.wlock()->parents.setParents(parents);
 
@@ -235,10 +237,10 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
         journal_->recordHashUpdate(parents.parent1());
 
         // Initialize the overlay.
-        // This must be performed before we do any operations that may allocate
-        // inode numbers, including creating the root TreeInode.
-        return overlay_->initialize().deferValue(
-            [parents](auto&&) { return parents; });
+        // This must be performed before we do any operations that may
+        // allocate inode numbers, including creating the root TreeInode.
+        return overlay_->initialize(std::move(progressCallback))
+            .deferValue([parents](auto&&) { return parents; });
       })
       .thenValue(
           [this](ParentCommits&& parents) { return createRootInode(parents); })
@@ -837,7 +839,6 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   *lastCheckoutTime_.wlock() = clock_->getRealtime();
 
   auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
-
   return serverState_->getFaultInjector()
       .checkAsync("checkout", getPath().stringPiece())
       .via(serverState_->getThreadPool().get())
