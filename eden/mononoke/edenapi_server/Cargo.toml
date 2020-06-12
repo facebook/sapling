@@ -26,7 +26,6 @@ async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 clap = "2.33"
 futures = { version = "0.3", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
 gotham = { version = "=0.5.0-dev", default-features = false }
 gotham_derive = "=0.5.0-dev"
 http = "0.2"
