@@ -17,7 +17,7 @@ use super::repo::HgRepoContext;
 /// Trait describing the common interface for working with Mercurial's
 /// blob-like types, such as files and trees.
 #[async_trait]
-pub trait HgDataContext {
+pub trait HgDataContext: Send + Sync + 'static {
     type NodeId;
 
     /// Get the ID (node hash) of this blob.
@@ -38,7 +38,7 @@ pub trait HgDataContext {
 /// This trait allows constructing `HgDataContext` from these
 /// identifiers in a generic and type-safe way.
 #[async_trait]
-pub trait HgDataId {
+pub trait HgDataId: Send + Sync + 'static {
     type Context: HgDataContext;
 
     /// Convert a HgNodeHash (which could represent any kind
