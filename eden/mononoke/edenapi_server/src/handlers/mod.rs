@@ -28,7 +28,6 @@ mod data;
 mod history;
 mod repos;
 mod subtree;
-mod util;
 
 pub fn build_router(ctx: ServerContext) -> Router {
     let pipeline = new_pipeline().add(StateMiddleware::new(ctx)).build();

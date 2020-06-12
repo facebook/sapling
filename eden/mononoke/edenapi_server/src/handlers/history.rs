@@ -8,7 +8,6 @@
 use std::convert::TryFrom;
 
 use anyhow::anyhow;
-use bytes::Bytes;
 use futures::{
     stream::{BoxStream, FuturesUnordered},
     StreamExt, TryStreamExt,
@@ -18,15 +17,14 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry};
-use gotham_ext::{error::HttpError, response::BytesBody};
+use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api::hg::HgRepoContext;
 use types::Key;
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
-
-use super::util::{cbor_mime, get_repo, get_request_body, to_mononoke_path};
+use crate::utils::{cbor_response, get_repo, parse_cbor_request, to_mononoke_path};
 
 type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, HttpError>>;
 
@@ -35,21 +33,16 @@ pub struct HistoryParams {
     repo: String,
 }
 
-pub async fn history(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
+pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
     let params = HistoryParams::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
-    let body = get_request_body(state).await?;
-
-    let request = serde_cbor::from_slice(&body).map_err(HttpError::e400)?;
+    let request = parse_cbor_request(state).await?;
     let response = get_history(&repo, request).await?;
-    let bytes: Bytes = serde_cbor::to_vec(&response)
-        .map_err(HttpError::e500)?
-        .into();
 
-    Ok(BytesBody::new(bytes, cbor_mime()))
+    cbor_response(response)
 }
 
 /// Fetch history for all of the requested files concurrently.

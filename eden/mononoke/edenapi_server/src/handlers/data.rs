@@ -6,43 +6,36 @@
  */
 
 use anyhow::anyhow;
-use bytes::Bytes;
 use futures::{stream::FuturesUnordered, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{DataEntry, DataRequest, DataResponse};
-use gotham_ext::{error::HttpError, response::BytesBody};
+use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::HgNodeHash;
 use mononoke_api::hg::{HgDataContext, HgDataId, HgRepoContext};
 use types::Key;
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
-
-use super::util::{cbor_mime, get_repo, get_request_body};
+use crate::utils::{cbor_response, get_repo, parse_cbor_request};
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct DataParams {
     repo: String,
 }
 
-pub async fn data<ID: HgDataId>(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
+pub async fn data<ID: HgDataId>(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
     let params = DataParams::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
-    let body = get_request_body(state).await?;
-
-    let request = serde_cbor::from_slice(&body).map_err(HttpError::e400)?;
+    let request = parse_cbor_request(state).await?;
     let response = get_all_entries::<ID>(&repo, request).await?;
-    let bytes: Bytes = serde_cbor::to_vec(&response)
-        .map_err(HttpError::e500)?
-        .into();
 
-    Ok(BytesBody::new(bytes, cbor_mime()))
+    cbor_response(response)
 }
 
 /// Fetch data for all of the requested keys concurrently.

@@ -6,14 +6,13 @@
  */
 
 use anyhow::Error;
-use bytes::Bytes;
 use futures::TryStreamExt;
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{DataEntry, DataResponse, TreeRequest};
-use gotham_ext::{error::HttpError, response::BytesBody};
+use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgManifestId, HgNodeHash};
 use mononoke_api::{
     hg::{HgDataContext, HgRepoContext, HgTreeContext},
@@ -23,29 +22,23 @@ use types::Key;
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
-
-use super::util::{cbor_mime, get_repo, get_request_body, to_hg_path, to_mononoke_path};
+use crate::utils::{cbor_response, get_repo, parse_cbor_request, to_hg_path, to_mononoke_path};
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct SubTreeParams {
     repo: String,
 }
 
-pub async fn subtree(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
+pub async fn subtree(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
     let params = SubTreeParams::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
-    let body = get_request_body(state).await?;
-
-    let request = serde_cbor::from_slice(&body).map_err(HttpError::e400)?;
+    let request = parse_cbor_request(state).await?;
     let response = get_complete_subtree(&repo, request).await?;
-    let bytes: Bytes = serde_cbor::to_vec(&response)
-        .map_err(HttpError::e500)?
-        .into();
 
-    Ok(BytesBody::new(bytes, cbor_mime()))
+    cbor_response(response)
 }
 
 /// Fetch all of the nodes for the subtree under the specified

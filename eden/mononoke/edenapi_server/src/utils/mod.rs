@@ -5,27 +5,23 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context};
 use bytes::Bytes;
 use gotham::state::{FromState, State};
 use http::HeaderMap;
 use hyper::Body;
-use mime::Mime;
-use once_cell::sync::Lazy;
 
 use gotham_ext::{body_ext::BodyExt, error::HttpError};
-use mononoke_api::{hg::HgRepoContext, path::MononokePath};
-use mononoke_types::MPath;
-use types::{RepoPath, RepoPathBuf};
+use mononoke_api::hg::HgRepoContext;
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
 
-static CBOR_MIME: Lazy<Mime> = Lazy::new(|| "application/cbor".parse().unwrap());
+pub mod cbor;
+pub mod convert;
 
-pub fn cbor_mime() -> Mime {
-    CBOR_MIME.clone()
-}
+pub use cbor::{cbor_mime, cbor_response, parse_cbor_request, to_cbor_bytes};
+pub use convert::{to_hg_path, to_mononoke_path};
 
 pub async fn get_repo(
     sctx: &ServerContext,
@@ -38,7 +34,8 @@ pub async fn get_repo(
         .await
         .map_err(HttpError::e403)?
         .map(|repo| repo.hg())
-        .ok_or_else(|| HttpError::e404(anyhow!("repo does not exist: {:?}", name)))
+        .with_context(|| anyhow!("repo does not exist: {:?}", name))
+        .map_err(HttpError::e404)
 }
 
 pub async fn get_request_body(state: &mut State) -> Result<Bytes, HttpError> {
@@ -48,16 +45,4 @@ pub async fn get_request_body(state: &mut State) -> Result<Bytes, HttpError> {
         .map_err(HttpError::e400)?
         .await
         .map_err(HttpError::e400)
-}
-
-pub fn to_mononoke_path(path: impl AsRef<RepoPath>) -> Result<MononokePath, Error> {
-    let mpath = MPath::new_opt(path.as_ref().as_byte_slice())?;
-    Ok(MononokePath::new(mpath))
-}
-
-pub fn to_hg_path(path: &MononokePath) -> Result<RepoPathBuf, Error> {
-    Ok(match path.as_mpath() {
-        Some(mpath) => RepoPathBuf::from_utf8(mpath.to_vec())?,
-        None => RepoPathBuf::new(),
-    })
 }
