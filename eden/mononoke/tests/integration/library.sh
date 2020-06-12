@@ -376,6 +376,8 @@ commitextras=
 ack=*
 [experimental]
 changegroup3=True
+[mutation]
+record=False
 EOF
 }
 
@@ -1191,6 +1193,8 @@ treeonly=True
 [remotefilelog]
 server=False
 reponame=repo
+[mutation]
+record=False
 EOF
 }
 
