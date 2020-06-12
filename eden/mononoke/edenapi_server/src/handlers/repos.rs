@@ -24,7 +24,7 @@ struct ReposResponse<'a> {
     repos: Vec<&'a str>,
 }
 
-pub fn repos(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
+pub async fn repos(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
     let params = ReposParams::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
     let mononoke = sctx.mononoke_api();

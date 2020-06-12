@@ -29,6 +29,43 @@ mod history;
 mod repos;
 mod subtree;
 
+/// Macro to create a Gotham handler function from an async function.
+///
+/// The expected signature of the input function is:
+/// ```rust,ignore
+/// async fn handler(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
+/// ```
+///
+/// The resulting wrapped function will have the signaure:
+/// ```rust,ignore
+/// fn wrapped(mut state: State) -> Pin<Box<HandlerFuture>>
+/// ```
+macro_rules! define_handler {
+    ($name:ident, $func:path) => {
+        fn $name(mut state: State) -> Pin<Box<HandlerFuture>> {
+            async move {
+                let res = $func(&mut state).await;
+                build_response(res, state)
+            }
+            .boxed()
+        }
+    };
+}
+
+define_handler!(repos_handler, repos::repos);
+define_handler!(files_handler, data::data::<HgFileNodeId>);
+define_handler!(trees_handler, data::data::<HgManifestId>);
+define_handler!(history_handler, history::history);
+define_handler!(subtree_handler, subtree::subtree);
+
+fn health_handler(state: State) -> (State, &'static str) {
+    if ServerContext::borrow_from(&state).will_exit() {
+        (state, "EXITING")
+    } else {
+        (state, "I_AM_ALIVE")
+    }
+}
+
 pub fn build_router(ctx: ServerContext) -> Router {
     let pipeline = new_pipeline().add(StateMiddleware::new(ctx)).build();
     let (chain, pipelines) = single_pipeline(pipeline);
@@ -56,52 +93,4 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .with_path_extractor::<subtree::SubTreeParams>()
             .to(subtree_handler);
     })
-}
-
-pub fn health_handler(state: State) -> (State, &'static str) {
-    if ServerContext::borrow_from(&state).will_exit() {
-        (state, "EXITING")
-    } else {
-        (state, "I_AM_ALIVE")
-    }
-}
-
-pub fn repos_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
-    async move {
-        let res = repos::repos(&mut state);
-        build_response(res, state)
-    }
-    .boxed()
-}
-
-pub fn files_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
-    async move {
-        let res = data::data::<HgFileNodeId>(&mut state).await;
-        build_response(res, state)
-    }
-    .boxed()
-}
-
-pub fn trees_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
-    async move {
-        let res = data::data::<HgManifestId>(&mut state).await;
-        build_response(res, state)
-    }
-    .boxed()
-}
-
-pub fn history_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
-    async move {
-        let res = history::history(&mut state).await;
-        build_response(res, state)
-    }
-    .boxed()
-}
-
-pub fn subtree_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
-    async move {
-        let res = subtree::subtree(&mut state).await;
-        build_response(res, state)
-    }
-    .boxed()
 }
