@@ -124,18 +124,20 @@ def getscratchbranchparts(
     )
 
     if mutation.enabled(repo):
-        if constants.scratchmutationparttype not in bundle2.bundle2caps(peer):
-            repo.ui.warn(
-                _("no server support for %r - skipping\n")
-                % constants.scratchmutationparttype
-            )
-        else:
-            parts.append(
-                bundle2.bundlepart(
-                    constants.scratchmutationparttype,
-                    data=mutation.bundle(repo, outgoing.missing),
+        entries = mutation.entriesforbundle(repo, outgoing.missing)
+        if entries:
+            if constants.scratchmutationparttype not in bundle2.bundle2caps(peer):
+                repo.ui.warn(
+                    _("no server support for %r - skipping\n")
+                    % constants.scratchmutationparttype
                 )
-            )
+            else:
+                parts.append(
+                    bundle2.bundlepart(
+                        constants.scratchmutationparttype,
+                        data=mutation.bundleentries(entries),
+                    )
+                )
 
     try:
         treemod = extensions.find("treemanifest")

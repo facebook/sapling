@@ -659,11 +659,8 @@ def unbundle(repo, bundledata):
         recordentries(repo, entries, skipexisting=True)
 
 
-def bundle(repo, nodes):
-    """Generate bundled mutation data for bundling alongside the given nodes.
-
-    This consists of mutation entries for all predecessors of the given nodes,
-    including the nodes themselves.
+def entriesforbundle(repo, nodes):
+    """Generate mutation entries for the given nodes
     """
     nodes = set(nodes)
     remaining = set(nodes)
@@ -682,7 +679,18 @@ def bundle(repo, nodes):
                 if nextnode not in seen:
                     remaining.add(nextnode)
 
+    return entries
+
+
+def bundleentries(entries):
     return mutationstore.bundle(entries)
+
+
+def bundle(repo, nodes):
+    """Generate bundled mutation data for bundling alongside the given nodes.
+    """
+    entries = entriesforbundle(repo, nodes)
+    return bundleentries(entries)
 
 
 def convertfromobsmarkers(repo):
