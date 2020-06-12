@@ -239,6 +239,41 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         p.wait()
         self.assertEqual(p.exitstatus, 0)
 
+    def test_graceful_restart_unresponsive_thrift(self) -> None:
+        orig_pid = self._start_fake_edenfs()
+
+        # Rename the thrift socket so that "eden restart --graceful" will not be able
+        # to communicate with the existing daemon.
+        (self.eden_dir / SOCKET_PATH).rename(self.eden_dir / "old.socket")
+
+        # "eden restart --graceful" should not restart if it cannot confirm the
+        # current health of edenfs.
+        p = self._spawn_restart("--graceful")
+        p.expect_exact(
+            f"Found an existing edenfs daemon (pid {orig_pid} that does not "
+            "seem to be responding to thrift calls."
+        )
+        p.expect_exact("Use --force if you want to forcibly restart the current daemon")
+        p.wait()
+        self.assertEqual(p.exitstatus, 1)
+
+        # "eden restart --graceful --force" should force the restart anyway
+        p = self._spawn_restart("--graceful", "--force")
+        p.expect_exact(
+            f"Found an existing edenfs daemon (pid {orig_pid} that does not "
+            "seem to be responding to thrift calls."
+        )
+        p.expect_exact("Forcing a full restart...")
+        p.expect_exact("Starting fake edenfs daemon")
+        p.expect(r"Started edenfs \(pid [0-9]+\)")
+        p.expect_exact("Successfully restarted edenfs.")
+        p.expect_exact(
+            "Note: any programs running inside of an Eden-managed "
+            "directory will need to cd"
+        )
+        p.wait()
+        self.assertEqual(p.exitstatus, 0)
+
     def test_eden_restart_fails_if_edenfs_crashes_on_start(self) -> None:
         self._start_fake_edenfs()
         restart_process = self._spawn_restart(

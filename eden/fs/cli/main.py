@@ -1388,15 +1388,15 @@ class RestartCmd(Subcmd):
             "disruption to clients.  Open file handles will continue to work "
             "across the restart.",
         )
-        mode_group.add_argument(
+
+        parser.add_argument(
             "--force",
-            action="store_const",
-            const=RESTART_MODE_FORCE,
-            dest="restart_type",
+            dest="force_restart",
+            default=False,
+            action="store_true",
             help="Force a full restart, even if the existing edenfs daemon is "
             "still in the middle of starting or stopping.",
         )
-
         parser.add_argument(
             "--daemon-binary", help="Path to the binary for the Eden daemon."
         )
@@ -1459,7 +1459,7 @@ class RestartCmd(Subcmd):
                 # just kill it.
                 stop_timeout = 0
 
-            if self.args.restart_type != RESTART_MODE_FORCE:
+            if not self.args.force_restart:
                 print(f"Use --force if you want to forcibly restart the current daemon")
                 return 1
             return self._force_restart(instance, edenfs_pid, stop_timeout)
@@ -1571,7 +1571,7 @@ Any programs using files or directories inside the Eden mounts will need to
 re-open these files after Eden is restarted.
 """
         )
-        if self.args.restart_type != RESTART_MODE_FORCE and sys.stdin.isatty():
+        if not self.args.force_restart and sys.stdin.isatty():
             if not prompt_confirmation("Proceed?"):
                 print("Not confirmed.")
                 return 1
