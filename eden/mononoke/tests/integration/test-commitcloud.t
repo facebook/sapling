@@ -36,6 +36,9 @@ mononoke + local commit cloud backend
   > user_token_path = $TESTTMP
   > owner_team = The Test Team
   > updateonmove = true
+  > [mutation]
+  > enabled = False
+  > proxy-obsstore = False
   > EOF
 
 setup repo
@@ -201,7 +204,6 @@ On the second client sync it
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 0 files
-  obsoleted 3 changesets
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 58508421158d has been moved remotely to 8e3f03f8d9db
@@ -249,6 +251,7 @@ On the first client check that all commits were hidden
   $ cd ../client1
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
+  detected obsmarker inconsistency (fixing by obsoleting [660cb078da57, eba3648c3275, 44641a2b1a42] and reviving [])
   commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
