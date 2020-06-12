@@ -71,10 +71,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
 
     gotham_build_router(chain, pipelines, |route| {
         route.get("/health_check").to(health_handler);
-        route
-            .get("/repos")
-            .with_query_string_extractor::<repos::ReposParams>()
-            .to(repos_handler);
+        route.get("/repos").to(repos_handler);
         route
             .post("/:repo/files")
             .with_path_extractor::<data::DataParams>()
