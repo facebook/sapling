@@ -20,7 +20,6 @@ use gotham::{
 };
 
 use gotham_ext::response::build_response;
-use mercurial_types::{HgFileNodeId, HgManifestId};
 
 use crate::context::ServerContext;
 
@@ -53,8 +52,8 @@ macro_rules! define_handler {
 }
 
 define_handler!(repos_handler, repos::repos);
-define_handler!(files_handler, data::data::<HgFileNodeId>);
-define_handler!(trees_handler, data::data::<HgManifestId>);
+define_handler!(files_handler, data::files);
+define_handler!(trees_handler, data::trees);
 define_handler!(history_handler, history::history);
 define_handler!(subtree_handler, subtree::subtree);
 

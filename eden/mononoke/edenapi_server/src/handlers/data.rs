@@ -13,7 +13,7 @@ use serde::Deserialize;
 
 use edenapi_types::{DataEntry, DataRequest, DataResponse};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
-use mercurial_types::HgNodeHash;
+use mercurial_types::{HgFileNodeId, HgManifestId, HgNodeHash};
 use mononoke_api::hg::{HgDataContext, HgDataId, HgRepoContext};
 use types::Key;
 
@@ -27,7 +27,19 @@ pub struct DataParams {
     repo: String,
 }
 
-pub async fn data<ID: HgDataId>(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+/// Fetch the content of the files requested by the client.
+pub async fn files(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    data::<HgFileNodeId>(state).await
+}
+
+/// Fetch the tree nodes requested by the client.
+pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    data::<HgManifestId>(state).await
+}
+
+/// Generic async function to fetch any kind of data blob
+/// whose identifier implements the `HgDataID` trait.
+async fn data<ID: HgDataId>(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
     let params = DataParams::borrow_from(state);
