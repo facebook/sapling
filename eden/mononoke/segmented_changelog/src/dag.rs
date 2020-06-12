@@ -266,8 +266,6 @@ impl StartState {
 mod tests {
     use super::*;
 
-    use std::ops::Deref;
-
     use fbinit::FacebookInit;
 
     use blobrepo::BlobRepo;
@@ -310,7 +308,7 @@ mod tests {
             head: ChangesetId,
         ) -> Result<()> {
             let changeset_fetcher = blobrepo.get_changeset_fetcher();
-            self.build_incremental(ctx, changeset_fetcher.deref(), head)
+            self.build_incremental(ctx, &*changeset_fetcher, head)
                 .await?;
             Ok(())
         }
