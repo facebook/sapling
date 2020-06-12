@@ -7,6 +7,8 @@
 
 //! Types for data interchange between the Mononoke API Server and the Mercurial client.
 
+use std::iter::FromIterator;
+
 use serde_derive::{Deserialize, Serialize};
 
 use types::{hgid::HgId, key::Key, path::RepoPathBuf};
@@ -27,9 +29,15 @@ pub struct DataResponse {
 }
 
 impl DataResponse {
-    pub fn new(data: impl IntoIterator<Item = DataEntry>) -> Self {
+    pub fn new(entries: impl IntoIterator<Item = DataEntry>) -> Self {
+        Self::from_iter(entries)
+    }
+}
+
+impl FromIterator<DataEntry> for DataResponse {
+    fn from_iter<I: IntoIterator<Item = DataEntry>>(entries: I) -> Self {
         Self {
-            entries: data.into_iter().collect(),
+            entries: entries.into_iter().collect(),
         }
     }
 }
@@ -51,13 +59,19 @@ pub struct HistoryRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HistoryResponse {
-    pub entries: Vec<(RepoPathBuf, WireHistoryEntry)>,
+    pub chunks: Vec<HistoryResponseChunk>,
 }
 
 impl HistoryResponse {
-    pub fn new(history: impl IntoIterator<Item = (RepoPathBuf, WireHistoryEntry)>) -> Self {
+    pub fn new(chunks: impl IntoIterator<Item = HistoryResponseChunk>) -> Self {
+        Self::from_iter(chunks)
+    }
+}
+
+impl FromIterator<HistoryResponseChunk> for HistoryResponse {
+    fn from_iter<I: IntoIterator<Item = HistoryResponseChunk>>(chunks: I) -> Self {
         Self {
-            entries: history.into_iter().collect(),
+            chunks: chunks.into_iter().collect(),
         }
     }
 }
@@ -67,10 +81,36 @@ impl IntoIterator for HistoryResponse {
     type IntoIter = Box<dyn Iterator<Item = HistoryEntry> + Send + 'static>;
 
     fn into_iter(self) -> Self::IntoIter {
+        Box::new(self.chunks.into_iter().flatten())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HistoryResponseChunk {
+    pub path: RepoPathBuf,
+    pub entries: Vec<WireHistoryEntry>,
+}
+
+impl HistoryResponseChunk {
+    pub fn new(path: RepoPathBuf, entries: impl IntoIterator<Item = WireHistoryEntry>) -> Self {
+        Self {
+            path,
+            entries: entries.into_iter().collect(),
+        }
+    }
+}
+
+impl IntoIterator for HistoryResponseChunk {
+    type Item = HistoryEntry;
+    type IntoIter = Box<dyn Iterator<Item = HistoryEntry> + Send + 'static>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let path = self.path;
         let iter = self
             .entries
             .into_iter()
-            .map(|(path, entry)| HistoryEntry::from_wire(entry, path));
+            .map(move |entry| HistoryEntry::from_wire(entry, path.clone()));
+
         Box::new(iter)
     }
 }

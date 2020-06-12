@@ -11,6 +11,8 @@ pub mod api;
 pub mod dataentry;
 pub mod historyentry;
 
-pub use crate::api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest};
+pub use crate::api::{
+    DataRequest, DataResponse, HistoryRequest, HistoryResponse, HistoryResponseChunk, TreeRequest,
+};
 pub use crate::dataentry::{DataEntry, Validity};
 pub use crate::historyentry::{HistoryEntry, WireHistoryEntry};

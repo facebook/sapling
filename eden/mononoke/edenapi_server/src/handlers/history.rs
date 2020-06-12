@@ -10,14 +10,14 @@ use std::convert::TryFrom;
 use anyhow::anyhow;
 use bytes::Bytes;
 use futures::{
-    stream::{select_all, BoxStream},
+    stream::{BoxStream, FuturesUnordered},
     StreamExt, TryStreamExt,
 };
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
-use edenapi_types::{HistoryRequest, HistoryResponse, WireHistoryEntry};
+use edenapi_types::{HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry};
 use gotham_ext::{error::HttpError, response::BytesBody};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api::hg::HgRepoContext;
@@ -52,26 +52,31 @@ pub async fn history(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
     Ok(BytesBody::new(bytes, cbor_mime()))
 }
 
-/// Fetch data for all of the requested keys concurrently.
+/// Fetch history for all of the requested files concurrently.
 async fn get_history(
     repo: &HgRepoContext,
     request: HistoryRequest,
 ) -> Result<HistoryResponse, HttpError> {
-    // Get streams of history entries for all requested keys.
-    let mut streams = Vec::with_capacity(request.keys.len());
+    let chunk_stream = FuturesUnordered::new();
     for key in request.keys {
-        let entries = single_key_history(repo, &key, request.length).await?;
-        // Add the path of the current key to all items of the stream.
-        // This is needed since the history entries of different keys
-        // may be arbitrarily interleaved later.
-        let entries = entries.map_ok(move |entry| (key.path.clone(), entry));
-        streams.push(entries);
+        // Build a stream of history entries for a single file.
+        let entry_stream = single_key_history(repo, &key, request.length).await?;
+
+        // Build a future that buffers the stream and resolves
+        // to a HistoryResponseChunk for this file.
+        let chunk_fut = async {
+            Ok(HistoryResponseChunk {
+                path: key.path,
+                entries: entry_stream.try_collect().await?,
+            })
+        };
+
+        chunk_stream.push(chunk_fut);
     }
 
-    // Combine them into a single stream, then buffer all items.
     // TODO(kulshrax): Don't buffer the results here.
-    let entries = select_all(streams).try_collect().await?;
-    let response = HistoryResponse { entries };
+    let chunks = chunk_stream.try_collect().await?;
+    let response = HistoryResponse { chunks };
 
     Ok(response)
 }

@@ -159,8 +159,8 @@ fn cmd_history_ls(args: HistLsArgs) -> Result<()> {
     let response: HistoryResponse = read_input(args.input)?;
     // Deduplicate and sort paths.
     let mut paths = BTreeSet::new();
-    for (path, _) in response.entries {
-        paths.insert(path.into_string());
+    for chunk in response.chunks {
+        paths.insert(chunk.path.into_string());
     }
     for path in paths {
         println!("{}", path);
@@ -187,10 +187,10 @@ fn cmd_history_show(args: HistShowArgs) -> Result<()> {
 
 fn make_history_map(response: HistoryResponse) -> BTreeMap<String, Vec<WireHistoryEntry>> {
     let mut map = BTreeMap::new();
-    for (path, entry) in response.entries {
-        map.entry(path.into_string())
+    for chunk in response.chunks {
+        map.entry(chunk.path.into_string())
             .or_insert_with(Vec::new)
-            .push(entry);
+            .extend_from_slice(&chunk.entries);
     }
     map
 }
