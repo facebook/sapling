@@ -35,22 +35,22 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 fn register_error_handlers() {
     fn specific_error_handler(py: Python, e: &error::Error) -> Option<PyErr> {
-        if let Some(e) = e.downcast_ref::<indexedlog::Error>() {
+        if e.downcast_ref::<indexedlog::Error>().is_some() {
             Some(PyErr::new::<IndexedLogError, _>(
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))
-        } else if let Some(e) = e.downcast_ref::<metalog::Error>() {
+        } else if e.downcast_ref::<metalog::Error>().is_some() {
             Some(PyErr::new::<MetaLogError, _>(
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))
-        } else if let Some(e) = e.downcast_ref::<revisionstore::Error>() {
+        } else if e.downcast_ref::<revisionstore::Error>().is_some() {
             Some(PyErr::new::<RevisionstoreError, _>(
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))
-        } else if let Some(e) = e.downcast_ref::<cpython_ext::Error>() {
+        } else if e.downcast_ref::<cpython_ext::Error>().is_some() {
             Some(PyErr::new::<NonUTF8Path, _>(
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
