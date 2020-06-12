@@ -73,25 +73,11 @@ int main(int argc, char** argv) {
   for (unsigned i = 0; i < nthreads; ++i) {
     threads.emplace_back(
         [i, &gate, &socket_path, &repo_path, &samples, &files] {
-          // Setup a socket per-thread talking to eden
-          auto sock_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
-          if (sock_fd == -1) {
-            perror("Failed to create socket");
-            return;
-          }
-          struct sockaddr_un addr;
-          addr.sun_family = AF_UNIX;
-          strncpy(addr.sun_path, socket_path.c_str(), 108);
-          addr.sun_path[107] = '\0';
-          auto rc =
-              connect(sock_fd, (const struct sockaddr*)&addr, sizeof(addr));
-          if (rc == -1) {
-            perror("Failed to connect to socket");
-            return;
-          }
           folly::EventBase eventBase;
           auto socket = folly::AsyncSocket::newSocket(
-              &eventBase, folly::NetworkSocket::fromFd(sock_fd));
+              &eventBase,
+              folly::SocketAddress::makeFromPath(
+                  socket_path.string<std::string>()));
           auto channel = folly::to_shared_ptr(
               apache::thrift::HeaderClientChannel::newChannel(socket));
           auto client = std::make_unique<EdenServiceAsyncClient>(channel);
