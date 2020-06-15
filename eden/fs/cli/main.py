@@ -237,10 +237,10 @@ from the backing repo directory!
             "ignored": "Not cleaned. Please see WARNING above",
             "backing": "Not cleaned. Please see CAUTION above",
             "shared": "Cleaned",
-            "legacy": "Not cleaned. Directories listed above. \
-            Check and remove manually",
-            "fsck": "Not cleaned. Directories listed above. \
-            Check and remove manually",
+            "legacy": "Not cleaned. Directories listed above."
+            + " Check and remove manually",
+            "fsck": "Not cleaned. Directories listed above."
+            + " Check and remove manually",
         }
 
         # align colons. type_label for fsck is long, so
@@ -261,6 +261,8 @@ from the backing repo directory!
                 else:
                     self.color_out.writeln(clean_label, fg=self.color_out.YELLOW)
         self.color_out.writeln("")
+        if not clean:
+            print("To perform automated cleanup, run `eden du --clean`\n")
 
     def du(self, path) -> int:
         cp = subprocess.run(["du", "-skxc", path], stdout=subprocess.PIPE)
