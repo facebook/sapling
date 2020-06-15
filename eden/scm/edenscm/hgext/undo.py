@@ -73,7 +73,7 @@ def hintuncommit(command, oldhash):
 def extsetup(ui):
     extensions.wrapfunction(dispatch, "runcommand", _runcommandwrapper)
 
-    # undo has its own locking, whitelist itself to bypass repo lock audit
+    # undo has its own locking, add itself to bypass repo lock audit
     localrepo.localrepository._wlockfreeprefix.add("undolog/")
 
 

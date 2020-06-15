@@ -19,7 +19,7 @@ FILE_DELETION_CHANCE = 6  # percent
 ADD_DELETE_RATIO = 3
 DELETION_MAX_SIZE = 2000
 
-BLACKLIST = [".hgdirsync", ".hgtags"]
+EXCLUDELIST = [".hgdirsync", ".hgtags"]
 
 
 class randomeditsgenerator(object):

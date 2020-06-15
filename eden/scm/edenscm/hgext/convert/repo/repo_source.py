@@ -412,7 +412,7 @@ class repo(object):
 
     MANIFEST_FILENAME_DEFAULT = "default.xml"
 
-    def __init__(self, ui, path, branchwhitelist=None):
+    def __init__(self, ui, path, branchincludelist=None):
         if not os.path.exists(os.path.join(path, ".repo")):
             raise common.NoRepo(_("%s does not look like a repo repository") % path)
 
@@ -421,7 +421,7 @@ class repo(object):
         self.branches = None
         self.repocommandline = repo_commandline(ui, path)
         self.gitcommandline = common.commandline(ui, "git")
-        self._branchwhitelist = branchwhitelist
+        self._branchincludelist = branchincludelist
 
         self.repobranchsingleregex = re.compile(
             r"^(?P<checkedout>[* ])(?P<published>[pP ]) (?P<name>\S+)\s+|"
@@ -657,7 +657,7 @@ class repo(object):
         branches = set()
         for line in outputlines:
             branchname = line
-            if self._branchwhitelist is None or branchname in self._branchwhitelist:
+            if self._branchincludelist is None or branchname in self._branchincludelist:
                 branches.add(branchname)
         return branches
 
@@ -762,13 +762,13 @@ class repo_source(common.converter_source):
         self._dirredenabled = self.ui.configbool(
             self.CONFIG_NAMESPACE, self.CONFIG_DIRRED_ENABLED, default=True
         )
-        self._branchwhitelist = self.ui.configlist(
+        self._branchincludelist = self.ui.configlist(
             self.CONFIG_NAMESPACE, self.CONFIG_BRANCH_WHITELIST, default=None
         )
 
         self.srcencoding = "utf-8"  # TODO: Read from git source projects
         self.pprinter = pprint.PrettyPrinter()
-        self.repo = repo(ui, path, branchwhitelist=self._branchwhitelist)
+        self.repo = repo(ui, path, branchincludelist=self._branchincludelist)
         self.repocommandline = repo_commandline(ui, path)
         self.gitcommandline = common.commandline(ui, "git")
 

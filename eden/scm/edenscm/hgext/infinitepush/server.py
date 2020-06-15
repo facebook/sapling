@@ -479,16 +479,16 @@ def processparts(orig, repo, op, unbundler):
 
     handleallparts = repo.ui.configbool("infinitepush", "storeallparts")
 
-    partforwardingwhitelist = [constants.scratchmutationparttype]
+    partforwardingincludelist = [constants.scratchmutationparttype]
     try:
         treemfmod = extensions.find("treemanifest")
-        partforwardingwhitelist.append(treemfmod.TREEGROUP_PARTTYPE2)
+        partforwardingincludelist.append(treemfmod.TREEGROUP_PARTTYPE2)
     except KeyError:
         pass
 
     try:
         snapshot = extensions.find("snapshot")
-        partforwardingwhitelist.append(snapshot.bundleparts.snapshotmetadataparttype)
+        partforwardingincludelist.append(snapshot.bundleparts.snapshotmetadataparttype)
     except KeyError:
         pass
 
@@ -533,7 +533,7 @@ def processparts(orig, repo, op, unbundler):
                 # the part so it can be consumed later.
                 scratchbookpart = copiedpart(part)
             else:
-                if handleallparts or part.type in partforwardingwhitelist:
+                if handleallparts or part.type in partforwardingincludelist:
                     # Ideally we would not process any parts, and instead just
                     # forward them to the bundle for storage, but since this
                     # differs from previous behavior, we need to put it behind a

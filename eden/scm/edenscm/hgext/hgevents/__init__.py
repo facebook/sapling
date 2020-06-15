@@ -33,9 +33,9 @@ configitem = registrar.configitem(configtable)
 
 configitem("experimental", "fsmonitor.transaction_notify", default=False)
 
-# This extension is incompatible with the following blacklisted extensions
+# This extension is incompatible with the following extensions
 # and will disable itself when encountering one of these:
-_blacklist = ["largefiles", "eol"]
+_incompatible_exts = ["largefiles", "eol"]
 
 
 def extsetup(ui):
@@ -45,7 +45,7 @@ def extsetup(ui):
 
 def reposetup(ui, repo):
     exts = extensions.enabled()
-    for ext in _blacklist:
+    for ext in _incompatible_exts:
         if ext in exts:
             ui.warn(
                 _(

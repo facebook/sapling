@@ -221,9 +221,9 @@ configitem("fsmonitor", "tcp", default=False)
 configitem("fsmonitor", "tcp-host", default="::1")
 configitem("fsmonitor", "tcp-port", default=12300)
 
-# This extension is incompatible with the following blacklisted extensions
+# This extension is incompatible with the following incompatible extensions
 # and will disable itself when encountering one of these:
-_blacklist = ["largefiles", "eol"]
+_incompatible_list = ["largefiles", "eol"]
 
 
 def _handleunavailable(ui, state, ex):
@@ -1114,7 +1114,7 @@ def wrapsymlink(orig, source, link_name):
 def reposetup(ui, repo):
     # We don't work with largefiles or inotify
     exts = extensions.enabled()
-    for ext in _blacklist:
+    for ext in _incompatible_list:
         if ext in exts:
             ui.warn(
                 _(
