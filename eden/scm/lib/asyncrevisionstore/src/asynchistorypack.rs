@@ -22,7 +22,7 @@ impl AsyncHistoryPack {
     pub fn new(
         path: PathBuf,
     ) -> impl Future<Item = AsyncHistoryPack, Error = Error> + Send + 'static {
-        poll_fn({ move || blocking(|| HistoryPack::new(&path)) })
+        poll_fn(move || blocking(|| HistoryPack::new(&path)))
             .from_err()
             .and_then(|res| res)
             .map(move |historypack| AsyncHgIdHistoryStore::new_(historypack))

@@ -23,7 +23,7 @@ impl AsyncMutableDataPack {
         dir: PathBuf,
         version: DataPackVersion,
     ) -> impl Future<Item = Self, Error = Error> + Send + 'static {
-        poll_fn({ move || blocking(|| MutableDataPack::new(&dir, version.clone())) })
+        poll_fn(move || blocking(|| MutableDataPack::new(&dir, version.clone())))
             .from_err()
             .and_then(|res| res)
             .map(move |datapack| AsyncHgIdMutableDeltaStore::new_(datapack))

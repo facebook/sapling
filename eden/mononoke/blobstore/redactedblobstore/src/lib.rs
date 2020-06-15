@@ -171,7 +171,7 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
                     err
                 }
             })
-            .map({ move |blobstore| blobstore.get(ctx, key) })
+            .map(move |blobstore| blobstore.get(ctx, key))
             .into_future()
             .flatten()
             .boxify()
@@ -191,7 +191,7 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
                     err
                 }
             })
-            .map({ move |blobstore| blobstore.put(ctx, key, value) })
+            .map(move |blobstore| blobstore.put(ctx, key, value))
             .into_future()
             .flatten()
             .boxify()

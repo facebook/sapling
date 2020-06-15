@@ -331,7 +331,7 @@ mod test {
 
     #[fbinit::test]
     fn test_block_execute_success(fb: FacebookInit) {
-        let future = lazy({ |_| -> Result<(), Error> { Ok(()) } });
+        let future = lazy(|_| -> Result<(), Error> { Ok(()) });
         let logger = create_logger();
         let matches = exec_matches();
         let res = block_execute(future, fb, "test_app", &logger, &matches, AliveService);
@@ -340,7 +340,7 @@ mod test {
 
     #[fbinit::test]
     fn test_block_execute_error(fb: FacebookInit) {
-        let future = lazy({ |_| -> Result<(), Error> { Err(Error::msg("Some error")) } });
+        let future = lazy(|_| -> Result<(), Error> { Err(Error::msg("Some error")) });
         let logger = create_logger();
         let matches = exec_matches();
         let res = block_execute(future, fb, "test_app", &logger, &matches, AliveService);

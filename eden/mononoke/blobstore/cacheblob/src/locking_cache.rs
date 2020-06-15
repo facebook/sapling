@@ -439,7 +439,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
                     err
                 }
             })
-            .map({ move |blobstore| blobstore.get_no_cache_fill(ctx, key) })
+            .map(move |blobstore| blobstore.get_no_cache_fill(ctx, key))
             .into_future()
             .flatten()
             .boxify()
@@ -463,7 +463,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
                     err
                 }
             })
-            .map({ move |blobstore| blobstore.get_cache_only(ctx, key) })
+            .map(move |blobstore| blobstore.get_cache_only(ctx, key))
             .into_future()
             .flatten()
             .boxify()

@@ -21,7 +21,7 @@ pub type AsyncDataPack = AsyncHgIdDataStore<DataPack>;
 impl AsyncDataPack {
     /// Opens the datapack at `path`.
     pub fn new(path: PathBuf) -> impl Future<Item = AsyncDataPack, Error = Error> + Send + 'static {
-        poll_fn({ move || blocking(|| DataPack::new(&path)) })
+        poll_fn(move || blocking(|| DataPack::new(&path)))
             .from_err()
             .and_then(|res| res)
             .map(move |datapack| AsyncHgIdDataStore::new_(datapack))

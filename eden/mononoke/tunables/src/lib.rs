@@ -94,7 +94,7 @@ pub fn init_tunables_worker(
 
     thread::Builder::new()
         .name("mononoke-tunables".into())
-        .spawn({ move || worker(conf_handle, init_tunables, logger) })
+        .spawn(move || worker(conf_handle, init_tunables, logger))
         .expect("Can't spawn tunables updater");
 
     Ok(())

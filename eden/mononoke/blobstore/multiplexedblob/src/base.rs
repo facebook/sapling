@@ -188,7 +188,7 @@ pub fn inner_put(
     blobstore
         .put(ctx, key.clone(), value.clone())
         .timeout(REQUEST_TIMEOUT)
-        .map({ move |_| blobstore_id })
+        .map(move |_| blobstore_id)
         .map_err(remap_timeout_error)
         .timed(move |stats, result| {
             record_put_stats(
