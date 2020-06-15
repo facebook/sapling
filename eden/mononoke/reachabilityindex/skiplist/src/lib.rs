@@ -426,27 +426,21 @@ impl SkiplistIndex {
         self.skip_list_edges.skip_edges_per_node
     }
 
-    pub fn add_node(
+    pub async fn add_node(
         &self,
-        ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        ctx: &CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
         node: ChangesetId,
         max_index_depth: u64,
-    ) -> BoxFuture<(), Error> {
-        cloned!(self.skip_list_edges);
-        async move {
-            lazy_index_node(
-                &ctx,
-                &changeset_fetcher,
-                &skip_list_edges,
-                node,
-                max_index_depth,
-            )
-            .await
-        }
-        .boxed()
-        .compat()
-        .boxify()
+    ) -> Result<(), Error> {
+        lazy_index_node(
+            ctx,
+            changeset_fetcher,
+            &self.skip_list_edges,
+            node,
+            max_index_depth,
+        )
+        .await
     }
 
     /// get skiplist edges originating from a particular node hash
@@ -861,8 +855,8 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;
+    use futures::stream::{iter, StreamExt, TryStreamExt};
     use futures_old::future::join_all;
-    use futures_old::stream::iter_ok;
     use futures_old::stream::Stream;
     use revset::AncestorsNodeStream;
     use std::collections::HashSet;
@@ -909,8 +903,7 @@ mod test {
                 "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
             )
             .await;
-            sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), master_node, 100)
-                .compat()
+            sli.add_node(&ctx, &repo.get_changeset_fetcher(), master_node, 100)
                 .await
                 .unwrap();
             let ordered_hashes = vec![
@@ -982,8 +975,7 @@ mod test {
                 "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
             )
             .await;
-            sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), master_node, 100)
-                .compat()
+            sli.add_node(&ctx, &repo.get_changeset_fetcher(), master_node, 100)
                 .await
                 .unwrap();
             let ordered_hashes = vec![
@@ -1078,8 +1070,7 @@ mod test {
                 "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
             )
             .await;
-            sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), master_node, 100)
-                .compat()
+            sli.add_node(&ctx, &repo.get_changeset_fetcher(), master_node, 100)
                 .await
                 .unwrap();
             // hashes in order from newest to oldest are:
@@ -1227,8 +1218,7 @@ mod test {
             )
             .await;
             let sli = SkiplistIndex::new();
-            sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), merge_node, 100)
-                .compat()
+            sli.add_node(&ctx, &repo.get_changeset_fetcher(), merge_node, 100)
                 .await
                 .unwrap();
             for node in branch_1.into_iter() {
@@ -1363,15 +1353,9 @@ mod test {
             let sli = SkiplistIndex::new();
 
             // index just one branch first
-            sli.add_node(
-                ctx.clone(),
-                repo.get_changeset_fetcher(),
-                branch_1_head,
-                100,
-            )
-            .compat()
-            .await
-            .unwrap();
+            sli.add_node(&ctx, &repo.get_changeset_fetcher(), branch_1_head, 100)
+                .await
+                .unwrap();
             for node in branch_1.into_iter() {
                 let skip_edges: Vec<_> = sli
                     .get_skip_edges(node)
@@ -1385,15 +1369,9 @@ mod test {
                 assert!(!sli.is_node_indexed(node));
             }
             // index second branch
-            sli.add_node(
-                ctx.clone(),
-                repo.get_changeset_fetcher(),
-                branch_2_head,
-                100,
-            )
-            .compat()
-            .await
-            .unwrap();
+            sli.add_node(&ctx, &repo.get_changeset_fetcher(), branch_2_head, 100)
+                .await
+                .unwrap();
             for node in branch_2.into_iter() {
                 let skip_edges: Vec<_> = sli
                     .get_skip_edges(node)
@@ -1457,13 +1435,11 @@ mod test {
             .await;
 
             let sli = SkiplistIndex::new();
-            iter_ok::<_, Error>(vec![b1_1, b1_2, b2_1, b2_2])
-                .map(|branch_tip| {
-                    sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), branch_tip, 100)
-                })
-                .buffered(4)
-                .for_each(|_| ok(()))
-                .compat()
+            let changeset_fetcher = repo.get_changeset_fetcher();
+            iter(vec![b1_1, b1_2, b2_1, b2_2].into_iter())
+                .map(|branch_tip| Ok(sli.add_node(&ctx, &changeset_fetcher, branch_tip, 100)))
+                .try_buffer_unordered(4)
+                .try_for_each(|_| async { Ok(()) })
                 .await
                 .unwrap();
             assert!(sli.is_node_indexed(root_node));
@@ -1632,8 +1608,7 @@ mod test {
                                 .await
                                 .unwrap();
                             for head in heads {
-                                sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), head, 100)
-                                    .compat()
+                                sli.add_node(&ctx, &repo.get_changeset_fetcher(), head, 100)
                                     .await
                                     .unwrap();
                             }
@@ -1810,8 +1785,7 @@ mod test {
             assert!(parents_count_before_indexing > 0);
 
             // Index
-            sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), src_node, 10)
-                .compat()
+            sli.add_node(&ctx, &repo.get_changeset_fetcher(), src_node, 10)
                 .await
                 .unwrap();
             assert_eq!(sli.indexed_node_count(), ordered_hashes.len());
@@ -1850,15 +1824,9 @@ mod test {
         )
         .await;
         // Indexing starting from a merge node
-        sli.add_node(
-            ctx.clone(),
-            repo.get_changeset_fetcher(),
-            commit_after_merge,
-            10,
-        )
-        .compat()
-        .await
-        .unwrap();
+        sli.add_node(&ctx, &repo.get_changeset_fetcher(), commit_after_merge, 10)
+            .await
+            .unwrap();
         let f = sli.query_reachability(
             ctx.clone(),
             repo.get_changeset_fetcher(),
@@ -2289,8 +2257,7 @@ mod test {
 
         // This test partially indexes the top few of the graph.
         // Then it does a query that traverses from indexed to unindexed nodes.
-        sli.add_node(ctx.clone(), repo.get_changeset_fetcher(), merge_node, 2)
-            .compat()
+        sli.add_node(&ctx, &repo.get_changeset_fetcher(), merge_node, 2)
             .await
             .unwrap();
 

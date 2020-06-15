@@ -34,10 +34,7 @@ mod test {
     use fbinit::FacebookInit;
     use futures::{compat::Stream01CompatExt, stream::StreamExt as _};
     use futures_ext::{BoxFuture, BoxStream, StreamExt};
-    use futures_old::{
-        future::{join_all, ok},
-        Stream,
-    };
+    use futures_old::{future::ok, Stream};
     use mononoke_types::ChangesetId;
     use quickcheck::{quickcheck, Arbitrary, Gen};
     use rand::{seq::SliceRandom, thread_rng, Rng};
@@ -505,37 +502,40 @@ mod test {
 
     mod full_skiplist_tests {
         use super::*;
+        use futures::stream::TryStreamExt;
         use futures_ext::FutureExt;
         use futures_old::Future;
+        use futures_util::future::{try_join_all, FutureExt as NewFutureExt, TryFutureExt};
 
         fn create_skiplist(
             ctx: CoreContext,
             repo: &Arc<BlobRepo>,
         ) -> BoxFuture<Arc<SkiplistIndex>, Error> {
             let changeset_fetcher = repo.get_changeset_fetcher();
-            let skiplist_index = SkiplistIndex::new();
+            let skiplist_index = Arc::new(SkiplistIndex::new());
             let max_index_depth = 100;
 
-            repo.get_bonsai_heads_maybe_stale(ctx.clone())
-                .collect()
-                .and_then({
-                    cloned!(skiplist_index);
-                    move |heads| {
-                        join_all(heads.into_iter().map({
-                            cloned!(skiplist_index);
-                            move |head| {
-                                skiplist_index.add_node(
-                                    ctx.clone(),
-                                    changeset_fetcher.clone(),
-                                    head,
-                                    max_index_depth,
-                                )
-                            }
-                        }))
+            cloned!(repo, ctx);
+            async move {
+                let heads = repo
+                    .get_bonsai_heads_maybe_stale(ctx.clone())
+                    .compat()
+                    .try_collect::<Vec<_>>()
+                    .await?;
+                try_join_all(heads.into_iter().map(|head| {
+                    cloned!(skiplist_index, ctx, changeset_fetcher);
+                    async move {
+                        skiplist_index
+                            .add_node(&ctx, &changeset_fetcher, head, max_index_depth)
+                            .await
                     }
-                })
-                .map(move |_| Arc::new(skiplist_index))
-                .boxify()
+                }))
+                .await?;
+                Ok(skiplist_index)
+            }
+            .boxed()
+            .compat()
+            .boxify()
         }
 
         ancestors_check!(ancestors_check_branch_even, branch_even);

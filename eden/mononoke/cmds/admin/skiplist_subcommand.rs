@@ -15,6 +15,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{loop_fn, ok, Loop};
 use futures_old::prelude::*;
 use futures_old::stream::iter_ok;
+use futures_util::future::{FutureExt as NewFutureExt, TryFutureExt};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -192,14 +193,17 @@ fn build_skiplist_index<S: ToString>(
                     (heads.into_iter(), skiplist_index),
                     move |(mut heads, skiplist_index)| match heads.next() {
                         Some(head) => {
-                            let f = skiplist_index.add_node(
-                                ctx.clone(),
-                                cs_fetcher.clone(),
-                                head,
-                                max_index_depth,
-                            );
+                            cloned!(ctx, cs_fetcher);
+                            let f = async move {
+                                skiplist_index
+                                    .add_node(&ctx, &cs_fetcher, head, max_index_depth)
+                                    .await?;
+                                Ok(skiplist_index)
+                            }
+                            .boxed()
+                            .compat();
 
-                            f.map(move |()| Loop::Continue((heads, skiplist_index)))
+                            f.map(move |skiplist_index| Loop::Continue((heads, skiplist_index)))
                                 .boxify()
                         }
                         None => ok(Loop::Break(skiplist_index)).boxify(),
