@@ -14,6 +14,12 @@ from . import environment_variable as env_module
 from .temporary_directory import TempFileManager
 
 
+try:
+    from unittest import IsolatedAsyncioTestCase
+except ImportError:
+    from .async_case_backport import IsolatedAsyncioTestCase
+
+
 @contextlib.contextmanager
 def no_warnings(self: unittest.TestCase):
     with warnings.catch_warnings(record=True) as wlist:
@@ -29,7 +35,7 @@ def no_warnings(self: unittest.TestCase):
         self.fail("Warnings detected during test:\n" + "".join(msgs))
 
 
-class EdenTestCaseBase(unittest.TestCase):
+class EdenTestCaseBase(IsolatedAsyncioTestCase):
     """Base class for many EdenFS test cases.
 
     This class provides a number of convenience functions.
