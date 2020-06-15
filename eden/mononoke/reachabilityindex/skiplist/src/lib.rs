@@ -19,9 +19,7 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::future::try_join_all;
 use futures::stream::{self, futures_unordered::FuturesUnordered, TryStreamExt};
-use futures_ext::{BoxFuture, FutureExt as FBFutureExt};
 use futures_util::compat::Future01CompatExt;
-use futures_util::future::{FutureExt, TryFutureExt};
 use futures_util::try_join;
 use maplit::{hashmap, hashset};
 use slog::{info, Logger};
@@ -482,49 +480,41 @@ impl SkiplistIndex {
     }
 }
 
+#[async_trait]
 impl ReachabilityIndex for SkiplistIndex {
-    fn query_reachability(
+    async fn query_reachability(
         &self,
-        ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        ctx: &CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
         desc_hash: ChangesetId,
         anc_hash: ChangesetId,
-    ) -> BoxFuture<bool, Error> {
-        cloned!(self.skip_list_edges);
-        async move {
-            let (anc_gen, desc_gen) = try_join!(
-                changeset_fetcher
-                    .get_generation_number(ctx.clone(), anc_hash)
-                    .compat(),
-                changeset_fetcher
-                    .get_generation_number(ctx.clone(), desc_hash)
-                    .compat()
-            )?;
-            ctx.perf_counters()
-                .set_counter(PerfCounterType::SkiplistAncestorGen, anc_gen.value() as i64);
-            ctx.perf_counters().set_counter(
-                PerfCounterType::SkiplistDescendantGen,
-                desc_gen.value() as i64,
-            );
-            let frontier = async move {
-                process_frontier(
-                    &ctx,
-                    &changeset_fetcher,
-                    &skip_list_edges,
-                    NodeFrontier::new(hashmap! {desc_gen => hashset!{desc_hash}}),
-                    anc_gen,
-                )
-                .await
-            }
-            .await?;
-            match frontier.get_all_changesets_for_gen_num(anc_gen) {
-                Some(cs_ids) => Ok(cs_ids.contains(&anc_hash)),
-                None => Ok(false),
-            }
+    ) -> Result<bool, Error> {
+        let (anc_gen, desc_gen) = try_join!(
+            changeset_fetcher
+                .get_generation_number(ctx.clone(), anc_hash)
+                .compat(),
+            changeset_fetcher
+                .get_generation_number(ctx.clone(), desc_hash)
+                .compat(),
+        )?;
+        ctx.perf_counters()
+            .set_counter(PerfCounterType::SkiplistAncestorGen, anc_gen.value() as i64);
+        ctx.perf_counters().set_counter(
+            PerfCounterType::SkiplistDescendantGen,
+            desc_gen.value() as i64,
+        );
+        let frontier = process_frontier(
+            &ctx,
+            &changeset_fetcher,
+            &self.skip_list_edges,
+            NodeFrontier::new(hashmap! {desc_gen => hashset!{desc_hash}}),
+            anc_gen,
+        )
+        .await?;
+        match frontier.get_all_changesets_for_gen_num(anc_gen) {
+            Some(cs_ids) => Ok(cs_ids.contains(&anc_hash)),
+            None => Ok(false),
         }
-        .boxed()
-        .compat()
-        .boxify()
     }
 }
 
@@ -679,8 +669,7 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
         if ancestor == descendant {
             Ok(false)
         } else {
-            self.query_reachability(ctx.clone(), changeset_fetcher.clone(), descendant, ancestor)
-                .compat()
+            self.query_reachability(ctx, changeset_fetcher, descendant, ancestor)
                 .await
         }
     }
@@ -836,8 +825,10 @@ mod test {
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;
     use futures::stream::{iter, StreamExt, TryStreamExt};
+    use futures_ext::{BoxFuture, FutureExt as FBFutureExt};
     use futures_old::future::{join_all, Future};
     use futures_old::stream::Stream;
+    use futures_util::future::{FutureExt, TryFutureExt};
     use revset::AncestorsNodeStream;
     use std::collections::HashSet;
     use std::iter::FromIterator;
@@ -1555,8 +1546,10 @@ mod test {
         // indexing doesn't even take place if the query can conclude true or false right away
 
         for (_, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
-            let f = sli.query_reachability(ctx.clone(), repo.get_changeset_fetcher(), node, node);
-            assert!(f.compat().await.unwrap());
+            assert!(sli
+                .query_reachability(&ctx, &repo.get_changeset_fetcher(), node, node)
+                .await
+                .unwrap());
         }
     }
 
@@ -1662,15 +1655,9 @@ mod test {
             let src_node = ordered_hashes_oldest_to_newest.get(i).unwrap();
             for j in i + 1..ordered_hashes_oldest_to_newest.len() {
                 let dst_node = ordered_hashes_oldest_to_newest.get(j).unwrap();
-                sli.query_reachability(
-                    ctx.clone(),
-                    repo.get_changeset_fetcher(),
-                    *src_node,
-                    *dst_node,
-                )
-                .compat()
-                .await
-                .unwrap();
+                sli.query_reachability(&ctx, &repo.get_changeset_fetcher(), *src_node, *dst_node)
+                    .await
+                    .unwrap();
             }
         }
     }
@@ -1683,11 +1670,12 @@ mod test {
             let sli = SkiplistIndex::new();
             let get_parents_count = Arc::new(AtomicUsize::new(0));
             let get_gen_number_count = Arc::new(AtomicUsize::new(0));
-            let cs_fetcher = Arc::new(CountingChangesetFetcher::new(
-                repo.get_changeset_fetcher(),
-                get_parents_count.clone(),
-                get_gen_number_count,
-            ));
+            let cs_fetcher: Arc<(dyn changeset_fetcher::ChangesetFetcher + 'static)> =
+                Arc::new(CountingChangesetFetcher::new(
+                    repo.get_changeset_fetcher(),
+                    get_parents_count.clone(),
+                    get_gen_number_count,
+                ));
 
             let src_node = string_to_bonsai(
                 ctx.clone(),
@@ -1701,8 +1689,7 @@ mod test {
                 "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
             )
             .await;
-            sli.query_reachability(ctx.clone(), cs_fetcher.clone(), src_node, dst_node)
-                .compat()
+            sli.query_reachability(&ctx, &cs_fetcher, src_node, dst_node)
                 .await
                 .unwrap();
             let ordered_hashes = vec![
@@ -1775,9 +1762,9 @@ mod test {
 
             // Make sure that we don't use changeset fetcher anymore, because everything is
             // indexed
-            let f = sli.query_reachability(ctx.clone(), cs_fetcher, src_node, dst_node);
+            let f = sli.query_reachability(&ctx, &cs_fetcher, src_node, dst_node);
 
-            assert!(f.compat().await.unwrap());
+            assert!(f.await.unwrap());
 
             assert_eq!(
                 parents_count_before_indexing,
@@ -1803,17 +1790,13 @@ mod test {
             "7fe9947f101acb4acf7d945e69f0d6ce76a81113",
         )
         .await;
+        let cs_fetcher = repo.get_changeset_fetcher();
         // Indexing starting from a merge node
         sli.add_node(&ctx, &repo.get_changeset_fetcher(), commit_after_merge, 10)
             .await
             .unwrap();
-        let f = sli.query_reachability(
-            ctx.clone(),
-            repo.get_changeset_fetcher(),
-            commit_after_merge,
-            merge_node,
-        );
-        assert!(f.compat().await.unwrap());
+        let f = sli.query_reachability(&ctx, &cs_fetcher, commit_after_merge, merge_node);
+        assert!(f.await.unwrap());
 
         // perform a query from the merge to the start of branch 1
         let dst_node = string_to_bonsai(
@@ -1823,13 +1806,8 @@ mod test {
         )
         .await;
         // performing this query should index all the nodes inbetween
-        let f = sli.query_reachability(
-            ctx.clone(),
-            repo.get_changeset_fetcher(),
-            merge_node,
-            dst_node,
-        );
-        assert!(f.compat().await.unwrap());
+        let f = sli.query_reachability(&ctx, &cs_fetcher, merge_node, dst_node);
+        assert!(f.await.unwrap());
 
         // perform a query from the merge to the start of branch 2
         let dst_node = string_to_bonsai(
@@ -1838,8 +1816,8 @@ mod test {
             "1700524113b1a3b1806560341009684b4378660b",
         )
         .await;
-        let f = sli.query_reachability(ctx, repo.get_changeset_fetcher(), merge_node, dst_node);
-        assert!(f.compat().await.unwrap());
+        let f = sli.query_reachability(&ctx, &cs_fetcher, merge_node, dst_node);
+        assert!(f.await.unwrap());
     }
 
     fn advance_node_forward(

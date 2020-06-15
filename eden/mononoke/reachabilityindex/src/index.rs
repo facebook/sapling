@@ -12,7 +12,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
-use futures_ext::BoxFuture;
 use futures_util::compat::Future01CompatExt;
 use maplit::{hashmap, hashset};
 
@@ -160,15 +159,16 @@ impl NodeFrontier {
 }
 
 /// Trait for any method of supporting reachability queries
+#[async_trait]
 pub trait ReachabilityIndex {
     /// Return a Future for whether the src node can reach the dst node
-    fn query_reachability(
+    async fn query_reachability(
         &self,
-        ctx: CoreContext,
-        repo: Arc<dyn ChangesetFetcher>,
+        ctx: &CoreContext,
+        repo: &Arc<dyn ChangesetFetcher>,
         src: ChangesetId,
         dst: ChangesetId,
-    ) -> BoxFuture<bool, Error>;
+    ) -> Result<bool, Error>;
 }
 
 /// Trait for any method supporting computing an "LCA hint"

@@ -101,12 +101,14 @@ pub fn test_linear_reachability<T: ReachabilityIndex + 'static>(
             for j in i..ordered_hashes.len() {
                 let src = ordered_hashes.get(i).unwrap();
                 let dst = ordered_hashes.get(j).unwrap();
-                let future_result_src_to_dst =
-                    index.query_reachability(ctx.clone(), repo.get_changeset_fetcher(), *src, *dst);
-                assert!(future_result_src_to_dst.compat().await.unwrap());
-                let future_result_dst_to_src =
-                    index.query_reachability(ctx.clone(), repo.get_changeset_fetcher(), *dst, *src);
-                assert_eq!(future_result_dst_to_src.compat().await.unwrap(), src == dst);
+                let result_src_to_dst = index
+                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), *src, *dst)
+                    .await;
+                assert!(result_src_to_dst.unwrap());
+                let result_dst_to_src = index
+                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), *dst, *src)
+                    .await;
+                assert_eq!(result_dst_to_src.unwrap(), src == dst);
             }
         }
     });
@@ -211,43 +213,19 @@ pub fn test_merge_uneven_reachability<T: ReachabilityIndex + 'static>(
         for left_node in branch_1.into_iter() {
             for right_node in branch_2.iter() {
                 assert!(index
-                    .query_reachability(
-                        ctx.clone(),
-                        repo.get_changeset_fetcher(),
-                        left_node,
-                        root_node
-                    )
-                    .compat()
+                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), left_node, root_node)
                     .await
                     .unwrap());
                 assert!(index
-                    .query_reachability(
-                        ctx.clone(),
-                        repo.get_changeset_fetcher(),
-                        *right_node,
-                        root_node
-                    )
-                    .compat()
+                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), *right_node, root_node)
                     .await
                     .unwrap());
                 assert!(!index
-                    .query_reachability(
-                        ctx.clone(),
-                        repo.get_changeset_fetcher(),
-                        root_node,
-                        left_node
-                    )
-                    .compat()
+                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), root_node, left_node)
                     .await
                     .unwrap());
                 assert!(!index
-                    .query_reachability(
-                        ctx.clone(),
-                        repo.get_changeset_fetcher(),
-                        root_node,
-                        *right_node
-                    )
-                    .compat()
+                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), root_node, *right_node)
                     .await
                     .unwrap());
             }
@@ -311,23 +289,11 @@ pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
         // all nodes can reach the root
         for above_root in vec![b1, b2, b1_1, b1_2, b2_1, b2_2].iter() {
             assert!(index
-                .query_reachability(
-                    ctx.clone(),
-                    repo.get_changeset_fetcher(),
-                    *above_root,
-                    root_node
-                )
-                .compat()
+                .query_reachability(&ctx, &repo.get_changeset_fetcher(), *above_root, root_node)
                 .await
                 .unwrap());
             assert!(!index
-                .query_reachability(
-                    ctx.clone(),
-                    repo.get_changeset_fetcher(),
-                    root_node,
-                    *above_root
-                )
-                .compat()
+                .query_reachability(&ctx, &repo.get_changeset_fetcher(), root_node, *above_root)
                 .await
                 .unwrap());
         }
@@ -336,23 +302,11 @@ pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
         for b1_node in vec![b1, b1_1, b1_2].iter() {
             for b2_node in vec![b2, b2_1, b2_2].iter() {
                 assert!(!index
-                    .query_reachability(
-                        ctx.clone(),
-                        repo.get_changeset_fetcher(),
-                        *b1_node,
-                        *b2_node
-                    )
-                    .compat()
+                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), *b1_node, *b2_node)
                     .await
                     .unwrap());
                 assert!(!index
-                    .query_reachability(
-                        ctx.clone(),
-                        repo.get_changeset_fetcher(),
-                        *b2_node,
-                        *b1_node
-                    )
-                    .compat()
+                    .query_reachability(&ctx, &repo.get_changeset_fetcher(), *b2_node, *b1_node)
                     .await
                     .unwrap());
             }
@@ -361,45 +315,37 @@ pub fn test_branch_wide_reachability<T: ReachabilityIndex + 'static>(
         // branch nodes can reach their common root but not each other
         // - branch 1
         assert!(index
-            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b1_1, b1)
-            .compat()
+            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b1_1, b1)
             .await
             .unwrap());
         assert!(index
-            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b1_2, b1)
-            .compat()
+            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b1_2, b1)
             .await
             .unwrap());
         assert!(!index
-            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b1_1, b1_2)
-            .compat()
+            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b1_1, b1_2)
             .await
             .unwrap());
         assert!(!index
-            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b1_2, b1_1)
-            .compat()
+            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b1_2, b1_1)
             .await
             .unwrap());
 
         // - branch 2
         assert!(index
-            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b2_1, b2)
-            .compat()
+            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b2_1, b2)
             .await
             .unwrap());
         assert!(index
-            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b2_2, b2)
-            .compat()
+            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b2_2, b2)
             .await
             .unwrap());
         assert!(!index
-            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b2_1, b2_2)
-            .compat()
+            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b2_1, b2_2)
             .await
             .unwrap());
         assert!(!index
-            .query_reachability(ctx.clone(), repo.get_changeset_fetcher(), b2_2, b2_1)
-            .compat()
+            .query_reachability(&ctx, &repo.get_changeset_fetcher(), b2_2, b2_1)
             .await
             .unwrap());
     });

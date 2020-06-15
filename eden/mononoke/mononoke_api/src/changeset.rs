@@ -312,12 +312,11 @@ impl ChangesetContext {
             .repo()
             .skiplist_index()
             .query_reachability(
-                self.ctx().clone(),
-                self.repo().blob_repo().get_changeset_fetcher(),
+                &self.ctx(),
+                &self.repo().blob_repo().get_changeset_fetcher(),
                 other_commit,
                 self.id,
             )
-            .compat()
             .await?;
         Ok(is_ancestor_of)
     }
