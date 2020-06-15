@@ -24,7 +24,7 @@ class TraceImporter(object):
     In additional, wrap functions so they get traced.
     """
 
-    # Blacklisted modules - Tracing them might yield huge amount of
+    # Excluded modules - Tracing them might yield huge amount of
     # uninteresting data.
     _blocklist = {
         # unicodedata.east_asian_width can be called very frequently.

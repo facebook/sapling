@@ -53,7 +53,7 @@ fn split_path(path: &Path) -> Option<(&Path, &Path)> {
 enum MatchResult {
     Unspecified,
     Ignored,
-    Whitelisted,
+    Included,
 }
 
 impl<T> From<ignore::Match<T>> for MatchResult {
@@ -61,7 +61,7 @@ impl<T> From<ignore::Match<T>> for MatchResult {
         match v {
             ignore::Match::None => MatchResult::Unspecified,
             ignore::Match::Ignore(_) => MatchResult::Ignored,
-            ignore::Match::Whitelist(_) => MatchResult::Whitelisted,
+            ignore::Match::Whitelist(_) => MatchResult::Included,
         }
     }
 }
@@ -154,7 +154,7 @@ impl GitignoreMatcher {
         };
 
         match subdir_result {
-            MatchResult::Whitelisted => MatchResult::Whitelisted,
+            MatchResult::Included => MatchResult::Included,
             MatchResult::Ignored => MatchResult::Ignored,
             MatchResult::Unspecified => self.ignore.matched(path, is_dir).into(),
         }
@@ -190,8 +190,8 @@ impl GitignoreMatcher {
         }
     }
 
-    /// Explain why a path is ignored or not whitelisted. This includes rules
-    /// whitelisting and blacklisting the given path, or why parent directories
+    /// Explain why a path is ignored or not included. This includes rules
+    /// including and excluding the given path, or why parent directories
     /// are ignored.
     ///
     /// Return human-readable text.
@@ -304,7 +304,7 @@ impl Matcher for GitignoreMatcher {
     fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
         match self.match_path(path.as_str(), true, self, &mut None) {
             MatchResult::Ignored => DirectoryMatch::Everything,
-            MatchResult::Whitelisted => DirectoryMatch::Nothing,
+            MatchResult::Included => DirectoryMatch::Nothing,
             MatchResult::Unspecified => DirectoryMatch::ShouldTraverse,
         }
     }

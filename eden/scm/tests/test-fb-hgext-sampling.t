@@ -39,7 +39,7 @@ Create an extension that logs the call to commit
 
 
 Set up the extension and set a log file
-We whitelist only the 'commit' key, only the events with that key will be
+We include only the 'commit' key, only the events with that key will be
 logged
   $ cat >> $HGRCPATH << EOF
   > [ui]
