@@ -17,8 +17,9 @@ use chashmap::CHashMap;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::future::try_join_all;
+use futures::stream::{self, futures_unordered::FuturesUnordered, TryStreamExt};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as FBFutureExt};
-use futures_old::future::{join_all, loop_fn, ok, Future, Loop};
+use futures_old::future::{ok, Future};
 use futures_old::IntoFuture;
 use futures_util::compat::Future01CompatExt;
 use futures_util::future::{FutureExt, TryFutureExt};
@@ -516,14 +517,16 @@ impl ReachabilityIndex for SkiplistIndex {
                 PerfCounterType::SkiplistDescendantGen,
                 desc_gen.value() as i64,
             );
-            let frontier = process_frontier(
-                ctx.clone(),
-                changeset_fetcher,
-                skip_list_edges,
-                NodeFrontier::new(hashmap! {desc_gen => hashset!{desc_hash}}),
-                anc_gen,
-            )
-            .compat()
+            let frontier = async move {
+                process_frontier(
+                    &ctx,
+                    &changeset_fetcher,
+                    &skip_list_edges,
+                    NodeFrontier::new(hashmap! {desc_gen => hashset!{desc_hash}}),
+                    anc_gen,
+                )
+                .await
+            }
             .await?;
             match frontier.get_all_changesets_for_gen_num(anc_gen) {
                 Some(cs_ids) => Ok(cs_ids.contains(&anc_hash)),
@@ -585,74 +588,75 @@ fn move_skippable_nodes(
 // Returns a frontier "C" that satisfy the following condition:
 /// - Max generation number in "C" is <= "max_gen"
 /// - Any ancestor of "node_frontier" with generation <= "max_gen" is also an ancestor of "C"
-fn process_frontier(
-    ctx: CoreContext,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    skip_edges: Arc<SkiplistEdgeMapping>,
+async fn process_frontier(
+    ctx: &CoreContext,
+    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    skip_edges: &Arc<SkiplistEdgeMapping>,
     node_frontier: NodeFrontier,
     max_gen: Generation,
-) -> impl Future<Item = NodeFrontier, Error = Error> {
-    loop_fn(
-        node_frontier,
-        move |mut node_frontier: NodeFrontier| match node_frontier.max_gen() {
-            Some(val) if val > max_gen => {
-                let all_cs_ids = node_frontier.remove_max_gen().unwrap();
-                let (no_skiplist_edges, skipped_frontier) = move_skippable_nodes(
-                    skip_edges.clone(),
-                    all_cs_ids.into_iter().collect(),
-                    max_gen,
+) -> Result<NodeFrontier, Error> {
+    let mut node_frontier = node_frontier;
+    while let Some(val) = node_frontier.max_gen() {
+        if val <= max_gen {
+            break;
+        }
+        let all_cs_ids = node_frontier.remove_max_gen().unwrap();
+        let (no_skiplist_edges, skipped_frontier) = move_skippable_nodes(
+            skip_edges.clone(),
+            all_cs_ids.into_iter().collect(),
+            max_gen,
+        );
+        if skipped_frontier.is_empty() {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SkiplistNoskipIterations);
+        } else {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SkiplistSkipIterations);
+            if let Some(new) = skipped_frontier.max_gen() {
+                ctx.perf_counters().add_to_counter(
+                    PerfCounterType::SkiplistSkippedGenerations,
+                    (val.value() - new.value()) as i64,
                 );
-                if skipped_frontier.len() == 0 {
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::SkiplistNoskipIterations);
-                } else {
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::SkiplistSkipIterations);
-                    if let Some(new) = skipped_frontier.max_gen() {
-                        ctx.perf_counters().add_to_counter(
-                            PerfCounterType::SkiplistSkippedGenerations,
-                            (val.value() - new.value()) as i64,
-                        );
-                    }
-                }
-                let parents_futs = no_skiplist_edges.into_iter().map({
-                    cloned!(ctx, changeset_fetcher);
-                    move |cs_id| {
-                        changeset_fetcher
-                            .get_parents(ctx.clone(), cs_id)
-                            .map(IntoIterator::into_iter)
-                    }
-                });
-                join_all(parents_futs)
-                    .map(|all_parents| all_parents.into_iter().flatten())
-                    .and_then({
-                        cloned!(ctx, changeset_fetcher);
-                        move |parents| {
-                            let mut gen_futs = vec![];
-                            for p in parents {
-                                let f = changeset_fetcher
-                                    .get_generation_number(ctx.clone(), p)
-                                    .map(move |gen_num| (p, gen_num));
-                                gen_futs.push(f);
-                            }
-                            join_all(gen_futs)
-                        }
-                    })
-                    .map(move |gen_cs| {
-                        node_frontier.extend(gen_cs);
-
-                        for (gen, s) in skipped_frontier {
-                            for entry in s {
-                                node_frontier.insert((entry, gen));
-                            }
-                        }
-                        Loop::Continue(node_frontier)
-                    })
-                    .left_future()
             }
-            _ => ok(Loop::Break(node_frontier)).right_future(),
-        },
-    )
+        }
+        let gen_cs = no_skiplist_edges
+            .into_iter()
+            .map(|cs_id| async move {
+                Ok::<_, Error>(stream::iter(
+                    changeset_fetcher
+                        .get_parents(ctx.clone(), cs_id)
+                        .compat()
+                        .await?
+                        .into_iter()
+                        .map(Ok::<_, Error>),
+                ))
+            })
+            .collect::<FuturesUnordered<_>>()
+            .try_flatten()
+            .and_then(|p| {
+                cloned!(ctx, changeset_fetcher);
+                async move {
+                    let gen_num = changeset_fetcher
+                        .get_generation_number(ctx.clone(), p)
+                        .compat()
+                        .await?;
+                    let res: Result<_, Error> = Ok((p, gen_num));
+                    res
+                }
+            })
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter();
+
+        node_frontier.extend(gen_cs);
+
+        for (gen, s) in skipped_frontier {
+            for entry in s {
+                node_frontier.insert((entry, gen));
+            }
+        }
+    }
+    Ok(node_frontier)
 }
 
 impl LeastCommonAncestorsHint for SkiplistIndex {
@@ -663,13 +667,19 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
         node_frontier: NodeFrontier,
         gen: Generation,
     ) -> BoxFuture<NodeFrontier, Error> {
-        process_frontier(
-            ctx,
-            changeset_fetcher,
-            self.skip_list_edges.clone(),
-            node_frontier,
-            gen,
-        )
+        cloned!(self.skip_list_edges);
+        async move {
+            process_frontier(
+                &ctx,
+                &changeset_fetcher,
+                &skip_list_edges,
+                node_frontier,
+                gen,
+            )
+            .await
+        }
+        .boxed()
+        .compat()
         .boxify()
     }
 
@@ -851,6 +861,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;
+    use futures_old::future::join_all;
     use futures_old::stream::iter_ok;
     use futures_old::stream::Stream;
     use revset::AncestorsNodeStream;
@@ -1892,13 +1903,18 @@ mod test {
     ) -> BoxFuture<NodeFrontier, Error> {
         let initial_frontier = hashmap! {gen => hashset!{node}};
         let initial_frontier = NodeFrontier::new(initial_frontier);
-        process_frontier(
-            ctx,
-            changeset_fetcher,
-            skip_list_edges,
-            initial_frontier,
-            max_gen,
-        )
+        async move {
+            process_frontier(
+                &ctx,
+                &changeset_fetcher,
+                &skip_list_edges,
+                initial_frontier,
+                max_gen,
+            )
+            .await
+        }
+        .boxed()
+        .compat()
         .boxify()
     }
 
@@ -2489,31 +2505,27 @@ mod test {
         let mut expected_gen_2_frontier_map = HashMap::new();
         expected_gen_2_frontier_map.insert(Generation::new(2), vec![b1, b2].into_iter().collect());
         let f = process_frontier(
-            ctx.clone(),
-            repo.get_changeset_fetcher(),
-            sli.skip_list_edges.clone(),
+            &ctx,
+            &repo.get_changeset_fetcher(),
+            &sli.skip_list_edges,
             NodeFrontier::new(starting_frontier_map.clone()),
             Generation::new(2),
-        );
-        assert_eq!(
-            f.compat().await.unwrap(),
-            NodeFrontier::new(expected_gen_2_frontier_map)
-        );
+        )
+        .await;
+        assert_eq!(f.unwrap(), NodeFrontier::new(expected_gen_2_frontier_map));
 
         let mut expected_root_frontier_map = HashMap::new();
         expected_root_frontier_map
             .insert(Generation::new(1), vec![root_node].into_iter().collect());
         let f = process_frontier(
-            ctx,
-            repo.get_changeset_fetcher(),
-            sli.skip_list_edges.clone(),
+            &ctx,
+            &repo.get_changeset_fetcher(),
+            &sli.skip_list_edges,
             NodeFrontier::new(starting_frontier_map),
             Generation::new(1),
-        );
-        assert_eq!(
-            f.compat().await.unwrap(),
-            NodeFrontier::new(expected_root_frontier_map)
-        );
+        )
+        .await;
+        assert_eq!(f.unwrap(), NodeFrontier::new(expected_root_frontier_map));
     }
 
     async fn test_lca(
