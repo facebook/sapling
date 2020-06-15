@@ -230,6 +230,35 @@ impl SkiplistEdgeMapping {
     }
 }
 
+/// helper function that computes a single skip edge by leveraging the existing skiplist
+/// without assuming its completeness.
+async fn compute_single_skip_edge(
+    ctx: &CoreContext,
+    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    skip_list_edges: &Arc<SkiplistEdgeMapping>,
+    (node, gen): (ChangesetId, Generation),
+    target_gen: Generation,
+) -> Result<ChangesetId, Error> {
+    let initial_frontier = hashmap! {gen => hashset!{node}};
+    let initial_frontier = NodeFrontier::new(initial_frontier);
+    let target_frontier = process_frontier(
+        ctx,
+        changeset_fetcher,
+        skip_list_edges,
+        initial_frontier,
+        target_gen,
+    )
+    .await?;
+
+    let target_changeset = target_frontier
+        .get(&target_gen)
+        .ok_or_else(|| ErrorKind::ProgrammingError("frontier doesn't have target generation"))?
+        .iter()
+        .next()
+        .ok_or_else(|| ErrorKind::ProgrammingError("inconsistent frontier state"))?;
+    Ok(*target_changeset)
+}
+
 fn nth_node_or_last<T: Clone>(v: &Vec<T>, i: usize) -> Option<T> {
     return v.get(i).or(v.last()).cloned();
 }
@@ -240,38 +269,74 @@ fn nth_node_or_last<T: Clone>(v: &Vec<T>, i: usize) -> Option<T> {
 /// note that start node is not the node that we'll be adding these skip list edges to.
 /// it is the first node that we'll consider as a candidate for a skip list edge.
 /// hence it should always be the parent of the node we are creating edges for.
-fn compute_skip_edges(
+///
+/// Because we sometimes trim the skiplist structure to just have the single entry to save space we
+/// can't assume all the edges being present in ancestor's entries.  In those cases (when the
+/// ancestor skip pointers point to far to be useful) we need to manually compute the targets of
+/// skip pointers instead of trusting the data from ancestor's skiplits.
+async fn compute_skip_edges(
+    ctx: CoreContext,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     start_node: (ChangesetId, Generation),
     skip_edge_mapping: Arc<SkiplistEdgeMapping>,
-) -> Vec<(ChangesetId, Generation)> {
+) -> Result<Vec<(ChangesetId, Generation)>, Error> {
+    let source_gen = start_node.1.add(1);
     let mut curr = start_node;
 
     let max_skip_edge_count = skip_edge_mapping.skip_edges_per_node as usize;
     let mut skip_edges = vec![curr];
     let mut i: usize = 0;
 
-    while let Some(read_locked_entry) = skip_edge_mapping.mapping.get(&curr.0) {
-        match &*read_locked_entry {
-            SkiplistNodeType::SingleEdge(next_node) => {
-                curr = *next_node;
-                skip_edges.push(curr);
-            }
-            SkiplistNodeType::SkipEdges(edges) => {
-                if let Some(next_node) = nth_node_or_last(edges, i) {
-                    curr = next_node;
-                    skip_edges.push(curr)
-                } else {
+    loop {
+        // edge in ith should point no further than 2^(i+1) commits back
+        let target_gen = source_gen
+            .checked_sub(1 << (i + 1))
+            .unwrap_or(FIRST_GENERATION);
+        {
+            match skip_edge_mapping.mapping.get(&curr.0) {
+                Some(read_locked_entry) => {
+                    // ith edge should point not further than 2^(i+1) commits back
+
+                    match &*read_locked_entry {
+                        SkiplistNodeType::SingleEdge(next_node) => {
+                            curr = *next_node;
+                        }
+                        SkiplistNodeType::SkipEdges(edges) => {
+                            if let Some(next_node) = nth_node_or_last(edges, i) {
+                                curr = next_node;
+                            } else {
+                                break;
+                            }
+                        }
+                        _ => break,
+                    };
+                }
+                None => {
                     break;
                 }
             }
-            _ => break,
-        };
+        }
+        if target_gen > curr.1 {
+            // the pointer is pointing too far - weed need to fixup
+            curr = (
+                compute_single_skip_edge(
+                    &ctx,
+                    &changeset_fetcher,
+                    &skip_edge_mapping,
+                    start_node,
+                    target_gen,
+                )
+                .await?,
+                target_gen,
+            );
+        }
+        skip_edges.push(curr);
         if skip_edges.len() >= max_skip_edge_count {
             break;
         }
         i += 1;
     }
-    skip_edges
+    Ok(skip_edges)
 }
 /// Structure for indexing skip list edges for reachability queries.
 #[derive(Clone)]
@@ -383,7 +448,13 @@ async fn lazy_index_node(
             // Even if this reaches a non indexed node during,
             // indexing correctness isn't affected.
             let unique_parent_gen_pair = parent_gen_pairs.get(0).unwrap().clone();
-            let new_edges = compute_skip_edges(unique_parent_gen_pair, skip_edge_mapping.clone());
+            let new_edges = compute_skip_edges(
+                ctx.clone(),
+                changeset_fetcher.clone(),
+                unique_parent_gen_pair,
+                skip_edge_mapping.clone(),
+            )
+            .await?;
             skip_edge_mapping
                 .mapping
                 .insert(curr_hash, SkiplistNodeType::SkipEdges(new_edges));
@@ -2689,9 +2760,9 @@ mod test {
 
     #[fbinit::test]
     fn test_index_update(fb: FacebookInit) {
-        // This test was created to show the problem we currently have with skiplists not being
-        // correctly updated after being trimmed.  The skiplist update algorithm wasn't designed
-        // with trimming in mind and assumes that entries pointing closer are always awalable.
+        // This test was created to show the problem we had with skiplists not being correctly
+        // updated after being trimmed.  The skiplist update algorithm wasn't designed with
+        // trimming in mind and assumes that entries pointing closer are always awalable.
         // Resulting skiplits point further away than it's needed (if the worst case of skiplists
         // being updated very often to the latest merge commit).
         async_unit::tokio_unit_test(async move {
@@ -2730,7 +2801,7 @@ mod test {
                     .into_iter()
                     .map(|(_, gen)| gen.value())
                     .collect::<Vec<_>>(),
-                vec![10, 9, 1]
+                vec![10, 9, 7, 3]
             );
         });
     }
