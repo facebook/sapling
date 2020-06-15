@@ -7,27 +7,31 @@
 
 use std::convert::TryFrom;
 
-use anyhow::Context;
+use anyhow::{Context, Error};
 use futures::{
-    stream::{BoxStream, FuturesUnordered},
-    StreamExt, TryStreamExt,
+    stream::{self, BoxStream},
+    Stream, StreamExt, TryStreamExt,
 };
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
-use edenapi_types::{HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry};
+use cloned::cloned;
+use edenapi_types::{HistoryRequest, HistoryResponseChunk, WireHistoryEntry};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api::hg::HgRepoContext;
 use types::Key;
 
 use crate::context::ServerContext;
-use crate::errors::{ErrorKind, MononokeErrorExt};
+use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_response, get_repo, parse_cbor_request, to_mpath};
+use crate::utils::{cbor_stream, get_repo, parse_cbor_request, to_mpath};
 
-type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, HttpError>>;
+type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, Error>>;
+
+/// XXX: This number was chosen arbitrarily.
+const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 10;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct HistoryParams {
@@ -41,67 +45,55 @@ pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpErro
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;
-    let response = get_history(&repo, request).await?;
 
-    cbor_response(response)
+    Ok(cbor_stream(fetch_history(repo, request).await))
 }
 
 /// Fetch history for all of the requested files concurrently.
-async fn get_history(
-    repo: &HgRepoContext,
+async fn fetch_history(
+    repo: HgRepoContext,
     request: HistoryRequest,
-) -> Result<HistoryResponse, HttpError> {
-    let chunk_stream = FuturesUnordered::new();
-    for key in request.keys {
-        // Save the path for inclusion in the response.
-        let path = key.path.clone();
+) -> impl Stream<Item = Result<HistoryResponseChunk, Error>> {
+    let HistoryRequest { keys, length } = request;
 
-        // Build a stream of history entries for a single file.
-        let entry_stream = single_key_history(repo, key, request.length).await?;
-
-        // Build a future that buffers the stream and resolves
-        // to a HistoryResponseChunk for this file.
-        let chunk_fut = async {
-            let entries = entry_stream.try_collect().await?;
+    let fetches = keys.into_iter().map(move |key| {
+        // Construct a Future that buffers the full history for this key.
+        // This should be OK since the history entries are relatively
+        // small, so unless the history is extremely long, the total
+        // amount of buffered data should be reasonable.
+        cloned!(repo);
+        async move {
+            let path = key.path.clone();
+            let stream = fetch_history_for_key(repo, key, length).await?;
+            let entries = stream.try_collect().await?;
             Ok(HistoryResponseChunk { path, entries })
-        };
+        }
+    });
 
-        chunk_stream.push(chunk_fut);
-    }
-
-    // TODO(kulshrax): Don't buffer the results here.
-    let chunks = chunk_stream.try_collect().await?;
-    let response = HistoryResponse { chunks };
-
-    Ok(response)
+    stream::iter(fetches).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
 }
 
-async fn single_key_history(
-    repo: &HgRepoContext,
+async fn fetch_history_for_key(
+    repo: HgRepoContext,
     key: Key,
     length: Option<u32>,
-) -> Result<HistoryStream, HttpError> {
+) -> Result<HistoryStream, Error> {
     let filenode_id = HgFileNodeId::new(HgNodeHash::from(key.hgid));
-    let mpath = to_mpath(&key.path)
-        .map_err(HttpError::e400)?
-        .context(ErrorKind::UnexpectedEmptyPath)
-        .map_err(HttpError::e400)?;
+    let mpath = to_mpath(&key.path)?.context(ErrorKind::UnexpectedEmptyPath)?;
 
     let file = repo
         .file(filenode_id)
         .await
-        .map_err(|e| e.into_http_error(ErrorKind::DataFetchFailed(key.clone())))?
-        .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))
-        .map_err(HttpError::e404)?;
+        .with_context(|| ErrorKind::DataFetchFailed(key.clone()))?
+        .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
     // Fetch the file's history and convert the entries into
     // the expected on-the-wire format.
     let history = file
         .history(mpath, length)
-        .map_err(move |e| e.into_http_error(ErrorKind::HistoryFetchFailed(key.clone())))
-        // XXX: Use async block because TryStreamExt::and_then
-        // requires the closure to return a TryFuture.
-        .and_then(|entry| async { WireHistoryEntry::try_from(entry).map_err(HttpError::e500) })
+        .err_into::<Error>()
+        .map_err(move |e| e.context(ErrorKind::HistoryFetchFailed(key.clone())))
+        .and_then(|entry| async { WireHistoryEntry::try_from(entry) })
         .boxed();
 
     Ok(history)

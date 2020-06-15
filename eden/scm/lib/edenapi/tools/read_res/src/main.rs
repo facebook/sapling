@@ -19,9 +19,10 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use serde::de::DeserializeOwned;
+use serde_cbor::Deserializer;
 use structopt::StructOpt;
 
-use edenapi_types::{DataResponse, HistoryResponse, Validity, WireHistoryEntry};
+use edenapi_types::{DataEntry, HistoryResponseChunk, Validity, WireHistoryEntry};
 use types::{Key, Parents, RepoPathBuf};
 
 #[derive(Debug, StructOpt)]
@@ -107,8 +108,8 @@ fn cmd_data(args: DataArgs) -> Result<()> {
 }
 
 fn cmd_data_ls(args: DataLsArgs) -> Result<()> {
-    let response: DataResponse = read_input(args.input)?;
-    for entry in response.entries {
+    let entries: Vec<DataEntry> = read_input(args.input)?;
+    for entry in entries {
         println!("{}", entry.key());
     }
     Ok(())
@@ -119,9 +120,8 @@ fn cmd_data_cat(args: DataCatArgs) -> Result<()> {
     let hgid = args.hgid.parse()?;
     let key = Key::new(path, hgid);
 
-    let response: DataResponse = read_input(args.input)?;
-    let entry = response
-        .entries
+    let entries: Vec<DataEntry> = read_input(args.input)?;
+    let entry = entries
         .into_iter()
         .find(|entry| entry.key() == &key)
         .ok_or_else(|| anyhow!("Key not found"))?;
@@ -130,8 +130,8 @@ fn cmd_data_cat(args: DataCatArgs) -> Result<()> {
 }
 
 fn cmd_data_check(args: DataCheckArgs) -> Result<()> {
-    let response: DataResponse = read_input(args.input)?;
-    for entry in response.entries {
+    let entries: Vec<DataEntry> = read_input(args.input)?;
+    for entry in entries {
         match entry.data().1 {
             Validity::Valid => {}
             Validity::Redacted => {
@@ -156,10 +156,10 @@ fn cmd_history(args: HistoryArgs) -> Result<()> {
 }
 
 fn cmd_history_ls(args: HistLsArgs) -> Result<()> {
-    let response: HistoryResponse = read_input(args.input)?;
+    let chunks: Vec<HistoryResponseChunk> = read_input(args.input)?;
     // Deduplicate and sort paths.
     let mut paths = BTreeSet::new();
-    for chunk in response.chunks {
+    for chunk in chunks {
         paths.insert(chunk.path.into_string());
     }
     for path in paths {
@@ -169,8 +169,8 @@ fn cmd_history_ls(args: HistLsArgs) -> Result<()> {
 }
 
 fn cmd_history_show(args: HistShowArgs) -> Result<()> {
-    let response: HistoryResponse = read_input(args.input)?;
-    let map = make_history_map(response);
+    let chunks: Vec<HistoryResponseChunk> = read_input(args.input)?;
+    let map = make_history_map(chunks);
     match args.file {
         Some(ref path) => match map.get(path) {
             Some(entries) => print_history(path, entries, args.count),
@@ -185,9 +185,11 @@ fn cmd_history_show(args: HistShowArgs) -> Result<()> {
     Ok(())
 }
 
-fn make_history_map(response: HistoryResponse) -> BTreeMap<String, Vec<WireHistoryEntry>> {
+fn make_history_map(
+    chunks: impl IntoIterator<Item = HistoryResponseChunk>,
+) -> BTreeMap<String, Vec<WireHistoryEntry>> {
     let mut map = BTreeMap::new();
-    for chunk in response.chunks {
+    for chunk in chunks {
         map.entry(chunk.path.into_string())
             .or_insert_with(Vec::new)
             .extend_from_slice(&chunk.entries);
@@ -218,16 +220,20 @@ fn print_history(path: &str, entries: &[WireHistoryEntry], counts_only: bool) {
     }
 }
 
-fn read_input<T: DeserializeOwned>(path: Option<PathBuf>) -> Result<T> {
+fn read_input<T: DeserializeOwned>(path: Option<PathBuf>) -> Result<Vec<T>> {
     Ok(match path {
         Some(path) => {
             eprintln!("Reading from file: {:?}", &path);
             let file = File::open(&path)?;
-            serde_cbor::from_reader(file)?
+            Deserializer::from_reader(file)
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?
         }
         None => {
             eprintln!("Reading from stdin");
-            serde_cbor::from_reader(stdin())?
+            Deserializer::from_reader(stdin())
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?
         }
     })
 }

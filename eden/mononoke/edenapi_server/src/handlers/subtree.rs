@@ -6,12 +6,12 @@
  */
 
 use anyhow::Error;
-use futures::TryStreamExt;
+use futures::{Stream, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
-use edenapi_types::{DataEntry, DataResponse, TreeRequest};
+use edenapi_types::{DataEntry, TreeRequest};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgManifestId, HgNodeHash};
 use mononoke_api::{
@@ -21,9 +21,9 @@ use mononoke_api::{
 use types::Key;
 
 use crate::context::ServerContext;
-use crate::errors::{ErrorKind, MononokeErrorExt};
+use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_response, get_repo, parse_cbor_request, to_hg_path, to_mononoke_path};
+use crate::utils::{cbor_stream, get_repo, parse_cbor_request, to_hg_path, to_mononoke_path};
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct SubTreeParams {
@@ -37,9 +37,8 @@ pub async fn subtree(state: &mut State) -> Result<impl TryIntoResponse, HttpErro
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;
-    let response = get_complete_subtree(&repo, request).await?;
 
-    cbor_response(response)
+    Ok(cbor_stream(get_complete_subtree(&repo, request)?))
 }
 
 /// Fetch all of the nodes for the subtree under the specified
@@ -54,10 +53,10 @@ pub async fn subtree(state: &mut State) -> Result<impl TryIntoResponse, HttpErro
 /// a fairly expensive way to request trees. When possible, clients
 /// should prefer explicitly request individual tree nodes via the
 /// more lightweight `/trees` endpoint.
-async fn get_complete_subtree(
+fn get_complete_subtree(
     repo: &HgRepoContext,
     request: TreeRequest,
-) -> Result<DataResponse, HttpError> {
+) -> Result<impl Stream<Item = Result<DataEntry, Error>>, HttpError> {
     let path = to_mononoke_path(request.rootdir).map_err(HttpError::e400)?;
 
     let root_nodes = request
@@ -72,20 +71,13 @@ async fn get_complete_subtree(
         .map(|hgid| HgManifestId::new(HgNodeHash::from(hgid)))
         .collect::<Vec<_>>();
 
-    let entries = repo
+    let stream = repo
         .trees_under_path(path, root_nodes, base_nodes, request.depth)
-        .map_err(|e| e.into_http_error(ErrorKind::SubtreeRequestFailed))
-        .and_then(move |(tree, path)| async {
-            // XXX: Even though this function isn't async, we need to
-            // use an async block because `and_then()` requires a Future.
-            data_entry_for_tree(tree, path).map_err(HttpError::e500)
-        })
-        // TODO(kulshrax): Change this method to return a stream
-        // instead of buffering the data entires.
-        .try_collect::<Vec<_>>()
-        .await?;
+        .err_into::<Error>()
+        .map_err(|e| e.context(ErrorKind::SubtreeRequestFailed))
+        .and_then(move |(tree, path)| async { data_entry_for_tree(tree, path) });
 
-    Ok(DataResponse::new(entries))
+    Ok(stream)
 }
 
 fn data_entry_for_tree(tree: HgTreeContext, path: MononokePath) -> Result<DataEntry, Error> {

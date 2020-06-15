@@ -9,17 +9,18 @@
 
 use anyhow::{Context, Error};
 use bytes::Bytes;
+use futures::{Stream, TryStreamExt};
 use gotham::state::State;
 use mime::Mime;
 use once_cell::sync::Lazy;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::errors::ErrorKind;
-
 use gotham_ext::{
     error::HttpError,
-    response::{BytesBody, TryIntoResponse},
+    response::{StreamBody, TryIntoResponse},
 };
+
+use crate::errors::ErrorKind;
 
 use super::get_request_body;
 
@@ -35,9 +36,18 @@ pub fn to_cbor_bytes<S: Serialize>(s: S) -> Result<Bytes, Error> {
         .context(ErrorKind::SerializationFailed)
 }
 
-pub fn cbor_response<S: Serialize>(s: S) -> Result<impl TryIntoResponse, HttpError> {
-    let bytes = to_cbor_bytes(s).map_err(HttpError::e500)?;
-    Ok(BytesBody::new(bytes, cbor_mime()))
+/// Serialize each item of the input stream as CBOR and return
+/// a streaming response. Note that although the input stream
+/// can fail, the error type is `anyhow::Error` rather than
+/// `HttpError` because the HTTP status code would have already
+/// been sent at the time of the failure.
+pub fn cbor_stream<S, T>(stream: S) -> impl TryIntoResponse
+where
+    S: Stream<Item = Result<T, Error>> + Send + 'static,
+    T: Serialize + Send + 'static,
+{
+    let byte_stream = stream.and_then(|item| async { to_cbor_bytes(item) });
+    StreamBody::new(byte_stream, cbor_mime())
 }
 
 pub async fn parse_cbor_request<R: DeserializeOwned>(state: &mut State) -> Result<R, HttpError> {

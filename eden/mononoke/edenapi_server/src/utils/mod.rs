@@ -21,7 +21,7 @@ use crate::middleware::RequestContext;
 pub mod cbor;
 pub mod convert;
 
-pub use cbor::{cbor_mime, cbor_response, parse_cbor_request, to_cbor_bytes};
+pub use cbor::{cbor_mime, cbor_stream, parse_cbor_request, to_cbor_bytes};
 pub use convert::{to_hg_path, to_mononoke_path, to_mpath};
 
 pub async fn get_repo(
