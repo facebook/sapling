@@ -679,37 +679,11 @@ impl LeastCommonAncestorsHint for SkiplistIndex {
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> BoxFuture<bool, Error> {
-        let anc_with_gen = changeset_fetcher
-            .get_generation_number(ctx.clone(), ancestor)
-            .map(move |gen| (ancestor, gen));
-        let desc_with_gen = changeset_fetcher
-            .get_generation_number(ctx.clone(), descendant)
-            .map(move |gen| (descendant, gen));
-
-        anc_with_gen
-            .join(desc_with_gen)
-            .and_then({
-                let this = self.clone();
-                move |(anc, desc)| {
-                    if anc.1 >= desc.1 {
-                        Ok(false).into_future().boxify()
-                    } else {
-                        let mut frontier = NodeFrontier::default();
-                        frontier.insert(desc);
-                        this.lca_hint(ctx.clone(), changeset_fetcher, frontier, anc.1)
-                            .map(move |res| {
-                                // If "ancestor" is an ancestor of "descendant" lca_hint will return
-                                // a node frontier that contains "ancestor".
-                                match res.get_all_changesets_for_gen_num(anc.1) {
-                                    Some(generation_set) if generation_set.contains(&anc.0) => true,
-                                    _ => false,
-                                }
-                            })
-                            .boxify()
-                    }
-                }
-            })
-            .boxify()
+        if ancestor == descendant {
+            Ok(false).into_future().boxify()
+        } else {
+            self.query_reachability(ctx, changeset_fetcher, descendant, ancestor)
+        }
     }
 }
 
