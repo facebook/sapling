@@ -23,19 +23,26 @@ use serde_derive::Serialize;
 #[derive(Serialize)]
 pub struct CommitInfo<'a> {
     repo_id: RepositoryId,
-    bookmark: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bookmark: Option<&'a str>,
     generation: Generation,
     changeset_id: ChangesetId,
     parents: Vec<ChangesetId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user_unix_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_hostname: Option<&'a str>,
 }
 
 impl<'a> CommitInfo<'a> {
     pub fn new(
         repo_id: RepositoryId,
-        bookmark: &'a str,
+        bookmark: Option<&'a str>,
         generation: Generation,
         changeset_id: ChangesetId,
         parents: Vec<ChangesetId>,
+        user_unix_name: Option<&'a str>,
+        source_hostname: Option<&'a str>,
     ) -> Self {
         Self {
             repo_id,
@@ -43,6 +50,8 @@ impl<'a> CommitInfo<'a> {
             generation,
             changeset_id,
             parents,
+            user_unix_name,
+            source_hostname,
         }
     }
 }

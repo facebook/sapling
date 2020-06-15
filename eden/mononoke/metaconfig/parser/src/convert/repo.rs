@@ -252,6 +252,7 @@ impl Convert for RawInfinitepushParams {
                 .and_then(|ns| Regex::new(&ns).ok().map(InfinitepushNamespace::new)),
             hydrate_getbundle_response: self.hydrate_getbundle_response.unwrap_or(false),
             populate_reverse_filler_queue: self.populate_reverse_filler_queue.unwrap_or(false),
+            commit_scribe_category: self.commit_scribe_category,
         })
     }
 }

@@ -908,6 +908,9 @@ pub struct InfinitepushParams {
 
     /// Whether to write saved infinitepush bundles into the reverse filler queue
     pub populate_reverse_filler_queue: bool,
+
+    /// Scribe category we log new commits to
+    pub commit_scribe_category: Option<String>,
 }
 
 impl Default for InfinitepushParams {
@@ -917,6 +920,7 @@ impl Default for InfinitepushParams {
             namespace: None,
             hydrate_getbundle_response: false,
             populate_reverse_filler_queue: false,
+            commit_scribe_category: None,
         }
     }
 }

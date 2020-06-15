@@ -1153,6 +1153,7 @@ mod test {
                     namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
                     hydrate_getbundle_response: false,
                     populate_reverse_filler_queue: false,
+                    commit_scribe_category: None,
                 },
                 list_keys_patterns_max: 123,
                 hook_max_file_size: 456,

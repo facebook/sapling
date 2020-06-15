@@ -447,7 +447,7 @@ async fn run_infinitepush(
         maybe_bookmark_push,
         mutations,
         maybe_raw_bundle2_id,
-        uploaded_bonsais: _,
+        uploaded_bonsais,
         uploaded_hg_changeset_ids,
         is_cross_backend_sync,
     } = action;
@@ -469,30 +469,49 @@ async fn run_infinitepush(
             .context("Failed to store mutation data")?;
     }
 
-    let bookmark_push = match maybe_bookmark_push {
-        Some(bookmark_push) => bookmark_push,
-        None => {
-            // Changegroup was saved during bundle2 resolution
-            // there's nothing we need to do here.
-            return Ok(UnbundleInfinitePushResponse { changegroup_id });
-        }
+    let bookmark = if let Some(bookmark_push) = maybe_bookmark_push {
+        let reason = BookmarkUpdateReason::Push {
+            bundle_replay_data: maybe_raw_bundle2_id.map(BundleReplayData::new),
+        };
+        let maybe_bonsai_bookmark_push = filter_or_check_infinitepush_allowed(
+            ctx,
+            repo,
+            lca_hint,
+            infinitepush_params,
+            bookmark_push,
+        )
+        .await
+        .context("While verifying Infinite Push bookmark push")?;
+
+        save_bookmark_pushes_to_db(
+            ctx,
+            repo,
+            reason,
+            vec![maybe_bonsai_bookmark_push
+                .clone()
+                .map(BookmarkPush::Infinitepush)],
+            None,
+        )
+        .await?;
+        maybe_bonsai_bookmark_push.map(|bp| bp.name)
+    } else {
+        None
     };
 
-    let reason = BookmarkUpdateReason::Push {
-        bundle_replay_data: maybe_raw_bundle2_id.map(BundleReplayData::new),
-    };
+    let new_commits: Vec<ChangesetId> = uploaded_bonsais
+        .iter()
+        .map(|cs| cs.get_changeset_id())
+        .collect();
 
-    let maybe_bonsai_bookmark_push = filter_or_check_infinitepush_allowed(
+    log_commits_to_scribe(
         ctx,
         repo,
-        lca_hint,
-        infinitepush_params,
-        bookmark_push,
+        bookmark.as_ref(),
+        new_commits,
+        infinitepush_params.commit_scribe_category.clone(),
     )
-    .await
-    .context("While verifying Infinite Push bookmark push")
-    .map(|maybe_bp| maybe_bp.map(BookmarkPush::Infinitepush))?;
-    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bonsai_bookmark_push], None).await?;
+    .await?;
+
     Ok(UnbundleInfinitePushResponse { changegroup_id })
 }
 
@@ -565,7 +584,7 @@ async fn run_pushrebase(
     log_commits_to_scribe(
         ctx,
         repo,
-        &bookmark,
+        Some(&bookmark),
         new_commits,
         pushrebase_params.commit_scribe_category.clone(),
     )
@@ -950,7 +969,7 @@ async fn check_is_ancestor_opt(
 async fn log_commits_to_scribe(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    bookmark: &BookmarkName,
+    bookmark: Option<&BookmarkName>,
     changesets: Vec<ChangesetId>,
     commit_scribe_category: Option<String>,
 ) -> Result<(), Error> {
@@ -962,7 +981,7 @@ async fn log_commits_to_scribe(
     };
 
     let repo_id = repo.get_repoid();
-    let bookmark = bookmark.as_str();
+    let bookmark = bookmark.map(|bm| bm.as_str());
 
     let futs: FuturesUnordered<_> = changesets
         .into_iter()
@@ -989,6 +1008,8 @@ async fn log_commits_to_scribe(
                     generation,
                     changeset_id,
                     parents,
+                    ctx.user_unix_name().as_deref(),
+                    ctx.source_hostname().as_deref(),
                 );
                 queue.queue_commit(&ci).await
             }
