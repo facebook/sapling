@@ -62,8 +62,6 @@ else()
   set(EDEN_HAVE_GIT OFF)
 endif()
 
-find_package(LZ4 MODULE REQUIRED)
-
 # The following packages ship with their own CMake configuration files
 find_package(cpptoml CONFIG REQUIRED)
 find_package(gflags CONFIG REQUIRED)
@@ -78,6 +76,7 @@ find_package(gflags CONFIG REQUIRED)
 # Even though we tend to build RelWithDebInfo we need to allow this to work for the
 # other common cmake build modes.
 # This section of logic can be removed once we've fixed up the behavior in RocksDB.
+
 find_package(Snappy CONFIG REQUIRED)
 get_target_property(SNAPPY_LIBS_RELWITHDEBINFO Snappy::snappy IMPORTED_LOCATION_RELWITHDEBINFO)
 get_target_property(SNAPPY_LIBS_RELEASE Snappy::snappy IMPORTED_LOCATION_RELEASE)
@@ -90,6 +89,22 @@ set_target_properties(snappy::snappy PROPERTIES
   IMPORTED_LOCATION_RELEASE "${SNAPPY_LIBS_RELEASE}"
   IMPORTED_LOCATION_DEBUG "${SNAPPY_LIBS_DEBUG}"
   INTERFACE_INCLUDE_DIRECTORIES "${SNAPPY_INCLUDES}"
+)
+
+# Same as above for LZ4.
+
+find_package(LZ4 MODULE REQUIRED)
+get_target_property(LZ4_LIBS_RELWITHDEBINFO Snappy::snappy IMPORTED_LOCATION_RELWITHDEBINFO)
+get_target_property(LZ4_LIBS_RELEASE Snappy::snappy IMPORTED_LOCATION_RELEASE)
+get_target_property(LZ4_LIBS_DEBUG Snappy::snappy IMPORTED_LOCATION_DEBUG)
+get_target_property(LZ4_INCLUDES Snappy::snappy INTERFACE_INCLUDE_DIRECTORIES)
+add_library(lz4::lz4 UNKNOWN IMPORTED)
+set_target_properties(lz4::lz4 PROPERTIES
+  IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+  IMPORTED_LOCATION_RELWITHDEBINFO "${LZ4_LIBS_RELWITHDEBINFO}"
+  IMPORTED_LOCATION_RELEASE "${LZ4_LIBS_RELEASE}"
+  IMPORTED_LOCATION_DEBUG "${LZ4_LIBS_DEBUG}"
+  INTERFACE_INCLUDE_DIRECTORIES "${LZ4_INCLUDES}"
 )
 
 # TODO: It shouldn't be too hard to turn RocksDB and sqlite3 into optional
