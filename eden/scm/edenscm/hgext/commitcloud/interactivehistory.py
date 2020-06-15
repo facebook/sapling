@@ -56,7 +56,7 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                         limit,
                     )
                 formatteddate = time.strftime(
-                    "%Y-%m-%d %H:%M:%S", time.localtime(slinfo.sltimestamp)
+                    "%Y-%m-%d %H:%M:%S", time.localtime(slinfo.timestamp)
                 )
                 ui.status(
                     _("Smartlog version %d \nsynced at %s\n\n")
