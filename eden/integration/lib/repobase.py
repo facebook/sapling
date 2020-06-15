@@ -105,12 +105,11 @@ class Repository(object):
             mode = 0o644
 
         full_path = self.get_path(path)
-        if isinstance(contents, bytes):
-            with open(full_path, "wb") as f:
-                f.write(contents)
-        else:
-            with open(full_path, "w") as f:
-                f.write(contents)
+        if isinstance(contents, str):
+            contents = contents.encode()
+
+        with open(full_path, "wb") as f:
+            f.write(contents)
 
         os.chmod(full_path, mode)
 

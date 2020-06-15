@@ -144,21 +144,16 @@ class BasicTest(BasicTestBase):
 
     def test_append(self) -> None:
         hello = self.mount_path / "bdir/test.sh"
-        with hello.open("a") as f:
-            f.write("echo more commands\n")
+        with hello.open("ab") as f:
+            f.write("echo more commands\n".encode())
 
         expected_data = "#!/bin/bash\necho test\necho more commands\n"
         st = os.lstat(hello)
-        with hello.open("r") as f:
-            read_back = f.read()
+        with hello.open("rb") as f:
+            read_back = f.read().decode()
         self.assertEqual(expected_data, read_back)
 
-        if sys.platform == "win32":
-            # On Windows each newline actually gets written out as \r\n
-            num_newlines = expected_data.count("\n")
-            expected_len = len(expected_data) + num_newlines
-        else:
-            expected_len = len(expected_data)
+        expected_len = len(expected_data)
         self.assertEqual(expected_len, st.st_size)
 
     def test_materialize(self) -> None:
