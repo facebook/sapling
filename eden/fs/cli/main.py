@@ -125,6 +125,8 @@ class DiskUsageCmd(Subcmd):
         "legacy": 0,
     }
     color_out = ui.get_output()
+    hasLFS = False
+    hasWorkingCopyBacked = False
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -210,8 +212,31 @@ from the backing repo directory!
                 fg=color_out.YELLOW,
             )
 
+        lfs_repos = set()
+        backed_working_copy_repos = set()
+
         for backing in backing_repos:
-            self.backing_usage(backing)
+            self.backing_usage(backing, lfs_repos, backed_working_copy_repos)
+
+        if lfs_repos:
+            print(
+                """
+LFS cache detected in backing repo. To reclaim space from the LFS cache directory, run:
+"""
+            )
+            for lfs_repo in lfs_repos:
+                print(f"hg -R {lfs_repo} gc")
+
+        if backed_working_copy_repos:
+            print(
+                f"""
+Working copy detected in backing repo.  This is not generally useful
+and just takes up space.  You can make this a bare repo to reclaim
+space by running:
+"""
+            )
+            for backed_working_copy in backed_working_copy_repos:
+                print(f"hg -R {backed_working_copy} checkout null")
 
         if instance:
             self.shared_usage(instance, clean)
@@ -285,7 +310,12 @@ from the backing repo directory!
         if print_label:
             print(f"{self.MOVE_TO_SOL_CLEAR_TO_EOL}{print_label}: {format_size(usage)}")
 
-    def backing_usage(self, backing_repo: Path) -> None:
+    def backing_usage(
+        self,
+        backing_repo: Path,
+        lfs_repos: Set[Path],
+        backed_working_copy_repos: Set[Path],
+    ) -> None:
 
         self.usage_for_dir(backing_repo, "backing")
 
@@ -294,24 +324,10 @@ from the backing repo directory!
             hg_dir = backing_repo / ".hg"
             lfs_dir = hg_dir / "store" / "lfs"
             if os.path.exists(lfs_dir):
-                print(
-                    f"""
-Reclaim space from the LFS cache directory by running:
-
-hg -R {backing_repo} gc
-"""
-                )
+                lfs_repos.add(backing_repo)
 
             if len(top_dirs) > 1:
-                print(
-                    f"""
-Working copy detected in backing repo.  This is not generally useful
-and just takes up space.  You can make this a bare repo to reclaim
-space by running:
-
-hg -R {backing_repo} checkout null
-"""
-                )
+                backed_working_copy_repos.add(backing_repo)
 
     def shared_usage(self, instance: EdenInstance, clean: bool) -> None:
         logs_dir = instance.state_dir / "logs"
