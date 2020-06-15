@@ -129,7 +129,7 @@ impl GitimportTarget {
 
     async fn populate_roots(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo: &BlobRepo,
         roots: &mut HashMap<Oid, ChangesetId>,
     ) -> Result<(), Error> {
@@ -140,7 +140,7 @@ impl GitimportTarget {
             Self::GitRange(from, _to) => {
                 let root = repo
                     .bonsai_git_mapping()
-                    .get_bonsai_from_git_sha1(GitSha1::from_bytes(from)?)
+                    .get_bonsai_from_git_sha1(&ctx, GitSha1::from_bytes(from)?)
                     .await?
                     .ok_or_else(|| {
                         format_err!(

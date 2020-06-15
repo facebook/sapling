@@ -160,7 +160,7 @@ impl ChangesetContext {
             .repo()
             .blob_repo()
             .bonsai_git_mapping()
-            .get_git_sha1_from_bonsai(self.id)
+            .get_git_sha1_from_bonsai(self.ctx(), self.id)
             .await?)
     }
 

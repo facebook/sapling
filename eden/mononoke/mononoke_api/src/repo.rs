@@ -632,7 +632,7 @@ impl RepoContext {
             ChangesetSpecifier::GitSha1(git_sha1) => {
                 self.blob_repo()
                     .bonsai_git_mapping()
-                    .get_bonsai_from_git_sha1(git_sha1)
+                    .get_bonsai_from_git_sha1(&self.ctx, git_sha1)
                     .await?
             }
         };
@@ -753,7 +753,7 @@ impl RepoContext {
         let mapping = self
             .blob_repo()
             .bonsai_git_mapping()
-            .get(changesets.into())
+            .get(&self.ctx, changesets.into())
             .await?
             .into_iter()
             .map(|entry| (entry.bcs_id, entry.git_sha1))

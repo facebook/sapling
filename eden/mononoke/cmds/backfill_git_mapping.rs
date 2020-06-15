@@ -76,7 +76,7 @@ pub async fn backfill<P: AsRef<Path>>(
             cloned!(ctx, repo);
             async move {
                 repo.bonsai_git_mapping()
-                    .bulk_import_from_bonsai(ctx.clone(), &chunk)
+                    .bulk_import_from_bonsai(&ctx, &chunk)
                     .await
             }
         })

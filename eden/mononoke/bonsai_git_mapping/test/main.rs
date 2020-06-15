@@ -13,6 +13,8 @@ use bonsai_git_mapping::{
     bulk_add_git_mapping_in_transaction, AddGitMappingErrorKind, BonsaiGitMapping,
     BonsaiGitMappingEntry, BonsaisOrGitShas, SqlBonsaiGitMappingConnection,
 };
+use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::hash::*;
@@ -22,7 +24,8 @@ use sql_construct::SqlConstruct;
 use sql_ext::{open_sqlite_in_memory, SqlConnections};
 
 #[fbinit::test]
-async fn test_add_and_get() -> Result<(), Error> {
+async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
 
     let entry = BonsaiGitMappingEntry {
@@ -30,23 +33,28 @@ async fn test_add_and_get() -> Result<(), Error> {
         git_sha1: ONES_GIT_SHA1,
     };
 
-    mapping.bulk_add(&vec![entry.clone()]).await?;
+    mapping.bulk_add(&ctx, &[entry.clone()]).await?;
 
     let result = mapping
-        .get(BonsaisOrGitShas::Bonsai(vec![bonsai::ONES_CSID]))
+        .get(&ctx, BonsaisOrGitShas::Bonsai(vec![bonsai::ONES_CSID]))
         .await?;
     assert_eq!(result, vec![entry.clone()]);
-    let result = mapping.get_git_sha1_from_bonsai(bonsai::ONES_CSID).await?;
+    let result = mapping
+        .get_git_sha1_from_bonsai(&ctx, bonsai::ONES_CSID)
+        .await?;
     assert_eq!(result, Some(ONES_GIT_SHA1));
-    let result = mapping.get_bonsai_from_git_sha1(ONES_GIT_SHA1).await?;
+    let result = mapping
+        .get_bonsai_from_git_sha1(&ctx, ONES_GIT_SHA1)
+        .await?;
     assert_eq!(result, Some(bonsai::ONES_CSID));
 
     Ok(())
 }
 
 #[fbinit::test]
-async fn test_add_duplicate() -> Result<(), Error> {
+async fn test_add_duplicate(fb: FacebookInit) -> Result<(), Error> {
     // Inserting duplicate entries should just be a successful no-op.
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
 
     let entry = BonsaiGitMappingEntry {
@@ -54,19 +62,22 @@ async fn test_add_duplicate() -> Result<(), Error> {
         git_sha1: ONES_GIT_SHA1,
     };
 
-    mapping.bulk_add(&vec![entry.clone()]).await?;
-    mapping.bulk_add(&vec![entry.clone()]).await?;
+    mapping.bulk_add(&ctx, &[entry.clone()]).await?;
+    mapping.bulk_add(&ctx, &[entry.clone()]).await?;
 
-    let result = mapping.get_git_sha1_from_bonsai(bonsai::ONES_CSID).await?;
+    let result = mapping
+        .get_git_sha1_from_bonsai(&ctx, bonsai::ONES_CSID)
+        .await?;
     assert_eq!(result, Some(ONES_GIT_SHA1));
 
     Ok(())
 }
 
 #[fbinit::test]
-async fn test_add_conflict() -> Result<(), Error> {
+async fn test_add_conflict(fb: FacebookInit) -> Result<(), Error> {
     // Adding conflicting entries should fail. Other entries inserted in the
     // same bulk_add should be inserted.
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
 
     let entry = BonsaiGitMappingEntry {
@@ -74,7 +85,7 @@ async fn test_add_conflict() -> Result<(), Error> {
         git_sha1: ONES_GIT_SHA1,
     };
 
-    mapping.bulk_add(&vec![entry.clone()]).await?;
+    mapping.bulk_add(&ctx, &[entry.clone()]).await?;
 
     let entries = vec![
         BonsaiGitMappingEntry {
@@ -89,17 +100,20 @@ async fn test_add_conflict() -> Result<(), Error> {
         },
     ];
 
-    let res = mapping.bulk_add(&entries).await;
+    let res = mapping.bulk_add(&ctx, &entries).await;
     assert_matches!(res, Err(AddGitMappingErrorKind::Conflict(_)));
 
-    let result = mapping.get_git_sha1_from_bonsai(bonsai::TWOS_CSID).await?;
+    let result = mapping
+        .get_git_sha1_from_bonsai(&ctx, bonsai::TWOS_CSID)
+        .await?;
     assert_eq!(result, Some(TWOS_GIT_SHA1));
 
     Ok(())
 }
 
 #[fbinit::test]
-async fn test_bulk_add() -> Result<(), Error> {
+async fn test_bulk_add(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
 
     let entry1 = BonsaiGitMappingEntry {
@@ -116,18 +130,19 @@ async fn test_bulk_add() -> Result<(), Error> {
     };
 
     mapping
-        .bulk_add(&vec![entry1.clone(), entry2.clone(), entry3.clone()])
+        .bulk_add(&ctx, &[entry1.clone(), entry2.clone(), entry3.clone()])
         .await?;
 
     Ok(())
 }
 
 #[fbinit::test]
-async fn test_missing() -> Result<(), Error> {
+async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
 
     let result = mapping
-        .get(BonsaisOrGitShas::Bonsai(vec![bonsai::ONES_CSID]))
+        .get(&ctx, BonsaisOrGitShas::Bonsai(vec![bonsai::ONES_CSID]))
         .await?;
 
     assert_eq!(result, vec![]);
@@ -136,7 +151,8 @@ async fn test_missing() -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn test_add_with_transaction() -> Result<(), Error> {
+async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;
     conn.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
     let conn = Connection::with_sqlite(conn);
@@ -164,7 +180,9 @@ async fn test_add_with_transaction() -> Result<(), Error> {
 
     assert_eq!(
         Some(ONES_GIT_SHA1),
-        mapping.get_git_sha1_from_bonsai(bonsai::ONES_CSID).await?
+        mapping
+            .get_git_sha1_from_bonsai(&ctx, bonsai::ONES_CSID)
+            .await?
     );
 
     let txn = conn.start_transaction().compat().await?;
@@ -176,7 +194,9 @@ async fn test_add_with_transaction() -> Result<(), Error> {
 
     assert_eq!(
         Some(TWOS_GIT_SHA1),
-        mapping.get_git_sha1_from_bonsai(bonsai::TWOS_CSID).await?
+        mapping
+            .get_git_sha1_from_bonsai(&ctx, bonsai::TWOS_CSID)
+            .await?
     );
 
     // Inserting duplicates fails
@@ -194,7 +214,9 @@ async fn test_add_with_transaction() -> Result<(), Error> {
 
     assert_eq!(
         Some(TWOS_GIT_SHA1),
-        mapping.get_git_sha1_from_bonsai(bonsai::TWOS_CSID).await?
+        mapping
+            .get_git_sha1_from_bonsai(&ctx, bonsai::TWOS_CSID)
+            .await?
     );
 
     Ok(())

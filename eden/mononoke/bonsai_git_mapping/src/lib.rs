@@ -10,7 +10,7 @@
 use anyhow;
 use ascii::AsciiStr;
 use async_trait::async_trait;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use futures::compat::Future01CompatExt;
 use mononoke_types::{hash::GitSha1, BonsaiChangeset, ChangesetId, RepositoryId};
 use slog::warn;
@@ -88,30 +88,41 @@ impl From<Vec<GitSha1>> for BonsaisOrGitShas {
 pub trait BonsaiGitMapping: Send + Sync {
     async fn bulk_add(
         &self,
+        ctx: &CoreContext,
         entries: &[BonsaiGitMappingEntry],
     ) -> Result<(), AddGitMappingErrorKind>;
 
-    async fn get(&self, field: BonsaisOrGitShas) -> anyhow::Result<Vec<BonsaiGitMappingEntry>>;
+    async fn get(
+        &self,
+        ctx: &CoreContext,
+        field: BonsaisOrGitShas,
+    ) -> anyhow::Result<Vec<BonsaiGitMappingEntry>>;
 
     async fn get_git_sha1_from_bonsai(
         &self,
+        ctx: &CoreContext,
         bcs_id: ChangesetId,
     ) -> anyhow::Result<Option<GitSha1>> {
-        let result = self.get(BonsaisOrGitShas::Bonsai(vec![bcs_id])).await?;
+        let result = self
+            .get(ctx, BonsaisOrGitShas::Bonsai(vec![bcs_id]))
+            .await?;
         Ok(result.into_iter().next().map(|entry| entry.git_sha1))
     }
 
     async fn get_bonsai_from_git_sha1(
         &self,
+        ctx: &CoreContext,
         git_sha1: GitSha1,
     ) -> anyhow::Result<Option<ChangesetId>> {
-        let result = self.get(BonsaisOrGitShas::GitSha1(vec![git_sha1])).await?;
+        let result = self
+            .get(ctx, BonsaisOrGitShas::GitSha1(vec![git_sha1]))
+            .await?;
         Ok(result.into_iter().next().map(|entry| entry.bcs_id))
     }
 
     async fn bulk_import_from_bonsai(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         changesets: &[BonsaiChangeset],
     ) -> anyhow::Result<()> {
         let mut entries = vec![];
@@ -133,7 +144,7 @@ pub trait BonsaiGitMapping: Send + Sync {
                 }
             }
         }
-        self.bulk_add(&entries).await?;
+        self.bulk_add(ctx, &entries).await?;
         Ok(())
     }
 }
@@ -142,13 +153,18 @@ pub trait BonsaiGitMapping: Send + Sync {
 impl BonsaiGitMapping for Arc<dyn BonsaiGitMapping> {
     async fn bulk_add(
         &self,
+        ctx: &CoreContext,
         entries: &[BonsaiGitMappingEntry],
     ) -> Result<(), AddGitMappingErrorKind> {
-        (**self).bulk_add(entries).await
+        (**self).bulk_add(ctx, entries).await
     }
 
-    async fn get(&self, field: BonsaisOrGitShas) -> anyhow::Result<Vec<BonsaiGitMappingEntry>> {
-        (**self).get(field).await
+    async fn get(
+        &self,
+        ctx: &CoreContext,
+        field: BonsaisOrGitShas,
+    ) -> anyhow::Result<Vec<BonsaiGitMappingEntry>> {
+        (**self).get(ctx, field).await
     }
 }
 
@@ -194,9 +210,13 @@ queries! {
 impl BonsaiGitMapping for SqlBonsaiGitMapping {
     async fn bulk_add(
         &self,
+        ctx: &CoreContext,
         entries: &[BonsaiGitMappingEntry],
     ) -> Result<(), AddGitMappingErrorKind> {
         STATS::adds.add_value(entries.len().try_into().map_err(anyhow::Error::from)?);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
+
         let rows: Vec<_> = entries
             .iter()
             .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (&self.repo_id, git_sha1, bcs_id))
@@ -220,7 +240,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
                     .collect(),
             );
             let mapping_from_db: BTreeMap<_, _> = self
-                .get(git_shas)
+                .get(ctx, git_shas)
                 .await?
                 .into_iter()
                 .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (git_sha1, bcs_id))
@@ -235,13 +255,22 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         return Ok(());
     }
 
-    async fn get(&self, objects: BonsaisOrGitShas) -> anyhow::Result<Vec<BonsaiGitMappingEntry>> {
+    async fn get(
+        &self,
+        ctx: &CoreContext,
+        objects: BonsaisOrGitShas,
+    ) -> anyhow::Result<Vec<BonsaiGitMappingEntry>> {
         STATS::gets.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
         let mut mappings = select_mapping(&self.read_connection, &self.repo_id, &objects).await?;
         let left_to_fetch = filter_fetched_ids(objects, &mappings[..]);
 
         if !left_to_fetch.is_empty() {
             STATS::gets_master.add_value(1);
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
             let mut master_mappings =
                 select_mapping(&self.read_master_connection, &self.repo_id, &left_to_fetch).await?;
             mappings.append(&mut master_mappings);

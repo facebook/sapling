@@ -260,7 +260,7 @@ impl<'a> Blobimport<'a> {
                 if populate_git_mapping {
                     let git_mapping_store = blobrepo.bonsai_git_mapping();
                     git_mapping_store
-                        .bulk_import_from_bonsai(ctx.clone(), changesets)
+                        .bulk_import_from_bonsai(ctx, changesets)
                         .await
                 } else {
                     Ok(())

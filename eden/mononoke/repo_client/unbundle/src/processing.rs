@@ -275,7 +275,7 @@ async fn find_ancestors_without_git_mapping(
                     .compat()
                     .map_err(Error::from);
 
-                let mapping_fut = repo.bonsai_git_mapping().get(cs_id.into());
+                let mapping_fut = repo.bonsai_git_mapping().get(ctx, cs_id.into());
 
                 let (bcs, git_mapping) = try_join(bcs_fut, mapping_fut).await?;
                 Result::<_, Error>::Ok((cs_id, bcs, git_mapping))
@@ -1193,20 +1193,26 @@ mod tests {
         );
 
         repo.bonsai_git_mapping()
-            .bulk_add(&[BonsaiGitMappingEntry {
-                git_sha1: ONES_GIT_SHA1,
-                bcs_id: parent,
-            }])
+            .bulk_add(
+                &ctx,
+                &[BonsaiGitMappingEntry {
+                    git_sha1: ONES_GIT_SHA1,
+                    bcs_id: parent,
+                }],
+            )
             .await?;
 
         let res = find_ancestors_without_git_mapping(&ctx, &repo, hashset! {child}).await?;
         assert_eq!(res.keys().collect::<HashSet<_>>(), hashset![&child]);
 
         repo.bonsai_git_mapping()
-            .bulk_add(&[BonsaiGitMappingEntry {
-                git_sha1: TWOS_GIT_SHA1,
-                bcs_id: child,
-            }])
+            .bulk_add(
+                &ctx,
+                &[BonsaiGitMappingEntry {
+                    git_sha1: TWOS_GIT_SHA1,
+                    bcs_id: child,
+                }],
+            )
             .await?;
         let res = find_ancestors_without_git_mapping(&ctx, &repo, hashset! {child}).await?;
         assert_eq!(res.keys().collect::<HashSet<_>>(), hashset![]);
