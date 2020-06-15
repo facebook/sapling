@@ -150,13 +150,9 @@ impl MononokeRepoBuilder {
             readonly_storage.0,
         );
 
-        let skiplist = fetch_skiplist_index(
-            ctx.clone(),
-            skiplist_index_blobstore_key,
-            repo.get_blobstore().boxed(),
-        )
-        .compat()
-        .map(|res| res.with_context(|| format!("while fetching skiplist for {}", repo.name())));
+        let blobstore = repo.get_blobstore().boxed();
+        let skiplist = fetch_skiplist_index(&ctx, &skiplist_index_blobstore_key, &blobstore)
+            .map(|res| res.with_context(|| format!("while fetching skiplist for {}", repo.name())));
 
         let (
             streaming_clone,

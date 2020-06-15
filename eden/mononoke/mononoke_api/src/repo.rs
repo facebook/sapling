@@ -182,12 +182,8 @@ impl Repo {
             Ok(ArcPermissionChecker::from(checker))
         };
 
-        let skiplist_index = fetch_skiplist_index(
-            ctx.clone(),
-            skiplist_index_blobstore_key,
-            blob_repo.get_blobstore().boxed(),
-        )
-        .compat();
+        let blobstore = blob_repo.get_blobstore().boxed();
+        let skiplist_index = fetch_skiplist_index(&ctx, &skiplist_index_blobstore_key, &blobstore);
 
         let warm_bookmarks_cache = async {
             Ok(Arc::new(

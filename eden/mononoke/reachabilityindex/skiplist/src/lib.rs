@@ -18,8 +18,7 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::future::try_join_all;
 use futures::stream::{self, futures_unordered::FuturesUnordered, TryStreamExt};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt as FBFutureExt};
-use futures_old::future::{ok, Future};
+use futures_ext::{BoxFuture, FutureExt as FBFutureExt};
 use futures_old::IntoFuture;
 use futures_util::compat::Future01CompatExt;
 use futures_util::future::{FutureExt, TryFutureExt};
@@ -130,37 +129,33 @@ impl SkiplistNodeType {
     }
 }
 
-pub fn fetch_skiplist_index(
-    ctx: CoreContext,
-    maybe_skiplist_blobstore_key: Option<String>,
-    blobstore: Arc<dyn Blobstore>,
-) -> BoxFuture<Arc<SkiplistIndex>, Error> {
+pub async fn fetch_skiplist_index(
+    ctx: &CoreContext,
+    maybe_skiplist_blobstore_key: &Option<String>,
+    blobstore: &Arc<dyn Blobstore>,
+) -> Result<Arc<SkiplistIndex>, Error> {
     match maybe_skiplist_blobstore_key {
         Some(skiplist_index_blobstore_key) => {
             info!(ctx.logger(), "Fetching and initializing skiplist");
-            blobstore
-                .get(ctx.clone(), skiplist_index_blobstore_key)
-                .and_then(move |maybebytes| {
-                    let slg = match maybebytes {
-                        Some(bytes) => {
-                            let bytes = bytes.into_raw_bytes();
-                            let skiplist = try_boxfuture!(deserialize_skiplist_index(
-                                ctx.logger().clone(),
-                                bytes
-                            ));
-                            info!(ctx.logger(), "Built skiplist");
-                            skiplist
-                        }
-                        None => {
-                            info!(ctx.logger(), "Skiplist is empty!");
-                            SkiplistIndex::new()
-                        }
-                    };
-                    ok(Arc::new(slg)).boxify()
-                })
-                .boxify()
+            let maybebytes = blobstore
+                .get(ctx.clone(), skiplist_index_blobstore_key.to_string())
+                .compat()
+                .await?;
+            let slg = match maybebytes {
+                Some(bytes) => {
+                    let bytes = bytes.into_raw_bytes();
+                    let skiplist = deserialize_skiplist_index(ctx.logger().clone(), bytes)?;
+                    info!(ctx.logger(), "Built skiplist");
+                    skiplist
+                }
+                None => {
+                    info!(ctx.logger(), "Skiplist is empty!");
+                    SkiplistIndex::new()
+                }
+            };
+            Ok(Arc::new(slg))
         }
-        None => ok(Arc::new(SkiplistIndex::new())).boxify(),
+        None => Ok(Arc::new(SkiplistIndex::new())),
     }
 }
 
@@ -856,7 +851,7 @@ mod test {
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;
     use futures::stream::{iter, StreamExt, TryStreamExt};
-    use futures_old::future::join_all;
+    use futures_old::future::{join_all, Future};
     use futures_old::stream::Stream;
     use revset::AncestorsNodeStream;
     use std::collections::HashSet;
