@@ -11,6 +11,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use chashmap::CHashMap;
@@ -19,7 +20,6 @@ use context::{CoreContext, PerfCounterType};
 use futures::future::try_join_all;
 use futures::stream::{self, futures_unordered::FuturesUnordered, TryStreamExt};
 use futures_ext::{BoxFuture, FutureExt as FBFutureExt};
-use futures_old::IntoFuture;
 use futures_util::compat::Future01CompatExt;
 use futures_util::future::{FutureExt, TryFutureExt};
 use futures_util::try_join;
@@ -648,43 +648,40 @@ async fn process_frontier(
     Ok(node_frontier)
 }
 
+#[async_trait]
 impl LeastCommonAncestorsHint for SkiplistIndex {
-    fn lca_hint(
+    async fn lca_hint(
         &self,
-        ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        ctx: &CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
         node_frontier: NodeFrontier,
         gen: Generation,
-    ) -> BoxFuture<NodeFrontier, Error> {
-        cloned!(self.skip_list_edges);
-        async move {
-            process_frontier(
-                &ctx,
-                &changeset_fetcher,
-                &skip_list_edges,
-                node_frontier,
-                gen,
-            )
-            .await
-        }
-        .boxed()
-        .compat()
-        .boxify()
+    ) -> Result<NodeFrontier, Error> {
+        process_frontier(
+            ctx,
+            changeset_fetcher,
+            &self.skip_list_edges,
+            node_frontier,
+            gen,
+        )
+        .await
     }
 
     /// Check if `ancestor` changeset is an ancestor of `descendant` changeset
     /// Note that a changeset IS NOT its own ancestor
-    fn is_ancestor(
+    async fn is_ancestor(
         &self,
-        ctx: CoreContext,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        ctx: &CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
         ancestor: ChangesetId,
         descendant: ChangesetId,
-    ) -> BoxFuture<bool, Error> {
+    ) -> Result<bool, Error> {
         if ancestor == descendant {
-            Ok(false).into_future().boxify()
+            Ok(false)
         } else {
-            self.query_reachability(ctx, changeset_fetcher, descendant, ancestor)
+            self.query_reachability(ctx.clone(), changeset_fetcher.clone(), descendant, ancestor)
+                .compat()
+                .await
         }
     }
 }
@@ -700,20 +697,8 @@ impl SkiplistIndex {
         gen: Generation,
     ) -> Result<(NodeFrontier, NodeFrontier), Error> {
         try_join!(
-            self.lca_hint(
-                ctx.clone(),
-                changeset_fetcher.clone(),
-                frontier1.clone(),
-                gen,
-            )
-            .compat(),
-            self.lca_hint(
-                ctx.clone(),
-                changeset_fetcher.clone(),
-                frontier2.clone(),
-                gen,
-            )
-            .compat(),
+            self.lca_hint(&ctx, &changeset_fetcher, frontier1.clone(), gen,),
+            self.lca_hint(&ctx, &changeset_fetcher, frontier2.clone(), gen,),
         )
     }
 
@@ -2553,16 +2538,26 @@ mod test {
                     .collect();
 
                 let mut res = vec![];
+                let sli = Arc::new(sli);
                 for anc in cs_ancestor_map.keys() {
                     for desc in cs_ancestor_map.keys() {
-                        cloned!(ctx, repo, anc, desc);
-                        let expected_and_params = Ok((
+                        cloned!(ctx, repo, anc, desc, sli);
+                        let expected_and_params = (
                             cs_ancestor_map.get(&desc).unwrap().contains(&anc),
                             (anc, desc),
-                        ))
-                        .into_future();
-                        let actual = sli.is_ancestor(ctx, repo.get_changeset_fetcher(), anc, desc);
-                        res.push(actual.join(expected_and_params))
+                        );
+                        res.push(
+                            async move {
+                                Ok((
+                                    sli.is_ancestor(&ctx, &repo.get_changeset_fetcher(), anc, desc)
+                                        .await?,
+                                    expected_and_params,
+                                ))
+                            }
+                            .boxed()
+                            .compat()
+                            .boxify(),
+                        );
                     }
                 }
                 join_all(res).map(|res| {

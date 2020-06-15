@@ -18,6 +18,7 @@ failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", b
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
 maplit = "1.0"
 thiserror = "1.0"
 
@@ -30,7 +31,6 @@ async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", br
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 ascii = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
-futures-util = "0.3"
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_distr = "0.2"

@@ -951,8 +951,7 @@ async fn check_is_ancestor_opt(
     if let Some(old) = old {
         if old != new {
             let is_ancestor = lca_hint
-                .is_ancestor(ctx.clone(), repo.get_changeset_fetcher(), old, new)
-                .compat()
+                .is_ancestor(ctx, &repo.get_changeset_fetcher(), old, new)
                 .await?;
             if !is_ancestor {
                 return Err(format_err!(

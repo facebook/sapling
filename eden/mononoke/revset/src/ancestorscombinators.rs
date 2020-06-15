@@ -30,10 +30,11 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use cloned::cloned;
-use futures_ext::{BoxFuture, BoxStream, FutureExt, SelectAll, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt as FBFutureExt, SelectAll, StreamExt};
 use futures_old::future::{ok, Future};
 use futures_old::stream::{self, iter_ok, Stream};
 use futures_old::{try_ready, Async, IntoFuture, Poll};
+use futures_util::future::{FutureExt, TryFutureExt};
 use maplit::hashset;
 
 use changeset_fetcher::ChangesetFetcher;
@@ -278,12 +279,21 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                 // Replace the exclude with a new future
                 // And indicate the current exclude gen needs to be recalculated.
                 self.current_exclude_generation = None;
-                self.exclude_ancestors_future = self.lca_hint_index.lca_hint(
-                    self.ctx.clone(),
-                    self.changeset_fetcher.clone(),
-                    curr_exclude_ancestors,
-                    current_generation,
-                );
+
+                cloned!(self.lca_hint_index, self.ctx, self.changeset_fetcher);
+                self.exclude_ancestors_future = async move {
+                    lca_hint_index
+                        .lca_hint(
+                            &ctx,
+                            &changeset_fetcher,
+                            curr_exclude_ancestors,
+                            current_generation,
+                        )
+                        .await
+                }
+                .boxed()
+                .compat()
+                .boxify();
             } else {
                 // the max frontier is still "None".
                 // So there are no nodes in our exclude frontier.

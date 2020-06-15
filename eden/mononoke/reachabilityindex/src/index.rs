@@ -11,6 +11,7 @@ use std::iter::{Extend, FromIterator};
 use std::sync::Arc;
 
 use anyhow::Error;
+use async_trait::async_trait;
 use futures_ext::BoxFuture;
 use futures_util::compat::Future01CompatExt;
 use maplit::{hashmap, hashset};
@@ -171,27 +172,28 @@ pub trait ReachabilityIndex {
 }
 
 /// Trait for any method supporting computing an "LCA hint"
+#[async_trait]
 pub trait LeastCommonAncestorsHint: Send + Sync {
     /// Return a Future for an advanced frontier of ancestors from a set of nodes.
     /// Given a set "nodes", and a maximum generation "gen",
     /// return a set of nodes "C" which satisfies:
     /// - Max generation number in "C" is <= gen
     /// - Any ancestor of "nodes" with generation <= gen is also an ancestor of "C"
-    fn lca_hint(
+    async fn lca_hint(
         &self,
-        ctx: CoreContext,
-        repo: Arc<dyn ChangesetFetcher>,
+        ctx: &CoreContext,
+        repo: &Arc<dyn ChangesetFetcher>,
         node_frontier: NodeFrontier,
         gen: Generation,
-    ) -> BoxFuture<NodeFrontier, Error>;
+    ) -> Result<NodeFrontier, Error>;
 
     /// Check if `ancestor` changeset is an ancestor of `descendant` changeset
     /// Note that a changeset IS NOT its own ancestor
-    fn is_ancestor(
+    async fn is_ancestor(
         &self,
-        ctx: CoreContext,
-        repo: Arc<dyn ChangesetFetcher>,
+        ctx: &CoreContext,
+        repo: &Arc<dyn ChangesetFetcher>,
         ancestor: ChangesetId,
         descendant: ChangesetId,
-    ) -> BoxFuture<bool, Error>;
+    ) -> Result<bool, Error>;
 }
