@@ -143,6 +143,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_address(&host, port.into(), false)?
         .with_tls()
         .expect("failed to enable TLS")
+        .with_cancel_if_client_disconnected()
         .with_factory(exec, move || service)
         .build();
 
