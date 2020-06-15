@@ -83,7 +83,7 @@ class ConfigParserTests(unittest.TestCase):
         )
         eq(cfg.sources("c", "x"), [("1", ("<builtin>", 6, 7, 2), "parse")])
 
-    def testSectionWhitelist(self):
+    def testSectionIncludelist(self):
         cfg = createConfig()
         cfg.readpath("a.rc", "readpath", ["a"], None, None)
         eq(cfg.sections(), ["a"])
@@ -93,7 +93,7 @@ class ConfigParserTests(unittest.TestCase):
         cfg.readpath("a.rc", "readpath", None, [("a", "x")], None)
         eq(cfg.sections(), ["x", "b"])
 
-    def testWhitelist(self):
+    def testIncludelist(self):
         cfg = createConfig()
         cfg.readpath("a.rc", "readpath", None, None, [("a", "y")])
         eq(cfg.get("a", "x"), "1")

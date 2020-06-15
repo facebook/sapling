@@ -39,9 +39,9 @@ pub trait OptionsHgExt {
     fn remap_sections<K: Eq + Hash + Into<Text>, V: Into<Text>>(self, remap: HashMap<K, V>)
         -> Self;
 
-    /// Set section whitelist. Sections outside the whitelist won't be loaded.
+    /// Filter sections. Sections outside include_sections won't be loaded.
     /// This is implemented via `append_filter`.
-    fn whitelist_sections<B: Clone + Into<Text>>(self, sections: Vec<B>) -> Self;
+    fn filter_sections<B: Clone + Into<Text>>(self, include_sections: Vec<B>) -> Self;
 }
 
 pub trait ConfigSetHgExt {
@@ -102,27 +102,27 @@ impl OptionsHgExt for Options {
         let plain_set = env::var(HGPLAIN).is_ok();
         let plain_except = env::var(HGPLAINEXCEPT);
         if plain_set || plain_except.is_ok() {
-            let (section_blacklist, ui_blacklist) = {
+            let (section_exclude_list, ui_exclude_list) = {
                 let plain_exceptions: HashSet<String> = plain_except
                     .unwrap_or_else(|_| "".to_string())
                     .split(',')
                     .map(|s| s.to_string())
                     .collect();
 
-                // [defaults] and [commands] are always blacklisted.
-                let mut section_blacklist: HashSet<Text> =
+                // [defaults] and [commands] are always excluded.
+                let mut section_exclude_list: HashSet<Text> =
                     ["defaults", "commands"].iter().map(|&s| s.into()).collect();
 
-                // [alias], [revsetalias], [templatealias] are blacklisted if they are outside
+                // [alias], [revsetalias], [templatealias] are excluded if they are outside
                 // HGPLAINEXCEPT.
                 for &name in ["alias", "revsetalias", "templatealias"].iter() {
                     if !plain_exceptions.contains(name) {
-                        section_blacklist.insert(Text::from(name));
+                        section_exclude_list.insert(Text::from(name));
                     }
                 }
 
-                // These configs under [ui] are always blacklisted.
-                let mut ui_blacklist: HashSet<Text> = [
+                // These configs under [ui] are always excluded.
+                let mut ui_exclude_list: HashSet<Text> = [
                     "debug",
                     "fallbackencoding",
                     "quiet",
@@ -136,17 +136,17 @@ impl OptionsHgExt for Options {
                 .iter()
                 .map(|&s| s.into())
                 .collect();
-                // exitcodemask is blacklisted if exitcode is outside HGPLAINEXCEPT.
+                // exitcodemask is excluded if exitcode is outside HGPLAINEXCEPT.
                 if !plain_exceptions.contains("exitcode") {
-                    ui_blacklist.insert("exitcodemask".into());
+                    ui_exclude_list.insert("exitcodemask".into());
                 }
 
-                (section_blacklist, ui_blacklist)
+                (section_exclude_list, ui_exclude_list)
             };
 
             let filter = move |section: Text, name: Text, value: Option<Text>| {
-                if section_blacklist.contains(&section)
-                    || (section.as_ref() == "ui" && ui_blacklist.contains(&name))
+                if section_exclude_list.contains(&section)
+                    || (section.as_ref() == "ui" && ui_exclude_list.contains(&name))
                 {
                     None
                 } else {
@@ -160,17 +160,17 @@ impl OptionsHgExt for Options {
         }
     }
 
-    /// Set section whitelist. Sections outside the whitelist won't be loaded.
+    /// Filter sections. Sections outside of include_sections won't be loaded.
     /// This is implemented via `append_filter`.
-    fn whitelist_sections<B: Clone + Into<Text>>(self, sections: Vec<B>) -> Self {
-        let whitelist: HashSet<Text> = sections
+    fn filter_sections<B: Clone + Into<Text>>(self, include_sections: Vec<B>) -> Self {
+        let include_list: HashSet<Text> = include_sections
             .iter()
             .cloned()
             .map(|section| section.into())
             .collect();
 
         let filter = move |section: Text, name: Text, value: Option<Text>| {
-            if whitelist.contains(&section) {
+            if include_list.contains(&section) {
                 Some((section, name, value))
             } else {
                 None
@@ -837,8 +837,8 @@ mod tests {
     }
 
     #[test]
-    fn test_section_whitelist() {
-        let opts = Options::new().whitelist_sections(vec!["x", "y"]);
+    fn test_section_filter() {
+        let opts = Options::new().filter_sections(vec!["x", "y"]);
         let mut cfg = ConfigSet::new();
         cfg.parse(
             "[x]\n\

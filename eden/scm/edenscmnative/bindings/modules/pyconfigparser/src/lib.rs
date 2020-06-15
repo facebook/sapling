@@ -49,7 +49,7 @@ py_class!(pub class config |py| {
 
         let mut opts = Options::new().source(source).process_hgplain();
         if let Some(sections) = sections {
-            opts = opts.whitelist_sections(sections);
+            opts = opts.filter_sections(sections);
         }
         if let Some(remap) = remap {
             let map = remap.into_iter().collect();
@@ -147,11 +147,11 @@ py_class!(pub class config |py| {
         &self,
         superset_source: String,
         subset_sources: Vec<String>,
-        whitelist: Vec<(String, String)>
+        allow_list: Vec<(String, String)>
     ) -> PyResult<Vec<(Str, Str, Option<Str>, Option<Str>)>> {
-        let whitelist = HashSet::from_iter(whitelist.iter().map(|v| (v.0.as_ref(), v.1.as_ref())));
+        let allow_list = HashSet::from_iter(allow_list.iter().map(|v| (v.0.as_ref(), v.1.as_ref())));
 
-        let results = self.cfg(py).borrow_mut().ensure_location_supersets(superset_source, subset_sources, whitelist);
+        let results = self.cfg(py).borrow_mut().ensure_location_supersets(superset_source, subset_sources, allow_list);
         if results.is_empty() {
             return Ok(vec![]);
         }

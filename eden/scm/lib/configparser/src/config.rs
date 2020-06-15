@@ -426,7 +426,7 @@ impl ConfigSet {
         &mut self,
         superset_location: String,
         subset_locations: Vec<String>,
-        whitelist: HashSet<(&str, &str)>,
+        allow_list: HashSet<(&str, &str)>,
     ) -> SupersetVerification {
         let mut result = SupersetVerification::new();
 
@@ -435,7 +435,7 @@ impl ConfigSet {
 
         for (sname, section) in self.sections.iter_mut() {
             for (kname, values) in section.items.iter_mut() {
-                if whitelist.contains(&(sname.as_ref(), kname.as_ref())) {
+                if allow_list.contains(&(sname.as_ref(), kname.as_ref())) {
                     continue;
                 }
 
@@ -916,7 +916,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_filters() {
-        fn blacklist_section_x(
+        fn exclude_list_section_x(
             section: Text,
             name: Text,
             value: Option<Text>,
@@ -946,7 +946,7 @@ pub(crate) mod tests {
 
         let mut cfg = ConfigSet::new();
         let opts = Options::new()
-            .append_filter(Box::new(blacklist_section_x))
+            .append_filter(Box::new(exclude_list_section_x))
             .append_filter(Box::new(swap_name_value))
             .append_filter(Box::new(rename_section_to_z));
         cfg.parse(
