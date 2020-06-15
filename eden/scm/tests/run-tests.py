@@ -552,6 +552,11 @@ def getparser():
         help="enable Py3k warnings on Python 2.7+",
     )
     hgconf.add_argument(
+        "--record",
+        action="store_true",
+        help="track $TESTTMP changes in git (implies --keep-tmpdir)",
+    )
+    hgconf.add_argument(
         "--with-hg",
         metavar="HG",
         help="test using specified hg script rather than a temporary installation",
@@ -1905,12 +1910,20 @@ class TTest(Test):
         salt = b"SALT%d" % time.time()
         saltcount = [0]
 
-        def addsalt(line, inpython):
+        record = self._options.record
+
+        def addsalt(line, inpython, linecontent):
             saltcount[0] += 1
             if inpython:
                 script.append(b"%s %d 0\n" % (salt, line))
             else:
                 script.append(b"echo %s %d $?\n" % (salt, line))
+                if record:
+                    # Commit to git.
+                    script.append(
+                        b"testrecord %r\n"
+                        % ("%s (line %s)" % (linecontent.strip(), line),)
+                    )
 
         script = []
 
@@ -1939,6 +1952,23 @@ class TTest(Test):
 
         # Source $RUNTESTDIR/tinit.sh for utility functions
         script.append(b'source "$RUNTESTDIR/tinit.sh"\n')
+        if record:
+            script.append(b'git init -q "$TESTTMP"\n')
+            script.append(
+                b"""testrecord() {
+                (
+                cd "$TESTTMP"
+                git add -A &>/dev/null
+                GIT_AUTHOR_NAME=test \
+                GIT_AUTHOR_EMAIL=test@localhost \
+                GIT_AUTHOR_DATE=2000-01-01T00:00:00 \
+                GIT_COMMITTER_NAME=test \
+                GIT_COMMITTER_EMAIL=test@localhost \
+                GIT_COMMITTER_DATE=2000-01-01T00:00:00 \
+                git commit -a -m "$1" --allow-empty -q
+                )
+            }\n"""
+            )
 
         n = 0
         for n, l in enumerate(lines):
@@ -1983,7 +2013,7 @@ class TTest(Test):
                 if not inpython:
                     # We've just entered a Python block. Add the header.
                     inpython = True
-                    addsalt(prepos, False)  # Make sure we report the exit code.
+                    addsalt(prepos, False, l)  # Make sure we report the exit code.
                     if os.name == "nt":
                         script.append(
                             b"%s %s <<EOF\n"
@@ -1998,7 +2028,7 @@ class TTest(Test):
                         script.append(
                             b"%s -m heredoctest <<EOF\n" % b"hg debugpython --"
                         )
-                addsalt(n, True)
+                addsalt(n, True, l)
                 script.append(l[2:])
             elif l.startswith(b"  ... "):  # python inlines
                 after.setdefault(prepos, []).append(l)
@@ -2010,7 +2040,7 @@ class TTest(Test):
                 after.setdefault(pos, []).append(l)
                 prepos = pos
                 pos = n
-                addsalt(n, False)
+                addsalt(n, False, l)
                 cmd = l[4:].split()
                 if len(cmd) == 2 and cmd[0] == b"cd":
                     l = b"  $ cd %s || exit 1\n" % cmd[1]
@@ -2032,7 +2062,7 @@ class TTest(Test):
             script.append(b"EOF\n")
         if skipping is not None:
             after.setdefault(pos, []).append("  !!! missing #endif\n")
-        addsalt(n + 1, False)
+        addsalt(n + 1, False, "EOF")
 
         return salt, saltcount[0], script, after, expected
 
@@ -3363,6 +3393,9 @@ class TestRunner(object):
             # use a random python hash seed all the time
             # we do the randomness ourself to know what seed is used
             os.environ["PYTHONHASHSEED"] = str(random.getrandbits(32))
+
+        if self.options.record:
+            self.options.keep_tmpdir = True
 
         if self.options.tmpdir:
             self.options.keep_tmpdir = True
