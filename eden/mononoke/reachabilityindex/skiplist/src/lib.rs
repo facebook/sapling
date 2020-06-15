@@ -16,10 +16,11 @@ use bytes::Bytes;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as FBFutureExt};
 use futures_old::future::{join_all, loop_fn, ok, Future, Loop};
 use futures_old::IntoFuture;
 use futures_util::compat::Future01CompatExt;
+use futures_util::future::{FutureExt, TryFutureExt};
 use futures_util::try_join;
 use maplit::{hashmap, hashset};
 use slog::{info, Logger};
@@ -295,52 +296,42 @@ pub struct SkiplistIndex {
 // This method searches backwards from a start node until a specified depth,
 // collecting all nodes which are not currently present in the index.
 // Then it orders them topologically using their generation numbers and returns them.
-fn find_nodes_to_index(
-    ctx: CoreContext,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    skip_list_edges: Arc<SkiplistEdgeMapping>,
+async fn find_nodes_to_index(
+    ctx: &CoreContext,
+    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    skip_list_edges: &Arc<SkiplistEdgeMapping>,
     (start_node, start_gen): (ChangesetId, Generation),
     depth: u64,
-) -> BoxFuture<Vec<(ChangesetId, Generation)>, Error> {
-    let start_bfs_layer: HashSet<_> = vec![(start_node, start_gen)].into_iter().collect();
-    let start_seen: HashSet<_> = HashSet::new();
-    let ancestors_to_depth =
-        check_if_node_exists(ctx.clone(), changeset_fetcher.clone(), start_node.clone()).and_then(
-            move |_| {
-                loop_fn(
-                    (start_bfs_layer, start_seen, depth),
-                    move |(curr_layer_unfiltered, curr_seen, curr_depth)| {
-                        let curr_layer: HashSet<_> = curr_layer_unfiltered
-                            .into_iter()
-                            .filter(|(hash, _gen)| !skip_list_edges.mapping.contains_key(&hash))
-                            .collect();
+) -> Result<Vec<(ChangesetId, Generation)>, Error> {
+    let mut bfs_layer: HashSet<_> = vec![(start_node, start_gen)].into_iter().collect();
+    let mut seen: HashSet<_> = HashSet::new();
+    let mut curr_depth = depth;
 
-                        if curr_depth == 0 || curr_layer.is_empty() {
-                            ok(Loop::Break(curr_seen)).boxify()
-                        } else {
-                            advance_bfs_layer(
-                                ctx.clone(),
-                                changeset_fetcher.clone(),
-                                curr_layer,
-                                curr_seen,
-                            )
-                            .map(move |(next_layer, next_seen)| {
-                                Loop::Continue((next_layer, next_seen, curr_depth - 1))
-                            })
-                            .boxify()
-                        }
-                    },
-                )
-            },
-        );
-    ancestors_to_depth
-        .map(|hash_gen_pairs| {
-            let mut top_order = hash_gen_pairs.into_iter().collect::<Vec<_>>();
-            top_order.sort_by(|a, b| (a.1).cmp(&b.1));
-            top_order
-        })
-        .from_err()
-        .boxify()
+    check_if_node_exists(ctx.clone(), changeset_fetcher.clone(), start_node.clone())
+        .compat()
+        .await?;
+    loop {
+        bfs_layer = bfs_layer
+            .into_iter()
+            .filter(|(hash, _gen)| !skip_list_edges.mapping.contains_key(&hash))
+            .collect();
+
+        if curr_depth == 0 || bfs_layer.is_empty() {
+            break;
+        } else {
+            let (next_bfs_layer, next_seen) =
+                advance_bfs_layer(ctx.clone(), changeset_fetcher.clone(), bfs_layer, seen)
+                    .compat()
+                    .await?;
+            bfs_layer = next_bfs_layer;
+            seen = next_seen;
+            curr_depth -= 1;
+        }
+    }
+
+    let mut top_order = seen.into_iter().collect::<Vec<_>>();
+    top_order.sort_by(|a, b| (a.1).cmp(&b.1));
+    Ok(top_order)
 }
 
 /// From a starting node, index all nodes that are reachable within a given distance.
@@ -360,13 +351,17 @@ fn lazy_index_node(
             .and_then({
                 cloned!(ctx, changeset_fetcher, skip_edge_mapping);
                 move |node_gen_pair| {
-                    find_nodes_to_index(
-                        ctx,
-                        changeset_fetcher,
-                        skip_edge_mapping,
-                        node_gen_pair,
-                        max_depth,
-                    )
+                    async move {
+                        find_nodes_to_index(
+                            &ctx,
+                            &changeset_fetcher,
+                            &skip_edge_mapping,
+                            node_gen_pair,
+                            max_depth,
+                        ).await
+                    }
+                    .boxed()
+                    .compat()
                 }
             })
             .and_then({
