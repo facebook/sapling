@@ -478,6 +478,18 @@ impl SkiplistIndex {
     pub fn indexed_node_count(&self) -> usize {
         self.skip_list_edges.mapping.len()
     }
+
+    // Remove all but latest skip entry (i.e. entry with the longest jump) to save space.
+    pub fn trim_to_single_entry_per_changeset(&self) {
+        for (cs_id, old_node) in self.skip_list_edges.mapping.clone().into_iter() {
+            let new_node = if let SkiplistNodeType::SkipEdges(skip_edges) = old_node {
+                SkiplistNodeType::SkipEdges(skip_edges.last().cloned().into_iter().collect())
+            } else {
+                old_node
+            };
+            let _old_node = self.skip_list_edges.mapping.insert(cs_id, new_node);
+        }
+    }
 }
 
 #[async_trait]
@@ -2673,6 +2685,54 @@ mod test {
             Some("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"),
         )
         .await;
+    }
+
+    #[fbinit::test]
+    fn test_index_update(fb: FacebookInit) {
+        // This test was created to show the problem we currently have with skiplists not being
+        // correctly updated after being trimmed.  The skiplist update algorithm wasn't designed
+        // with trimming in mind and assumes that entries pointing closer are always awalable.
+        // Resulting skiplits point further away than it's needed (if the worst case of skiplists
+        // being updated very often to the latest merge commit).
+        async_unit::tokio_unit_test(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Arc::new(linear::getrepo(fb).await);
+            let sli = SkiplistIndex::with_skip_edge_count(4);
+
+            let old_head = string_to_bonsai(
+                ctx.clone(),
+                &repo,
+                "3c15267ebf11807f3d772eb891272b911ec68759",
+            )
+            .await;
+            let new_head = string_to_bonsai(
+                ctx.clone(),
+                &repo,
+                "79a13814c5ce7330173ec04d279bf95ab3f652fb",
+            )
+            .await;
+
+            // This test simulates incremental index update by indexing up to the old_head first and
+            // then updating to a new_head
+            sli.add_node(&ctx, &repo.get_changeset_fetcher(), old_head, 100)
+                .await
+                .unwrap();
+
+            sli.trim_to_single_entry_per_changeset();
+
+            sli.add_node(&ctx, &repo.get_changeset_fetcher(), new_head, 100)
+                .await
+                .unwrap();
+
+            assert_eq!(
+                sli.get_skip_edges(new_head)
+                    .unwrap()
+                    .into_iter()
+                    .map(|(_, gen)| gen.value())
+                    .collect::<Vec<_>>(),
+                vec![10, 9, 1]
+            );
+        });
     }
 
     skiplist_test!(test_lca_first_generation, linear);
