@@ -109,7 +109,6 @@ mod test {
     use futures::stream;
     use memblob::EagerMemblob;
     use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata, RepositoryId};
-    use prefixblob::PrefixBlobstore;
     use redactedblobstore::RedactedBlobstore;
     use repo_blobstore::RepoBlobstoreArgs;
     use scuba_ext::ScubaSampleBuilder;
