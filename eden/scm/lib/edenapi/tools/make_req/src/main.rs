@@ -24,7 +24,7 @@ use anyhow::{anyhow, ensure, Result};
 use serde_json::Value;
 use structopt::StructOpt;
 
-use edenapi_types::{DataRequest, HistoryRequest, TreeRequest};
+use edenapi_types::{CompleteTreeRequest, DataRequest, HistoryRequest};
 use types::{HgId, Key, RepoPathBuf};
 
 #[derive(Debug, StructOpt)]
@@ -118,14 +118,13 @@ fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
     Ok(HistoryRequest { keys, length })
 }
 
-/// Parse a `TreeRequest` from JSON.
+/// Parse a `CompleteTreeRequest` from JSON.
 ///
 /// The request is represented as a JSON object containing the fields
-/// needed for a "gettreepack"-style tree request. Note that most
-/// EdenAPI tree requests are actually performed using a `DataRequest`
-/// for the desired tree nodes; `TreeRequest`s are only used in situations
-/// where behavior similar to Mercurial's `gettreepack` wire protocol
-/// command is desired.
+/// needed for a "gettreepack"-style complete tree request. Note that
+/// it is generally preferred to request trees using a `DataRequest`
+/// for the desired tree nodes, as this is a lot less expensive than
+/// fetching complete trees.
 ///
 /// Example request:
 ///
@@ -144,7 +143,7 @@ fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
 ///     }
 ///     ```
 ///
-fn parse_tree_req(json: &Value) -> Result<TreeRequest> {
+fn parse_tree_req(json: &Value) -> Result<CompleteTreeRequest> {
     let obj = json
         .as_object()
         .ok_or_else(|| anyhow!("input must be a JSON object"))?;
@@ -172,7 +171,7 @@ fn parse_tree_req(json: &Value) -> Result<TreeRequest> {
         .and_then(|d| d.as_u64())
         .map(|d| d as usize);
 
-    Ok(TreeRequest {
+    Ok(CompleteTreeRequest {
         rootdir,
         mfnodes,
         basemfnodes,

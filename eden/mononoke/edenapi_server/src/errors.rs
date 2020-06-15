@@ -54,8 +54,8 @@ pub enum ErrorKind {
     DataFetchFailed(Key),
     #[error("Failed to fetch history for key: {0:?}")]
     HistoryFetchFailed(Key),
-    #[error("Subtree request failed")]
-    SubtreeRequestFailed,
+    #[error("Complete tree request failed")]
+    CompleteTreeRequestFailed,
 }
 
 /// Extension trait for converting `MononokeError`s into `HttpErrors`.

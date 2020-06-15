@@ -15,7 +15,7 @@ Initialize test repo.
   $ cd repo-hg
   $ setup_hg_server
 
-Create a nested directory structure. 
+Create a nested directory structure.
   $ mkdir -p a{1,2}/b{1,2}/c{1,2}
   $ echo "1" | tee a{1,2}/{file,b{1,2}/{file,c{1,2}/file}} > /dev/null
   $ tree
@@ -81,7 +81,7 @@ Start up EdenAPI server.
   $ setup_mononoke_config
   $ start_edenapi_server
 
-Create and send tree request.
+Create and send complete tree request.
   $ edenapi_make_req tree > req.cbor <<EOF
   > {
   >   "rootdir": "",
@@ -91,7 +91,7 @@ Create and send tree request.
   > }
   > EOF
   Reading from stdin
-  Generated request: TreeRequest {
+  Generated request: CompleteTreeRequest {
       rootdir: RepoPathBuf(
           "",
       ),
@@ -106,11 +106,11 @@ Create and send tree request.
           2,
       ),
   }
-  $ sslcurl -s "$EDENAPI_URI/repo/subtree" -d@req.cbor > res.cbor
+  $ sslcurl -s "$EDENAPI_URI/repo/trees/complete" -d@req.cbor > res.cbor
 
 Confirm that the response contains only directories whose files
 were modified, and that each directory appears twice since the
-files therein were modified in both commits. 
+files therein were modified in both commits.
   $ edenapi_read_res data ls res.cbor
   Reading from file: "res.cbor"
   3d866afaa8cdb847e3800fef742c1fe9e741f75f 

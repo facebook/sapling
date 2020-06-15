@@ -21,8 +21,8 @@ use serde_cbor::Deserializer;
 use url::Url;
 
 use edenapi_types::{
-    DataEntry, DataRequest, DataResponse, HistoryEntry, HistoryRequest, HistoryResponse,
-    TreeRequest, Validity, WireHistoryEntry,
+    CompleteTreeRequest, DataEntry, DataRequest, DataResponse, HistoryEntry, HistoryRequest,
+    HistoryResponse, Validity, WireHistoryEntry,
 };
 use types::{HgId, Key, RepoPathBuf};
 
@@ -279,7 +279,12 @@ impl EdenApi for EdenApiCurlClient {
         }
 
         let creds = self.creds.as_ref();
-        let requests = vec![TreeRequest::new(rootdir, mfnodes, basemfnodes, depth)];
+        let requests = vec![CompleteTreeRequest::new(
+            rootdir,
+            mfnodes,
+            basemfnodes,
+            depth,
+        )];
 
         let mut responses = Vec::new();
         let stats = if self.stream_trees {

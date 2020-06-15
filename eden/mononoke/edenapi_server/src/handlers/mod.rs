@@ -23,10 +23,10 @@ use gotham_ext::response::build_response;
 
 use crate::context::ServerContext;
 
+mod complete_trees;
 mod data;
 mod history;
 mod repos;
-mod subtree;
 
 /// Macro to create a Gotham handler function from an async function.
 ///
@@ -54,8 +54,8 @@ macro_rules! define_handler {
 define_handler!(repos_handler, repos::repos);
 define_handler!(files_handler, data::files);
 define_handler!(trees_handler, data::trees);
+define_handler!(complete_trees_handler, complete_trees::complete_trees);
 define_handler!(history_handler, history::history);
-define_handler!(subtree_handler, subtree::subtree);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -81,12 +81,12 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .with_path_extractor::<data::DataParams>()
             .to(trees_handler);
         route
+            .post("/:repo/trees/complete")
+            .with_path_extractor::<complete_trees::CompleteTreesParams>()
+            .to(complete_trees_handler);
+        route
             .post("/:repo/history")
             .with_path_extractor::<history::HistoryParams>()
             .to(history_handler);
-        route
-            .post("/:repo/subtree")
-            .with_path_extractor::<subtree::SubTreeParams>()
-            .to(subtree_handler);
     })
 }

@@ -15,4 +15,4 @@ pub use crate::data::{DataEntry, DataRequest, DataResponse, Validity};
 pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
 };
-pub use crate::tree::TreeRequest;
+pub use crate::tree::CompleteTreeRequest;

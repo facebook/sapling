@@ -11,7 +11,7 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
-use edenapi_types::{DataEntry, TreeRequest};
+use edenapi_types::{CompleteTreeRequest, DataEntry};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgManifestId, HgNodeHash};
 use mononoke_api::{
@@ -26,36 +26,43 @@ use crate::middleware::RequestContext;
 use crate::utils::{cbor_stream, get_repo, parse_cbor_request, to_hg_path, to_mononoke_path};
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct SubTreeParams {
+pub struct CompleteTreesParams {
     repo: String,
 }
 
-pub async fn subtree(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
-    let params = SubTreeParams::borrow_from(state);
+    let params = CompleteTreesParams::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;
 
-    Ok(cbor_stream(get_complete_subtree(&repo, request)?))
+    Ok(cbor_stream(fetch_trees_under_path(&repo, request)?))
 }
 
-/// Fetch all of the nodes for the subtree under the specified
-/// path for the specified root node versions of this path.
-/// The client may optionally specify a list of root versions
-/// for the path that it already has, and any nodes in these
-/// older subtrees will be filtered out if present in the
-/// requested subtrees.
+/// Fetch the complete tree under the specified path.
+///
+/// This function returns all tree nodes underneath (and including)
+/// a given directory in the repo. Multiple versions of the
+/// root directory can be specified (via their manifest IDs);
+/// all tree nodes reachable from any of these root nodes will
+/// be fetched.
+///
+/// Optionally, the caller can specify a list of versions of
+/// the root directory that are already present on the client.
+/// It is assumed that the client possess the *complete tree*
+/// underneath each of these versions. Any tree node reachable
+/// from any of these root nodes will not be fetched.
 ///
 /// This is essentially an HTTP-based implementation of Mercurial's
-/// `gettreepack` wire protocol command, and is generally considered
+/// `gettreepack` wire protocol command. This is generally considered
 /// a fairly expensive way to request trees. When possible, clients
-/// should prefer explicitly request individual tree nodes via the
+/// should prefer to request individual tree nodes as needed via the
 /// more lightweight `/trees` endpoint.
-fn get_complete_subtree(
+fn fetch_trees_under_path(
     repo: &HgRepoContext,
-    request: TreeRequest,
+    request: CompleteTreeRequest,
 ) -> Result<impl Stream<Item = Result<DataEntry, Error>>, HttpError> {
     let path = to_mononoke_path(request.rootdir).map_err(HttpError::e400)?;
 
@@ -74,7 +81,7 @@ fn get_complete_subtree(
     let stream = repo
         .trees_under_path(path, root_nodes, base_nodes, request.depth)
         .err_into::<Error>()
-        .map_err(|e| e.context(ErrorKind::SubtreeRequestFailed))
+        .map_err(|e| e.context(ErrorKind::CompleteTreeRequestFailed))
         .and_then(move |(tree, path)| async { data_entry_for_tree(tree, path) });
 
     Ok(stream)

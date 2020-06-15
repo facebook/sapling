@@ -13,13 +13,10 @@
 
 #![deny(warnings)]
 
-use anyhow::Error;
 use bytes_old::Bytes;
-use edenapi_types::TreeRequest;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use mononoke_types::MPath;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::convert::TryFrom;
 use std::fmt::{self, Debug};
 use std::sync::Mutex;
 
@@ -178,31 +175,6 @@ pub struct GettreepackArgs {
     pub directories: Vec<Bytes>,
     /// The depth from the root that should be sent.
     pub depth: Option<usize>,
-}
-
-impl TryFrom<TreeRequest> for GettreepackArgs {
-    type Error = Error;
-
-    fn try_from(req: TreeRequest) -> Result<Self, Self::Error> {
-        let mfnodes = req
-            .mfnodes
-            .into_iter()
-            .map(|node| HgManifestId::new(node.into()))
-            .collect();
-        let basemfnodes = req
-            .basemfnodes
-            .into_iter()
-            .map(|node| HgManifestId::new(node.into()))
-            .collect();
-
-        Ok(Self {
-            rootdir: MPath::new_opt(req.rootdir)?,
-            mfnodes,
-            basemfnodes,
-            directories: Vec::new(),
-            depth: req.depth,
-        })
-    }
 }
 
 #[derive(Debug)]

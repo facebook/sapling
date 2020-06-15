@@ -18,17 +18,16 @@ use types::{hgid::HgId, path::RepoPathBuf};
 /// In general, trees can be requested from the API server using a `DataRequest`
 /// containing the keys of the desired tree nodes.
 ///
-/// In all cases, trees will be returned in a `DataResponse`, so there is no
-/// `TreeResponse` type to accompany `TreeRequest`.
+/// In all cases, trees will be returned in a `DataResponse`.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TreeRequest {
+pub struct CompleteTreeRequest {
     pub rootdir: RepoPathBuf,
     pub mfnodes: Vec<HgId>,
     pub basemfnodes: Vec<HgId>,
     pub depth: Option<usize>,
 }
 
-impl TreeRequest {
+impl CompleteTreeRequest {
     pub fn new(
         rootdir: RepoPathBuf,
         mfnodes: Vec<HgId>,

@@ -7,7 +7,6 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-edenapi_types = { path = "../../scm/lib/edenapi/types" }
 mercurial_bundles = { path = "../mercurial/bundles" }
 mercurial_types = { path = "../mercurial/types" }
 mononoke_types = { path = "../mononoke_types" }
