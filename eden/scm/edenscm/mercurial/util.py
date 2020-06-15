@@ -1309,7 +1309,7 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
         unlink(dest)
     if hardlink:
         # Hardlinks are problematic on CIFS (issue4546), do not allow hardlinks
-        # unless we are confident that dest is on a whitelisted filesystem.
+        # unless we are confident that dest is on an allowed filesystem.
         fstype = getfstype(os.path.dirname(dest))
         if not fscap.getfscap(fstype, fscap.HARDLINK):
             hardlink = False

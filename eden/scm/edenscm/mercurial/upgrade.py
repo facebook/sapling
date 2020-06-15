@@ -98,7 +98,7 @@ def allowednewrequirements(repo):
     they weren't present before.
 
     We use a list of allowed requirement additions instead of a list of known
-    bad additions because the whitelist approach is safer and will prevent
+    bad additions because the allowed list approach is safer and will prevent
     future, unknown requirements from accidentally being added.
     """
     return {"dotencode", "fncache", "generaldelta", "storerequirements"}

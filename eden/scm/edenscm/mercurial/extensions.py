@@ -68,7 +68,7 @@ _ignoreextensions = {
     "uncommit",
     "upgradegeneraldelta",
 }
-_blacklist = {"extlib"}
+_exclude_list = {"extlib"}
 
 
 # root of the directory, or installed distribution
@@ -393,7 +393,7 @@ def _runextsetup(name, ui):
     return True
 
 
-def loadall(ui, whitelist=None):
+def loadall(ui, include_list=None):
     result = ui.configitems("extensions")
     resultkeys = set([name for name, loc in result])
 
@@ -407,8 +407,8 @@ def loadall(ui, whitelist=None):
     result = [(k, v) for (k, v) in result if k not in ALWAYS_ON_EXTENSIONS]
     result += [(name, "") for name in sorted(ALWAYS_ON_EXTENSIONS)]
 
-    if whitelist is not None:
-        result = [(k, v) for (k, v) in result if k in whitelist]
+    if include_list is not None:
+        result = [(k, v) for (k, v) in result if k in include_list]
 
     newindex = len(_order)
     for (name, path) in result:
@@ -841,7 +841,7 @@ def disabled():
         return dict(
             (name, gettext(desc))
             for name, desc in pycompat.iteritems(__index__.docs)
-            if name not in _order and name not in _blacklist
+            if name not in _order and name not in _exclude_list
         )
     except (ImportError, AttributeError):
         pass
@@ -853,7 +853,7 @@ def disabled():
     exts = {}
     for name, path in pycompat.iteritems(paths):
         doc = _disabledhelp(path)
-        if doc and name not in _blacklist:
+        if doc and name not in _exclude_list:
             exts[name] = doc.splitlines()[0]
 
     return exts
@@ -866,7 +866,7 @@ def disabledext(name):
 
         if name in _order:  # enabled
             return
-        elif name in _blacklist:  # blacklisted
+        elif name in _exclude_list:
             return
         else:
             return gettext(__index__.docs.get(name))
@@ -874,7 +874,7 @@ def disabledext(name):
         pass
 
     paths = _disabledpaths()
-    if name in paths and name not in _blacklist:
+    if name in paths and name not in _exclude_list:
         return _disabledhelp(paths[name])
 
 

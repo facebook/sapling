@@ -872,7 +872,7 @@ def write_to_chrome(data, fp, minthreshold=0.005, maxthreshold=0.999):
     # * Numerous samples take almost no time, but introduce lots of
     #   noisy, oft-deep "spines" into a rendered profile.
 
-    blacklist = set()
+    exclude_list = set()
     totaltime = data.samples[-1].time - data.samples[0].time
     minthreshold = totaltime * minthreshold
     maxthreshold = max(totaltime * maxthreshold, clamp)
@@ -896,7 +896,7 @@ def write_to_chrome(data, fp, minthreshold=0.005, maxthreshold=0.999):
                 )
             )
         else:
-            blacklist.add(oldidx)
+            exclude_list.add(oldidx)
 
     # Much fiddling to synthesize correctly(ish) nested begin/end
     # events given only stack snapshots.
@@ -930,7 +930,7 @@ def write_to_chrome(data, fp, minthreshold=0.005, maxthreshold=0.999):
         laststack = collections.deque(stack)
     while laststack:
         poplast()
-    events = [s[1] for s in enumerate(samples) if s[0] not in blacklist]
+    events = [s[1] for s in enumerate(samples) if s[0] not in exclude_list]
     frames = collections.OrderedDict((str(k), v) for (k, v) in enumerate(id2stack))
     json.dump(dict(traceEvents=events, stackFrames=frames), fp, indent=1)
     fp.write("\n")

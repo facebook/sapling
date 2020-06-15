@@ -25,7 +25,7 @@ from .pycompat import decodeutf8
 def _loadprofiler(ui, profiler):
     """load profiler extension. return profile method, or None on failure"""
     extname = profiler
-    extensions.loadall(ui, whitelist=[extname])
+    extensions.loadall(ui, include_list=[extname])
     try:
         mod = extensions.find(extname)
     except KeyError:

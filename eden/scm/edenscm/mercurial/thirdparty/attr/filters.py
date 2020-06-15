@@ -20,9 +20,9 @@ def _split_what(what):
 
 def include(*what):
     """
-    Whitelist *what*.
+    Include *what*.
 
-    :param what: What to whitelist.
+    :param what: What to include.
     :type what: :class:`list` of :class:`type` or :class:`attr.Attribute`\ s
 
     :rtype: :class:`callable`
@@ -37,9 +37,9 @@ def include(*what):
 
 def exclude(*what):
     """
-    Blacklist *what*.
+    Exclude *what*.
 
-    :param what: What to blacklist.
+    :param what: What to exclude.
     :type what: :class:`list` of classes or :class:`attr.Attribute`\ s.
 
     :rtype: :class:`callable`

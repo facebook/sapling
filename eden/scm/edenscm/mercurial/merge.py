@@ -448,11 +448,11 @@ class mergestate(object):
 
         See the docstring for _readrecordsv2 for why we use 't'."""
         # these are the records that all version 2 clients can read
-        whitelist = "LOF"
+        allowedkeys = "LOF"
         f = self._repo.localvfs(self.statepathv2, "w")
         for key, data in records:
             assert len(key) == 1
-            if key not in whitelist:
+            if key not in allowedkeys:
                 key, data = "t", "%s%s" % (key, data)
             key = encodeutf8(key)
             data = encodeutf8(data)
