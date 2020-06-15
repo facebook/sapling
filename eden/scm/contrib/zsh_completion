@@ -1220,4 +1220,11 @@ _hg_cmd_purge() {
   '(--print0 -0)'{-0,--print0}'[end filenames with NUL, for use with xargs (implies -p/--print)]'
 }
 
+# Histedit
+_hg_cmd_histedit() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--continue -c)'{-c,--continue}'[continue an interrupted histedit]' \
+  '(--abort -a)'{-a,--abort}'[abort an interrupted histedit]' \
+}
+
 _hg "$@"
