@@ -16,6 +16,7 @@ use bytes::Bytes;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
+use futures::future::try_join_all;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as FBFutureExt};
 use futures_old::future::{join_all, loop_fn, ok, Future, Loop};
 use futures_old::IntoFuture;
@@ -29,7 +30,7 @@ use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation, FIRST_GENERATION};
 
 use common::{
-    advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists,
+    advance_bfs_layer, changesets_with_generation_numbers, check_if_node_exists, fetch_generation,
     fetch_generation_and_join, get_parents,
 };
 use reachabilityindex::{errors::*, LeastCommonAncestorsHint, NodeFrontier, ReachabilityIndex};
@@ -336,80 +337,65 @@ async fn find_nodes_to_index(
 
 /// From a starting node, index all nodes that are reachable within a given distance.
 /// If a previously indexed node is reached, indexing will stop there.
-fn lazy_index_node(
-    ctx: CoreContext,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    skip_edge_mapping: Arc<SkiplistEdgeMapping>,
+async fn lazy_index_node(
+    ctx: &CoreContext,
+    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    skip_edge_mapping: &Arc<SkiplistEdgeMapping>,
     node: ChangesetId,
     max_depth: u64,
-) -> BoxFuture<(), Error> {
+) -> Result<(), Error> {
     // if this node is indexed or we've passed the max depth, return
     if max_depth == 0 || skip_edge_mapping.mapping.contains_key(&node) {
-        ok(()).boxify()
-    } else {
-        fetch_generation_and_join(ctx.clone(), changeset_fetcher.clone(), node)
-            .and_then({
-                cloned!(ctx, changeset_fetcher, skip_edge_mapping);
-                move |node_gen_pair| {
-                    async move {
-                        find_nodes_to_index(
-                            &ctx,
-                            &changeset_fetcher,
-                            &skip_edge_mapping,
-                            node_gen_pair,
-                            max_depth,
-                        ).await
-                    }
-                    .boxed()
-                    .compat()
-                }
-            })
-            .and_then({
-                move |node_gen_pairs| {
-                    join_all(node_gen_pairs.into_iter().map({
-                        cloned!(changeset_fetcher);
-                        move |(hash, _gen)| {
-                            get_parents(ctx.clone(), changeset_fetcher.clone(), hash.clone())
-                                .and_then({
-                                    cloned!(ctx, changeset_fetcher);
-                                    move |parents| {
-                                        changesets_with_generation_numbers(
-                                            ctx,
-                                            changeset_fetcher,
-                                            parents,
-                                        )
-                                    }
-                                })
-                                .map(move |parent_gen_pairs| (hash, parent_gen_pairs))
-                        }
-                    }))
-                }
-            })
-            .map(move |hash_parentgens_gen_vec| {
-                // determine what kind of skip edges to add for this node
-                for (curr_hash, parent_gen_pairs) in hash_parentgens_gen_vec.into_iter() {
-                    if parent_gen_pairs.len() != 1 {
-                        // Merge node or parentless node
-                        // Reflect this in the index
-                        skip_edge_mapping
-                            .mapping
-                            .insert(curr_hash, SkiplistNodeType::ParentEdges(parent_gen_pairs));
-                    } else {
-                        // Single parent node
-                        // Compute skip edges assuming a reasonable number of parents are indexed.
-                        // Even if this reaches a non indexed node during,
-                        // indexing correctness isn't affected.
-                        let unique_parent_gen_pair = parent_gen_pairs.get(0).unwrap().clone();
-                        let new_edges =
-                            compute_skip_edges(unique_parent_gen_pair, skip_edge_mapping.clone());
-                        skip_edge_mapping
-                            .mapping
-                            .insert(curr_hash, SkiplistNodeType::SkipEdges(new_edges));
-                    }
-                }
-            })
-            .boxify()
+        return Ok(());
     }
+
+    let gen = fetch_generation(ctx.clone(), changeset_fetcher.clone(), node)
+        .compat()
+        .await?;
+    let node_gen_pairs = find_nodes_to_index(
+        ctx,
+        changeset_fetcher,
+        skip_edge_mapping,
+        (node, gen),
+        max_depth,
+    )
+    .await?;
+    let hash_parentgens_gen_vec = try_join_all(node_gen_pairs.into_iter().map(|(hash, _gen)| {
+        cloned!(ctx, changeset_fetcher);
+        async move {
+            let parents = get_parents(ctx.clone(), changeset_fetcher.clone(), hash)
+                .compat()
+                .await?;
+            let parent_gen_pairs =
+                changesets_with_generation_numbers(ctx, changeset_fetcher, parents)
+                    .compat()
+                    .await?;
+            let res: Result<_, Error> = Ok((hash, parent_gen_pairs));
+            res
+        }
+    }))
+    .await?;
+
+    for (curr_hash, parent_gen_pairs) in hash_parentgens_gen_vec.into_iter() {
+        if parent_gen_pairs.len() != 1 {
+            // Merge node or parentless node
+            // Reflect this in the index
+            skip_edge_mapping
+                .mapping
+                .insert(curr_hash, SkiplistNodeType::ParentEdges(parent_gen_pairs));
+        } else {
+            // Single parent node
+            // Compute skip edges assuming a reasonable number of parents are indexed.
+            // Even if this reaches a non indexed node during,
+            // indexing correctness isn't affected.
+            let unique_parent_gen_pair = parent_gen_pairs.get(0).unwrap().clone();
+            let new_edges = compute_skip_edges(unique_parent_gen_pair, skip_edge_mapping.clone());
+            skip_edge_mapping
+                .mapping
+                .insert(curr_hash, SkiplistNodeType::SkipEdges(new_edges));
+        }
+    }
+    Ok(())
 }
 
 impl SkiplistIndex {
@@ -446,13 +432,20 @@ impl SkiplistIndex {
         node: ChangesetId,
         max_index_depth: u64,
     ) -> BoxFuture<(), Error> {
-        lazy_index_node(
-            ctx,
-            changeset_fetcher,
-            self.skip_list_edges.clone(),
-            node,
-            max_index_depth,
-        )
+        cloned!(self.skip_list_edges);
+        async move {
+            lazy_index_node(
+                &ctx,
+                &changeset_fetcher,
+                &skip_list_edges,
+                node,
+                max_index_depth,
+            )
+            .await
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     /// get skiplist edges originating from a particular node hash
