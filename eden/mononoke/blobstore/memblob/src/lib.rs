@@ -10,8 +10,8 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 
 use anyhow::Error;
-use futures::future::{lazy, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
+use futures_old::future::{lazy as lazy01, IntoFuture as IntoFuture01};
 
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
@@ -58,14 +58,14 @@ impl LazyMemblob {
 }
 
 impl Blobstore for EagerMemblob {
-    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
         let mut inner = self.hash.lock().expect("lock poison");
 
         inner.insert(key, value);
         Ok(()).into_future().boxify()
     }
 
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         let inner = self.hash.lock().expect("lock poison");
 
         Ok(inner.get(&key).map(|blob_ref| blob_ref.clone().into()))
@@ -75,10 +75,10 @@ impl Blobstore for EagerMemblob {
 }
 
 impl Blobstore for LazyMemblob {
-    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
         let hash = self.hash.clone();
 
-        lazy(move || {
+        lazy01(move || {
             let mut inner = hash.lock().expect("lock poison");
 
             inner.insert(key, value);
@@ -87,10 +87,10 @@ impl Blobstore for LazyMemblob {
         .boxify()
     }
 
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         let hash = self.hash.clone();
 
-        lazy(move || {
+        lazy01(move || {
             let inner = hash.lock().expect("lock poison");
             Ok(inner.get(&key).map(|bytes| bytes.clone().into())).into_future()
         })
