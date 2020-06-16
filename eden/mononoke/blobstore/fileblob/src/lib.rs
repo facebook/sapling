@@ -14,9 +14,11 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use anyhow::{bail, Error, Result};
-use futures::future::{poll_fn, Future};
-use futures::Async;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
+use futures_old::{
+    future::{poll_fn as poll_fn01, Future as Future01},
+    Async,
+};
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
@@ -68,10 +70,10 @@ fn ctime(file: &File) -> Option<i64> {
 }
 
 impl Blobstore for Fileblob {
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         let p = self.path(&key);
 
-        poll_fn(move || {
+        poll_fn01(move || {
             let mut v = Vec::new();
             let ret = match File::open(&p) {
                 Err(ref e) if e.kind() == io::ErrorKind::NotFound => None,
@@ -91,10 +93,10 @@ impl Blobstore for Fileblob {
         .boxify()
     }
 
-    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
         let p = self.path(&key);
 
-        poll_fn::<_, Error, _>(move || {
+        poll_fn01::<_, Error, _>(move || {
             let tempfile = NamedTempFile::new()?;
             tempfile.as_file().write_all(value.as_bytes().as_ref())?;
             tempfile.persist(&p)?;
@@ -103,10 +105,10 @@ impl Blobstore for Fileblob {
         .boxify()
     }
 
-    fn is_present(&self, _ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, _ctx: CoreContext, key: String) -> BoxFuture01<bool, Error> {
         let p = self.path(&key);
 
-        poll_fn(move || {
+        poll_fn01(move || {
             let ret = match File::open(&p) {
                 Err(ref e) if e.kind() == io::ErrorKind::NotFound => false,
                 Err(e) => return Err(e),
