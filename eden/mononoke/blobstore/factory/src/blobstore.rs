@@ -21,6 +21,7 @@ use metaconfig_types::{
     ShardableRemoteDatabaseConfig,
 };
 use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
+use packblob::PackBlob;
 use readonlyblob::ReadOnlyBlobstore;
 use scuba::ScubaSampleBuilder;
 use slog::Logger;
@@ -255,6 +256,19 @@ pub fn make_blobstore<'a>(
                     let _ = (bucket, prefix, ttl);
                     unimplemented!("This is implemented only for fbcode_build")
                 }
+            }
+            Pack { blobconfig } => {
+                let store = make_blobstore(
+                    fb,
+                    *blobconfig,
+                    mysql_options,
+                    readonly_storage,
+                    &blobstore_options,
+                    logger,
+                )
+                .await?;
+
+                Arc::new(PackBlob::new(store)) as Arc<dyn Blobstore>
             }
         };
 

@@ -708,6 +708,11 @@ pub enum BlobConfig {
         /// 1 in scuba_sample_rate samples will be logged.
         scuba_sample_rate: NonZeroU64,
     },
+    /// An optionally-packing blobstore that wraps another blobstore
+    Pack {
+        /// The config for the blobstore that is wrapped.
+        blobconfig: Box<BlobConfig>,
+    },
 }
 
 impl BlobConfig {
@@ -724,6 +729,7 @@ impl BlobConfig {
                 .map(|(_, config)| config)
                 .all(BlobConfig::is_local),
             Logging { blobconfig, .. } => blobconfig.is_local(),
+            Pack { blobconfig, .. } => blobconfig.is_local(),
         }
     }
 

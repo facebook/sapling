@@ -89,6 +89,9 @@ impl Convert for RawBlobstoreConfig {
                 scuba_sample_rate: parse_scuba_sample_rate(raw.scuba_sample_rate)?,
                 blobconfig: Box::new(raw.blobstore.convert()?),
             },
+            RawBlobstoreConfig::pack(raw) => BlobConfig::Pack {
+                blobconfig: Box::new(raw.blobstore.convert()?),
+            },
             RawBlobstoreConfig::UnknownField(f) => {
                 return Err(anyhow!("unsupported blobstore configuration ({})", f));
             }

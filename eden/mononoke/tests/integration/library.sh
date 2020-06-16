@@ -531,7 +531,11 @@ CONFIG
     local i
     for ((i=0; i<=MULTIPLEXED; i++)); do
       mkdir -p "$blobstorepath/$i"
-      echo "  { blobstore_id = $i, blobstore = { $underlyingstorage = { path = \"$blobstorepath/$i\" } } }," >> common/storage.toml
+      if [[ -v PACK_BLOB && $i -le "$PACK_BLOB" ]]; then
+        echo "  { blobstore_id = $i, blobstore = { pack = { blobstore = { $underlyingstorage = { path = \"$blobstorepath/$i\" } } } } }," >> common/storage.toml
+      else
+        echo "  { blobstore_id = $i, blobstore = { $underlyingstorage = { path = \"$blobstorepath/$i\" } } }," >> common/storage.toml
+      fi
     done
     echo ']' >> common/storage.toml
   else
