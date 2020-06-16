@@ -7,8 +7,8 @@
 
 use anyhow::{format_err, Error};
 use context::CoreContext;
-use futures::future::IntoFuture;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
+use futures_old::future::IntoFuture as IntoFuture01;
 
 use super::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 
@@ -28,13 +28,18 @@ impl DisabledBlob {
 }
 
 impl Blobstore for DisabledBlob {
-    fn get(&self, _ctx: CoreContext, _key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(&self, _ctx: CoreContext, _key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         Err(format_err!("Blobstore disabled: {}", self.reason))
             .into_future()
             .boxify()
     }
 
-    fn put(&self, _ctx: CoreContext, _key: String, _value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        _ctx: CoreContext,
+        _key: String,
+        _value: BlobstoreBytes,
+    ) -> BoxFuture01<(), Error> {
         Err(format_err!("Blobstore disabled: {}", self.reason))
             .into_future()
             .boxify()

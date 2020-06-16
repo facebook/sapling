@@ -15,7 +15,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures::Future;
+use futures_old::Future as Future01;
 use tempdir::TempDir;
 use tokio::{prelude::*, runtime::Runtime};
 

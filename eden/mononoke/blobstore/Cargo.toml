@@ -23,7 +23,8 @@ abomonation_derive = "0.5"
 anyhow = "1.0"
 auto_impl = { git = "https://github.com/auto-impl-rs/auto_impl", rev = "43ad0ed49f67168b2971b271481e75afac589b24" }
 bytes = { version = "0.5", features = ["serde"] }
-futures = "0.1"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
 thiserror = "1.0"
 
 [dev-dependencies]

@@ -9,8 +9,8 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use anyhow::Error;
-use futures::Future;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
+use futures_old::Future as Future01;
 use stats::prelude::*;
 
 use context::CoreContext;
@@ -57,7 +57,7 @@ impl<T: Blobstore> CountedBlobstore<T> {
 }
 
 impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         let stats = self.stats.clone();
         stats.get.add_value(1);
         self.blobstore
@@ -72,7 +72,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             .boxify()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
         let stats = self.stats.clone();
         stats.put.add_value(1);
         self.blobstore
@@ -87,7 +87,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             .boxify()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture01<bool, Error> {
         let stats = self.stats.clone();
         stats.is_present.add_value(1);
         self.blobstore
@@ -102,7 +102,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             .boxify()
     }
 
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture01<(), Error> {
         let stats = self.stats.clone();
         stats.assert_present.add_value(1);
         self.blobstore
