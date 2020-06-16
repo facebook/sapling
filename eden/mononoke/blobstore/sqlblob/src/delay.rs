@@ -55,7 +55,7 @@ impl BlobDelay {
         }
     }
 
-    pub async fn delay(&self) {
+    pub async fn delay(&self, _shard_id: usize) {
         let mut lag_receiver = self.lag_receiver.clone();
         let start_time = Instant::now();
 

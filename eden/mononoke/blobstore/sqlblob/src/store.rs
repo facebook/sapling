@@ -15,6 +15,8 @@ use futures::compat::Future01CompatExt;
 use sql::{queries, Connection};
 use twox_hash::XxHash32;
 
+use crate::delay::BlobDelay;
+
 mod types {
     use sql::mysql_async::{
         prelude::{ConvIr, FromValue},
@@ -115,6 +117,7 @@ pub(crate) struct DataSqlStore {
     write_connection: Arc<Vec<Connection>>,
     read_connection: Arc<Vec<Connection>>,
     read_master_connection: Arc<Vec<Connection>>,
+    delay: BlobDelay,
 }
 
 impl DataSqlStore {
@@ -123,12 +126,14 @@ impl DataSqlStore {
         write_connection: Arc<Vec<Connection>>,
         read_connection: Arc<Vec<Connection>>,
         read_master_connection: Arc<Vec<Connection>>,
+        delay: BlobDelay,
     ) -> Self {
         Self {
             shard_count,
             write_connection,
             read_connection,
             read_master_connection,
+            delay,
         }
     }
 
@@ -136,11 +141,11 @@ impl DataSqlStore {
         let shard_id = self.shard(key);
 
         let rows = {
-            let rows = SelectData::query(&self.read_connection[shard_id - 1], &key)
+            let rows = SelectData::query(&self.read_connection[shard_id], &key)
                 .compat()
                 .await?;
             if rows.is_empty() {
-                SelectData::query(&self.read_master_connection[shard_id - 1], &key)
+                SelectData::query(&self.read_master_connection[shard_id], &key)
                     .compat()
                     .await?
             } else {
@@ -169,8 +174,10 @@ impl DataSqlStore {
     ) -> Result<(), Error> {
         let shard_id = self.shard(key);
 
+        self.delay.delay(shard_id).await;
+
         InsertData::query(
-            &self.write_connection[shard_id - 1],
+            &self.write_connection[shard_id],
             &[(&key, &ctime, &chunk_id, &chunk_count, &chunking_method)],
         )
         .compat()
@@ -182,11 +189,11 @@ impl DataSqlStore {
         let shard_id = self.shard(key);
 
         let rows = {
-            let rows = SelectIsDataPresent::query(&self.read_connection[shard_id - 1], &key)
+            let rows = SelectIsDataPresent::query(&self.read_connection[shard_id], &key)
                 .compat()
                 .await?;
             if rows.is_empty() {
-                SelectIsDataPresent::query(&self.read_master_connection[shard_id - 1], &key)
+                SelectIsDataPresent::query(&self.read_master_connection[shard_id], &key)
                     .compat()
                     .await?
             } else {
@@ -199,7 +206,7 @@ impl DataSqlStore {
     fn shard(&self, key: &str) -> usize {
         let mut hasher = XxHash32::with_seed(0);
         hasher.write(key.as_bytes());
-        ((hasher.finish() % self.shard_count.get() as u64) + 1) as usize
+        (hasher.finish() % self.shard_count.get() as u64) as usize
     }
 }
 
@@ -209,6 +216,7 @@ pub(crate) struct ChunkSqlStore {
     write_connection: Arc<Vec<Connection>>,
     read_connection: Arc<Vec<Connection>>,
     read_master_connection: Arc<Vec<Connection>>,
+    delay: BlobDelay,
 }
 
 impl ChunkSqlStore {
@@ -217,12 +225,14 @@ impl ChunkSqlStore {
         write_connection: Arc<Vec<Connection>>,
         read_connection: Arc<Vec<Connection>>,
         read_master_connection: Arc<Vec<Connection>>,
+        delay: BlobDelay,
     ) -> Self {
         Self {
             shard_count,
             write_connection,
             read_connection,
             read_master_connection,
+            delay,
         }
     }
 
@@ -235,11 +245,11 @@ impl ChunkSqlStore {
         let shard_id = self.shard(id, chunk_num, chunking_method);
 
         let rows = {
-            let rows = SelectChunk::query(&self.read_connection[shard_id - 1], &id, &chunk_num)
+            let rows = SelectChunk::query(&self.read_connection[shard_id], &id, &chunk_num)
                 .compat()
                 .await?;
             if rows.is_empty() {
-                SelectChunk::query(&self.read_master_connection[shard_id - 1], &id, &chunk_num)
+                SelectChunk::query(&self.read_master_connection[shard_id], &id, &chunk_num)
                     .compat()
                     .await?
             } else {
@@ -261,8 +271,9 @@ impl ChunkSqlStore {
     ) -> Result<(), Error> {
         let shard_id = self.shard(key, chunk_num, chunking_method);
 
+        self.delay.delay(shard_id).await;
         InsertChunk::query(
-            &self.write_connection[shard_id - 1],
+            &self.write_connection[shard_id],
             &[(&key, &chunk_num, &value)],
         )
         .compat()
@@ -274,6 +285,6 @@ impl ChunkSqlStore {
         let mut hasher = XxHash32::with_seed(0);
         hasher.write(key.as_bytes());
         hasher.write_u32(chunk_id);
-        ((hasher.finish() % self.shard_count.get() as u64) + 1) as usize
+        (hasher.finish() % self.shard_count.get() as u64) as usize
     }
 }

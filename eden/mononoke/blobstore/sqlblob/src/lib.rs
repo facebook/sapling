@@ -62,7 +62,6 @@ pub type CountedSqlblob = CountedBlobstore<Sqlblob>;
 pub struct Sqlblob {
     data_store: Arc<DataSqlStore>,
     chunk_store: Arc<ChunkSqlStore>,
-    delay: BlobDelay,
 }
 
 impl Sqlblob {
@@ -190,14 +189,15 @@ impl Sqlblob {
                             write_connections.clone(),
                             read_connections.clone(),
                             read_master_connections.clone(),
+                            delay.clone(),
                         )),
                         chunk_store: Arc::new(ChunkSqlStore::new(
                             shard_num,
                             write_connections,
                             read_connections,
                             read_master_connections,
+                            delay,
                         )),
-                        delay,
                     },
                     label,
                 )
@@ -249,14 +249,15 @@ impl Sqlblob {
                     cons.clone(),
                     cons.clone(),
                     cons.clone(),
+                    BlobDelay::dummy(),
                 )),
                 chunk_store: Arc::new(ChunkSqlStore::new(
                     SQLITE_SHARD_NUM,
                     cons.clone(),
                     cons.clone(),
                     cons,
+                    BlobDelay::dummy(),
                 )),
-                delay: BlobDelay::dummy(),
             },
             "sqlite".into(),
         ))
@@ -325,12 +326,11 @@ impl Blobstore for Sqlblob {
             hash_context.finish().to_hex()
         };
 
-        cloned!(self.delay, self.data_store, self.chunk_store);
+        cloned!(self.data_store, self.chunk_store);
         async move {
             let chunks = value.as_bytes().chunks(CHUNK_SIZE);
             let chunk_count = chunks.len().try_into()?;
             for (chunk_num, value) in chunks.enumerate() {
-                delay.delay().await;
                 chunk_store
                     .put(
                         chunk_key.as_str(),
@@ -346,7 +346,6 @@ impl Blobstore for Sqlblob {
                     Err(negative) => negative.duration().as_secs().try_into().map(|v: i64| -v),
                 }
             }?;
-            delay.delay().await;
             data_store
                 .put(
                     &key,
