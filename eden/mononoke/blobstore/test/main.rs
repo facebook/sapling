@@ -15,101 +15,45 @@ use std::sync::Arc;
 use anyhow::Error;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures_old::Future as Future01;
+use futures::compat::Future01CompatExt;
 use tempdir::TempDir;
-use tokio::{prelude::*, runtime::Runtime};
 
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::Blobstore;
 use context::CoreContext;
 use fileblob::Fileblob;
-use memblob::EagerMemblob;
+use memblob::{EagerMemblob, LazyMemblob};
 use mononoke_types::BlobstoreBytes;
 
-fn simple<B>(fb: FacebookInit, blobstore: B, has_ctime: bool)
-where
-    B: IntoFuture,
-    B::Item: Blobstore,
-    B::Future: Send + 'static,
-    Error: From<B::Error>,
-{
+async fn round_trip<B: Blobstore>(
+    fb: FacebookInit,
+    blobstore: B,
+    has_ctime: bool,
+) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobstore = blobstore.into_future().map_err(|err| err.into());
 
-    let foo = "foo".to_string();
+    let key = "foo".to_string();
+    let value = BlobstoreBytes::from_bytes(&b"bar"[..]);
 
-    let fut = future::lazy(|| {
-        blobstore.and_then(|blobstore| {
-            blobstore
-                .put(
-                    ctx.clone(),
-                    foo.clone(),
-                    BlobstoreBytes::from_bytes(&b"bar"[..]),
-                )
-                .and_then(move |_| blobstore.get(ctx, foo))
-        })
-    });
+    blobstore
+        .put(ctx.clone(), key.clone(), value)
+        .compat()
+        .await?;
 
-    let mut runtime = Runtime::new().expect("runtime creation failed");
-    let out = runtime
-        .block_on(fut)
-        .expect("pub/get failed")
-        .expect("missing");
+    let out = blobstore.get(ctx, key).compat().await?.unwrap();
 
     assert_eq!(out.clone().into_raw_bytes(), Bytes::from_static(b"bar"));
     assert_eq!(out.as_meta().as_ctime().is_some(), has_ctime);
+    Ok(())
 }
 
-fn missing<B>(fb: FacebookInit, blobstore: B)
-where
-    B: IntoFuture,
-    B::Item: Blobstore,
-    B::Future: Send + 'static,
-    Error: From<B::Error>,
-{
+async fn missing<B: Blobstore>(fb: FacebookInit, blobstore: B) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobstore = blobstore.into_future().map_err(|err| err.into());
 
-    let fut = future::lazy(move || {
-        blobstore.and_then(|blobstore| blobstore.get(ctx, "missing".to_string()))
-    });
-
-    let mut runtime = Runtime::new().expect("runtime creation failed");
-    let out = runtime.block_on(fut).expect("get failed");
+    let key = "missing".to_string();
+    let out = blobstore.get(ctx, key).compat().await?;
 
     assert!(out.is_none());
-}
-
-fn boxable<B>(fb: FacebookInit, blobstore: B)
-where
-    B: IntoFuture,
-    B::Item: Blobstore,
-    B::Future: Send + 'static,
-    Error: From<B::Error>,
-{
-    let ctx = CoreContext::test_mock(fb);
-    let blobstore = Box::new(blobstore.into_future().map_err(|err| err.into()));
-
-    let foo = "foo".to_string();
-
-    let fut = future::lazy(|| {
-        blobstore.and_then(|blobstore| {
-            blobstore
-                .put(
-                    ctx.clone(),
-                    foo.clone(),
-                    BlobstoreBytes::from_bytes(&b"bar"[..]),
-                )
-                .and_then(move |_| blobstore.get(ctx, foo))
-        })
-    });
-    let mut runtime = Runtime::new().expect("runtime creation failed");
-
-    let out: BlobstoreGetData = runtime
-        .block_on(fut)
-        .expect("pub/get failed")
-        .expect("missing");
-
-    assert_eq!(out.into_raw_bytes(), Bytes::from_static(b"bar"));
+    Ok(())
 }
 
 macro_rules! blobstore_test_impl {
@@ -122,32 +66,55 @@ macro_rules! blobstore_test_impl {
         mod $mod_name {
             use super::*;
 
-            #[fbinit::test]
-            fn test_simple(fb: FacebookInit) {
+            #[fbinit::compat_test]
+            async fn test_round_trip(fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
                 let has_ctime = $has_ctime;
-                simple(fb, $new_cb(state.clone()), has_ctime);
+                let factory = $new_cb;
+                round_trip(fb, factory(state.clone())?, has_ctime).await
             }
 
-            #[fbinit::test]
-            fn test_missing(fb: FacebookInit) {
+            #[fbinit::compat_test]
+            async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
-                missing(fb, $new_cb(state.clone()));
+                let factory = $new_cb;
+                missing(fb, factory(state)?).await
             }
 
-            #[fbinit::test]
-            fn test_boxable(fb: FacebookInit) {
+            #[fbinit::compat_test]
+            async fn test_boxable(_fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
-                boxable(fb, $new_cb(state.clone()));
+                let factory = $new_cb;
+                // This is really just checking that the constructed type is Sized
+                Box::new(factory(state)?);
+                Ok(())
             }
         }
     };
 }
 
 blobstore_test_impl! {
-    memblob_test => {
+    eager_memblob_test => {
         state: (),
-        new: move |_| Ok::<_,!>(EagerMemblob::new()),
+        new: move |_| Ok::<_,Error>(EagerMemblob::new()),
+        persistent: false,
+        has_ctime: false,
+    }
+}
+
+blobstore_test_impl! {
+    box_blobstore_test => {
+        state: (),
+        new: move |_| Ok::<_,Error>(Box::new(EagerMemblob::new())),
+        persistent: false,
+        has_ctime: false,
+    }
+}
+
+blobstore_test_impl! {
+    lazy_memblob_test => {
+        state: (),
+        new: move |_| Ok::<_,Error>(LazyMemblob::new()),
         persistent: false,
         has_ctime: false,
     }
