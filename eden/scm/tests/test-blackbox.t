@@ -26,6 +26,7 @@ alias expansion is logged
   $ hg blackbox
   [command] ["hg", "confuse"] started by uid 0 as pid 0 with nice 0
   [process_tree] (this process)
+  [legacy][command_info]
   [legacy][env_vars]
   [legacy][command] confuse
   [legacy][dirstate_info]
@@ -39,6 +40,7 @@ alias expansion is logged
   [tracing] (binary data of * bytes) (glob)
   [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
   [process_tree] (this process)
+  [legacy][command_info]
   [legacy][env_vars]
   [legacy][command] blackbox
   [legacy][dirstate_info]
@@ -50,6 +52,7 @@ recursive aliases work correctly
   $ hg blackbox
   [command] ["hg", "so-confusing"] started by uid 0 as pid 0 with nice 0
   [process_tree] (this process)
+  [legacy][command_info]
   [legacy][env_vars]
   [legacy][command] so-confusing
   [legacy][dirstate_info]
@@ -63,6 +66,7 @@ recursive aliases work correctly
   [tracing] (binary data of * bytes) (glob)
   [command] ["hg", "blackbox"] started by uid 0 as pid 0 with nice 0
   [process_tree] (this process)
+  [legacy][command_info]
   [legacy][env_vars]
   [legacy][command] blackbox
   [legacy][dirstate_info]

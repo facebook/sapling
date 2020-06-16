@@ -77,6 +77,19 @@ def telemetry(reporef):
         ui.log("command_info", sampling_failure=str(e))
 
 
+def replaceuser(path):
+    """Replace path components in ``path`` that match the user's username
+    with ``$USER``.
+    """
+    username = util.username()
+    if username is not None:
+        sep = os.path.sep
+        usercomponent = sep + username + sep
+        replacement = sep + "$USER" + sep
+        path = path.replace(usercomponent, replacement)
+    return path
+
+
 def reposetup(ui, repo):
     # Don't setup telemetry for sshpeer's
     if not isinstance(repo, localrepo.localrepository):
@@ -86,6 +99,13 @@ def reposetup(ui, repo):
 
     # Log other information that we don't want to log in the wrapper, if it's
     # cheap to do so.
+
+    # Log repo root and shared root, with the user's name replaced by "$USER"
+    ui.log(
+        "command_info",
+        reporoot=replaceuser(repo.root),
+        reposharedroot=replaceuser(repo.sharedroot),
+    )
 
     # Log the current directory bucketed to top-level directories, if enabled.
     # This provides a very rough approximation of what area the users works in.
