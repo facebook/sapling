@@ -6,12 +6,12 @@
 # shallowutil.py -- remotefilelog utilities
 from __future__ import absolute_import
 
-import builtins
 import errno
 import hashlib
 import os
 import stat
 import struct
+import sys
 import tempfile
 import typing
 from collections import defaultdict
@@ -214,11 +214,10 @@ def _buildpackmeta(metadict):
     return metabuf
 
 
-long = getattr(builtins, "long", None)
-if long is not None:
-    inttype = (int, long)
-else:
+if sys.version_info[0] >= 3:
     inttype = (int,)
+else:
+    inttype = (int, long)  # noqa: F821
 
 
 _metaitemtypes = {constants.METAKEYFLAG: inttype, constants.METAKEYSIZE: inttype}

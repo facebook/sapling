@@ -70,7 +70,6 @@ else:
 
 
 if sys.version_info[0] >= 3:
-    import builtins
     import functools
     import io
     import struct
