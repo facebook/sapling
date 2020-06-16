@@ -131,6 +131,16 @@ impl SqlHgMutationStore {
             }
         }
 
+        // Sort the entries so that they are inserted in a stable
+        // order.  This prevents deadlocks where one transaction is
+        // adding commits "A, B, C" and gains the lock on A while
+        // another transaction is adding "C, D, A" and gains the lock
+        // on C.
+        db_csets.sort_unstable();
+        db_entries.sort_unstable();
+        db_preds.sort_unstable();
+        db_splits.sort_unstable();
+
         // Convert the numbers to references.
         let ref_db_entries: Vec<_> = db_entries
             .iter()
