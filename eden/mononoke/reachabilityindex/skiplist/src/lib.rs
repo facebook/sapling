@@ -367,9 +367,7 @@ async fn find_nodes_to_index(
     let mut seen: HashSet<_> = HashSet::new();
     let mut curr_depth = depth;
 
-    check_if_node_exists(ctx.clone(), changeset_fetcher.clone(), start_node.clone())
-        .compat()
-        .await?;
+    check_if_node_exists(ctx, changeset_fetcher, start_node).await?;
     loop {
         bfs_layer = bfs_layer
             .into_iter()
@@ -380,9 +378,7 @@ async fn find_nodes_to_index(
             break;
         } else {
             let (next_bfs_layer, next_seen) =
-                advance_bfs_layer(ctx.clone(), changeset_fetcher.clone(), bfs_layer, seen)
-                    .compat()
-                    .await?;
+                advance_bfs_layer(ctx, changeset_fetcher, bfs_layer, seen).await?;
             bfs_layer = next_bfs_layer;
             seen = next_seen;
             curr_depth -= 1;
@@ -408,9 +404,7 @@ async fn lazy_index_node(
         return Ok(());
     }
 
-    let gen = fetch_generation(ctx.clone(), changeset_fetcher.clone(), node)
-        .compat()
-        .await?;
+    let gen = fetch_generation(ctx, changeset_fetcher, node).await?;
     let node_gen_pairs = find_nodes_to_index(
         ctx,
         changeset_fetcher,
@@ -419,21 +413,15 @@ async fn lazy_index_node(
         max_depth,
     )
     .await?;
-    let hash_parentgens_gen_vec = try_join_all(node_gen_pairs.into_iter().map(|(hash, _gen)| {
-        cloned!(ctx, changeset_fetcher);
-        async move {
-            let parents = get_parents(ctx.clone(), changeset_fetcher.clone(), hash)
-                .compat()
-                .await?;
+    let hash_parentgens_gen_vec =
+        try_join_all(node_gen_pairs.into_iter().map(|(hash, _gen)| async move {
+            let parents = get_parents(ctx, changeset_fetcher, hash).await?;
             let parent_gen_pairs =
-                changesets_with_generation_numbers(ctx, changeset_fetcher, parents)
-                    .compat()
-                    .await?;
+                changesets_with_generation_numbers(ctx, changeset_fetcher, parents).await?;
             let res: Result<_, Error> = Ok((hash, parent_gen_pairs));
             res
-        }
-    }))
-    .await?;
+        }))
+        .await?;
 
     for (curr_hash, parent_gen_pairs) in hash_parentgens_gen_vec.into_iter() {
         if parent_gen_pairs.len() != 1 {
@@ -685,9 +673,7 @@ async fn process_frontier(
             .into_iter()
             .map(|cs_id| async move {
                 Ok::<_, Error>(stream::iter(
-                    changeset_fetcher
-                        .get_parents(ctx.clone(), cs_id)
-                        .compat()
+                    get_parents(ctx, changeset_fetcher, cs_id)
                         .await?
                         .into_iter()
                         .map(Ok::<_, Error>),

@@ -16,7 +16,7 @@ use fixtures::{branch_wide, linear, merge_uneven};
 use futures::compat::Future01CompatExt;
 
 #[cfg(test)]
-use common::fetch_generation_and_join;
+use common::fetch_generation;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::ChangesetId;
 use reachabilityindex::ReachabilityIndex;
@@ -421,10 +421,12 @@ mod test {
 
             for (i, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
                 assert_eq!(
-                    fetch_generation_and_join(ctx.clone(), repo.get_changeset_fetcher(), node)
-                        .compat()
-                        .await
-                        .unwrap(),
+                    (
+                        node,
+                        fetch_generation(&ctx, &repo.get_changeset_fetcher(), node)
+                            .await
+                            .unwrap()
+                    ),
                     (node, Generation::new(i as u64 + 1))
                 );
             }
