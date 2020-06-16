@@ -5,17 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 
 use crate::repo::BlobRepo;
 use anyhow::{anyhow, Error};
 use cloned::cloned;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, FilenodeResult};
-use futures_ext::{BoxStream, FutureExt, StreamExt};
+use futures::{
+    compat::Future01CompatExt,
+    stream,
+    stream::{StreamExt, TryStreamExt},
+};
+use futures_ext::{FutureExt, StreamExt as OldStreamExt};
 use futures_old::{
     future::{err, ok},
-    stream, Future, Stream,
+    stream as old_stream, Future, Stream,
 };
 use maplit::hashset;
 use mercurial_types::{
@@ -99,7 +104,7 @@ pub fn get_file_history_maybe_incomplete(
                     repo.get_filenode_from_envelope(ctx.clone(), &path, filenode, NULL_CSID)
                         .and_then(move |filenode_info| {
                             let filenode =
-                                filenode_to_history_entry(filenode, filenode_info, path)?;
+                                filenode_to_history_entry(filenode, filenode_info, &path)?;
                             Ok(vec![filenode])
                         })
                         .right_future()
@@ -107,7 +112,7 @@ pub fn get_file_history_maybe_incomplete(
             }
         }
     })
-    .map(stream::iter_ok)
+    .map(old_stream::iter_ok)
     .flatten_stream()
 }
 
@@ -162,9 +167,9 @@ fn get_file_history_using_prefetched(
     path: MPath,
     max_length: Option<u32>,
     prefetched_history: HashMap<HgFileNodeId, FilenodeInfo>,
-) -> BoxStream<HgFileHistoryEntry, Error> {
+) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
     if startnode == HgFileNodeId::new(NULL_HASH) {
-        return stream::empty().boxify();
+        return old_stream::empty().left_stream();
     }
 
     let mut startstate = VecDeque::new();
@@ -172,57 +177,75 @@ fn get_file_history_using_prefetched(
     let seen_nodes = hashset! {startnode};
     let path = RepoPath::FilePath(path);
 
+    struct BfsContext {
+        ctx: CoreContext,
+        repo: BlobRepo,
+        path: RepoPath,
+        prefetched_history: HashMap<HgFileNodeId, FilenodeInfo>,
+    }
+
+    let bfs_context = BfsContext {
+        ctx,
+        repo,
+        path,
+        prefetched_history,
+    };
+
     // TODO: There is probably another thundering herd problem here. If we change a file twice,
     // then the original cached value will be reused, and we'll keep going back to getting the
     // filenode individualy (perhaps not the end of the world?).
-    stream::unfold(
-        (startstate, seen_nodes, 0),
-        move |(mut nodes, mut seen_nodes, length): (
-            VecDeque<HgFileNodeId>,
-            HashSet<HgFileNodeId>,
-            u32,
-        )| {
+    stream::try_unfold(
+        (bfs_context, startstate, seen_nodes, 0),
+        move |(bfs_context, mut nodes, mut seen_nodes, length)| async move {
             match max_length {
-                Some(max_length) if length >= max_length => return None,
+                Some(max_length) if length >= max_length => return Ok(None),
                 _ => {}
             }
 
-            let node = nodes.pop_front()?;
-
-            let filenode_fut = if let Some(filenode) = prefetched_history.get(&node) {
-                ok(filenode.clone()).left_future()
-            } else {
-                get_maybe_missing_filenode(ctx.clone(), repo.clone(), path.clone(), node)
-                    .right_future()
+            let node = match nodes.pop_front() {
+                Some(node) => node,
+                None => {
+                    return Ok(None);
+                }
             };
 
-            cloned!(path);
+            let filenode = if let Some(filenode) = bfs_context.prefetched_history.get(&node) {
+                filenode.clone()
+            } else {
+                get_maybe_missing_filenode(
+                    &bfs_context.ctx,
+                    &bfs_context.repo,
+                    &bfs_context.path,
+                    node,
+                )
+                .compat()
+                .await?
+            };
 
-            let history = filenode_fut.and_then(move |filenode| {
-                let p1 = filenode.p1.map(|p| p.into_nodehash());
-                let p2 = filenode.p2.map(|p| p.into_nodehash());
-                let parents = HgParents::new(p1, p2);
-                let entry = filenode_to_history_entry(node, filenode, path)?;
+            let p1 = filenode.p1.map(|p| p.into_nodehash());
+            let p2 = filenode.p2.map(|p| p.into_nodehash());
+            let parents = HgParents::new(p1, p2);
+            let entry = filenode_to_history_entry(node, filenode, &bfs_context.path)?;
 
-                nodes.extend(
-                    parents
-                        .into_iter()
-                        .map(HgFileNodeId::new)
-                        .filter(|p| seen_nodes.insert(*p)),
-                );
-                Ok((entry, (nodes, seen_nodes, length + 1)))
-            });
+            nodes.extend(
+                parents
+                    .into_iter()
+                    .map(HgFileNodeId::new)
+                    .filter(|p| seen_nodes.insert(*p)),
+            );
 
-            Some(history)
+            Ok(Some((entry, (bfs_context, nodes, seen_nodes, length + 1))))
         },
     )
-    .boxify()
+    .boxed()
+    .compat()
+    .right_stream()
 }
 
 pub fn filenode_to_history_entry(
     node: HgFileNodeId,
     filenode: FilenodeInfo,
-    path: RepoPath,
+    path: &RepoPath,
 ) -> Result<HgFileHistoryEntry, Error> {
     let p1 = filenode.p1.map(|p| p.into_nodehash());
     let p2 = filenode.p2.map(|p| p.into_nodehash());
@@ -233,7 +256,7 @@ pub fn filenode_to_history_entry(
     let copyfrom = match filenode.copyfrom {
         Some((RepoPath::FilePath(frompath), node)) => Some((frompath, node)),
         Some((frompath, _)) => {
-            return Err(ErrorKind::InconsistentCopyInfo(path, frompath).into());
+            return Err(ErrorKind::InconsistentCopyInfo(path.clone(), frompath).into());
         }
         None => None,
     };
@@ -242,12 +265,12 @@ pub fn filenode_to_history_entry(
 }
 
 fn get_maybe_missing_filenode(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    path: RepoPath,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    path: &RepoPath,
     node: HgFileNodeId,
 ) -> impl Future<Item = FilenodeInfo, Error = Error> {
-    repo.get_filenode_opt(ctx.clone(), &path, node).and_then({
+    repo.get_filenode_opt(ctx.clone(), path, node).and_then({
         cloned!(repo, ctx, path, node);
         move |filenode_res| match filenode_res {
             FilenodeResult::Present(Some(filenode)) => ok(filenode).left_future(),
