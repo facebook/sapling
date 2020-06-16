@@ -73,7 +73,7 @@ impl Sqlblob {
         shard_num: NonZeroUsize,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob, Error> {
-        let delay = try_boxfuture!(myadmin_delay::sharded(fb, &shardmap));
+        let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
         Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
                 shardmap.clone(),
@@ -124,7 +124,7 @@ impl Sqlblob {
         shard_num: NonZeroUsize,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob, Error> {
-        let delay = try_boxfuture!(myadmin_delay::sharded(fb, &shardmap));
+        let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
         Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
             create_raw_xdb_connections(
                 fb,
@@ -249,14 +249,14 @@ impl Sqlblob {
                     cons.clone(),
                     cons.clone(),
                     cons.clone(),
-                    BlobDelay::dummy(),
+                    BlobDelay::dummy(SQLITE_SHARD_NUM),
                 )),
                 chunk_store: Arc::new(ChunkSqlStore::new(
                     SQLITE_SHARD_NUM,
                     cons.clone(),
                     cons.clone(),
                     cons,
-                    BlobDelay::dummy(),
+                    BlobDelay::dummy(SQLITE_SHARD_NUM),
                 )),
             },
             "sqlite".into(),

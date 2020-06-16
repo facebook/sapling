@@ -8,6 +8,7 @@
 use std::{
     cmp::min,
     convert::TryInto,
+    num::NonZeroUsize,
     time::{Duration, Instant},
 };
 
@@ -26,7 +27,7 @@ define_stats! {
 
 #[derive(Clone)]
 pub struct BlobDelay {
-    lag_receiver: watch::Receiver<Duration>,
+    lag_receivers: Vec<watch::Receiver<Duration>>,
     entity: Option<String>,
 }
 
@@ -38,25 +39,31 @@ async fn jitter_delay(raw_lag: Duration) {
 }
 
 impl BlobDelay {
-    pub fn dummy() -> Self {
-        let (_, lag_receiver) = watch::channel(Duration::new(0, 0));
+    pub fn dummy(shard_count: NonZeroUsize) -> Self {
+        let lag_receivers = vec![
+            {
+                let (_, ch) = watch::channel(Duration::new(0, 0));
+                ch
+            };
+            shard_count.into()
+        ];
         Self {
-            lag_receiver,
+            lag_receivers,
             entity: None,
         }
     }
 
     #[cfg(fbcode_build)]
-    pub fn from_channel(lag_receiver: watch::Receiver<Duration>, name: String) -> Self {
+    pub fn from_channels(lag_receivers: Vec<watch::Receiver<Duration>>, name: String) -> Self {
         let entity = Some(name);
         Self {
-            lag_receiver,
+            lag_receivers,
             entity,
         }
     }
 
-    pub async fn delay(&self, _shard_id: usize) {
-        let mut lag_receiver = self.lag_receiver.clone();
+    pub async fn delay(&self, shard_id: usize) {
+        let mut lag_receiver = self.lag_receivers[shard_id].clone();
         let start_time = Instant::now();
 
         while let Some(raw_lag) = lag_receiver.recv().await {
