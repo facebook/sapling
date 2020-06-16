@@ -1,0 +1,26 @@
+[package]
+name = "packblob"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobstore = { path = ".." }
+context = { path = "../../server/context" }
+mononoke_types = { path = "../../mononoke_types" }
+packblob-thrift = { path = "if" }
+bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+tokio-compat = "0.1"
+
+[dev-dependencies]
+memblob = { path = "../memblob" }

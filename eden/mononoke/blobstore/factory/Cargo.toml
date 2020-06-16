@@ -19,6 +19,7 @@ metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 multiplexedblob = { path = "../multiplexedblob" }
 newfilenodes = { path = "../../newfilenodes" }
+packblob = { path = "../packblob" }
 prefixblob = { path = "../prefixblob" }
 readonlyblob = { path = "../readonlyblob" }
 scuba_ext = { path = "../../common/scuba_ext" }
