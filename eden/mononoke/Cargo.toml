@@ -24,6 +24,7 @@ members = [
     "blobstore/logblob",
     "blobstore/memblob",
     "blobstore/multiplexedblob",
+    "blobstore/packblob/if",
     "blobstore/prefixblob",
     "blobstore/readonlyblob",
     "blobstore/redactedblobstore",

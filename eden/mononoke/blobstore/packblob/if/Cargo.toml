@@ -1,0 +1,25 @@
+[package]
+name = "packblob-thrift"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["thrift_lib.rs"]
+build = "thrift_build.rs"
+
+[lib]
+path = "thrift_lib.rs"
+
+[build-dependencies]
+thrift_compiler = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+
+[dependencies]
+codegen_includer_proc_macro = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+anyhow = "1.0"
+async-trait = "0.1.29"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+lazy_static = "1.0"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_derive = "1.0"
+thiserror = "1.0"
