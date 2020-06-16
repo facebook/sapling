@@ -50,6 +50,12 @@ class TemporarySystemdUserServiceManagerTest(SystemdTestCaseBase):
                 return False
             if unit_name.endswith(".target"):
                 return False
+            if unit_name in (
+                "systemd-tmpfiles-setup.service",
+                "grub-boot-success.timer",
+                "systemd-tmpfiles-clean.timer",
+            ):
+                return False
             return True
 
         systemd = self.make_temporary_systemd_user_service_manager()
@@ -81,7 +87,7 @@ class TemporarySystemdUserServiceManagerTest(SystemdTestCaseBase):
 
 class TemporarySystemdUserServiceManagerIsolationTest(SystemdTestCaseBase):
     def test_services_with_same_name_by_different_managers_are_independent(
-        self
+        self,
     ) -> None:
         systemd_1 = self.make_temporary_systemd_user_service_manager()
         systemd_2 = self.make_temporary_systemd_user_service_manager()
@@ -337,7 +343,7 @@ def get_process_exe(process_id: ProcessID) -> pathlib.Path:
 
 
 def get_process_exe_or_error(
-    process_id: ProcessID
+    process_id: ProcessID,
 ) -> typing.Union[pathlib.Path, OSError]:
     try:
         return get_process_exe(process_id)
@@ -346,7 +352,7 @@ def get_process_exe_or_error(
 
 
 def get_resolved_process_exe_or_error(
-    process_id: ProcessID
+    process_id: ProcessID,
 ) -> typing.Union[pathlib.Path, OSError]:
     try:
         return get_process_exe(process_id).resolve()
