@@ -199,13 +199,12 @@ pub async fn init_small_large_repo(
         mark_public: false,
     };
     let move_hg_cs = perform_move(
-        ctx.clone(),
-        megarepo.clone(),
+        &ctx,
+        &megarepo,
         second_bcs_id,
         Arc::new(prefix_mover),
         move_cs_args,
     )
-    .compat()
     .await?;
 
     let maybe_move_bcs_id = megarepo

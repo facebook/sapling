@@ -8,11 +8,10 @@
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use cloned::cloned;
 use context::CoreContext;
-use futures_old::{
-    future::{ok, Future, FutureResult},
-    stream::{iter_ok, Stream},
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future, stream, Stream, StreamExt, TryStreamExt,
 };
 use manifest::ManifestOps;
 use mercurial_types::{
@@ -23,7 +22,6 @@ use mononoke_types::{ChangesetId, ContentId, FileChange, FileType};
 use movers::Mover;
 use slog::info;
 use std::collections::BTreeMap;
-use std::iter::Iterator;
 
 pub mod common;
 use crate::common::{create_and_save_changeset, ChangesetArgs};
@@ -55,116 +53,105 @@ fn get_file_changes(
     res
 }
 
-fn get_move_file_changes(
-    ctx: CoreContext,
-    repo: BlobRepo,
+fn get_move_file_changes<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     hg_cs: HgBlobChangeset,
     parent_cs_id: ChangesetId,
-    path_converter: Mover,
-) -> impl Stream<Item = (MPath, Option<FileChange>), Error = Error> {
+    path_converter: &'a Mover,
+) -> impl Stream<Item = Result<(MPath, Option<FileChange>), Error>> + 'a {
     hg_cs
         .manifestid()
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .filter_map(move |(old_path, (file_type, filenode_id))| {
+        .compat()
+        .try_filter_map(move |(old_path, (file_type, filenode_id))| async move {
             let maybe_new_path = path_converter(&old_path).unwrap();
-            if Some(old_path.clone()) == maybe_new_path {
+            if Some(&old_path) == maybe_new_path.as_ref() {
                 // path does not need to be changed, drop from the stream
-                None
+                Ok(None)
             } else {
                 // path needs to be changed (or deleted), keep in the stream
-                Some((old_path.clone(), maybe_new_path, file_type, filenode_id))
+                Ok(Some((old_path, maybe_new_path, file_type, filenode_id)))
             }
         })
-        .map({
-            cloned!(ctx, repo, parent_cs_id);
+        .map_ok({
             move |(old_path, maybe_new_path, file_type, filenode_id)| {
-                filenode_id
-                    .load(ctx.clone(), repo.blobstore())
-                    .from_err()
-                    .map(move |file_envelope| {
-                        // Note: it is always safe to unwrap here, since
-                        // `HgFileEnvelope::get_size()` always returns `Some()`
-                        // The return type is `Option` to acommodate `HgManifestEnvelope`
-                        // which returns `None`.
-                        let file_size = file_envelope.get_size().unwrap();
-                        iter_ok(get_file_changes(
-                            old_path,
-                            maybe_new_path,
-                            file_type,
-                            file_size,
-                            file_envelope.content_id(),
-                            parent_cs_id,
-                        ))
-                    })
+                async move {
+                    let file_envelope = filenode_id
+                        .load(ctx.clone(), repo.blobstore())
+                        .compat()
+                        .await?;
+
+                    // Note: it is always safe to unwrap here, since
+                    // `HgFileEnvelope::get_size()` always returns `Some()`
+                    // The return type is `Option` to acommodate `HgManifestEnvelope`
+                    // which returns `None`.
+                    let file_size = file_envelope.get_size().unwrap();
+                    let stream = stream::iter(get_file_changes(
+                        old_path,
+                        maybe_new_path,
+                        file_type,
+                        file_size,
+                        file_envelope.content_id(),
+                        parent_cs_id,
+                    ));
+                    Ok(stream.map(Ok))
+                }
             }
         })
-        .buffer_unordered(BUFFER_SIZE)
-        .flatten()
+        .try_buffer_unordered(BUFFER_SIZE)
+        .try_flatten()
 }
 
-pub fn perform_move(
-    ctx: CoreContext,
-    repo: BlobRepo,
+pub async fn perform_move<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     parent_bcs_id: ChangesetId,
     path_converter: Mover,
     resulting_changeset_args: ChangesetArgs,
-) -> impl Future<Item = HgChangesetId, Error = Error> {
-    repo.clone()
+) -> Result<HgChangesetId, Error> {
+    let parent_hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), parent_bcs_id)
-        .and_then({
-            cloned!(repo, parent_bcs_id);
-            move |parent_hg_cs_id| {
-                parent_hg_cs_id
-                    .load(ctx.clone(), repo.blobstore())
-                    .from_err()
-                    .and_then({
-                        cloned!(ctx, parent_bcs_id, repo);
-                        move |parent_hg_cs| {
-                            get_move_file_changes(
-                                ctx.clone(),
-                                repo.clone(),
-                                parent_hg_cs,
-                                parent_bcs_id.clone(),
-                                path_converter,
-                            )
-                            .fold(vec![], {
-                                cloned!(ctx);
-                                move |mut collected, item| {
-                                    collected.push(item);
-                                    if collected.len() % REPORTING_INTERVAL_FILES == 0 {
-                                        info!(ctx.logger(), "Processed {} files", collected.len());
-                                    }
-                                    let res: FutureResult<Vec<_>, Error> = ok(collected);
-                                    res
-                                }
-                            })
-                            .and_then({
-                                cloned!(ctx, repo, parent_bcs_id);
-                                move |file_changes: Vec<(MPath, Option<FileChange>)>| {
-                                    let file_changes: BTreeMap<_, _> =
-                                        file_changes.into_iter().collect();
-                                    create_and_save_changeset(
-                                        ctx,
-                                        repo,
-                                        vec![parent_bcs_id],
-                                        file_changes,
-                                        resulting_changeset_args,
-                                    )
-                                }
-                            })
-                        }
-                    })
-            }
-        })
+        .compat()
+        .await?;
+
+    let parent_hg_cs = parent_hg_cs_id
+        .load(ctx.clone(), repo.blobstore())
+        .compat()
+        .await?;
+
+    let file_changes =
+        get_move_file_changes(&ctx, &repo, parent_hg_cs, parent_bcs_id, &path_converter)
+            .try_fold(BTreeMap::new(), {
+                move |mut collected, (path, file_change)| {
+                    collected.insert(path, file_change);
+                    if collected.len() % REPORTING_INTERVAL_FILES == 0 {
+                        info!(ctx.logger(), "Processed {} files", collected.len());
+                    }
+                    future::ready(Ok(collected))
+                }
+            })
+            .await?;
+
+    create_and_save_changeset(
+        &ctx,
+        &repo,
+        vec![parent_bcs_id],
+        file_changes,
+        resulting_changeset_args,
+    )
+    .await
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use anyhow::Result;
+    use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::many_files_dirs;
     use futures::compat::Future01CompatExt;
+    use futures_old::{stream::Stream, Future};
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime};
@@ -255,13 +242,12 @@ mod test {
         async_unit::tokio_unit_test(async move {
             let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
             let newcs = perform_move(
-                ctx.clone(),
-                repo.clone(),
+                &ctx,
+                &repo,
                 bcs_id,
                 Arc::new(identity_mover),
                 changeset_args,
             )
-            .compat()
             .await
             .unwrap();
             let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
@@ -285,16 +271,9 @@ mod test {
     fn test_drop_file(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
-            let newcs = perform_move(
-                ctx.clone(),
-                repo.clone(),
-                bcs_id,
-                Arc::new(skip_one),
-                changeset_args,
-            )
-            .compat()
-            .await
-            .unwrap();
+            let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(skip_one), changeset_args)
+                .await
+                .unwrap();
             let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
 
             let BonsaiChangesetMut {
@@ -321,16 +300,9 @@ mod test {
     fn test_shift_path_by_one(fb: FacebookInit) {
         async_unit::tokio_unit_test(async move {
             let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
-            let newcs = perform_move(
-                ctx.clone(),
-                repo.clone(),
-                bcs_id,
-                Arc::new(shift_one),
-                changeset_args,
-            )
-            .compat()
-            .await
-            .unwrap();
+            let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(shift_one), changeset_args)
+                .await
+                .unwrap();
             let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
 
             let BonsaiChangesetMut {
@@ -390,13 +362,12 @@ mod test {
         async_unit::tokio_unit_test(async move {
             let (ctx, repo, old_hg_cs_id, old_bcs_id, changeset_args) = prepare(fb).await;
             let new_hg_cs_id = perform_move(
-                ctx.clone(),
-                repo.clone(),
+                &ctx,
+                &repo,
                 old_bcs_id,
                 Arc::new(shift_one_skip_another),
                 changeset_args,
             )
-            .compat()
             .await
             .unwrap();
             let mut old_wc =
