@@ -12,6 +12,7 @@ use ascii::AsciiString;
 use blobstore::{BlobstoreGetData, BlobstoreMetadata};
 use mononoke_types::{hash::Context as HashContext, repo::REPO_PREFIX_REGEX, BlobstoreBytes};
 use packblob_thrift::{PackedEntry, PackedFormat, PackedValue, SingleValue};
+use std::io::Cursor;
 
 pub fn decode_independent(
     meta: BlobstoreMetadata,
@@ -19,8 +20,9 @@ pub fn decode_independent(
 ) -> Result<BlobstoreGetData, Error> {
     match v {
         SingleValue::Raw(v) => Ok(BlobstoreGetData::new(meta, BlobstoreBytes::from_bytes(v))),
-        // TODO, handle Zstd case
-        e => Err(format_err!("Unexpected SingleValue {:?}", e)),
+        SingleValue::Zstd(v) => Ok(zstd::decode_all(Cursor::new(v))
+            .map(|v| BlobstoreGetData::new(meta, BlobstoreBytes::from_bytes(v)))?),
+        SingleValue::UnknownField(e) => Err(format_err!("SingleValue::UnknownField {:?}", e)),
     }
 }
 
@@ -36,8 +38,7 @@ pub fn decode_pack(
         None => key,
     };
 
-    let entries = packed.entries;
-    for entry in entries {
+    for entry in packed.entries {
         if entry.key == key {
             match entry.data {
                 PackedValue::Single(v) => return decode_independent(pack_meta, v),
@@ -91,8 +92,26 @@ pub fn create_packed(entries: Vec<PackedEntry>) -> Result<PackedFormat, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bytes::Bytes;
     use rand::{Rng, SeedableRng};
     use rand_xorshift::XorShiftRng;
+
+    #[test]
+    fn decode_independent_zstd_test() -> Result<(), Error> {
+        // Highly compressable!
+        let bytes_in = vec![7u8; 65535];
+
+        // Prepare a compressed blob
+        let input = Cursor::new(bytes_in.clone());
+        let bytes = zstd::encode_all(input, 0 /* default */)?;
+        assert!(bytes.len() < bytes_in.len());
+
+        // Test the decoder
+        let decoded = decode_independent(BlobstoreMetadata::new(None), SingleValue::Zstd(bytes))?;
+        assert_eq!(decoded.as_bytes().as_bytes(), &Bytes::from(bytes_in));
+
+        Ok(())
+    }
 
     #[test]
     fn pack_test() -> Result<(), Error> {
