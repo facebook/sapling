@@ -6,6 +6,7 @@
  */
 
 mod envelope;
+mod pack;
 mod store;
 
 pub use store::PackBlob;
