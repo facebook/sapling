@@ -21,7 +21,7 @@ use metaconfig_types::{
     ShardableRemoteDatabaseConfig,
 };
 use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
-use packblob::PackBlob;
+use packblob::{PackBlob, PackOptions};
 use readonlyblob::ReadOnlyBlobstore;
 use scuba::ScubaSampleBuilder;
 use slog::Logger;
@@ -39,6 +39,7 @@ pub struct BlobstoreOptions {
     pub chaos_options: ChaosOptions,
     pub throttle_options: ThrottleOptions,
     pub manifold_api_key: Option<String>,
+    pub pack_options: PackOptions,
 }
 
 impl BlobstoreOptions {
@@ -46,11 +47,13 @@ impl BlobstoreOptions {
         chaos_options: ChaosOptions,
         throttle_options: ThrottleOptions,
         manifold_api_key: Option<String>,
+        pack_options: PackOptions,
     ) -> Self {
         Self {
             chaos_options,
             throttle_options,
             manifold_api_key,
+            pack_options,
         }
     }
 }
@@ -61,6 +64,7 @@ impl Default for BlobstoreOptions {
             ChaosOptions::new(None, None),
             ThrottleOptions::new(None, None),
             None,
+            PackOptions::default(),
         )
     }
 }
@@ -268,7 +272,8 @@ pub fn make_blobstore<'a>(
                 )
                 .await?;
 
-                Arc::new(PackBlob::new(store)) as Arc<dyn Blobstore>
+                Arc::new(PackBlob::new(store, blobstore_options.pack_options.clone()))
+                    as Arc<dyn Blobstore>
             }
         };
 

@@ -10,26 +10,52 @@ use crate::pack;
 
 use anyhow::{format_err, Context, Error};
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreWithLink};
+use bytes::Bytes;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
     stream::{FuturesUnordered, TryStreamExt},
     FutureExt, TryFutureExt,
 };
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as Future01Ext};
+use futures_ext::{try_boxfuture, BoxFuture as BoxFuture01, FutureExt as Future01Ext};
 use mononoke_types::BlobstoreBytes;
 use packblob_thrift::{PackedEntry, SingleValue, StorageEnvelope, StorageFormat};
-use std::convert::TryInto;
+use std::{convert::TryInto, io::Cursor};
+
+#[derive(Clone, Debug, Default)]
+pub struct PackOptions {
+    // If Some, this is used as zstd compression level on put.
+    // Some(0) means use zstd default level.
+    put_compress_level: Option<i32>,
+}
+
+impl PackOptions {
+    pub fn new(put_compress_level: Option<i32>) -> Self {
+        Self { put_compress_level }
+    }
+}
 
 /// A layer over an existing blobstore that uses thrift blob wrappers to allow packing and compression
 #[derive(Clone, Debug)]
 pub struct PackBlob<T: Blobstore + Clone> {
     inner: T,
+    options: PackOptions,
 }
 
 impl<T: Blobstore + Clone> PackBlob<T> {
-    pub fn new(inner: T) -> Self {
-        Self { inner }
+    pub fn new(inner: T, options: PackOptions) -> Self {
+        Self { inner, options }
+    }
+}
+
+// If compressed version is smaller, use it, otherwise return raw
+fn compress_if_worthwhile(value: Bytes, zstd_level: i32) -> Result<SingleValue, Error> {
+    let cursor = Cursor::new(value.clone());
+    let compressed = zstd::encode_all(cursor, zstd_level)?;
+    if compressed.len() < value.len() {
+        Ok(SingleValue::Zstd(compressed))
+    } else {
+        Ok(SingleValue::Raw(value.to_vec()))
     }
 }
 
@@ -80,9 +106,18 @@ impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
         value: BlobstoreBytes,
     ) -> BoxFuture01<(), Error> {
         key.push_str(ENVELOPE_SUFFIX);
+
+        let value = value.into_bytes();
+
+        let single = if let Some(zstd_level) = self.options.put_compress_level {
+            try_boxfuture!(compress_if_worthwhile(value, zstd_level))
+        } else {
+            SingleValue::Raw(value.to_vec())
+        };
+
         // Wrap in thrift encoding
         let envelope: PackEnvelope = PackEnvelope(StorageEnvelope {
-            storage: StorageFormat::Single(SingleValue::Raw(value.into_bytes().to_vec())),
+            storage: StorageFormat::Single(single),
         });
         // pass through the put after wrapping
         self.inner.put(ctx, key, envelope.into())
@@ -145,19 +180,70 @@ mod tests {
     use fbinit::FacebookInit;
     use memblob::EagerMemblob;
     use packblob_thrift::{PackedEntry, PackedValue, SingleValue};
+    use rand::{RngCore, SeedableRng};
+    use rand_xorshift::XorShiftRng;
     use std::sync::Arc;
 
     #[fbinit::compat_test]
     async fn simple_roundtrip_test(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let inner_blobstore = Arc::new(EagerMemblob::new());
+        let packblob = PackBlob::new(inner_blobstore.clone(), PackOptions::default());
 
         let outer_key = "repo0000.randomkey".to_string();
-
-        let packblob = PackBlob::new(inner_blobstore.clone());
-
         let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldata"));
+        let _ = roundtrip(ctx, inner_blobstore.clone(), &packblob, outer_key, value).await?;
+        Ok(())
+    }
 
+    #[fbinit::compat_test]
+    async fn compressible_roundtrip_test(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let innerblob = Arc::new(EagerMemblob::new());
+        let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
+
+        let bytes_in = Bytes::from(vec![7u8; 65535]);
+        let value = BlobstoreBytes::from_bytes(bytes_in.clone());
+
+        let outer_key = "repo0000.compressible".to_string();
+        let inner_key =
+            roundtrip(ctx.clone(), innerblob.clone(), &packblob, outer_key, value).await?;
+
+        // check inner value is smaller
+        let inner_value = innerblob.get(ctx.clone(), inner_key).compat().await?;
+        assert!(inner_value.unwrap().into_bytes().len() < bytes_in.len());
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn incompressible_roundtrip_test(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let innerblob = Arc::new(EagerMemblob::new());
+        let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
+
+        let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
+        let mut bytes_in = vec![7u8; 65535];
+        rng.fill_bytes(&mut bytes_in);
+        let bytes_in = Bytes::from(bytes_in);
+
+        let outer_key = "repo0000.incompressible".to_string();
+        let value = BlobstoreBytes::from_bytes(bytes_in.clone());
+        let inner_key =
+            roundtrip(ctx.clone(), innerblob.clone(), &packblob, outer_key, value).await?;
+
+        // check inner value is larger (due to being raw plus thrift encoding)
+        let inner_value = innerblob.get(ctx.clone(), inner_key).compat().await?;
+        assert!(inner_value.unwrap().into_bytes().len() > bytes_in.len());
+        Ok(())
+    }
+
+    async fn roundtrip(
+        ctx: CoreContext,
+        inner_blobstore: Arc<EagerMemblob>,
+        packblob: &PackBlob<Arc<EagerMemblob>>,
+        outer_key: String,
+        value: BlobstoreBytes,
+    ) -> Result<String, Error> {
         // Put, this will apply the thrift envelope and save to the inner store
         packblob
             .put(ctx.clone(), outer_key.clone(), value.clone())
@@ -187,7 +273,7 @@ mod tests {
 
         // Check is_present matches
         let is_present = inner_blobstore
-            .is_present(ctx.clone(), inner_key)
+            .is_present(ctx.clone(), inner_key.clone())
             .compat()
             .await?;
         assert!(is_present);
@@ -199,7 +285,7 @@ mod tests {
             .await?;
         assert!(is_not_present);
 
-        Ok(())
+        Ok(inner_key)
     }
 
     #[fbinit::compat_test]
@@ -222,7 +308,7 @@ mod tests {
 
         let ctx = CoreContext::test_mock(fb);
         let inner_blobstore = EagerMemblob::new();
-        let packblob = PackBlob::new(inner_blobstore.clone());
+        let packblob = PackBlob::new(inner_blobstore.clone(), PackOptions::default());
 
         // put_packed, this will apply the thrift envelope and save to the inner store
         let inner_key = packblob

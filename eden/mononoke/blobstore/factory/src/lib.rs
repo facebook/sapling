@@ -11,6 +11,7 @@ mod facebook;
 mod sql;
 
 pub use chaosblob::ChaosOptions;
+pub use packblob::PackOptions;
 pub use throttledblob::ThrottleOptions;
 
 pub use crate::blobstore::{make_blobstore, make_blobstore_multiplexed, BlobstoreOptions};

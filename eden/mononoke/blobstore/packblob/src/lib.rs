@@ -9,4 +9,4 @@ mod envelope;
 mod pack;
 mod store;
 
-pub use store::PackBlob;
+pub use store::{PackBlob, PackOptions};

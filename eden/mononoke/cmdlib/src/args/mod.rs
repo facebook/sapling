@@ -37,7 +37,7 @@ use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
-use blobstore_factory::{BlobstoreOptions, ChaosOptions, Scrubbing, ThrottleOptions};
+use blobstore_factory::{BlobstoreOptions, ChaosOptions, PackOptions, Scrubbing, ThrottleOptions};
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction};
 use mononoke_types::RepositoryId;
@@ -75,6 +75,7 @@ const READ_QPS_ARG: &str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &str = "blobstore-write-qps";
 const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
 const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
+const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd-level";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 
 const CRYPTO_PROJECT: &str = "SCM";
@@ -686,6 +687,13 @@ pub fn add_blobstore_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("Rate of errors on writes. Pass N,  it will error randomly 1/N times. For multiplexed stores will only apply to the first store in the multiplex."),
     )
     .arg(
+        Arg::with_name(WRITE_ZSTD_ARG)
+            .long(WRITE_ZSTD_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Set the zstd compression level to be used on writes via the packed blobstore (if configured).  Default is None."),
+    )
+    .arg(
         Arg::with_name(MANIFOLD_API_KEY_ARG)
             .long(MANIFOLD_API_KEY_ARG)
             .takes_value(true)
@@ -971,10 +979,16 @@ pub fn parse_blobstore_options<'a>(matches: &ArgMatches<'a>) -> BlobstoreOptions
         .value_of(MANIFOLD_API_KEY_ARG)
         .map(|api_key| api_key.to_string());
 
+    let write_zstd_level: Option<i32> = matches.value_of(WRITE_ZSTD_ARG).map(|v| {
+        v.parse()
+            .expect("Provided Zstd compression level is not i32")
+    });
+
     BlobstoreOptions::new(
         ChaosOptions::new(read_chaos, write_chaos),
         ThrottleOptions::new(read_qps, write_qps),
         manifold_api_key,
+        PackOptions::new(write_zstd_level),
     )
 }
 
