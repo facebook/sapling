@@ -46,9 +46,9 @@ pub enum ErrorKind {
     InvalidPath(Vec<u8>),
     #[error("Unexpected empty path")]
     UnexpectedEmptyPath,
-    #[error("Serialization Failed")]
+    #[error("Serialization failed")]
     SerializationFailed,
-    #[error("Deserialization Failed")]
+    #[error("Deserialization failed")]
     DeserializationFailed,
     #[error("Failed to fetch data for key: {0:?}")]
     DataFetchFailed(Key),
