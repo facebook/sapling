@@ -136,6 +136,7 @@ members = [
     "repo_client/streaming_clone",
     "repo_client/unbundle",
     "repo_client/wirepack",
+    "repo_import",
     "revset",
     "revset/revset-test-helper",
     "segmented_changelog",
