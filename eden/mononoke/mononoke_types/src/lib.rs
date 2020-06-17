@@ -43,7 +43,7 @@ pub use file_contents::{ChunkedFileContents, ContentChunkPointer, FileContents};
 pub use generation::{Generation, FIRST_GENERATION};
 pub use path::{check_case_conflicts, MPath, MPathElement, MPathHash, RepoPath};
 pub use rawbundle2::RawBundle2;
-pub use repo::RepositoryId;
+pub use repo::{RepositoryId, REPO_PREFIX_REGEX};
 pub use typed_hash::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, ContentChunkId, ContentId,
     ContentMetadataId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, ManifestUnodeId,

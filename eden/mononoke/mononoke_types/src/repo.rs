@@ -7,12 +7,24 @@
 
 use abomonation_derive::Abomonation;
 use anyhow::Error;
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde_derive::Serialize;
 use std::default::Default;
 use std::fmt;
 use std::str::FromStr;
 
 use crate::errors::ErrorKind;
+
+const REPO_ID_PREFIX: &str = "repo";
+const REPO_ID_SUFFIX: &str = ".";
+
+lazy_static! {
+    /// Used to strip of repo prefixes when embedding keys inside blobs
+    pub static ref REPO_PREFIX_REGEX: Regex = Regex::new(
+        format!(r"^{}\d{{3}}\d+\{}", REPO_ID_PREFIX, REPO_ID_SUFFIX
+    ).as_str()).unwrap();
+}
 
 /// Represents a repository. This ID is used throughout storage.
 #[derive(
@@ -46,7 +58,7 @@ impl RepositoryId {
     #[inline]
     pub fn prefix(&self) -> String {
         // Generate repo0001, repo0002, etc.
-        format!("repo{:04}.", self.0)
+        format!("{}{:04}{}", REPO_ID_PREFIX, self.0, REPO_ID_SUFFIX)
     }
 }
 
@@ -77,12 +89,40 @@ mod test {
     use super::*;
 
     #[test]
-    fn prefix() {
+    fn prefix_generation() {
         assert_eq!(RepositoryId::new(0).prefix().as_str(), "repo0000.");
         assert_eq!(RepositoryId::new(1).prefix().as_str(), "repo0001.");
         assert_eq!(RepositoryId::new(99).prefix().as_str(), "repo0099.");
         assert_eq!(RepositoryId::new(456).prefix().as_str(), "repo0456.");
         assert_eq!(RepositoryId::new(9999).prefix().as_str(), "repo9999.");
         assert_eq!(RepositoryId::new(12000).prefix().as_str(), "repo12000.");
+    }
+
+    #[test]
+    fn prefix_match() {
+        // Check generated prefixes match the expected form
+        assert!(REPO_PREFIX_REGEX.is_match(RepositoryId::new(0).prefix().as_str()));
+        assert!(REPO_PREFIX_REGEX.is_match(RepositoryId::new(1).prefix().as_str()));
+        assert!(REPO_PREFIX_REGEX.is_match(RepositoryId::new(99).prefix().as_str()));
+        assert!(REPO_PREFIX_REGEX.is_match(RepositoryId::new(456).prefix().as_str()));
+        assert!(REPO_PREFIX_REGEX.is_match(RepositoryId::new(9999).prefix().as_str()));
+        assert!(REPO_PREFIX_REGEX.is_match(RepositoryId::new(12000).prefix().as_str()));
+    }
+
+    #[test]
+    fn prefix_not_match() {
+        // Check we dont match unexpected forms
+        assert!(!REPO_PREFIX_REGEX.is_match(""));
+        assert!(!REPO_PREFIX_REGEX.is_match("."));
+        assert!(!REPO_PREFIX_REGEX.is_match(".repo0000."));
+        assert!(!REPO_PREFIX_REGEX.is_match("repo0000"));
+        assert!(!REPO_PREFIX_REGEX.is_match("repo(0000)"));
+        assert!(!REPO_PREFIX_REGEX.is_match("repo0000a"));
+        assert!(!REPO_PREFIX_REGEX.is_match("repo00a0."));
+        assert!(!REPO_PREFIX_REGEX.is_match("flat/repo0000."));
+        assert!(!REPO_PREFIX_REGEX.is_match("repo."));
+        assert!(!REPO_PREFIX_REGEX.is_match("repo0."));
+        assert!(!REPO_PREFIX_REGEX.is_match("repo00."));
+        assert!(!REPO_PREFIX_REGEX.is_match("repo000."));
     }
 }

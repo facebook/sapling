@@ -59,7 +59,6 @@ impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
             let get_data = match envelope.0.storage {
                 StorageFormat::Single(single) => pack::decode_independent(meta, single)
                     .with_context(|| format!("While decoding independent {:?}", key))?,
-                // TODO, need to do prefix-removal as pack entries should not contain repoXXX. prefix
                 StorageFormat::Packed(packed) => pack::decode_pack(meta, packed, key.clone())
                     .with_context(|| format!("While decoding pack for {:?}", key))?,
                 StorageFormat::UnknownField(e) => {
@@ -98,7 +97,7 @@ impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
 impl<T: Blobstore + BlobstoreWithLink + Clone> PackBlob<T> {
     // Put packed content, returning the pack's key if successful.
     // `prefix` is in the control of the packer, e.g. if packing only
-    // filecontent together packer can chose "repoXXX.pack_file_content."
+    // filecontent together packer can chose "repoXXXX.packed.file_content."
     //
     // On ref counted stores the packer will need to call unlink on the returned key
     // if its desirable for old packs to be removed.
@@ -110,10 +109,11 @@ impl<T: Blobstore + BlobstoreWithLink + Clone> PackBlob<T> {
     ) -> Result<String, Error> {
         let link_keys: Vec<String> = entries.iter().map(|entry| entry.key.clone()).collect();
 
-        let pack = pack::create_packed(entries, prefix)
+        let pack = pack::create_packed(entries)
             .with_context(|| format!("While packing entries for {:?}", link_keys.clone()))?;
 
-        let pack_key = pack.key.clone();
+        let mut pack_key = prefix;
+        pack_key.push_str(&pack.key);
 
         // Wrap in thrift encoding
         let pack = PackEnvelope(StorageEnvelope {

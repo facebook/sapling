@@ -10,7 +10,7 @@ use crate::store;
 use anyhow::{format_err, Error};
 use ascii::AsciiString;
 use blobstore::{BlobstoreGetData, BlobstoreMetadata};
-use mononoke_types::{hash::Context as HashContext, BlobstoreBytes};
+use mononoke_types::{hash::Context as HashContext, repo::REPO_PREFIX_REGEX, BlobstoreBytes};
 use packblob_thrift::{PackedEntry, PackedFormat, PackedValue, SingleValue};
 
 pub fn decode_independent(
@@ -30,6 +30,12 @@ pub fn decode_pack(
     packed: PackedFormat,
     key: String,
 ) -> Result<BlobstoreGetData, Error> {
+    // Strip repo prefix, if any
+    let key = match REPO_PREFIX_REGEX.find(&key) {
+        Some(m) => String::from_utf8(key[m.end()..].as_bytes().to_vec())?,
+        None => key,
+    };
+
     let entries = packed.entries;
     for entry in entries {
         if entry.key == key {
@@ -59,10 +65,21 @@ fn compute_pack_hash(entries: &[PackedEntry]) -> AsciiString {
 
 // Didn't call this encode, as the packer producing the entries is the real
 // encoder.
-pub fn create_packed(entries: Vec<PackedEntry>, prefix: String) -> Result<PackedFormat, Error> {
+pub fn create_packed(entries: Vec<PackedEntry>) -> Result<PackedFormat, Error> {
+    // make sure we don't embedded repo prefixes inside a blob
+    let entries: Vec<PackedEntry> = entries
+        .into_iter()
+        .map(|entry| match REPO_PREFIX_REGEX.find(&entry.key) {
+            Some(m) => Ok(PackedEntry {
+                key: String::from_utf8(entry.key[m.end()..].as_bytes().to_vec())?,
+                data: entry.data,
+            }),
+            None => Ok(entry),
+        })
+        .collect::<Result<Vec<PackedEntry>, Error>>()?;
+
     // Build the pack identity
-    let mut pack_key = prefix;
-    pack_key.push_str(compute_pack_hash(&entries).as_str());
+    let mut pack_key = compute_pack_hash(&entries).to_string();
     pack_key.push_str(store::ENVELOPE_SUFFIX);
 
     Ok(PackedFormat {
@@ -93,11 +110,11 @@ mod tests {
             })
             .collect();
 
-        let packed = create_packed(entries, "test.".to_string())?;
+        let packed = create_packed(entries)?;
 
         // Check for any change of hashing approach
         assert_eq!(
-            "test.f551ebbe66cfb504befd393604c53af5270b98d50fd7b1bf2d2aa3814c80e325.pack",
+            "f551ebbe66cfb504befd393604c53af5270b98d50fd7b1bf2d2aa3814c80e325.pack",
             packed.key
         );
 
