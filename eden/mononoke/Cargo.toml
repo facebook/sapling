@@ -1,3 +1,132 @@
+[package]
+name = "eden_mononoke"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
+
+[[bin]]
+name = "aliasverify"
+path = "cmds/aliasverify.rs"
+
+[[bin]]
+name = "backfill_derived_data"
+path = "cmds/backfill_derived_data/main.rs"
+
+[[bin]]
+name = "backfill_git_mapping"
+path = "cmds/backfill_git_mapping.rs"
+
+[[bin]]
+name = "benchmark_storage_config"
+path = "cmds/benchmark_storage_config/main.rs"
+
+[[bin]]
+name = "bonsai_verify"
+path = "cmds/bonsai_verify/main.rs"
+
+[[bin]]
+name = "configlint"
+path = "cmds/configlint.rs"
+
+[[bin]]
+name = "dumprev"
+path = "cmds/dumprev.rs"
+
+[[bin]]
+name = "idxdump"
+path = "cmds/idxdump.rs"
+
+[[bin]]
+name = "lfs_import"
+path = "cmds/lfs_import.rs"
+
+[[bin]]
+name = "rechunker"
+path = "cmds/rechunker.rs"
+
+[[bin]]
+name = "revlogrepo"
+path = "cmds/revlogrepo.rs"
+
+[[bin]]
+name = "statistics_collector"
+path = "cmds/statistics_collector.rs"
+
+[[bin]]
+name = "upload_globalrevs"
+path = "cmds/upload_globalrevs.rs"
+
+[dependencies]
+blame = { path = "derived_data/blame" }
+blobrepo = { path = "blobrepo" }
+blobrepo_factory = { path = "blobrepo/factory" }
+blobrepo_utils = { path = "blobrepo_utils" }
+blobstore = { path = "blobstore" }
+blobstore_factory = { path = "blobstore/factory" }
+bonsai_globalrev_mapping = { path = "bonsai_globalrev_mapping" }
+bookmarks = { path = "bookmarks" }
+bulkops = { path = "bulkops" }
+cacheblob = { path = "blobstore/cacheblob" }
+changesets = { path = "changesets" }
+cmdlib = { path = "cmdlib" }
+context = { path = "server/context" }
+dbbookmarks = { path = "bookmarks/dbbookmarks" }
+deleted_files_manifest = { path = "derived_data/deleted_files_manifest" }
+derived_data = { path = "derived_data" }
+derived_data_utils = { path = "derived_data/utils" }
+fastlog = { path = "derived_data/fastlog" }
+filestore = { path = "filestore" }
+fsnodes = { path = "derived_data/fsnodes" }
+lfs_import_lib = { path = "lfs_import_lib" }
+manifest = { path = "manifest" }
+mercurial_derived_data = { path = "derived_data/mercurial_derived_data" }
+mercurial_revlog = { path = "mercurial/revlog" }
+mercurial_types = { path = "mercurial/types" }
+metaconfig_types = { path = "metaconfig/types" }
+mononoke_types = { path = "mononoke_types" }
+phases = { path = "phases" }
+revset = { path = "revset" }
+scuba_ext = { path = "common/scuba_ext" }
+unodes = { path = "derived_data/unodes" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+ascii = "1.0"
+async-trait = "0.1.29"
+bytes = { version = "0.5", features = ["serde"] }
+clap = "2.33"
+criterion = "0.3"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+itertools = "0.8"
+maplit = "1.0"
+rand = { version = "0.7", features = ["small_rng"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_derive = "1.0"
+sha2 = "0.8"
+slog = { version = "2.5", features = ["max_level_debug"] }
+tokio = { version = "=0.2.13", features = ["full"] }
+tokio-compat = "0.1"
+tokio-old = { package = "tokio", version = "0.1" }
+tokio-timer = "0.2"
+toml = "=0.5.6"
+
+[dev-dependencies]
+fixtures = { path = "tests/fixtures" }
+tests_utils = { path = "tests/utils" }
+bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
+
 [workspace]
 
 members = [
@@ -155,3 +284,19 @@ members = [
     "unbundle_replay",
     "walker",
 ]
+
+[patch.crates-io]
+chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace2ca3cdbc2095adb1af111d211e254e2aae" }
+const-random = { git = "https://github.com/fbsource/const-random", rev = "374c5b46427fe2ffbf6acbd9c1687e0f1a809f95" }
+gotham = { git = "https://github.com/krallin/gotham.git", branch = "socket_data" }
+gotham_derive = { git = "https://github.com/krallin/gotham.git", branch = "socket_data" }
+prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-build = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+protobuf-build = { git = "https://github.com/tikv/protobuf-build.git", rev = "1b8b7f8b4aa1be4647acd85bab9345583a5df4f1" }
+pyo3 = { git = "https://github.com/PyO3/pyo3.git", rev = "4af61e83c34a04d74679a1048ee3866831a327ab" }
+r2d2_sqlite = { git = "https://github.com/jsgf/r2d2-sqlite.git", rev = "6d77a828ca0a3c507a3f58561532a1b6c66c7918" }
+rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
+tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
+toml = { git = "https://github.com/jsgf/toml-rs", branch = "master" }
