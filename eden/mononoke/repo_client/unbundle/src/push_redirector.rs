@@ -23,26 +23,91 @@ use crate::{
 use anyhow::{format_err, Error};
 use backsyncer::backsync_all_latest;
 use backsyncer::TargetRepoDbs;
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
+use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::{CommitSyncOutcome, CommitSyncer};
 use futures::compat::Future01CompatExt;
 use futures::future::try_join_all;
 use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
-use futures_old::Future;
-use futures_util::future::{FutureExt, TryFutureExt};
 use futures_util::try_join;
 use metaconfig_types::CommitSyncConfig;
 use mononoke_repo::MononokeRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use pushrebase::{OntoBookmarkParams, PushrebaseChangesetPair};
+use slog::debug;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use topo_sort::sort_topological;
 
 pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
+
+/// An auxillary struct, which contains nearly
+/// everything needed to create a full `PushRedirector`
+/// This is intended to be used to create a new
+/// `PushRedirector` at the start of every `unbundle`
+/// request.
+#[derive(Clone)]
+pub struct PushRedirectorArgs {
+    commit_sync_config: CommitSyncConfig,
+    target_repo: MononokeRepo,
+    source_blobrepo: BlobRepo,
+    synced_commit_mapping: SqlSyncedCommitMapping,
+    target_repo_dbs: TargetRepoDbs,
+}
+
+impl PushRedirectorArgs {
+    pub fn new(
+        commit_sync_config: CommitSyncConfig,
+        target_repo: MononokeRepo,
+        source_blobrepo: BlobRepo,
+        synced_commit_mapping: SqlSyncedCommitMapping,
+        target_repo_dbs: TargetRepoDbs,
+    ) -> Self {
+        Self {
+            commit_sync_config,
+            target_repo,
+            source_blobrepo,
+            synced_commit_mapping,
+            target_repo_dbs,
+        }
+    }
+
+    /// Create `PushRedirector` for a given source repo
+    pub fn into_push_redirector(self, ctx: &CoreContext) -> Result<PushRedirector, Error> {
+        // TODO: This function needs to be extended
+        //       and query configerator for the fresh
+        //       value of `commit_sync_config`
+        let PushRedirectorArgs {
+            commit_sync_config,
+            target_repo,
+            source_blobrepo,
+            synced_commit_mapping,
+            target_repo_dbs,
+        } = self;
+
+        let small_repo = source_blobrepo;
+        let large_repo = target_repo.blobrepo().clone();
+        let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
+        let syncers =
+            create_commit_syncers(small_repo, large_repo, &commit_sync_config, mapping.clone())?;
+
+        let small_to_large_commit_syncer = syncers.small_to_large;
+        let large_to_small_commit_syncer = syncers.large_to_small;
+
+        debug!(ctx.logger(), "Instantiating a new PushRedirector");
+        Ok(PushRedirector {
+            repo: target_repo,
+            small_to_large_commit_syncer,
+            large_to_small_commit_syncer,
+            target_repo_dbs,
+            commit_sync_config,
+        })
+    }
+}
 
 #[derive(Clone)]
 /// Core push redirector struct. Performs conversions of pushes
@@ -62,23 +127,6 @@ pub struct PushRedirector {
 }
 
 impl PushRedirector {
-    /// To the external observer, this fn is just like `run_post_resolve_action`
-    /// in that it will result in the repo having the action processed.
-    /// Under the hood it will:
-    /// - convert small repo `PostResolveAction` into a large repo `PostResolveAction`
-    /// - run the result of this conversion against the large repo
-    /// - trigger a commit backsyncing into the small repo
-    /// - convert the `UnbundleResponse` struct to be a small-repo one
-    pub fn run_redirected_post_resolve_action_compat(
-        self,
-        ctx: CoreContext,
-        action: PostResolveAction,
-    ) -> impl Future<Item = UnbundleResponse, Error = BundleResolverError> {
-        async move { self.run_redirected_post_resolve_action(ctx, action).await }
-            .boxed()
-            .compat()
-    }
-
     /// To the external observer, this fn is just like `run_post_resolve_action`
     /// in that it will result in the repo having the action processed.
     /// Under the hood it will:

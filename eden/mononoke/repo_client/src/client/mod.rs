@@ -7,7 +7,7 @@
 
 use crate::errors::ErrorKind;
 
-use unbundle::{run_hooks, run_post_resolve_action, PushRedirector};
+use unbundle::{run_hooks, run_post_resolve_action, PushRedirector, PushRedirectorArgs};
 
 use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
@@ -53,7 +53,6 @@ use mercurial_types::{
 };
 use metaconfig_types::RepoReadOnly;
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
-use mononoke_types::RepositoryId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
 use rand::{self, Rng};
 use remotefilelog::{
@@ -355,7 +354,7 @@ pub struct RepoClient {
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
     cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
     wireproto_logging: Arc<WireprotoLogging>,
-    maybe_push_redirector: Option<PushRedirector>,
+    maybe_push_redirector_args: Option<PushRedirectorArgs>,
     pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
     force_lfs: Arc<AtomicBool>,
 }
@@ -414,7 +413,7 @@ impl RepoClient {
         preserve_raw_bundle2: bool,
         pure_push_allowed: bool,
         wireproto_logging: Arc<WireprotoLogging>,
-        maybe_push_redirector: Option<PushRedirector>,
+        maybe_push_redirector_args: Option<PushRedirectorArgs>,
         pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
     ) -> Self {
         Self {
@@ -426,7 +425,7 @@ impl RepoClient {
             pure_push_allowed,
             cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
             wireproto_logging,
-            maybe_push_redirector,
+            maybe_push_redirector_args,
             pushredirect_config,
             force_lfs: Arc::new(AtomicBool::new(false)),
         }
@@ -851,27 +850,6 @@ impl RepoClient {
         })
     }
 
-    /// Returns Some(push_redirector) if pushredirect should redirect this push
-    /// via the repo sync target, None if this should be a direct push
-    fn maybe_get_push_redirector_for_action(
-        &self,
-        action: &unbundle::PostResolveAction,
-    ) -> Result<Option<PushRedirector>> {
-        // Don't query configerator if we lack config
-        if self.maybe_push_redirector.is_none() {
-            return Ok(None);
-        }
-        if maybe_pushredirect_action(
-            self.repo.blobrepo().get_repoid(),
-            self.pushredirect_config.as_ref(),
-            action,
-        )? {
-            Ok(self.maybe_push_redirector.clone())
-        } else {
-            Ok(None)
-        }
-    }
-
     fn lfs_params(&self) -> SessionLfsParams {
         if self.force_lfs.load(Ordering::Relaxed) {
             self.repo.force_lfs_if_threshold_set()
@@ -880,26 +858,37 @@ impl RepoClient {
                 .lfs_params(self.session.source_hostname().as_deref())
         }
     }
-}
 
-fn maybe_pushredirect_action(
-    repo_id: RepositoryId,
-    pushredirect_config: Option<&ConfigHandle<MononokePushRedirectEnable>>,
-    action: &unbundle::PostResolveAction,
-) -> Result<bool> {
-    let maybe_config = pushredirect_config.map(|config| config.get());
+    fn maybe_get_pushredirector_for_action(
+        &self,
+        ctx: &CoreContext,
+        action: &unbundle::PostResolveAction,
+    ) -> Result<Option<PushRedirector>> {
+        let push_redirector_args = match self.maybe_push_redirector_args.clone() {
+            Some(push_redirector_args) => push_redirector_args,
+            None => return Ok(None),
+        };
 
-    let enabled = maybe_config.and_then(move |config| {
-        config.per_repo.get(&(repo_id.id() as i64)).map(|enables| {
-            use unbundle::PostResolveAction::*;
+        let repo_id = self.repo.blobrepo().get_repoid();
+        let pushredirect_config = self.pushredirect_config.as_ref();
+        let maybe_config = pushredirect_config.map(|config| config.get());
 
-            match action {
-                InfinitePush(_) => enables.draft_push,
-                Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => enables.public_push,
-            }
-        })
-    });
-    Ok(enabled.unwrap_or(false))
+        let enabled = maybe_config.and_then(move |config| {
+            config.per_repo.get(&(repo_id.id() as i64)).map(|enables| {
+                use unbundle::PostResolveAction::*;
+
+                match action {
+                    InfinitePush(_) => enables.draft_push,
+                    Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => enables.public_push,
+                }
+            })
+        });
+
+        match enabled {
+            None | Some(false) => Ok(None),
+            Some(true) => Ok(Some(push_redirector_args.into_push_redirector(ctx)?)),
+        }
+    }
 }
 
 fn throttle_stream<F, S, V>(
@@ -1542,44 +1531,48 @@ impl HgCommands for RepoClient {
                     })
                     .and_then({
                         cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint);
-                        move |action| match try_boxfuture!(
-                            client.maybe_get_push_redirector_for_action(&action)
-                        ) {
-                            Some(push_redirector) => {
-                                let ctx = ctx.with_mutated_scuba(|mut sample| {
-                                    sample.add(
-                                        "target_repo_name",
-                                        push_redirector.repo.reponame().as_ref(),
-                                    );
-                                    sample
-                                        .add("target_repo_id", push_redirector.repo.repoid().id());
-                                    sample
-                                });
-                                ctx.scuba()
-                                    .clone()
-                                    .log_with_msg("Push redirected to large repo", None);
-                                push_redirector
-                                    .run_redirected_post_resolve_action_compat(ctx, action)
-                                    .boxify()
-                            }
-                            None => async move {
-                                let maybe_reverse_filler_queue =
-                                    client.repo.maybe_reverse_filler_queue();
-                                run_post_resolve_action(
-                                    &ctx,
-                                    &blobrepo,
-                                    &bookmark_attrs,
-                                    &*lca_hint,
-                                    &infinitepush_params,
-                                    &pushrebase_params,
-                                    maybe_reverse_filler_queue,
-                                    action,
-                                )
-                                .await
+                        move |action| {
+                            async move {
+                                match client.maybe_get_pushredirector_for_action(&ctx, &action)? {
+                                    Some(push_redirector) => {
+                                        let ctx = ctx.with_mutated_scuba(|mut sample| {
+                                            sample.add(
+                                                "target_repo_name",
+                                                push_redirector.repo.reponame().as_ref(),
+                                            );
+                                            sample.add(
+                                                "target_repo_id",
+                                                push_redirector.repo.repoid().id(),
+                                            );
+                                            sample
+                                        });
+                                        ctx.scuba()
+                                            .clone()
+                                            .log_with_msg("Push redirected to large repo", None);
+                                        push_redirector
+                                            .run_redirected_post_resolve_action(ctx, action)
+                                            .await
+                                    }
+                                    None => {
+                                        let maybe_reverse_filler_queue =
+                                            client.repo.maybe_reverse_filler_queue();
+                                        run_post_resolve_action(
+                                            &ctx,
+                                            &blobrepo,
+                                            &bookmark_attrs,
+                                            &*lca_hint,
+                                            &infinitepush_params,
+                                            &pushrebase_params,
+                                            maybe_reverse_filler_queue,
+                                            action,
+                                        )
+                                        .await
+                                    }
+                                }
                             }
                             .boxed()
                             .compat()
-                            .boxify(),
+                            .boxify()
                         }
                     })
                     .and_then({

@@ -9,6 +9,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 async_limiter = { path = "../../common/async_limiter" }
 backsyncer = { path = "../../backsyncer" }
+blobrepo = { path = "../../blobrepo" }
 blobrepo_factory = { path = "../../blobrepo/factory" }
 blobstore_factory = { path = "../../blobstore/factory" }
 cache_warmup = { path = "../../cache_warmup" }

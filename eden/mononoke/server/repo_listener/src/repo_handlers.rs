@@ -9,34 +9,31 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use anyhow::{format_err, Context, Error};
+use backsyncer::{open_backsyncer_dbs, TargetRepoDbs};
+use blobrepo::BlobRepo;
+use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobstore_factory::make_blobstore;
+use cache_warmup::cache_warmup;
 use cloned::cloned;
+use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as _, TryFutureExt},
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::{future, Future};
-use slog::{info, o, Logger};
-
-use backsyncer::open_backsyncer_dbs_compat;
-use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
-use blobstore_factory::make_blobstore;
-use cache_warmup::cache_warmup;
-use context::CoreContext;
-use cross_repo_sync::create_commit_syncers;
-use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::blobrepo_text_only_fetcher;
-use metaconfig_types::{
-    CommitSyncConfig, MetadataDatabaseConfig, RepoConfig, WireprotoLoggingConfig,
-};
+use metaconfig_types::{CommitSyncConfig, RepoConfig, WireprotoLoggingConfig};
 use mononoke_types::RepositoryId;
-use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirector, WireprotoLogging};
+use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirectorArgs, WireprotoLogging};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use slog::{info, o, Logger};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
-use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
+use synced_commit_mapping::SqlSyncedCommitMapping;
 
 use crate::errors::ErrorKind;
 
@@ -55,13 +52,51 @@ struct IncompleteRepoHandler {
     hash_validation_percentage: usize,
     preserve_raw_bundle2: bool,
     pure_push_allowed: bool,
+    maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
+}
+
+#[derive(Clone)]
+struct IncompletePushRedirectorArgs {
+    commit_sync_config: CommitSyncConfig,
+    synced_commit_mapping: SqlSyncedCommitMapping,
+    target_repo_dbs: TargetRepoDbs,
+    source_blobrepo: BlobRepo,
+}
+
+impl IncompletePushRedirectorArgs {
+    fn try_into_push_redirector_args(
+        self,
+        repo_lookup_table: &HashMap<RepositoryId, IncompleteRepoHandler>,
+    ) -> Result<PushRedirectorArgs, Error> {
+        let Self {
+            commit_sync_config,
+            synced_commit_mapping,
+            target_repo_dbs,
+            source_blobrepo,
+        } = self;
+
+        let large_repo_id = commit_sync_config.large_repo_id;
+        let target_repo: MononokeRepo = repo_lookup_table
+            .get(&large_repo_id)
+            .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id))?
+            .repo
+            .clone();
+
+        Ok(PushRedirectorArgs::new(
+            commit_sync_config,
+            target_repo,
+            source_blobrepo,
+            synced_commit_mapping,
+            target_repo_dbs,
+        ))
+    }
 }
 
 impl IncompleteRepoHandler {
-    fn into_repo_handler_with_push_redirector(
+    fn try_into_repo_handler(
         self,
-        maybe_push_redirector: Option<PushRedirector>,
-    ) -> RepoHandler {
+        repo_lookup_table: &HashMap<RepositoryId, IncompleteRepoHandler>,
+    ) -> Result<RepoHandler, Error> {
         let IncompleteRepoHandler {
             logger,
             scuba,
@@ -70,8 +105,17 @@ impl IncompleteRepoHandler {
             hash_validation_percentage,
             preserve_raw_bundle2,
             pure_push_allowed,
+            maybe_incomplete_push_redirector_args,
         } = self;
-        RepoHandler {
+
+        let maybe_push_redirector_args = match maybe_incomplete_push_redirector_args {
+            None => None,
+            Some(incomplete_push_redirector_args) => Some(
+                incomplete_push_redirector_args.try_into_push_redirector_args(repo_lookup_table)?,
+            ),
+        };
+
+        Ok(RepoHandler {
             logger,
             scuba,
             wireproto_logging,
@@ -79,19 +123,9 @@ impl IncompleteRepoHandler {
             hash_validation_percentage,
             preserve_raw_bundle2,
             pure_push_allowed,
-            maybe_push_redirector,
-        }
+            maybe_push_redirector_args,
+        })
     }
-}
-
-/// An auxillary struct to pass between closures before
-/// we are capable of creating a full `PushRedirector`
-#[derive(Clone)]
-struct PushRedirectorArgs {
-    commit_sync_config: CommitSyncConfig,
-    synced_commit_mapping: SqlSyncedCommitMapping,
-    db_config: MetadataDatabaseConfig,
-    mysql_options: MysqlOptions,
 }
 
 #[derive(Clone)]
@@ -103,80 +137,7 @@ pub struct RepoHandler {
     pub hash_validation_percentage: usize,
     pub preserve_raw_bundle2: bool,
     pub pure_push_allowed: bool,
-    pub maybe_push_redirector: Option<PushRedirector>,
-}
-
-/// Given a `CommitSyncConfig`, a small repo id, and an
-/// auxillary struct, that holds partially built `RepoHandler`,
-/// build `PushRedirector` for a push rediction from this
-/// small repo into a large repo.
-fn create_push_redirector(
-    ctx: CoreContext,
-    source_repo: &MononokeRepo,
-    target_incomplete_repo_handler: &IncompleteRepoHandler,
-    push_redirector_args: PushRedirectorArgs,
-    readonly_storage: ReadOnlyStorage,
-) -> BoxFuture<PushRedirector, Error> {
-    let PushRedirectorArgs {
-        commit_sync_config,
-        synced_commit_mapping,
-        db_config,
-        mysql_options,
-    } = push_redirector_args;
-
-    let small_repo = source_repo.blobrepo().clone();
-    let large_repo = target_incomplete_repo_handler.repo.blobrepo().clone();
-    let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
-    let syncers = try_boxfuture!(create_commit_syncers(
-        small_repo.clone(),
-        large_repo,
-        &commit_sync_config,
-        mapping.clone()
-    ));
-
-    let small_to_large_commit_syncer = syncers.small_to_large;
-    let large_to_small_commit_syncer = syncers.large_to_small;
-
-    let repo = target_incomplete_repo_handler.repo.clone();
-
-    open_backsyncer_dbs_compat(ctx, small_repo, db_config, mysql_options, readonly_storage)
-        .map(move |target_repo_dbs| PushRedirector {
-            repo,
-            small_to_large_commit_syncer,
-            large_to_small_commit_syncer,
-            target_repo_dbs,
-            commit_sync_config,
-        })
-        .boxify()
-}
-
-fn get_maybe_create_push_redirector_fut(
-    ctx: CoreContext,
-    incomplete_repo_handler: &IncompleteRepoHandler,
-    push_redirector_args: PushRedirectorArgs,
-    lookup_table: &HashMap<RepositoryId, IncompleteRepoHandler>,
-    readonly_storage: ReadOnlyStorage,
-) -> BoxFuture<Option<PushRedirector>, Error> {
-    let large_repo_id = push_redirector_args.commit_sync_config.large_repo_id;
-    let current_repo_id = incomplete_repo_handler.repo.repoid();
-    let current_repo = &incomplete_repo_handler.repo;
-    let target_incomplete_repo_handler = try_boxfuture!(lookup_table
-        .get(&large_repo_id)
-        .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id)));
-
-    if large_repo_id == current_repo_id {
-        future::ok(None).boxify()
-    } else {
-        create_push_redirector(
-            ctx,
-            current_repo,
-            target_incomplete_repo_handler,
-            push_redirector_args,
-            readonly_storage,
-        )
-        .map(Some)
-        .boxify()
-    }
+    pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
 }
 
 pub fn repo_handlers(
@@ -191,17 +152,7 @@ pub fn repo_handlers(
     root_log: &Logger,
 ) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
     // compute eagerly to avoid lifetime issues
-    let repo_futs: Vec<
-        BoxFuture<
-            (
-                CoreContext,
-                String,
-                IncompleteRepoHandler,
-                Option<PushRedirectorArgs>,
-            ),
-            Error,
-        >,
-    > = repos
+    let repo_futs: Vec<BoxFuture<(String, IncompleteRepoHandler), Error>> = repos
         .into_iter()
         .filter(|(reponame, config)| {
             if !config.enabled {
@@ -315,23 +266,46 @@ pub fn repo_handlers(
                 )
                 .compat();
 
-                let (repo, sql_commit_sync_mapping, wireproto_logging) =
-                    futures::future::try_join3(repo, sql_commit_sync_mapping, wireproto_logging)
-                        .await?;
+                let backsyncer_dbs = open_backsyncer_dbs(
+                    ctx.clone(),
+                    blobrepo.clone(),
+                    db_config.clone(),
+                    mysql_options,
+                    readonly_storage,
+                );
 
-                let maybe_push_redirector_args =
-                    commit_sync_config.map(move |commit_sync_config| PushRedirectorArgs {
-                        commit_sync_config,
-                        synced_commit_mapping: sql_commit_sync_mapping,
-                        db_config,
-                        mysql_options,
+                info!(
+                    logger,
+                    "Creating MononokeRepo, CommitSyncMapping, WireprotoLogging, TargetRepoDbs"
+                );
+                let (repo, sql_commit_sync_mapping, wireproto_logging, backsyncer_dbs) =
+                    futures::future::try_join4(
+                        repo,
+                        sql_commit_sync_mapping,
+                        wireproto_logging,
+                        backsyncer_dbs,
+                    )
+                    .await?;
+
+                info!(logger, "Constructing incomplete push redirection args");
+                let maybe_incomplete_push_redirector_args =
+                    commit_sync_config.and_then(move |commit_sync_config| {
+                        if commit_sync_config.large_repo_id == blobrepo.get_repoid() {
+                            None
+                        } else {
+                            Some(IncompletePushRedirectorArgs {
+                                commit_sync_config,
+                                synced_commit_mapping: sql_commit_sync_mapping,
+                                target_repo_dbs: backsyncer_dbs,
+                                source_blobrepo: blobrepo,
+                            })
+                        }
                     });
 
                 initial_warmup.await??;
 
                 info!(logger, "Repository is ready");
                 Ok((
-                    ctx,
                     reponame,
                     IncompleteRepoHandler {
                         logger,
@@ -341,8 +315,8 @@ pub fn repo_handlers(
                         hash_validation_percentage,
                         preserve_raw_bundle2,
                         pure_push_allowed,
+                        maybe_incomplete_push_redirector_args,
                     },
-                    maybe_push_redirector_args,
                 ))
             };
 
@@ -351,22 +325,16 @@ pub fn repo_handlers(
         .collect();
 
     future::join_all(repo_futs)
-        .and_then(move |t| build_repo_handlers(t, readonly_storage))
+        .and_then(build_repo_handlers)
         .boxify()
 }
 
 fn build_repo_handlers(
-    tuples: Vec<(
-        CoreContext,
-        String,
-        IncompleteRepoHandler,
-        Option<PushRedirectorArgs>,
-    )>,
-    readonly_storage: ReadOnlyStorage,
+    tuples: Vec<(String, IncompleteRepoHandler)>,
 ) -> impl Future<Item = HashMap<String, RepoHandler>, Error = Error> {
     let lookup_table: HashMap<RepositoryId, IncompleteRepoHandler> = tuples
         .iter()
-        .map(|(_, _, incomplete_repo_handler, _)| {
+        .map(|(_, incomplete_repo_handler)| {
             (
                 incomplete_repo_handler.repo.repoid(),
                 incomplete_repo_handler.clone(),
@@ -376,30 +344,13 @@ fn build_repo_handlers(
 
     future::join_all({
         cloned!(lookup_table);
-        tuples.into_iter().map(
-            move |(ctx, reponame, incomplete_repo_handler, maybe_push_redirector_args)| {
-                let maybe_push_redirector_fut = match maybe_push_redirector_args {
-                    None => future::ok(None).boxify(),
-                    Some(push_redirector_args) => get_maybe_create_push_redirector_fut(
-                        ctx,
-                        &incomplete_repo_handler,
-                        push_redirector_args,
-                        &lookup_table,
-                        readonly_storage,
-                    ),
-                };
-
-                maybe_push_redirector_fut
-                    .map(move |maybe_push_redirector| {
-                        (
-                            reponame,
-                            incomplete_repo_handler
-                                .into_repo_handler_with_push_redirector(maybe_push_redirector),
-                        )
-                    })
-                    .boxify()
-            },
-        )
+        tuples
+            .into_iter()
+            .map(move |(reponame, incomplete_repo_handler)| {
+                let repo_handler =
+                    try_boxfuture!(incomplete_repo_handler.try_into_repo_handler(&lookup_table));
+                future::ok((reponame, repo_handler)).boxify()
+            })
     })
     .map(|v| v.into_iter().collect())
 }
