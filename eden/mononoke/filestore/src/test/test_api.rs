@@ -350,7 +350,11 @@ async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     .compat()
     .await?;
 
-    assert!(blob.remove(&part_id.blobstore_key()).is_some());
+    assert!(blob
+        .unlink(part_id.blobstore_key())
+        .await
+        .unwrap()
+        .is_some());
 
     // This should fail
     let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
@@ -696,7 +700,11 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     .await?;
 
     // Remove the metadata
-    assert!(blob.remove(&metadata.blobstore_key()).is_some());
+    assert!(blob
+        .unlink(metadata.blobstore_key())
+        .await
+        .unwrap()
+        .is_some());
 
     // Getting the metadata should cause it to get recomputed
     let fut: OldBoxFuture<_, _> =
@@ -706,7 +714,11 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     assert_eq!(res?, expected);
 
     // Now, delete the content (this shouldn't normally happen, but we're injecting failure here).
-    assert!(blob.remove(&content_id.blobstore_key()).is_some());
+    assert!(blob
+        .unlink(content_id.blobstore_key())
+        .await
+        .unwrap()
+        .is_some());
 
     // Query the metadata again. It should succeed because it's saved.
     let fut: OldBoxFuture<_, _> =
@@ -716,7 +728,11 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     assert_eq!(res?, expected);
 
     // Delete the metadata now.
-    assert!(blob.remove(&metadata.blobstore_key()).is_some());
+    assert!(blob
+        .unlink(metadata.blobstore_key())
+        .await
+        .unwrap()
+        .is_some());
 
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.

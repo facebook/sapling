@@ -13,6 +13,7 @@ use std::fmt;
 
 use abomonation_derive::Abomonation;
 use anyhow::Error;
+use futures::future::BoxFuture;
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
 use futures_old::future::{self as future01, Future as Future01};
 use thiserror::Error;
@@ -275,6 +276,17 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
             })
             .boxify()
     }
+}
+
+/// Mixin trait for blobstores that support the `link()` operation
+#[auto_impl(Arc, Box)]
+pub trait BlobstoreWithLink: Blobstore {
+    fn link(
+        &self,
+        ctx: CoreContext,
+        existing_key: String,
+        link_key: String,
+    ) -> BoxFuture<'static, Result<(), Error>>;
 }
 
 #[derive(Debug, Error)]

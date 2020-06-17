@@ -9,64 +9,111 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
+use futures::{
+    future::{self, lazy, BoxFuture},
+    FutureExt,
+};
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
 use futures_old::future::{lazy as lazy01, IntoFuture as IntoFuture01};
 
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreWithLink};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
+
+// Implements hardlink-style links
+#[derive(Default, Debug)]
+struct MemState {
+    next_id: usize,
+    data: HashMap<usize, BlobstoreBytes>,
+    links: HashMap<String, usize>,
+}
+
+impl MemState {
+    fn put(&mut self, key: String, value: BlobstoreBytes) {
+        let id = self.next_id;
+        self.data.insert(id, value);
+        self.links.insert(key, id);
+        self.next_id += 1;
+    }
+
+    fn link(&mut self, existing_key: String, link_key: String) -> Result<(), Error> {
+        if let Some(existing_id) = self.links.get(&existing_key) {
+            let existing_id = *existing_id;
+            self.links.insert(link_key, existing_id);
+            return Ok(());
+        }
+        Err(format_err!("Unknown existing_key {}", existing_key))
+    }
+
+    fn get(&self, key: &str) -> Option<&BlobstoreBytes> {
+        if let Some(id) = self.links.get(key) {
+            self.data.get(id)
+        } else {
+            None
+        }
+    }
+
+    fn unlink(&mut self, key: &str) -> Option<()> {
+        self.links.remove(key).map(|_| ())
+    }
+}
 
 /// In-memory "blob store"
 ///
 /// Pure in-memory implementation for testing.
 #[derive(Clone)]
 pub struct EagerMemblob {
-    hash: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
+    state: Arc<Mutex<MemState>>,
 }
 
 /// As EagerMemblob, but methods are lazy - they wait until polled to do anything.
 #[derive(Clone)]
 pub struct LazyMemblob {
-    hash: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
+    state: Arc<Mutex<MemState>>,
 }
 
 impl EagerMemblob {
     pub fn new() -> Self {
         Self {
-            hash: Arc::new(Mutex::new(HashMap::new())),
+            state: Arc::new(Mutex::new(MemState::default())),
         }
     }
 
-    pub fn remove(&self, key: &String) -> Option<BlobstoreBytes> {
-        let mut inner = self.hash.lock().expect("lock poison");
-        inner.remove(key)
+    pub fn unlink(&self, key: String) -> BoxFuture<'static, Result<Option<()>, Error>> {
+        let mut inner = self.state.lock().expect("lock poison");
+        future::ok(inner.unlink(&key)).boxed()
     }
 }
 
 impl LazyMemblob {
     pub fn new() -> Self {
         Self {
-            hash: Arc::new(Mutex::new(HashMap::new())),
+            state: Arc::new(Mutex::new(MemState::default())),
         }
     }
 
-    pub fn remove(&self, key: &String) -> Option<BlobstoreBytes> {
-        let mut inner = self.hash.lock().expect("lock poison");
-        inner.remove(key)
+    pub fn unlink(&self, key: String) -> BoxFuture<'static, Result<Option<()>, Error>> {
+        let state = self.state.clone();
+
+        lazy(move |_| {
+            let mut inner = state.lock().expect("lock poison");
+            Ok(inner.unlink(&key))
+        })
+        .boxed()
     }
 }
 
 impl Blobstore for EagerMemblob {
     fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
-        let mut inner = self.hash.lock().expect("lock poison");
+        let mut inner = self.state.lock().expect("lock poison");
 
-        inner.insert(key, value);
+        inner.put(key, value);
         Ok(()).into_future().boxify()
     }
 
     fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
-        let inner = self.hash.lock().expect("lock poison");
+        let inner = self.state.lock().expect("lock poison");
 
         Ok(inner.get(&key).map(|blob_ref| blob_ref.clone().into()))
             .into_future()
@@ -74,40 +121,63 @@ impl Blobstore for EagerMemblob {
     }
 }
 
+impl BlobstoreWithLink for EagerMemblob {
+    fn link(
+        &self,
+        _ctx: CoreContext,
+        existing_key: String,
+        link_key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let mut inner = self.state.lock().expect("lock poison");
+        future::ready(inner.link(existing_key, link_key)).boxed()
+    }
+}
+
 impl Blobstore for LazyMemblob {
     fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
-        let hash = self.hash.clone();
+        let state = self.state.clone();
 
         lazy01(move || {
-            let mut inner = hash.lock().expect("lock poison");
+            let mut inner = state.lock().expect("lock poison");
 
-            inner.insert(key, value);
+            inner.put(key, value);
             Ok(()).into_future()
         })
         .boxify()
     }
 
     fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
-        let hash = self.hash.clone();
+        let state = self.state.clone();
 
         lazy01(move || {
-            let inner = hash.lock().expect("lock poison");
+            let inner = state.lock().expect("lock poison");
             Ok(inner.get(&key).map(|bytes| bytes.clone().into())).into_future()
         })
         .boxify()
     }
 }
 
+impl BlobstoreWithLink for LazyMemblob {
+    fn link(
+        &self,
+        _ctx: CoreContext,
+        existing_key: String,
+        link_key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let state = self.state.clone();
+
+        lazy(move |_| {
+            let mut inner = state.lock().expect("lock poison");
+            inner.link(existing_key, link_key)
+        })
+        .boxed()
+    }
+}
+
 impl fmt::Debug for EagerMemblob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EagerMemblob")
-            .field(
-                "hash",
-                &format!(
-                    "({} entries)",
-                    self.hash.lock().expect("lock poisoned").len()
-                ),
-            )
+            .field("state", &self.state.lock().expect("lock poisoned"))
             .finish()
     }
 }
@@ -115,13 +185,7 @@ impl fmt::Debug for EagerMemblob {
 impl fmt::Debug for LazyMemblob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("LazyMemblob")
-            .field(
-                "hash",
-                &format!(
-                    "({} entries)",
-                    self.hash.lock().expect("lock poisoned").len()
-                ),
-            )
+            .field("state", &self.state.lock().expect("lock poisoned"))
             .finish()
     }
 }

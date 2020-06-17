@@ -8,12 +8,16 @@
 #![deny(warnings)]
 
 use std::convert::TryFrom;
-use std::fs::{create_dir_all, File};
+use std::fs::{create_dir_all, hard_link, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use anyhow::{bail, Error, Result};
+use futures::{
+    future::{self, BoxFuture},
+    FutureExt, TryFutureExt,
+};
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
 use futures_old::{
     future::{poll_fn as poll_fn01, Future as Future01},
@@ -21,7 +25,7 @@ use futures_old::{
 };
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstoreWithLink};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use tempfile::NamedTempFile;
@@ -118,5 +122,23 @@ impl Blobstore for Fileblob {
         })
         .from_err()
         .boxify()
+    }
+}
+
+impl BlobstoreWithLink for Fileblob {
+    // This uses hardlink semantics as the production blobstores also have hardlink like semantics
+    // (i.e. you can't discover a canonical link source when loading by the target)
+    fn link(
+        &self,
+        _ctx: CoreContext,
+        existing_key: String,
+        link_key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        // from std::fs::hard_link: The dst path will be a link pointing to the src path
+        let src_path = self.path(&existing_key);
+        let dst_path = self.path(&link_key);
+        future::ready(hard_link(src_path, dst_path))
+            .map_err(Error::from)
+            .boxed()
     }
 }

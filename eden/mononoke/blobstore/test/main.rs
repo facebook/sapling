@@ -18,31 +18,64 @@ use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use tempdir::TempDir;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreWithLink};
 use context::CoreContext;
 use fileblob::Fileblob;
 use memblob::{EagerMemblob, LazyMemblob};
 use mononoke_types::BlobstoreBytes;
 
-async fn round_trip<B: Blobstore>(
+async fn roundtrip_and_link<B: BlobstoreWithLink>(
     fb: FacebookInit,
     blobstore: B,
     has_ctime: bool,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
-    let key = "foo".to_string();
-    let value = BlobstoreBytes::from_bytes(&b"bar"[..]);
+    let key = "randomkey".to_string();
+    let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldata"));
 
+    // Roundtrip
     blobstore
-        .put(ctx.clone(), key.clone(), value)
+        .put(ctx.clone(), key.clone(), value.clone())
         .compat()
         .await?;
 
-    let out = blobstore.get(ctx, key).compat().await?.unwrap();
+    let roundtrip = blobstore
+        .get(ctx.clone(), key.clone())
+        .compat()
+        .await?
+        .unwrap();
 
-    assert_eq!(out.clone().into_raw_bytes(), Bytes::from_static(b"bar"));
-    assert_eq!(out.as_meta().as_ctime().is_some(), has_ctime);
+    let orig_ctime = roundtrip.as_meta().as_ctime().clone();
+
+    assert_eq!(orig_ctime.is_some(), has_ctime);
+    assert_eq!(value, roundtrip.into_bytes());
+
+    let newkey = "newkey".to_string();
+
+    // And now the link
+    blobstore
+        .link(ctx.clone(), key.clone(), newkey.clone())
+        .await?;
+
+    let newvalue = blobstore
+        .get(ctx.clone(), newkey.clone())
+        .compat()
+        .await?
+        .unwrap();
+
+    let new_ctime = newvalue.as_meta().as_ctime().clone();
+    assert_eq!(new_ctime.is_some(), has_ctime);
+    assert_eq!(orig_ctime, new_ctime);
+    assert_eq!(value, newvalue.into_bytes());
+
+    let newkey_is_present = blobstore
+        .is_present(ctx.clone(), newkey.clone())
+        .compat()
+        .await?;
+
+    assert!(newkey_is_present);
+
     Ok(())
 }
 
@@ -67,11 +100,11 @@ macro_rules! blobstore_test_impl {
             use super::*;
 
             #[fbinit::compat_test]
-            async fn test_round_trip(fb: FacebookInit) -> Result<(), Error> {
+            async fn test_roundtrip_and_link(fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
                 let has_ctime = $has_ctime;
                 let factory = $new_cb;
-                round_trip(fb, factory(state.clone())?, has_ctime).await
+                roundtrip_and_link(fb, factory(state.clone())?, has_ctime).await
             }
 
             #[fbinit::compat_test]
