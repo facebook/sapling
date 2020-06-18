@@ -105,7 +105,7 @@ def isatty(fp):
 # destined stdout with a pipe destined stdout (e.g. pager), we want line
 # buffering
 if isatty(stdout):
-    stdout = os.fdopen(stdout.fileno(), "wb", 1)
+    stdout = os.fdopen(stdout.fileno(), "wb")
 
 if pycompat.iswindows:
     from . import windows as platform
@@ -115,6 +115,7 @@ else:
     from . import posix as platform
 
 _ = i18n._
+
 
 bindunixsocket = platform.bindunixsocket
 cachestat = platform.cachestat
