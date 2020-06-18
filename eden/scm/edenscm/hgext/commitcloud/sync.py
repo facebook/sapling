@@ -13,6 +13,7 @@ import time
 from edenscm.mercurial import (
     blackbox,
     bookmarks,
+    error,
     exchange,
     extensions,
     hg,
@@ -182,6 +183,18 @@ def _sync(
     backedup, failed = backup._backup(
         repo, state, remotepath, getconnection, backupsnapshots=backupsnapshots
     )
+
+    # Now that commits are backed up, check that visibleheads are enabled
+    # locally, and only sync if visibleheads is enabled.
+    # developer config: commitcloud.requirevisibleheads
+    if repo.ui.configbool("commitcloud", "requirevisibleheads", True):
+        if not visibility.enabled(repo):
+            hint = None
+            if repo.ui.config("visibility", "automigrate") == "start":
+                hint = "try 'hg pull' in this repo to trigger an upgrade"
+            raise error.Abort(
+                "commit cloud sync requires new-style visibility", hint=hint
+            )
 
     # On cloud rejoin we already know what the cloudrefs are.  Otherwise,
     # fetch them from the commit cloud service.

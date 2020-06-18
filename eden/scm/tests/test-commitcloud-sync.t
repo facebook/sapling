@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ configure dummyssh evolution
+  $ configure dummyssh mutation-norecord
   $ disable treemanifest
   $ enable amend directaccess commitcloud infinitepush rebase remotenames share smartlog
 
@@ -189,6 +189,12 @@ Make a commit in the first client, and sync it
   finished in * (glob)
   remote: pushing 1 commit:
   remote:     fa5d62c46fd7  commit1
+
+Sync requires visibility
+  $ hg cloud sync --config visibility.enabled=false
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  abort: commit cloud sync requires new-style visibility
+  [255]
   $ cd ..
 
 Sync from the second client - the commit should appear
@@ -818,7 +824,7 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   remote:     715c1454ae33  stack commit 2
   remote:     a6b97eebbf74  shared commit updated
   remote:     9bd68ef10d6b  toobig
-  push failed: bundle is too big: 2219 bytes. max allowed size is 0 MB
+  push failed: bundle is too big: 2460 bytes. max allowed size is 0 MB
   retrying push with discovery
   searching for changes
   remote: pushing 4 commits:
@@ -826,32 +832,32 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   remote:     715c1454ae33  stack commit 2
   remote:     a6b97eebbf74  shared commit updated
   remote:     9bd68ef10d6b  toobig
-  push of stack 4b4f26511f8b failed: bundle is too big: 2219 bytes. max allowed size is 0 MB
+  push of stack 4b4f26511f8b failed: bundle is too big: 2460 bytes. max allowed size is 0 MB
   retrying each head individually
   remote: pushing 3 commits:
   remote:     4b4f26511f8b  race attempt
   remote:     715c1454ae33  stack commit 2
   remote:     a6b97eebbf74  shared commit updated
-  push failed: bundle is too big: 1738 bytes. max allowed size is 0 MB
+  push failed: bundle is too big: 1979 bytes. max allowed size is 0 MB
   retrying push with discovery
   searching for changes
   remote: pushing 3 commits:
   remote:     4b4f26511f8b  race attempt
   remote:     715c1454ae33  stack commit 2
   remote:     a6b97eebbf74  shared commit updated
-  push of head a6b97eebbf74 failed: bundle is too big: 1738 bytes. max allowed size is 0 MB
+  push of head a6b97eebbf74 failed: bundle is too big: 1979 bytes. max allowed size is 0 MB
   remote: pushing 3 commits:
   remote:     4b4f26511f8b  race attempt
   remote:     715c1454ae33  stack commit 2
   remote:     9bd68ef10d6b  toobig
-  push failed: bundle is too big: 1695 bytes. max allowed size is 0 MB
+  push failed: bundle is too big: 1869 bytes. max allowed size is 0 MB
   retrying push with discovery
   searching for changes
   remote: pushing 3 commits:
   remote:     4b4f26511f8b  race attempt
   remote:     715c1454ae33  stack commit 2
   remote:     9bd68ef10d6b  toobig
-  push of head 9bd68ef10d6b failed: bundle is too big: 1695 bytes. max allowed size is 0 MB
+  push of head 9bd68ef10d6b failed: bundle is too big: 1869 bytes. max allowed size is 0 MB
   commitcloud: failed to synchronize 2 commits
   finished in * (glob)
 

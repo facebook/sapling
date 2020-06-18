@@ -5,7 +5,7 @@
   $ enable amend commitcloud infinitepush rebase remotenames share smartlog
 
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
-  $ setconfig commitcloud.hostname=testhost
+  $ setconfig commitcloud.hostname=testhost commitcloud.requirevisibleheads=false
   $ setconfig remotefilelog.reponame=server
 
   $ hg init server
