@@ -97,6 +97,10 @@ EOF
 
 function init_large_small_repo() {
   create_large_small_repo
+  start_large_small_repo "$@"
+}
+
+function start_large_small_repo {
   echo "Starting Mononoke server"
   mononoke "$@"
   wait_for_mononoke

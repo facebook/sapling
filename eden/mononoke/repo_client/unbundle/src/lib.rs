@@ -7,6 +7,9 @@
 
 #![deny(warnings)]
 #![cfg_attr(test, type_length_limit = "2097152")]
+// Used to avoid too much copy-and-paste in hook_running.
+// Tracking issue https://github.com/rust-lang/rust/issues/41517 suggests it's reasonably safe to usse
+#![feature(trait_alias)]
 
 mod changegroup;
 mod errors;
@@ -20,7 +23,7 @@ mod stats;
 mod upload_blobs;
 mod upload_changesets;
 
-pub use hook_running::run_hooks;
+pub use hook_running::{run_hooks, run_remapped_hooks};
 pub use processing::{get_pushrebase_hooks, run_post_resolve_action};
 pub use push_redirector::{PushRedirector, PushRedirectorArgs, CONFIGERATOR_PUSHREDIRECT_ENABLE};
 pub use resolver::{

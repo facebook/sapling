@@ -13,38 +13,68 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, stream::TryStreamExt, FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as _};
+use futures::{
+    compat::Future01CompatExt,
+    future::BoxFuture,
+    stream::{FuturesUnordered, TryStreamExt},
+    FutureExt, TryFutureExt,
+};
+use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as _};
 use futures_old::future::ok;
 use futures_stats::TimedFutureExt;
 use hooks::{HookManager, HookOutcome};
-use mononoke_types::BonsaiChangeset;
+use mercurial_types::HgChangesetId;
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use scuba_ext::ScubaSampleBuilderExt;
 use std::{collections::HashMap, sync::Arc};
+
+pub trait RemapAsyncFn = (Fn(ChangesetId) -> BoxFuture<'static, Result<HgChangesetId, BundleResolverError>>)
+    + Send
+    + Sync
+    + 'static;
+
+pub fn run_remapped_hooks(
+    ctx: CoreContext,
+    hook_manager: Arc<HookManager>,
+    action: &PostResolveAction,
+    remap_cs: impl RemapAsyncFn,
+) -> OldBoxFuture<(), BundleResolverError> {
+    match action {
+        // TODO: Need to run hooks on Push, not just PushRebase
+        PostResolveAction::Push(_) => ok(()).boxify(),
+        PostResolveAction::InfinitePush(_) => ok(()).boxify(),
+        PostResolveAction::PushRebase(action) => {
+            run_pushrebase_hooks(ctx, action, hook_manager, remap_cs)
+        }
+        PostResolveAction::BookmarkOnlyPushRebase(_) => ok(()).boxify(),
+    }
+}
 
 pub fn run_hooks(
     ctx: CoreContext,
     repo: BlobRepo,
     hook_manager: Arc<HookManager>,
     action: &PostResolveAction,
-) -> BoxFuture<(), BundleResolverError> {
-    match action {
-        // TODO: Need to run hooks on Push, not just PushRebase
-        PostResolveAction::Push(_) => ok(()).boxify(),
-        PostResolveAction::InfinitePush(_) => ok(()).boxify(),
-        PostResolveAction::PushRebase(action) => {
-            run_pushrebase_hooks(ctx, repo, action, hook_manager)
+) -> OldBoxFuture<(), BundleResolverError> {
+    run_remapped_hooks(ctx.clone(), hook_manager, action, move |cs| {
+        let repo = repo.clone();
+        let ctx = ctx.clone();
+        async move {
+            repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
+                .compat()
+                .await
+                .map_err(|e| e.into())
         }
-        PostResolveAction::BookmarkOnlyPushRebase(_) => ok(()).boxify(),
-    }
+        .boxed()
+    })
 }
 
 fn run_pushrebase_hooks(
     ctx: CoreContext,
-    repo: BlobRepo,
     action: &PostResolvePushRebase,
     hook_manager: Arc<HookManager>,
-) -> BoxFuture<(), BundleResolverError> {
+    remap_cs: impl RemapAsyncFn,
+) -> OldBoxFuture<(), BundleResolverError> {
     // The changesets that will be pushed
     let changesets = action.uploaded_bonsais.clone();
     let maybe_pushvars = action.maybe_pushvars.clone();
@@ -54,11 +84,11 @@ fn run_pushrebase_hooks(
     async move {
         run_hooks_on_changesets(
             &ctx,
-            &repo,
             &*hook_manager,
             changesets.iter(),
             bookmark,
             maybe_pushvars,
+            remap_cs,
         )
         .await?;
         Ok(())
@@ -70,11 +100,11 @@ fn run_pushrebase_hooks(
 
 async fn run_hooks_on_changesets(
     ctx: &CoreContext,
-    repo: &BlobRepo,
     hook_manager: &HookManager,
     changesets: impl Iterator<Item = &BonsaiChangeset> + Clone + itertools::Itertools,
     bookmark: BookmarkName,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
+    remap_cs: impl RemapAsyncFn,
 ) -> Result<(), BundleResolverError> {
     let (stats, hook_outcomes) = hook_manager
         .run_hooks_for_bookmark(&ctx, changesets, &bookmark, maybe_pushvars.as_ref())
@@ -97,13 +127,11 @@ async fn run_hooks_on_changesets(
         return Ok(());
     }
 
+    let remap_cs = &remap_cs;
     let rejections = rejections
         .into_iter()
         .map(|(hook_name, cs_id, info)| async move {
-            let cs_id = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                .compat()
-                .await?;
+            let cs_id = remap_cs(cs_id).await?;
 
             Result::<_, anyhow::Error>::Ok(HookFailure {
                 hook_name,
@@ -111,7 +139,7 @@ async fn run_hooks_on_changesets(
                 info,
             })
         })
-        .collect::<futures::stream::FuturesUnordered<_>>()
+        .collect::<FuturesUnordered<_>>()
         .try_collect()
         .await?;
 

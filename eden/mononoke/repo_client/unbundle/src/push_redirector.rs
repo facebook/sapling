@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use crate::run_post_resolve_action;
+use crate::{run_post_resolve_action, run_remapped_hooks};
 use crate::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
     UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
@@ -29,10 +29,12 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::{CommitSyncOutcome, CommitSyncer};
-use futures::compat::Future01CompatExt;
-use futures::future::try_join_all;
+use futures::{
+    compat::Future01CompatExt,
+    future::{try_join_all, FutureExt},
+    try_join,
+};
 use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
-use futures_util::try_join;
 use metaconfig_types::CommitSyncConfig;
 use mononoke_repo::MononokeRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -42,6 +44,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use topo_sort::sort_topological;
+use tunables::tunables;
 
 pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
 
@@ -280,21 +283,26 @@ impl PushRedirector {
             .map(|(small_cs_id, large_bcs)| (large_bcs.get_changeset_id(), *small_cs_id))
             .collect::<HashMap<_, _>>();
 
-        let maybe_hg_replay_data = maybe_hg_replay_data.map(|mut hg_replay_data| {
-            hg_replay_data.override_convertor(Arc::new({
-                move |large_cs_id| {
-                    let small_cs_id = try_boxfuture!(large_to_small
-                        .get(&large_cs_id)
-                        .ok_or(format_err!("{} doesn't remap in small repo", large_cs_id)));
-                    source_repo
-                        .get_hg_from_bonsai_changeset(ctx.clone(), *small_cs_id)
-                        .boxify()
-                }
-            }));
-            hg_replay_data
+        let maybe_hg_replay_data = maybe_hg_replay_data.map({
+            cloned!(ctx);
+            |mut hg_replay_data| {
+                hg_replay_data.override_convertor(Arc::new({
+                    cloned!(large_to_small);
+                    move |large_cs_id| {
+                        let small_cs_id =
+                            try_boxfuture!(large_to_small.get(&large_cs_id).ok_or_else(
+                                || format_err!("{} doesn't remap in small repo", large_cs_id)
+                            ));
+                        source_repo
+                            .get_hg_from_bonsai_changeset(ctx.clone(), *small_cs_id)
+                            .boxify()
+                    }
+                }));
+                hg_replay_data
+            }
         });
 
-        Ok(PostResolvePushRebase {
+        let action = PostResolvePushRebase {
             any_merges,
             bookmark_push_part_id,
             bookmark_spec,
@@ -302,7 +310,42 @@ impl PushRedirector {
             maybe_pushvars,
             commonheads,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
-        })
+        };
+
+        // We've uploaded commits to the large repo at this point - now run hooks in the large
+        // repo, against the commits that have just been remapped from small repo to large repo.
+        if !tunables().get_run_pushredirected_hooks_in_large_repo_killswitch() {
+            run_remapped_hooks(
+                ctx.clone(),
+                self.repo.hook_manager(),
+                &PostResolveAction::PushRebase(action.clone()),
+                {
+                    let source_repo = self.small_to_large_commit_syncer.get_source_repo().clone();
+                    move |cs| {
+                        cloned!(source_repo, ctx, large_to_small);
+                        // For the benefit of the user seeing the error, remap the commit hash back
+                        // to the small repo, so that while the error message may contain large repo
+                        // paths, the commit hash is the one you have in your small repo
+                        async move {
+                            let cs = large_to_small
+                                .get(&cs)
+                                .ok_or_else(|| format_err!("{} doesn't remap in small repo", cs))?;
+
+                            source_repo
+                                .get_hg_from_bonsai_changeset(ctx.clone(), *cs)
+                                .compat()
+                                .await
+                                .map_err(|e| e.into())
+                        }
+                        .boxed()
+                    }
+                },
+            )
+            .compat()
+            .await?;
+        }
+
+        Ok(action)
     }
 
     /// Convert `PostResolveInfinitePush` struct in the small-to-large direction

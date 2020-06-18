@@ -197,6 +197,7 @@ pub struct PostResolveInfinitePush {
 }
 
 /// Data, needed to perform post-resolve `PushRebase` action
+#[derive(Clone)]
 pub struct PostResolvePushRebase {
     pub any_merges: bool,
     pub bookmark_push_part_id: Option<PartId>,
@@ -522,6 +523,7 @@ fn get_post_resolve_push(
 // stack of) commit(s) and rebase it on top of a given bookmark.
 // Force pushrebase is basically a push, which for logging
 // and respondin purposes is treated like a pushrebase
+#[derive(Clone)]
 pub enum PushrebaseBookmarkSpec<T: Copy> {
     NormalPushrebase(pushrebase::OntoBookmarkParams),
     ForcePushrebase(PlainBookmarkPush<T>),
@@ -747,6 +749,7 @@ struct ChangegroupPush {
     infinitepush_payload: Option<InfinitepushPayload>,
 }
 
+#[derive(Clone)]
 pub struct CommonHeads {
     pub heads: Vec<HgChangesetId>,
 }
