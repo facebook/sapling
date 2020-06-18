@@ -558,16 +558,16 @@ def loaddynamicconfig(ui, path):
     if ui.configbool("configs", "loaddynamicconfig"):
         sharedpathfile = os.path.join(path, "sharedpath")
         if os.path.exists(sharedpathfile):
-            with open(sharedpathfile, "r") as f:
-                path = f.read()
+            with open(sharedpathfile, "rb") as f:
+                path = pycompat.decodeutf8(f.read())
 
         hgrcdyn = os.path.join(path, "hgrc.dynamic")
 
         # Check the version of the existing generated config. If it doesn't
         # match the current version, regenerate it immediately.
         try:
-            with open(hgrcdyn, "r") as f:
-                content = f.read()
+            with open(hgrcdyn, "rb") as f:
+                content = pycompat.decodeutf8(f.read())
             matches = re.search("^# version=(.*)$", content, re.MULTILINE)
             version = matches.group(1) if matches else None
         except IOError:
