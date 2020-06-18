@@ -51,6 +51,8 @@ jobs:
       continue-on-error: true
   mac:
     runs-on: macOS-latest
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_10.3.app/Contents/Developer
     steps:
     - uses: actions/checkout@v1
     - name: Install Rust Stable
