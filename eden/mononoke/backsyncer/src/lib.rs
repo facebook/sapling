@@ -66,15 +66,15 @@ pub enum BacksyncError {
 
 pub async fn backsync_all_latest<M>(
     ctx: CoreContext,
-    commit_sync_config: CommitSyncer<M>,
+    commit_syncer: CommitSyncer<M>,
     target_repo_dbs: TargetRepoDbs,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
     let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
-    let target_repo_id = commit_sync_config.get_target_repo().get_repoid();
-    let source_repo_id = commit_sync_config.get_source_repo().get_repoid();
+    let target_repo_id = commit_syncer.get_target_repo().get_repoid();
+    let source_repo_id = commit_syncer.get_source_repo().get_repoid();
     let counter_name = format_counter(&source_repo_id);
 
     let counter = counters
@@ -86,7 +86,7 @@ where
     debug!(ctx.logger(), "fetched counter {}", counter);
     // Set limit extremely high to read all new values
     let log_entries_limit = u64::max_value();
-    let next_entries = commit_sync_config
+    let next_entries = commit_syncer
         .get_source_repo()
         .read_next_bookmark_log_entries(
             ctx.clone(),
@@ -104,7 +104,7 @@ where
     } else {
         sync_entries(
             ctx,
-            &commit_sync_config,
+            &commit_syncer,
             target_repo_dbs,
             next_entries,
             counter as i64,
@@ -115,7 +115,7 @@ where
 
 pub async fn backsync_many<M>(
     ctx: CoreContext,
-    commit_sync_config: CommitSyncer<M>,
+    commit_syncer: CommitSyncer<M>,
     target_repo_dbs: TargetRepoDbs,
     // TODO(stash): add a type for log_id?
     while_log_id_less_than: i64,
@@ -124,8 +124,8 @@ where
     M: SyncedCommitMapping + Clone + 'static,
 {
     let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
-    let target_repo_id = commit_sync_config.get_target_repo().get_repoid();
-    let source_repo_id = commit_sync_config.get_source_repo().get_repoid();
+    let target_repo_id = commit_syncer.get_target_repo().get_repoid();
+    let source_repo_id = commit_syncer.get_source_repo().get_repoid();
     let counter_name = format_counter(&source_repo_id);
     let mut last_counter = None;
 
@@ -152,7 +152,7 @@ where
 
         let next_entries = fetch_next_log_entries(
             ctx.clone(),
-            commit_sync_config.get_source_repo().clone(),
+            commit_syncer.get_source_repo().clone(),
             counter as u64,
             log_entries_limit,
         )
@@ -160,7 +160,7 @@ where
 
         sync_entries(
             ctx.clone(),
-            &commit_sync_config,
+            &commit_syncer,
             target_repo_dbs.clone(),
             next_entries
                 .into_iter()
@@ -298,7 +298,7 @@ async fn fetch_next_log_entries(
 
 pub async fn backsync_bookmark<M>(
     ctx: CoreContext,
-    commit_sync_config: &CommitSyncer<M>,
+    commit_syncer: &CommitSyncer<M>,
     target_repo_dbs: TargetRepoDbs,
     prev_counter: Option<i64>,
     log_entry: BookmarkUpdateLogEntry,
@@ -306,8 +306,8 @@ pub async fn backsync_bookmark<M>(
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
-    let target_repo_id = commit_sync_config.get_target_repo().get_repoid();
-    let source_repo_id = commit_sync_config.get_source_repo().get_repoid();
+    let target_repo_id = commit_syncer.get_target_repo().get_repoid();
+    let source_repo_id = commit_syncer.get_source_repo().get_repoid();
     let TargetRepoDbs {
         connections,
         bookmarks,
@@ -317,7 +317,7 @@ where
     debug!(ctx.logger(), "preparing to backsync {:?}", log_entry);
 
     let new_counter = log_entry.id;
-    let bookmark = commit_sync_config.get_bookmark_renamer()(&log_entry.bookmark_name);
+    let bookmark = commit_syncer.get_bookmark_renamer()(&log_entry.bookmark_name);
     debug!(ctx.logger(), "bookmark was renamed into {:?}", bookmark);
     let from_cs_id = log_entry.from_changeset_id;
     let to_cs_id = log_entry.to_changeset_id;
@@ -327,7 +327,7 @@ where
         async move {
             match maybe_cs_id {
                 Some(cs_id) => {
-                    let maybe_outcome = commit_sync_config
+                    let maybe_outcome = commit_syncer
                         .get_commit_sync_outcome(ctx.clone(), cs_id)
                         .await?;
                     match maybe_outcome {

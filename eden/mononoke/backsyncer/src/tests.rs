@@ -59,9 +59,9 @@ const BRANCHMERGE_FILE: &str = "branchmerge";
 fn backsync_linear(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
     runtime.block_on_std(async move {
-        let (commit_sync_config, target_repo_dbs) =
+        let (commit_syncer, target_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -131,14 +131,14 @@ fn backsync_linear_with_prefix_mover(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
 
     runtime.block_on_std(async move {
-        let (commit_sync_config, target_repo_dbs) = init_repos(
+        let (commit_syncer, target_repo_dbs) = init_repos(
             fb,
             MoverType::Prefix("prefix".to_string()),
             BookmarkRenamerType::Noop,
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -147,14 +147,14 @@ fn backsync_linear_with_mover_that_removes_some_files(fb: FacebookInit) -> Resul
     let mut runtime = Runtime::new()?;
 
     runtime.block_on_std(async move {
-        let (commit_sync_config, target_repo_dbs) = init_repos(
+        let (commit_syncer, target_repo_dbs) = init_repos(
             fb,
             MoverType::Only("files".to_string()),
             BookmarkRenamerType::Noop,
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -163,14 +163,14 @@ fn backsync_linear_with_mover_that_removes_single_file(fb: FacebookInit) -> Resu
     let mut runtime = Runtime::new()?;
 
     runtime.block_on_std(async move {
-        let (commit_sync_config, target_repo_dbs) = init_repos(
+        let (commit_syncer, target_repo_dbs) = init_repos(
             fb,
             MoverType::Except("10".to_string()),
             BookmarkRenamerType::Noop,
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -180,10 +180,10 @@ fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Result<(), 
 
     runtime.block_on_std(async move {
         let master = BookmarkName::new("master")?;
-        let (commit_sync_config, target_repo_dbs) =
+        let (commit_syncer, target_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::Only(master)).await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -192,14 +192,14 @@ fn backsync_linear_bookmark_renamer_prefix(fb: FacebookInit) -> Result<(), Error
     let mut runtime = Runtime::new()?;
 
     runtime.block_on_std(async move {
-        let (commit_sync_config, target_repo_dbs) = init_repos(
+        let (commit_syncer, target_repo_dbs) = init_repos(
             fb,
             MoverType::Noop,
             BookmarkRenamerType::Prefix("prefix".to_string()),
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -208,10 +208,10 @@ fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result<(), E
     let mut runtime = Runtime::new()?;
 
     runtime.block_on_std(async move {
-        let (commit_sync_config, target_repo_dbs) =
+        let (commit_syncer, target_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::RemoveAll).await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -220,14 +220,14 @@ fn backsync_linear_bookmark_renamer_and_mover(fb: FacebookInit) -> Result<(), Er
     let mut runtime = Runtime::new()?;
 
     runtime.block_on_std(async move {
-        let (commit_sync_config, target_repo_dbs) = init_repos(
+        let (commit_syncer, target_repo_dbs) = init_repos(
             fb,
             MoverType::Except("10".to_string()),
             BookmarkRenamerType::Prefix("prefix".to_string()),
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -281,7 +281,7 @@ fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(), Err
             }
         });
 
-        let (commit_sync_config, target_repo_dbs) = init_repos(
+        let (commit_syncer, target_repo_dbs) = init_repos(
             fb,
             MoverType::Custom {
                 mover: no_newrepo_mover.clone(),
@@ -292,7 +292,7 @@ fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(), Err
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -310,7 +310,7 @@ fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), Error>
             }
         });
 
-        let (commit_sync_config, target_repo_dbs) = init_repos(
+        let (commit_syncer, target_repo_dbs) = init_repos(
             fb,
             MoverType::Custom {
                 mover: no_newrepo_mover.clone(),
@@ -321,7 +321,7 @@ fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), Error>
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -329,14 +329,14 @@ fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), Error>
 fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
     runtime.block_on_std(async move {
-        let (commit_sync_config, target_repo_dbs) = init_repos(
+        let (commit_syncer, target_repo_dbs) = init_repos(
             fb,
             MoverType::Except(BRANCHMERGE_FILE.to_string()),
             BookmarkRenamerType::Noop,
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -345,14 +345,14 @@ fn backsync_merge_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
     runtime.block_on_std(async move {
         let master = BookmarkName::new("master")?;
-        let (commit_sync_config, target_repo_dbs) = init_repos(
+        let (commit_syncer, target_repo_dbs) = init_repos(
             fb,
             MoverType::Except("unrelated_branch".to_string()),
             BookmarkRenamerType::Only(master),
         )
         .await?;
 
-        let source_repo = commit_sync_config.get_source_repo();
+        let source_repo = commit_syncer.get_source_repo();
 
         let ctx = CoreContext::test_mock(fb);
         let merge = build_unrelated_branch(ctx.clone(), &source_repo).await;
@@ -365,7 +365,7 @@ fn backsync_merge_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -373,10 +373,10 @@ fn backsync_merge_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
 fn backsync_merge_unrelated_branch_preserved(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
     runtime.block_on_std(async move {
-        let (commit_sync_config, target_repo_dbs) =
+        let (commit_syncer, target_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
 
-        let source_repo = commit_sync_config.get_source_repo();
+        let source_repo = commit_syncer.get_source_repo();
 
         let ctx = CoreContext::test_mock(fb);
         let merge = build_unrelated_branch(ctx.clone(), &source_repo).await;
@@ -389,7 +389,7 @@ fn backsync_merge_unrelated_branch_preserved(fb: FacebookInit) -> Result<(), Err
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_sync_config, target_repo_dbs).await
+        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
     })
 }
 
@@ -445,14 +445,14 @@ fn noop_book_renamer(bookmark_name: &BookmarkName) -> Option<BookmarkName> {
 
 async fn backsync_and_verify_master_wc(
     fb: FacebookInit,
-    commit_sync_config: CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping>,
     target_repo_dbs: TargetRepoDbs,
 ) -> Result<(), Error> {
-    let source_repo = commit_sync_config.get_source_repo();
-    let target_repo = commit_sync_config.get_target_repo();
+    let source_repo = commit_syncer.get_source_repo();
+    let target_repo = commit_syncer.get_target_repo();
 
     let ctx = CoreContext::test_mock(fb);
-    let next_log_entries = commit_sync_config
+    let next_log_entries = commit_syncer
         .get_source_repo()
         .read_next_bookmark_log_entries(ctx.clone(), 0, 1000, Freshness::MaybeStale)
         .collect()
@@ -465,12 +465,12 @@ async fn backsync_and_verify_master_wc(
     // Run syncs in parallel
     for _ in 1..5 {
         let f = future::lazy({
-            cloned!(commit_sync_config, ctx, target_repo_dbs);
+            cloned!(commit_syncer, ctx, target_repo_dbs);
             move || {
                 spawn_future(
                     backsync_all_latest(
                         ctx.clone(),
-                        commit_sync_config.clone(),
+                        commit_syncer.clone(),
                         target_repo_dbs.clone(),
                     )
                     .map_err(Error::from)
@@ -496,20 +496,20 @@ async fn backsync_and_verify_master_wc(
         .await?;
     assert_eq!(fetched_value, Some(latest_log_id));
 
-    verify_mapping_and_all_wc(ctx.clone(), commit_sync_config, vec![]).await?;
+    verify_mapping_and_all_wc(ctx.clone(), commit_syncer, vec![]).await?;
     Ok(())
 }
 
 async fn verify_mapping_and_all_wc(
     ctx: CoreContext,
-    commit_sync_config: CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping>,
     dont_verify_commits: Vec<ChangesetId>,
 ) -> Result<(), Error> {
-    let source_repo = commit_sync_config.get_source_repo();
-    let target_repo = commit_sync_config.get_target_repo();
-    let mover = commit_sync_config.get_mover().clone();
+    let source_repo = commit_syncer.get_source_repo();
+    let target_repo = commit_syncer.get_target_repo();
+    let mover = commit_syncer.get_mover().clone();
 
-    verify_bookmarks(ctx.clone(), commit_sync_config.clone()).await?;
+    verify_bookmarks(ctx.clone(), commit_syncer.clone()).await?;
 
     let heads = source_repo
         .get_bonsai_heads_maybe_stale(ctx.clone())
@@ -532,7 +532,7 @@ async fn verify_mapping_and_all_wc(
         if dont_verify_commits.contains(&source_cs_id) {
             continue;
         }
-        let csc = commit_sync_config.clone();
+        let csc = commit_syncer.clone();
         let outcome = csc
             .get_commit_sync_outcome(ctx.clone(), source_cs_id)
             .await?;
@@ -573,7 +573,7 @@ async fn verify_mapping_and_all_wc(
             &ctx,
             source_hg_cs_id,
             target_hg_cs_id,
-            commit_sync_config.clone(),
+            commit_syncer.clone(),
             mover_to_use.clone(),
         )
         .await?;
@@ -664,13 +664,13 @@ async fn compare_contents(
     ctx: &CoreContext,
     source_hg_cs_id: HgChangesetId,
     target_hg_cs_id: HgChangesetId,
-    commit_sync_config: CommitSyncer<SqlSyncedCommitMapping>,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping>,
     mover: Mover,
 ) -> Result<(), Error> {
     let source_content =
-        list_content(ctx, source_hg_cs_id, commit_sync_config.get_source_repo()).await?;
+        list_content(ctx, source_hg_cs_id, commit_syncer.get_source_repo()).await?;
     let target_content =
-        list_content(ctx, target_hg_cs_id, commit_sync_config.get_target_repo()).await?;
+        list_content(ctx, target_hg_cs_id, commit_syncer.get_target_repo()).await?;
 
     let filtered_source_content = source_content
         .into_iter()
@@ -903,7 +903,7 @@ async fn init_repos(
     .await;
 
     // Sync first commit manually
-    let commit_sync_config = CommitSyncer::new(mapping.clone(), repos);
+    let commit_syncer = CommitSyncer::new(mapping.clone(), repos);
     let initial_bcs_id = source_repo
         .get_bonsai_from_hg(
             ctx.clone(),
@@ -1106,7 +1106,7 @@ async fn init_repos(
     )
     .await?;
 
-    Ok((commit_sync_config, target_repo_dbs))
+    Ok((commit_syncer, target_repo_dbs))
 }
 
 async fn init_merged_repos(
