@@ -1,4 +1,3 @@
-#require py2
   $ disable treemanifest
 #testcases vfscachestore simplecachestore
 
@@ -307,14 +306,14 @@
   > import time
   > with repo.connectionpool.get('ssh://user@dummy/master') as conn:
   >     connid = id(conn)
-  >     print("got first connection")
+  >     repo.ui.debug("got first connection\n")
   > with repo.connectionpool.get('ssh://user@dummy/master') as conn:
   >     assert connid == id(conn)
-  >     print("got second connection")
+  >     repo.ui.debug("got second connection\n")
   > time.sleep(2)
   > with repo.connectionpool.get('ssh://user@dummy/master') as conn:
   >     assert connid != id(conn)
-  >     print("got third connection")
+  >     repo.ui.debug("got third connection\n")
   >     time.sleep(2)
   > EOF
   $ hg debugshell --command "`cat $TESTTMP/testpool`" --config connectionpool.lifetime=1 --debug | grep 'connection'
