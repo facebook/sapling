@@ -21,6 +21,8 @@ Setup
   $ mkcommit public1
   $ mkcommit public2
   $ hg phase -p .
+  $ hg debugvisibility status
+  commit visibility is tracked explicitly
 
 Simple creation and amending of draft commits
 
