@@ -18,7 +18,6 @@ context = { path = "../server/context" }
 cross_repo_sync = { path = "../commit_rewriting/cross_repo_sync" }
 derived_data = { path = "../derived_data" }
 fastlog = { path = "../derived_data/fastlog" }
-filenodes = { path = "../filenodes" }
 filestore = { path = "../filestore" }
 fsnodes = { path = "../derived_data/fsnodes" }
 hgproto = { path = "../hgproto" }
@@ -54,7 +53,6 @@ itertools = "0.8"
 maplit = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
-tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
 cross_repo_sync_test_utils = { path = "../commit_rewriting/cross_repo_sync/test_utils" }

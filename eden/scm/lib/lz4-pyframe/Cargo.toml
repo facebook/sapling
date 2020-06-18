@@ -18,7 +18,4 @@ lz4-sys = "1.8"
 thiserror = "1.0"
 
 [dev-dependencies]
-minibench = { path = "../minibench" }
 quickcheck = "0.9"
-rand_chacha = "0.2"
-rand_core = "0.5"

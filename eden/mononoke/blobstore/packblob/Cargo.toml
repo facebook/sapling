@@ -12,9 +12,6 @@ context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
 packblob-thrift = { path = "if" }
 zstdelta = { path = "../../../scm/lib/zstdelta" }
-bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
@@ -22,10 +19,11 @@ ascii = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-tokio-compat = "0.1"
 zstd = "=0.4.23"
 
 [dev-dependencies]
 memblob = { path = "../memblob" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 rand = { version = "0.7", features = ["small_rng"] }
 rand_xorshift = "0.2"
+tokio-compat = "0.1"

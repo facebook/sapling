@@ -11,35 +11,23 @@ blobstore = { path = ".." }
 blobstore_sync_queue = { path = "../../blobstore_sync_queue" }
 cacheblob = { path = "../cacheblob" }
 chaosblob = { path = "../chaosblob" }
-context = { path = "../../server/context" }
 fileblob = { path = "../fileblob" }
 logblob = { path = "../logblob" }
 memblob = { path = "../memblob" }
 metaconfig_types = { path = "../../metaconfig/types" }
-mononoke_types = { path = "../../mononoke_types" }
 multiplexedblob = { path = "../multiplexedblob" }
-newfilenodes = { path = "../../newfilenodes" }
 packblob = { path = "../packblob" }
 prefixblob = { path = "../prefixblob" }
 readonlyblob = { path = "../readonlyblob" }
-scuba_ext = { path = "../../common/scuba_ext" }
 sql_construct = { path = "../../common/sql_construct" }
 sql_ext = { path = "../../common/rust/sql_ext" }
 sqlblob = { path = "../sqlblob" }
 throttledblob = { path = "../throttledblob" }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-itertools = "0.8"
-serde = { version = "1.0", features = ["derive", "rc"] }
-serde_derive = "1.0"
-serde_json = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }

@@ -21,7 +21,6 @@ mercurial_revlog = { path = "../mercurial/revlog" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_repo = { path = "mononoke_repo" }
-mononoke_types = { path = "../mononoke_types" }
 pushredirect_enable = { path = "../config_structs/pushredirect" }
 remotefilelog = { path = "remotefilelog" }
 repo_read_write_status = { path = "repo_read_write_status" }
@@ -57,11 +56,3 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
 tokio-old = { package = "tokio", version = "0.1" }
-
-[dev-dependencies]
-blobrepo_factory = { path = "../blobrepo/factory" }
-fixtures = { path = "../tests/fixtures" }
-hooks_content_stores = { path = "../hooks/content-stores" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks" }
-skiplist = { path = "../reachabilityindex/skiplist" }
-tests_utils = { path = "../tests/utils" }

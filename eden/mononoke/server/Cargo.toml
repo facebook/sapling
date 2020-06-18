@@ -19,4 +19,3 @@ clap = "2.33"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 openssl = "0.10"
 slog = { version = "2.5", features = ["max_level_debug"] }
-slog-term = "2.4.2"

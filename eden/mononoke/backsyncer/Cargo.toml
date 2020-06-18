@@ -36,7 +36,6 @@ filestore = { path = "../filestore" }
 fixtures = { path = "../tests/fixtures" }
 manifest = { path = "../manifest" }
 mercurial_types = { path = "../mercurial/types" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 movers = { path = "../commit_rewriting/movers" }
 revset = { path = "../revset" }
 skiplist = { path = "../reachabilityindex/skiplist" }

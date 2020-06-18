@@ -32,7 +32,6 @@ scuba_ext = { path = "../common/scuba_ext" }
 sql_ext = { path = "../common/rust/sql_ext" }
 async_compression = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

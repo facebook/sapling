@@ -10,12 +10,12 @@ include = ["src/*.rs"]
 blobstore = { path = ".." }
 context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
-futures = "0.1"
 inlinable_string = "0.1"
 
 [dev-dependencies]
 memblob = { path = "../memblob" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bytes = { version = "0.5", features = ["serde"] }
+futures = "0.1"

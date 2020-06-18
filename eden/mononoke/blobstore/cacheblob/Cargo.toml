@@ -14,13 +14,11 @@ memcache-lock-thrift = { path = "../if" }
 mononoke_types = { path = "../../mononoke_types" }
 prefixblob = { path = "../prefixblob" }
 redactedblobstore = { path = "../redactedblobstore" }
-bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -31,9 +29,9 @@ futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }
-tokio-compat = "0.1"
 tokio-old = { package = "tokio", version = "0.1" }
 tokio-timer = "0.2"
 
 [dev-dependencies]
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
+tokio-compat = "0.1"

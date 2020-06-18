@@ -12,34 +12,29 @@ path = "lib.rs"
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
 blobstore = { path = "../../blobstore" }
-bookmarks = { path = "../../bookmarks" }
 context = { path = "../../server/context" }
 derived_data = { path = ".." }
 manifest = { path = "../../manifest" }
-mercurial_types = { path = "../../mercurial/types" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 repo_blobstore = { path = "../../blobrepo/repo_blobstore" }
-revset = { path = "../../revset" }
-tests_utils = { path = "../../tests/utils" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-maplit = "1.0"
-serde = { version = "1.0", features = ["derive", "rc"] }
-serde_derive = "1.0"
-slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
-tokio = "0.1"
-tokio-compat = "0.1"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
+bookmarks = { path = "../../bookmarks" }
 derived_data_filenodes = { path = "../filenodes" }
 fixtures = { path = "../../tests/fixtures" }
+mercurial_types = { path = "../../mercurial/types" }
+revset = { path = "../../revset" }
 test_utils = { path = "../../manifest/test_utils" }
+tests_utils = { path = "../../tests/utils" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+maplit = "1.0"
+tokio-compat = "0.1"

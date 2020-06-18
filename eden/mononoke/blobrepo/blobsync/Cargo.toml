@@ -19,10 +19,8 @@ futures = "0.1"
 
 [dev-dependencies]
 memblob = { path = "../../blobstore/memblob" }
-prefixblob = { path = "../../blobstore/prefixblob" }
 redactedblobstore = { path = "../../blobstore/redactedblobstore" }
 scuba_ext = { path = "../../common/scuba_ext" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bytes = { version = "0.5", features = ["serde"] }
-tokio = "0.1"
 tokio-compat = "0.1"

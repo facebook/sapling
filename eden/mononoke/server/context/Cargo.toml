@@ -29,4 +29,3 @@ chrono = { version = "0.4", features = ["serde"] }
 futures = "0.1"
 rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
-tokio = { version = "=0.2.13", features = ["full"] }

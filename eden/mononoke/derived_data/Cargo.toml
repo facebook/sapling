@@ -9,18 +9,13 @@ include = ["src/**/*.rs"]
 [dependencies]
 blobrepo = { path = "../blobrepo" }
 blobstore = { path = "../blobstore" }
-bookmarks = { path = "../bookmarks" }
 bounded_traversal = { path = "../common/bounded_traversal" }
 cacheblob = { path = "../blobstore/cacheblob" }
-changeset_fetcher = { path = "../blobrepo/changeset_fetcher" }
 context = { path = "../server/context" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }
-revset = { path = "../revset" }
 scuba_ext = { path = "../common/scuba_ext" }
 topo_sort = { path = "../common/topo_sort" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -29,24 +24,23 @@ time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", bran
 tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 async-trait = "0.1.29"
-bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-itertools = "0.8"
-lazy_static = "1.0"
-maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
-regex = "1.3.7"
-scopeguard = "1.0.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
-tokio-compat = "0.1"
 tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]
+bookmarks = { path = "../bookmarks" }
 fixtures = { path = "../tests/fixtures" }
 mercurial_types = { path = "../mercurial/types" }
+revset = { path = "../revset" }
 tests_utils = { path = "../tests/utils" }
-futures-util = "0.3"
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+lazy_static = "1.0"
+maplit = "1.0"
+tokio-compat = "0.1"
 tokio-timer = "0.2"

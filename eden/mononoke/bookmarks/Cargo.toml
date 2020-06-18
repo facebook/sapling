@@ -24,4 +24,3 @@ fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 maplit = "1.0"
 quickcheck = "0.9"
 tokio = "0.1"
-tokio-compat = "0.1"

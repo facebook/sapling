@@ -13,7 +13,3 @@ anyhow = "1.0"
 ascii = "1.0"
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
-
-[dev-dependencies]
-mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
-maplit = "1.0"

@@ -45,6 +45,3 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 slog-term = "2.4.2"
 tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"
-
-[dev-dependencies]
-tokio-timer = "0.2"

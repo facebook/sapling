@@ -15,7 +15,6 @@ mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
 reachabilityindex = { path = ".." }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }

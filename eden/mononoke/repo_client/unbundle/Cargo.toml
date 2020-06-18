@@ -9,7 +9,6 @@ include = ["src/**/*.rs"]
 [dependencies]
 backsyncer = { path = "../../backsyncer" }
 blobrepo = { path = "../../blobrepo" }
-blobrepo_factory = { path = "../../blobrepo/factory" }
 blobstore = { path = "../../blobstore" }
 bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 bookmarks = { path = "../../bookmarks" }
@@ -35,7 +34,6 @@ remotefilelog = { path = "../remotefilelog" }
 reverse_filler_queue = { path = "../reverse_filler_queue" }
 scribe_commit_queue = { path = "../scribe_commit_queue" }
 scuba_ext = { path = "../../common/scuba_ext" }
-sql_ext = { path = "../../common/rust/sql_ext" }
 synced_commit_mapping = { path = "../../commit_rewriting/synced_commit_mapping" }
 time_window_counter = { path = "../../time_window_counter" }
 topo_sort = { path = "../../common/topo_sort" }
@@ -64,10 +62,10 @@ thiserror = "1.0"
 tokio = "0.1"
 
 [dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory" }
 fixtures = { path = "../../tests/fixtures" }
 mercurial_types-mocks = { path = "../../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 tests_utils = { path = "../../tests/utils" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio-compat = "0.1"

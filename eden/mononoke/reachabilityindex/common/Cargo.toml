@@ -7,12 +7,10 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo_errors = { path = "../../blobrepo/errors" }
 changeset_fetcher = { path = "../../blobrepo/changeset_fetcher" }
 context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
 reachabilityindex = { path = ".." }
-uniqueheap = { path = "../../common/uniqueheap" }
 anyhow = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-util = "0.3"

@@ -72,7 +72,6 @@ cacheblob = { path = "blobstore/cacheblob" }
 changesets = { path = "changesets" }
 cmdlib = { path = "cmdlib" }
 context = { path = "server/context" }
-dbbookmarks = { path = "bookmarks/dbbookmarks" }
 deleted_files_manifest = { path = "derived_data/deleted_files_manifest" }
 derived_data = { path = "derived_data" }
 derived_data_utils = { path = "derived_data/utils" }
@@ -81,16 +80,13 @@ filestore = { path = "filestore" }
 fsnodes = { path = "derived_data/fsnodes" }
 lfs_import_lib = { path = "lfs_import_lib" }
 manifest = { path = "manifest" }
-mercurial_derived_data = { path = "derived_data/mercurial_derived_data" }
 mercurial_revlog = { path = "mercurial/revlog" }
 mercurial_types = { path = "mercurial/types" }
 metaconfig_types = { path = "metaconfig/types" }
 mononoke_types = { path = "mononoke_types" }
-phases = { path = "phases" }
 revset = { path = "revset" }
 scuba_ext = { path = "common/scuba_ext" }
 unodes = { path = "derived_data/unodes" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -110,7 +106,6 @@ futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 itertools = "0.8"
-maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
@@ -119,13 +114,13 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"
 tokio-old = { package = "tokio", version = "0.1" }
-tokio-timer = "0.2"
 toml = "=0.5.6"
 
 [dev-dependencies]
 fixtures = { path = "tests/fixtures" }
 tests_utils = { path = "tests/utils" }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
+maplit = "1.0"
 
 [workspace]
 

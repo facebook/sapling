@@ -13,9 +13,7 @@ path = "lib.rs"
 lz4-pyframe = { path = "../../../scm/lib/lz4-pyframe" }
 mercurial_types = { path = "../types" }
 mercurial_types-mocks = { path = "../types/mocks" }
-mononoke_types = { path = "../../mononoke_types" }
 mononoke_types-thrift = { path = "../../mononoke_types/if" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 ascii = "1.0"
@@ -23,14 +21,10 @@ bitflags = "1.2"
 bytes = { version = "0.5", features = ["serde"] }
 flate2 = { version = "1.0", features = ["tokio", "rust_backend"], default-features = false }
 futures = "0.1"
-itertools = "0.8"
 memmap = "0.7"
 nom = { version = "3", features = [ "verbose-errors" ] }
-quickcheck = "0.9"
-rand = { version = "0.7", features = ["small_rng"] }
-serde = { version = "1.0", features = ["derive", "rc"] }
-serde_derive = "1.0"
 thiserror = "1.0"
 
 [dev-dependencies]
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 assert_matches = "1.3"

@@ -26,7 +26,6 @@ metaconfig_parser = { path = "../../metaconfig/parser" }
 metaconfig_types = { path = "../../metaconfig/types" }
 microwave = { path = ".." }
 mononoke_types = { path = "../../mononoke_types" }
-scuba_ext = { path = "../../common/scuba_ext" }
 warm_bookmarks_cache = { path = "../../bookmarks/warm_bookmarks_cache" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

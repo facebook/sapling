@@ -19,29 +19,20 @@ derived_data = { path = ".." }
 manifest = { path = "../../manifest" }
 mononoke_types = { path = "../../mononoke_types" }
 mononoke_types-thrift = { path = "../../mononoke_types/if" }
-tunables = { path = "../../tunables" }
 unodes = { path = "../unodes" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
-itertools = "0.8"
 maplit = "1.0"
-pretty_assertions = "0.6"
-rand = { version = "0.7", features = ["small_rng"] }
-rand_xorshift = "0.2"
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
-tokio-compat = "0.1"
 
 [dev-dependencies]
 benchmark_lib = { path = "../../benchmark" }
@@ -52,3 +43,8 @@ mercurial_types = { path = "../../mercurial/types" }
 mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 revset = { path = "../../revset" }
 tests_utils = { path = "../../tests/utils" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+pretty_assertions = "0.6"
+rand = { version = "0.7", features = ["small_rng"] }
+rand_xorshift = "0.2"
+tokio-compat = "0.1"

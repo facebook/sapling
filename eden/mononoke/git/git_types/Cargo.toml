@@ -15,22 +15,19 @@ filestore = { path = "../../filestore" }
 git-types-thrift = { path = "if" }
 manifest = { path = "../../manifest" }
 mononoke_types = { path = "../../mononoke_types" }
-bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
 digest = "0.8"
-futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-futures-util = "0.3"
 sha-1 = "0.8"
 thiserror = "1.0"
 
 [dev-dependencies]
 fixtures = { path = "../../tests/fixtures" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures-util = "0.3"
 git2 = "0.13"
 tempdir = "0.3"
 tokio-compat = "0.1"

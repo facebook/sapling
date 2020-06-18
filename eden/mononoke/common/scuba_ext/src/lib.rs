@@ -17,6 +17,8 @@ use time_ext::DurationExt;
 use tracing::TraceContext;
 use tunables::tunables;
 
+use anyhow as _; // oss uses anyhow
+
 #[cfg(fbcode_build)]
 mod facebook;
 #[cfg(not(fbcode_build))]

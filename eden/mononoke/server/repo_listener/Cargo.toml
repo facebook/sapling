@@ -15,7 +15,6 @@ blobstore_factory = { path = "../../blobstore/factory" }
 cache_warmup = { path = "../../cache_warmup" }
 cmdlib = { path = "../../cmdlib" }
 context = { path = "../context" }
-cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync" }
 hgproto = { path = "../../hgproto" }
 hooks = { path = "../../hooks" }
 hooks_content_stores = { path = "../../hooks/content-stores" }

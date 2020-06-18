@@ -25,11 +25,9 @@ maplit = "1.0"
 [dev-dependencies]
 blobrepo = { path = "../blobrepo" }
 fixtures = { path = "../tests/fixtures" }
-mercurial_types = { path = "../mercurial/types" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 revset = { path = "../revset" }
 tests_utils = { path = "../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures-old = { package = "futures", version = "0.1" }
-futures-util = "0.3"
 tokio-compat = "0.1"

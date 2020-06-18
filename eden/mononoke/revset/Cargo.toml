@@ -14,7 +14,6 @@ mononoke_types = { path = "../mononoke_types" }
 reachabilityindex = { path = "../reachabilityindex" }
 uniqueheap = { path = "../common/uniqueheap" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 futures-old = { package = "futures", version = "0.1" }
@@ -28,10 +27,10 @@ fixtures = { path = "../tests/fixtures" }
 revset_test_helper = { path = "revset-test-helper" }
 skiplist = { path = "../reachabilityindex/skiplist" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 ascii = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
-rand_distr = "0.2"
 tokio = "0.1"

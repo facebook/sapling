@@ -35,5 +35,4 @@ fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 futures = { version = "0.3", features = ["async-await", "compat"] }
 maplit = "1.0"
 quickcheck = "0.9"
-tokio = "0.1"
 tokio-compat = "0.1"

@@ -8,11 +8,8 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
-blobstore = { path = "../../blobstore" }
 context = { path = "../../server/context" }
 filestore = { path = "../../filestore" }
-manifest = { path = "../../manifest" }
-mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
 anyhow = "1.0"
 async-trait = "0.1.29"
@@ -23,5 +20,4 @@ thiserror = "1.0"
 [dev-dependencies]
 mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"

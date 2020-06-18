@@ -12,23 +12,15 @@ path = "lib.rs"
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
 blobstore = { path = "../../blobstore" }
-bookmarks = { path = "../../bookmarks" }
 context = { path = "../../server/context" }
 derived_data = { path = ".." }
 filestore = { path = "../../filestore" }
 manifest = { path = "../../manifest" }
-mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
 repo_blobstore = { path = "../../blobrepo/repo_blobstore" }
-revset = { path = "../../revset" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 ascii = "1.0"
 async-trait = "0.1.29"
@@ -37,17 +29,19 @@ digest = "0.8"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 itertools = "0.8"
-maplit = "1.0"
-serde = { version = "1.0", features = ["derive", "rc"] }
-serde_derive = "1.0"
 sha-1 = "0.8"
 sha2 = "0.8"
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
-tokio-compat = "0.1"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
+bookmarks = { path = "../../bookmarks" }
 fixtures = { path = "../../tests/fixtures" }
+mercurial_types = { path = "../../mercurial/types" }
+revset = { path = "../../revset" }
 test_utils = { path = "../../manifest/test_utils" }
 tests_utils = { path = "../../tests/utils" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+maplit = "1.0"
+tokio-compat = "0.1"

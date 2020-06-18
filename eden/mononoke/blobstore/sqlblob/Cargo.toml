@@ -11,27 +11,20 @@ blobstore = { path = ".." }
 context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
 sql_ext = { path = "../../common/rust/sql_ext" }
-bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 once_cell = "1.2"
 rand = { version = "0.7", features = ["small_rng"] }
-serde = { version = "1.0", features = ["derive", "rc"] }
-serde_derive = "1.0"
-serde_json = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
-tokio-compat = "0.1"
 tokio-old = { package = "tokio", version = "0.1" }
 twox-hash = "1.5"
 
 [dev-dependencies]
-quickcheck = "0.9"
+tokio-compat = "0.1"

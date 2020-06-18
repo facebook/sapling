@@ -14,28 +14,26 @@ cacheblob = { path = "../cacheblob" }
 context = { path = "../../server/context" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
-sql_construct = { path = "../../common/sql_construct" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
-futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 itertools = "0.8"
-lazy_static = "1.0"
-nonzero_ext = "0.2"
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = "0.1"
-tokio-compat = "0.1"
-uuid = { version = "0.8.1", features = ["v4"] }
 
 [dev-dependencies]
 memblob = { path = "../memblob" }
 readonlyblob = { path = "../readonlyblob" }
+sql_construct = { path = "../../common/sql_construct" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bytes = { version = "0.5", features = ["serde"] }
+futures = { version = "0.3", features = ["async-await", "compat"] }
+nonzero_ext = "0.2"
+tokio-compat = "0.1"

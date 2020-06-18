@@ -21,7 +21,6 @@ permission_checker = { path = "../permission_checker" }
 redactedblobstore = { path = "../blobstore/redactedblobstore" }
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -52,7 +51,6 @@ tokio-openssl = "0.4"
 
 [dev-dependencies]
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
-assert_matches = "1.3"
 futures-old = { package = "futures", version = "0.1" }
 pretty_assertions = "0.6"
 tokio-compat = "0.1"
