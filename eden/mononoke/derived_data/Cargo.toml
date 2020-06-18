@@ -30,7 +30,6 @@ rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
-tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]
 bookmarks = { path = "../bookmarks" }

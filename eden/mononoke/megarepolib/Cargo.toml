@@ -17,7 +17,6 @@ mononoke_types = { path = "../mononoke_types" }
 movers = { path = "../commit_rewriting/movers" }
 anyhow = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 
 [dev-dependencies]
@@ -25,4 +24,5 @@ fixtures = { path = "../tests/fixtures" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures-old = { package = "futures", version = "0.1" }
 maplit = "1.0"

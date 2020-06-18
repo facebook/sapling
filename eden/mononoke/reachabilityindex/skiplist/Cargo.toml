@@ -21,7 +21,6 @@ async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 chashmap = "2.2"
 futures = { version = "0.3", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 maplit = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
@@ -35,3 +34,4 @@ test-helpers = { path = "../test-helpers" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures-old = { package = "futures", version = "0.1" }

@@ -14,7 +14,6 @@ mononoke_types = { path = "../mononoke_types" }
 uniqueheap = { path = "../common/uniqueheap" }
 anyhow = "1.0"
 async-trait = "0.1.29"
-futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 maplit = "1.0"
 thiserror = "1.0"

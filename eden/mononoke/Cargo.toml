@@ -119,7 +119,6 @@ toml = "=0.5.6"
 [dev-dependencies]
 fixtures = { path = "tests/fixtures" }
 tests_utils = { path = "tests/utils" }
-bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 maplit = "1.0"
 
 [workspace]

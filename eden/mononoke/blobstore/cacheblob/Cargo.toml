@@ -33,5 +33,4 @@ tokio-old = { package = "tokio", version = "0.1" }
 tokio-timer = "0.2"
 
 [dev-dependencies]
-bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 tokio-compat = "0.1"

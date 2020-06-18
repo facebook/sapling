@@ -23,7 +23,6 @@ futures-old = { package = "futures", version = "0.1" }
 once_cell = "1.2"
 rand = { version = "0.7", features = ["small_rng"] }
 tokio = { version = "=0.2.13", features = ["full"] }
-tokio-old = { package = "tokio", version = "0.1" }
 twox-hash = "1.5"
 
 [dev-dependencies]

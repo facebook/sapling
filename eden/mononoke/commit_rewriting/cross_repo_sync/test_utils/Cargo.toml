@@ -27,5 +27,4 @@ sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = 
 anyhow = "1.0"
 ascii = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
 maplit = "1.0"
