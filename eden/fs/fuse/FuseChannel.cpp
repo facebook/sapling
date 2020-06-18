@@ -1473,7 +1473,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_GETATTR inode=" << header->nodeid;
-  return dispatcher_->getattr(InodeNumber{header->nodeid})
+  return dispatcher_->getattr(InodeNumber{header->nodeid}, RequestData::get())
       .thenValue([](Dispatcher::Attr attr) {
         RequestData::get().sendReply(attr.asFuseAttr());
       });

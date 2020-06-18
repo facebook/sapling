@@ -122,7 +122,9 @@ class Dispatcher {
    *
    * @param ino the inode number
    */
-  virtual folly::Future<Attr> getattr(InodeNumber ino);
+  virtual folly::Future<Attr> getattr(
+      InodeNumber ino,
+      ObjectFetchContext& context);
 
   /**
    * Set file attributes

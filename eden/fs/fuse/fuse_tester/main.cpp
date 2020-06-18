@@ -19,6 +19,7 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -40,7 +41,8 @@ class TestDispatcher : public Dispatcher {
   TestDispatcher(EdenStats* stats, const UserInfo& identity)
       : Dispatcher(stats), identity_(identity) {}
 
-  folly::Future<Attr> getattr(InodeNumber ino) override {
+  folly::Future<Attr> getattr(InodeNumber ino, ObjectFetchContext& /*context*/)
+      override {
     if (ino == kRootNodeId) {
       struct stat st = {};
       st.st_ino = ino.get();

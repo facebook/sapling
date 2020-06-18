@@ -66,13 +66,13 @@ Dispatcher::Attr attrForInodeWithCorruptOverlay(InodeNumber ino) noexcept {
 }
 } // namespace
 
-folly::Future<Dispatcher::Attr> EdenDispatcher::getattr(InodeNumber ino) {
+folly::Future<Dispatcher::Attr> EdenDispatcher::getattr(
+    InodeNumber ino,
+    ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "getattr({})", ino);
   return inodeMap_->lookupInode(ino)
-      .thenValue([](const InodePtr& inode) {
-        // TODO(zeyi)
-        return inode->stat(ObjectFetchContext::getNullContext());
-      })
+      .thenValue(
+          [&context](const InodePtr& inode) { return inode->stat(context); })
       .thenValue([](const struct stat& st) { return Dispatcher::Attr{st}; });
 }
 
