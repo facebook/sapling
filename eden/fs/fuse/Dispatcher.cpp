@@ -66,7 +66,8 @@ void Dispatcher::destroy() {}
 
 folly::Future<fuse_entry_out> Dispatcher::lookup(
     InodeNumber /*parent*/,
-    PathComponentPiece /*name*/) {
+    PathComponentPiece /*name*/,
+    ObjectFetchContext& /*context*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 

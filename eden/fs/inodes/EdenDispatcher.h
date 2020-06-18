@@ -39,7 +39,8 @@ class EdenDispatcher : public Dispatcher {
   folly::Future<folly::Unit> releasedir(InodeNumber ino, uint64_t fh) override;
   folly::Future<fuse_entry_out> lookup(
       InodeNumber parent,
-      PathComponentPiece name) override;
+      PathComponentPiece name,
+      ObjectFetchContext& context) override;
 
   void forget(InodeNumber ino, unsigned long nlookup) override;
   folly::Future<uint64_t> open(InodeNumber ino, int flags) override;

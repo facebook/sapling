@@ -15,6 +15,7 @@
 #include <unordered_map>
 
 #include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -44,7 +45,8 @@ class TestDispatcher : public Dispatcher {
 
   folly::Future<fuse_entry_out> lookup(
       InodeNumber parent,
-      PathComponentPiece name) override;
+      PathComponentPiece name,
+      ObjectFetchContext& context) override;
 
   /**
    * Wait for the dispatcher to receive a FUSE_LOOKUP request with the

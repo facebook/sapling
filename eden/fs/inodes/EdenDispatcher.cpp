@@ -100,17 +100,15 @@ folly::Future<folly::Unit> EdenDispatcher::releasedir(
 
 folly::Future<fuse_entry_out> EdenDispatcher::lookup(
     InodeNumber parent,
-    PathComponentPiece namepiece) {
+    PathComponentPiece namepiece,
+    ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({}, {})", parent, namepiece);
   return inodeMap_->lookupTreeInode(parent)
       .thenValue([name = PathComponent(namepiece)](const TreeInodePtr& tree) {
         return tree->getOrLoadChild(name);
       })
-      .thenValue([](const InodePtr& inode) {
-        return folly::makeFutureWith([&]() {
-                 // TODO(zeyi)
-                 return inode->stat(ObjectFetchContext::getNullContext());
-               })
+      .thenValue([&context](const InodePtr& inode) {
+        return folly::makeFutureWith([&]() { return inode->stat(context); })
             .thenTry([inode](folly::Try<struct stat> maybeStat) {
               if (maybeStat.hasValue()) {
                 inode->incFuseRefcount();

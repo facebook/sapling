@@ -67,7 +67,8 @@ class Dispatcher {
    */
   virtual folly::Future<fuse_entry_out> lookup(
       InodeNumber parent,
-      PathComponentPiece name);
+      PathComponentPiece name,
+      ObjectFetchContext& context);
 
   /**
    * Forget about an inode

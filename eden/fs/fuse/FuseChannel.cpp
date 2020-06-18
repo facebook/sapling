@@ -1453,9 +1453,9 @@ folly::Future<folly::Unit> FuseChannel::fuseLookup(
 
   XLOG(DBG7) << "FUSE_LOOKUP parent=" << parent << " name=" << name;
 
-  return dispatcher_->lookup(parent, name).thenValue([](fuse_entry_out param) {
-    RequestData::get().sendReply(param);
-  });
+  return dispatcher_->lookup(parent, name, RequestData::get())
+      .thenValue(
+          [](fuse_entry_out param) { RequestData::get().sendReply(param); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseForget(
