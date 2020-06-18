@@ -14,6 +14,7 @@
 #include <chrono>
 
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
@@ -437,7 +438,7 @@ TEST(FileInode, readDuringLoad) {
 
   // Load the inode and start reading the contents
   auto inode = mount_.getFileInode("notready.txt");
-  auto dataFuture = inode->read(4096, 0);
+  auto dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext());
 
   EXPECT_FALSE(dataFuture.isReady());
 
@@ -484,7 +485,7 @@ TEST(FileInode, truncateDuringLoad) {
   auto inode = mount_.getFileInode("notready.txt");
 
   // Start reading the contents
-  auto dataFuture = inode->read(4096, 0);
+  auto dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(dataFuture.isReady());
 
   // Truncate the file while the initial read is in progress. This should
@@ -502,7 +503,7 @@ TEST(FileInode, truncateDuringLoad) {
   // For good measure, test reading and writing some more.
   inode->write("foobar\n"_sp, 5).get(0ms);
 
-  dataFuture = inode->read(4096, 0);
+  dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(dataFuture.isReady());
   EXPECT_EQ("\0\0\0\0\0foobar\n"_sp, std::move(dataFuture).get().copyData());
 
@@ -520,13 +521,13 @@ TEST(FileInode, dropsCacheWhenFullyRead) {
 
   EXPECT_FALSE(blobCache->get(hash).blob);
 
-  inode->read(4, 0).get(0ms);
+  inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
 
-  inode->read(4, 4).get(0ms);
+  inode->read(4, 4, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
 
-  inode->read(4, 8).get(0ms);
+  inode->read(4, 8, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_FALSE(blobCache->contains(hash));
 }
 
@@ -541,17 +542,17 @@ TEST(FileInode, keepsCacheIfPartiallyReread) {
 
   EXPECT_FALSE(blobCache->contains(hash));
 
-  inode->read(6, 0).get(0ms);
+  inode->read(6, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
 
-  inode->read(6, 6).get(0ms);
+  inode->read(6, 6, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_FALSE(blobCache->contains(hash));
 
-  inode->read(6, 0).get(0ms);
+  inode->read(6, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
 
   // Evicts again on the second full read!
-  inode->read(6, 6).get(0ms);
+  inode->read(6, 6, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_FALSE(blobCache->contains(hash));
 }
 
@@ -566,7 +567,7 @@ TEST(FileInode, dropsCacheWhenMaterialized) {
 
   EXPECT_FALSE(blobCache->get(hash).blob);
 
-  inode->read(4, 0).get(0ms);
+  inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
 
   inode->write("data"_sp, 0).get(0ms);
@@ -582,7 +583,7 @@ TEST(FileInode, dropsCacheWhenUnloaded) {
   auto inode = mount.getFileInode("bigfile.txt");
   auto hash = inode->getBlobHash().value();
 
-  inode->read(4, 0).get(0ms);
+  inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash));
 
   inode.reset();
@@ -599,11 +600,11 @@ TEST(FileInode, reloadsBlobIfCacheIsEvicted) {
   auto inode = mount.getFileInode("bigfile.txt");
   auto hash = inode->getBlobHash().value();
 
-  inode->read(4, 0).get(0ms);
+  inode->read(4, 0, ObjectFetchContext::getNullContext()).get(0ms);
   blobCache->clear();
   EXPECT_FALSE(blobCache->contains(hash));
 
-  inode->read(4, 4).get(0ms);
+  inode->read(4, 4, ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_TRUE(blobCache->contains(hash))
       << "reading should insert hash " << hash << " into cache";
 }

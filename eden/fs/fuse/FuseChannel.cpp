@@ -1420,7 +1420,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRead(
   XLOG(DBG7) << "FUSE_READ";
 
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->read(ino, read->size, read->offset)
+  return dispatcher_->read(ino, read->size, read->offset, RequestData::get())
       .thenValue(
           [](BufVec&& buf) { RequestData::get().sendReply(buf.getIov()); });
 }

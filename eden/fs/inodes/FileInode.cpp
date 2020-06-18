@@ -798,13 +798,14 @@ void FileInode::materialize() {
 }
 #else
 
-Future<BufVec> FileInode::read(size_t size, off_t off) {
+Future<BufVec>
+FileInode::read(size_t size, off_t off, ObjectFetchContext& context) {
   DCHECK_GE(off, 0);
   return runWhileDataLoaded<Future<BufVec>>(
       LockedState{this},
       BlobCache::Interest::WantHandle,
       // This function is only called by FUSE.
-      ObjectFetchContext::getNullContext(),
+      context,
       ImportPriority::kHigh(),
       nullptr,
       [size, off, self = inodePtrFromThis()](

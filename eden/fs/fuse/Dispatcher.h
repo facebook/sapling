@@ -13,6 +13,7 @@
 #include "eden/fs/fuse/BufVec.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -286,7 +287,8 @@ class Dispatcher {
    * @param size number of bytes to read
    * @param off offset to read from
    */
-  virtual folly::Future<BufVec> read(InodeNumber ino, size_t size, off_t off);
+  virtual folly::Future<BufVec>
+  read(InodeNumber ino, size_t size, off_t off, ObjectFetchContext& context);
 
   /**
    * Write data

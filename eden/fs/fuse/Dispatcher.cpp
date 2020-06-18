@@ -150,8 +150,11 @@ folly::Future<folly::Unit> Dispatcher::releasedir(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<BufVec>
-Dispatcher::read(InodeNumber /*ino*/, size_t /*size*/, off_t /*off*/) {
+folly::Future<BufVec> Dispatcher::read(
+    InodeNumber /*ino*/,
+    size_t /*size*/,
+    off_t /*off*/,
+    ObjectFetchContext& /*context*/) {
   FUSELL_NOT_IMPL();
 }
 

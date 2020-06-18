@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BlobCache.h"
+#include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
 #ifndef _WIN32
 #include "eden/fs/utils/CoverageSet.h"
@@ -239,7 +240,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    *
    * May throw exceptions on error.
    */
-  folly::Future<BufVec> read(size_t size, off_t off);
+  folly::Future<BufVec>
+  read(size_t size, off_t off, ObjectFetchContext& context);
 
   folly::Future<size_t> write(BufVec&& buf, off_t off);
   folly::Future<size_t> write(folly::StringPiece data, off_t off);
