@@ -15,9 +15,6 @@
 #include <folly/logging/xlog.h>
 #include <stdexcept>
 
-#ifndef _WIN32
-#include "eden/fs/fuse/RequestData.h"
-#endif
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
@@ -82,7 +79,6 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
         // this layer.
 
         // Load the tree from the BackingStore.
-        self->recordBackingStoreImport();
         return self->backingStore_->getTree(id)
             .via(self->executor_)
             .thenValue([id, &fetchContext, localStore = self->localStore_](
@@ -110,7 +106,6 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
     ObjectFetchContext&) const {
   XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
 
-  recordBackingStoreImport();
   return backingStore_->getTreeForCommit(commitID).via(executor_).thenValue(
       [commitID, localStore = localStore_](std::shared_ptr<const Tree> tree) {
         if (!tree) {
@@ -129,7 +124,6 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
     ObjectFetchContext&) const {
   XLOG(DBG3) << "getTreeForManifest(" << commitID << ", " << manifestID << ")";
 
-  recordBackingStoreImport();
   return backingStore_->getTreeForManifest(commitID, manifestID)
       .via(executor_)
       .thenValue([commitID, manifestID, localStore = localStore_](
@@ -186,7 +180,6 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
     }
 
     // Look in the BackingStore
-    self->recordBackingStoreImport();
     return self->backingStore_->getBlob(id, priority)
         .via(self->executor_)
         .thenValue([self, &fetchContext, id](
@@ -258,7 +251,6 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
         //
         // TODO: This should probably check the LocalStore for the blob first,
         // especially when we begin to expire entries in RocksDB.
-        self->recordBackingStoreImport();
         return self->backingStore_->getBlob(id)
             .via(self->executor_)
             .thenValue([self, id, &context](std::unique_ptr<Blob> blob) {
@@ -306,15 +298,5 @@ Future<uint64_t> ObjectStore::getBlobSize(
   return getBlobMetadata(id, context)
       .thenValue([](const BlobMetadata& metadata) { return metadata.size; });
 }
-
-void ObjectStore::recordBackingStoreImport() const {
-#ifndef _WIN32
-  // TODO(puneetk): Add Windows stats for Backing store import here.
-  if (RequestData::isFuseRequest()) {
-    RequestData::get().getEdenTopStats().setDidImportFromBackingStore();
-  }
-#endif
-}
-
 } // namespace eden
 } // namespace facebook

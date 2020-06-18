@@ -14,6 +14,7 @@
 
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 
@@ -35,7 +36,7 @@ class Dispatcher;
  * see eden/fs/fuse/FuseChannel.cpp FuseChannel::processSession for how this
  * should be used
  */
-class RequestData : public folly::RequestData {
+class RequestData : public folly::RequestData, public ObjectFetchContext {
   FuseChannel* channel_;
   fuse_in_header fuseHeader_;
   // Needed to track stats
@@ -81,6 +82,14 @@ class RequestData : public folly::RequestData {
 
   bool hasCallback() override {
     return false;
+  }
+
+  // Override of `ObjectFetchContext`
+  void didFetch(ObjectType /*type*/, const Hash& /*hash*/, Origin origin)
+      override {
+    if (origin == Origin::FromBackingStore) {
+      edenTopStats_.setDidImportFromBackingStore();
+    }
   }
 
   // Returns true if the current context is being called from inside

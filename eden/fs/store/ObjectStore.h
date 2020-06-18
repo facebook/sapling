@@ -177,8 +177,6 @@ class ObjectStore : public IObjectStore,
 
   void updateBlobStats(bool local, bool backing) const;
   void updateBlobMetadataStats(bool memory, bool local, bool backing) const;
-
-  void recordBackingStoreImport() const;
 };
 
 } // namespace eden
