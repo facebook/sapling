@@ -25,6 +25,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/journal/JournalDelta.h"
+#include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
@@ -599,7 +600,7 @@ TEST(EdenMount, setOwnerChangesTakeEffect) {
   edenMount->setOwner(uid, gid);
 
   auto fileInode = testMount.getFileInode("dir/file.txt");
-  auto st = fileInode->stat().get(0ms);
+  auto st = fileInode->stat(ObjectFetchContext::getNullContext()).get(0ms);
   EXPECT_EQ(st.st_uid, uid);
   EXPECT_EQ(st.st_gid, gid);
 }
@@ -626,7 +627,9 @@ class ChownTest : public ::testing::Test {
   }
 
   void expectChownSucceeded() {
-    auto st = testMount_->getFileInode("file.txt")->stat().get(0ms);
+    auto st = testMount_->getFileInode("file.txt")
+                  ->stat(ObjectFetchContext::getNullContext())
+                  .get(0ms);
     EXPECT_EQ(st.st_uid, uid);
     EXPECT_EQ(st.st_gid, gid);
   }

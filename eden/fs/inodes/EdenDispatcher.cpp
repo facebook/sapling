@@ -69,7 +69,10 @@ Dispatcher::Attr attrForInodeWithCorruptOverlay(InodeNumber ino) noexcept {
 folly::Future<Dispatcher::Attr> EdenDispatcher::getattr(InodeNumber ino) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "getattr({})", ino);
   return inodeMap_->lookupInode(ino)
-      .thenValue([](const InodePtr& inode) { return inode->stat(); })
+      .thenValue([](const InodePtr& inode) {
+        // TODO(zeyi)
+        return inode->stat(ObjectFetchContext::getNullContext());
+      })
       .thenValue([](const struct stat& st) { return Dispatcher::Attr{st}; });
 }
 
@@ -104,7 +107,10 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
         return tree->getOrLoadChild(name);
       })
       .thenValue([](const InodePtr& inode) {
-        return folly::makeFutureWith([&]() { return inode->stat(); })
+        return folly::makeFutureWith([&]() {
+                 // TODO(zeyi)
+                 return inode->stat(ObjectFetchContext::getNullContext());
+               })
             .thenTry([inode](folly::Try<struct stat> maybeStat) {
               if (maybeStat.hasValue()) {
                 inode->incFuseRefcount();
@@ -206,8 +212,8 @@ folly::Future<fuse_entry_out> EdenDispatcher::create(
       [=](const TreeInodePtr& inode) {
         auto childName = PathComponent{name};
         auto child = inode->mknod(childName, mode, 0);
-        return child->stat().thenValue(
-            [child](struct stat st) -> fuse_entry_out {
+        return child->stat(ObjectFetchContext::getNullContext())
+            .thenValue([child](struct stat st) -> fuse_entry_out {
               child->incFuseRefcount();
               return computeEntryParam(Dispatcher::Attr{st});
             });
@@ -317,8 +323,8 @@ folly::Future<fuse_entry_out> EdenDispatcher::mknod(
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}, mode, rdev](const TreeInodePtr& inode) {
         auto child = inode->mknod(childName, mode, rdev);
-        return child->stat().thenValue(
-            [child](struct stat st) -> fuse_entry_out {
+        return child->stat(ObjectFetchContext::getNullContext())
+            .thenValue([child](struct stat st) -> fuse_entry_out {
               child->incFuseRefcount();
               return computeEntryParam(Dispatcher::Attr{st});
             });
@@ -339,10 +345,11 @@ folly::Future<fuse_entry_out> EdenDispatcher::mkdir(
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}, mode](const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode);
-        return child->stat().thenValue([child](struct stat st) {
-          child->incFuseRefcount();
-          return computeEntryParam(Dispatcher::Attr{st});
-        });
+        return child->stat(ObjectFetchContext::getNullContext())
+            .thenValue([child](struct stat st) {
+              child->incFuseRefcount();
+              return computeEntryParam(Dispatcher::Attr{st});
+            });
       });
 }
 
@@ -377,9 +384,10 @@ folly::Future<fuse_entry_out> EdenDispatcher::symlink(
        childName = PathComponent{name}](const TreeInodePtr& inode) {
         auto symlinkInode = inode->symlink(childName, linkContents);
         symlinkInode->incFuseRefcount();
-        return symlinkInode->stat().thenValue([symlinkInode](struct stat st) {
-          return computeEntryParam(Dispatcher::Attr{st});
-        });
+        return symlinkInode->stat(ObjectFetchContext::getNullContext())
+            .thenValue([symlinkInode](struct stat st) {
+              return computeEntryParam(Dispatcher::Attr{st});
+            });
       });
 }
 

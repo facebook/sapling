@@ -176,7 +176,7 @@ TreeInode::TreeInode(
 
 TreeInode::~TreeInode() {}
 
-folly::Future<struct stat> TreeInode::stat() {
+folly::Future<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
   auto st = getMount()->initStatData();
   st.st_ino = folly::to_narrow(getNodeId().get());
   auto contents = contents_.rlock();
@@ -3456,11 +3456,11 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
       auto blobHash = childFile->getBlobHash();
       infoEntry.materialized = !blobHash.has_value();
       infoEntry.hash = thriftHash(blobHash);
-      futures.push_back(
-          childFile->stat().thenValue([i = info.entries.size() - 1](auto st) {
-            auto fileSize = st.st_size;
-            return std::make_pair(i, fileSize);
-          }));
+      futures.push_back(childFile->stat(ObjectFetchContext::getNullContext())
+                            .thenValue([i = info.entries.size() - 1](auto st) {
+                              auto fileSize = st.st_size;
+                              return std::make_pair(i, fileSize);
+                            }));
     }
   }
   auto fileSizeMappings = folly::collectAllUnsafe(futures).get();
@@ -3550,7 +3550,9 @@ void TreeInode::prefetch() {
                         entry,
                         pendingLoads,
                         ObjectFetchContext::getNullContext())
-                    .thenValue([](InodePtr inode) { return inode->stat(); })
+                    .thenValue([](InodePtr inode) {
+                      return inode->stat(ObjectFetchContext::getNullContext());
+                    })
                     .unit());
           }
         }

@@ -758,19 +758,21 @@ EdenServiceHandler::semifuture_getFileInformation(
                         rootInode,
                         *paths,
                         [](InodePtr inode) {
-                          return inode->stat().thenValue([](struct stat st) {
-                            FileInformation info;
-                            info.size = st.st_size;
-                            auto ts = stMtime(st);
-                            info.mtime.seconds = ts.tv_sec;
-                            info.mtime.nanoSeconds = ts.tv_nsec;
-                            info.mode = st.st_mode;
+                          return inode
+                              ->stat(ObjectFetchContext::getNullContext())
+                              .thenValue([](struct stat st) {
+                                FileInformation info;
+                                info.size = st.st_size;
+                                auto ts = stMtime(st);
+                                info.mtime.seconds = ts.tv_sec;
+                                info.mtime.nanoSeconds = ts.tv_nsec;
+                                info.mode = st.st_mode;
 
-                            FileInformationOrError result;
-                            result.set_info(info);
+                                FileInformationOrError result;
+                                result.set_info(info);
 
-                            return result;
-                          });
+                                return result;
+                              });
                         }))
       .deferValue([](vector<Try<FileInformationOrError>>&& done) {
         auto out = std::make_unique<vector<FileInformationOrError>>();

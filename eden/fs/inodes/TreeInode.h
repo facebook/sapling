@@ -110,7 +110,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   ~TreeInode() override;
 
-  folly::Future<struct stat> stat() override;
+  folly::Future<struct stat> stat(ObjectFetchContext& context) override;
 
 #ifndef _WIN32
   folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;

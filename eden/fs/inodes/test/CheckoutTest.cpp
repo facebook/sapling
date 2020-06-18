@@ -21,6 +21,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/PrettyPrinters.h"
+#include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -365,7 +366,7 @@ void testModifyFile(
   // also store its stat information so we can compare it after the checkout.
   if (loadType == LoadBehavior::INODE || loadType == LoadBehavior::ALL) {
     auto preInode = testMount.getFileInode(path);
-    auto st = preInode->stat().get(10ms);
+    auto st = preInode->stat(ObjectFetchContext::getNullContext()).get(10ms);
     EXPECT_EQ(st.st_size, contents1.size());
     preStat = st;
   }
@@ -384,7 +385,8 @@ void testModifyFile(
   EXPECT_FILE_INODE(postInode, contents2, perms2);
 
   // Check the stat() information on the inode.
-  auto postStat = postInode->stat().get(10ms);
+  auto postStat =
+      postInode->stat(ObjectFetchContext::getNullContext()).get(10ms);
   EXPECT_EQ(postStat.st_size, contents2.size());
   // The timestamps should not be earlier than when the checkout started.
   // We don't populate timestamps in the FileInode yet on win32

@@ -654,7 +654,7 @@ Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
 }
 
-folly::Future<struct stat> FileInode::stat() {
+folly::Future<struct stat> FileInode::stat(ObjectFetchContext& context) {
   auto st = getMount()->initStatData();
   st.st_nlink = 1; // Eden does not support hard links yet.
   st.st_ino = getNodeId().get();
@@ -676,7 +676,7 @@ folly::Future<struct stat> FileInode::stat() {
       // a win after restarting Eden - size can be loaded from the local cache
       // more cheaply than deserializing an entire blob.
       return getObjectStore()
-          ->getBlobSize(*state->hash, ObjectFetchContext::getNullContext())
+          ->getBlobSize(*state->hash, context)
           .thenValue([st](const uint64_t size) mutable {
             st.st_size = size;
             updateBlockCount(st);

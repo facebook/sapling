@@ -73,7 +73,7 @@ InodeBase::~InodeBase() {
              << ") destroyed: " << getLogPath();
 }
 
-folly::Future<struct stat> InodeBase::stat() {
+folly::Future<struct stat> InodeBase::stat(ObjectFetchContext& /*context*/) {
 #ifndef _WIN32
   FUSELL_NOT_IMPL();
 #else
