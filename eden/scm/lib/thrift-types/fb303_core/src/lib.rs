@@ -8,13 +8,9 @@ pub use self::types::*;
 pub mod types {
     #![allow(clippy::redundant_closure)]
 
-    use fbthrift::{
-        Deserialize, GetTType, ProtocolReader, ProtocolWriter, Serialize, TType,
-    };
-    use serde_derive::{Deserialize, Serialize};
 
-    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-    pub struct fb303_status(pub i32);
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    pub struct fb303_status(pub ::std::primitive::i32);
 
     impl fb303_status {
         pub const DEAD: Self = fb303_status(0i32);
@@ -25,36 +21,36 @@ pub mod types {
         pub const WARNING: Self = fb303_status(5i32);
     }
 
-    impl Default for fb303_status {
+    impl ::std::default::Default for fb303_status {
         fn default() -> Self {
-            fb303_status(fbthrift::__UNKNOWN_ID)
+            fb303_status(::fbthrift::__UNKNOWN_ID)
         }
     }
 
-    impl<'a> From<&'a fb303_status> for i32 {
+    impl<'a> ::std::convert::From<&'a fb303_status> for ::std::primitive::i32 {
         #[inline]
-        fn from(x: &'a fb303_status) -> i32 {
+        fn from(x: &'a fb303_status) -> Self {
             x.0
         }
     }
 
-    impl From<fb303_status> for i32 {
+    impl ::std::convert::From<fb303_status> for ::std::primitive::i32 {
         #[inline]
-        fn from(x: fb303_status) -> i32 {
+        fn from(x: fb303_status) -> Self {
             x.0
         }
     }
 
-    impl From<i32> for fb303_status {
+    impl ::std::convert::From<::std::primitive::i32> for fb303_status {
         #[inline]
-        fn from(x: i32) -> Self {
+        fn from(x: ::std::primitive::i32) -> Self {
             Self(x)
         }
     }
 
-    impl std::fmt::Display for fb303_status {
-        fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            let s: &str = match *self {
+    impl ::std::fmt::Display for fb303_status {
+        fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            let s: &::std::primitive::str = match *self {
                 fb303_status::DEAD => "DEAD",
                 fb303_status::STARTING => "STARTING",
                 fb303_status::ALIVE => "ALIVE",
@@ -67,43 +63,49 @@ pub mod types {
         }
     }
 
-    impl std::fmt::Debug for fb303_status {
-        fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    impl ::std::fmt::Debug for fb303_status {
+        fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
             write!(fmt, "fb303_status::{}", self)
         }
     }
 
-    impl std::str::FromStr for fb303_status {
-        type Err = anyhow::Error;
+    impl ::std::str::FromStr for fb303_status {
+        type Err = ::anyhow::Error;
 
-        fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
+        fn from_str(string: &::std::primitive::str) -> ::std::result::Result<Self, Self::Err> {
             match string {
-                "DEAD" => Ok(fb303_status::DEAD),
-                "STARTING" => Ok(fb303_status::STARTING),
-                "ALIVE" => Ok(fb303_status::ALIVE),
-                "STOPPING" => Ok(fb303_status::STOPPING),
-                "STOPPED" => Ok(fb303_status::STOPPED),
-                "WARNING" => Ok(fb303_status::WARNING),
-                _ => anyhow::bail!("Unable to parse {} as fb303_status", string),
+                "DEAD" => ::std::result::Result::Ok(fb303_status::DEAD),
+                "STARTING" => ::std::result::Result::Ok(fb303_status::STARTING),
+                "ALIVE" => ::std::result::Result::Ok(fb303_status::ALIVE),
+                "STOPPING" => ::std::result::Result::Ok(fb303_status::STOPPING),
+                "STOPPED" => ::std::result::Result::Ok(fb303_status::STOPPED),
+                "WARNING" => ::std::result::Result::Ok(fb303_status::WARNING),
+                _ => ::anyhow::bail!("Unable to parse {} as fb303_status", string),
             }
         }
     }
 
-    impl GetTType for fb303_status {
-        const TTYPE: TType = TType::I32;
+    impl ::fbthrift::GetTType for fb303_status {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::I32;
     }
 
-    impl<P: ProtocolWriter> Serialize<P> for fb303_status {
+    impl<P> ::fbthrift::Serialize<P> for fb303_status
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
         #[inline]
         fn write(&self, p: &mut P) {
             p.write_i32(self.into())
         }
     }
 
-    impl<P: ProtocolReader> Deserialize<P> for fb303_status {
+    impl<P> ::fbthrift::Deserialize<P> for fb303_status
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
         #[inline]
-        fn read(p: &mut P) -> anyhow::Result<Self> {
-            Ok(fb303_status::from(p.read_i32()?))
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            ::std::result::Result::Ok(fb303_status::from(p.read_i32()?))
         }
     }
 }
@@ -113,35 +115,34 @@ pub mod dependencies {
 
 pub mod services {
     pub mod base_service {
-        use fbthrift::{
-            ApplicationException, ApplicationExceptionErrorCode, Deserialize, ProtocolReader,
-            ProtocolWriter, Serialize, TType,
-        };
 
         #[derive(Clone, Debug)]
         pub enum GetStatusExn {
             Success(crate::types::fb303_status),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetStatusExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetStatusExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetStatusExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetStatusExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetStatusExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetStatusExn {
+        impl<P> ::fbthrift::Serialize<P> for GetStatusExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetStatus");
                 match self {
                     GetStatusExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::I32,
+                            ::fbthrift::TType::I32,
                             0i16,
                         );
                         inner.write(p);
@@ -158,26 +159,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetStatusExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetStatusExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::I32, 0i32), false) => {
+                        ((::fbthrift::TType::I32, 0i32), false) => {
                             once = true;
-                            alt = Some(GetStatusExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetStatusExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetStatusExn",
@@ -191,8 +195,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetStatusExn"),
                     )
                     .into(),
@@ -202,28 +206,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetNameExn {
-            Success(String),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::string::String),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetNameExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetNameExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetNameExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetNameExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetNameExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetNameExn {
+        impl<P> ::fbthrift::Serialize<P> for GetNameExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetName");
                 match self {
                     GetNameExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::String,
+                            ::fbthrift::TType::String,
                             0i16,
                         );
                         inner.write(p);
@@ -240,26 +247,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetNameExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetNameExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::String, 0i32), false) => {
+                        ((::fbthrift::TType::String, 0i32), false) => {
                             once = true;
-                            alt = Some(GetNameExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetNameExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetNameExn",
@@ -273,8 +283,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetNameExn"),
                     )
                     .into(),
@@ -284,28 +294,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetVersionExn {
-            Success(String),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::string::String),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetVersionExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetVersionExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetVersionExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetVersionExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetVersionExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetVersionExn {
+        impl<P> ::fbthrift::Serialize<P> for GetVersionExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetVersion");
                 match self {
                     GetVersionExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::String,
+                            ::fbthrift::TType::String,
                             0i16,
                         );
                         inner.write(p);
@@ -322,26 +335,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetVersionExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetVersionExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::String, 0i32), false) => {
+                        ((::fbthrift::TType::String, 0i32), false) => {
                             once = true;
-                            alt = Some(GetVersionExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetVersionExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetVersionExn",
@@ -355,8 +371,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetVersionExn"),
                     )
                     .into(),
@@ -366,28 +382,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetStatusDetailsExn {
-            Success(String),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::string::String),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetStatusDetailsExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetStatusDetailsExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetStatusDetailsExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetStatusDetailsExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetStatusDetailsExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetStatusDetailsExn {
+        impl<P> ::fbthrift::Serialize<P> for GetStatusDetailsExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetStatusDetails");
                 match self {
                     GetStatusDetailsExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::String,
+                            ::fbthrift::TType::String,
                             0i16,
                         );
                         inner.write(p);
@@ -404,26 +423,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetStatusDetailsExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetStatusDetailsExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::String, 0i32), false) => {
+                        ((::fbthrift::TType::String, 0i32), false) => {
                             once = true;
-                            alt = Some(GetStatusDetailsExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetStatusDetailsExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetStatusDetailsExn",
@@ -437,8 +459,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetStatusDetailsExn"),
                     )
                     .into(),
@@ -448,28 +470,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetCountersExn {
-            Success(std::collections::BTreeMap<String, i64>),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetCountersExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetCountersExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetCountersExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetCountersExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetCountersExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetCountersExn {
+        impl<P> ::fbthrift::Serialize<P> for GetCountersExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetCounters");
                 match self {
                     GetCountersExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::Map,
+                            ::fbthrift::TType::Map,
                             0i16,
                         );
                         inner.write(p);
@@ -486,26 +511,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetCountersExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetCountersExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::Map, 0i32), false) => {
+                        ((::fbthrift::TType::Map, 0i32), false) => {
                             once = true;
-                            alt = Some(GetCountersExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetCountersExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetCountersExn",
@@ -519,8 +547,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetCountersExn"),
                     )
                     .into(),
@@ -530,28 +558,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetRegexCountersExn {
-            Success(std::collections::BTreeMap<String, i64>),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetRegexCountersExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetRegexCountersExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetRegexCountersExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetRegexCountersExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetRegexCountersExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetRegexCountersExn {
+        impl<P> ::fbthrift::Serialize<P> for GetRegexCountersExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetRegexCounters");
                 match self {
                     GetRegexCountersExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::Map,
+                            ::fbthrift::TType::Map,
                             0i16,
                         );
                         inner.write(p);
@@ -568,26 +599,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetRegexCountersExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetRegexCountersExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::Map, 0i32), false) => {
+                        ((::fbthrift::TType::Map, 0i32), false) => {
                             once = true;
-                            alt = Some(GetRegexCountersExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetRegexCountersExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetRegexCountersExn",
@@ -601,8 +635,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetRegexCountersExn"),
                     )
                     .into(),
@@ -612,28 +646,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetSelectedCountersExn {
-            Success(std::collections::BTreeMap<String, i64>),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetSelectedCountersExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetSelectedCountersExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetSelectedCountersExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetSelectedCountersExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetSelectedCountersExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetSelectedCountersExn {
+        impl<P> ::fbthrift::Serialize<P> for GetSelectedCountersExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetSelectedCounters");
                 match self {
                     GetSelectedCountersExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::Map,
+                            ::fbthrift::TType::Map,
                             0i16,
                         );
                         inner.write(p);
@@ -650,26 +687,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetSelectedCountersExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetSelectedCountersExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::Map, 0i32), false) => {
+                        ((::fbthrift::TType::Map, 0i32), false) => {
                             once = true;
-                            alt = Some(GetSelectedCountersExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetSelectedCountersExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetSelectedCountersExn",
@@ -683,8 +723,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetSelectedCountersExn"),
                     )
                     .into(),
@@ -694,28 +734,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetCounterExn {
-            Success(i64),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::primitive::i64),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetCounterExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetCounterExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetCounterExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetCounterExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetCounterExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetCounterExn {
+        impl<P> ::fbthrift::Serialize<P> for GetCounterExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetCounter");
                 match self {
                     GetCounterExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::I64,
+                            ::fbthrift::TType::I64,
                             0i16,
                         );
                         inner.write(p);
@@ -732,26 +775,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetCounterExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetCounterExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::I64, 0i32), false) => {
+                        ((::fbthrift::TType::I64, 0i32), false) => {
                             once = true;
-                            alt = Some(GetCounterExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetCounterExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetCounterExn",
@@ -765,8 +811,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetCounterExn"),
                     )
                     .into(),
@@ -776,28 +822,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetExportedValuesExn {
-            Success(std::collections::BTreeMap<String, String>),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::collections::BTreeMap<::std::string::String, ::std::string::String>),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetExportedValuesExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetExportedValuesExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetExportedValuesExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetExportedValuesExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetExportedValuesExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetExportedValuesExn {
+        impl<P> ::fbthrift::Serialize<P> for GetExportedValuesExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetExportedValues");
                 match self {
                     GetExportedValuesExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::Map,
+                            ::fbthrift::TType::Map,
                             0i16,
                         );
                         inner.write(p);
@@ -814,26 +863,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetExportedValuesExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetExportedValuesExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::Map, 0i32), false) => {
+                        ((::fbthrift::TType::Map, 0i32), false) => {
                             once = true;
-                            alt = Some(GetExportedValuesExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetExportedValuesExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetExportedValuesExn",
@@ -847,8 +899,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetExportedValuesExn"),
                     )
                     .into(),
@@ -858,28 +910,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetSelectedExportedValuesExn {
-            Success(std::collections::BTreeMap<String, String>),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::collections::BTreeMap<::std::string::String, ::std::string::String>),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetSelectedExportedValuesExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetSelectedExportedValuesExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetSelectedExportedValuesExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetSelectedExportedValuesExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetSelectedExportedValuesExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetSelectedExportedValuesExn {
+        impl<P> ::fbthrift::Serialize<P> for GetSelectedExportedValuesExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetSelectedExportedValues");
                 match self {
                     GetSelectedExportedValuesExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::Map,
+                            ::fbthrift::TType::Map,
                             0i16,
                         );
                         inner.write(p);
@@ -896,26 +951,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetSelectedExportedValuesExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetSelectedExportedValuesExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::Map, 0i32), false) => {
+                        ((::fbthrift::TType::Map, 0i32), false) => {
                             once = true;
-                            alt = Some(GetSelectedExportedValuesExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetSelectedExportedValuesExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetSelectedExportedValuesExn",
@@ -929,8 +987,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetSelectedExportedValuesExn"),
                     )
                     .into(),
@@ -940,28 +998,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetRegexExportedValuesExn {
-            Success(std::collections::BTreeMap<String, String>),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::collections::BTreeMap<::std::string::String, ::std::string::String>),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetRegexExportedValuesExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetRegexExportedValuesExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetRegexExportedValuesExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetRegexExportedValuesExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetRegexExportedValuesExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetRegexExportedValuesExn {
+        impl<P> ::fbthrift::Serialize<P> for GetRegexExportedValuesExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetRegexExportedValues");
                 match self {
                     GetRegexExportedValuesExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::Map,
+                            ::fbthrift::TType::Map,
                             0i16,
                         );
                         inner.write(p);
@@ -978,26 +1039,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetRegexExportedValuesExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetRegexExportedValuesExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::Map, 0i32), false) => {
+                        ((::fbthrift::TType::Map, 0i32), false) => {
                             once = true;
-                            alt = Some(GetRegexExportedValuesExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetRegexExportedValuesExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetRegexExportedValuesExn",
@@ -1011,8 +1075,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetRegexExportedValuesExn"),
                     )
                     .into(),
@@ -1022,28 +1086,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetExportedValueExn {
-            Success(String),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::string::String),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetExportedValueExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetExportedValueExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetExportedValueExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetExportedValueExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetExportedValueExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetExportedValueExn {
+        impl<P> ::fbthrift::Serialize<P> for GetExportedValueExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetExportedValue");
                 match self {
                     GetExportedValueExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::String,
+                            ::fbthrift::TType::String,
                             0i16,
                         );
                         inner.write(p);
@@ -1060,26 +1127,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetExportedValueExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetExportedValueExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::String, 0i32), false) => {
+                        ((::fbthrift::TType::String, 0i32), false) => {
                             once = true;
-                            alt = Some(GetExportedValueExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetExportedValueExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetExportedValueExn",
@@ -1093,8 +1163,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetExportedValueExn"),
                     )
                     .into(),
@@ -1105,27 +1175,30 @@ pub mod services {
         #[derive(Clone, Debug)]
         pub enum SetOptionExn {
             Success(()),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for SetOptionExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for SetOptionExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 SetOptionExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for SetOptionExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for SetOptionExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for SetOptionExn {
+        impl<P> ::fbthrift::Serialize<P> for SetOptionExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("SetOption");
                 match self {
                     SetOptionExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::Void,
+                            ::fbthrift::TType::Void,
                             0i16,
                         );
                         inner.write(p);
@@ -1142,26 +1215,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for SetOptionExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for SetOptionExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
                 let mut alt = SetOptionExn::Success(());
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::Void, 0i32), false) => {
+                        ((::fbthrift::TType::Void, 0i32), false) => {
                             once = true;
-                            alt = SetOptionExn::Success(Deserialize::read(p)?);
+                            alt = SetOptionExn::Success(::fbthrift::Deserialize::read(p)?);
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "SetOptionExn",
@@ -1174,34 +1250,37 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                Ok(alt)
+                ::std::result::Result::Ok(alt)
             }
         }
 
         #[derive(Clone, Debug)]
         pub enum GetOptionExn {
-            Success(String),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::string::String),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetOptionExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetOptionExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetOptionExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetOptionExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetOptionExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetOptionExn {
+        impl<P> ::fbthrift::Serialize<P> for GetOptionExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetOption");
                 match self {
                     GetOptionExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::String,
+                            ::fbthrift::TType::String,
                             0i16,
                         );
                         inner.write(p);
@@ -1218,26 +1297,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetOptionExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetOptionExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::String, 0i32), false) => {
+                        ((::fbthrift::TType::String, 0i32), false) => {
                             once = true;
-                            alt = Some(GetOptionExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetOptionExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetOptionExn",
@@ -1251,8 +1333,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetOptionExn"),
                     )
                     .into(),
@@ -1262,28 +1344,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum GetOptionsExn {
-            Success(std::collections::BTreeMap<String, String>),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::collections::BTreeMap<::std::string::String, ::std::string::String>),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for GetOptionsExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for GetOptionsExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 GetOptionsExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for GetOptionsExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for GetOptionsExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for GetOptionsExn {
+        impl<P> ::fbthrift::Serialize<P> for GetOptionsExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("GetOptions");
                 match self {
                     GetOptionsExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::Map,
+                            ::fbthrift::TType::Map,
                             0i16,
                         );
                         inner.write(p);
@@ -1300,26 +1385,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for GetOptionsExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for GetOptionsExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::Map, 0i32), false) => {
+                        ((::fbthrift::TType::Map, 0i32), false) => {
                             once = true;
-                            alt = Some(GetOptionsExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(GetOptionsExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "GetOptionsExn",
@@ -1333,8 +1421,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetOptionsExn"),
                     )
                     .into(),
@@ -1344,28 +1432,31 @@ pub mod services {
 
         #[derive(Clone, Debug)]
         pub enum AliveSinceExn {
-            Success(i64),
-            ApplicationException(::fbthrift::types::ApplicationException),
+            Success(::std::primitive::i64),
+            ApplicationException(::fbthrift::ApplicationException),
         }
 
-        impl From<ApplicationException> for AliveSinceExn {
-            fn from(exn: ApplicationException) -> Self {
+        impl ::std::convert::From<::fbthrift::ApplicationException> for AliveSinceExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
                 AliveSinceExn::ApplicationException(exn)
             }
         }
 
-        impl fbthrift::GetTType for AliveSinceExn {
-            const TTYPE: fbthrift::TType = fbthrift::TType::Struct;
+        impl ::fbthrift::GetTType for AliveSinceExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
 
-        impl<P: ProtocolWriter> Serialize<P> for AliveSinceExn {
+        impl<P> ::fbthrift::Serialize<P> for AliveSinceExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
             fn write(&self, p: &mut P) {
                 p.write_struct_begin("AliveSince");
                 match self {
                     AliveSinceExn::Success(inner) => {
                         p.write_field_begin(
                             "Success",
-                            TType::I64,
+                            ::fbthrift::TType::I64,
                             0i16,
                         );
                         inner.write(p);
@@ -1382,26 +1473,29 @@ pub mod services {
             }
         }
 
-        impl<P: ProtocolReader> Deserialize<P> for AliveSinceExn {
-            fn read(p: &mut P) -> anyhow::Result<Self> {
+        impl<P> ::fbthrift::Deserialize<P> for AliveSinceExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
                 let _ = p.read_struct_begin(|_| ())?;
                 let mut once = false;
-                let mut alt = None;
+                let mut alt = ::std::option::Option::None;
                 loop {
                     let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                    match ((fty, fid as i32), once) {
-                        ((TType::Stop, _), _) => {
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
                             p.read_field_end()?;
                             break;
                         }
-                        ((TType::I64, 0i32), false) => {
+                        ((::fbthrift::TType::I64, 0i32), false) => {
                             once = true;
-                            alt = Some(AliveSinceExn::Success(Deserialize::read(p)?));
+                            alt = ::std::option::Option::Some(AliveSinceExn::Success(::fbthrift::Deserialize::read(p)?));
                         }
                         ((ty, _id), false) => p.skip(ty)?,
-                        ((badty, badid), true) => return Err(From::from(
-                            ApplicationException::new(
-                                ApplicationExceptionErrorCode::ProtocolError,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
                                 format!(
                                     "unwanted extra union {} field ty {:?} id {}",
                                     "AliveSinceExn",
@@ -1415,8 +1509,8 @@ pub mod services {
                 }
                 p.read_struct_end()?;
                 alt.ok_or_else(||
-                    ApplicationException::new(
-                        ApplicationExceptionErrorCode::MissingResult,
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "AliveSinceExn"),
                     )
                     .into(),
@@ -1427,13 +1521,10 @@ pub mod services {
 }
 
 pub mod client {
-    use fbthrift::*;
-    use std::marker::PhantomData;
-    use std::sync::Arc;
 
     pub struct BaseServiceImpl<P, T> {
         transport: T,
-        _phantom: PhantomData<fn() -> P>,
+        _phantom: ::std::marker::PhantomData<fn() -> P>,
     }
 
     impl<P, T> BaseServiceImpl<P, T> {
@@ -1442,7 +1533,7 @@ pub mod client {
         ) -> Self {
             Self {
                 transport,
-                _phantom: PhantomData,
+                _phantom: ::std::marker::PhantomData,
             }
         }
 
@@ -1451,80 +1542,81 @@ pub mod client {
         }
     }
 
-    pub trait BaseService: Send {
+    pub trait BaseService: ::std::marker::Send {
         fn getStatus(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + Send + 'static>>;
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + ::std::marker::Send + 'static>>;
         fn getName(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetNameError>> + Send + 'static>>;
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetNameError>> + ::std::marker::Send + 'static>>;
         fn getVersion(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetVersionError>> + Send + 'static>>;
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetVersionError>> + ::std::marker::Send + 'static>>;
         fn getStatusDetails(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetStatusDetailsError>> + Send + 'static>>;
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetStatusDetailsError>> + ::std::marker::Send + 'static>>;
         fn getCounters(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError>> + Send + 'static>>;
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetCountersError>> + ::std::marker::Send + 'static>>;
         fn getRegexCounters(
             &self,
-            arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError>> + Send + 'static>>;
+            arg_regex: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetRegexCountersError>> + ::std::marker::Send + 'static>>;
         fn getSelectedCounters(
             &self,
-            arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError>> + Send + 'static>>;
+            arg_keys: &[::std::string::String],
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetSelectedCountersError>> + ::std::marker::Send + 'static>>;
         fn getCounter(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::GetCounterError>> + Send + 'static>>;
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::GetCounterError>> + ::std::marker::Send + 'static>>;
         fn getExportedValues(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError>> + Send + 'static>>;
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetExportedValuesError>> + ::std::marker::Send + 'static>>;
         fn getSelectedExportedValues(
             &self,
-            arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError>> + Send + 'static>>;
+            arg_keys: &[::std::string::String],
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetSelectedExportedValuesError>> + ::std::marker::Send + 'static>>;
         fn getRegexExportedValues(
             &self,
-            arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError>> + Send + 'static>>;
+            arg_regex: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetRegexExportedValuesError>> + ::std::marker::Send + 'static>>;
         fn getExportedValue(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetExportedValueError>> + Send + 'static>>;
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetExportedValueError>> + ::std::marker::Send + 'static>>;
         fn setOption(
             &self,
-            arg_key: &str,
-            arg_value: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::base_service::SetOptionError>> + Send + 'static>>;
+            arg_key: &::std::primitive::str,
+            arg_value: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::base_service::SetOptionError>> + ::std::marker::Send + 'static>>;
         fn getOption(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetOptionError>> + Send + 'static>>;
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetOptionError>> + ::std::marker::Send + 'static>>;
         fn getOptions(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError>> + Send + 'static>>;
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetOptionsError>> + ::std::marker::Send + 'static>>;
         fn aliveSince(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::AliveSinceError>> + Send + 'static>>;
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::AliveSinceError>> + ::std::marker::Send + 'static>>;
     }
 
     impl<P, T> BaseService for BaseServiceImpl<P, T>
     where
-        P: Protocol,
-        T: Transport,
-        P::Frame: Framing<DecBuf = FramingDecoded<T>>,
-        ProtocolEncoded<P>: BufMutExt<Final = FramingEncodedFinal<T>>,
+        P: ::fbthrift::Protocol,
+        T: ::fbthrift::Transport,
+        P::Frame: ::fbthrift::Framing<DecBuf = ::fbthrift::FramingDecoded<T>>,
+        ::fbthrift::ProtocolEncoded<P>: ::fbthrift::BufMutExt<Final = ::fbthrift::FramingEncodedFinal<T>>,
     {        fn getStatus(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getStatus",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
@@ -1537,29 +1629,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetStatusExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetStatusExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetStatusExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetStatusExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetStatusExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetStatusError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetStatusError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetStatusError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetStatusError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetStatusError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetStatusError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1570,12 +1662,13 @@ pub mod client {
         }
         fn getName(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetNameError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetNameError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getName",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
@@ -1588,29 +1681,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetNameError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::string::String, crate::errors::base_service::GetNameError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetNameExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetNameExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetNameExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetNameExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetNameExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetNameError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetNameError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetNameError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetNameError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetNameError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetNameError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1621,12 +1714,13 @@ pub mod client {
         }
         fn getVersion(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetVersionError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetVersionError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getVersion",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
@@ -1639,29 +1733,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetVersionError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::string::String, crate::errors::base_service::GetVersionError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetVersionExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetVersionExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetVersionExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetVersionExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetVersionExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetVersionError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetVersionError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetVersionError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetVersionError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetVersionError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetVersionError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1672,12 +1766,13 @@ pub mod client {
         }
         fn getStatusDetails(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetStatusDetailsError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetStatusDetailsError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getStatusDetails",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
@@ -1690,29 +1785,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetStatusDetailsError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::string::String, crate::errors::base_service::GetStatusDetailsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetStatusDetailsExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetStatusDetailsExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetStatusDetailsExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetStatusDetailsExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetStatusDetailsExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetStatusDetailsError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetStatusDetailsError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetStatusDetailsError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetStatusDetailsError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetStatusDetailsError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetStatusDetailsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1723,12 +1818,13 @@ pub mod client {
         }
         fn getCounters(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetCountersError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getCounters",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
@@ -1741,29 +1837,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetCountersError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetCountersExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetCountersExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetCountersExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetCountersExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetCountersExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetCountersError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetCountersError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetCountersError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetCountersError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetCountersError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetCountersError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1774,21 +1870,22 @@ pub mod client {
         }
         fn getRegexCounters(
             &self,
-            arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+            arg_regex: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetRegexCountersError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getRegexCounters",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
                 0,
                 |p| {
                     p.write_struct_begin("args");
-                    p.write_field_begin("arg_regex", TType::String, 1i16);
-                    arg_regex.write(p);
+                    p.write_field_begin("arg_regex", ::fbthrift::TType::String, 1i16);
+                    ::fbthrift::Serialize::write(&arg_regex, p);
                     p.write_field_end();
                     p.write_field_stop();
                     p.write_struct_end();
@@ -1796,29 +1893,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetRegexCountersError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetRegexCountersExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetRegexCountersExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetRegexCountersExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetRegexCountersExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetRegexCountersExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetRegexCountersError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetRegexCountersError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetRegexCountersError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetRegexCountersError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetRegexCountersError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetRegexCountersError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1829,21 +1926,22 @@ pub mod client {
         }
         fn getSelectedCounters(
             &self,
-            arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+            arg_keys: &[::std::string::String],
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetSelectedCountersError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getSelectedCounters",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
                 0,
                 |p| {
                     p.write_struct_begin("args");
-                    p.write_field_begin("arg_keys", TType::List, 1i16);
-                    arg_keys.write(p);
+                    p.write_field_begin("arg_keys", ::fbthrift::TType::List, 1i16);
+                    ::fbthrift::Serialize::write(&arg_keys, p);
                     p.write_field_end();
                     p.write_field_stop();
                     p.write_struct_end();
@@ -1851,29 +1949,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetSelectedCountersError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetSelectedCountersExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetSelectedCountersExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetSelectedCountersExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetSelectedCountersExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetSelectedCountersExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetSelectedCountersError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetSelectedCountersError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetSelectedCountersError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetSelectedCountersError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetSelectedCountersError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetSelectedCountersError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1884,21 +1982,22 @@ pub mod client {
         }
         fn getCounter(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::GetCounterError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::GetCounterError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getCounter",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
                 0,
                 |p| {
                     p.write_struct_begin("args");
-                    p.write_field_begin("arg_key", TType::String, 1i16);
-                    arg_key.write(p);
+                    p.write_field_begin("arg_key", ::fbthrift::TType::String, 1i16);
+                    ::fbthrift::Serialize::write(&arg_key, p);
                     p.write_field_end();
                     p.write_field_stop();
                     p.write_struct_end();
@@ -1906,29 +2005,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::base_service::GetCounterError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::primitive::i64, crate::errors::base_service::GetCounterError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetCounterExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetCounterExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetCounterExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetCounterExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetCounterExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetCounterError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetCounterError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetCounterError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetCounterError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetCounterError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetCounterError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1939,12 +2038,13 @@ pub mod client {
         }
         fn getExportedValues(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetExportedValuesError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getExportedValues",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
@@ -1957,29 +2057,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetExportedValuesError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetExportedValuesExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetExportedValuesExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetExportedValuesExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetExportedValuesExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetExportedValuesExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetExportedValuesError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetExportedValuesError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetExportedValuesError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetExportedValuesError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetExportedValuesError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetExportedValuesError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1990,21 +2090,22 @@ pub mod client {
         }
         fn getSelectedExportedValues(
             &self,
-            arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+            arg_keys: &[::std::string::String],
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetSelectedExportedValuesError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getSelectedExportedValues",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
                 0,
                 |p| {
                     p.write_struct_begin("args");
-                    p.write_field_begin("arg_keys", TType::List, 1i16);
-                    arg_keys.write(p);
+                    p.write_field_begin("arg_keys", ::fbthrift::TType::List, 1i16);
+                    ::fbthrift::Serialize::write(&arg_keys, p);
                     p.write_field_end();
                     p.write_field_stop();
                     p.write_struct_end();
@@ -2012,29 +2113,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetSelectedExportedValuesError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetSelectedExportedValuesExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetSelectedExportedValuesExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetSelectedExportedValuesExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetSelectedExportedValuesExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetSelectedExportedValuesExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetSelectedExportedValuesError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetSelectedExportedValuesError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetSelectedExportedValuesError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetSelectedExportedValuesError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetSelectedExportedValuesError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetSelectedExportedValuesError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2045,21 +2146,22 @@ pub mod client {
         }
         fn getRegexExportedValues(
             &self,
-            arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+            arg_regex: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetRegexExportedValuesError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getRegexExportedValues",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
                 0,
                 |p| {
                     p.write_struct_begin("args");
-                    p.write_field_begin("arg_regex", TType::String, 1i16);
-                    arg_regex.write(p);
+                    p.write_field_begin("arg_regex", ::fbthrift::TType::String, 1i16);
+                    ::fbthrift::Serialize::write(&arg_regex, p);
                     p.write_field_end();
                     p.write_field_stop();
                     p.write_struct_end();
@@ -2067,29 +2169,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetRegexExportedValuesError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetRegexExportedValuesExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetRegexExportedValuesExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetRegexExportedValuesExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetRegexExportedValuesExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetRegexExportedValuesExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetRegexExportedValuesError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetRegexExportedValuesError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetRegexExportedValuesError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetRegexExportedValuesError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetRegexExportedValuesError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetRegexExportedValuesError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2100,21 +2202,22 @@ pub mod client {
         }
         fn getExportedValue(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetExportedValueError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetExportedValueError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getExportedValue",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
                 0,
                 |p| {
                     p.write_struct_begin("args");
-                    p.write_field_begin("arg_key", TType::String, 1i16);
-                    arg_key.write(p);
+                    p.write_field_begin("arg_key", ::fbthrift::TType::String, 1i16);
+                    ::fbthrift::Serialize::write(&arg_key, p);
                     p.write_field_end();
                     p.write_field_stop();
                     p.write_struct_end();
@@ -2122,29 +2225,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetExportedValueError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::string::String, crate::errors::base_service::GetExportedValueError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetExportedValueExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetExportedValueExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetExportedValueExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetExportedValueExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetExportedValueExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetExportedValueError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetExportedValueError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetExportedValueError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetExportedValueError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetExportedValueError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetExportedValueError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2155,25 +2258,26 @@ pub mod client {
         }
         fn setOption(
             &self,
-            arg_key: &str,
-            arg_value: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::base_service::SetOptionError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+            arg_key: &::std::primitive::str,
+            arg_value: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::base_service::SetOptionError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "setOption",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
                 0,
                 |p| {
                     p.write_struct_begin("args");
-                    p.write_field_begin("arg_key", TType::String, 1i16);
-                    arg_key.write(p);
+                    p.write_field_begin("arg_key", ::fbthrift::TType::String, 1i16);
+                    ::fbthrift::Serialize::write(&arg_key, p);
                     p.write_field_end();
-                    p.write_field_begin("arg_value", TType::String, 2i16);
-                    arg_value.write(p);
+                    p.write_field_begin("arg_value", ::fbthrift::TType::String, 2i16);
+                    ::fbthrift::Serialize::write(&arg_value, p);
                     p.write_field_end();
                     p.write_field_stop();
                     p.write_struct_end();
@@ -2181,29 +2285,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::base_service::SetOptionError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::base_service::SetOptionError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::SetOptionExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::SetOptionExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::SetOptionExn::Success(x) => Ok(x),
+                                    crate::services::base_service::SetOptionExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::SetOptionExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::SetOptionError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::SetOptionError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::SetOptionError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::SetOptionError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::SetOptionError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::SetOptionError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2214,21 +2318,22 @@ pub mod client {
         }
         fn getOption(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetOptionError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetOptionError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getOption",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
                 0,
                 |p| {
                     p.write_struct_begin("args");
-                    p.write_field_begin("arg_key", TType::String, 1i16);
-                    arg_key.write(p);
+                    p.write_field_begin("arg_key", ::fbthrift::TType::String, 1i16);
+                    ::fbthrift::Serialize::write(&arg_key, p);
                     p.write_field_end();
                     p.write_field_stop();
                     p.write_struct_end();
@@ -2236,29 +2341,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetOptionError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::string::String, crate::errors::base_service::GetOptionError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetOptionExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetOptionExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetOptionExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetOptionExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetOptionExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetOptionError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetOptionError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetOptionError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetOptionError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetOptionError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetOptionError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2269,12 +2374,13 @@ pub mod client {
         }
         fn getOptions(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetOptionsError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getOptions",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
@@ -2287,29 +2393,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetOptionsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::GetOptionsExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::GetOptionsExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::GetOptionsExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetOptionsExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::GetOptionsExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::GetOptionsError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::GetOptionsError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::GetOptionsError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::GetOptionsError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::GetOptionsError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::GetOptionsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2320,12 +2426,13 @@ pub mod client {
         }
         fn aliveSince(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::AliveSinceError>> + Send + 'static>> {
-            use futures::future::{FutureExt, TryFutureExt};
-            let request = serialize!(P, |p| protocol::write_message(
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::AliveSinceError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "aliveSince",
-                MessageType::Call,
+                ::fbthrift::MessageType::Call,
                 // Note: we send a 0 message sequence ID from clients because
                 // this field should not be used by the server (except for some
                 // language implementations).
@@ -2338,29 +2445,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .map_err(From::from)
-                .and_then(|reply| futures::future::ready({
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::base_service::AliveSinceError> {
+                    move |mut p: P::Deserializer| -> ::std::result::Result<::std::primitive::i64, crate::errors::base_service::AliveSinceError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
-                            MessageType::Reply => {
-                                let exn = crate::services::base_service::AliveSinceExn::read(p)?;
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::base_service::AliveSinceExn = ::fbthrift::Deserialize::read(p)?;
                                 match exn {
-                                    crate::services::base_service::AliveSinceExn::Success(x) => Ok(x),
+                                    crate::services::base_service::AliveSinceExn::Success(x) => ::std::result::Result::Ok(x),
                                     crate::services::base_service::AliveSinceExn::ApplicationException(ae) => {
-                                        Err(crate::errors::base_service::AliveSinceError::ApplicationException(ae))
+                                        ::std::result::Result::Err(crate::errors::base_service::AliveSinceError::ApplicationException(ae))
                                     }
                                 }
                             }
-                            MessageType::Exception => {
-                                let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::base_service::AliveSinceError::ApplicationException(ae))
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::base_service::AliveSinceError::ApplicationException(ae))
                             }
-                            MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                Err(crate::errors::base_service::AliveSinceError::ThriftError(err))
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::base_service::AliveSinceError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2373,98 +2480,98 @@ pub mod client {
 
     impl<'a, T> BaseService for T
     where
-        T: AsRef<dyn BaseService + 'a>,
-        T: Send,
+        T: ::std::convert::AsRef<dyn BaseService + 'a>,
+        T: ::std::marker::Send,
     {
         fn getStatus(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getStatus(
             )
         }
         fn getName(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetNameError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetNameError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getName(
             )
         }
         fn getVersion(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetVersionError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetVersionError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getVersion(
             )
         }
         fn getStatusDetails(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetStatusDetailsError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetStatusDetailsError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getStatusDetails(
             )
         }
         fn getCounters(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetCountersError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getCounters(
             )
         }
         fn getRegexCounters(
             &self,
-            arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError>> + Send + 'static>> {
+            arg_regex: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetRegexCountersError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getRegexCounters(
                 arg_regex,
             )
         }
         fn getSelectedCounters(
             &self,
-            arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError>> + Send + 'static>> {
+            arg_keys: &[::std::string::String],
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetSelectedCountersError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getSelectedCounters(
                 arg_keys,
             )
         }
         fn getCounter(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::GetCounterError>> + Send + 'static>> {
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::GetCounterError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getCounter(
                 arg_key,
             )
         }
         fn getExportedValues(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetExportedValuesError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getExportedValues(
             )
         }
         fn getSelectedExportedValues(
             &self,
-            arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError>> + Send + 'static>> {
+            arg_keys: &[::std::string::String],
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetSelectedExportedValuesError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getSelectedExportedValues(
                 arg_keys,
             )
         }
         fn getRegexExportedValues(
             &self,
-            arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError>> + Send + 'static>> {
+            arg_regex: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetRegexExportedValuesError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getRegexExportedValues(
                 arg_regex,
             )
         }
         fn getExportedValue(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetExportedValueError>> + Send + 'static>> {
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetExportedValueError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getExportedValue(
                 arg_key,
             )
         }
         fn setOption(
             &self,
-            arg_key: &str,
-            arg_value: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::base_service::SetOptionError>> + Send + 'static>> {
+            arg_key: &::std::primitive::str,
+            arg_value: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::base_service::SetOptionError>> + ::std::marker::Send + 'static>> {
             self.as_ref().setOption(
                 arg_key,
                 arg_value,
@@ -2472,21 +2579,21 @@ pub mod client {
         }
         fn getOption(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetOptionError>> + Send + 'static>> {
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetOptionError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getOption(
                 arg_key,
             )
         }
         fn getOptions(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetOptionsError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getOptions(
             )
         }
         fn aliveSince(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::AliveSinceError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::AliveSinceError>> + ::std::marker::Send + 'static>> {
             self.as_ref().aliveSince(
             )
         }
@@ -2509,25 +2616,25 @@ pub mod client {
         pub fn new<P, T>(
             protocol: P,
             transport: T,
-        ) -> Arc<impl BaseService + Send + 'static>
+        ) -> ::std::sync::Arc<impl BaseService + ::std::marker::Send + 'static>
         where
-            P: Protocol<Frame = T>,
-            T: Transport,
+            P: ::fbthrift::Protocol<Frame = T>,
+            T: ::fbthrift::Transport,
         {
             let _ = protocol;
-            Arc::new(BaseServiceImpl::<P, T>::new(transport))
+            ::std::sync::Arc::new(BaseServiceImpl::<P, T>::new(transport))
         }
     }
 
     /// The same thing, but to be called from generic contexts where we are
     /// working with a type parameter `C: ClientFactory` to produce clients.
-    impl ClientFactory for make_BaseService {
-        type Api = dyn BaseService + Send + Sync + 'static;
+    impl ::fbthrift::ClientFactory for make_BaseService {
+        type Api = dyn BaseService + ::std::marker::Send + ::std::marker::Sync + 'static;
 
-        fn new<P, T>(protocol: P, transport: T) -> Arc<Self::Api>
+        fn new<P, T>(protocol: P, transport: T) -> ::std::sync::Arc<Self::Api>
         where
-            P: Protocol<Frame = T>,
-            T: Transport + Sync,
+            P: ::fbthrift::Protocol<Frame = T>,
+            T: ::fbthrift::Transport + ::std::marker::Sync,
         {
             BaseService::new(protocol, transport)
         }
@@ -2535,17 +2642,13 @@ pub mod client {
 }
 
 pub mod server {
-    use async_trait::async_trait;
-    use fbthrift::*;
-    use std::marker::PhantomData;
-
-    #[async_trait]
-    pub trait BaseService: Send + Sync + 'static {
+    #[::async_trait::async_trait]
+    pub trait BaseService: ::std::marker::Send + ::std::marker::Sync + 'static {
         async fn getStatus(
             &self,
-        ) -> Result<crate::types::fb303_status, crate::services::base_service::GetStatusExn> {
-            Err(crate::services::base_service::GetStatusExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+        ) -> ::std::result::Result<crate::types::fb303_status, crate::services::base_service::GetStatusExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetStatusExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getStatus",
                 ),
@@ -2553,9 +2656,9 @@ pub mod server {
         }
         async fn getName(
             &self,
-        ) -> Result<String, crate::services::base_service::GetNameExn> {
-            Err(crate::services::base_service::GetNameExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+        ) -> ::std::result::Result<::std::string::String, crate::services::base_service::GetNameExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetNameExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getName",
                 ),
@@ -2563,9 +2666,9 @@ pub mod server {
         }
         async fn getVersion(
             &self,
-        ) -> Result<String, crate::services::base_service::GetVersionExn> {
-            Err(crate::services::base_service::GetVersionExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+        ) -> ::std::result::Result<::std::string::String, crate::services::base_service::GetVersionExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetVersionExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getVersion",
                 ),
@@ -2573,9 +2676,9 @@ pub mod server {
         }
         async fn getStatusDetails(
             &self,
-        ) -> Result<String, crate::services::base_service::GetStatusDetailsExn> {
-            Err(crate::services::base_service::GetStatusDetailsExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+        ) -> ::std::result::Result<::std::string::String, crate::services::base_service::GetStatusDetailsExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetStatusDetailsExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getStatusDetails",
                 ),
@@ -2583,9 +2686,9 @@ pub mod server {
         }
         async fn getCounters(
             &self,
-        ) -> Result<std::collections::BTreeMap<String, i64>, crate::services::base_service::GetCountersExn> {
-            Err(crate::services::base_service::GetCountersExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+        ) -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::services::base_service::GetCountersExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetCountersExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getCounters",
                 ),
@@ -2593,10 +2696,10 @@ pub mod server {
         }
         async fn getRegexCounters(
             &self,
-            _regex: String,
-        ) -> Result<std::collections::BTreeMap<String, i64>, crate::services::base_service::GetRegexCountersExn> {
-            Err(crate::services::base_service::GetRegexCountersExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+            _regex: ::std::string::String,
+        ) -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::services::base_service::GetRegexCountersExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetRegexCountersExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getRegexCounters",
                 ),
@@ -2604,10 +2707,10 @@ pub mod server {
         }
         async fn getSelectedCounters(
             &self,
-            _keys: Vec<String>,
-        ) -> Result<std::collections::BTreeMap<String, i64>, crate::services::base_service::GetSelectedCountersExn> {
-            Err(crate::services::base_service::GetSelectedCountersExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+            _keys: ::std::vec::Vec<::std::string::String>,
+        ) -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::services::base_service::GetSelectedCountersExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetSelectedCountersExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getSelectedCounters",
                 ),
@@ -2615,10 +2718,10 @@ pub mod server {
         }
         async fn getCounter(
             &self,
-            _key: String,
-        ) -> Result<i64, crate::services::base_service::GetCounterExn> {
-            Err(crate::services::base_service::GetCounterExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+            _key: ::std::string::String,
+        ) -> ::std::result::Result<::std::primitive::i64, crate::services::base_service::GetCounterExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetCounterExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getCounter",
                 ),
@@ -2626,9 +2729,9 @@ pub mod server {
         }
         async fn getExportedValues(
             &self,
-        ) -> Result<std::collections::BTreeMap<String, String>, crate::services::base_service::GetExportedValuesExn> {
-            Err(crate::services::base_service::GetExportedValuesExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+        ) -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::services::base_service::GetExportedValuesExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetExportedValuesExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getExportedValues",
                 ),
@@ -2636,10 +2739,10 @@ pub mod server {
         }
         async fn getSelectedExportedValues(
             &self,
-            _keys: Vec<String>,
-        ) -> Result<std::collections::BTreeMap<String, String>, crate::services::base_service::GetSelectedExportedValuesExn> {
-            Err(crate::services::base_service::GetSelectedExportedValuesExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+            _keys: ::std::vec::Vec<::std::string::String>,
+        ) -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::services::base_service::GetSelectedExportedValuesExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetSelectedExportedValuesExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getSelectedExportedValues",
                 ),
@@ -2647,10 +2750,10 @@ pub mod server {
         }
         async fn getRegexExportedValues(
             &self,
-            _regex: String,
-        ) -> Result<std::collections::BTreeMap<String, String>, crate::services::base_service::GetRegexExportedValuesExn> {
-            Err(crate::services::base_service::GetRegexExportedValuesExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+            _regex: ::std::string::String,
+        ) -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::services::base_service::GetRegexExportedValuesExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetRegexExportedValuesExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getRegexExportedValues",
                 ),
@@ -2658,10 +2761,10 @@ pub mod server {
         }
         async fn getExportedValue(
             &self,
-            _key: String,
-        ) -> Result<String, crate::services::base_service::GetExportedValueExn> {
-            Err(crate::services::base_service::GetExportedValueExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+            _key: ::std::string::String,
+        ) -> ::std::result::Result<::std::string::String, crate::services::base_service::GetExportedValueExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetExportedValueExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getExportedValue",
                 ),
@@ -2669,11 +2772,11 @@ pub mod server {
         }
         async fn setOption(
             &self,
-            _key: String,
-            _value: String,
-        ) -> Result<(), crate::services::base_service::SetOptionExn> {
-            Err(crate::services::base_service::SetOptionExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+            _key: ::std::string::String,
+            _value: ::std::string::String,
+        ) -> ::std::result::Result<(), crate::services::base_service::SetOptionExn> {
+            ::std::result::Result::Err(crate::services::base_service::SetOptionExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "setOption",
                 ),
@@ -2681,10 +2784,10 @@ pub mod server {
         }
         async fn getOption(
             &self,
-            _key: String,
-        ) -> Result<String, crate::services::base_service::GetOptionExn> {
-            Err(crate::services::base_service::GetOptionExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+            _key: ::std::string::String,
+        ) -> ::std::result::Result<::std::string::String, crate::services::base_service::GetOptionExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetOptionExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getOption",
                 ),
@@ -2692,9 +2795,9 @@ pub mod server {
         }
         async fn getOptions(
             &self,
-        ) -> Result<std::collections::BTreeMap<String, String>, crate::services::base_service::GetOptionsExn> {
-            Err(crate::services::base_service::GetOptionsExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+        ) -> ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::services::base_service::GetOptionsExn> {
+            ::std::result::Result::Err(crate::services::base_service::GetOptionsExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "getOptions",
                 ),
@@ -2702,9 +2805,9 @@ pub mod server {
         }
         async fn aliveSince(
             &self,
-        ) -> Result<i64, crate::services::base_service::AliveSinceExn> {
-            Err(crate::services::base_service::AliveSinceExn::ApplicationException(
-                ApplicationException::unimplemented_method(
+        ) -> ::std::result::Result<::std::primitive::i64, crate::services::base_service::AliveSinceExn> {
+            ::std::result::Result::Err(crate::services::base_service::AliveSinceExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
                     "BaseService",
                     "aliveSince",
                 ),
@@ -2715,21 +2818,21 @@ pub mod server {
     #[derive(Clone, Debug)]
     pub struct BaseServiceProcessor<P, H, R> {
         service: H,
-        supa: fbthrift::NullServiceProcessor<P, R>,
-        _phantom: PhantomData<(P, H, R)>,
+        supa: ::fbthrift::NullServiceProcessor<P, R>,
+        _phantom: ::std::marker::PhantomData<(P, H, R)>,
     }
 
     impl<P, H, R> BaseServiceProcessor<P, H, R>
     where
-        P: Protocol + Send + Sync + 'static,
-        P::Deserializer: Send,
+        P: ::fbthrift::Protocol + ::std::marker::Send + ::std::marker::Sync + 'static,
+        P::Deserializer: ::std::marker::Send,
         H: BaseService,
     {
         pub fn new(service: H) -> Self {
             Self {
                 service,
-                supa: fbthrift::NullServiceProcessor::new(),
-                _phantom: PhantomData,
+                supa: ::fbthrift::NullServiceProcessor::new(),
+                _phantom: ::std::marker::PhantomData,
             }
         }
 
@@ -2741,13 +2844,14 @@ pub mod server {
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -2756,40 +2860,41 @@ pub mod server {
             let res = self.service.getStatus(
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetStatusExn::Success(res)
                 }
-                Err(crate::services::base_service::GetStatusExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetStatusExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetStatusExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetStatusExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getStatus",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getStatus",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getName<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -2798,40 +2903,41 @@ pub mod server {
             let res = self.service.getName(
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetNameExn::Success(res)
                 }
-                Err(crate::services::base_service::GetNameExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetNameExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetNameExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetNameExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getName",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getName",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getVersion<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -2840,40 +2946,41 @@ pub mod server {
             let res = self.service.getVersion(
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetVersionExn::Success(res)
                 }
-                Err(crate::services::base_service::GetVersionExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetVersionExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetVersionExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetVersionExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getVersion",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getVersion",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getStatusDetails<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -2882,40 +2989,41 @@ pub mod server {
             let res = self.service.getStatusDetails(
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetStatusDetailsExn::Success(res)
                 }
-                Err(crate::services::base_service::GetStatusDetailsExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetStatusDetailsExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetStatusDetailsExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetStatusDetailsExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getStatusDetails",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getStatusDetails",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getCounters<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -2924,42 +3032,43 @@ pub mod server {
             let res = self.service.getCounters(
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetCountersExn::Success(res)
                 }
-                Err(crate::services::base_service::GetCountersExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetCountersExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetCountersExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetCountersExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getCounters",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getCounters",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getRegexCounters<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
-            let mut field_regex = None;
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let mut field_regex = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::String, 1) => field_regex = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_regex = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -2967,49 +3076,50 @@ pub mod server {
             p.read_struct_end()?;
             let res = self.service.getRegexCounters(
                 field_regex.ok_or_else(|| {
-                    ApplicationException::missing_arg(
+                    ::fbthrift::ApplicationException::missing_arg(
                         "getRegexCounters",
                         "regex",
                     )
                 })?,
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetRegexCountersExn::Success(res)
                 }
-                Err(crate::services::base_service::GetRegexCountersExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetRegexCountersExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetRegexCountersExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetRegexCountersExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getRegexCounters",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getRegexCounters",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getSelectedCounters<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
-            let mut field_keys = None;
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let mut field_keys = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::List, 1) => field_keys = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::List, 1) => field_keys = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3017,49 +3127,50 @@ pub mod server {
             p.read_struct_end()?;
             let res = self.service.getSelectedCounters(
                 field_keys.ok_or_else(|| {
-                    ApplicationException::missing_arg(
+                    ::fbthrift::ApplicationException::missing_arg(
                         "getSelectedCounters",
                         "keys",
                     )
                 })?,
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetSelectedCountersExn::Success(res)
                 }
-                Err(crate::services::base_service::GetSelectedCountersExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetSelectedCountersExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetSelectedCountersExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetSelectedCountersExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getSelectedCounters",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getSelectedCounters",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getCounter<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
-            let mut field_key = None;
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let mut field_key = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::String, 1) => field_key = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_key = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3067,47 +3178,48 @@ pub mod server {
             p.read_struct_end()?;
             let res = self.service.getCounter(
                 field_key.ok_or_else(|| {
-                    ApplicationException::missing_arg(
+                    ::fbthrift::ApplicationException::missing_arg(
                         "getCounter",
                         "key",
                     )
                 })?,
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetCounterExn::Success(res)
                 }
-                Err(crate::services::base_service::GetCounterExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetCounterExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetCounterExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetCounterExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getCounter",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getCounter",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getExportedValues<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3116,42 +3228,43 @@ pub mod server {
             let res = self.service.getExportedValues(
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetExportedValuesExn::Success(res)
                 }
-                Err(crate::services::base_service::GetExportedValuesExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetExportedValuesExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetExportedValuesExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetExportedValuesExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getExportedValues",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getExportedValues",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getSelectedExportedValues<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
-            let mut field_keys = None;
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let mut field_keys = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::List, 1) => field_keys = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::List, 1) => field_keys = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3159,49 +3272,50 @@ pub mod server {
             p.read_struct_end()?;
             let res = self.service.getSelectedExportedValues(
                 field_keys.ok_or_else(|| {
-                    ApplicationException::missing_arg(
+                    ::fbthrift::ApplicationException::missing_arg(
                         "getSelectedExportedValues",
                         "keys",
                     )
                 })?,
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetSelectedExportedValuesExn::Success(res)
                 }
-                Err(crate::services::base_service::GetSelectedExportedValuesExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetSelectedExportedValuesExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetSelectedExportedValuesExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetSelectedExportedValuesExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getSelectedExportedValues",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getSelectedExportedValues",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getRegexExportedValues<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
-            let mut field_regex = None;
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let mut field_regex = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::String, 1) => field_regex = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_regex = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3209,49 +3323,50 @@ pub mod server {
             p.read_struct_end()?;
             let res = self.service.getRegexExportedValues(
                 field_regex.ok_or_else(|| {
-                    ApplicationException::missing_arg(
+                    ::fbthrift::ApplicationException::missing_arg(
                         "getRegexExportedValues",
                         "regex",
                     )
                 })?,
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetRegexExportedValuesExn::Success(res)
                 }
-                Err(crate::services::base_service::GetRegexExportedValuesExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetRegexExportedValuesExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetRegexExportedValuesExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetRegexExportedValuesExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getRegexExportedValues",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getRegexExportedValues",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getExportedValue<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
-            let mut field_key = None;
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let mut field_key = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::String, 1) => field_key = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_key = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3259,51 +3374,52 @@ pub mod server {
             p.read_struct_end()?;
             let res = self.service.getExportedValue(
                 field_key.ok_or_else(|| {
-                    ApplicationException::missing_arg(
+                    ::fbthrift::ApplicationException::missing_arg(
                         "getExportedValue",
                         "key",
                     )
                 })?,
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetExportedValueExn::Success(res)
                 }
-                Err(crate::services::base_service::GetExportedValueExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetExportedValueExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetExportedValueExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetExportedValueExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getExportedValue",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getExportedValue",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_setOption<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
-            let mut field_key = None;
-            let mut field_value = None;
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let mut field_key = ::std::option::Option::None;
+            let mut field_value = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::String, 1) => field_key = Some(Deserialize::read(p)?),
-                    (TType::String, 2) => field_value = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_key = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::String, 2) => field_value = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3311,55 +3427,56 @@ pub mod server {
             p.read_struct_end()?;
             let res = self.service.setOption(
                 field_key.ok_or_else(|| {
-                    ApplicationException::missing_arg(
+                    ::fbthrift::ApplicationException::missing_arg(
                         "setOption",
                         "key",
                     )
                 })?,
                 field_value.ok_or_else(|| {
-                    ApplicationException::missing_arg(
+                    ::fbthrift::ApplicationException::missing_arg(
                         "setOption",
                         "value",
                     )
                 })?,
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::SetOptionExn::Success(res)
                 }
-                Err(crate::services::base_service::SetOptionExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::SetOptionExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::SetOptionExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::SetOptionExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "setOption",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "setOption",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getOption<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
-            let mut field_key = None;
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let mut field_key = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::String, 1) => field_key = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_key = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3367,47 +3484,48 @@ pub mod server {
             p.read_struct_end()?;
             let res = self.service.getOption(
                 field_key.ok_or_else(|| {
-                    ApplicationException::missing_arg(
+                    ::fbthrift::ApplicationException::missing_arg(
                         "getOption",
                         "key",
                     )
                 })?,
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetOptionExn::Success(res)
                 }
-                Err(crate::services::base_service::GetOptionExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetOptionExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetOptionExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetOptionExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getOption",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getOption",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_getOptions<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3416,40 +3534,41 @@ pub mod server {
             let res = self.service.getOptions(
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::GetOptionsExn::Success(res)
                 }
-                Err(crate::services::base_service::GetOptionsExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::GetOptionsExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::GetOptionsExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::GetOptionsExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "getOptions",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getOptions",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
 
         async fn handle_aliveSince<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
             _req_ctxt: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3458,87 +3577,87 @@ pub mod server {
             let res = self.service.aliveSince(
             ).await;
             let res = match res {
-                Ok(res) => {
+                ::std::result::Result::Ok(res) => {
                     crate::services::base_service::AliveSinceExn::Success(res)
                 }
-                Err(crate::services::base_service::AliveSinceExn::ApplicationException(aexn)) => {
-                    return Err(aexn.into())
+                ::std::result::Result::Err(crate::services::base_service::AliveSinceExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
                 }
-                Err(crate::services::base_service::AliveSinceExn::Success(_)) => {
+                ::std::result::Result::Err(crate::services::base_service::AliveSinceExn::Success(_)) => {
                     panic!(
                         "{} attempted to return success via error",
                         "aliveSince",
                     )
                 }
             };
-            let res = serialize!(P, |p| fbthrift::protocol::write_message(
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "aliveSince",
-                MessageType::Reply,
+                ::fbthrift::MessageType::Reply,
                 seqid,
-                |p| res.write(p),
+                |p| ::fbthrift::Serialize::write(&res, p),
             ));
-            Ok(res)
+            ::std::result::Result::Ok(res)
         }
     }
 
-    #[async_trait]
-    impl<P, H, R> fbthrift::ServiceProcessor<P> for BaseServiceProcessor<P, H, R>
+    #[::async_trait::async_trait]
+    impl<P, H, R> ::fbthrift::ServiceProcessor<P> for BaseServiceProcessor<P, H, R>
     where
-        P: Protocol + Send + Sync + 'static,
-        P::Deserializer: Send,
+        P: ::fbthrift::Protocol + ::std::marker::Send + ::std::marker::Sync + 'static,
+        P::Deserializer: ::std::marker::Send,
         H: BaseService,
-        R: Send + Sync + 'static,
+        R: ::std::marker::Send + ::std::marker::Sync + 'static,
     {
         type RequestContext = R;
 
         #[inline]
-        fn method_idx(&self, name: &[u8]) -> Result<usize, ApplicationException> {
+        fn method_idx(&self, name: &[::std::primitive::u8]) -> ::std::result::Result<::std::primitive::usize, ::fbthrift::ApplicationException> {
             match name {
-                b"getStatus" => Ok(0usize),
-                b"getName" => Ok(1usize),
-                b"getVersion" => Ok(2usize),
-                b"getStatusDetails" => Ok(3usize),
-                b"getCounters" => Ok(4usize),
-                b"getRegexCounters" => Ok(5usize),
-                b"getSelectedCounters" => Ok(6usize),
-                b"getCounter" => Ok(7usize),
-                b"getExportedValues" => Ok(8usize),
-                b"getSelectedExportedValues" => Ok(9usize),
-                b"getRegexExportedValues" => Ok(10usize),
-                b"getExportedValue" => Ok(11usize),
-                b"setOption" => Ok(12usize),
-                b"getOption" => Ok(13usize),
-                b"getOptions" => Ok(14usize),
-                b"aliveSince" => Ok(15usize),
-                _ => Err(ApplicationException::unknown_method()),
+                b"getStatus" => ::std::result::Result::Ok(0usize),
+                b"getName" => ::std::result::Result::Ok(1usize),
+                b"getVersion" => ::std::result::Result::Ok(2usize),
+                b"getStatusDetails" => ::std::result::Result::Ok(3usize),
+                b"getCounters" => ::std::result::Result::Ok(4usize),
+                b"getRegexCounters" => ::std::result::Result::Ok(5usize),
+                b"getSelectedCounters" => ::std::result::Result::Ok(6usize),
+                b"getCounter" => ::std::result::Result::Ok(7usize),
+                b"getExportedValues" => ::std::result::Result::Ok(8usize),
+                b"getSelectedExportedValues" => ::std::result::Result::Ok(9usize),
+                b"getRegexExportedValues" => ::std::result::Result::Ok(10usize),
+                b"getExportedValue" => ::std::result::Result::Ok(11usize),
+                b"setOption" => ::std::result::Result::Ok(12usize),
+                b"getOption" => ::std::result::Result::Ok(13usize),
+                b"getOptions" => ::std::result::Result::Ok(14usize),
+                b"aliveSince" => ::std::result::Result::Ok(15usize),
+                _ => ::std::result::Result::Err(::fbthrift::ApplicationException::unknown_method()),
             }
         }
 
         async fn handle_method(
             &self,
-            idx: usize,
-            p: &mut P::Deserializer,
-            r: &R,
-            seqid: u32,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+            idx: ::std::primitive::usize,
+            _p: &mut P::Deserializer,
+            _r: &R,
+            _seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
             match idx {
-                0usize => self.handle_getStatus(p, r, seqid).await,
-                1usize => self.handle_getName(p, r, seqid).await,
-                2usize => self.handle_getVersion(p, r, seqid).await,
-                3usize => self.handle_getStatusDetails(p, r, seqid).await,
-                4usize => self.handle_getCounters(p, r, seqid).await,
-                5usize => self.handle_getRegexCounters(p, r, seqid).await,
-                6usize => self.handle_getSelectedCounters(p, r, seqid).await,
-                7usize => self.handle_getCounter(p, r, seqid).await,
-                8usize => self.handle_getExportedValues(p, r, seqid).await,
-                9usize => self.handle_getSelectedExportedValues(p, r, seqid).await,
-                10usize => self.handle_getRegexExportedValues(p, r, seqid).await,
-                11usize => self.handle_getExportedValue(p, r, seqid).await,
-                12usize => self.handle_setOption(p, r, seqid).await,
-                13usize => self.handle_getOption(p, r, seqid).await,
-                14usize => self.handle_getOptions(p, r, seqid).await,
-                15usize => self.handle_aliveSince(p, r, seqid).await,
+                0usize => self.handle_getStatus(_p, _r, _seqid).await,
+                1usize => self.handle_getName(_p, _r, _seqid).await,
+                2usize => self.handle_getVersion(_p, _r, _seqid).await,
+                3usize => self.handle_getStatusDetails(_p, _r, _seqid).await,
+                4usize => self.handle_getCounters(_p, _r, _seqid).await,
+                5usize => self.handle_getRegexCounters(_p, _r, _seqid).await,
+                6usize => self.handle_getSelectedCounters(_p, _r, _seqid).await,
+                7usize => self.handle_getCounter(_p, _r, _seqid).await,
+                8usize => self.handle_getExportedValues(_p, _r, _seqid).await,
+                9usize => self.handle_getSelectedExportedValues(_p, _r, _seqid).await,
+                10usize => self.handle_getRegexExportedValues(_p, _r, _seqid).await,
+                11usize => self.handle_getExportedValue(_p, _r, _seqid).await,
+                12usize => self.handle_setOption(_p, _r, _seqid).await,
+                13usize => self.handle_getOption(_p, _r, _seqid).await,
+                14usize => self.handle_getOptions(_p, _r, _seqid).await,
+                15usize => self.handle_aliveSince(_p, _r, _seqid).await,
                 bad => panic!(
                     "{}: unexpected method idx {}",
                     "BaseServiceProcessor",
@@ -3548,34 +3667,35 @@ pub mod server {
         }
     }
 
-    #[async_trait]
-    impl<P, H, R> ThriftService<P::Frame> for BaseServiceProcessor<P, H, R>
+    #[::async_trait::async_trait]
+    impl<P, H, R> ::fbthrift::ThriftService<P::Frame> for BaseServiceProcessor<P, H, R>
     where
-        P: Protocol + Send + Sync + 'static,
-        P::Deserializer: Send,
-        P::Frame: Send + 'static,
+        P: ::fbthrift::Protocol + ::std::marker::Send + ::std::marker::Sync + 'static,
+        P::Deserializer: ::std::marker::Send,
+        P::Frame: ::std::marker::Send + 'static,
         H: BaseService,
-        R: Send + Sync + 'static,
+        R: ::std::marker::Send + ::std::marker::Sync + 'static,
     {
         type Handler = H;
         type RequestContext = R;
 
         async fn call(
             &self,
-            req: ProtocolDecoded<P>,
+            req: ::fbthrift::ProtocolDecoded<P>,
             req_ctxt: &R,
-        ) -> anyhow::Result<ProtocolEncodedFinal<P>> {
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::{BufExt as _, ProtocolReader as _, ServiceProcessor as _};
             let mut p = P::deserializer(req);
             let (idx, mty, seqid) = p.read_message_begin(|name| self.method_idx(name))?;
-            if mty != MessageType::Call {
-                return Err(From::from(ApplicationException::new(
-                    ApplicationExceptionErrorCode::InvalidMessageType,
+            if mty != ::fbthrift::MessageType::Call {
+                return ::std::result::Result::Err(::std::convert::From::from(::fbthrift::ApplicationException::new(
+                    ::fbthrift::ApplicationExceptionErrorCode::InvalidMessageType,
                     format!("message type {:?} not handled", mty)
                 )));
             }
             let idx = match idx {
-                Ok(idx) => idx,
-                Err(_) => {
+                ::std::result::Result::Ok(idx) => idx,
+                ::std::result::Result::Err(_) => {
                     let cur = P::into_buffer(p).reset();
                     return self.supa.call(cur, req_ctxt).await;
                 }
@@ -3583,43 +3703,43 @@ pub mod server {
             let res = self.handle_method(idx, &mut p, req_ctxt, seqid).await;
             p.read_message_end()?;
             match res {
-                Ok(bytes) => Ok(bytes),
-                Err(err) => match err.downcast_ref::<fbthrift::ProtocolError>() {
-                    Some(fbthrift::ProtocolError::ApplicationException(ae)) => {
-                        let res = serialize!(P, |p| {
-                            fbthrift::protocol::write_message(
+                ::std::result::Result::Ok(bytes) => ::std::result::Result::Ok(bytes),
+                ::std::result::Result::Err(err) => match err.downcast_ref::<::fbthrift::ProtocolError>() {
+                    ::std::option::Option::Some(::fbthrift::ProtocolError::ApplicationException(ae)) => {
+                        let res = ::fbthrift::serialize!(P, |p| {
+                            ::fbthrift::protocol::write_message(
                                 p,
                                 "BaseServiceProcessor",
-                                MessageType::Exception,
+                                ::fbthrift::MessageType::Exception,
                                 seqid,
-                                |p| ae.write(p),
+                                |p| ::fbthrift::Serialize::write(&ae, p),
                             )
                         });
-                        Ok(res)
+                        ::std::result::Result::Ok(res)
                     }
-                    _ => Err(err),
+                    _ => ::std::result::Result::Err(err),
                 },
             }
         }
     }
 
     pub fn make_BaseService_server<F, H, R>(
-        proto: ProtocolID,
+        proto: ::fbthrift::ProtocolID,
         handler: H,
-    ) -> Result<Box<dyn ThriftService<F, Handler = H, RequestContext = R> + Send + 'static>, ApplicationException>
+    ) -> ::std::result::Result<::std::boxed::Box<dyn ::fbthrift::ThriftService<F, Handler = H, RequestContext = R> + ::std::marker::Send + 'static>, ::fbthrift::ApplicationException>
     where
-        F: Framing + Send + Sync + 'static,
+        F: ::fbthrift::Framing + ::std::marker::Send + ::std::marker::Sync + 'static,
         H: BaseService,
-        R: Send + Sync + 'static,
+        R: ::std::marker::Send + ::std::marker::Sync + 'static,
     {
         match proto {
-            ProtocolID::BinaryProtocol => {
-                Ok(Box::new(BaseServiceProcessor::<BinaryProtocol<F>, H, R>::new(handler)))
+            ::fbthrift::ProtocolID::BinaryProtocol => {
+                ::std::result::Result::Ok(::std::boxed::Box::new(BaseServiceProcessor::<::fbthrift::BinaryProtocol<F>, H, R>::new(handler)))
             }
-            ProtocolID::CompactProtocol => {
-                Ok(Box::new(BaseServiceProcessor::<CompactProtocol<F>, H, R>::new(handler)))
+            ::fbthrift::ProtocolID::CompactProtocol => {
+                ::std::result::Result::Ok(::std::boxed::Box::new(BaseServiceProcessor::<::fbthrift::CompactProtocol<F>, H, R>::new(handler)))
             }
-            bad => Err(ApplicationException::invalid_protocol(bad)),
+            bad => ::std::result::Result::Err(::fbthrift::ApplicationException::invalid_protocol(bad)),
         }
     }
 }
@@ -3701,9 +3821,6 @@ pub mod server {
 ///         client: Arc<dyn MyService + Send + Sync + 'static>,
 ///     ) -> impl Future<Item = Out> {...}
 pub mod mock {
-    use async_trait::async_trait;
-    use std::marker::PhantomData;
-
     pub struct BaseService<'mock> {
         pub getStatus: base_service::getStatus<'mock>,
         pub getName: base_service::getName<'mock>,
@@ -3721,7 +3838,7 @@ pub mod mock {
         pub getOption: base_service::getOption<'mock>,
         pub getOptions: base_service::getOptions<'mock>,
         pub aliveSince: base_service::aliveSince<'mock>,
-        _marker: PhantomData<&'mock ()>,
+        _marker: ::std::marker::PhantomData<&'mock ()>,
     }
 
     impl dyn super::client::BaseService {
@@ -3743,152 +3860,151 @@ pub mod mock {
                 getOption: base_service::getOption::unimplemented(),
                 getOptions: base_service::getOptions::unimplemented(),
                 aliveSince: base_service::aliveSince::unimplemented(),
-                _marker: PhantomData,
+                _marker: ::std::marker::PhantomData,
             }
         }
     }
 
-    #[async_trait]
+    #[::async_trait::async_trait]
     impl<'mock> super::client::BaseService for BaseService<'mock> {
         fn getStatus(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getStatus.closure.lock().unwrap();
-            let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()))
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
         }
         fn getName(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetNameError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetNameError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getName.closure.lock().unwrap();
-            let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()))
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
         }
         fn getVersion(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetVersionError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetVersionError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getVersion.closure.lock().unwrap();
-            let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()))
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
         }
         fn getStatusDetails(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetStatusDetailsError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetStatusDetailsError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getStatusDetails.closure.lock().unwrap();
-            let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()))
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
         }
         fn getCounters(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetCountersError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getCounters.closure.lock().unwrap();
-            let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()))
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
         }
         fn getRegexCounters(
             &self,
-            arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError>> + Send + 'static>> {
+            arg_regex: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetRegexCountersError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getRegexCounters.closure.lock().unwrap();
-            let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_regex.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(::std::string::String) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_regex.to_owned())))
         }
         fn getSelectedCounters(
             &self,
-            arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError>> + Send + 'static>> {
+            arg_keys: &[::std::string::String],
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetSelectedCountersError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getSelectedCounters.closure.lock().unwrap();
-            let closure: &mut dyn FnMut(Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_keys.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_keys.to_owned())))
         }
         fn getCounter(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::GetCounterError>> + Send + 'static>> {
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::GetCounterError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getCounter.closure.lock().unwrap();
-            let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_key.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(::std::string::String) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_key.to_owned())))
         }
         fn getExportedValues(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetExportedValuesError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getExportedValues.closure.lock().unwrap();
-            let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()))
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
         }
         fn getSelectedExportedValues(
             &self,
-            arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError>> + Send + 'static>> {
+            arg_keys: &[::std::string::String],
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetSelectedExportedValuesError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getSelectedExportedValues.closure.lock().unwrap();
-            let closure: &mut dyn FnMut(Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_keys.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_keys.to_owned())))
         }
         fn getRegexExportedValues(
             &self,
-            arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError>> + Send + 'static>> {
+            arg_regex: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetRegexExportedValuesError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getRegexExportedValues.closure.lock().unwrap();
-            let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_regex.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(::std::string::String) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_regex.to_owned())))
         }
         fn getExportedValue(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetExportedValueError>> + Send + 'static>> {
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetExportedValueError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getExportedValue.closure.lock().unwrap();
-            let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_key.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(::std::string::String) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_key.to_owned())))
         }
         fn setOption(
             &self,
-            arg_key: &str,
-            arg_value: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::base_service::SetOptionError>> + Send + 'static>> {
+            arg_key: &::std::primitive::str,
+            arg_value: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::base_service::SetOptionError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.setOption.closure.lock().unwrap();
-            let closure: &mut dyn FnMut(String, String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_key.to_owned(), arg_value.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(::std::string::String, ::std::string::String) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_key.to_owned(), arg_value.to_owned())))
         }
         fn getOption(
             &self,
-            arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetOptionError>> + Send + 'static>> {
+            arg_key: &::std::primitive::str,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetOptionError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getOption.closure.lock().unwrap();
-            let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_key.to_owned())))
+            let closure: &mut dyn ::std::ops::FnMut(::std::string::String) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_key.to_owned())))
         }
         fn getOptions(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetOptionsError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.getOptions.closure.lock().unwrap();
-            let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()))
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
         }
         fn aliveSince(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::AliveSinceError>> + Send + 'static>> {
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::AliveSinceError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.aliveSince.closure.lock().unwrap();
-            let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()))
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
         }
     }
 
     mod base_service {
-        use std::sync::Mutex;
 
         pub struct getStatus<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut() -> Result<
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut() -> ::std::result::Result<
                     crate::types::fb303_status,
                     crate::errors::base_service::GetStatusError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getStatus<'mock> {
             pub fn unimplemented() -> Self {
                 getStatus {
-                    closure: Mutex::new(Box::new(|| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getStatus",
@@ -3900,34 +4016,34 @@ pub mod mock {
                 self.mock(move || value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut() -> crate::types::fb303_status + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::fb303_status + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Ok(mock()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetStatusError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetStatusError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getName<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut() -> Result<
-                    String,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut() -> ::std::result::Result<
+                    ::std::string::String,
                     crate::errors::base_service::GetNameError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getName<'mock> {
             pub fn unimplemented() -> Self {
                 getName {
-                    closure: Mutex::new(Box::new(|| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getName",
@@ -3935,38 +4051,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: String) {
+            pub fn ret(&self, value: ::std::string::String) {
                 self.mock(move || value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut() -> String + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Ok(mock()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetNameError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetNameError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getVersion<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut() -> Result<
-                    String,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut() -> ::std::result::Result<
+                    ::std::string::String,
                     crate::errors::base_service::GetVersionError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getVersion<'mock> {
             pub fn unimplemented() -> Self {
                 getVersion {
-                    closure: Mutex::new(Box::new(|| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getVersion",
@@ -3974,38 +4090,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: String) {
+            pub fn ret(&self, value: ::std::string::String) {
                 self.mock(move || value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut() -> String + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Ok(mock()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetVersionError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetVersionError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getStatusDetails<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut() -> Result<
-                    String,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut() -> ::std::result::Result<
+                    ::std::string::String,
                     crate::errors::base_service::GetStatusDetailsError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getStatusDetails<'mock> {
             pub fn unimplemented() -> Self {
                 getStatusDetails {
-                    closure: Mutex::new(Box::new(|| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getStatusDetails",
@@ -4013,38 +4129,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: String) {
+            pub fn ret(&self, value: ::std::string::String) {
                 self.mock(move || value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut() -> String + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Ok(mock()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetStatusDetailsError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetStatusDetailsError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getCounters<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut() -> Result<
-                    std::collections::BTreeMap<String, i64>,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut() -> ::std::result::Result<
+                    ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
                     crate::errors::base_service::GetCountersError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getCounters<'mock> {
             pub fn unimplemented() -> Self {
                 getCounters {
-                    closure: Mutex::new(Box::new(|| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getCounters",
@@ -4052,38 +4168,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: std::collections::BTreeMap<String, i64>) {
+            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>) {
                 self.mock(move || value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut() -> std::collections::BTreeMap<String, i64> + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Ok(mock()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetCountersError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetCountersError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getRegexCounters<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut(String) -> Result<
-                    std::collections::BTreeMap<String, i64>,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                    ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
                     crate::errors::base_service::GetRegexCountersError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getRegexCounters<'mock> {
             pub fn unimplemented() -> Self {
                 getRegexCounters {
-                    closure: Mutex::new(Box::new(|_: String| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getRegexCounters",
@@ -4091,38 +4207,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: std::collections::BTreeMap<String, i64>) {
-                self.mock(move |_: String| value.clone());
+            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>) {
+                self.mock(move |_: ::std::string::String| value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut(String) -> std::collections::BTreeMap<String, i64> + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |regex| Ok(mock(regex)));
+                *closure = ::std::boxed::Box::new(move |regex| ::std::result::Result::Ok(mock(regex)));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetRegexCountersError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetRegexCountersError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |_: String| Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getSelectedCounters<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut(Vec<String>) -> Result<
-                    std::collections::BTreeMap<String, i64>,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::result::Result<
+                    ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
                     crate::errors::base_service::GetSelectedCountersError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getSelectedCounters<'mock> {
             pub fn unimplemented() -> Self {
                 getSelectedCounters {
-                    closure: Mutex::new(Box::new(|_: Vec<String>| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::vec::Vec<::std::string::String>| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getSelectedCounters",
@@ -4130,38 +4246,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: std::collections::BTreeMap<String, i64>) {
-                self.mock(move |_: Vec<String>| value.clone());
+            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>) {
+                self.mock(move |_: ::std::vec::Vec<::std::string::String>| value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut(Vec<String>) -> std::collections::BTreeMap<String, i64> + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |keys| Ok(mock(keys)));
+                *closure = ::std::boxed::Box::new(move |keys| ::std::result::Result::Ok(mock(keys)));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetSelectedCountersError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetSelectedCountersError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |_: Vec<String>| Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move |_: ::std::vec::Vec<::std::string::String>| ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getCounter<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut(String) -> Result<
-                    i64,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                    ::std::primitive::i64,
                     crate::errors::base_service::GetCounterError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getCounter<'mock> {
             pub fn unimplemented() -> Self {
                 getCounter {
-                    closure: Mutex::new(Box::new(|_: String| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getCounter",
@@ -4169,38 +4285,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: i64) {
-                self.mock(move |_: String| value.clone());
+            pub fn ret(&self, value: ::std::primitive::i64) {
+                self.mock(move |_: ::std::string::String| value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut(String) -> i64 + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |key| Ok(mock(key)));
+                *closure = ::std::boxed::Box::new(move |key| ::std::result::Result::Ok(mock(key)));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetCounterError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetCounterError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |_: String| Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getExportedValues<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut() -> Result<
-                    std::collections::BTreeMap<String, String>,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut() -> ::std::result::Result<
+                    ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
                     crate::errors::base_service::GetExportedValuesError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getExportedValues<'mock> {
             pub fn unimplemented() -> Self {
                 getExportedValues {
-                    closure: Mutex::new(Box::new(|| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getExportedValues",
@@ -4208,38 +4324,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: std::collections::BTreeMap<String, String>) {
+            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
                 self.mock(move || value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut() -> std::collections::BTreeMap<String, String> + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Ok(mock()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetExportedValuesError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetExportedValuesError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getSelectedExportedValues<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut(Vec<String>) -> Result<
-                    std::collections::BTreeMap<String, String>,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::result::Result<
+                    ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
                     crate::errors::base_service::GetSelectedExportedValuesError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getSelectedExportedValues<'mock> {
             pub fn unimplemented() -> Self {
                 getSelectedExportedValues {
-                    closure: Mutex::new(Box::new(|_: Vec<String>| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::vec::Vec<::std::string::String>| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getSelectedExportedValues",
@@ -4247,38 +4363,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: std::collections::BTreeMap<String, String>) {
-                self.mock(move |_: Vec<String>| value.clone());
+            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
+                self.mock(move |_: ::std::vec::Vec<::std::string::String>| value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut(Vec<String>) -> std::collections::BTreeMap<String, String> + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |keys| Ok(mock(keys)));
+                *closure = ::std::boxed::Box::new(move |keys| ::std::result::Result::Ok(mock(keys)));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetSelectedExportedValuesError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetSelectedExportedValuesError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |_: Vec<String>| Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move |_: ::std::vec::Vec<::std::string::String>| ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getRegexExportedValues<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut(String) -> Result<
-                    std::collections::BTreeMap<String, String>,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                    ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
                     crate::errors::base_service::GetRegexExportedValuesError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getRegexExportedValues<'mock> {
             pub fn unimplemented() -> Self {
                 getRegexExportedValues {
-                    closure: Mutex::new(Box::new(|_: String| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getRegexExportedValues",
@@ -4286,38 +4402,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: std::collections::BTreeMap<String, String>) {
-                self.mock(move |_: String| value.clone());
+            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
+                self.mock(move |_: ::std::string::String| value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut(String) -> std::collections::BTreeMap<String, String> + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |regex| Ok(mock(regex)));
+                *closure = ::std::boxed::Box::new(move |regex| ::std::result::Result::Ok(mock(regex)));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetRegexExportedValuesError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetRegexExportedValuesError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |_: String| Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getExportedValue<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut(String) -> Result<
-                    String,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                    ::std::string::String,
                     crate::errors::base_service::GetExportedValueError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getExportedValue<'mock> {
             pub fn unimplemented() -> Self {
                 getExportedValue {
-                    closure: Mutex::new(Box::new(|_: String| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getExportedValue",
@@ -4325,38 +4441,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: String) {
-                self.mock(move |_: String| value.clone());
+            pub fn ret(&self, value: ::std::string::String) {
+                self.mock(move |_: ::std::string::String| value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut(String) -> String + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |key| Ok(mock(key)));
+                *closure = ::std::boxed::Box::new(move |key| ::std::result::Result::Ok(mock(key)));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetExportedValueError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetExportedValueError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |_: String| Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct setOption<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut(String, String) -> Result<
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut(::std::string::String, ::std::string::String) -> ::std::result::Result<
                     (),
                     crate::errors::base_service::SetOptionError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> setOption<'mock> {
             pub fn unimplemented() -> Self {
                 setOption {
-                    closure: Mutex::new(Box::new(|_: String, _: String| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String, _: ::std::string::String| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "setOption",
@@ -4365,37 +4481,37 @@ pub mod mock {
             }
 
             pub fn ret(&self, value: ()) {
-                self.mock(move |_: String, _: String| value.clone());
+                self.mock(move |_: ::std::string::String, _: ::std::string::String| value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut(String, String) -> () + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String, ::std::string::String) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |key, value| Ok(mock(key, value)));
+                *closure = ::std::boxed::Box::new(move |key, value| ::std::result::Result::Ok(mock(key, value)));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::SetOptionError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::SetOptionError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |_: String, _: String| Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move |_: ::std::string::String, _: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getOption<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut(String) -> Result<
-                    String,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                    ::std::string::String,
                     crate::errors::base_service::GetOptionError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getOption<'mock> {
             pub fn unimplemented() -> Self {
                 getOption {
-                    closure: Mutex::new(Box::new(|_: String| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getOption",
@@ -4403,38 +4519,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: String) {
-                self.mock(move |_: String| value.clone());
+            pub fn ret(&self, value: ::std::string::String) {
+                self.mock(move |_: ::std::string::String| value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut(String) -> String + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |key| Ok(mock(key)));
+                *closure = ::std::boxed::Box::new(move |key| ::std::result::Result::Ok(mock(key)));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetOptionError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetOptionError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move |_: String| Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct getOptions<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut() -> Result<
-                    std::collections::BTreeMap<String, String>,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut() -> ::std::result::Result<
+                    ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
                     crate::errors::base_service::GetOptionsError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> getOptions<'mock> {
             pub fn unimplemented() -> Self {
                 getOptions {
-                    closure: Mutex::new(Box::new(|| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "getOptions",
@@ -4442,38 +4558,38 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: std::collections::BTreeMap<String, String>) {
+            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
                 self.mock(move || value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut() -> std::collections::BTreeMap<String, String> + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Ok(mock()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::GetOptionsError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::GetOptionsError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
             }
         }
 
         pub struct aliveSince<'mock> {
-            pub(super) closure: Mutex<Box<
-                dyn FnMut() -> Result<
-                    i64,
+            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
+                dyn ::std::ops::FnMut() -> ::std::result::Result<
+                    ::std::primitive::i64,
                     crate::errors::base_service::AliveSinceError,
-                > + Send + Sync + 'mock,
+                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
             >>,
         }
 
         impl<'mock> aliveSince<'mock> {
             pub fn unimplemented() -> Self {
                 aliveSince {
-                    closure: Mutex::new(Box::new(|| panic!(
+                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
                         "{}::{} is not mocked",
                         "BaseService",
                         "aliveSince",
@@ -4481,22 +4597,22 @@ pub mod mock {
                 }
             }
 
-            pub fn ret(&self, value: i64) {
+            pub fn ret(&self, value: ::std::primitive::i64) {
                 self.mock(move || value.clone());
             }
 
-            pub fn mock(&self, mut mock: impl FnMut() -> i64 + Send + Sync + 'mock) {
+            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Ok(mock()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
             }
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::errors::base_service::AliveSinceError>,
-                E: Clone + Send + Sync + 'mock,
+                E: ::std::convert::Into<crate::errors::base_service::AliveSinceError>,
+                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
-                *closure = Box::new(move || Err(exception.clone().into()));
+                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
             }
         }
     }

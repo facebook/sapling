@@ -8,27 +8,23 @@ pub use self::types::*;
 pub mod types {
     #![allow(clippy::redundant_closure)]
 
-    use fbthrift::{
-        Deserialize, GetTType, ProtocolReader, ProtocolWriter, Serialize, TType,
-    };
-    use serde_derive::{Deserialize, Serialize};
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct ConfigValue {
         #[serde(default)]
-        pub parsedValue: String,
+        pub parsedValue: ::std::string::String,
         #[serde(default)]
         pub source: crate::types::ConfigSource,
     }
 
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct EdenConfigData {
         #[serde(default)]
-        pub values: std::collections::BTreeMap<String, crate::types::ConfigValue>,
+        pub values: ::std::collections::BTreeMap<::std::string::String, crate::types::ConfigValue>,
     }
 
-    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-    pub struct ConfigSource(pub i32);
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    pub struct ConfigSource(pub ::std::primitive::i32);
 
     impl ConfigSource {
         pub const Default: Self = ConfigSource(0i32);
@@ -37,36 +33,36 @@ pub mod types {
         pub const CommandLine: Self = ConfigSource(3i32);
     }
 
-    impl Default for ConfigSource {
+    impl ::std::default::Default for ConfigSource {
         fn default() -> Self {
-            ConfigSource(fbthrift::__UNKNOWN_ID)
+            ConfigSource(::fbthrift::__UNKNOWN_ID)
         }
     }
 
-    impl<'a> From<&'a ConfigSource> for i32 {
+    impl<'a> ::std::convert::From<&'a ConfigSource> for ::std::primitive::i32 {
         #[inline]
-        fn from(x: &'a ConfigSource) -> i32 {
+        fn from(x: &'a ConfigSource) -> Self {
             x.0
         }
     }
 
-    impl From<ConfigSource> for i32 {
+    impl ::std::convert::From<ConfigSource> for ::std::primitive::i32 {
         #[inline]
-        fn from(x: ConfigSource) -> i32 {
+        fn from(x: ConfigSource) -> Self {
             x.0
         }
     }
 
-    impl From<i32> for ConfigSource {
+    impl ::std::convert::From<::std::primitive::i32> for ConfigSource {
         #[inline]
-        fn from(x: i32) -> Self {
+        fn from(x: ::std::primitive::i32) -> Self {
             Self(x)
         }
     }
 
-    impl std::fmt::Display for ConfigSource {
-        fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            let s: &str = match *self {
+    impl ::std::fmt::Display for ConfigSource {
+        fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            let s: &::std::primitive::str = match *self {
                 ConfigSource::Default => "Default",
                 ConfigSource::SystemConfig => "SystemConfig",
                 ConfigSource::UserConfig => "UserConfig",
@@ -77,46 +73,52 @@ pub mod types {
         }
     }
 
-    impl std::fmt::Debug for ConfigSource {
-        fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    impl ::std::fmt::Debug for ConfigSource {
+        fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
             write!(fmt, "ConfigSource::{}", self)
         }
     }
 
-    impl std::str::FromStr for ConfigSource {
-        type Err = anyhow::Error;
+    impl ::std::str::FromStr for ConfigSource {
+        type Err = ::anyhow::Error;
 
-        fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
+        fn from_str(string: &::std::primitive::str) -> ::std::result::Result<Self, Self::Err> {
             match string {
-                "Default" => Ok(ConfigSource::Default),
-                "SystemConfig" => Ok(ConfigSource::SystemConfig),
-                "UserConfig" => Ok(ConfigSource::UserConfig),
-                "CommandLine" => Ok(ConfigSource::CommandLine),
-                _ => anyhow::bail!("Unable to parse {} as ConfigSource", string),
+                "Default" => ::std::result::Result::Ok(ConfigSource::Default),
+                "SystemConfig" => ::std::result::Result::Ok(ConfigSource::SystemConfig),
+                "UserConfig" => ::std::result::Result::Ok(ConfigSource::UserConfig),
+                "CommandLine" => ::std::result::Result::Ok(ConfigSource::CommandLine),
+                _ => ::anyhow::bail!("Unable to parse {} as ConfigSource", string),
             }
         }
     }
 
-    impl GetTType for ConfigSource {
-        const TTYPE: TType = TType::I32;
+    impl ::fbthrift::GetTType for ConfigSource {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::I32;
     }
 
-    impl<P: ProtocolWriter> Serialize<P> for ConfigSource {
+    impl<P> ::fbthrift::Serialize<P> for ConfigSource
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
         #[inline]
         fn write(&self, p: &mut P) {
             p.write_i32(self.into())
         }
     }
 
-    impl<P: ProtocolReader> Deserialize<P> for ConfigSource {
+    impl<P> ::fbthrift::Deserialize<P> for ConfigSource
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
         #[inline]
-        fn read(p: &mut P) -> anyhow::Result<Self> {
-            Ok(ConfigSource::from(p.read_i32()?))
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            ::std::result::Result::Ok(ConfigSource::from(p.read_i32()?))
         }
     }
 
-    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-    pub struct ConfigReloadBehavior(pub i32);
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    pub struct ConfigReloadBehavior(pub ::std::primitive::i32);
 
     impl ConfigReloadBehavior {
         pub const AutoReload: Self = ConfigReloadBehavior(0i32);
@@ -124,36 +126,36 @@ pub mod types {
         pub const ForceReload: Self = ConfigReloadBehavior(2i32);
     }
 
-    impl Default for ConfigReloadBehavior {
+    impl ::std::default::Default for ConfigReloadBehavior {
         fn default() -> Self {
-            ConfigReloadBehavior(fbthrift::__UNKNOWN_ID)
+            ConfigReloadBehavior(::fbthrift::__UNKNOWN_ID)
         }
     }
 
-    impl<'a> From<&'a ConfigReloadBehavior> for i32 {
+    impl<'a> ::std::convert::From<&'a ConfigReloadBehavior> for ::std::primitive::i32 {
         #[inline]
-        fn from(x: &'a ConfigReloadBehavior) -> i32 {
+        fn from(x: &'a ConfigReloadBehavior) -> Self {
             x.0
         }
     }
 
-    impl From<ConfigReloadBehavior> for i32 {
+    impl ::std::convert::From<ConfigReloadBehavior> for ::std::primitive::i32 {
         #[inline]
-        fn from(x: ConfigReloadBehavior) -> i32 {
+        fn from(x: ConfigReloadBehavior) -> Self {
             x.0
         }
     }
 
-    impl From<i32> for ConfigReloadBehavior {
+    impl ::std::convert::From<::std::primitive::i32> for ConfigReloadBehavior {
         #[inline]
-        fn from(x: i32) -> Self {
+        fn from(x: ::std::primitive::i32) -> Self {
             Self(x)
         }
     }
 
-    impl std::fmt::Display for ConfigReloadBehavior {
-        fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            let s: &str = match *self {
+    impl ::std::fmt::Display for ConfigReloadBehavior {
+        fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            let s: &::std::primitive::str = match *self {
                 ConfigReloadBehavior::AutoReload => "AutoReload",
                 ConfigReloadBehavior::NoReload => "NoReload",
                 ConfigReloadBehavior::ForceReload => "ForceReload",
@@ -163,87 +165,99 @@ pub mod types {
         }
     }
 
-    impl std::fmt::Debug for ConfigReloadBehavior {
-        fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    impl ::std::fmt::Debug for ConfigReloadBehavior {
+        fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
             write!(fmt, "ConfigReloadBehavior::{}", self)
         }
     }
 
-    impl std::str::FromStr for ConfigReloadBehavior {
-        type Err = anyhow::Error;
+    impl ::std::str::FromStr for ConfigReloadBehavior {
+        type Err = ::anyhow::Error;
 
-        fn from_str(string: &str) -> std::result::Result<Self, Self::Err> {
+        fn from_str(string: &::std::primitive::str) -> ::std::result::Result<Self, Self::Err> {
             match string {
-                "AutoReload" => Ok(ConfigReloadBehavior::AutoReload),
-                "NoReload" => Ok(ConfigReloadBehavior::NoReload),
-                "ForceReload" => Ok(ConfigReloadBehavior::ForceReload),
-                _ => anyhow::bail!("Unable to parse {} as ConfigReloadBehavior", string),
+                "AutoReload" => ::std::result::Result::Ok(ConfigReloadBehavior::AutoReload),
+                "NoReload" => ::std::result::Result::Ok(ConfigReloadBehavior::NoReload),
+                "ForceReload" => ::std::result::Result::Ok(ConfigReloadBehavior::ForceReload),
+                _ => ::anyhow::bail!("Unable to parse {} as ConfigReloadBehavior", string),
             }
         }
     }
 
-    impl GetTType for ConfigReloadBehavior {
-        const TTYPE: TType = TType::I32;
+    impl ::fbthrift::GetTType for ConfigReloadBehavior {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::I32;
     }
 
-    impl<P: ProtocolWriter> Serialize<P> for ConfigReloadBehavior {
+    impl<P> ::fbthrift::Serialize<P> for ConfigReloadBehavior
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
         #[inline]
         fn write(&self, p: &mut P) {
             p.write_i32(self.into())
         }
     }
 
-    impl<P: ProtocolReader> Deserialize<P> for ConfigReloadBehavior {
+    impl<P> ::fbthrift::Deserialize<P> for ConfigReloadBehavior
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
         #[inline]
-        fn read(p: &mut P) -> anyhow::Result<Self> {
-            Ok(ConfigReloadBehavior::from(p.read_i32()?))
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            ::std::result::Result::Ok(ConfigReloadBehavior::from(p.read_i32()?))
         }
     }
 
-    impl Default for self::ConfigValue {
+    impl ::std::default::Default for self::ConfigValue {
         fn default() -> Self {
             Self {
-                parsedValue: Default::default(),
-                source: Default::default(),
+                parsedValue: ::std::default::Default::default(),
+                source: ::std::default::Default::default(),
             }
         }
     }
 
-    impl GetTType for self::ConfigValue {
-        const TTYPE: TType = TType::Struct;
+    impl ::fbthrift::GetTType for self::ConfigValue {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
 
-    impl<P: ProtocolWriter> Serialize<P> for self::ConfigValue {
+    impl<P> ::fbthrift::Serialize<P> for self::ConfigValue
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
         fn write(&self, p: &mut P) {
             p.write_struct_begin("ConfigValue");
-            p.write_field_begin("parsedValue", TType::String, 1);
-            Serialize::write(&self.parsedValue, p);
+            p.write_field_begin("parsedValue", ::fbthrift::TType::String, 1);
+            ::fbthrift::Serialize::write(&self.parsedValue, p);
             p.write_field_end();
-            p.write_field_begin("source", TType::I32, 2);
-            Serialize::write(&self.source, p);
+            p.write_field_begin("source", ::fbthrift::TType::I32, 2);
+            ::fbthrift::Serialize::write(&self.source, p);
             p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
     }
 
-    impl<P: ProtocolReader> Deserialize<P> for self::ConfigValue {
-        fn read(p: &mut P) -> anyhow::Result<Self> {
-            let mut field_parsedValue = None;
-            let mut field_source = None;
+    impl<P> ::fbthrift::Deserialize<P> for self::ConfigValue
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            let mut field_parsedValue = ::std::option::Option::None;
+            let mut field_source = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::String, 1) => field_parsedValue = Some(Deserialize::read(p)?),
-                    (TType::I32, 2) => field_source = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_parsedValue = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::I32, 2) => field_source = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
             }
             p.read_struct_end()?;
-            Ok(Self {
+            ::std::result::Result::Ok(Self {
                 parsedValue: field_parsedValue.unwrap_or_default(),
                 source: field_source.unwrap_or_default(),
             })
@@ -251,44 +265,50 @@ pub mod types {
     }
 
 
-    impl Default for self::EdenConfigData {
+    impl ::std::default::Default for self::EdenConfigData {
         fn default() -> Self {
             Self {
-                values: Default::default(),
+                values: ::std::default::Default::default(),
             }
         }
     }
 
-    impl GetTType for self::EdenConfigData {
-        const TTYPE: TType = TType::Struct;
+    impl ::fbthrift::GetTType for self::EdenConfigData {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
 
-    impl<P: ProtocolWriter> Serialize<P> for self::EdenConfigData {
+    impl<P> ::fbthrift::Serialize<P> for self::EdenConfigData
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
         fn write(&self, p: &mut P) {
             p.write_struct_begin("EdenConfigData");
-            p.write_field_begin("values", TType::Map, 1);
-            Serialize::write(&self.values, p);
+            p.write_field_begin("values", ::fbthrift::TType::Map, 1);
+            ::fbthrift::Serialize::write(&self.values, p);
             p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
     }
 
-    impl<P: ProtocolReader> Deserialize<P> for self::EdenConfigData {
-        fn read(p: &mut P) -> anyhow::Result<Self> {
-            let mut field_values = None;
+    impl<P> ::fbthrift::Deserialize<P> for self::EdenConfigData
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            let mut field_values = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
-                match (fty, fid as i32) {
-                    (TType::Stop, _) => break,
-                    (TType::Map, 1) => field_values = Some(Deserialize::read(p)?),
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::Map, 1) => field_values = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
             }
             p.read_struct_end()?;
-            Ok(Self {
+            ::std::result::Result::Ok(Self {
                 values: field_values.unwrap_or_default(),
             })
         }
