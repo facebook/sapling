@@ -472,6 +472,7 @@ def display(fp=None, format=3, data=None, **kwargs):
         fp = sys.stdout
     if len(data.samples) == 0:
         print("No samples recorded.", file=fp)
+        fp.flush()
         return
 
     if format == DisplayFormats.ByLine:

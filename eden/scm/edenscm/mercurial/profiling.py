@@ -109,11 +109,6 @@ def flameprofile(ui, fp, section):
 
 @contextlib.contextmanager
 def statprofile(ui, fp, section):
-    # TODO(py3): Fix statprof compatibility.
-    if sys.version_info.major == 3:
-        yield
-        return
-
     from . import statprof
 
     freq = ui.configwith(float, section, "freq")
@@ -222,7 +217,7 @@ class profile(object):
                 self._ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
                 profiler = "stat"
 
-        self._fp = util.stringio()
+        self._fp = pycompat.stringutf8io()
 
         if proffn is not None:
             pass
@@ -245,7 +240,7 @@ class profile(object):
             elapsed = time.time() - self._started
             if elapsed >= self._ui.configint(self._section, "minelapsed"):
                 output = self._ui.config(self._section, "output")
-                content = decodeutf8(self._fp.getvalue())
+                content = self._fp.getvalue()
                 if output == "blackbox":
                     blackbox.log({"profile": {"msg": content}})
                 elif output:
