@@ -1,4 +1,3 @@
-#require py2
 test --time
 
   $ hg --time help -q help 2>&1 | grep time > /dev/null
@@ -37,12 +36,14 @@ profiler extension could be loaded before other extensions
 
   $ cat > fooprof.py <<EOF
   > from __future__ import absolute_import
-  > import contextlib
+  > import contextlib, sys
   > @contextlib.contextmanager
   > def profile(ui, fp, section):
   >     print('fooprof: start profile')
+  >     sys.stdout.flush()
   >     yield
   >     print('fooprof: end profile')
+  >     sys.stdout.flush()
   > def extsetup(ui):
   >     ui.write('fooprof: loaded\n')
   > EOF

@@ -165,9 +165,6 @@ else:
             return obj
         return getattr(obj, "__doc__", None)
 
-    def _getoptbwrapper(orig, args, shortlist, namelist):
-        return orig(args, shortlist, namelist)
-
     oslinesep = os.linesep
     osname = os.name
     ospathsep = os.pathsep
@@ -235,11 +232,11 @@ iswindows = osname == "nt"
 
 
 def getoptb(args, shortlist, namelist):
-    return _getoptbwrapper(getopt.getopt, args, shortlist, namelist)
+    return getopt.getopt(args, shortlist, namelist)
 
 
 def gnugetoptb(args, shortlist, namelist):
-    return _getoptbwrapper(getopt.gnu_getopt, args, shortlist, namelist)
+    return getopt.gnu_getopt(args, shortlist, namelist)
 
 
 def getcwdsafe():

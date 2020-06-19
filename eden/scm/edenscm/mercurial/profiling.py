@@ -112,7 +112,7 @@ def statprofile(ui, fp, section):
     from . import statprof
 
     freq = ui.configwith(float, section, "freq")
-    if freq > 0:
+    if freq is not None and freq > 0:
         # Cannot reset when profiler is already active. So silently no-op.
         if statprof.state.profile_level == 0:
             statprof.reset(freq)
@@ -238,7 +238,8 @@ class profile(object):
                 exception_type, exception_value, traceback
             )
             elapsed = time.time() - self._started
-            if elapsed >= self._ui.configint(self._section, "minelapsed"):
+            minelapsed = self._ui.configint(self._section, "minelapsed")
+            if minelapsed is None or elapsed >= minelapsed:
                 output = self._ui.config(self._section, "output")
                 content = self._fp.getvalue()
                 if output == "blackbox":
@@ -247,7 +248,7 @@ class profile(object):
                     path = self._ui.expandpath(output)
                     try:
                         with open(path, "wb") as f:
-                            f.write(content)
+                            f.write(pycompat.encodeutf8(content))
                     except IOError as e:
                         # CreateFile(.., CREATE_ALWAYS, ...) can fail
                         # for existing "hidden" or "system" files.
