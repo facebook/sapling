@@ -7,13 +7,12 @@
 
 #![deny(warnings)]
 
-mod git_pool;
 mod mem_writes_bonsai_hg_mapping;
 mod mem_writes_changesets;
 
 use anyhow::{format_err, Context, Error};
 use blobrepo::{BlobRepo, DangerousOverride};
-use blobstore::{Blobstore, LoadableError};
+use blobstore::Blobstore;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
@@ -30,31 +29,31 @@ use futures::{
     future::{self, FutureExt as _, TryFutureExt},
     stream::{self, StreamExt as _, TryStreamExt},
 };
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::{FutureExt, StreamExt};
 use futures_old::Future;
 use futures_old::{
     future::IntoFuture,
     stream::{self as stream_old, Stream},
 };
-use git2::{ObjectType, Oid, Repository, Sort};
-use git_types::{mode, TreeHandle};
-use import_tools::{GitimportPreferences, GitimportTarget};
+use git2::{Oid, Repository, Sort};
+use git_types::TreeHandle;
+use import_tools::{
+    CommitMetadata, ExtractedCommit, GitLeaf, GitPool, GitimportPreferences, GitimportTarget,
+};
 use linked_hash_map::LinkedHashMap;
-use manifest::{bonsai_diff, BonsaiDiffFileChange, Entry, Manifest, StoreLoadable};
+use manifest::{bonsai_diff, BonsaiDiffFileChange, StoreLoadable};
 use mercurial_types::HgManifestId;
 use mononoke_types::{
     blob::BlobstoreValue, hash::RichGitSha1, typed_hash::MononokeId, BonsaiChangeset,
-    BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange, FileType, MPath,
-    MPathElement,
+    BonsaiChangesetMut, ChangesetId, ContentMetadata, FileChange, MPath,
 };
 use slog::info;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::task;
 
-use crate::git_pool::GitPool;
 use crate::mem_writes_bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use crate::mem_writes_changesets::MemWritesChangesets;
 
@@ -73,80 +72,6 @@ const ARG_GIT_FROM: &str = "git-from";
 const ARG_GIT_TO: &str = "git-to";
 
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
-
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-struct GitTree(Oid);
-
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-struct GitLeaf(Oid);
-
-struct GitManifest(HashMap<MPathElement, Entry<GitTree, (FileType, GitLeaf)>>);
-
-impl Manifest for GitManifest {
-    type TreeId = GitTree;
-    type LeafId = (FileType, GitLeaf);
-
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.0.get(name).cloned()
-    }
-
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        Box::new(self.0.clone().into_iter())
-    }
-}
-
-async fn load_git_tree(oid: Oid, pool: &GitPool) -> Result<GitManifest, Error> {
-    pool.with(move |repo| {
-        let tree = repo.find_tree(oid)?;
-
-        let elements = tree
-            .iter()
-            .map(|entry| {
-                let oid = entry.id();
-                let filemode = entry.filemode();
-                let name = MPathElement::new(entry.name_bytes().into())?;
-
-                let r = match entry.kind() {
-                    Some(ObjectType::Blob) => {
-                        let ft = match filemode {
-                            mode::GIT_FILEMODE_BLOB => FileType::Regular,
-                            mode::GIT_FILEMODE_BLOB_EXECUTABLE => FileType::Executable,
-                            mode::GIT_FILEMODE_LINK => FileType::Symlink,
-                            _ => {
-                                return Err(format_err!("Invalid filemode: {:?}", filemode));
-                            }
-                        };
-
-                        (name, Entry::Leaf((ft, GitLeaf(oid))))
-                    }
-                    Some(ObjectType::Tree) => (name, Entry::Tree(GitTree(oid))),
-                    k => {
-                        return Err(format_err!("Invalid kind: {:?}", k));
-                    }
-                };
-
-                Ok(r)
-            })
-            .collect::<Result<HashMap<_, _>, Error>>()?;
-
-        Result::<_, Error>::Ok(GitManifest(elements))
-    })
-    .await
-}
-
-impl StoreLoadable<GitPool> for GitTree {
-    type Value = GitManifest;
-
-    fn load(&self, _ctx: CoreContext, pool: &GitPool) -> BoxFuture<Self::Value, LoadableError> {
-        let oid = self.0;
-        let pool = pool.clone();
-        async move { load_git_tree(oid, &pool).await }
-            .boxed()
-            .compat()
-            .map_err(LoadableError::Error)
-            .boxify()
-    }
-}
 
 async fn do_upload(
     ctx: CoreContext,
@@ -212,65 +137,6 @@ where
         .buffer_unordered(100)
         .collect_to()
         .from_err()
-}
-
-struct CommitMetadata {
-    oid: Oid,
-    parents: Vec<Oid>,
-    author: String,
-    message: String,
-    author_date: DateTime,
-}
-
-struct ExtractedCommit {
-    metadata: CommitMetadata,
-    tree: GitTree,
-    parent_trees: HashSet<GitTree>,
-}
-
-impl ExtractedCommit {
-    async fn new(oid: Oid, pool: &GitPool) -> Result<Self, Error> {
-        pool.with(move |repo| {
-            let commit = repo.find_commit(oid)?;
-
-            let tree = GitTree(commit.tree()?.id());
-
-            let parent_trees = commit
-                .parents()
-                .map(|p| {
-                    let tree = p.tree()?;
-                    Ok(GitTree(tree.id()))
-                })
-                .collect::<Result<_, Error>>()?;
-
-            // TODO: Include email in the author
-            let author = commit
-                .author()
-                .name()
-                .ok_or_else(|| format_err!("Commit has no author: {:?}", commit.id()))?
-                .to_owned();
-
-            let message = commit.message().unwrap_or_default().to_owned();
-
-            let parents = commit.parents().map(|p| p.id()).collect();
-
-            let time = commit.time();
-            let author_date = DateTime::from_timestamp(time.seconds(), time.offset_minutes() * 60)?;
-
-            Result::<_, Error>::Ok(ExtractedCommit {
-                metadata: CommitMetadata {
-                    oid: commit.id(),
-                    parents,
-                    message,
-                    author,
-                    author_date,
-                },
-                tree,
-                parent_trees,
-            })
-        })
-        .await
-    }
 }
 
 async fn gitimport(
