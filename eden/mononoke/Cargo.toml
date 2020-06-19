@@ -210,6 +210,7 @@ members = [
     "git/git_types",
     "git/git_types/if",
     "git/gitimport",
+    "git/import_tools",
     "gotham_ext",
     "hgcli",
     "hgproto",

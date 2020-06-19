@@ -1,0 +1,14 @@
+[package]
+name = "import_tools"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+context = { path = "../../server/context" }
+mononoke_types = { path = "../../mononoke_types" }
+anyhow = "1.0"
+git2 = "0.13"

@@ -36,17 +36,16 @@ use futures_old::{
     future::IntoFuture,
     stream::{self as stream_old, Stream},
 };
-use git2::{ObjectType, Oid, Repository, Revwalk, Sort};
+use git2::{ObjectType, Oid, Repository, Sort};
 use git_types::{mode, TreeHandle};
+use import_tools::{GitimportPreferences, GitimportTarget};
 use linked_hash_map::LinkedHashMap;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Entry, Manifest, StoreLoadable};
 use mercurial_types::HgManifestId;
 use mononoke_types::{
-    blob::BlobstoreValue,
-    hash::{GitSha1, RichGitSha1},
-    typed_hash::MononokeId,
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange,
-    FileType, MPath, MPathElement,
+    blob::BlobstoreValue, hash::RichGitSha1, typed_hash::MononokeId, BonsaiChangeset,
+    BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange, FileType, MPath,
+    MPathElement,
 };
 use slog::info;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -74,88 +73,6 @@ const ARG_GIT_FROM: &str = "git-from";
 const ARG_GIT_TO: &str = "git-to";
 
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
-
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
-struct GitimportPreferences {
-    dry_run: bool,
-    derive_trees: bool,
-    derive_hg: bool,
-    hggit_compatibility: bool,
-}
-
-impl GitimportPreferences {
-    fn enable_dry_run(&mut self) {
-        self.dry_run = true
-    }
-
-    fn enable_derive_trees(&mut self) {
-        self.derive_trees = true
-    }
-
-    fn enable_derive_hg(&mut self) {
-        self.derive_hg = true
-    }
-
-    fn enable_hggit_compatibility(&mut self) {
-        self.hggit_compatibility = true
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-enum GitimportTarget {
-    FullRepo,
-    GitRange(Oid, Oid),
-}
-
-impl GitimportTarget {
-    fn populate_walk(&self, repo: &Repository, walk: &mut Revwalk) -> Result<(), Error> {
-        match self {
-            Self::FullRepo => {
-                for reference in repo.references()? {
-                    let reference = reference?;
-                    if let Some(oid) = reference.target() {
-                        walk.push(oid)?;
-                    }
-                }
-            }
-            Self::GitRange(from, to) => {
-                walk.hide(*from)?;
-                walk.push(*to)?;
-            }
-        };
-
-        Ok(())
-    }
-
-    async fn populate_roots(
-        &self,
-        ctx: &CoreContext,
-        repo: &BlobRepo,
-        roots: &mut HashMap<Oid, ChangesetId>,
-    ) -> Result<(), Error> {
-        match self {
-            Self::FullRepo => {
-                // Noop
-            }
-            Self::GitRange(from, _to) => {
-                let root = repo
-                    .bonsai_git_mapping()
-                    .get_bonsai_from_git_sha1(&ctx, GitSha1::from_bytes(from)?)
-                    .await?
-                    .ok_or_else(|| {
-                        format_err!(
-                            "Cannot start import from {}: commit does not exist in Blobrepo",
-                            from
-                        )
-                    })?;
-
-                roots.insert(*from, root);
-            }
-        };
-
-        Ok(())
-    }
-}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 struct GitTree(Oid);

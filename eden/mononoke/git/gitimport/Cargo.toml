@@ -17,6 +17,7 @@ context = { path = "../../server/context" }
 derived_data = { path = "../../derived_data" }
 filestore = { path = "../../filestore" }
 git_types = { path = "../git_types" }
+import_tools = { path = "../import_tools" }
 manifest = { path = "../../manifest" }
 mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
