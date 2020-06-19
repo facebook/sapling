@@ -1,4 +1,3 @@
-#require py2
 #require fsmonitor
 
   $ setconfig fsmonitor.detectrace=1

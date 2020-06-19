@@ -1131,7 +1131,7 @@ class Test(unittest.TestCase):
                     raise
 
         if self._watchman:
-            shortname = hashlib.sha1(b"%s" % name).hexdigest()[:6]
+            shortname = hashlib.sha1(b"%s" % name).hexdigest()[:6].encode("utf-8")
             self._watchmandir = os.path.join(
                 self._threadtmp, b"%s.watchman" % shortname
             )
@@ -1147,7 +1147,7 @@ class Test(unittest.TestCase):
 
             self._watchmansock = sockfile
 
-            clilogfile = os.path.join(self._watchmandir, "cli-log")
+            clilogfile = os.path.join(self._watchmandir, b"cli-log")
             logfile = os.path.join(self._watchmandir, b"log")
             pidfile = os.path.join(self._watchmandir, b"pid")
             statefile = os.path.join(self._watchmandir, b"state")
@@ -1156,8 +1156,8 @@ class Test(unittest.TestCase):
                 f.write(json.dumps({}))
 
             envb = osenvironb.copy()
-            envb[b"WATCHMAN_CONFIG_FILE"] = _bytespath(cfgfile)
-            envb[b"WATCHMAN_SOCK"] = _bytespath(sockfile)
+            envb[b"WATCHMAN_CONFIG_FILE"] = cfgfile
+            envb[b"WATCHMAN_SOCK"] = sockfile
 
             argv = [
                 self._watchman,
