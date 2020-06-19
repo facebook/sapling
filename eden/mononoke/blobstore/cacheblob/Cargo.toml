@@ -9,7 +9,6 @@ include = ["**/*.rs"]
 [dependencies]
 blobstore = { path = ".." }
 context = { path = "../../server/context" }
-memblob = { path = "../memblob" }
 memcache-lock-thrift = { path = "../if" }
 mononoke_types = { path = "../../mononoke_types" }
 prefixblob = { path = "../prefixblob" }
@@ -33,4 +32,5 @@ tokio-old = { package = "tokio", version = "0.1" }
 tokio-timer = "0.2"
 
 [dev-dependencies]
+memblob = { path = "../memblob" }
 tokio-compat = "0.1"

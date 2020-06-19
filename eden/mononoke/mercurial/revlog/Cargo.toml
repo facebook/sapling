@@ -12,7 +12,6 @@ path = "lib.rs"
 [dependencies]
 lz4-pyframe = { path = "../../../scm/lib/lz4-pyframe" }
 mercurial_types = { path = "../types" }
-mercurial_types-mocks = { path = "../types/mocks" }
 mononoke_types-thrift = { path = "../../mononoke_types/if" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
@@ -26,5 +25,6 @@ nom = { version = "3", features = [ "verbose-errors" ] }
 thiserror = "1.0"
 
 [dev-dependencies]
+mercurial_types-mocks = { path = "../types/mocks" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 assert_matches = "1.3"

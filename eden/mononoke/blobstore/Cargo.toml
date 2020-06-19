@@ -30,7 +30,6 @@ thiserror = "1.0"
 fileblob = { path = "fileblob" }
 memblob = { path = "memblob" }
 mononoke_types = { path = "../mononoke_types" }
-redactedblobstore = { path = "redactedblobstore" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tempdir = "0.3"
 tokio-compat = "0.1"
