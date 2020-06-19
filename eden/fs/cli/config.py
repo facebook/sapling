@@ -257,7 +257,7 @@ class EdenInstance:
             from eden.fs.cli.facebook import scuba_telemetry
 
             return scuba_telemetry.ScubaTelemetryLogger()
-        except ImportError:
+        except (ImportError, NotImplementedError):
             pass
 
         scribe_cat = self.get_config_value("telemetry.scribe-cat", default="")
