@@ -10,9 +10,6 @@ from edenscm.mercurial import util
 from hghave import require
 
 
-require(["py2"])
-
-
 atomictempfile = util.atomictempfile
 
 # force dealing with tmp filenames that go
@@ -69,7 +66,7 @@ class testatomictempfile(unittest.TestCase):
     def testcheckambig(self):
         def atomicwrite(checkambig):
             f = atomictempfile(self._filename, checkambig=checkambig)
-            f.write("FOO")
+            f.writeutf8("FOO")
             f.close()
 
         # try some times, because reproduction of ambiguity depends on
