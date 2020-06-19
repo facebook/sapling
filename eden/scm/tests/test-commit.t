@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 commit date test
@@ -649,13 +648,13 @@ Test making empty commits
 verify pathauditor blocks evil filepaths
   $ cat > evil-commit.py <<EOF
   > from __future__ import absolute_import
-  > from edenscm.mercurial import context, hg, node, ui as uimod
-  > notrc = u".h\u200cg".encode('utf-8') + '/hgrc'
+  > from edenscm.mercurial import context, hg, node, pycompat, ui as uimod
+  > notrc = pycompat.ensurestr(u".h\u200cg/hgrc")
   > u = uimod.ui.load()
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):
   >     return context.memfilectx(repo, memctx, path,
-  >         '[hooks]\nupdate = echo owned')
+  >         b'[hooks]\nupdate = echo owned')
   > c = context.memctx(r, [r['tip'].node(), node.nullid],
   >                    'evil', [notrc], filectxfn, 0)
   > r.commitctx(c)
@@ -681,7 +680,7 @@ verify pathauditor blocks evil filepaths
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):
   >     return context.memfilectx(repo, memctx, path,
-  >         '[hooks]\nupdate = echo owned')
+  >         b'[hooks]\nupdate = echo owned')
   > c = context.memctx(r, [r['tip'].node(), node.nullid],
   >                    'evil', [notrc], filectxfn, 0)
   > r.commitctx(c)
@@ -701,7 +700,7 @@ verify pathauditor blocks evil filepaths
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):
   >     return context.memfilectx(repo, memctx, path,
-  >         '[hooks]\nupdate = echo owned')
+  >         b'[hooks]\nupdate = echo owned')
   > c = context.memctx(r, [r['tip'].node(), node.nullid],
   >                    'evil', [notrc], filectxfn, 0)
   > r.commitctx(c)

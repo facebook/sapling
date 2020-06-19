@@ -55,9 +55,22 @@ def hfsignoreclean(s):
     >>> hfsignoreclean(u'.h\ufeffg'.encode('utf-8'))
     '.hg'
     """
-    if "\xe2" in s or "\xef" in s:
-        for c in _ignore:
-            s = s.replace(c, "")
+
+    if isinstance(s, bytes):
+        if b"\xe2" in s or b"\xef" in s:
+            for c in _ignore:
+                s = s.replace(c, b"")
+    elif isinstance(s, pycompat.unicode):
+        # It's unfortunate that we encode every string, probably resulting in an
+        # allocation, but it saves us from having to iterate over the string for
+        # every ignored code point.
+        bytestr = s.encode("utf-8")
+        if b"\xe2" in bytestr or b"\xef" in bytestr:
+            for c in _ignore:
+                bytestr = bytestr.replace(c, b"")
+            s = bytestr.decode("utf-8")
+    else:
+        raise RuntimeError("cannot scrub hfs path of type %s" % s.__class__)
     return s
 
 
