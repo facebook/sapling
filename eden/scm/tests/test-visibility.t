@@ -664,9 +664,10 @@ Unamend and Uncommit
   |/
   @  0: df4f53cec30a 'base'
   
+
 Migration down
   $ setconfig visibility.automigrate=stop
-  $ hg debugedenimporthelper --get-manifest-node .
+  $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
   reverting to tracking visibility through obsmarkers
   4e7eb8574ed56675aa89d2b5abbced12d5688cef
 
@@ -676,11 +677,11 @@ Migration up
  (Test if the repo contains an abandoned transaction, the auto migration is
  skipped)
   $ touch .hg/store/journal
-  $ hg debugedenimporthelper --get-manifest-node .
+  $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
   switching to explicit tracking of visible commits
   4e7eb8574ed56675aa89d2b5abbced12d5688cef
   $ rm .hg/store/journal
 
-  $ hg debugedenimporthelper --get-manifest-node .
+  $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
   switching to explicit tracking of visible commits
   4e7eb8574ed56675aa89d2b5abbced12d5688cef

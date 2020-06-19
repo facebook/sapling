@@ -6,7 +6,6 @@
 # no-check-code
 
 import argparse
-import binascii
 import collections
 import logging
 import os
@@ -29,7 +28,7 @@ from .. import (
     util,
 )
 from ..i18n import _
-from ..node import hex
+from ..node import bin, hex
 from .cmdtable import command
 
 
@@ -202,7 +201,7 @@ class HgUI(ui.ui):
 
 class HgServer(object):
     def __init__(self, repo, in_fd=None, out_fd=None):
-        # type: (localrepo.localrepository, Optional[bytes], Optional[bytes]) -> None
+        # type: (localrepo.localrepository, Optional[int], Optional[int]) -> None
         """
         Create an HgServer.
 
@@ -218,11 +217,11 @@ class HgServer(object):
         if not in_fd:
             self.in_file = sys.stdin
         else:
-            self.in_file = fdopen(int(in_fd), "rb")
+            self.in_file = fdopen(in_fd, "rb")
         if not out_fd:
             self.out_file = sys.stdout
         else:
-            self.out_file = fdopen(int(out_fd), "wb")
+            self.out_file = fdopen(out_fd, "wb")
 
         self.repo = repo.unfiltered()
 
@@ -299,15 +298,15 @@ class HgServer(object):
         #   - treemanifest paths, encoded as (length, string_data)
         parts = []
         parts.append(
-            struct.pack(b">III", PROTOCOL_VERSION, flags, len(treemanifest_paths))
+            struct.pack(">III", PROTOCOL_VERSION, flags, len(treemanifest_paths))
         )
         for path in treemanifest_paths:
-            parts.append(struct.pack(b">I", len(path)))
-            parts.append(path)
+            parts.append(struct.pack(">I", len(path)))
+            parts.append(pycompat.encodeutf8(path))
 
         if use_mononoke:
-            parts.append(struct.pack(b">I", len(repo_name)))
-            parts.append(repo_name)
+            parts.append(struct.pack(">I", len(repo_name)))
+            parts.append(pycompat.encodeutf8(repo_name))
 
         return b"".join(parts)
 
@@ -388,7 +387,7 @@ class HgServer(object):
           - <path>: The full file path, relative to the root of the repository
           - <nul>: a nul byte ('\0')
         """
-        rev_name = request.body
+        rev_name = pycompat.decodeutf8(request.body)
         self.debug("sending manifest for revision %r", rev_name)
         self.dump_manifest(rev_name, request)
 
@@ -408,7 +407,7 @@ class HgServer(object):
             raise RuntimeError("old_cat_file request data too short")
 
         rev_hash = request.body[:SHA1_NUM_BYTES]
-        path = request.body[SHA1_NUM_BYTES:]
+        path = pycompat.decodeutf8(request.body[SHA1_NUM_BYTES:])
         self.debug(
             "(pid:%s) CMD_OLD_CAT_FILE request for contents of file %r revision %s",
             os.getpid(),
@@ -438,7 +437,7 @@ class HgServer(object):
             raise RuntimeError("cat_file request data too short")
 
         rev_hash = request.body[:SHA1_NUM_BYTES]
-        path = request.body[SHA1_NUM_BYTES:]
+        path = pycompat.decodeutf8(request.body[SHA1_NUM_BYTES:])
         self.debug(
             "(pid:%s) getting contents of file %r revision %s",
             os.getpid(),
@@ -447,7 +446,7 @@ class HgServer(object):
         )
 
         contents = self.get_file(path, rev_hash)
-        length_data = struct.pack(b">Q", len(contents))
+        length_data = struct.pack(">Q", len(contents))
         self.send_chunk(request, contents, length_data)
 
     @cmd(CMD_GET_FILE_SIZE)
@@ -468,12 +467,12 @@ class HgServer(object):
             raise RuntimeError("get_file_size request data too short")
 
         id = request.body[:SHA1_NUM_BYTES]
-        path = request.body[SHA1_NUM_BYTES:]
+        path = pycompat.decodeutf8(request.body[SHA1_NUM_BYTES:])
 
         self.debug("(pid:%s) GET_FILE_SIZE, path %r, id %s", os.getpid(), path, hex(id))
         size = self.get_file_size(path, id)
 
-        data = struct.pack(b">Q", size)
+        data = struct.pack(">Q", size)
         self.send_chunk(request, data)
 
     @cmd(CMD_MANIFEST_NODE_FOR_COMMIT)
@@ -516,7 +515,7 @@ class HgServer(object):
             )
 
         manifest_node = request.body[:SHA1_NUM_BYTES]
-        path = request.body[SHA1_NUM_BYTES:]
+        path = pycompat.decodeutf8(request.body[SHA1_NUM_BYTES:])
         self.debug(
             "fetching tree for path %r manifest node %s", path, hex(manifest_node)
         )
@@ -525,7 +524,7 @@ class HgServer(object):
         self.send_chunk(request, b"")
 
     def fetch_tree(self, path, manifest_node):
-        # type: (bytes, bytes) -> None
+        # type: (str, bytes) -> None
         if self.treemanifest is None:
             raise RuntimeError("treemanifest not enabled in this repository")
 
@@ -542,7 +541,7 @@ class HgServer(object):
             raise ResetRepoError(ex)
 
     def _fetch_tree_impl(self, path, manifest_node):
-        # type: (bytes, bytes) -> None
+        # type: (str, bytes) -> None
         mfnodes = set([manifest_node])
         if path:
             # We have to call repo._prefetchtrees() directly if we have a path.
@@ -604,7 +603,7 @@ class HgServer(object):
         self.out_file.flush()
 
     def dump_manifest(self, rev, request):
-        # type: (bytes, Request) -> None
+        # type: (str, Request) -> None
         """
         Send the manifest data.
         """
@@ -686,15 +685,15 @@ class HgServer(object):
             return self._get_manifest_node_impl(rev)
 
     def get_file(self, path, rev_hash):
-        # type: (bytes, bytes) -> bytes
+        # type: (str, bytes) -> bytes
         return self.get_file_attribute(path, rev_hash, "data", lambda fctx: fctx.data())
 
     def get_file_size(self, path, rev_hash):
-        # type: (bytes, bytes) -> int
+        # type: (str, bytes) -> int
         return self.get_file_attribute(path, rev_hash, "size", lambda fctx: fctx.size())
 
     def get_file_attribute(self, path, rev_hash, attr, attr_of):
-        # type: (bytes, bytes, str, Callable[[context.filectx], AttributeType])
+        # type: (str, str, bytes, Callable[[context.filectx], AttributeType])
         #       -> AttributeType
         try:
             fctx = self.repo.filectx(path, fileid=rev_hash)
@@ -802,7 +801,7 @@ def always_allow_shared_pending(root, sharedroot):
 
 
 def _open_repo(orig_ui, repo_path):
-    # type: (ui.ui, bytes) -> localrepo.localrepository
+    # type: (ui.ui, str) -> localrepo.localrepository
     ui = HgUI.load()
 
     for section, name, value in orig_ui.walkconfig():
@@ -811,7 +810,7 @@ def _open_repo(orig_ui, repo_path):
 
     # Create a fresh copy of the UI object, and load the repository's
     # config into it.  Then load extensions specified by this config.
-    hgrc = os.path.join(repo_path, b".hg", b"hgrc")
+    hgrc = os.path.join(repo_path, ".hg", "hgrc")
     local_ui = ui.copy()
     local_ui.readconfig(hgrc, repo_path)
     extensions.loadall(local_ui)
@@ -830,40 +829,46 @@ def _open_repo(orig_ui, repo_path):
 
 
 def runedenimporthelper(repo, **opts):
-    # type: (localrepo.localrepository, bytes) -> int
-    server = HgServer(repo, in_fd=opts.get("in_fd"), out_fd=opts.get("out_fd"))
+    # type: (localrepo.localrepository, str) -> int
+    fd = opts.get("in_fd")
+    in_fd = int(fd) if fd else None
+    fd = opts.get("out_fd")
+    out_fd = int(fd) if fd else None
+    server = HgServer(repo, in_fd=in_fd, out_fd=out_fd)
 
     get_manifest_node_arg = opts.get("get_manifest_node")
     if get_manifest_node_arg:
-        node = server.get_manifest_node(get_manifest_node_arg)
+        manifest_rev = bin(get_manifest_node_arg)
+        node = server.get_manifest_node(manifest_rev)
         repo.ui.write(hex(node) + "\n")
         return 0
 
     manifest_arg = opts.get("manifest")
     if manifest_arg:
-        request = Request(0, CMD_MANIFEST, flags=0, body=manifest_arg)
+        manifest_rev = bin(manifest_arg)
+        request = Request(0, CMD_MANIFEST, flags=0, body=manifest_rev)
         server.dump_manifest(manifest_arg, request)
         return 0
 
     cat_file_arg = opts.get("cat_file")
     if cat_file_arg:
-        path, file_rev_str = cat_file_arg.rsplit(b":", -1)
-        file_rev = binascii.unhexlify(file_rev_str)
+        path, file_rev_str = cat_file_arg.rsplit(":", -1)
+        file_rev = bin(file_rev_str)
         data = server.get_file(path, file_rev)
         repo.ui.writebytes(data)
         return 0
 
     get_file_size_arg = opts.get("get_file_size")
     if get_file_size_arg:
-        path, id_str = get_file_size_arg.rsplit(b":", -1)
-        id = binascii.unhexlify(id_str)
+        path, id_str = get_file_size_arg.rsplit(":", -1)
+        id = bin(id_str)
         size = server.get_file_size(path, id)
         repo.ui.write("{}\n".format(size))
         return 0
 
     fetch_tree_arg = opts.get("fetch_tree")
     if fetch_tree_arg:
-        parts = fetch_tree_arg.rsplit(b":", -1)
+        parts = fetch_tree_arg.rsplit(":", -1)
         if len(parts) == 1:
             path = parts[0]
             if path == "":
@@ -875,7 +880,7 @@ def runedenimporthelper(repo, **opts):
                 raise RuntimeError("a manifest node ID is required when using a path")
         else:
             path, manifest_node_str = parts
-            manifest_node = binascii.unhexlify(manifest_node_str)
+            manifest_node = bin(manifest_node_str)
             if len(manifest_node) != 20:
                 raise RuntimeError("manifest node should be a 40-byte hex string")
 
@@ -960,7 +965,7 @@ def runedenimporthelper(repo, **opts):
     optionalrepo=True,
 )
 def eden_import_helper(ui, repo, *repo_args, **opts):
-    # type: (ui.ui, Optional[localrepo.localrepository], bytes, bytes) -> int
+    # type: (ui.ui, Optional[localrepo.localrepository], str, str) -> int
     """Obtain data for edenfs"""
     logging.basicConfig(
         stream=sys.stderr, level=logging.INFO, format="%(asctime)s %(message)s"
@@ -1013,10 +1018,6 @@ def edenrunpostupdatehook(ui, repo):
     # type: (ui.ui, localrepo.localrepository) -> None
     """Run post-update hooks for edenfs"""
     with repo.wlock():
-        # this isn't at the top of the file because there's already a
-        # binascii.hexlify imported and used in this file
-        from ..node import hex
-
         parent1, parent2 = ([hex(node) for node in repo.nodes("parents()")] + ["", ""])[
             :2
         ]
