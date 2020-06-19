@@ -247,9 +247,9 @@
   $ hg commit -m b
   $ hg status
   >>> with open('a2', 'wb') as f:
-  ...     f.write(b'\1\nSTART-WITH-HG-FILELOG-METADATA')
+  ...     _ = f.write(b'\1\nSTART-WITH-HG-FILELOG-METADATA')
   >>> with open('a1', 'wb') as f:
-  ...     f.write(b'\1\nMETA\n')
+  ...     _ = f.write(b'\1\nMETA\n')
   $ hg commit -m meta
   $ hg status
   $ hg log -T '{rev}: {file_copies} | {file_dels} | {file_adds}\n'
