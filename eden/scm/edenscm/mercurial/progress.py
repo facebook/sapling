@@ -20,7 +20,7 @@ import time
 
 from bindings import threading as rustthreading, tracing
 
-from . import encoding, util
+from . import encoding, pycompat, util
 from .i18n import _, _x
 
 
@@ -165,7 +165,7 @@ class baserenderer(object):
                 # IOError can happen if the pager has just exited.  Ignore it.
                 pass
         else:
-            _eintrretry(ui.ferr.write, msg)
+            _eintrretry(ui.ferr.write, pycompat.encodeutf8(msg))
             if flush:
                 _eintrretry(ui.ferr.flush)
 
