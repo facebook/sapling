@@ -1,4 +1,3 @@
-#require py2
   $ . "$TESTDIR/hgsql/library.sh"
   $ disable treemanifest
 

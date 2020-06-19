@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Test hgsql tries to sync before entering the critical section

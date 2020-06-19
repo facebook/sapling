@@ -1,4 +1,3 @@
-#require py2
 
   $ . "$RUNTESTDIR/hgsql/library.sh"
   $ . "$RUNTESTDIR/hggit/testutil"
