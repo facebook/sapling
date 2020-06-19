@@ -84,6 +84,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("hgsql", "database", default=None)
+configitem("hgsql", "replicadatabase", default=None)
 configitem("hgsql", "host", default=None)
 configitem("hgsql", "reponame", default=None)
 configitem("hgsql", "password", default="")
@@ -124,6 +125,7 @@ INITIAL_SYNC_DISABLE = "disabled"
 INITIAL_SYNC_FORCE = "force"
 
 initialsync = INITIAL_SYNC_NORMAL
+initialsyncfromreplica = False
 
 cls = localrepo.localrepository
 # Do NOT add hgsql to localrepository.supportedformats. Doing that breaks
@@ -269,6 +271,15 @@ def extsetup(ui):
                 _("TYPE"),
             )
         )
+        commands.globalopts.append(
+            (
+                "",
+                "syncfromreplica",
+                False,
+                _("do hgsql sync but prefer to sync from db replica"),
+                _("TYPE"),
+            )
+        )
 
     global initialsync
     if not ui.configbool("hgsql", "initialsync"):
@@ -279,6 +290,12 @@ def extsetup(ui):
     # the first place we have access to parsed options is in the same function
     # (dispatch.dispatch) that created the repo and the repo creation initiates
     # the sync operation in which the lock is elided unless we set this.
+
+    global initialsyncfromreplica
+    if "--syncfromreplica" in sys.argv:
+        ui.debug("syncing from replica\n")
+        initialsyncfromreplica = True
+
     if "--forcesync" in sys.argv:
         ui.debug("forcesync enabled\n")
         initialsync = INITIAL_SYNC_FORCE
@@ -296,8 +313,31 @@ def reposetup(ui, repo):
             def noop():
                 pass
 
-            enforcepullfromdb = initialsync == INITIAL_SYNC_FORCE
-            executewithsql(repo, noop, enforcepullfromdb=enforcepullfromdb)
+            enforcepullfromdb = False
+            syncfromreplica = False
+            if initialsync == INITIAL_SYNC_FORCE:
+                enforcepullfromdb = True
+
+            if initialsyncfromreplica:
+                syncfromreplica = True
+
+            overrides = {}
+            replicadbconfig = repo.ui.config("hgsql", "replicadatabase")
+            if syncfromreplica:
+                if replicadbconfig:
+                    overrides[("hgsql", "database")] = replicadbconfig
+                else:
+                    ui.warn(
+                        "--syncfromreplica is set, but hgsql.replicadatabase is not specified!\n"
+                    )
+
+            with ui.configoverride(overrides, "sqldbsync"):
+                executewithsql(
+                    repo,
+                    noop,
+                    enforcepullfromdb=enforcepullfromdb,
+                    syncfromreplica=syncfromreplica,
+                )
 
 
 # Incoming commits are only allowed via push and pull.
@@ -462,7 +502,9 @@ def _localphasemove(orig, pushop, *args, **kwargs):
 
 
 class sqlcontext(object):
-    def __init__(self, repo, dbwritable=False, enforcepullfromdb=False):
+    def __init__(
+        self, repo, dbwritable=False, enforcepullfromdb=False, syncfromreplica=False
+    ):
         if dbwritable and not enforcepullfromdb:
             raise error.ProgrammingError(
                 "enforcepullfromdb must be True if dbwritable is True"
@@ -470,6 +512,7 @@ class sqlcontext(object):
         self.repo = repo
         self.dbwritable = dbwritable
         self.enforcepullfromdb = enforcepullfromdb
+        self.syncfromreplica = syncfromreplica
         self._connected = False
         self._locked = False
         self._used = False
@@ -534,7 +577,10 @@ class sqlcontext(object):
         self._startlocktime = time.time()
 
         if self._connected:
-            repo.pullfromdb(enforcepullfromdb=self.enforcepullfromdb)
+            repo.pullfromdb(
+                enforcepullfromdb=self.enforcepullfromdb,
+                syncfromreplica=self.syncfromreplica,
+            )
 
     def __exit__(self, type, value, traceback):
         try:
@@ -638,6 +684,11 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
             enforcepullfromdb = kwargs["enforcepullfromdb"]
         del kwargs["enforcepullfromdb"]
 
+    syncfromreplica = False
+    if "syncfromreplica" in kwargs:
+        syncfromreplica = kwargs["syncfromreplica"]
+        del kwargs["syncfromreplica"]
+
     # Take repo lock if sqllock is set.
     if sqllock:
         wlock = repo.wlock()
@@ -647,7 +698,10 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
         lock = util.nullcontextmanager()
 
     with wlock, lock, sqlcontext(
-        repo, dbwritable=sqllock, enforcepullfromdb=enforcepullfromdb
+        repo,
+        dbwritable=sqllock,
+        enforcepullfromdb=enforcepullfromdb,
+        syncfromreplica=syncfromreplica,
     ):
         return action(*args, **kwargs)
 
@@ -1018,7 +1072,7 @@ def wraprepo(repo):
                 )
                 return None
 
-        def pullfromdb(self, enforcepullfromdb=False):
+        def pullfromdb(self, enforcepullfromdb=False, syncfromreplica=False):
             """Attempts to sync the local repository with the latest bits in the
             database.
 
@@ -1029,7 +1083,7 @@ def wraprepo(repo):
             try:
                 self._issyncing = True
                 if enforcepullfromdb:
-                    return self._pullfromdb(enforcepullfromdb)
+                    return self._pullfromdb(enforcepullfromdb, syncfromreplica)
                 else:
                     # For operations that do not require the absolute latest bits,
                     # only let one process update the repo at a time.
@@ -1047,13 +1101,13 @@ def wraprepo(repo):
                         return
 
                     try:
-                        return self._pullfromdb(enforcepullfromdb)
+                        return self._pullfromdb(enforcepullfromdb, syncfromreplica)
                     finally:
                         limiter.release()
             finally:
                 self._issyncing = False
 
-        def _pullfromdb(self, enforcepullfromdb):
+        def _pullfromdb(self, enforcepullfromdb, syncfromreplica=False):
             # MySQL could take a snapshot of the database view.
             # Start a new transaction to get new changes.
             self.sqlconn.rollback()
@@ -1100,6 +1154,10 @@ def wraprepo(repo):
                 outofsync, sqlheads, sqlbookmarks, fetchend = self.needsync()
                 if not outofsync:
                     return
+                # Local repository is ahead of replica - no need to sync
+                if syncfromreplica and outofsync:
+                    if len(self) - 1 > fetchend:
+                        return
 
                 self._hgsqlnote(
                     "getting %s commits from database"
