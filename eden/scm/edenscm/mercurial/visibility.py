@@ -40,7 +40,7 @@ def stoptracking(repo):
         if "visibleheads" in repo.storerequirements:
             repo.storerequirements.discard("visibleheads")
             repo._writestorerequirements()
-        repo.svfs.write("visibleheads", "")
+        repo.svfs.write("visibleheads", b"")
 
 
 # Supported file format version.
