@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v1
+    - name: Check space
+      run: df -h
     - name: Install Rust Stable
       uses: actions-rs/toolchain@v1
       with:
@@ -21,8 +23,29 @@ jobs:
         profile: minimal
     - name: Build dependencies
       run: python3 build/fbcode_builder/getdeps.py build --only-deps --src-dir=. mononoke
+    - name: Check space
+      run: df -h
     - name: Build mononoke
       run: python3 build/fbcode_builder/getdeps.py build --no-deps --src-dir=. mononoke
+      continue-on-error: true
+    - name: Check space
+      run: df -h
+    - name: clean stuff
+      run: sudo rm -rf "/usr/local/share/boost"
+    - name: Check space
+      run: df -h
+    - name: clean stuff
+      run: sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+    - name: Check space
+      run: df -h
+    - name: clean stuff
+      run: sudo apt-get clean
+    - name: Check space
+      run: df -h
+    - name: Build mononoke
+      run: python3 build/fbcode_builder/getdeps.py build --no-deps --src-dir=. mononoke
+    - name: Check space
+      run: df -h
     - name: Copy artifacts
       run: python3 build/fbcode_builder/getdeps.py fixup-dyn-deps --src-dir=. mononoke _artifacts/linux
     - uses: actions/upload-artifact@master

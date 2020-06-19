@@ -958,12 +958,18 @@ class CargoBuilder(BuilderBase):
         self.add_openssl_to_env(env, install_dirs)
         # Enable using nightly features with stable compiler
         env["RUSTC_BOOTSTRAP"] = "1"
+        env["FUSE_SYS_DELEGATE_LINKING"] = "1"
+        env["GRPCIO_SYS_DELEGATE_LINKING"] = "1"
+        env["GRPCIO_SYS_USE_PKG_CONFIG"] = "0"
         env["LIBZ_SYS_STATIC"] = "1"
+        env["LZ4_SYS_DELEGATE_LINKING"] = "1"
+        env["LIBCURL_NO_PKG_CONFIG"] = "1"
         cmd = [
             "cargo",
             operation,
             "--workspace",
             "-j%s" % self.build_opts.num_jobs,
+            "-v",
         ] + args
         self._run_cmd(cmd, cwd=self.workspace_dir(), env=env)
 
