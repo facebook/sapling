@@ -2,12 +2,9 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from edenscm.mercurial import context, encoding, hg, scmutil, ui as uimod
+from edenscm.mercurial import context, encoding, hg, pycompat, scmutil, ui as uimod
 from edenscm.mercurial.node import hex
 from hghave import require
-
-
-require(["py2"])
 
 
 u = uimod.ui.load()
@@ -35,17 +32,13 @@ print("workingfilectx.date = (%d, %d)" % d)
 
 
 def filectxfn(repo, memctx, path):
-    return context.memfilectx(repo, memctx, "foo", "")
+    return context.memfilectx(repo, memctx, "foo", b"")
 
 
 ctx = context.memctx(
     repo, ["tip", None], encoding.tolocal("Gr\xc3\xbcezi!"), ["foo"], filectxfn
 )
 ctx.commit()
-for enc in "ASCII", "Latin-1", "UTF-8":
-    encoding.encoding = enc
-    text = repo["tip"].description()
-    print("%-8s: hex %s" % (enc, hex(text)))
 
 # test performing a status
 
@@ -54,7 +47,7 @@ def getfilectx(repo, memctx, f):
     fctx = memctx.parents()[0][f]
     data, flags = fctx.data(), fctx.flags()
     if f == "foo":
-        data += "bar\n"
+        data += b"bar\n"
     return context.memfilectx(repo, memctx, f, data, "l" in flags, "x" in flags)
 
 
@@ -74,7 +67,7 @@ print(ctxb.status(ctxa))
 # test performing a diff on a memctx
 
 for d in ctxb.diff(ctxa, git=True):
-    print(d, end="")
+    print(pycompat.decodeutf8(d), end="")
 
 # test safeness and correctness of "ctx.status()"
 print("= checking context.status():")
@@ -82,16 +75,16 @@ print("= checking context.status():")
 # ancestor "wcctx ~ 2"
 actx2 = repo["."]
 
-repo.wwrite("bar-m", "bar-m\n", "")
-repo.wwrite("bar-r", "bar-r\n", "")
+repo.wwrite("bar-m", b"bar-m\n", "")
+repo.wwrite("bar-r", b"bar-r\n", "")
 repo[None].add(["bar-m", "bar-r"])
 repo.commit(text="add bar-m, bar-r", date="0 0")
 
 # ancestor "wcctx ~ 1"
 actx1 = repo["."]
 
-repo.wwrite("bar-m", "bar-m bar-m\n", "")
-repo.wwrite("bar-a", "bar-a\n", "")
+repo.wwrite("bar-m", b"bar-m bar-m\n", "")
+repo.wwrite("bar-a", b"bar-a\n", "")
 repo[None].add(["bar-a"])
 repo[None].forget(["bar-r"])
 
@@ -166,12 +159,12 @@ repo = hg.repository(u, "test2", create=1)
 os.chdir("test2")
 
 # make some commits
-for i in [b"1", b"2", b"3"]:
+for i in ["1", "2", "3"]:
     with open(i, "wb") as f:
-        f.write(i)
+        f.write(pycompat.encodeutf8(i))
     status = scmutil.status([], [i], [], [], [], [], [])
     ctx = context.workingcommitctx(
-        repo, status, text=i, user=b"test@test.com", date=(0, 0)
+        repo, status, text=i, user="test@test.com", date=(0, 0)
     )
     ctx.p1().manifest()  # side effect: cache manifestctx
     n = repo.commitctx(ctx)
@@ -184,7 +177,7 @@ for i in [b"1", b"2", b"3"]:
 
     # read the file just committed
     try:
-        if repo[n][i].data() != i:
+        if pycompat.decodeutf8(repo[n][i].data()) != i:
             print("data mismatch")
     except Exception as ex:
         print("cannot read data: %r" % ex)
@@ -205,7 +198,6 @@ with repo.wlock(), repo.lock(), repo.transaction("test"):
 # be used to skip calculating hash.
 print("=== filelog rawdata reuse ===")
 os.chdir(os.getenv("TESTTMP"))
-u.setconfig("ui", "debug", "1")
 newrepo = hg.repository(u, "test3", create=1)
 
 
