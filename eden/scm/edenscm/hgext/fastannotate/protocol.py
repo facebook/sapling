@@ -7,6 +7,7 @@
 
 import contextlib
 import os
+import sys
 
 from edenscm.mercurial import (
     error,
@@ -18,6 +19,7 @@ from edenscm.mercurial import (
     wireproto,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex
 
 from . import context
 
@@ -54,10 +56,14 @@ def _capabilities(orig, repo, proto):
 
 
 def _getannotate(repo, proto, path, lastnode):
+    # Older fastannotte sent binary nodes. Newer fastannotate sends hex.
+    if len(lastnode) == 40:
+        lastnode = bin(lastnode)
+
     # output:
     #   FILE := vfspath + '\0' + str(size) + '\0' + content
     #   OUTPUT := '' | FILE + OUTPUT
-    result = ""
+    result = b""
     buildondemand = repo.ui.configbool("fastannotate", "serverbuildondemand", True)
     with context.annotatecontext(repo, path) as actx:
         if buildondemand:
@@ -86,12 +92,16 @@ def _getannotate(repo, proto, path, lastnode):
             for p in [actx.revmappath, actx.linelogpath]:
                 if not os.path.exists(p):
                     continue
-                content = ""
+                content = b""
                 with open(p, "rb") as f:
                     content = f.read()
                 vfsbaselen = len(repo.localvfs.base + "/")
                 relpath = p[vfsbaselen:]
-                result += "%s\0%s\0%s" % (relpath, len(content), content)
+                result += b"%s\0%s\0%s" % (
+                    pycompat.encodeutf8(relpath),
+                    pycompat.encodeutf8(str(len(content))),
+                    content,
+                )
     return result
 
 
@@ -114,15 +124,17 @@ def _parseresponse(payload):
     i = 0
     l = len(payload) - 1
     state = 0  # 0: vfspath, 1: size
-    vfspath = size = ""
+    vfspath = size = b""
     while i < l:
-        ch = payload[i]
-        if ch == "\0":
+        ch = payload[i : i + 1]
+        if ch == b"\0":
             if state == 1:
-                result[vfspath] = buffer(payload, i + 1, int(size))
-                i += int(size)
+                sizeint = int(pycompat.decodeutf8(size))
+                buf = buffer(payload)[i + 1 : i + 1 + sizeint]
+                result[pycompat.decodeutf8(vfspath)] = buf
+                i += sizeint
                 state = 0
-                vfspath = size = ""
+                vfspath = size = b""
             elif state == 0:
                 state = 1
         else:
@@ -142,7 +154,10 @@ def peersetup(ui, peer):
                 ui.warn(_("remote peer cannot provide annotate cache\n"))
                 yield None, None
             else:
-                args = {"path": path, "lastnode": lastnode or ""}
+                lastnode = lastnode or b""
+                if sys.version_info[0] >= 3:
+                    lastnode = hex(lastnode)
+                args = {"path": path, "lastnode": lastnode}
                 f = wireproto.future()
                 yield args, f
                 yield _parseresponse(f.value)

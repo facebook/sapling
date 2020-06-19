@@ -180,7 +180,7 @@ def encodelist(l, sep=" "):
 # batched call argument encoding
 
 
-def escapearg(plain):
+def escapestringarg(plain):
     if isinstance(plain, bytearray):
         plain = bytes(plain)
     return (
@@ -200,6 +200,17 @@ def unescapestringarg(escaped):
     )
 
 
+def escapebytearg(plain):
+    if isinstance(plain, bytearray):
+        plain = bytes(plain)
+    return (
+        plain.replace(b":", b":c")
+        .replace(b",", b":o")
+        .replace(b";", b":s")
+        .replace(b"=", b":e")
+    )
+
+
 def unescapebytearg(escaped):
     return (
         escaped.replace(b":e", b"=")
@@ -216,10 +227,10 @@ def encodebatchcmds(req):
         # Old servers didn't properly unescape argument names. So prevent
         # the sending of argument names that may not be decoded properly by
         # servers.
-        assert all(escapearg(k) == k for k in argsdict)
+        assert all(escapestringarg(k) == k for k in argsdict)
 
         args = ",".join(
-            "%s=%s" % (escapearg(k), escapearg(v))
+            "%s=%s" % (escapestringarg(k), escapestringarg(v))
             for k, v in pycompat.iteritems(argsdict)
         )
         cmds.append("%s %s" % (op, args))
@@ -888,8 +899,10 @@ def batch(repo, proto, cmds, others):
             result = func(repo, proto)
         if isinstance(result, ooberror):
             return result
-        res.append(escapearg(result))
-    return ";".join(res)
+        if isinstance(result, str):
+            result = pycompat.encodeutf8(result)
+        res.append(escapebytearg(result))
+    return b";".join(res)
 
 
 @wireprotocommand("between", "pairs")

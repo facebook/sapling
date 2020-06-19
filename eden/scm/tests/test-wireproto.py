@@ -45,9 +45,10 @@ class clientpeer(wireproto.wirepeer):
         return ["batch"]
 
     def _call(self, cmd, **args):
-        return pycompat.encodeutf8(
-            wireproto.dispatch(self.serverrepo, proto(args), cmd)
-        )
+        res = wireproto.dispatch(self.serverrepo, proto(args), cmd)
+        if isinstance(res, str):
+            res = pycompat.encodeutf8(res)
+        return res
 
     def _callstream(self, cmd, **args):
         return stringio(self._call(cmd, **args))

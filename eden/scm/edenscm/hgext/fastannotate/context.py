@@ -444,7 +444,7 @@ class _annotatecontext(object):
                     if len(pl) == 2 and self.opts.followmerge:  # merge
                         bannotated = curr[0]
                     if blocks is None:  # no parents, add an empty one
-                        blocks = list(self._diffblocks("", curr[1]))
+                        blocks = list(self._diffblocks(b"", curr[1]))
                     self._appendrev(f, blocks, bannotated)
                 elif showpath:  # not append linelog, but we need to record path
                     self._node2path[f.node()] = f.path()
@@ -605,7 +605,7 @@ class _annotatecontext(object):
         the best case, the user provides a node and we don't need to read the
         filelog or construct any filecontext.
         """
-        if isinstance(f, str):
+        if isinstance(f, bytes):
             hsh = f
         else:
             hsh = f.node()
@@ -627,7 +627,7 @@ class _annotatecontext(object):
         if showpath:
             result = self._addpathtoresult(result)
         if showlines:
-            if isinstance(f, str):  # f: node or fctx
+            if isinstance(f, bytes):  # f: node or fctx
                 llrev = self.revmap.hsh2rev(f)
                 fctx = self._resolvefctx(f, self.revmap.rev2path(llrev))
             else:

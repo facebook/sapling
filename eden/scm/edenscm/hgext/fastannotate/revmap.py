@@ -100,6 +100,8 @@ class revmap(object):
             raise error.CorruptedFileError("%r is in revmap already" % hex(hsh))
         if len(hsh) != _hshlen:
             raise hgerror.ProgrammingError("hsh must be %d-char long" % _hshlen)
+        if path is not None and not isinstance(path, str):
+            raise hgerror.ProgrammingError("path must be str")
         idx = len(self._rev2hsh)
         flag = 0
         if sidebranch:
@@ -189,7 +191,7 @@ class revmap(object):
                 if flag & renameflag:
                     path = self._readcstr(f)
                     self._renamerevs.append(rev)
-                    self._renamepaths.append(path)
+                    self._renamepaths.append(pycompat.decodeutf8(path))
                 hsh = f.read(hshlen)
                 if len(hsh) != hshlen:
                     raise error.CorruptedFileError()

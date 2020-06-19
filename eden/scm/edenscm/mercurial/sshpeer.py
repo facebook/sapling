@@ -360,13 +360,20 @@ class sshpeer(wireproto.wirepeer):
                 wireargs[k] = args[k]
                 del args[k]
         for k, v in sorted(pycompat.iteritems(wireargs)):
-            self._pipeo.write(encodeutf8("%s %d\n" % (k, len(v))))
+            k = encodeutf8(k)
+            if isinstance(v, str):
+                v = encodeutf8(v)
+            self._pipeo.write(b"%s %d\n" % (k, len(v)))
             if isinstance(v, dict):
                 for dk, dv in pycompat.iteritems(v):
-                    self._pipeo.write(encodeutf8("%s %d\n" % (dk, len(dv))))
-                    self._pipeo.write(encodeutf8(dv))
+                    if isinstance(dk, str):
+                        dk = encodeutf8(dk)
+                    if isinstance(dv, str):
+                        dv = encodeutf8(dv)
+                    self._pipeo.write(b"%s %d\n" % (dk, len(dv)))
+                    self._pipeo.write(dv)
             else:
-                self._pipeo.write(encodeutf8(v))
+                self._pipeo.write(v)
         self._pipeo.flush()
 
         return self._pipei

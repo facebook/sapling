@@ -2393,7 +2393,7 @@ def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories, depth)
     opts["basemfnodes"] = wireproto.encodelist(basemfnodes)
     # Serialize directories with a trailing , so we can differentiate the empty
     # directory from the end of the list!
-    opts["directories"] = "".join([wireproto.escapearg(d) + "," for d in directories])
+    opts["directories"] = "".join([wireproto.escapestringarg(d) + "," for d in directories])
     opts["depth"] = str(depth)
 
     ui = remote.ui

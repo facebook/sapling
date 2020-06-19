@@ -5,7 +5,7 @@
 
 # format: defines the format used to output annotate result
 
-from edenscm.mercurial import encoding, node, templatefilters, util
+from edenscm.mercurial import encoding, node, pycompat, templatefilters, util
 from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, range
 
 
@@ -127,7 +127,9 @@ class jsonformatter(defaultformatter):
             (name, list(map(f, annotatedresult))) for f, sep, name, enc in self.funcmap
         ]
         if lines is not None:
-            pieces.append(("line", lines))
+            pieces.append(
+                ("line", list(pycompat.decodeutf8(l, errors="replace") for l in lines))
+            )
         pieces.sort()
 
         seps = [","] * len(pieces[:-1]) + [""]

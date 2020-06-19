@@ -4,6 +4,7 @@ import os
 import tempfile
 
 from edenscm.hgext.fastannotate import error, revmap
+from edenscm.mercurial import pycompat
 from hghave import require
 
 
@@ -17,7 +18,7 @@ except NameError:
 
 
 def genhsh(i):
-    return chr(i) + b"\0" * 19
+    return pycompat.encodeutf8(chr(i)) + b"\0" * 19
 
 
 def gettemppath():
@@ -94,7 +95,7 @@ def testcorruptformat():
     path = gettemppath()
 
     # incorrect header
-    with open(path, "w") as f:
+    with open(path, "wb") as f:
         f.write(b"NOT A VALID HEADER")
     try:
         revmap.revmap(path)
