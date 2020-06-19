@@ -634,7 +634,7 @@ def _dnsnamematch(dn, hostname, maxwildcards=1):
     if not dn:
         return False
 
-    pieces = dn.split(r".")
+    pieces = dn.split(".")
     leftmost = pieces[0]
     remainder = pieces[1:]
     wildcards = leftmost.count("*")
@@ -698,12 +698,6 @@ def _verifycert(cert, hostname):
                 # According to RFC 2818 the most specific Common Name must
                 # be used.
                 if key == "commonName":
-                    # 'subject' entries are unicode.
-                    try:
-                        value = value.encode("ascii")
-                    except UnicodeEncodeError:
-                        return _("IDN in certificate not supported")
-
                     try:
                         if _dnsnamematch(value, hostname):
                             return

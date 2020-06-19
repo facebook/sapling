@@ -8,9 +8,6 @@ from edenscm.mercurial import sslutil
 from hghave import require
 
 
-require(["py2"])
-
-
 def check(a, b):
     if a != b:
         print((a, b))
@@ -71,9 +68,6 @@ check(
     "no commonName or subjectAltName found in certificate",
 )
 check(_verifycert(None, "example.com"), "no certificate received")
-
-# Unicode (IDN) certname isn't supported
-check(_verifycert(cert(u"\u4f8b.jp"), "example.jp"), "IDN in certificate not supported")
 
 # The following tests are from CPython's test_ssl.py.
 check(_verifycert(cert("example.com"), "example.com"), None)
@@ -353,13 +347,6 @@ def test_url():
     <url path: '\\\\foo:bar'>
     >>> url('./foo:bar')
     <url path: './foo:bar'>
-
-    Non-localhost file URL:
-
-    >>> u = url('file://mercurial-scm.org/foo')
-    Traceback (most recent call last):
-      File "<stdin>", line 1, in ?
-    Abort: file:// URLs can only refer to localhost
 
     Empty URL:
 
