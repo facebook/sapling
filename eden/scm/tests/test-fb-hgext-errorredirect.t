@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ newext crash <<EOF
@@ -7,7 +6,7 @@
   > command = registrar.command(cmdtable)
   > @command('crash', [])
   > def crash(ui, repo):
-  >     raise 'crash'
+  >     raise Exception('crash')
   > EOF
   $ enable errorredirect
   $ setconfig extensions.mock="$TESTDIR/mockblackbox.py"
@@ -26,14 +25,12 @@ If the script returns non-zero, print the trace
   $ hg crash --config errorredirect.script='echo It works && exit 1' 2>&1 | grep '^[IT]'
   It works
   Traceback (most recent call last):
-  TypeError: exceptions must be old-style classes or derived from BaseException, not str
 
   $ printf '#!%sbin/sh\necho It works && false' '/' > a.sh
   $ chmod +x $TESTTMP/a.sh
   $ PATH=$TESTTMP:$PATH hg crash --config errorredirect.script=a.sh 2>&1 | grep '^[IT]'
   It works
   Traceback (most recent call last):
-  TypeError: exceptions must be old-style classes or derived from BaseException, not str
 
 If the script is terminated by SIGTERM (Ctrl+C), do not print the trace
   $ hg crash --config errorredirect.script='echo It works && kill -TERM $$' 2>&1
@@ -51,7 +48,6 @@ If the script cannot be executed (not found in PATH), print the trace
   [1]
   $ hg crash --config errorredirect.script='SCRIPT-DOES-NOT-EXIST' 2>&1 | grep '^[IT]'
   Traceback (most recent call last):
-  TypeError: exceptions must be old-style classes or derived from BaseException, not str
 
 Traces are logged in blackbox
   $ cat >> $HGRCPATH << EOF
@@ -65,5 +61,5 @@ Traces are logged in blackbox
   $ hg crash --config errorredirect.script='echo Works'
   Works
   [255]
-  $ hg blackbox --pattern '{"legacy_log":{"service":"command_exception"}}' | head -n 1
+  $ hg blackbox --pattern '{"legacy_log":{"service":"command_exception"}}' 2>&1 | head -n 1
   * [legacy][command_exception] ** has crashed: (glob)

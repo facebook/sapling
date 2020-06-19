@@ -38,7 +38,7 @@ import sys
 import time
 import traceback
 
-from edenscm.mercurial import dispatch, encoding, extensions
+from edenscm.mercurial import dispatch, encoding, extensions, pycompat
 
 
 def _printtrace(ui, warning):
@@ -79,7 +79,7 @@ def _handlecommandexception(orig, ui):
 
     try:
         p = subprocess.Popen(script, shell=shell, stdin=subprocess.PIPE, env=env)
-        p.communicate(trace)
+        p.communicate(pycompat.encodeutf8(trace))
     except Exception:
         # The binary cannot be executed, or some other issues. For example,
         # "script" is not in PATH, and shell is False; or the peer closes the

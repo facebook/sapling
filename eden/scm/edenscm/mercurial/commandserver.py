@@ -425,13 +425,18 @@ def _serverequest(ui, repo, conn, createcmdserver):
         finally:
             sv.cleanup()
     except:  # re-raises
+        # print_exc requires a string file-like object in Python 3, so let's get
+        # it a buffer then convert it to bytes before sending it to the server.
+        output = pycompat.stringutf8io()
+        traceback.print_exc(file=output)
+
         # also write traceback to error channel. otherwise client cannot
         # see it because it is written to server's stderr by default.
+        output = pycompat.encodeutf8(output.getvalue())
         if sv:
-            cerr = sv.cerr
+            sv.cerr.write(output)
         else:
-            cerr = channeledoutput(fout, b"e")
-        traceback.print_exc(file=cerr)
+            channeledoutput(fout, b"e").write(output)
         raise
     finally:
         fin.close()
