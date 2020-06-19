@@ -307,8 +307,9 @@ class wirepeer(repository.legacypeer):
         try:
             branchmap = {}
             for branchpart in d.splitlines():
+                branchpart = pycompat.decodeutf8(branchpart)
                 branchname, branchheads = branchpart.split(" ", 1)
-                branchname = encoding.tolocal(urlreq.unquote(branchname))
+                branchname = urlreq.unquote(branchname)
                 branchheads = decodelist(branchheads)
                 branchmap[branchname] = branchheads
             yield branchmap

@@ -1,4 +1,3 @@
-#require py2
   $ disable treemanifest
 
 This test tries to exercise the ssh functionality with a dummy script
@@ -245,6 +244,7 @@ a bad, evil hook that prints to stdout
   > import sys
   > def hook(ui, repo, hooktype, **kwargs):
   >     sys.stdout.write("KABOOM IN PROCESS\n")
+  >     sys.stdout.flush()
   > EOF
 
   $ cat <<EOF >> ../remote/.hg/hgrc
