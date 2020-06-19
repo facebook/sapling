@@ -12,7 +12,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   > | sed 's-\\-/-g' > $TESTTMP/files.txt
 
   $ NPROC=`$PYTHON -c 'import multiprocessing; print(multiprocessing.cpu_count())'`
-  $ cat $TESTTMP/files.txt | PYTHONPATH= xargs -n64 -P $NPROC contrib/check-code.py --warnings --per-file=0 | sort
+  $ cat $TESTTMP/files.txt | PYTHONPATH= xargs -n64 -P $NPROC contrib/check-code.py --warnings --per-file=0 | LC_ALL=C sort
   Skipping edenscm/hgext/extlib/cstore/datapackstore.cpp it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/cstore/datapackstore.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/cstore/datastore.h it has no-che?k-code (glob)

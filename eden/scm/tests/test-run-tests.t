@@ -334,7 +334,7 @@ test --outputdir
   # Ran 3 tests, 0 skipped, 2 failed.
   python hash seed: * (glob)
   [1]
-  $ ls -a output
+  $ LC_ALL=C ls -a output
   .
   ..
   .testtimes
@@ -1281,7 +1281,7 @@ test for --json
           "time": "\s*[\d\.]{4,5}" (re)
       }
   } (no-eol)
-  $ ls -a output
+  $ LC_ALL=C ls -a output
   .
   ..
   .testtimes

@@ -1515,7 +1515,7 @@ class Test(unittest.TestCase):
 
         # Reset some environment variables to well-known values so that
         # the tests produce repeatable output.
-        env["LANG"] = env["LC_ALL"] = env["LANGUAGE"] = "C"
+        env["LANG"] = env["LC_ALL"] = env["LANGUAGE"] = "en_US.UTF-8"
         env["TZ"] = "GMT"
         env["EMAIL"] = "Foo Bar <foo.bar@example.com>"
         env["COLUMNS"] = "80"

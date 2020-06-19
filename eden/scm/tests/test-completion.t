@@ -188,7 +188,7 @@ Show the alias of a debug command if there are no other candidates
   
 
 Show the global options
-  $ hg debugcomplete --options | sort
+  $ hg debugcomplete --options | LC_ALL=C sort
   --color
   --config
   --configfile
@@ -216,7 +216,7 @@ Show the global options
   -y
 
 Show the options for the "serve" command
-  $ hg debugcomplete --options serve | sort
+  $ hg debugcomplete --options serve | LC_ALL=C sort
   --accesslog
   --address
   --certificate

@@ -18,7 +18,7 @@ Initialize test repo.
 Create a nested directory structure.
   $ mkdir -p a{1,2}/b{1,2}/c{1,2}
   $ echo "1" | tee a{1,2}/{file,b{1,2}/{file,c{1,2}/file}} > /dev/null
-  $ tree
+  $ LC_ALL=C tree
   .
   |-- a1
   |   |-- b1

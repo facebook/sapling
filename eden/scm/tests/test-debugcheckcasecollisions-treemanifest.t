@@ -30,7 +30,7 @@ Check basic case collisions
   DIRA (directory for DIRA/SUBDIRB/file2) conflicts with dirA
   DIRB (directory for DIRB/FILE3) conflicts with dirB
   [1]
-  $ sorted hg debugcheckcasecollisions dirA/subdirA/FILE1 dirA/SUBDIRB/file2 dirB/FILE3
+  $ LC_ALL=C sorted hg debugcheckcasecollisions dirA/subdirA/FILE1 dirA/SUBDIRB/file2 dirB/FILE3
   dirA/SUBDIRB (directory for dirA/SUBDIRB/file2) conflicts with dirA/subdirB
   dirA/subdirA/FILE1 conflicts with dirA/subdirA/file1
   dirB/FILE3 conflicts with dirB/file3

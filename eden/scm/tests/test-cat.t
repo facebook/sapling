@@ -57,7 +57,7 @@ Test fileset
   $ hg cat --output tmp/%p_p c
   $ hg log -r . --template "{rev}: {node|short}\n"
   2: 45116003780e
-  $ find tmp -type f | sort
+  $ find tmp -type f | LC_ALL=C sort
   tmp/.%_d
   tmp/HH_45116003780e3678b333fb2c99fa7d559c8457e9
   tmp/RR_2

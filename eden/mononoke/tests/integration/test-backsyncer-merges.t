@@ -84,6 +84,6 @@ although the second one became non-merge commit
 
 Make sure we have directory from the first move, but not from the second
   $ ls
-  file.txt
   filetoremove
+  file.txt
   newrepo
