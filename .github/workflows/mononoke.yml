@@ -13,6 +13,12 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v1
+    - name: Check space
+      run: df -h
+    - name: Clean space as per https://github.com/actions/virtual-environments/issues/709
+      run: sudo rm -rf "/usr/local/share/boost" && sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+    - name: Check space
+      run: df -h
     - name: Install Rust Stable
       uses: actions-rs/toolchain@v1
       with:
@@ -23,6 +29,8 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py build --only-deps --src-dir=. mononoke
     - name: Build mononoke
       run: python3 build/fbcode_builder/getdeps.py build --no-deps --src-dir=. mononoke
+    - name: Check space
+      run: df -h
     - name: Copy artifacts
       run: python3 build/fbcode_builder/getdeps.py fixup-dyn-deps --src-dir=. mononoke _artifacts/linux
     - uses: actions/upload-artifact@master
@@ -31,6 +39,8 @@ jobs:
         path: _artifacts
     - name: Test mononoke
       run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
+    - name: Check space
+      run: df -h
     - name: Install Rust Beta
       uses: actions-rs/toolchain@v1
       with:
@@ -49,12 +59,16 @@ jobs:
     - name: Test mononoke with nightly toolchain
       run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
       continue-on-error: true
+    - name: Check space
+      run: df -h
   mac:
     runs-on: macOS-latest
     env:
       DEVELOPER_DIR: /Applications/Xcode_10.3.app/Contents/Developer
     steps:
     - uses: actions/checkout@v1
+    - name: Check space
+      run: df -h
     - name: Install Rust Stable
       uses: actions-rs/toolchain@v1
       with:
@@ -65,6 +79,8 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py build --only-deps --src-dir=. mononoke
     - name: Build mononoke
       run: python3 build/fbcode_builder/getdeps.py build --no-deps --src-dir=. mononoke
+    - name: Check space
+      run: df -h
     - name: Copy artifacts
       run: python3 build/fbcode_builder/getdeps.py fixup-dyn-deps --src-dir=. mononoke _artifacts/mac
     - uses: actions/upload-artifact@master
@@ -73,6 +89,8 @@ jobs:
         path: _artifacts
     - name: Test mononoke
       run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
+    - name: Check space
+      run: df -h
     - name: Install Rust Beta
       uses: actions-rs/toolchain@v1
       with:
@@ -91,3 +109,5 @@ jobs:
     - name: Test mononoke with nightly toolchain
       run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
       continue-on-error: true
+    - name: Check space
+      run: df -h
