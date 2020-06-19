@@ -122,10 +122,6 @@ from .i18n import _
 from .node import hex, short
 
 
-# pyre-fixme[11]: Annotation `pickle` is not defined as a type.
-pickle = util.pickle
-
-
 class _nullconverter(object):
     """convert non-primitive data types to be processed by formatter"""
 
@@ -140,9 +136,7 @@ class _nullconverter(object):
     @staticmethod
     def formatdict(data, key, value, fmt, sep):
         """convert dict or key-value pairs to appropriate dict format"""
-        # use plain dict instead of util.sortdict so that data can be
-        # serialized as a builtin dict in pickle output
-        return dict(data)
+        return data
 
     @staticmethod
     def formatlist(data, name, fmt, sep):
@@ -353,20 +347,6 @@ class debugformatter(baseformatter):
     def end(self):
         baseformatter.end(self)
         self._out.write("]\n")
-
-
-class pickleformatter(baseformatter):
-    def __init__(self, ui, out, topic, opts):
-        baseformatter.__init__(self, ui, topic, opts, _nullconverter)
-        self._out = out
-        self._data = []
-
-    def _showitem(self):
-        self._data.append(self._item)
-
-    def end(self):
-        baseformatter.end(self)
-        self._out.write(pickle.dumps(self._data))
 
 
 class jsonformatter(baseformatter):
@@ -587,8 +567,6 @@ def formatter(ui, out, topic, opts):
     template = opts.get("template", "")
     if template == "json":
         return jsonformatter(ui, out, topic, opts)
-    elif template == "pickle":
-        return pickleformatter(ui, out, topic, opts)
     elif template == "debug":
         return debugformatter(ui, out, topic, opts)
     elif template != "":

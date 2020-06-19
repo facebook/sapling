@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ hg init repo1
@@ -231,13 +230,6 @@ hg status -A:
    }
   ]
 
-  $ hg status -A -Tpickle > pickle
-  >>> from __future__ import print_function
-  >>> import pickle
-  >>> print(sorted((x['status'], x['path']) for x in pickle.load(open("pickle"))))
-  [('!', 'deleted'), ('?', 'pickle'), ('?', 'unknown'), ('A', 'added'), ('A', 'copied'), ('C', '.gitignore'), ('C', 'modified'), ('I', 'ignored'), ('R', 'removed')]
-  $ rm pickle
-
   $ echo "ignoreddir/" > .gitignore
   $ mkdir ignoreddir
   $ touch ignoreddir/file
@@ -447,12 +439,12 @@ hg status of binary file starting with '\1\n', a separator for metadata:
 
   $ hg init repo5
   $ cd repo5
-  >>> _ = open("010a", "wb").write("\1\nfoo")
+  >>> _ = open("010a", "wb").write(b"\1\nfoo")
   $ hg ci -q -A -m 'initial checkin'
   $ hg status -A
   C 010a
 
-  >>> _ = open("010a", "wb").write("\1\nbar")
+  >>> _ = open("010a", "wb").write(b"\1\nbar")
   $ hg status -A
   M 010a
   $ hg ci -q -m 'modify 010a'
