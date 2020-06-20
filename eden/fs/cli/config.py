@@ -574,8 +574,16 @@ Do you want to run `eden mount %s` instead?"""
         mount_info = eden_ttypes.MountArgument(
             mountPoint=bytes(path), edenClientPath=bytes(client_dir), readOnly=read_only
         )
-        with self.get_thrift_client() as client:
-            client.mount(mount_info)
+
+        try:
+            with self.get_thrift_client() as client:
+                client.mount(mount_info)
+        except eden_ttypes.EdenError as ex:
+            if "already mounted" in str(ex):
+                print_stderr(
+                    f"ERROR: Mount point in use! {path} is already mounted by Eden."
+                )
+                return 1
 
         return 0
 

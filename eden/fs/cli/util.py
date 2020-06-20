@@ -520,7 +520,7 @@ def readlink_retry_estale(path: Union[Path, str]) -> str:
     attempts = 10
     while True:
         try:
-            return os.readlink(path)
+            return os.readlink(str(path))
         except OSError as ex:
             if attempts == 0 or ex.errno != errno.ESTALE:
                 raise
