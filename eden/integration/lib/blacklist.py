@@ -29,11 +29,7 @@ if sys.platform == "win32":
         "basic_test.BasicTestHg": [
             # "edenfsctl remove" does not yet work on Windows,
             # so blacklist related tests
-            "test_remove_checkout",
-            "test_remove_invalid_paths",
-            # The Windows-specific main.cpp file does not yet properly set up
-            # fb303 exports and options.
-            "test_version",
+            "test_remove_checkout"
         ],
         "chown_test.ChownTest": True,
         "clone_test.CloneFakeEdenFSTestAdHoc": True,
@@ -52,8 +48,6 @@ if sys.platform == "win32":
         "health_test.HealthOfFakeEdenFSTestAdHoc": True,
         "health_test.HealthOfFakeEdenFSTestManaged": True,
         "health_test.HealthOfFakeEdenFSTestSystemdEdenCLI": True,
-        "health_test.HealthTest": True,
-        "help_test.HelpTest": True,
         "info_test.InfoTestHg": True,
         "linux_cgroup_test.LinuxCgroupTest": True,
         "materialized_query_test.MaterializedQueryTestHg": True,
