@@ -672,12 +672,6 @@ class EdenMount {
 
 #ifdef _WIN32
   /**
-   * The following functions are to start and stop Eden Mount on Windows. They
-   * setup and destroy the ProjectedFS channel.
-   */
-  void stop();
-
-  /**
    * The following functions are to fetch and set information in the Inode
    * Tree. These are used by the ProjectedFS and TestMount for testing.
    */

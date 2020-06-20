@@ -270,14 +270,6 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
       });
 }
 
-#ifdef _WIN32
-void EdenMount::stop() {
-  transitionState(State::RUNNING, State::INITIALIZED);
-  fsChannel_->stop();
-  XLOGF(INFO, "Stopped EdenMount (0x{:x})", reinterpret_cast<uintptr_t>(this));
-}
-#endif
-
 folly::Future<TreeInodePtr> EdenMount::createRootInode(
     const ParentCommits& parentCommits) {
   // Load the overlay, if present.
@@ -610,7 +602,6 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
       });
 }
 
-#ifndef _WIN32
 folly::Future<folly::Unit> EdenMount::unmount() {
   return folly::makeFutureWith([this] {
     auto mountingUnmountingState = mountingUnmountingState_.wlock();
@@ -630,8 +621,13 @@ folly::Future<folly::Unit> EdenMount::unmount() {
           if (mountResult.hasException()) {
             return folly::makeFuture();
           }
+#ifdef _WIN32
+          fsChannel_->stop();
+          return folly::makeFuture();
+#else
           return serverState_->getPrivHelper()->fuseUnmount(
               getPath().stringPiece());
+#endif
         })
         .thenTry([this](Try<Unit> && result) noexcept->folly::Future<Unit> {
           auto mountingUnmountingState = mountingUnmountingState_.wlock();
@@ -645,8 +641,6 @@ folly::Future<folly::Unit> EdenMount::unmount() {
         });
   });
 }
-
-#endif // !_WIN32
 
 const shared_ptr<UnboundedQueueExecutor>& EdenMount::getThreadPool() const {
   return serverState_->getThreadPool();

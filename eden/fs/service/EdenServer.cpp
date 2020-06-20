@@ -397,7 +397,6 @@ EdenServer::~EdenServer() {
 }
 
 Future<Unit> EdenServer::unmountAll() {
-#ifndef _WIN32
   std::vector<Future<Unit>> futures;
   {
     const auto mountPoints = mountPoints_.wlock();
@@ -431,10 +430,6 @@ Future<Unit> EdenServer::unmountAll() {
           result.throwIfFailed();
         }
       });
-#else
-  // TODO: shut down any currently running mounts
-  return folly::makeFuture();
-#endif // !_WIN32
 }
 
 #ifndef _WIN32
@@ -1323,16 +1318,17 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 }
 
 Future<Unit> EdenServer::unmount(StringPiece mountPath) {
-#ifndef _WIN32
+  const auto normalizedPath = normalizeMountPoint(mountPath);
+
   return makeFutureWith([&] {
            auto future = Future<Unit>::makeEmpty();
            auto mount = std::shared_ptr<EdenMount>{};
            {
              const auto mountPoints = mountPoints_.wlock();
-             const auto it = mountPoints->find(mountPath);
+             const auto it = mountPoints->find(normalizedPath);
              if (it == mountPoints->end()) {
                return makeFuture<Unit>(
-                   std::out_of_range("no such mount point " + mountPath.str()));
+                   std::out_of_range("no such mount point " + normalizedPath));
              }
              future = it->second.unmountPromise.getFuture();
              mount = it->second.edenMount;
@@ -1345,20 +1341,18 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
                  return std::move(f);
                });
          })
-      .thenError([path = mountPath.str()](folly::exception_wrapper&& ew) {
+      .thenError([path = normalizedPath](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "Failed to perform unmount for \"" << path
                   << "\": " << folly::exceptionStr(ew);
         return makeFuture<Unit>(std::move(ew));
       });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServer::mountFinished(
     EdenMount* edenMount,
     std::optional<TakeoverData::MountInfo> takeover) {
-  const auto mountPath = edenMount->getPath().stringPiece();
+  const auto mountPath =
+      normalizeMountPoint(edenMount->getPath().stringPiece());
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   unregisterStats(edenMount);
 
