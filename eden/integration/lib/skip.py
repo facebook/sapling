@@ -11,24 +11,24 @@ from typing import Dict, List, Union
 
 
 #
-# Test blacklist definitions.
+# Disabled tests definitions.
 # This is a dictionary of class names. For each class the value can be set to True to
-# blacklists all tests in this class, or a list of specific test functions to blacklist.
+# skip all tests in this class, or a list of specific test functions to skip.
 #
-# We are currently blacklisting most existing test cases on Windows, but over time we
+# We are currently skipping most existing test cases on Windows, but over time we
 # should gradually remove tests from this list as we get them passing on Windows.
 #
-TEST_BLACKLIST: Dict[str, Union[List[str], bool]] = {}
+TEST_DISABLED: Dict[str, Union[List[str], bool]] = {}
 if sys.platform == "win32":
     # Note that on Windows we also exclude some test source files entirely
     # in CMakeLists.txt, for tests that never make sense to run on Windows.
-    TEST_BLACKLIST: Dict[str, Union[List[str], None]] = {
+    TEST_DISABLED: Dict[str, Union[List[str], None]] = {
         #
         # Test classes from the main integration test binary
         #
         "basic_test.BasicTestHg": [
             # "edenfsctl remove" does not yet work on Windows,
-            # so blacklist related tests
+            # so skip related tests
             "test_remove_checkout"
         ],
         "chown_test.ChownTest": True,
@@ -147,19 +147,19 @@ if sys.platform == "win32":
 elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-release"):
     # The ChownTest.setUp() code tries to look up the "nobody" group, which doesn't
     # exist on Ubuntu.
-    TEST_BLACKLIST["chown_test.ChownTest"] = True
+    TEST_DISABLED["chown_test.ChownTest"] = True
 
     # These tests try to run "hg whereami", which isn't available on Ubuntu.
     # This command is provided by the scm telemetry wrapper rather than by hg
     # itself, and we currently don't install the telemetry wrapper on Ubuntu.
-    TEST_BLACKLIST["hg.doctor_test.DoctorTestTreeOnly"] = [
+    TEST_DISABLED["hg.doctor_test.DoctorTestTreeOnly"] = [
         "test_eden_doctor_fixes_invalid_mismatched_parents",
         "test_eden_doctor_fixes_valid_mismatched_parents",
     ]
 
     # The systemd_fixture tests have some issues on Ubuntu that I haven't fully
     # investigated yet.
-    TEST_BLACKLIST[
+    TEST_DISABLED[
         "systemd_fixture_test.TemporarySystemdUserServiceManagerIsolationTest"
     ] = [
         # When run on Ubuntu the path contains some unexpected values like
@@ -167,7 +167,7 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
         # not.
         "test_path_environment_variable_is_forced_to_default"
     ]
-    TEST_BLACKLIST["systemd_fixture_test.TemporarySystemdUserServiceManagerTest"] = [
+    TEST_DISABLED["systemd_fixture_test.TemporarySystemdUserServiceManagerTest"] = [
         # This test does claim that there are a number of other different units
         # being managed
         "test_no_units_are_active",
@@ -176,7 +176,7 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
         "test_unit_paths_includes_manager_specific_directories",
     ]
 
-    TEST_BLACKLIST["hg.post_clone_test.SymlinkTestTreeOnly"] = [
+    TEST_DISABLED["hg.post_clone_test.SymlinkTestTreeOnly"] = [
         # This test fails with mismatched permissions (0775 vs 0755).
         # I haven't investigated too closely but it could be a umask configuration
         # issue.
@@ -184,30 +184,30 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
     ]
 
 
-def skip_test_if_blacklisted(test_case: unittest.TestCase) -> None:
-    if _is_blacklisted(test_case):
+def skip_if_disabled(test_case: unittest.TestCase) -> None:
+    if _is_disabled(test_case):
         raise unittest.SkipTest(f"this test is currently unsupported on this platform")
 
 
-def _is_blacklisted(test_case: unittest.TestCase) -> bool:
-    if not TEST_BLACKLIST:
+def _is_disabled(test_case: unittest.TestCase) -> bool:
+    if not TEST_DISABLED:
         return False
-    if os.environ.get("EDEN_RUN_BLACKLISTED_TESTS", "") == "1":
+    if os.environ.get("EDEN_RUN_DISABLED_TESTS", "") == "1":
         return False
 
     class_name = f"{type(test_case).__module__}.{type(test_case).__name__}"
     # Strip off the leading "eden.integration." prefix from the module name just
-    # to make our blacklisted names shorter and easier to read/maintain.
+    # to make our skipped names shorter and easier to read/maintain.
     strip_prefix = "eden.integration."
     if class_name.startswith(strip_prefix):
         class_name = class_name[len(strip_prefix) :]
 
-    class_blacklist = TEST_BLACKLIST.get(class_name)
-    if class_blacklist is None:
+    class_skipped = TEST_DISABLED.get(class_name)
+    if class_skipped is None:
         return False
-    if isinstance(class_blacklist, bool):
-        assert class_blacklist is True
-        # All classes in the test are blacklisted
+    if isinstance(class_skipped, bool):
+        assert class_skipped is True
+        # All classes in the test are skipped
         return True
     else:
-        return test_case._testMethodName in class_blacklist
+        return test_case._testMethodName in class_skipped

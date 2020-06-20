@@ -31,7 +31,7 @@ import eden.config
 from eden.test_support.testcase import EdenTestCaseBase
 from eden.thrift.legacy import EdenClient
 
-from . import blacklist, edenclient, gitrepo, hgrepo, repobase
+from . import edenclient, gitrepo, hgrepo, repobase, skip
 from .find_executables import FindExe
 
 
@@ -43,7 +43,7 @@ else:
 
 class IntegrationTestCase(EdenTestCaseBase):
     def setUp(self) -> None:
-        blacklist.skip_test_if_blacklisted(self)
+        skip.skip_if_disabled(self)
         super().setUp()
 
 
@@ -82,7 +82,7 @@ class EdenTestCase(EdenTestCaseBase):
         self.last_event = now
 
     def setUp(self) -> None:
-        blacklist.skip_test_if_blacklisted(self)
+        skip.skip_if_disabled(self)
 
         self.start = time.time()
         self.last_event = self.start
