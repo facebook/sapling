@@ -1192,66 +1192,30 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getChannelCompletionFuture() {
   return channelCompletionPromise_.getFuture();
 }
 
-folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
-  return folly::makeFutureWith([&]() {
-    transitionState(
-        /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);
-
-    // Just in case the mount point directory doesn't exist,
-    // automatically create it.
-    boost::filesystem::path boostMountPath{getPath().value()};
-    boost::filesystem::create_directories(boostMountPath);
-
-#ifdef _WIN32
-    fsChannel_ = std::make_unique<PrjfsChannel>(this);
-    fsChannel_->start(getPath(), readOnly);
-    createRepoConfig(
-        getPath(),
-        serverState_->getSocketPath(),
-        config_->getClientDirectory());
-    XLOGF(
-        INFO, "Started EdenMount (0x{:x})", reinterpret_cast<uintptr_t>(this));
-    transitionState(State::STARTING, State::RUNNING);
-
-    return folly::makeFuture();
-#else
-    return fuseMount(readOnly)
-        .thenValue([this](folly::File&& fuseDevice) {
-          createFuseChannel(std::move(fuseDevice));
-          return channel_->initialize().thenValue(
-              [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
-                fuseInitSuccessful(std::move(fuseCompleteFuture));
-              });
-        })
-        .thenError([this](folly::exception_wrapper&& ew) {
-          transitionToFuseInitializationErrorState();
-          return makeFuture<folly::Unit>(std::move(ew));
-        });
-#endif
-  });
-}
-
-#ifndef _WIN32
-void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
-  transitionState(State::INITIALIZED, State::STARTING);
-
-  try {
-    beginMount().setValue();
-
-    createFuseChannel(std::move(takeoverData.fd));
-    auto fuseCompleteFuture =
-        channel_->initializeFromTakeover(takeoverData.connInfo);
-    fuseInitSuccessful(std::move(fuseCompleteFuture));
-  } catch (const std::exception&) {
-    transitionToFuseInitializationErrorState();
-    throw;
-  }
-}
-
-folly::Future<folly::File> EdenMount::fuseMount(bool readOnly) {
+folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
   return folly::makeFutureWith([&] { return &beginMount(); })
       .thenValue([this, readOnly](folly::Promise<folly::Unit>* mountPromise) {
         AbsolutePath mountPath = getPath();
+#ifdef _WIN32
+        return folly::makeFutureWith(
+                   [mountPath, readOnly, this]() -> folly::Future<FsChannel*> {
+                     auto channel = new PrjfsChannel(this);
+                     channel->start(mountPath, readOnly);
+                     return channel;
+                   })
+            .thenTry([mountPromise, this](Try<FsChannel*>&& channel) {
+              if (channel.hasException()) {
+                mountPromise->setException(channel.exception());
+                return makeFuture<FsChannel*>(channel.exception());
+              }
+
+              // TODO(xavierd): similarly to the non-Windows code below, we
+              // need to handle the case where mount was cancelled.
+
+              mountPromise->setValue();
+              return makeFuture(channel);
+            });
+#else
         return serverState_->getPrivHelper()
             ->fuseMount(mountPath.stringPiece(), readOnly)
             .thenTry(
@@ -1289,7 +1253,60 @@ folly::Future<folly::File> EdenMount::fuseMount(bool readOnly) {
                   mountPromise->setValue();
                   return folly::makeFuture(std::move(fuseDevice).value());
                 });
+#endif
       });
+}
+
+void EdenMount::createChannel(EdenMount::channelType channel) {
+#if _WIN32
+  fsChannel_.reset(channel);
+#else
+  channel_.reset(new FuseChannel(
+      std::move(channel),
+      getPath(),
+      FLAGS_fuseNumThreads,
+      dispatcher_.get(),
+      serverState_->getProcessNameCache(),
+      std::chrono::duration_cast<folly::Duration>(
+          serverState_->getReloadableConfig()
+              .getEdenConfig()
+              ->fuseRequestTimeout.getValue()),
+      serverState_->getNotifications()));
+#endif
+}
+
+folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
+  return folly::makeFutureWith([&]() {
+    transitionState(
+        /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);
+
+    // Just in case the mount point directory doesn't exist,
+    // automatically create it.
+    boost::filesystem::path boostMountPath{getPath().value()};
+    boost::filesystem::create_directories(boostMountPath);
+
+    return channelMount(readOnly)
+        .thenValue([this](EdenMount::channelType&& channel) {
+          createChannel(std::move(channel));
+#ifdef _WIN32
+          createRepoConfig(
+              getPath(),
+              serverState_->getSocketPath(),
+              config_->getClientDirectory());
+
+          transitionState(State::STARTING, State::RUNNING);
+#else
+          return channel_->initialize().thenValue(
+              [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
+                fuseInitSuccessful(std::move(fuseCompleteFuture));
+              });
+#endif
+        })
+        .thenError([this](folly::exception_wrapper&& ew) {
+          transitionToFuseInitializationErrorState();
+          return makeFuture<folly::Unit>(std::move(ew));
+        });
+  });
 }
 
 folly::Promise<folly::Unit>& EdenMount::beginMount() {
@@ -1313,18 +1330,21 @@ folly::Promise<folly::Unit>& EdenMount::beginMount() {
   return *mountingUnmountingState->channelMountPromise;
 }
 
-void EdenMount::createFuseChannel(folly::File fuseDevice) {
-  channel_.reset(new FuseChannel(
-      std::move(fuseDevice),
-      getPath(),
-      FLAGS_fuseNumThreads,
-      dispatcher_.get(),
-      serverState_->getProcessNameCache(),
-      std::chrono::duration_cast<folly::Duration>(
-          serverState_->getReloadableConfig()
-              .getEdenConfig()
-              ->fuseRequestTimeout.getValue()),
-      serverState_->getNotifications()));
+#ifndef _WIN32
+void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
+  transitionState(State::INITIALIZED, State::STARTING);
+
+  try {
+    beginMount().setValue();
+
+    createChannel(std::move(takeoverData.fd));
+    auto fuseCompleteFuture =
+        channel_->initializeFromTakeover(takeoverData.connInfo);
+    fuseInitSuccessful(std::move(fuseCompleteFuture));
+  } catch (const std::exception&) {
+    transitionToFuseInitializationErrorState();
+    throw;
+  }
 }
 
 void EdenMount::fuseInitSuccessful(

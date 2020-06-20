@@ -834,12 +834,6 @@ class EdenMount {
       bool enforceCurrentParent,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request) const;
 
-#ifndef _WIN32
-  /**
-   * Open the FUSE device and mount it using the mount(2) syscall.
-   */
-  folly::Future<folly::File> fuseMount(bool readOnly);
-
   /**
    * Signal to unmount() that fuseMount() or takeoverFuse() has started.
    *
@@ -856,10 +850,23 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Promise<folly::Unit>& beginMount();
 
+#ifdef _WIN32
+  using channelType = FsChannel*;
+#else
+  using channelType = folly::File;
+#endif
+
+  /**
+   * Open the platform specific device and mount it.
+   */
+  folly::Future<channelType> channelMount(bool readOnly);
+
   /**
    * Construct the channel_ member variable.
    */
-  void createFuseChannel(folly::File fuseDevice);
+  void createChannel(channelType fuseDevice);
+
+#ifndef _WIN32
 
   /**
    * Once the FuseChannel has been initialized, set up callbacks to clean up
