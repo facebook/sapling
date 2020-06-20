@@ -16,7 +16,10 @@ use std::{
     ops::Range,
     path::{Path, PathBuf},
     str::{self, FromStr},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
     thread::sleep,
     time::Duration,
 };
@@ -29,6 +32,7 @@ use rand::{thread_rng, Rng};
 use reqwest::{Client, Method, Proxy, RequestBuilder, Url};
 use serde_derive::{Deserialize, Serialize};
 use tokio::{runtime::Runtime, task::spawn_blocking, time::timeout};
+use tracing::info_span;
 
 use configparser::{
     config::ConfigSet,
@@ -964,6 +968,9 @@ impl LfsRemoteInner {
         objs: &[(Sha256, usize)],
         operation: Operation,
     ) -> Result<Option<ResponseBatch>> {
+        let span = info_span!("LfsRemote::send_batch_inner");
+        let _guard = span.enter();
+
         let objects = objs
             .iter()
             .map(|(oid, size)| RequestObject {
@@ -1381,10 +1388,25 @@ impl RemoteDataStore for LfsRemoteStore {
             return Ok(());
         }
 
+        let span = info_span!(
+            "LfsRemoteStore::prefetch",
+            num_blobs = objs.len(),
+            size = &0
+        );
+        let _guard = span.enter();
+
+        let size = Arc::new(AtomicUsize::new(0));
         self.remote.batch_fetch(&objs, {
             let remote = self.remote.clone();
-            move |sha256, data| remote.shared.blobs.add(&sha256, data)
-        })
+            let size = size.clone();
+            move |sha256, data| {
+                size.fetch_add(data.len(), Ordering::Relaxed);
+                remote.shared.blobs.add(&sha256, data)
+            }
+        })?;
+        span.record("size", &size.load(Ordering::Relaxed));
+
+        Ok(())
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
@@ -1415,16 +1437,30 @@ impl RemoteDataStore for LfsRemoteStore {
             .collect::<Result<Vec<_>>>()?;
 
         if !objs.is_empty() {
+            let span = info_span!("LfsRemoteStore::upload", num_blobs = objs.len(), size = &0);
+            let _guard = span.enter();
+
+            let size = Arc::new(AtomicUsize::new(0));
+
             self.remote.batch_upload(&objs, {
                 let local_store = local_store.clone();
+                let size = size.clone();
                 move |sha256| {
                     let key = StoreKey::from(ContentHash::Sha256(sha256));
-                    local_store.blob(&key)
+                    let opt = local_store.blob(&key)?;
+                    if let Some(blob) = opt.as_ref() {
+                        size.fetch_add(blob.len(), Ordering::Relaxed);
+                    }
+                    Ok(opt)
                 }
             })?;
+
+            span.record("size", &size.load(Ordering::Relaxed));
         }
 
         if self.remote.move_after_upload {
+            let span = info_span!("LfsRemoteStore::move_after_upload");
+            let _guard = span.enter();
             // All the blobs were successfully uploaded, we can move the blobs from the local store
             // to the shared store. This is safe to do as blobs will never be collected from the
             // server once uploaded.
