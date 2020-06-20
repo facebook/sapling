@@ -8,8 +8,10 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <vector>
 
+#include <folly/portability/SysTypes.h>
 #include "eden/fs/store/ImportPriority.h"
 
 namespace folly {
@@ -64,6 +66,10 @@ class ObjectFetchContext {
    * Return a no-op fetch context suitable when no tracking is desired.
    */
   static ObjectFetchContext& getNullContext();
+
+  virtual std::optional<pid_t> getPid() const {
+    return std::nullopt;
+  }
 
  private:
   ObjectFetchContext(const ObjectFetchContext&) = delete;

@@ -92,6 +92,10 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
     }
   }
 
+  std::optional<pid_t> getPid() const override {
+    return static_cast<pid_t>(fuseHeader_.pid);
+  }
+
   // Returns true if the current context is being called from inside
   // a FUSE request, false otherwise.
   static bool isFuseRequest();

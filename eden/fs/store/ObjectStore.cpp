@@ -12,7 +12,7 @@
 #include <folly/Format.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
-#include <folly/logging/xlog.h>
+
 #include <stdexcept>
 
 #include "eden/fs/model/Blob.h"
@@ -50,7 +50,8 @@ ObjectStore::ObjectStore(
       localStore_{std::move(localStore)},
       backingStore_{std::move(backingStore)},
       stats_{std::move(stats)},
-      executor_{executor} {}
+      executor_{executor},
+      pidFetchCounts_{std::make_unique<PidFetchCounts>()} {}
 
 ObjectStore::~ObjectStore() {}
 
@@ -58,47 +59,58 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
     const Hash& id,
     ObjectFetchContext& fetchContext) const {
   // Check in the LocalStore first
-  return localStore_->getTree(id).thenValue(
-      [self = shared_from_this(), id, &fetchContext](
-          shared_ptr<const Tree> tree) {
-        if (tree) {
-          XLOG(DBG4) << "tree " << id << " found in local store";
+  return localStore_->getTree(id).thenValue([self = shared_from_this(),
+                                             id,
+                                             &fetchContext](
+                                                shared_ptr<const Tree> tree) {
+    if (tree) {
+      XLOG(DBG4) << "tree " << id << " found in local store";
+      fetchContext.didFetch(
+          ObjectFetchContext::Tree, id, ObjectFetchContext::FromDiskCache);
+
+      if (auto pid = fetchContext.getPid()) {
+        self->pidFetchCounts_->recordProcessFetch(pid.value());
+      }
+
+      return makeFuture(std::move(tree));
+    }
+
+    // Note: We don't currently have logic here to avoid duplicate work if
+    // multiple callers request the same tree at once.  We could store a map
+    // of pending lookups as (Hash --> std::list<Promise<unique_ptr<Tree>>),
+    // and just add a new Promise to the list if this Hash already exists in
+    // the pending list.
+    //
+    // However, de-duplication of object loads will already be done at the
+    // Inode layer.  Therefore we currently don't bother de-duping loads at
+    // this layer.
+
+    // Load the tree from the BackingStore.
+    return self->backingStore_->getTree(id)
+        .via(self->executor_)
+        .thenValue([self, id, &fetchContext, localStore = self->localStore_](
+                       unique_ptr<const Tree> loadedTree) {
+          if (!loadedTree) {
+            // TODO: Perhaps we should do some short-term negative
+            // caching?
+            XLOG(DBG2) << "unable to find tree " << id;
+            throw std::domain_error(
+                folly::to<string>("tree ", id.toString(), " not found"));
+          }
+
+          localStore->putTree(loadedTree.get());
+          XLOG(DBG3) << "tree " << id << " retrieved from backing store";
           fetchContext.didFetch(
-              ObjectFetchContext::Tree, id, ObjectFetchContext::FromDiskCache);
-          return makeFuture(std::move(tree));
-        }
+              ObjectFetchContext::Tree,
+              id,
+              ObjectFetchContext::FromBackingStore);
 
-        // Note: We don't currently have logic here to avoid duplicate work if
-        // multiple callers request the same tree at once.  We could store a map
-        // of pending lookups as (Hash --> std::list<Promise<unique_ptr<Tree>>),
-        // and just add a new Promise to the list if this Hash already exists in
-        // the pending list.
-        //
-        // However, de-duplication of object loads will already be done at the
-        // Inode layer.  Therefore we currently don't bother de-duping loads at
-        // this layer.
-
-        // Load the tree from the BackingStore.
-        return self->backingStore_->getTree(id)
-            .via(self->executor_)
-            .thenValue([id, &fetchContext, localStore = self->localStore_](
-                           unique_ptr<const Tree> loadedTree) {
-              if (!loadedTree) {
-                // TODO: Perhaps we should do some short-term negative caching?
-                XLOG(DBG2) << "unable to find tree " << id;
-                throw std::domain_error(
-                    folly::to<string>("tree ", id.toString(), " not found"));
-              }
-
-              localStore->putTree(loadedTree.get());
-              XLOG(DBG3) << "tree " << id << " retrieved from backing store";
-              fetchContext.didFetch(
-                  ObjectFetchContext::Tree,
-                  id,
-                  ObjectFetchContext::FromBackingStore);
-              return shared_ptr<const Tree>(std::move(loadedTree));
-            });
-      });
+          if (auto pid = fetchContext.getPid()) {
+            self->pidFetchCounts_->recordProcessFetch(pid.value());
+          }
+          return shared_ptr<const Tree>(std::move(loadedTree));
+        });
+  });
 }
 
 Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
@@ -176,6 +188,9 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
       self->updateBlobStats(true, false);
       fetchContext.didFetch(
           ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
+      if (auto pid = fetchContext.getPid()) {
+        self->pidFetchCounts_->recordProcessFetch(pid.value());
+      }
       return makeFuture(shared_ptr<const Blob>(std::move(blob)));
     }
 
@@ -191,6 +206,11 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
                 ObjectFetchContext::Blob,
                 id,
                 ObjectFetchContext::FromBackingStore);
+
+            if (auto pid = fetchContext.getPid()) {
+              self->pidFetchCounts_->recordProcessFetch(pid.value());
+            }
+
             auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
             self->metadataCache_.wlock()->set(id, metadata);
             return shared_ptr<const Blob>(std::move(loadedBlob));
@@ -224,6 +244,9 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
           ObjectFetchContext::BlobMetadata,
           id,
           ObjectFetchContext::FromMemoryCache);
+      if (auto pid = context.getPid()) {
+        pidFetchCounts_->recordProcessFetch(pid.value());
+      }
       return cacheIter->second;
     }
   }
@@ -240,6 +263,10 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
               ObjectFetchContext::BlobMetadata,
               id,
               ObjectFetchContext::FromDiskCache);
+          if (auto pid = context.getPid()) {
+            self->pidFetchCounts_->recordProcessFetch(pid.value());
+          }
+
           return makeFuture(*metadata);
         }
 
@@ -258,15 +285,19 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
                 self->updateBlobMetadataStats(false, false, true);
                 auto metadata = self->localStore_->putBlob(id, blob.get());
                 self->metadataCache_.wlock()->set(id, metadata);
-                // I could see an argument for recording this fetch with type
-                // Blob instead of BlobMetadata, but it's probably more useful
-                // in context to know how many metadata fetches occurred. Also,
-                // since backing stores don't directly support fetching
-                // metadata, it should be clear.
+                // I could see an argument for recording this fetch with
+                // type Blob instead of BlobMetadata, but it's probably more
+                // useful in context to know how many metadata fetches
+                // occurred. Also, since backing stores don't directly
+                // support fetching metadata, it should be clear.
                 context.didFetch(
                     ObjectFetchContext::BlobMetadata,
                     id,
                     ObjectFetchContext::FromBackingStore);
+
+                if (auto pid = context.getPid()) {
+                  self->pidFetchCounts_->recordProcessFetch(pid.value());
+                }
                 return makeFuture(metadata);
               }
 

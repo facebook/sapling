@@ -11,7 +11,9 @@
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
 #include <memory>
+#include <unordered_map>
 
+#include <folly/logging/xlog.h>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/IObjectStore.h"
@@ -25,6 +27,15 @@ class BackingStore;
 class Blob;
 class LocalStore;
 class Tree;
+
+struct PidFetchCounts {
+  folly::Synchronized<std::unordered_map<pid_t, uint64_t>> map_;
+
+  void recordProcessFetch(pid_t pid) {
+    auto map_lock = map_.wlock();
+    (*map_lock)[pid]++;
+  }
+};
 
 /**
  * ObjectStore is a content-addressed store for eden object data.
@@ -116,6 +127,10 @@ class ObjectStore : public IObjectStore,
     return backingStore_;
   }
 
+  folly::Synchronized<std::unordered_map<pid_t, uint64_t>>& getPidFetches() {
+    return pidFetchCounts_->map_;
+  }
+
  private:
   // Forbidden constructor. Use create().
   ObjectStore(
@@ -174,6 +189,10 @@ class ObjectStore : public IObjectStore,
   std::shared_ptr<EdenStats> const stats_;
 
   folly::Executor::KeepAlive<folly::Executor> executor_;
+
+  /* number of fetches for each process collected
+   * from the beginning of the eden daemon progress */
+  std::unique_ptr<PidFetchCounts> pidFetchCounts_;
 
   void updateBlobStats(bool local, bool backing) const;
   void updateBlobMetadataStats(bool memory, bool local, bool backing) const;
