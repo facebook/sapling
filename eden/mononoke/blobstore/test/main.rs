@@ -161,3 +161,63 @@ blobstore_test_impl! {
         has_ctime: true,
     }
 }
+
+#[cfg(fbcode_build)]
+fn create_cache(fb: FacebookInit) -> Result<(), Error> {
+    let config = cachelib::LruCacheConfig::new(128 * 1024 * 1024);
+    cachelib::init_cache_once(fb, config)?;
+    Ok(())
+}
+
+#[cfg(fbcode_build)]
+#[fbinit::compat_test]
+async fn test_cache_blob(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    create_cache(fb)?;
+    let blob_pool = cachelib::get_or_create_pool("blob_pool", 20 * 1024 * 1024)?;
+    let presence_pool = cachelib::get_or_create_pool("presence_pool", 20 * 1024 * 1024)?;
+
+    let inner = LazyMemblob::new();
+    let cache_blob =
+        cacheblob::new_cachelib_blobstore(inner, Arc::new(blob_pool), Arc::new(presence_pool));
+
+    let small_key = "small_key".to_string();
+    let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"smalldata"));
+    cache_blob
+        .put(ctx.clone(), small_key.clone(), value.clone())
+        .compat()
+        .await?;
+
+    assert_eq!(
+        cache_blob
+            .get(ctx.clone(), small_key)
+            .compat()
+            .await?
+            .map(|bytes| bytes.into_bytes()),
+        Some(value)
+    );
+
+    let large_key = "large_key".to_string();
+    let size = 5 * 1024 * 1024;
+    let mut large_value = Vec::with_capacity(size);
+    for _ in 0..size {
+        large_value.push(b'a');
+    }
+    let large_value = BlobstoreBytes::from_bytes(large_value);
+
+    cache_blob
+        .put(ctx.clone(), large_key.clone(), large_value.clone())
+        .compat()
+        .await?;
+
+    assert_eq!(
+        cache_blob
+            .get(ctx, large_key)
+            .compat()
+            .await?
+            .map(|bytes| bytes.into_bytes()),
+        Some(large_value)
+    );
+
+    Ok(())
+}

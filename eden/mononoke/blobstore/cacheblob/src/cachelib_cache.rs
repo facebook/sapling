@@ -22,6 +22,8 @@ use crate::dummy::DummyLease;
 use crate::in_process_lease::InProcessLease;
 use crate::locking_cache::CacheBlobstore;
 
+const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024;
+
 /// A caching layer over an existing blobstore, backed by cachelib
 #[derive(Clone)]
 pub struct CachelibOps {
@@ -87,7 +89,7 @@ impl CacheOps for CachelibOps {
         let _ = self.presence_pool.set(key, Bytes::from(b"P".as_ref()));
 
         value
-            .encode()
+            .encode(MAX_CACHELIB_VALUE_SIZE)
             .and_then(|bytes| self.blob_pool.set(key, bytes).map(|_| ()).map_err(|_| ()))
             .into_future()
             .boxify()

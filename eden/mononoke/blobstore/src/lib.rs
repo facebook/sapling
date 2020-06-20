@@ -16,6 +16,7 @@ use anyhow::Error;
 use futures::future::BoxFuture;
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
 use futures_old::future::{self as future01, Future as Future01};
+use std::io::Cursor;
 use thiserror::Error;
 
 use context::CoreContext;
@@ -34,6 +35,9 @@ pub struct BlobstoreGetData {
     meta: BlobstoreMetadata,
     bytes: BlobstoreBytes,
 }
+
+const UNCOMPRESSED: u8 = b'0';
+const COMPRESSED: u8 = b'1';
 
 impl BlobstoreGetData {
     #[inline]
@@ -79,16 +83,39 @@ impl BlobstoreGetData {
         self.meta.ctime = None;
     }
 
-    pub fn encode(self) -> Result<Bytes, ()> {
-        let mut bytes = Vec::new();
+    pub fn encode(self, encode_limit: u64) -> Result<Bytes, ()> {
+        let mut bytes = vec![UNCOMPRESSED];
         let get_data = BlobstoreGetDataSerialisable::from(self);
         unsafe { abomonation::encode(&get_data, &mut bytes).map_err(|_| ())? };
 
-        Ok(Bytes::from(bytes))
+        if bytes.len() as u64 >= encode_limit {
+            let mut compressed = Vec::with_capacity(bytes.len());
+            compressed.push(COMPRESSED);
+
+            let mut cursor = Cursor::new(bytes);
+            cursor.set_position(1);
+            zstd::stream::copy_encode(cursor, &mut compressed, 0 /* use default */)
+                .map_err(|_| ())?;
+            Ok(Bytes::from(compressed))
+        } else {
+            Ok(Bytes::from(bytes))
+        }
     }
 
-    pub fn decode(bytes: Bytes) -> Result<Self, ()> {
-        let mut bytes: Vec<u8> = bytes.bytes().into();
+    pub fn decode(mut bytes: Bytes) -> Result<Self, ()> {
+        let prefix_size = 1;
+        if bytes.len() < prefix_size {
+            return Err(());
+        }
+
+        let is_compressed = bytes.split_to(prefix_size);
+        let mut bytes: Vec<u8> = if is_compressed[0] == COMPRESSED {
+            let cursor = Cursor::new(bytes);
+            zstd::decode_all(cursor).map_err(|_| ())?
+        } else {
+            bytes.bytes().into()
+        };
+
         let get_data_serialisable =
             unsafe { abomonation::decode::<BlobstoreGetDataSerialisable>(&mut bytes) };
 

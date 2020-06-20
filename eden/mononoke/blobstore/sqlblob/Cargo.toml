@@ -20,7 +20,7 @@ anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-once_cell = "1.2"
+once_cell = "1.4"
 rand = { version = "0.7", features = ["small_rng"] }
 tokio = { version = "=0.2.13", features = ["full"] }
 twox-hash = "1.5"
