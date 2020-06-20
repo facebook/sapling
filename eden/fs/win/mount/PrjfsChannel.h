@@ -31,6 +31,8 @@ class PrjfsChannel : public FsChannel {
   void start(AbsolutePath mountPath, bool readOnly);
   void stop();
 
+  folly::SemiFuture<FsChannel::StopData> getStopFuture() override;
+
   /**
    * Remove files from the Projected FS cache. removeCachedFile() doesn't care
    * about the file state and will remove file in any state.
@@ -65,6 +67,7 @@ class PrjfsChannel : public FsChannel {
   EdenDispatcher dispatcher_;
   Guid mountId_;
   bool isRunning_{false};
+  folly::Promise<FsChannel::StopData> stopPromise_;
 };
 
 } // namespace eden

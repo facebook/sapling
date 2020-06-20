@@ -169,8 +169,13 @@ void PrjfsChannel::stop() {
       "Stopping PrjfsChannel (0x{:x})", uintptr_t(mountChannel_));
   DCHECK(isRunning_);
   PrjStopVirtualizing(mountChannel_);
+  stopPromise_.setValue(FsChannel::StopData{});
   isRunning_ = false;
   mountChannel_ = nullptr;
+}
+
+folly::SemiFuture<FsChannel::StopData> PrjfsChannel::getStopFuture() {
+  return stopPromise_.getSemiFuture();
 }
 
 // TODO: We need to add an extra layer to absorb all the exceptions generated in

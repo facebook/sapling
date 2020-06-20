@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <folly/futures/Future.h>
+
 namespace facebook {
 namespace eden {
 
@@ -22,6 +24,9 @@ class FsChannel {
 
   virtual void removeCachedFile(RelativePathPiece path) = 0;
   virtual void removeDeletedFile(RelativePathPiece path) = 0;
+
+  struct StopData {};
+  virtual folly::SemiFuture<FsChannel::StopData> getStopFuture() = 0;
 };
 
 } // namespace eden

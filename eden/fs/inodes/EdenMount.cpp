@@ -1294,11 +1294,11 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
               serverState_->getSocketPath(),
               config_->getClientDirectory());
 
-          transitionState(State::STARTING, State::RUNNING);
+          channelInitSuccessful(fsChannel_->getStopFuture());
 #else
           return channel_->initialize().thenValue(
               [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
-                fuseInitSuccessful(std::move(fuseCompleteFuture));
+                channelInitSuccessful(std::move(fuseCompleteFuture));
               });
 #endif
         })
@@ -1330,33 +1330,28 @@ folly::Promise<folly::Unit>& EdenMount::beginMount() {
   return *mountingUnmountingState->channelMountPromise;
 }
 
-#ifndef _WIN32
-void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
-  transitionState(State::INITIALIZED, State::STARTING);
-
-  try {
-    beginMount().setValue();
-
-    createChannel(std::move(takeoverData.fd));
-    auto fuseCompleteFuture =
-        channel_->initializeFromTakeover(takeoverData.connInfo);
-    fuseInitSuccessful(std::move(fuseCompleteFuture));
-  } catch (const std::exception&) {
-    transitionToFuseInitializationErrorState();
-    throw;
-  }
-}
-
-void EdenMount::fuseInitSuccessful(
-    FuseChannel::StopFuture&& fuseCompleteFuture) {
+void EdenMount::channelInitSuccessful(
+    EdenMount::StopFuture&& channelCompleteFuture) {
   // Try to transition to the RUNNING state.
   // This state transition could fail if shutdown() was called before we saw
   // the FUSE_INIT message from the kernel.
   transitionState(State::STARTING, State::RUNNING);
 
-  std::move(fuseCompleteFuture)
+  std::move(channelCompleteFuture)
       .via(serverState_->getThreadPool().get())
-      .thenValue([this](FuseChannel::StopData&& stopData) {
+      .thenValue([this](EdenMount::ChannelStopData&& stopData) {
+#ifdef _WIN32
+        inodeMap_->setUnmounted();
+        std::vector<AbsolutePath> bindMounts;
+        channelCompletionPromise_.setValue(TakeoverData::MountInfo(
+            getPath(),
+            config_->getClientDirectory(),
+            bindMounts,
+            folly::File{},
+            fuse_init_out{},
+            SerializedInodeMap{} // placeholder
+            ));
+#else
         // If the FUSE device is no longer valid then the mount point has
         // been unmounted.
         if (!stopData.fuseDevice) {
@@ -1373,11 +1368,29 @@ void EdenMount::fuseInitSuccessful(
             stopData.fuseSettings,
             SerializedInodeMap{} // placeholder
             ));
+#endif
       })
       .thenError([this](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "session complete with err: " << ew.what();
         channelCompletionPromise_.setException(std::move(ew));
       });
+}
+
+#ifndef _WIN32
+void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
+  transitionState(State::INITIALIZED, State::STARTING);
+
+  try {
+    beginMount().setValue();
+
+    createChannel(std::move(takeoverData.fd));
+    auto fuseCompleteFuture =
+        channel_->initializeFromTakeover(takeoverData.connInfo);
+    channelInitSuccessful(std::move(fuseCompleteFuture));
+  } catch (const std::exception&) {
+    transitionToFuseInitializationErrorState();
+    throw;
+  }
 }
 
 InodeMetadata EdenMount::getInitialInodeMetadata(mode_t mode) const {

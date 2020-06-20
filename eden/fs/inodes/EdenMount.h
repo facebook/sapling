@@ -852,9 +852,13 @@ class EdenMount {
 
 #ifdef _WIN32
   using channelType = FsChannel*;
+  using ChannelStopData = FsChannel::StopData;
 #else
   using channelType = folly::File;
+  using ChannelStopData = FuseChannel::StopData;
 #endif
+
+  using StopFuture = folly::SemiFuture<ChannelStopData>;
 
   /**
    * Open the platform specific device and mount it.
@@ -866,14 +870,11 @@ class EdenMount {
    */
   void createChannel(channelType fuseDevice);
 
-#ifndef _WIN32
-
   /**
-   * Once the FuseChannel has been initialized, set up callbacks to clean up
-   * correctly when the channel shuts down.
+   * Once the channel has been initialized, set up callbacks to clean up
+   * correctly when it shuts down.
    */
-  void fuseInitSuccessful(FuseChannel::StopFuture&& fuseCompleteFuture);
-#endif
+  void channelInitSuccessful(EdenMount::StopFuture&& channelCompleteFuture);
 
   /**
    * Private destructor.
