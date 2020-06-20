@@ -59,7 +59,7 @@ impl<T: HgIdHistoryStore + ?Sized> HgIdHistoryStorePyExt for T {
                 Err(e) => Err(e),
             })
             .collect::<PyResult<Vec<StoreKey>>>()?;
-        let missing = self.get_missing(&keys).map_pyerr(py)?;
+        let missing = py.allow_threads(|| self.get_missing(&keys)).map_pyerr(py)?;
 
         let results = PyList::new(py, &[]);
         for key in missing {
@@ -79,8 +79,8 @@ impl<T: HgIdHistoryStore + ?Sized> HgIdHistoryStorePyExt for T {
 
     fn get_node_info_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {
         let key = to_key(py, name, node)?;
-        let info = self
-            .get_node_info(&key)
+        let info = py
+            .allow_threads(|| self.get_node_info(&key))
             .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
@@ -145,9 +145,9 @@ fn to_node_info(
 
 impl<T: ToKeys + HgIdHistoryStore + ?Sized> IterableHgIdHistoryStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
-        let iter = self.to_keys().into_iter().map(|res| {
+        let iter = py.allow_threads(|| self.to_keys()).into_iter().map(|res| {
             let key = res?;
-            let node_info = self.get_node_info(&key)?.unwrap();
+            let node_info = py.allow_threads(|| self.get_node_info(&key))?.unwrap();
             let (name, node) = from_key(py, &key);
             let copyfrom = if key.path != node_info.parents[0].path {
                 if node_info.parents[0].path.is_empty() {
@@ -186,12 +186,13 @@ impl<T: HgIdMutableHistoryStore + ?Sized> HgIdMutableHistoryStorePyExt for T {
     ) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
         let nodeinfo = to_node_info(py, name, p1, p2, linknode, copyfrom)?;
-        self.add(&key, &nodeinfo).map_pyerr(py)?;
+        py.allow_threads(|| self.add(&key, &nodeinfo))
+            .map_pyerr(py)?;
         Ok(Python::None(py))
     }
 
     fn flush_py(&self, py: Python) -> PyResult<Option<PyPathBuf>> {
-        let opt = self.flush().map_pyerr(py)?;
+        let opt = py.allow_threads(|| self.flush()).map_pyerr(py)?;
         let opt = opt.map(|path| path.try_into()).transpose().map_pyerr(py)?;
         Ok(opt)
     }
@@ -203,7 +204,7 @@ impl<T: RemoteHistoryStore + ?Sized> RemoteHistoryStorePyExt for T {
             .iter(py)
             .map(|tuple| Ok(StoreKey::from(from_tuple_to_key(py, &tuple)?)))
             .collect::<PyResult<Vec<StoreKey>>>()?;
-        self.prefetch(&keys).map_pyerr(py)?;
+        py.allow_threads(|| self.prefetch(&keys)).map_pyerr(py)?;
         Ok(Python::None(py))
     }
 }

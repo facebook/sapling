@@ -63,8 +63,8 @@ pub trait RemoteDataStorePyExt: RemoteDataStore {
 impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
     fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
         let key = to_key(py, name, node)?;
-        let result = self
-            .get(&key)
+        let result = py
+            .allow_threads(|| self.get(&key))
             .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
@@ -74,8 +74,8 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
     fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
 
-        let data = self
-            .get(&key)
+        let data = py
+            .allow_threads(|| self.get(&key))
             .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
@@ -103,8 +103,8 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
     fn get_delta_chain_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyList> {
         let key = to_key(py, name, node)?;
 
-        let data = self
-            .get(&key)
+        let data = py
+            .allow_threads(|| self.get(&key))
             .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
@@ -125,8 +125,8 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
 
     fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node)?;
-        let metadata = self
-            .get_meta(&key)
+        let metadata = py
+            .allow_threads(|| self.get_meta(&key))
             .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
@@ -150,7 +150,7 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
                 Err(e) => Err(e),
             })
             .collect::<PyResult<Vec<StoreKey>>>()?;
-        let missing = self.get_missing(&keys).map_pyerr(py)?;
+        let missing = py.allow_threads(|| self.get_missing(&keys)).map_pyerr(py)?;
 
         let results = PyList::new(py, &[]);
         for key in missing {
@@ -172,8 +172,8 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
 impl<T: ContentDataStore + ?Sized> ContentDataStorePyExt for T {
     fn blob_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
         let key = to_key(py, name, node)?;
-        let result = self
-            .blob(&StoreKey::from(&key))
+        let result = py
+            .allow_threads(|| self.blob(&StoreKey::from(&key)))
             .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
         Ok(PyBytes::new(py, result.as_ref()))
@@ -181,8 +181,8 @@ impl<T: ContentDataStore + ?Sized> ContentDataStorePyExt for T {
 
     fn metadata_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
         let key = to_key(py, name, node)?;
-        let meta = self
-            .metadata(&StoreKey::from(&key))
+        let meta = py
+            .allow_threads(|| self.metadata(&StoreKey::from(&key)))
             .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
@@ -201,9 +201,9 @@ impl<T: ContentDataStore + ?Sized> ContentDataStorePyExt for T {
 
 impl<T: ToKeys + HgIdDataStore + ?Sized> IterableHgIdDataStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
-        let iter = self.to_keys().into_iter().map(|res| {
+        let iter = py.allow_threads(|| self.to_keys()).into_iter().map(|res| {
             let key = res?;
-            let data = self.get(&key)?.unwrap();
+            let data = py.allow_threads(|| self.get(&key))?.unwrap();
             let delta = Delta {
                 data: data.into(),
                 base: None,
@@ -241,12 +241,13 @@ impl<T: HgIdMutableDeltaStore + ?Sized> HgIdMutableDeltaStorePyExt for T {
             metadata = to_metadata(py, &meta)?;
         }
 
-        self.add(&delta, &metadata).map_pyerr(py)?;
+        py.allow_threads(|| self.add(&delta, &metadata))
+            .map_pyerr(py)?;
         Ok(Python::None(py))
     }
 
     fn flush_py(&self, py: Python) -> PyResult<Option<PyPathBuf>> {
-        let opt = self.flush().map_pyerr(py)?;
+        let opt = py.allow_threads(|| self.flush()).map_pyerr(py)?;
         let opt = opt.map(|path| path.try_into()).transpose().map_pyerr(py)?;
         Ok(opt)
     }
@@ -258,7 +259,7 @@ impl<T: RemoteDataStore + ?Sized> RemoteDataStorePyExt for T {
             .iter(py)
             .map(|tuple| Ok(StoreKey::from(from_tuple_to_key(py, &tuple)?)))
             .collect::<PyResult<Vec<StoreKey>>>()?;
-        self.prefetch(&keys).map_pyerr(py)?;
+        py.allow_threads(|| self.prefetch(&keys)).map_pyerr(py)?;
         Ok(Python::None(py))
     }
 
@@ -267,7 +268,7 @@ impl<T: RemoteDataStore + ?Sized> RemoteDataStorePyExt for T {
             .iter(py)
             .map(|tuple| Ok(StoreKey::from(from_tuple_to_key(py, &tuple)?)))
             .collect::<PyResult<Vec<StoreKey>>>()?;
-        let not_uploaded = self.upload(&keys).map_pyerr(py)?;
+        let not_uploaded = py.allow_threads(|| self.upload(&keys)).map_pyerr(py)?;
 
         let results = PyList::new(py, &[]);
         for key in not_uploaded {
