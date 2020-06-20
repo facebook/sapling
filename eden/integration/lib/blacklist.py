@@ -95,7 +95,6 @@ if sys.platform == "win32":
         "takeover_test.TakeoverTestHg": True,
         "thrift_test.ThriftTestHg": True,
         "unixsocket_test.UnixSocketTestHg": True,
-        "unlink_test.UnlinkTestHg": True,
         "userinfo_test.UserInfoTest": True,
         "xattr_test.XattrTestHg": True,
         #

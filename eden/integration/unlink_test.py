@@ -7,6 +7,7 @@
 import errno
 import os
 import shutil
+import sys
 
 from .lib import testcase
 
@@ -50,20 +51,37 @@ class UnlinkTest(testcase.EdenRepoTest):
         adir = os.path.join(self.mount, "adir")
         with self.assertRaises(OSError) as context:
             os.unlink(adir)
-        self.assertEqual(
-            context.exception.errno, errno.EISDIR, msg="unlink on a dir raises EISDIR"
-        )
+
+        if sys.platform != "win32":
+            self.assertEqual(
+                context.exception.errno,
+                errno.EISDIR,
+                msg="unlink on a dir raises EISDIR",
+            )
+        else:
+            self.assertEqual(
+                context.exception.errno,
+                errno.EACCES,
+                msg="unlink on a dir raises EACCES",
+            )
 
     def test_unlink_empty_dir(self) -> None:
         adir = os.path.join(self.mount, "an-empty-dir")
         os.mkdir(adir)
         with self.assertRaises(OSError) as context:
             os.unlink(adir)
-        self.assertEqual(
-            context.exception.errno,
-            errno.EISDIR,
-            msg="unlink on an empty dir raises EISDIR",
-        )
+        if sys.platform != "win32":
+            self.assertEqual(
+                context.exception.errno,
+                errno.EISDIR,
+                msg="unlink on an empty dir raises EISDIR",
+            )
+        else:
+            self.assertEqual(
+                context.exception.errno,
+                errno.EACCES,
+                msg="unlink on an empty dir raises EACCES",
+            )
 
     def test_rmdir_file(self) -> None:
         filename = os.path.join(self.mount, "hello")
