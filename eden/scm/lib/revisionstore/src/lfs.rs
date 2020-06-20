@@ -28,7 +28,7 @@ use parking_lot::{Mutex, RwLock};
 use rand::{thread_rng, Rng};
 use reqwest::{Client, Method, Proxy, RequestBuilder, Url};
 use serde_derive::{Deserialize, Serialize};
-use tokio::{runtime::Runtime, task::spawn_blocking};
+use tokio::{runtime::Runtime, task::spawn_blocking, time::timeout};
 
 use configparser::{
     config::ConfigSet,
@@ -83,6 +83,7 @@ struct HttpLfsRemote {
     user_agent: String,
     concurrent_fetches: usize,
     backoff_times: Vec<f32>,
+    request_timeout: Duration,
     client: Client,
     rt: Arc<Mutex<Runtime>>,
 }
@@ -905,6 +906,7 @@ impl LfsRemoteInner {
         url: Url,
         user_agent: String,
         backoff_times: Vec<f32>,
+        request_timeout: Duration,
         add_extra: impl Fn(RequestBuilder) -> RequestBuilder,
     ) -> Result<Option<Bytes>> {
         let mut backoff = backoff_times.into_iter();
@@ -917,7 +919,12 @@ impl LfsRemoteInner {
                 .header("User-Agent", &user_agent);
             let req = add_extra(req);
 
-            let reply = req.send().await?.error_for_status();
+            let reply = timeout(request_timeout, req.send())
+                .await
+                .with_context(|| {
+                    format!("Timed out after waiting {:?} from {}", request_timeout, url)
+                })??
+                .error_for_status();
 
             let (err, status) = match reply {
                 Ok(response) => return Ok(Some(response.bytes().await?)),
@@ -981,6 +988,7 @@ impl LfsRemoteInner {
                 http.url.join("objects/batch")?,
                 http.user_agent.clone(),
                 http.backoff_times.clone(),
+                http.request_timeout,
                 move |builder| builder.body(batch_json.clone()),
             )
             .await
@@ -999,6 +1007,7 @@ impl LfsRemoteInner {
         client: Client,
         user_agent: String,
         backoff_times: Vec<f32>,
+        request_timeout: Duration,
         op: Operation,
         action: ObjectAction,
         oid: Sha256,
@@ -1023,6 +1032,7 @@ impl LfsRemoteInner {
             url,
             user_agent,
             backoff_times,
+            request_timeout,
             move |mut builder| {
                 if let Some(header) = action.header.as_ref() {
                     for (key, val) in header {
@@ -1083,6 +1093,7 @@ impl LfsRemoteInner {
                 let client = http.client.clone();
                 let user_agent = http.user_agent.clone();
                 let backoff_times = http.backoff_times.clone();
+                let request_timeout = http.request_timeout.clone();
 
                 let oid = Sha256::from(oid.0);
                 let read_from_store = read_from_store.clone();
@@ -1092,6 +1103,7 @@ impl LfsRemoteInner {
                         client,
                         user_agent,
                         backoff_times,
+                        request_timeout,
                         op,
                         action,
                         oid,
@@ -1254,6 +1266,9 @@ impl LfsRemote {
 
             let backoff_times = config.get_or("lfs", "backofftimes", || vec![1f32, 4f32, 8f32])?;
 
+            let request_timeout =
+                Duration::from_millis(config.get_or("lfs", "requesttimeout", || 10_000)?);
+
             let rt = Arc::new(Mutex::new(Runtime::new()?));
             let client = Self::make_client(config)?;
 
@@ -1266,6 +1281,7 @@ impl LfsRemote {
                     user_agent,
                     concurrent_fetches,
                     backoff_times,
+                    request_timeout,
                     client,
                     rt,
                 }),
@@ -2055,8 +2071,7 @@ mod tests {
             );
 
             let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
-            let err = resp.err().unwrap();
-            assert_eq!(&err.to_string()[..120], "error sending request for url (https://mononoke-lfs.internal.tfbnw.net/ovrsource/objects/batch): error trying to connect");
+            assert!(resp.is_err());
 
             Ok(())
         }
@@ -2086,8 +2101,7 @@ mod tests {
             );
 
             let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
-            let err = resp.err().unwrap();
-            assert_eq!(&err.to_string()[..120], "error sending request for url (https://mononoke-lfs.internal.tfbnw.net/ovrsource/objects/batch): error trying to connect");
+            assert!(resp.is_err());
 
             Ok(())
         }
@@ -2205,6 +2219,31 @@ mod tests {
             expected_res.sort();
 
             assert_eq!(*out.lock(), expected_res);
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_request_timeout() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let mut config = make_lfs_config(&cachedir);
+
+            config.set("lfs", "requesttimeout", Some("0"), &Default::default());
+
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, None, &config)?;
+
+            let blob = (
+                Sha256::from_str(
+                    "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
+                )?,
+                6,
+                Bytes::from(&b"master"[..]),
+            );
+
+            let res = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            assert!(res.is_err());
 
             Ok(())
         }
