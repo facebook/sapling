@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Setup. SCM_SAMPLING_FILEPATH needs to be cleared as some environments may
@@ -64,6 +63,7 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   $ mkcommit c
   atexit handler executed
   atexit handler executed
+  >>> from edenscm.mercurial import pycompat
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read()
@@ -73,30 +73,30 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   ...         print(' '.join([parsedrecord["data"]["msg"], parsedrecord["category"]]))
   ...         assert len(parsedrecord["data"]) == 4
   ...     elif parsedrecord['category'] == 'measuredtimes':
-  ...         print('atexit_measured: ', repr(sorted(parsedrecord['data'])))
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked'] (no-fsmonitor !)
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fsmonitorwalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
+  ...         print('atexit_measured: ', ", ".join(sorted(parsedrecord['data'])))
+  atexit_measured:  atexit_measured, command_duration, fswalk_time, metrics_type, stdio_blocked (no-fsmonitor !)
+  atexit_measured:  atexit_measured, command_duration, fsmonitorwalk_time, metrics_type, stdio_blocked, watchmanquery_time (fsmonitor !)
   match filter commit_table
   message string commit_table
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked'] (no-fsmonitor !)
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked'] (no-fsmonitor !)
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fsmonitorwalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fsmonitorwalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
+  atexit_measured:  atexit_measured, command_duration, fswalk_time, metrics_type, stdio_blocked (no-fsmonitor !)
+  atexit_measured:  atexit_measured, command_duration, fswalk_time, metrics_type, stdio_blocked (no-fsmonitor !)
+  atexit_measured:  atexit_measured, command_duration, fsmonitorwalk_time, metrics_type, stdio_blocked, watchmanquery_time (fsmonitor !)
+  atexit_measured:  atexit_measured, command_duration, fsmonitorwalk_time, metrics_type, stdio_blocked, watchmanquery_time (fsmonitor !)
   match filter commit_table
   message string commit_table
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fswalk_time', u'metrics_type', u'stdio_blocked'] (no-fsmonitor !)
-  atexit_measured:  [u'atexit_measured', u'command_duration', u'fsmonitorwalk_time', u'metrics_type', u'stdio_blocked', u'watchmanquery_time'] (fsmonitor !)
+  atexit_measured:  atexit_measured, command_duration, fswalk_time, metrics_type, stdio_blocked (no-fsmonitor !)
+  atexit_measured:  atexit_measured, command_duration, fsmonitorwalk_time, metrics_type, stdio_blocked, watchmanquery_time (fsmonitor !)
 
 Test topdir logging:
   $ setconfig sampling.logtopdir=True
   $ setconfig sampling.key.command_info=command_info
   $ hg st > /dev/null
   atexit handler executed
-  >>> import json
+  >>> from edenscm.mercurial import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read().strip("\0").split("\0")
   >>> print([json.loads(d)["data"]["topdir"] for d in data if "topdir" in d])
-  [u'a_topdir']
+  ['a_topdir']
 
 Test env-var logging:
   $ setconfig sampling.env_vars=TEST_VAR1,TEST_VAR2
