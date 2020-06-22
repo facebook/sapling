@@ -9,13 +9,14 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use anyhow::Error;
+use futures::future::{BoxFuture, FutureExt};
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
 use futures_old::Future as Future01;
 use stats::prelude::*;
 
 use context::CoreContext;
 
-use crate::{Blobstore, BlobstoreBytes, BlobstoreGetData};
+use crate::{Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreWithLink};
 
 define_stats_struct! {
     CountedBlobstoreStats("mononoke.blobstore.{}", prefix: String),
@@ -31,6 +32,9 @@ define_stats_struct! {
     assert_present: timeseries(Rate, Sum),
     assert_present_ok: timeseries(Rate, Sum),
     assert_present_err: timeseries(Rate, Sum),
+    link: timeseries(Rate, Sum),
+    link_ok: timeseries(Rate, Sum),
+    link_err: timeseries(Rate, Sum),
 }
 
 #[derive(Clone, Debug)]
@@ -115,6 +119,28 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
                 res
             })
             .boxify()
+    }
+}
+
+impl<T: BlobstoreWithLink> BlobstoreWithLink for CountedBlobstore<T> {
+    fn link(
+        &self,
+        ctx: CoreContext,
+        existing_key: String,
+        link_key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let stats = self.stats.clone();
+        stats.link.add_value(1);
+        let res = self.blobstore.link(ctx, existing_key, link_key);
+        async move {
+            let res = res.await;
+            match res {
+                Ok(()) => stats.link_ok.add_value(1),
+                Err(_) => stats.link_err.add_value(1),
+            }
+            res
+        }
+        .boxed()
     }
 }
 
