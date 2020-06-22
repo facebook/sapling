@@ -11,6 +11,7 @@ context = { path = "../../server/context" }
 mercurial_mutation = { path = "../mutation" }
 mercurial_types = { path = "../types" }
 mononoke_types = { path = "../../mononoke_types" }
+phases = { path = "../../phases" }
 revisionstore_types = { path = "../../../scm/lib/revisionstore/types" }
 scuba_ext = { path = "../../common/scuba_ext" }
 types = { path = "../../../scm/lib/types" }

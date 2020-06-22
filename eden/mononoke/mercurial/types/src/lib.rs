@@ -61,7 +61,6 @@ pub mod hash;
 pub mod manifest;
 mod node;
 pub mod nodehash;
-pub mod phase;
 pub mod remotefilelog;
 pub mod sql_types;
 pub mod utils;
@@ -89,7 +88,6 @@ pub use nodehash::{
     HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgEntryId, HgFileNodeId,
     HgManifestId, HgNodeHash, HgNodeKey, NULL_CSID, NULL_HASH,
 };
-pub use phase::HgPhase;
 pub use remotefilelog::{convert_parents_to_remotefilelog_format, HgFileHistoryEntry};
 pub use utils::percent_encode;
 

@@ -42,11 +42,11 @@ use mercurial_bundles::{
 use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{
     blobs::{fetch_manifest_envelope, File},
-    FileBytes, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgParents, HgPhase, MPath,
-    RevFlags, NULL_CSID,
+    FileBytes, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgParents, MPath, RevFlags,
+    NULL_CSID,
 };
 use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
-use phases::Phases;
+use phases::{Phase, Phases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
@@ -556,7 +556,7 @@ async fn find_phase_heads(
     repo: &BlobRepo,
     heads: &[HgChangesetId],
     phases: &Arc<dyn Phases>,
-) -> Result<Vec<(HgChangesetId, HgPhase)>, Error> {
+) -> Result<Vec<(HgChangesetId, Phase)>, Error> {
     // Traverse the draft commits, collecting phase heads for the draft heads
     // and public commits that we encounter.
     let mut phase_heads = Vec::new();
@@ -567,10 +567,10 @@ async fn find_phase_heads(
         phases,
         heads,
         |_public_bcs_id, public_hg_cs_id| {
-            phase_heads.push((public_hg_cs_id, HgPhase::Public));
+            phase_heads.push((public_hg_cs_id, Phase::Public));
         },
         |_draft_head_bcs_id, draft_head_hg_cs_id| {
-            draft_heads.push((draft_head_hg_cs_id, HgPhase::Draft));
+            draft_heads.push((draft_head_hg_cs_id, Phase::Draft));
         },
         |_draft_bcs_id, _draft_hg_cs_id| true,
     )

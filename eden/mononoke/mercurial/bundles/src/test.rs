@@ -24,8 +24,9 @@ use crate::parts::phases_part;
 use async_compression::membuf::MemBuf;
 use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
 use fbinit::FacebookInit;
-use mercurial_types::{HgChangesetId, HgNodeHash, HgPhase, MPath, RepoPath, NULL_HASH};
+use mercurial_types::{HgChangesetId, HgNodeHash, MPath, RepoPath, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
+use phases::Phase;
 use quickcheck::{QuickCheck, StdGen};
 use slog::{o, Discard, Logger};
 
@@ -160,15 +161,15 @@ fn test_phases_part_encording(fb: FacebookInit) {
     let phases_entries = stream::iter_ok(vec![
         (
             HgChangesetId::from_bytes(b"bbbbbbbbbbbbbbbbbbbb").unwrap(),
-            HgPhase::Public,
+            Phase::Public,
         ),
         (
             HgChangesetId::from_bytes(b"cccccccccccccccccccc").unwrap(),
-            HgPhase::Public,
+            Phase::Public,
         ),
         (
             HgChangesetId::from_bytes(b"aaaaaaaaaaaaaaaaaaaa").unwrap(),
-            HgPhase::Draft,
+            Phase::Draft,
         ),
     ]);
 

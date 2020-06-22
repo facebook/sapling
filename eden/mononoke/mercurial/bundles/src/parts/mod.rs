@@ -27,10 +27,11 @@ use futures_ext::{BoxFuture, BoxStream, StreamExt};
 use futures_stats::Timed;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_types::{
-    Delta, HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgPhase, MPath, RepoPath, RevFlags,
+    Delta, HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, MPath, RepoPath, RevFlags,
     NULL_HASH,
 };
 use mononoke_types::DateTime;
+use phases::Phase;
 use scuba_ext::ScubaSampleBuilderExt;
 use std::fmt;
 use std::io::Write;
@@ -65,14 +66,14 @@ where
 
 pub fn phases_part<S>(ctx: CoreContext, phases_entries: S) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = (HgChangesetId, HgPhase), Error = Error> + Send + 'static,
+    S: Stream<Item = (HgChangesetId, Phase), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::PhaseHeads)?;
     let mut scuba_logger = ctx.scuba().clone();
     let payload = Vec::with_capacity(1024);
     let fut = phases_entries
         .fold(payload, |mut payload, (value, phase)| {
-            payload.write_u32::<BigEndian>(phase as u32)?;
+            payload.write_u32::<BigEndian>(u32::from(phase))?;
             payload.write(value.as_ref())?;
             Ok::<_, Error>(payload)
         })

@@ -24,7 +24,6 @@ use futures::{
     TryFutureExt,
 };
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
@@ -43,15 +42,6 @@ pub enum Phase {
     Public,
 }
 
-impl From<Phase> for HgPhase {
-    fn from(phase: Phase) -> HgPhase {
-        match phase {
-            Phase::Public => HgPhase::Public,
-            Phase::Draft => HgPhase::Draft,
-        }
-    }
-}
-
 impl fmt::Display for Phase {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -68,16 +58,38 @@ impl TryFrom<&[u8]> for Phase {
         match std::str::from_utf8(&buf) {
             Ok("Draft") => Ok(Phase::Draft),
             Ok("Public") => Ok(Phase::Public),
-            Ok(s) => Err(ErrorKind::PhasesError(
-                format!("Conversion error from &[u8] to Phase for {}", s).into(),
-            )),
-            _ => Err(ErrorKind::PhasesError(
-                format!(
-                    "Conversion error from &[u8] to Phase, received {} bytes",
-                    buf.len()
-                )
-                .into(),
-            )),
+            Ok(s) => Err(ErrorKind::PhasesError(format!(
+                "Conversion error from &[u8] to Phase for {}",
+                s
+            ))),
+            _ => Err(ErrorKind::PhasesError(format!(
+                "Conversion error from &[u8] to Phase, received {} bytes",
+                buf.len()
+            ))),
+        }
+    }
+}
+
+impl From<Phase> for u32 {
+    fn from(phase: Phase) -> u32 {
+        match phase {
+            Phase::Public => 0,
+            Phase::Draft => 1,
+        }
+    }
+}
+
+impl TryFrom<u32> for Phase {
+    type Error = ErrorKind;
+
+    fn try_from(phase_as_int: u32) -> Result<Phase, Self::Error> {
+        match phase_as_int {
+            0 => Ok(Phase::Public),
+            1 => Ok(Phase::Draft),
+            _ => Err(ErrorKind::PhasesError(format!(
+                "Cannot convert integer {} to a Phase",
+                phase_as_int
+            ))),
         }
     }
 }
@@ -325,4 +337,17 @@ pub async fn mark_reachable_as_public(
         result.extend(chunk)
     }
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_phase_as_integer() {
+        assert_eq!(u32::from(Phase::Public), 0);
+        assert_eq!(u32::from(Phase::Draft), 1);
+        assert_eq!(Phase::try_from(u32::from(Phase::Public)), Ok(Phase::Public));
+        assert_eq!(Phase::try_from(u32::from(Phase::Draft)), Ok(Phase::Draft));
+    }
 }
