@@ -806,3 +806,8 @@ def has_parso():
         return True
     except ImportError:
         return False
+
+
+@check("mononoke", "Mononoke server available")
+def has_mononoke():
+    return "USE_MONONOKE" in os.environ

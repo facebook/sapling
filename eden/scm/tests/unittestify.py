@@ -35,6 +35,10 @@ try:
     mononoke_hgcli = pathutils.get_build_rule_output_path(
         "//eden/mononoke/hgcli:hgcli", pathutils.BuildRuleTypes.RUST_BINARY
     )
+    edenapi_server = pathutils.get_build_rule_output_path(
+        "//eden/mononoke/edenapi_server:edenapi_server",
+        pathutils.BuildRuleTypes.RUST_BINARY,
+    )
 except ImportError:
     # Used by :hg_run_tests and :hg_watchman_run_tests unittest target
     hgpath = os.environ.get("HGTEST_HG")
@@ -42,6 +46,7 @@ except ImportError:
     watchman = os.environ.get("HGTEST_WATCHMAN")
     mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
     mononoke_hgcli = os.environ.get("HGTEST_MONONOKE_HGCLI")
+    edenapi_server = os.environ.get("HGTEST_EDENAPI_SERVER")
 
 
 if watchman is not None and not os.path.exists(str(watchman)):
@@ -95,6 +100,7 @@ def prepareargsenv(runtestsdir, port=None):
     if os.environ.get("USE_MONONOKE"):
         env["MONONOKE_SERVER"] = mononoke_server
         env["MONONOKE_HGCLI"] = mononoke_hgcli
+        env["EDENAPI_SERVER"] = edenapi_server
 
     return args, env
 
