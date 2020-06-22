@@ -15,8 +15,9 @@ use futures_ext::{BoxFuture, StreamExt};
 use futures_old::stream::futures_unordered;
 use scuba_ext::ScubaSampleBuilder;
 
-use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};
+use blobrepo::BlobRepo;
 use blobrepo_factory::new_memblob_empty;
+use blobrepo_hg::{ChangesetHandle, CreateChangeset};
 use context::CoreContext;
 use memblob::{EagerMemblob, LazyMemblob};
 use mercurial_types::{

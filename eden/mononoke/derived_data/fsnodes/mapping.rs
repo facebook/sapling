@@ -193,6 +193,7 @@ pub(crate) fn get_file_changes(
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use cloned::cloned;

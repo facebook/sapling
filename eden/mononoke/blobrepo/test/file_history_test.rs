@@ -6,8 +6,8 @@
  */
 
 use anyhow::{anyhow, Error};
-use blobrepo::file_history::get_file_history;
 use blobrepo::BlobRepo;
+use blobrepo_hg::file_history::get_file_history;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::BonsaiDerived;

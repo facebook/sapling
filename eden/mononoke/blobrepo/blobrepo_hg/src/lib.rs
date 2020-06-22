@@ -7,13 +7,31 @@
 
 #![deny(warnings)]
 
-use anyhow::Error;
+mod bonsai_generation;
+mod create_changeset;
+pub mod derive_hg_changeset;
+pub mod derive_hg_manifest;
+pub mod file_history;
+pub mod repo_commit;
+
+pub use crate::repo_commit::ChangesetHandle;
+pub use changeset_fetcher::ChangesetFetcher;
+// TODO: This is exported for testing - is this the right place for it?
+pub use crate::repo_commit::{check_case_conflicts, compute_changed_files, UploadEntries};
+pub mod errors {
+    pub use blobrepo_errors::*;
+}
+pub use create_changeset::CreateChangeset;
+
+use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
+use blobstore::Loadable;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiOrHgChangesetIds};
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix, Freshness};
 use cloned::cloned;
 use context::CoreContext;
+use failure_ext::FutureFailureExt;
 use filenodes::{FilenodeInfo, FilenodeResult, Filenodes};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::{
@@ -22,7 +40,7 @@ use futures_old::{
     Future, IntoFuture, Stream,
 };
 use mercurial_mutation::HgMutationStore;
-use mercurial_types::{HgChangesetId, HgFileNodeId};
+use mercurial_types::{blobs::HgBlobEnvelope, HgChangesetId, HgFileNodeId};
 use mononoke_types::{ChangesetId, RepoPath};
 use std::{
     collections::{HashMap, HashSet},
@@ -106,6 +124,20 @@ pub trait BlobRepoHg {
         ctx: CoreContext,
         path: RepoPath,
     ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error>;
+
+    fn get_hg_from_bonsai_changeset(
+        &self,
+        ctx: CoreContext,
+        bcs_id: ChangesetId,
+    ) -> BoxFuture<HgChangesetId, Error>;
+
+    fn get_filenode_from_envelope(
+        &self,
+        ctx: CoreContext,
+        path: &RepoPath,
+        node: HgFileNodeId,
+        linknode: HgChangesetId,
+    ) -> BoxFuture<FilenodeInfo, Error>;
 }
 
 impl BlobRepoHg for BlobRepo {
@@ -386,6 +418,50 @@ impl BlobRepoHg for BlobRepo {
     ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
         self.get_filenodes()
             .get_all_filenodes_maybe_stale(ctx, &path, self.get_repoid())
+    }
+
+    fn get_hg_from_bonsai_changeset(
+        &self,
+        ctx: CoreContext,
+        bcs_id: ChangesetId,
+    ) -> BoxFuture<HgChangesetId, Error> {
+        derive_hg_changeset::get_hg_from_bonsai_changeset(self, ctx, bcs_id).boxify()
+    }
+
+    fn get_filenode_from_envelope(
+        &self,
+        ctx: CoreContext,
+        path: &RepoPath,
+        node: HgFileNodeId,
+        linknode: HgChangesetId,
+    ) -> BoxFuture<FilenodeInfo, Error> {
+        node.load(ctx, &self.get_blobstore())
+            .with_context({
+                cloned!(path);
+                move || format!("While fetching filenode for {} {}", path, node)
+            })
+            .from_err()
+            .and_then({
+                cloned!(path, linknode);
+                move |envelope| {
+                    let (p1, p2) = envelope.parents();
+                    let copyfrom = envelope
+                        .get_copy_info()
+                        .with_context({
+                            cloned!(path);
+                            move || format!("While parsing copy information for {} {}", path, node)
+                        })?
+                        .map(|(path, node)| (RepoPath::FilePath(path), node));
+                    Ok(FilenodeInfo {
+                        filenode: node,
+                        p1,
+                        p2,
+                        copyfrom,
+                        linknode,
+                    })
+                }
+            })
+            .boxify()
     }
 }
 

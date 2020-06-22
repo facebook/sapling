@@ -8,6 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
 bonsai_hg_mapping = { path = "../../bonsai_hg_mapping" }
 cacheblob = { path = "../../blobstore/cacheblob" }

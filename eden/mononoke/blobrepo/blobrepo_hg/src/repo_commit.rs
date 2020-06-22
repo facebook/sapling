@@ -5,10 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
-use std::mem;
-use std::sync::{Arc, Mutex};
-
+use crate::derive_hg_changeset::check_case_conflict_in_manifest;
+use crate::BlobRepoHg;
 use anyhow::{format_err, Error, Result};
 use cloned::cloned;
 use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
@@ -30,6 +28,9 @@ use futures_old::IntoFuture;
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::prelude::*;
+use std::collections::{HashMap, HashSet};
+use std::mem;
+use std::sync::{Arc, Mutex};
 
 use ::manifest::{find_intersection_of_diffs, Diff, Entry, ManifestOps};
 use blobstore::{Blobstore, Loadable};
@@ -561,15 +562,15 @@ pub async fn check_case_conflicts(
     let mut case_conflict_checks = added_files
         .into_iter()
         .map(|path| async move {
-            let conflicting = repo
-                .check_case_conflict_in_manifest(
-                    ctx.clone(),
-                    parent_root_mf,
-                    child_root_mf,
-                    path.clone(),
-                )
-                .compat()
-                .await?;
+            let conflicting = check_case_conflict_in_manifest(
+                repo.clone(),
+                ctx.clone(),
+                parent_root_mf,
+                child_root_mf,
+                path.clone(),
+            )
+            .compat()
+            .await?;
 
             Result::<_, Error>::Ok((path, conflicting))
         })

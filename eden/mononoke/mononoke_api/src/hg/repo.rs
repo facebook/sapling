@@ -117,6 +117,7 @@ mod tests {
     use std::sync::Arc;
 
     use anyhow::Error;
+    use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;

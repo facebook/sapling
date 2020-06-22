@@ -13,6 +13,7 @@
 use anyhow::{bail, format_err, Error, Result};
 use benchmark_lib::{new_benchmark_repo, GenManifest};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use clap::{App, Arg};
 use cmdlib::args;
 use context::CoreContext;

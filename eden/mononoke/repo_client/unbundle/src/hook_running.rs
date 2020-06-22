@@ -10,6 +10,7 @@
 use crate::{resolver::HookFailure, BundleResolverError, PostResolveAction, PostResolvePushRebase};
 use anyhow::Context;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;

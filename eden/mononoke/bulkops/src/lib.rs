@@ -84,6 +84,7 @@ mod tests {
 
     use fbinit::FacebookInit;
 
+    use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkName;
     use fixtures::branch_wide;
     use mercurial_types::HgChangesetId;

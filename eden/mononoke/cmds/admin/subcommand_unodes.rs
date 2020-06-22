@@ -9,6 +9,7 @@ use crate::error::SubcommandError;
 
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;

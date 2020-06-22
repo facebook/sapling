@@ -14,8 +14,15 @@ mod utils;
 use ::manifest::{Entry, Manifest, ManifestOps};
 use anyhow::Error;
 use assert_matches::assert_matches;
-use blobrepo::{compute_changed_files, errors::ErrorKind, BlobRepo, UploadEntries};
-use blobrepo_hg::BlobRepoHg;
+use blobrepo::{errors::ErrorKind, BlobRepo};
+use blobrepo_hg::{
+    derive_hg_changeset::{
+        check_case_conflict_in_manifest, get_hg_from_bonsai_changeset_with_impl,
+        get_manifest_from_bonsai,
+    },
+    repo_commit::{compute_changed_files, UploadEntries},
+    BlobRepoHg,
+};
 use blobstore::{Loadable, Storable};
 use bytes::Bytes;
 use bytes::BytesMut;
@@ -734,7 +741,8 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
 
         // fails with conflict
         {
-            let ms_hash = (repo.get_manifest_from_bonsai(
+            let ms_hash = (get_manifest_from_bonsai(
+                &repo,
                 ctx.clone(),
                 make_bonsai_changeset(None, None, vec![]),
                 vec![ms1, ms2],
@@ -749,7 +757,8 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
 
         // resolves same content different parents for `branch` file
         {
-            let ms_hash = (repo.get_manifest_from_bonsai(
+            let ms_hash = (get_manifest_from_bonsai(
+                &repo,
                 ctx.clone(),
                 make_bonsai_changeset(None, None, vec![("base", None)]),
                 vec![ms1, ms2],
@@ -805,7 +814,7 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
                 .await
                 .unwrap();
             let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
-            let ms_hash = (repo.get_manifest_from_bonsai(ctx.clone(), bcs, vec![ms1, ms2]))
+            let ms_hash = (get_manifest_from_bonsai(&repo, ctx.clone(), bcs, vec![ms1, ms2]))
                 .compat()
                 .await
                 .expect("adding new file should not produce coflict");
@@ -881,7 +890,8 @@ fn test_case_conflict_in_manifest(fb: FacebookInit) {
                 .unwrap()
                 .manifestid();
             assert_eq!(
-                (repo.check_case_conflict_in_manifest(
+                (check_case_conflict_in_manifest(
+                    repo.clone(),
                     ctx.clone(),
                     mf,
                     child_mf,
@@ -1127,7 +1137,7 @@ fn test_hg_commit_generation_simple(fb: FacebookInit) {
         ))
         .unwrap();
     let (_, count) = runtime
-        .block_on(repo.get_hg_from_bonsai_changeset_with_impl(ctx, bcs_id))
+        .block_on(get_hg_from_bonsai_changeset_with_impl(&repo, ctx, bcs_id))
         .unwrap();
     assert_eq!(count, 1);
 }
@@ -1161,7 +1171,11 @@ fn test_hg_commit_generation_stack(fb: FacebookInit) {
         ))
         .unwrap();
     let (_, count) = runtime
-        .block_on(repo.get_hg_from_bonsai_changeset_with_impl(ctx, top_of_stack))
+        .block_on(get_hg_from_bonsai_changeset_with_impl(
+            &repo,
+            ctx,
+            top_of_stack,
+        ))
         .unwrap();
     assert_eq!(count, stack_size);
 }
@@ -1187,12 +1201,20 @@ fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
         .unwrap();
 
     let (_, count) = runtime
-        .block_on(repo.get_hg_from_bonsai_changeset_with_impl(ctx.clone(), first_bcs_id))
+        .block_on(get_hg_from_bonsai_changeset_with_impl(
+            &repo,
+            ctx.clone(),
+            first_bcs_id,
+        ))
         .unwrap();
     assert_eq!(count, 1);
 
     let (_, count) = runtime
-        .block_on(repo.get_hg_from_bonsai_changeset_with_impl(ctx, second_bcs_id))
+        .block_on(get_hg_from_bonsai_changeset_with_impl(
+            &repo,
+            ctx,
+            second_bcs_id,
+        ))
         .unwrap();
     assert_eq!(count, 1);
 }
@@ -1212,7 +1234,11 @@ fn test_hg_commit_generation_diamond(fb: FacebookInit) {
         .unwrap();
 
     let (_, count) = runtime
-        .block_on(repo.get_hg_from_bonsai_changeset_with_impl(ctx.clone(), last_bcs_id))
+        .block_on(get_hg_from_bonsai_changeset_with_impl(
+            &repo,
+            ctx.clone(),
+            last_bcs_id,
+        ))
         .unwrap();
     assert_eq!(count, 4);
 }
@@ -1229,7 +1255,11 @@ fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
         .unwrap();
 
     let (_, count) = runtime
-        .block_on(repo.get_hg_from_bonsai_changeset_with_impl(ctx.clone(), bcs_id))
+        .block_on(get_hg_from_bonsai_changeset_with_impl(
+            &repo,
+            ctx.clone(),
+            bcs_id,
+        ))
         .unwrap();
     assert_eq!(count, 200);
 }
@@ -2000,7 +2030,7 @@ mod octopus_merges {
 
 mod case_conflicts {
     use super::*;
-    use blobrepo::check_case_conflicts;
+    use blobrepo_hg::check_case_conflicts;
 
     #[fbinit::compat_test]
     async fn test_internal_case_conflict(fb: FacebookInit) -> Result<(), Error> {

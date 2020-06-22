@@ -50,6 +50,7 @@
 /// more information on those;
 use anyhow::{format_err, Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};

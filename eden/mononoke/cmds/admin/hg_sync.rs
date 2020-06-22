@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness};
 use clap::{App, Arg, ArgMatches, SubCommand};

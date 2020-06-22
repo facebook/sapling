@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use futures::compat::Future01CompatExt;

@@ -9,14 +9,34 @@ include = ["src/**/*.rs"]
 [dependencies]
 blobrepo = { path = ".." }
 blobrepo_errors = { path = "../errors" }
+blobstore = { path = "../../blobstore" }
 bonsai_hg_mapping = { path = "../../bonsai_hg_mapping" }
 bookmarks = { path = "../../bookmarks" }
+changeset_fetcher = { path = "../changeset_fetcher" }
+changesets = { path = "../../changesets" }
 context = { path = "../../server/context" }
 filenodes = { path = "../../filenodes" }
+manifest = { path = "../../manifest" }
 mercurial_mutation = { path = "../../mercurial/mutation" }
 mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
+repo_blobstore = { path = "../repo_blobstore" }
+scuba_ext = { path = "../../common/scuba_ext" }
+topo_sort = { path = "../../common/topo_sort" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
+futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+maplit = "1.0"
+rand = { version = "0.7", features = ["small_rng"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
+thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
+uuid = { version = "0.8.1", features = ["v4"] }

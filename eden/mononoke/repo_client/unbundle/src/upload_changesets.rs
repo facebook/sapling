@@ -8,7 +8,8 @@
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
 use anyhow::{bail, Context, Error, Result};
-use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};
+use blobrepo::BlobRepo;
+use blobrepo_hg::{ChangesetHandle, CreateChangeset};
 use context::CoreContext;
 use failure_ext::{Compat, StreamFailureErrorExt};
 use futures_ext::{

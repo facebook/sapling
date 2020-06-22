@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bytes::BytesMut;
 use clap::{App, ArgMatches, SubCommand};

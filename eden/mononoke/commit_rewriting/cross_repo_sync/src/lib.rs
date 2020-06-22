@@ -11,6 +11,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use anyhow::{bail, format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobsync::copy_content;
 use bookmark_renaming::{

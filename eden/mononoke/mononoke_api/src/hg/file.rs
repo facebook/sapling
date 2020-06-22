@@ -6,7 +6,7 @@
  */
 
 use async_trait::async_trait;
-use blobrepo::file_history::get_file_history_maybe_incomplete;
+use blobrepo_hg::file_history::get_file_history_maybe_incomplete;
 use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
 use futures::{

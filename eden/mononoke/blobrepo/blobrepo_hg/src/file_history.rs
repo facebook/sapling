@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, VecDeque};
-
-use crate::repo::BlobRepo;
+use crate::BlobRepoHg;
 use anyhow::{anyhow, Error};
+use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, FilenodeResult};
@@ -26,6 +25,7 @@ use maplit::hashset;
 use mercurial_types::{
     HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath, NULL_CSID, NULL_HASH,
 };
+use std::collections::{HashMap, VecDeque};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

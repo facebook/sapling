@@ -12,6 +12,7 @@ mod mem_writes_changesets;
 
 use anyhow::{format_err, Context, Error};
 use blobrepo::{BlobRepo, DangerousOverride};
+use blobrepo_hg::{derive_hg_changeset::get_manifest_from_bonsai, BlobRepoHg};
 use blobstore::Blobstore;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bytes::Bytes;
@@ -331,10 +332,10 @@ async fn gitimport(
             }))
             .await?;
 
-            let manifest = repo
-                .get_manifest_from_bonsai(ctx.clone(), bcs.clone(), parent_manifests)
-                .compat()
-                .await?;
+            let manifest =
+                get_manifest_from_bonsai(&repo, ctx.clone(), bcs.clone(), parent_manifests)
+                    .compat()
+                    .await?;
 
             hg_manifests.insert(*bcs_id, manifest);
 

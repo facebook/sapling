@@ -10,7 +10,7 @@
 mod config;
 
 use anyhow::{format_err, Error, Result};
-use blobrepo_hg::BlobRepoHg;
+use blobrepo_hg::{derive_hg_changeset::get_manifest_from_bonsai, BlobRepoHg};
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -385,7 +385,7 @@ fn subcommmand_hg_manifest_verify(
 
                         let start = Instant::now();
 
-                        repo.get_manifest_from_bonsai(ctx.clone(), bonsai.clone(), parents)
+                        get_manifest_from_bonsai(&repo, ctx.clone(), bonsai.clone(), parents)
                             .map(move |result| {
                                 if result != expected {
                                     println!(

@@ -16,6 +16,7 @@ path = "benchmark.rs"
 [dependencies]
 blobrepo = { path = "../blobrepo" }
 blobrepo_factory = { path = "../blobrepo/factory" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 blobstore = { path = "../blobstore" }
 bonsai_git_mapping = { path = "../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { path = "../bonsai_globalrev_mapping" }

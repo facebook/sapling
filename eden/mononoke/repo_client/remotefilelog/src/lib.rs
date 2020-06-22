@@ -12,7 +12,8 @@ mod redaction;
 use std::{collections::HashSet, fmt};
 
 use anyhow::Error;
-use blobrepo::{file_history::get_file_history_maybe_incomplete, BlobRepo};
+use blobrepo::BlobRepo;
+use blobrepo_hg::file_history::get_file_history_maybe_incomplete;
 use blobstore::Loadable;
 use bytes::{Bytes, BytesMut};
 use cloned::cloned;
@@ -305,6 +306,7 @@ mod test {
     use super::*;
     use assert_matches::assert_matches;
     use blobrepo::DangerousOverride;
+    use blobrepo_hg::BlobRepoHg;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use futures::compat::Future01CompatExt;

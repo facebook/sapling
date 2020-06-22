@@ -26,7 +26,8 @@ use scuba_ext::ScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;
 use tracing::{trace_args, EventId, Traced};
 
-use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};
+use blobrepo::BlobRepo;
+use blobrepo_hg::{ChangesetHandle, CreateChangeset};
 use lfs_import_lib::lfs_upload;
 use mercurial_revlog::{manifest, revlog::RevIdx, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{

@@ -8,6 +8,7 @@
 use crate::common::get_file_nodes;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;

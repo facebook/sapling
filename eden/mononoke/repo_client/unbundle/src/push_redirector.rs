@@ -24,6 +24,7 @@ use anyhow::{format_err, Error};
 use backsyncer::backsync_all_latest;
 use backsyncer::TargetRepoDbs;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;

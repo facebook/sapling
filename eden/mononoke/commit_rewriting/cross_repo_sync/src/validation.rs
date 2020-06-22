@@ -13,6 +13,7 @@ use super::{CommitSyncOutcome, CommitSyncer};
 use crate::types::{Source, Target};
 
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;

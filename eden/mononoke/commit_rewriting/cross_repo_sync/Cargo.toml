@@ -15,6 +15,7 @@ path = "test/main.rs"
 
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
 blobsync = { path = "../../blobrepo/blobsync" }
 bookmark_renaming = { path = "../bookmark_renaming" }
@@ -43,7 +44,6 @@ thiserror = "1.0"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 cross_repo_sync_test_utils = { path = "test_utils" }
 fixtures = { path = "../../tests/fixtures" }
 revset = { path = "../../revset" }

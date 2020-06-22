@@ -9,6 +9,7 @@
 
 use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use context::CoreContext;
 use futures::{stream, Future, Stream};
 use mercurial_bundles::obsmarkers::MetadataEntry;
