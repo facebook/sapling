@@ -66,6 +66,7 @@ use std::{
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
 use tracing::{trace_args, EventId, Traced};
+use type_map::TypeMap;
 use uuid::Uuid;
 
 define_stats! {
@@ -110,7 +111,6 @@ pub struct BlobRepo {
     changesets: Arc<dyn Changesets>,
     bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     hg_mutation_store: Arc<dyn HgMutationStore>,
     repoid: RepositoryId,
     // Returns new ChangesetFetcher that can be used by operation that work with commit graph
@@ -122,23 +122,28 @@ pub struct BlobRepo {
     phases_factory: SqlPhasesFactory,
     derived_data_config: DerivedDataConfig,
     reponame: String,
+    attributes: Arc<TypeMap>,
 }
 
 impl BlobRepo {
-    pub fn new(
+    /// Create new `BlobRepo` object.
+    ///
+    /// Avoid using this constructor directly as it requires properly initialized `attributes`
+    /// argument. Instead use `blobrepo_factory::*` functions.
+    pub fn new_dangerous(
         bookmarks: Arc<dyn Bookmarks>,
         blobstore_args: RepoBlobstoreArgs,
         filenodes: Arc<dyn Filenodes>,
         changesets: Arc<dyn Changesets>,
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         hg_mutation_store: Arc<dyn HgMutationStore>,
         derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
         phases_factory: SqlPhasesFactory,
         derived_data_config: DerivedDataConfig,
         reponame: String,
+        attributes: Arc<TypeMap>,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
@@ -159,7 +164,6 @@ impl BlobRepo {
             changesets,
             bonsai_git_mapping,
             bonsai_globalrev_mapping,
-            bonsai_hg_mapping,
             hg_mutation_store,
             repoid,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
@@ -168,7 +172,12 @@ impl BlobRepo {
             phases_factory,
             derived_data_config,
             reponame,
+            attributes,
         }
+    }
+
+    pub fn get_attribute<T: ?Sized + Send + Sync + 'static>(&self) -> Option<&Arc<T>> {
+        self.attributes.get::<T>()
     }
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.
@@ -605,7 +614,7 @@ impl BlobRepo {
         hg_cs_id: HgChangesetId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bonsai_from_hg.add_value(1);
-        self.bonsai_hg_mapping
+        self.get_bonsai_hg_mapping()
             .get_bonsai_from_hg(ctx, self.repoid, hg_cs_id)
     }
 
@@ -623,7 +632,7 @@ impl BlobRepo {
 
         let bonsai_or_hg_cs_ids = bonsai_or_hg_cs_ids.into();
         let fetched_from_mapping = self
-            .bonsai_hg_mapping
+            .get_bonsai_hg_mapping()
             .get(ctx.clone(), self.repoid, bonsai_or_hg_cs_ids.clone())
             .map(|result| {
                 result
@@ -746,8 +755,13 @@ impl BlobRepo {
         })
     }
 
-    pub fn get_bonsai_hg_mapping(&self) -> Arc<dyn BonsaiHgMapping> {
-        self.bonsai_hg_mapping.clone()
+    pub fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping> {
+        match self.get_attribute::<dyn BonsaiHgMapping>() {
+            Some(attr) => attr,
+            None => panic!(
+                "BlboRepo initalized incorrectly and does not have BonsaiHgMapping attribute",
+            ),
+        }
     }
 
     pub fn get_bookmarks_object(&self) -> Arc<dyn Bookmarks> {
@@ -1161,7 +1175,8 @@ impl BlobRepo {
         let key = self.generate_lease_key(&bcs_id);
         let repoid = self.get_repoid();
 
-        cloned!(self.bonsai_hg_mapping, self.derived_data_lease);
+        cloned!(self.derived_data_lease);
+        let bonsai_hg_mapping = self.get_bonsai_hg_mapping().clone();
         let repo = self.clone();
 
         let backoff_ms = 200;
@@ -1303,7 +1318,7 @@ impl BlobRepo {
                         .and_then({
                             cloned!(ctx, repo);
                             move |_| {
-                                repo.bonsai_hg_mapping.add(
+                                repo.get_bonsai_hg_mapping().add(
                                     ctx,
                                     BonsaiHgMappingEntry {
                                         repo_id: repo.get_repoid(),
@@ -1404,7 +1419,7 @@ impl BlobRepo {
             repo: BlobRepo,
             bcs_id: ChangesetId,
         ) -> impl Future<Item = HgBlobChangeset, Error = Error> {
-            let bonsai_hg_mapping = repo.bonsai_hg_mapping.clone();
+            let bonsai_hg_mapping = repo.get_bonsai_hg_mapping().clone();
             let repoid = repo.repoid;
 
             bonsai_hg_mapping
@@ -1491,12 +1506,13 @@ impl BlobRepo {
 
         let repo = self.clone();
 
-        cloned!(self.bonsai_hg_mapping, self.repoid);
+        cloned!(self.repoid);
+        let bonsai_hg_mapping = self.get_bonsai_hg_mapping().clone();
         find_toposorted_bonsai_cs_with_no_hg_cs_generated(
             ctx.clone(),
             repo.clone(),
             bcs_id.clone(),
-            self.bonsai_hg_mapping.clone(),
+            bonsai_hg_mapping.clone(),
         )
         .and_then({
             cloned!(ctx);
@@ -1898,7 +1914,8 @@ impl CreateChangeset {
         let changeset_complete_fut = changeset
             .join(parents_complete)
             .and_then({
-                cloned!(ctx, repo.bonsai_hg_mapping);
+                cloned!(ctx);
+                let bonsai_hg_mapping = repo.get_bonsai_hg_mapping().clone();
                 move |((hg_cs, bonsai_cs), _)| {
                     let bcs_id = bonsai_cs.get_changeset_id();
                     let bonsai_hg_entry = BonsaiHgMappingEntry {
@@ -1982,7 +1999,6 @@ impl Clone for BlobRepo {
             changesets: self.changesets.clone(),
             bonsai_git_mapping: self.bonsai_git_mapping.clone(),
             bonsai_globalrev_mapping: self.bonsai_globalrev_mapping.clone(),
-            bonsai_hg_mapping: self.bonsai_hg_mapping.clone(),
             hg_mutation_store: self.hg_mutation_store.clone(),
             repoid: self.repoid.clone(),
             changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
@@ -1991,6 +2007,7 @@ impl Clone for BlobRepo {
             phases_factory: self.phases_factory.clone(),
             derived_data_config: self.derived_data_config.clone(),
             reponame: self.reponame.clone(),
+            attributes: self.attributes.clone(),
         }
     }
 }
@@ -2126,9 +2143,11 @@ impl DangerousOverride<Arc<dyn BonsaiHgMapping>> for BlobRepo {
     where
         F: FnOnce(Arc<dyn BonsaiHgMapping>) -> Arc<dyn BonsaiHgMapping>,
     {
-        let bonsai_hg_mapping = modify(self.bonsai_hg_mapping.clone());
+        let bonsai_hg_mapping = modify(self.get_bonsai_hg_mapping().clone());
+        let mut attrs = self.attributes.as_ref().clone();
+        attrs.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
         BlobRepo {
-            bonsai_hg_mapping,
+            attributes: Arc::new(attrs),
             ..self.clone()
         }
     }

@@ -190,6 +190,7 @@ members = [
     "common/scuba_ext",
     "common/sql_construct",
     "common/topo_sort",
+    "common/type_map",
     "common/uniqueheap",
     "derived_data",
     "derived_data/blame",

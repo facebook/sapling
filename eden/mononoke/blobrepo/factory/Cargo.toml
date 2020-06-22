@@ -40,6 +40,7 @@ repo_blobstore = { path = "../repo_blobstore" }
 scuba_ext = { path = "../../common/scuba_ext" }
 sql_construct = { path = "../../common/sql_construct" }
 sql_ext = { path = "../../common/rust/sql_ext" }
+type_map = { path = "../../common/type_map" }
 unodes = { path = "../../derived_data/unodes" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

@@ -35,6 +35,7 @@ phases = { path = "../phases" }
 repo_blobstore = { path = "repo_blobstore" }
 scuba_ext = { path = "../common/scuba_ext" }
 topo_sort = { path = "../common/topo_sort" }
+type_map = { path = "../common/type_map" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

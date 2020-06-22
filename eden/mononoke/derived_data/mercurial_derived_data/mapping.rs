@@ -52,7 +52,7 @@ impl HgChangesetIdMapping {
     pub fn new(repo: &BlobRepo) -> Self {
         Self {
             repo_id: repo.get_repoid(),
-            mapping: repo.get_bonsai_hg_mapping(),
+            mapping: repo.get_bonsai_hg_mapping().clone(),
         }
     }
 }

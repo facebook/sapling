@@ -11,15 +11,15 @@ use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, make_metadata_sql_factory, MetadataSqlFactory};
-use bonsai_git_mapping::SqlBonsaiGitMappingConnection;
-use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
-use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
+use bonsai_git_mapping::{BonsaiGitMapping, SqlBonsaiGitMappingConnection};
+use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping};
+use bonsai_hg_mapping::{BonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{
-    new_cachelib_blobstore_no_lease, new_memcache_blobstore, InProcessLease, MemcacheOps,
+    new_cachelib_blobstore_no_lease, new_memcache_blobstore, InProcessLease, LeaseOps, MemcacheOps,
 };
 use changeset_info::ChangesetInfo;
-use changesets::{CachingChangesets, SqlChangesets};
+use changesets::{CachingChangesets, Changesets, SqlChangesets};
 use dbbookmarks::SqlBookmarks;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
@@ -34,7 +34,7 @@ use futures_util::try_join;
 use git_types::TreeHandle;
 use maplit::btreeset;
 use memblob::EagerMemblob;
-use mercurial_mutation::SqlHgMutationStoreBuilder;
+use mercurial_mutation::{HgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
     self, DerivedDataConfig, FilestoreParams, Redaction, RepoConfig, StorageConfig, UnodeVersion,
 };
@@ -50,6 +50,7 @@ use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_construct::SqlConstruct;
 use sql_ext::{facebook::MysqlOptions, SqlConnections};
 use std::{collections::HashMap, sync::Arc, time::Duration};
+use type_map::TypeMap;
 use unodes::RootUnodeManifestId;
 
 pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
@@ -326,7 +327,7 @@ impl TestRepoBuilder {
 
         let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
 
-        Ok(BlobRepo::new(
+        Ok(blobrepo_new(
             Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
             repo_blobstore_args,
             Arc::new(
@@ -431,7 +432,7 @@ pub fn new_memblob_with_connection_with_id(
     let phases_factory = SqlPhasesFactory::from_sql_connections(sql_connections.clone());
 
     Ok((
-        BlobRepo::new(
+        blobrepo_new(
             Arc::new(SqlBookmarks::from_sql_connections(sql_connections.clone())),
             repo_blobstore_args,
             // Filenodes are intentionally created on another connection
@@ -575,7 +576,7 @@ async fn new_development(
 
     let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
-    Ok(BlobRepo::new(
+    Ok(blobrepo_new(
         bookmarks,
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
         Arc::new(filenodes_builder.build()),
@@ -704,7 +705,7 @@ async fn new_production(
     phases_factory.enable_caching(fb, phases_cache_pool);
     let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
-    Ok(BlobRepo::new(
+    Ok(blobrepo_new(
         bookmarks,
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
         Arc::new(filenodes_builder.build()) as Arc<dyn Filenodes>,
@@ -729,4 +730,41 @@ fn get_volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
 fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
     cachelib::get_pool(name)
         .ok_or_else(|| Error::from(ErrorKind::MissingCachePool(name.to_string())))
+}
+
+pub fn blobrepo_new(
+    bookmarks: Arc<dyn Bookmarks>,
+    blobstore_args: RepoBlobstoreArgs,
+    filenodes: Arc<dyn Filenodes>,
+    changesets: Arc<dyn Changesets>,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+    bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
+    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    hg_mutation_store: Arc<dyn HgMutationStore>,
+    derived_data_lease: Arc<dyn LeaseOps>,
+    filestore_config: FilestoreConfig,
+    phases_factory: SqlPhasesFactory,
+    derived_data_config: DerivedDataConfig,
+    reponame: String,
+) -> BlobRepo {
+    let attributes = {
+        let mut attributes = TypeMap::new();
+        attributes.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
+        Arc::new(attributes)
+    };
+    BlobRepo::new_dangerous(
+        bookmarks,
+        blobstore_args,
+        filenodes,
+        changesets,
+        bonsai_git_mapping,
+        bonsai_globalrev_mapping,
+        hg_mutation_store,
+        derived_data_lease,
+        filestore_config,
+        phases_factory,
+        derived_data_config,
+        reponame,
+        attributes,
+    )
 }
