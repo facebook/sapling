@@ -9,7 +9,10 @@
 #![feature(const_fn)]
 
 pub mod errors;
-pub mod globalrev;
 pub mod hash;
 pub mod manifest;
 pub mod nodehash;
+
+pub mod globalrev {
+    pub use mononoke_types_mocks::globalrev::*;
+}

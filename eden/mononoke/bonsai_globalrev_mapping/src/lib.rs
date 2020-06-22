@@ -23,8 +23,7 @@ use futures::{
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::Future;
 use futures_old::{future, IntoFuture};
-use mercurial_types::Globalrev;
-use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, Globalrev, RepositoryId};
 use slog::warn;
 use sql::queries;
 use std::sync::Arc;

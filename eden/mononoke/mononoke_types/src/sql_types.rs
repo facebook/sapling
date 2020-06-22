@@ -6,6 +6,7 @@
  */
 
 use crate::datetime::Timestamp;
+use crate::globalrev::Globalrev;
 use crate::hash::{Blake2, GitSha1};
 use crate::repo::RepositoryId;
 use crate::typed_hash::ChangesetId;
@@ -121,4 +122,28 @@ impl ConvIr<GitSha1> for GitSha1 {
 
 impl FromValue for GitSha1 {
     type Intermediate = GitSha1;
+}
+
+impl From<Globalrev> for Value {
+    fn from(globalrev: Globalrev) -> Self {
+        Value::UInt(globalrev.id())
+    }
+}
+
+impl ConvIr<Globalrev> for Globalrev {
+    fn new(v: Value) -> FromValueResult<Self> {
+        Ok(Globalrev::new(from_value_opt(v)?))
+    }
+
+    fn commit(self) -> Self {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for Globalrev {
+    type Intermediate = Globalrev;
 }

@@ -27,10 +27,10 @@ use futures::{compat::Future01CompatExt, future::FutureExt as NewFutureExt};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{loop_fn, ok, Future, Loop};
 use futures_old::stream::{self, FuturesUnordered, Stream};
-use mercurial_types::Globalrev;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{
-    BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, MononokeId, RepositoryId, Timestamp,
+    BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, Globalrev, MononokeId, RepositoryId,
+    Timestamp,
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};

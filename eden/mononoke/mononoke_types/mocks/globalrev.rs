@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use mercurial_types::Globalrev;
+use mononoke_types::Globalrev;
 
 pub const GLOBALREV_ZERO: Globalrev = Globalrev::new(0);
 pub const GLOBALREV_ONE: Globalrev = Globalrev::new(1);

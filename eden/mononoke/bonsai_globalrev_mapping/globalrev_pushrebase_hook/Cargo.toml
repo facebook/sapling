@@ -13,7 +13,6 @@ path = "lib.rs"
 bonsai_globalrev_mapping = { path = ".." }
 bookmarks = { path = "../../bookmarks" }
 context = { path = "../../server/context" }
-mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
 pushrebase = { path = "../../pushrebase" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

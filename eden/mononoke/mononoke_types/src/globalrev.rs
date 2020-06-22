@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use crate::BonsaiChangeset;
 use anyhow::{bail, Error, Result};
-use mononoke_types::BonsaiChangeset;
 use std::str;
 
 pub const GLOBALREV_EXTRA: &str = "global_rev";
