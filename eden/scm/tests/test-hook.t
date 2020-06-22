@@ -1,4 +1,3 @@
-#require py2
   $ disable treemanifest
 commit hooks can see env vars
 (and post-transaction one are run unlocked)
@@ -525,17 +524,7 @@ test python hooks
 
 The second egrep is to filter out lines like '    ^', which are slightly
 different between Python 2.6 and Python 2.7.
-  $ hg pull ../a --traceback 2>&1 | egrep -v '^( +File|    [_a-zA-Z*(])' | egrep -v '^  '
-  pulling from ../a
-  searching for changes
-  exception from first failed import attempt:
-  Traceback (most recent call last):
-  SyntaxError: * (glob)
-  exception from second failed import attempt:
-  Traceback (most recent call last):
-  ImportError: No module named edenscm_hgext_syntaxerror
-  Traceback (most recent call last):
-  HookLoadError: preoutgoing.syntaxerror hook is invalid: import of "syntaxerror" failed
+  $ hg pull ../a --traceback 2>&1 | egrep 'abort:'
   abort: preoutgoing.syntaxerror hook is invalid: import of "syntaxerror" failed
 
   $ echo '[hooks]' > ../a/.hg/hgrc
@@ -663,8 +652,10 @@ test python hook configured with python:[file]:[hook] syntax
   [255]
 
   $ hg id
-  loading pre-identify.npmd hook failed: No module named repo
-  abort: No module named repo!
+  loading pre-identify.npmd hook failed: No module named 'repo' (no-py2 !)
+  abort: No module named 'repo'! (no-py2 !)
+  loading pre-identify.npmd hook failed: No module named repo (py2 !)
+  abort: No module named repo! (py2 !)
   [255]
 
   $ cd ../../b
@@ -681,15 +672,13 @@ make sure --traceback works on hook import failure
   $ echo 'precommit.importfail = python:importfail.whatever' >> .hg/hgrc
 
   $ echo a >> a
-  $ hg --traceback commit -ma 2>&1 | egrep -v '^  '
-  exception from first failed import attempt:
+  $ hg --traceback commit -ma 2>&1 | egrep 'Traceback|abort:'
   Traceback (most recent call last):
-  ImportError: No module named somebogusmodule
-  exception from second failed import attempt:
   Traceback (most recent call last):
-  ImportError: No module named edenscm_hgext_importfail
   Traceback (most recent call last):
-  HookLoadError: precommit.importfail hook is invalid: import of "importfail" failed
+  Traceback (most recent call last): (no-py2 !)
+  Traceback (most recent call last): (no-py2 !)
+  Traceback (most recent call last): (no-py2 !)
   abort: precommit.importfail hook is invalid: import of "importfail" failed
 
 commit and update hooks should run after command completion.
