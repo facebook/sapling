@@ -32,4 +32,5 @@ tokio-old = { package = "tokio", version = "0.1" }
 tokio-timer = "0.2"
 
 [dev-dependencies]
+memblob = { path = "../memblob" }
 tokio-compat = "0.1"
