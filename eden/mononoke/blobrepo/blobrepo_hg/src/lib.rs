@@ -42,6 +42,7 @@ use futures_old::{
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::{blobs::HgBlobEnvelope, HgChangesetId, HgFileNodeId};
 use mononoke_types::{ChangesetId, RepoPath};
+use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -140,30 +141,31 @@ pub trait BlobRepoHg {
     ) -> BoxFuture<FilenodeInfo, Error>;
 }
 
+define_stats! {
+    prefix = "mononoke.blobrepo";
+    changeset_exists: timeseries(Rate, Sum),
+    get_all_filenodes: timeseries(Rate, Sum),
+    get_bonsai_from_hg: timeseries(Rate, Sum),
+    get_bookmark: timeseries(Rate, Sum),
+    get_bookmarks_by_prefix_maybe_stale: timeseries(Rate, Sum),
+    get_changeset_parents: timeseries(Rate, Sum),
+    get_heads_maybe_stale: timeseries(Rate, Sum),
+    get_hg_bonsai_mapping: timeseries(Rate, Sum),
+    get_publishing_bookmarks_maybe_stale: timeseries(Rate, Sum),
+    get_pull_default_bookmarks_maybe_stale: timeseries(Rate, Sum),
+}
+
 impl BlobRepoHg for BlobRepo {
     fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping> {
-        match self.get_attribute::<dyn BonsaiHgMapping>() {
-            Some(attr) => attr,
-            None => panic!(
-                "BlboRepo initalized incorrectly and does not have BonsaiHgMapping attribute",
-            ),
-        }
+        get_attribute_expected::<dyn BonsaiHgMapping>(self)
     }
 
     fn get_filenodes(&self) -> &Arc<dyn Filenodes> {
-        match self.get_attribute::<dyn Filenodes>() {
-            Some(attr) => attr,
-            None => panic!("BlboRepo initalized incorrectly and does not have Filenodes attribute"),
-        }
+        get_attribute_expected::<dyn Filenodes>(self)
     }
 
     fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore> {
-        match self.get_attribute::<dyn HgMutationStore>() {
-            Some(attr) => attr,
-            None => panic!(
-                "BlboRepo initalized incorrectly and does not have HgMutationStore attribute"
-            ),
-        }
+        get_attribute_expected::<dyn HgMutationStore>(self)
     }
 
     fn get_bonsai_from_hg(
@@ -171,6 +173,7 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         hg_cs_id: HgChangesetId,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
+        STATS::get_bonsai_from_hg.add_value(1);
         self.get_bonsai_hg_mapping()
             .get_bonsai_from_hg(ctx, self.get_repoid(), hg_cs_id)
     }
@@ -185,6 +188,7 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds>,
     ) -> BoxFuture<Vec<(HgChangesetId, ChangesetId)>, Error> {
+        STATS::get_hg_bonsai_mapping.add_value(1);
         let bonsai_or_hg_cs_ids = bonsai_or_hg_cs_ids.into();
         let fetched_from_mapping = self
             .get_bonsai_hg_mapping()
@@ -251,6 +255,7 @@ impl BlobRepoHg for BlobRepo {
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.
     fn get_heads_maybe_stale(&self, ctx: CoreContext) -> BoxStream<HgChangesetId, Error> {
+        STATS::get_heads_maybe_stale.add_value(1);
         self.get_bonsai_heads_maybe_stale(ctx.clone())
             .and_then({
                 let repo = self.clone();
@@ -264,6 +269,7 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         changesetid: HgChangesetId,
     ) -> BoxFuture<bool, Error> {
+        STATS::changeset_exists.add_value(1);
         let changesetid = changesetid.clone();
         let repoid = self.get_repoid();
         let changesets = self.get_changesets_object();
@@ -284,6 +290,7 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         changesetid: HgChangesetId,
     ) -> BoxFuture<Vec<HgChangesetId>, Error> {
+        STATS::get_changeset_parents.add_value(1);
         let repo = self.clone();
         let repoid = self.get_repoid();
         let changesets = self.get_changesets_object();
@@ -316,6 +323,7 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         name: &BookmarkName,
     ) -> BoxFuture<Option<HgChangesetId>, Error> {
+        STATS::get_bookmark.add_value(1);
         self.get_bookmarks_object()
             .get(ctx.clone(), name, self.get_repoid())
             .and_then({
@@ -337,6 +345,7 @@ impl BlobRepoHg for BlobRepo {
         &self,
         ctx: CoreContext,
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+        STATS::get_pull_default_bookmarks_maybe_stale.add_value(1);
         let stream = self.get_bookmarks_object().list_pull_default_by_prefix(
             ctx.clone(),
             &BookmarkPrefix::empty(),
@@ -352,6 +361,7 @@ impl BlobRepoHg for BlobRepo {
         &self,
         ctx: CoreContext,
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+        STATS::get_publishing_bookmarks_maybe_stale.add_value(1);
         let stream = self.get_bookmarks_object().list_publishing_by_prefix(
             ctx.clone(),
             &BookmarkPrefix::empty(),
@@ -368,6 +378,7 @@ impl BlobRepoHg for BlobRepo {
         prefix: &BookmarkPrefix,
         max: u64,
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+        STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
         let stream = self.get_bookmarks_object().list_all_by_prefix(
             ctx.clone(),
             prefix,
@@ -416,6 +427,7 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         path: RepoPath,
     ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
+        STATS::get_all_filenodes.add_value(1);
         self.get_filenodes()
             .get_all_filenodes_maybe_stale(ctx, &path, self.get_repoid())
     }
@@ -504,4 +516,13 @@ fn to_hg_bookmark_stream(
         })
         .flatten()
         .boxify()
+}
+
+fn get_attribute_expected<T: ?Sized + Send + Sync + 'static>(repo: &BlobRepo) -> &Arc<T> {
+    repo.get_attribute::<T>().unwrap_or_else(|| {
+        panic!(
+            "BlobRepo initialized incorrectly and does not have {} attribute",
+            std::any::type_name::<T>()
+        )
+    })
 }

@@ -27,12 +27,21 @@ use mercurial_types::{
 };
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, MPath};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use stats::prelude::*;
 use std::{
     convert::From,
     sync::{Arc, Mutex},
 };
 use tracing::{trace_args, EventId, Traced};
 use uuid::Uuid;
+
+define_stats! {
+    prefix = "mononoke.blobrepo";
+    create_changeset: timeseries(Rate, Sum),
+    create_changeset_compute_cf: timeseries("create_changeset.compute_changed_files"; Rate, Sum),
+    create_changeset_expected_cf: timeseries("create_changeset.expected_changed_files"; Rate, Sum),
+    create_changeset_cf_count: timeseries("create_changeset.changed_files_count"; Average, Sum),
+}
 
 pub struct CreateChangeset {
     /// This should always be provided, keeping it an Option for tests
@@ -54,6 +63,7 @@ impl CreateChangeset {
         repo: &BlobRepo,
         mut scuba_logger: ScubaSampleBuilder,
     ) -> ChangesetHandle {
+        STATS::create_changeset.add_value(1);
         // This is used for logging, so that we can tie up all our pieces without knowing about
         // the final commit hash
         let uuid = Uuid::new_v4();
@@ -97,10 +107,12 @@ impl CreateChangeset {
 
                     move |(root_mf_id, (parents, parent_manifest_hashes, bonsai_parents))| {
                         let files = if let Some(expected_files) = expected_files {
+                            STATS::create_changeset_expected_cf.add_value(1);
                             // We are trusting the callee to provide a list of changed files, used
                             // by the import job
                             future::ok(expected_files).boxify()
                         } else {
+                            STATS::create_changeset_compute_cf.add_value(1);
                             compute_changed_files(
                                 ctx.clone(),
                                 repo.clone(),
@@ -126,6 +138,7 @@ impl CreateChangeset {
                         let changesets = files
                             .join(check_case_conflicts)
                             .and_then(move |(files, ())| {
+                                STATS::create_changeset_cf_count.add_value(files.len() as i64);
                                 make_new_changeset(parents, root_mf_id, cs_metadata, files)
                             })
                             .and_then({
