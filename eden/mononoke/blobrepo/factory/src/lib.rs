@@ -750,12 +750,12 @@ pub fn blobrepo_new(
     let attributes = {
         let mut attributes = TypeMap::new();
         attributes.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
+        attributes.insert::<dyn Filenodes>(filenodes);
         Arc::new(attributes)
     };
     BlobRepo::new_dangerous(
         bookmarks,
         blobstore_args,
-        filenodes,
         changesets,
         bonsai_git_mapping,
         bonsai_globalrev_mapping,

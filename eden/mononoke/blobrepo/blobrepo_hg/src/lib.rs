@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
@@ -12,14 +14,15 @@ use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiOrHgChangesetIds};
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix, Freshness};
 use cloned::cloned;
 use context::CoreContext;
+use filenodes::{FilenodeInfo, FilenodeResult, Filenodes};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::{
     future,
     stream::{self, futures_unordered},
     Future, IntoFuture, Stream,
 };
-use mercurial_types::HgChangesetId;
-use mononoke_types::ChangesetId;
+use mercurial_types::{HgChangesetId, HgFileNodeId};
+use mononoke_types::{ChangesetId, RepoPath};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -29,6 +32,8 @@ use std::{
 /// mercurial specific methods.
 pub trait BlobRepoHg {
     fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping>;
+
+    fn get_filenodes(&self) -> &Arc<dyn Filenodes>;
 
     fn get_bonsai_from_hg(
         &self,
@@ -78,6 +83,26 @@ pub trait BlobRepoHg {
         prefix: &BookmarkPrefix,
         max: u64,
     ) -> BoxStream<(Bookmark, HgChangesetId), Error>;
+
+    fn get_filenode_opt(
+        &self,
+        ctx: CoreContext,
+        path: &RepoPath,
+        node: HgFileNodeId,
+    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error>;
+
+    fn get_filenode(
+        &self,
+        ctx: CoreContext,
+        path: &RepoPath,
+        node: HgFileNodeId,
+    ) -> BoxFuture<FilenodeResult<FilenodeInfo>, Error>;
+
+    fn get_all_filenodes_maybe_stale(
+        &self,
+        ctx: CoreContext,
+        path: RepoPath,
+    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error>;
 }
 
 impl BlobRepoHg for BlobRepo {
@@ -87,6 +112,13 @@ impl BlobRepoHg for BlobRepo {
             None => panic!(
                 "BlboRepo initalized incorrectly and does not have BonsaiHgMapping attribute",
             ),
+        }
+    }
+
+    fn get_filenodes(&self) -> &Arc<dyn Filenodes> {
+        match self.get_attribute::<dyn Filenodes>() {
+            Some(attr) => attr,
+            None => panic!("BlboRepo initalized incorrectly and does not have Filenodes attribute"),
         }
     }
 
@@ -300,6 +332,48 @@ impl BlobRepoHg for BlobRepo {
             max,
         );
         to_hg_bookmark_stream(&self, &ctx, stream)
+    }
+
+    fn get_filenode_opt(
+        &self,
+        ctx: CoreContext,
+        path: &RepoPath,
+        node: HgFileNodeId,
+    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error> {
+        let path = path.clone();
+        self.get_filenodes()
+            .get_filenode(ctx, &path, node, self.get_repoid())
+            .boxify()
+    }
+
+    fn get_filenode(
+        &self,
+        ctx: CoreContext,
+        path: &RepoPath,
+        node: HgFileNodeId,
+    ) -> BoxFuture<FilenodeResult<FilenodeInfo>, Error> {
+        self.get_filenode_opt(ctx, path, node)
+            .and_then({
+                cloned!(path);
+                move |filenode_res| match filenode_res {
+                    FilenodeResult::Present(maybe_filenode) => {
+                        let filenode = maybe_filenode
+                            .ok_or_else(|| Error::from(ErrorKind::MissingFilenode(path, node)))?;
+                        Ok(FilenodeResult::Present(filenode))
+                    }
+                    FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+                }
+            })
+            .boxify()
+    }
+
+    fn get_all_filenodes_maybe_stale(
+        &self,
+        ctx: CoreContext,
+        path: RepoPath,
+    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
+        self.get_filenodes()
+            .get_all_filenodes_maybe_stale(ctx, &path, self.get_repoid())
     }
 }
 

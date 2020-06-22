@@ -42,10 +42,11 @@ use maplit::hashmap;
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::{
     blobs::{
-        ChangesetMetadata, ContentBlobMeta, HgBlobChangeset, HgBlobEntry, HgBlobEnvelope,
-        HgChangesetContent, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+        ChangesetMetadata, ContentBlobMeta, HgBlobChangeset, HgBlobEntry, HgChangesetContent,
+        UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     },
-    Globalrev, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents, RepoPath, Type,
+    Globalrev, HgBlobEnvelope, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
+    RepoPath, Type,
 };
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{
@@ -107,7 +108,6 @@ define_stats! {
 pub struct BlobRepo {
     blobstore: RepoBlobstore,
     bookmarks: Arc<dyn Bookmarks>,
-    filenodes: Arc<dyn Filenodes>,
     changesets: Arc<dyn Changesets>,
     bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
@@ -133,7 +133,6 @@ impl BlobRepo {
     pub fn new_dangerous(
         bookmarks: Arc<dyn Bookmarks>,
         blobstore_args: RepoBlobstoreArgs,
-        filenodes: Arc<dyn Filenodes>,
         changesets: Arc<dyn Changesets>,
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
@@ -160,7 +159,6 @@ impl BlobRepo {
         BlobRepo {
             bookmarks,
             blobstore,
-            filenodes,
             changesets,
             bonsai_git_mapping,
             bonsai_globalrev_mapping,
@@ -362,56 +360,15 @@ impl BlobRepo {
         self.bookmarks.create_transaction(ctx, self.repoid)
     }
 
-    pub fn get_linknode_opt(
-        &self,
-        ctx: CoreContext,
-        path: &RepoPath,
-        node: HgFileNodeId,
-    ) -> impl Future<Item = FilenodeResult<Option<HgChangesetId>>, Error = Error> {
-        STATS::get_linknode_opt.add_value(1);
-        self.get_filenode_opt(ctx, path, node).map(|filenode_res| {
-            filenode_res.map(|filenode_opt| filenode_opt.map(|filenode| filenode.linknode))
-        })
-    }
-
-    pub fn get_linknode(
-        &self,
-        ctx: CoreContext,
-        path: &RepoPath,
-        node: HgFileNodeId,
-    ) -> impl Future<Item = FilenodeResult<HgChangesetId>, Error = Error> {
-        STATS::get_linknode.add_value(1);
-        self.get_filenode(ctx, path, node)
-            .map(|filenode_res| filenode_res.map(|filenode| filenode.linknode))
-    }
-
-    pub fn get_filenode_opt(
+    pub(crate) fn get_filenode_opt(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
     ) -> impl Future<Item = FilenodeResult<Option<FilenodeInfo>>, Error = Error> {
         let path = path.clone();
-        self.filenodes.get_filenode(ctx, &path, node, self.repoid)
-    }
-
-    pub fn get_filenode(
-        &self,
-        ctx: CoreContext,
-        path: &RepoPath,
-        node: HgFileNodeId,
-    ) -> impl Future<Item = FilenodeResult<FilenodeInfo>, Error = Error> {
-        self.get_filenode_opt(ctx, path, node).and_then({
-            cloned!(path);
-            move |filenode_res| match filenode_res {
-                FilenodeResult::Present(maybe_filenode) => {
-                    let filenode = maybe_filenode
-                        .ok_or_else(|| Error::from(ErrorKind::MissingFilenode(path, node)))?;
-                    Ok(FilenodeResult::Present(filenode))
-                }
-                FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
-            }
-        })
+        self.get_filenodes()
+            .get_filenode(ctx, &path, node, self.repoid)
     }
 
     pub fn get_filenode_from_envelope(
@@ -455,7 +412,7 @@ impl BlobRepo {
         path: RepoPath,
     ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
         STATS::get_all_filenodes.add_value(1);
-        self.filenodes
+        self.get_filenodes()
             .get_all_filenodes_maybe_stale(ctx, &path, self.repoid)
     }
 
@@ -504,8 +461,11 @@ impl BlobRepo {
         self.repoid
     }
 
-    pub fn get_filenodes(&self) -> Arc<dyn Filenodes> {
-        self.filenodes.clone()
+    pub(crate) fn get_filenodes(&self) -> &Arc<dyn Filenodes> {
+        match self.get_attribute::<dyn Filenodes>() {
+            Some(attr) => attr,
+            None => panic!("BlboRepo initalized incorrectly and does not have Filenodes attribute"),
+        }
     }
 
     pub fn get_phases(&self) -> Arc<dyn Phases> {
@@ -1774,7 +1734,6 @@ impl Clone for BlobRepo {
         Self {
             bookmarks: self.bookmarks.clone(),
             blobstore: self.blobstore.clone(),
-            filenodes: self.filenodes.clone(),
             changesets: self.changesets.clone(),
             bonsai_git_mapping: self.bonsai_git_mapping.clone(),
             bonsai_globalrev_mapping: self.bonsai_globalrev_mapping.clone(),
@@ -1841,9 +1800,11 @@ impl DangerousOverride<Arc<dyn Filenodes>> for BlobRepo {
     where
         F: FnOnce(Arc<dyn Filenodes>) -> Arc<dyn Filenodes>,
     {
-        let filenodes = modify(self.filenodes.clone());
+        let filenodes = modify(self.get_filenodes().clone());
+        let mut attrs = self.attributes.as_ref().clone();
+        attrs.insert::<dyn Filenodes>(filenodes);
         BlobRepo {
-            filenodes,
+            attributes: Arc::new(attrs),
             ..self.clone()
         }
     }

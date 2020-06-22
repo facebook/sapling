@@ -10,6 +10,7 @@ use cmdlib::args;
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
 use cmdlib::helpers;

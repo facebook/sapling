@@ -9,6 +9,7 @@
 
 use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
@@ -21,6 +22,7 @@ use futures::{
     future::{self, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
+use futures_old::Future as FutureOld;
 use futures_stats::TimedFutureExt;
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
@@ -111,8 +113,7 @@ async fn blobstore_and_filenodes_warmup(
                         None => RepoPath::RootPath,
                     };
 
-                    let fut = repo
-                        .get_linknode_opt(ctx.clone(), &path, hash)
+                    let fut = get_linknode_opt(&repo, ctx.clone(), &path, hash)
                         .compat()
                         .map_ok(|res| match res {
                             FilenodeResult::Present(maybe_linknode) => maybe_linknode,
@@ -150,6 +151,17 @@ async fn blobstore_and_filenodes_warmup(
     debug!(ctx.logger(), "finished manifests warmup");
 
     Ok(())
+}
+
+fn get_linknode_opt(
+    repo: &BlobRepo,
+    ctx: CoreContext,
+    path: &RepoPath,
+    node: HgFileNodeId,
+) -> impl FutureOld<Item = FilenodeResult<Option<HgChangesetId>>, Error = Error> {
+    repo.get_filenode_opt(ctx, path, node).map(|filenode_res| {
+        filenode_res.map(|filenode_opt| filenode_opt.map(|filenode| filenode.linknode))
+    })
 }
 
 // Iterate over first parents, and fetch them
