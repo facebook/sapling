@@ -1,22 +1,20 @@
 [package]
-name = "mercurial_derived_data"
+name = "blobrepo_hg"
 edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["*.rs"]
-
-[lib]
-path = "lib.rs"
+include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
+blobrepo = { path = ".." }
+blobrepo_errors = { path = "../errors" }
 bonsai_hg_mapping = { path = "../../bonsai_hg_mapping" }
+bookmarks = { path = "../../bookmarks" }
 context = { path = "../../server/context" }
-derived_data = { path = ".." }
 mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-futures = "0.1"
+futures-old = { package = "futures", version = "0.1" }

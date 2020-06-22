@@ -12,6 +12,7 @@ use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, Future, Stream};
 
+use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use fbinit::FacebookInit;
 use fixtures::linear;

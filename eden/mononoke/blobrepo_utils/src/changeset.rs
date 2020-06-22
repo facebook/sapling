@@ -7,6 +7,7 @@
 
 use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use chashmap::CHashMap;
 use cloned::cloned;

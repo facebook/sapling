@@ -9,6 +9,7 @@
 
 use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;

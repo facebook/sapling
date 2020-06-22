@@ -10,6 +10,7 @@ include = ["src/**/*.rs"]
 blame = { path = "../derived_data/blame" }
 blobrepo = { path = "../blobrepo" }
 blobrepo_factory = { path = "../blobrepo/factory" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 blobstore = { path = "../blobstore" }
 blobstore_factory = { path = "../blobstore/factory" }
 bookmarks = { path = "../bookmarks" }

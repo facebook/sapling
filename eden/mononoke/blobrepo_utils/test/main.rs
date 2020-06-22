@@ -19,6 +19,7 @@ mod test {
                 use fbinit::FacebookInit;
                 use futures::{Future, Stream};
 
+                use blobrepo_hg::BlobRepoHg;
                 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
                 use context::CoreContext;
 

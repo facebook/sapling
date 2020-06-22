@@ -236,6 +236,7 @@ mod test {
     use crate::fixtures::linear;
     use crate::fixtures::merge_uneven;
     use blobrepo::BlobRepo;
+    use blobrepo_hg::BlobRepoHg;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;

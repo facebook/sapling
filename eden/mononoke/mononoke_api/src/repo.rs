@@ -15,6 +15,7 @@ use std::{
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::{BookmarkName, BookmarkPrefix};

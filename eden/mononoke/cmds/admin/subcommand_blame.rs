@@ -10,6 +10,7 @@ use crate::error::SubcommandError;
 use anyhow::{format_err, Error};
 use blame::{fetch_blame, fetch_file_full_content};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::{Blobstore, Loadable};
 use bytes::Bytes;
 use clap::{App, Arg, ArgMatches, SubCommand};

@@ -91,6 +91,7 @@ impl BonsaiDerivedMapping for ChangesetInfoMapping {
 mod test {
     use super::*;
 
+    use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use fbinit::FacebookInit;
     use fixtures::linear;

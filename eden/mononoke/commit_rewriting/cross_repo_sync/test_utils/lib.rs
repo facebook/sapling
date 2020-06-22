@@ -10,6 +10,7 @@
 use ascii::AsciiString;
 
 use anyhow::{format_err, Error};
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;

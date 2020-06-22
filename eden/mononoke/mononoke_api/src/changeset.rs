@@ -12,6 +12,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::anyhow;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use changeset_info::ChangesetInfo;
 use chrono::{DateTime, FixedOffset};

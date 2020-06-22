@@ -195,6 +195,7 @@ mod tests {
     use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
     use benchmark_lib::{GenManifest, GenSettings};
     use blobrepo::save_bonsai_changesets;
+    use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkName;
     use context::CoreContext;
     use fbinit::FacebookInit;

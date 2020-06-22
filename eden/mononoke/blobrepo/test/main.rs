@@ -15,6 +15,7 @@ use ::manifest::{Entry, Manifest, ManifestOps};
 use anyhow::Error;
 use assert_matches::assert_matches;
 use blobrepo::{compute_changed_files, errors::ErrorKind, BlobRepo, UploadEntries};
+use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, Storable};
 use bytes::Bytes;
 use bytes::BytesMut;

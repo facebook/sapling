@@ -28,6 +28,7 @@ use crate::args;
 use crate::monitoring;
 use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use context::CoreContext;

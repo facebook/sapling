@@ -62,6 +62,7 @@ path = "cmds/upload_globalrevs.rs"
 blame = { path = "derived_data/blame" }
 blobrepo = { path = "blobrepo" }
 blobrepo_factory = { path = "blobrepo/factory" }
+blobrepo_hg = { path = "blobrepo/blobrepo_hg" }
 blobrepo_utils = { path = "blobrepo_utils" }
 blobstore = { path = "blobstore" }
 blobstore_factory = { path = "blobstore/factory" }
@@ -129,6 +130,7 @@ members = [
     "benchmark",
     "blobimport_lib",
     "blobrepo",
+    "blobrepo/blobrepo_hg",
     "blobrepo/blobsync",
     "blobrepo/changeset_fetcher",
     "blobrepo/errors",

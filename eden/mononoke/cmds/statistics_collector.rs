@@ -9,6 +9,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::{Blobstore, Loadable};
 use bookmarks::BookmarkName;
 use bytes::Bytes;

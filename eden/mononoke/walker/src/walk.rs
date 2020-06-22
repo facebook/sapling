@@ -10,6 +10,7 @@ use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkPrefix, Freshness};
 use bounded_traversal::bounded_traversal_stream;

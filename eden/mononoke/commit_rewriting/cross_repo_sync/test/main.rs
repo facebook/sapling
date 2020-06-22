@@ -20,6 +20,7 @@ use std::sync::Arc;
 use anyhow::{bail, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_factory;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;

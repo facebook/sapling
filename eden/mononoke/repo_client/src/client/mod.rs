@@ -11,6 +11,7 @@ use unbundle::{run_hooks, run_post_resolve_action, PushRedirector, PushRedirecto
 
 use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::Bytes;

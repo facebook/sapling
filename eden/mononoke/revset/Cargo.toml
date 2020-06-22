@@ -7,6 +7,7 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 changeset_fetcher = { path = "../blobrepo/changeset_fetcher" }
 context = { path = "../server/context" }
 mercurial_types = { path = "../mercurial/types" }

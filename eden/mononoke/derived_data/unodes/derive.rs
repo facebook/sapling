@@ -387,6 +387,7 @@ mod tests {
     use blobrepo::save_bonsai_changesets;
     use blobrepo::{BlobRepo, DangerousOverride};
     use blobrepo_factory::new_memblob_empty;
+    use blobrepo_hg::BlobRepoHg;
     use blobstore::Storable;
     use bytes::Bytes;
     use derived_data::BonsaiDerived;

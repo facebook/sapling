@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{

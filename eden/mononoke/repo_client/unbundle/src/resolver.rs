@@ -15,6 +15,7 @@ use crate::upload_changesets::upload_changeset;
 use anyhow::{bail, ensure, format_err, Context, Error, Result};
 use ascii::AsciiString;
 use blobrepo::{BlobRepo, ChangesetHandle};
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Storable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;

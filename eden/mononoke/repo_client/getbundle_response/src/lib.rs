@@ -10,6 +10,7 @@
 use crate::errors::ErrorKind;
 use anyhow::{bail, Error, Result};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;

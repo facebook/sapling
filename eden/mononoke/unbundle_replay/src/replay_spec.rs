@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
 use bytes::Bytes;

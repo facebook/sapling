@@ -15,6 +15,7 @@ path = "test/main.rs"
 
 [dependencies]
 blobrepo = { path = "../blobrepo" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 blobstore = { path = "../blobstore" }
 cacheblob = { path = "../blobstore/cacheblob" }
 context = { path = "../server/context" }

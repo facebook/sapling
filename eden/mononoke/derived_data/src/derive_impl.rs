@@ -524,6 +524,7 @@ mod test {
 
     use anyhow::Error;
     use blobrepo::DangerousOverride;
+    use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkName;
     use cacheblob::LeaseOps;
     use cloned::cloned;

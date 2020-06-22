@@ -16,6 +16,7 @@ use futures_old::{prelude::*, stream};
 use slog::{info, Logger};
 
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use mercurial_revlog::RevlogRepo;

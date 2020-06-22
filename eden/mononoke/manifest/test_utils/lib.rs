@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
 use futures::{future, stream, Future, Stream};

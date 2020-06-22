@@ -9,6 +9,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
 blobrepo_factory = { path = "../../blobrepo/factory" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { path = "../../bookmarks" }
 context = { path = "../../server/context" }
 filestore = { path = "../../filestore" }

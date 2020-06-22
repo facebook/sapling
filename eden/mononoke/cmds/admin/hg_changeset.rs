@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{App, ArgMatches, SubCommand};
 use cloned::cloned;

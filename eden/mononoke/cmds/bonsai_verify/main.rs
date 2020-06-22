@@ -10,6 +10,7 @@
 mod config;
 
 use anyhow::{format_err, Error, Result};
+use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};

@@ -57,6 +57,7 @@ uuid = { version = "0.8.1", features = ["v4"] }
 [dev-dependencies]
 benchmark_lib = { path = "../benchmark" }
 blobrepo_factory = { path = "factory" }
+blobrepo_hg = { path = "blobrepo_hg" }
 cmdlib = { path = "../cmdlib" }
 derived_data = { path = "../derived_data" }
 derived_data_filenodes = { path = "../derived_data/filenodes" }

@@ -15,6 +15,7 @@ use ::hooks::{hook_loader::load_hooks, HookManager};
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::BlobrepoBuilder;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::Freshness;
 use bytes::Bytes;

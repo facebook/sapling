@@ -37,6 +37,7 @@ tokio = { version = "=0.2.13", features = ["full"] }
 [dev-dependencies]
 benchmark_lib = { path = "../../benchmark" }
 blobrepo_factory = { path = "../../blobrepo/factory" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { path = "../../bookmarks" }
 fixtures = { path = "../../tests/fixtures" }
 mercurial_types = { path = "../../mercurial/types" }

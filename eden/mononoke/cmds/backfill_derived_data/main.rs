@@ -562,6 +562,7 @@ async fn subcommand_single(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use blobrepo_hg::BlobRepoHg;
     use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
     use fixtures::linear;
     use futures::future::{FutureExt, TryFutureExt};

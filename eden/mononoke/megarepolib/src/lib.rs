@@ -7,6 +7,7 @@
 
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
 use futures::{
@@ -221,6 +222,7 @@ where
 mod test {
     use super::*;
     use anyhow::Result;
+    use blobrepo_hg::BlobRepoHg;
     use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs};

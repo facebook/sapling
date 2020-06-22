@@ -8,6 +8,7 @@
 use anyhow::{anyhow, Error};
 use ascii::AsciiStr;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{App, Arg};
 use cloned::cloned;

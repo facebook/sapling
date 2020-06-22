@@ -33,6 +33,7 @@ thiserror = "1.0"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../blobrepo/factory" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 dbbookmarks = { path = "../bookmarks/dbbookmarks" }
 filestore = { path = "../filestore" }
 fixtures = { path = "../tests/fixtures" }

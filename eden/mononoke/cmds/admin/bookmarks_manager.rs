@@ -6,6 +6,7 @@
  */
 
 use anyhow::{format_err, Error};
+use blobrepo_hg::BlobRepoHg;
 use bookmarks::Freshness;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;

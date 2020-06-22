@@ -27,6 +27,7 @@ use std::{
 };
 
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use cmdlib::args;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;

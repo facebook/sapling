@@ -9,6 +9,7 @@ use anyhow::Error;
 use blobrepo::DangerousOverride;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_factory::new_memblob_empty_with_id;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmark_renaming::BookmarkRenamer;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};

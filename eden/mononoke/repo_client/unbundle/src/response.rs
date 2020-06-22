@@ -8,6 +8,7 @@
 use crate::CommonHeads;
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use bookmarks::BookmarkName;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;

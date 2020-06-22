@@ -8,6 +8,7 @@
 use crate::errors::ErrorKind;
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;

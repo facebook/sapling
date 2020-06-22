@@ -12,6 +12,7 @@ use futures_ext::FutureExt;
 use futures_old::prelude::*;
 use std::str::FromStr;
 
+use blobrepo_hg::BlobRepoHg;
 use cmdlib::args;
 use context::CoreContext;
 use mercurial_types::HgChangesetId;

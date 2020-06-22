@@ -8,6 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 context = { path = "../../server/context" }
 fixtures = { path = "../../tests/fixtures" }
 mercurial_types = { path = "../../mercurial/types" }

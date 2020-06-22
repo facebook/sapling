@@ -40,6 +40,7 @@ thiserror = "1.0"
 
 [dev-dependencies]
 blobrepo = { path = "../blobrepo" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 bookmarks = { path = "../bookmarks" }
 fixtures = { path = "../tests/fixtures" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }

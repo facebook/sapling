@@ -9,6 +9,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 backsyncer = { path = "../../backsyncer" }
 blobrepo = { path = "../../blobrepo" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
 bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 bookmarks = { path = "../../bookmarks" }

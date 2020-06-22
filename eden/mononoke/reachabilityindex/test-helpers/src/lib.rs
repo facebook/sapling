@@ -10,6 +10,7 @@
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::{branch_wide, linear, merge_uneven};

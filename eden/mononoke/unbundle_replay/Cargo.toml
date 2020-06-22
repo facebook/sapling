@@ -9,6 +9,7 @@ include = ["schemas/**/*.sql", "src/**/*.rs"]
 [dependencies]
 blobrepo = { path = "../blobrepo" }
 blobrepo_factory = { path = "../blobrepo/factory" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 blobstore = { path = "../blobstore" }
 bookmarks = { path = "../bookmarks" }
 cmdlib = { path = "../cmdlib" }

@@ -8,6 +8,7 @@
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;

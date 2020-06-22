@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use context::CoreContext;
 use futures::{future, Future};
