@@ -6,7 +6,6 @@
 
 """Runner for Mononoke/Mercurial integration tests."""
 
-import contextlib
 import json
 import logging
 import multiprocessing
@@ -18,11 +17,6 @@ import xml.etree.ElementTree as ET
 from typing import Any, Dict, List, NamedTuple, Set
 
 import click
-from common.db.tests import DbDef
-from configerator.client import ConfigeratorClient
-from configerator.structs.mysql.table_schema.ttypes import DatabaseSchemas, TableSchema
-from eden.mononoke.tests.integration.lib_buck import find_buck_out
-from libfb.py.log import set_simple_logging
 
 
 ManifestEnv = Dict[str, str]
@@ -56,6 +50,15 @@ def is_mode_opt_buck_binary():
         import __manifest__
 
         return __manifest__.fbmake["build_mode"] == "opt"
+    except ImportError:
+        return False
+
+
+def is_libfb_present():
+    try:
+        import libfb.py.log  # noqa: F401
+
+        return True
     except ImportError:
         return False
 
@@ -106,67 +109,12 @@ class TestFlags(NamedTuple):
         return r
 
 
-def create_schema(mysql_schemas, conn):
-    client = ConfigeratorClient()
-    configs = []
-    for schema_path in mysql_schemas:
-        root = client.get_config_contents_as_thrift(
-            "{}/.sql_schema_domains".format(schema_path), DatabaseSchemas
-        )
-        for table in root.tables.keys():
-            configs.append("{}/{}.sql_table_schema".format(schema_path, table))
-    for table_path in configs:
-        table = client.get_config_contents_as_thrift(table_path, TableSchema)
-        conn.query(table.sql)
-
-
-@contextlib.contextmanager
-def ephemeral_db_helper(shard_part, mysql_schemas):
-    with DbDef.TestDatabaseManager(
-        prefix=shard_part,
-        oncall_shortname="source_control",
-        force_ephemeral=True,
-        ttl_minutes=15,  # Some Mononoke tests last this long
-    ) as test_db_manager:
-        if len(mysql_schemas) > 0:
-            conn = test_db_manager.get_connection()
-            create_schema(mysql_schemas, conn)
-        yield {"DB_SHARD_NAME": test_db_manager.get_shard_name()}
-
-
-@contextlib.contextmanager
-def devdb_db_helper(shard_part, mysql_schemas):
-    from libfb.py import db_locator
-
-    shard_name = "devdb." + shard_part
-    if len(mysql_schemas) > 0:
-        locator = db_locator.Locator(tier_name=shard_name, role="scriptrw")
-        locator.do_not_send_autocommit_query()
-        conn = locator.create_connection()
-        create_schema(mysql_schemas, conn)
-    yield {"DB_SHARD_NAME": shard_name}
-
-
-@contextlib.contextmanager
-def no_db_helper(*args, **kwargs):
-    yield {}
-
-
 def public_test_root(manifest_env: ManifestEnv) -> str:
     return manifest_env["TEST_ROOT_PUBLIC"]
 
 
 def facebook_test_root(manifest_env: ManifestEnv) -> str:
     return manifest_env["TEST_ROOT_FACEBOOK"]
-
-
-def load_manifest_env(manifest_path: str) -> ManifestEnv:
-    buck_out = find_buck_out(manifest_path)
-
-    with open(manifest_path) as f:
-        manifest_env = json.load(f)
-
-    return {k: os.path.join(buck_out, v) for k, v in manifest_env.items()}
 
 
 def maybe_use_local_test_paths(manifest_env: ManifestEnv):
@@ -413,12 +361,19 @@ def run(
     mysql_schemas,
     devdb,
 ):
-    set_simple_logging(logging.INFO)
+    if is_libfb_present():
+        from libfb.py.log import set_simple_logging
+        from eden.mononoke.tests.integration.facebook.lib_runner import (
+            load_manifest_env,
+        )
 
-    manifest_env = load_manifest_env(manifest)
+        set_simple_logging(logging.INFO)
+        manifest_env: ManifestEnv = load_manifest_env(manifest)
+    else:
+        with open(manifest) as f:
+            manifest_env: ManifestEnv = json.load(f)
+
     maybe_use_local_test_paths(manifest_env)
-
-    db_helper = no_db_helper
 
     if dry_run:
         return run_discover_tests(ctx, manifest_env, output, mysql)
@@ -448,29 +403,15 @@ def run(
     else:
         selected_tests.extend(tests)
 
-    shard_part = "monononoke_tests"
-    if mysql:
-        if dry_run:
-            # We can dry-run for ephemeral tests
-            pass
-        elif len(selected_tests) <= 1:
-            # One test is allowed to use an ephemeral db. This is OK, because
-            # TestPilot actually asks us to run tests one by one.
-            if devdb:
-                shard_part = devdb
-                db_helper = devdb_db_helper
-            else:
-                db_helper = ephemeral_db_helper
-        else:
-            # Too many tests! This won't work.
-            raise click.BadParameter(
-                "mysql tests allow at most 1 test at a time",
-                ctx,
-                param_hint="simple_test_selector",
-            )
+    if is_libfb_present():
+        from eden.mononoke.tests.integration.facebook.lib_runner import fb_test_context
 
-    with db_helper(shard_part, mysql_schemas) as test_env:
-        run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env)
+        with fb_test_context(
+            ctx, dry_run, mysql, mysql_schemas, devdb, selected_tests
+        ) as test_env:
+            run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env)
+    else:
+        run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env={})
 
 
 if __name__ == "__main__":
