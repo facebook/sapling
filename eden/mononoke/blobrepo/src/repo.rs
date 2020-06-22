@@ -5,13 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use super::utils::DangerousOverride;
-use crate::errors::*;
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
-use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason,
     Bookmarks, Freshness,
@@ -21,7 +18,6 @@ use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use futures::{compat::Future01CompatExt, future::FutureExt as NewFutureExt};
 use futures_ext::{BoxFuture, FutureExt};
@@ -77,24 +73,25 @@ define_stats! {
     create_changeset_cf_count: timeseries("create_changeset.changed_files_count"; Average, Sum),
 }
 
+// NOTE: this structure and its fields are public to enable `DangerousOverride` functionality
 #[derive(Clone)]
 pub struct BlobRepoInner {
-    blobstore: RepoBlobstore,
-    bookmarks: Arc<dyn Bookmarks>,
-    changesets: Arc<dyn Changesets>,
-    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
-    bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-    repoid: RepositoryId,
+    pub blobstore: RepoBlobstore,
+    pub bookmarks: Arc<dyn Bookmarks>,
+    pub changesets: Arc<dyn Changesets>,
+    pub bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
+    pub bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
+    pub repoid: RepositoryId,
     // Returns new ChangesetFetcher that can be used by operation that work with commit graph
     // (for example, revsets).
-    changeset_fetcher_factory:
+    pub changeset_fetcher_factory:
         Arc<dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync>,
-    derived_data_lease: Arc<dyn LeaseOps>,
-    filestore_config: FilestoreConfig,
-    phases_factory: SqlPhasesFactory,
-    derived_data_config: DerivedDataConfig,
-    reponame: String,
-    attributes: Arc<TypeMap>,
+    pub derived_data_lease: Arc<dyn LeaseOps>,
+    pub filestore_config: FilestoreConfig,
+    pub phases_factory: SqlPhasesFactory,
+    pub derived_data_config: DerivedDataConfig,
+    pub reponame: String,
+    pub attributes: Arc<TypeMap>,
 }
 
 #[derive(Clone)]
@@ -228,7 +225,8 @@ impl BlobRepo {
             .changesets
             .get(ctx, self.get_repoid(), changesetid)
             .and_then(move |maybe_bonsai| {
-                maybe_bonsai.ok_or(ErrorKind::BonsaiNotFound(changesetid).into())
+                maybe_bonsai
+                    .ok_or_else(|| format_err!("Commit {} does not exist in the repo", changesetid))
             })
             .map(|bonsai| bonsai.parents)
     }
@@ -415,6 +413,18 @@ impl BlobRepo {
     pub fn get_derived_data_lease_ops(&self) -> Arc<dyn LeaseOps> {
         self.inner.derived_data_lease.clone()
     }
+
+    /// To be used by `DangerousOverride` only
+    pub fn inner(&self) -> &Arc<BlobRepoInner> {
+        &self.inner
+    }
+
+    /// To be used by `DagerouseOverride` only
+    pub fn from_inner_dangerous(inner: BlobRepoInner) -> Self {
+        Self {
+            inner: Arc::new(inner),
+        }
+    }
 }
 
 /// This function uploads bonsai changests object to blobstore in parallel, and then does
@@ -519,152 +529,4 @@ pub fn save_bonsai_changeset_object(
     blobstore
         .put(ctx, blobstore_key, bonsai_blob.into())
         .map(|_| ())
-}
-
-impl<T> DangerousOverride<T> for BlobRepo
-where
-    BlobRepoInner: DangerousOverride<T>,
-{
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(T) -> T,
-    {
-        let inner = (*self.inner).clone().dangerous_override(modify);
-        BlobRepo {
-            inner: Arc::new(inner),
-        }
-    }
-}
-
-impl DangerousOverride<Arc<dyn LeaseOps>> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(Arc<dyn LeaseOps>) -> Arc<dyn LeaseOps>,
-    {
-        let derived_data_lease = modify(self.derived_data_lease.clone());
-        Self {
-            derived_data_lease,
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(Arc<dyn Blobstore>) -> Arc<dyn Blobstore>,
-    {
-        let (blobstore, repoid) = RepoBlobstoreArgs::new_with_wrapped_inner_blobstore(
-            self.blobstore.clone(),
-            self.repoid,
-            modify,
-        )
-        .into_blobrepo_parts();
-        Self {
-            repoid,
-            blobstore,
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<Arc<dyn Bookmarks>> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(Arc<dyn Bookmarks>) -> Arc<dyn Bookmarks>,
-    {
-        let bookmarks = modify(self.bookmarks.clone());
-        Self {
-            bookmarks,
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<Arc<dyn Filenodes>> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(Arc<dyn Filenodes>) -> Arc<dyn Filenodes>,
-    {
-        let filenodes = match self.attributes.get::<dyn Filenodes>() {
-            Some(attr) => modify(attr.clone()),
-            None => panic!("BlboRepo initalized incorrectly and does not have Filenodes attribute"),
-        };
-        let mut attrs = self.attributes.as_ref().clone();
-        attrs.insert::<dyn Filenodes>(filenodes);
-        Self {
-            attributes: Arc::new(attrs),
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<Arc<dyn Changesets>> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(Arc<dyn Changesets>) -> Arc<dyn Changesets>,
-    {
-        let changesets = modify(self.changesets.clone());
-        let changeset_fetcher_factory = {
-            cloned!(changesets, self.repoid);
-            move || {
-                let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
-                    SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
-                );
-                res
-            }
-        };
-
-        Self {
-            changesets,
-            changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<Arc<dyn BonsaiHgMapping>> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(Arc<dyn BonsaiHgMapping>) -> Arc<dyn BonsaiHgMapping>,
-    {
-        let bonsai_hg_mapping = match self.attributes.get::<dyn BonsaiHgMapping>() {
-            Some(attr) => modify(attr.clone()),
-            None => panic!(
-                "BlboRepo initalized incorrectly and does not have BonsaiHgMapping attribute",
-            ),
-        };
-        let mut attrs = self.attributes.as_ref().clone();
-        attrs.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
-        Self {
-            attributes: Arc::new(attrs),
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<DerivedDataConfig> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(DerivedDataConfig) -> DerivedDataConfig,
-    {
-        let derived_data_config = modify(self.derived_data_config.clone());
-        Self {
-            derived_data_config,
-            ..self.clone()
-        }
-    }
-}
-
-impl DangerousOverride<FilestoreConfig> for BlobRepoInner {
-    fn dangerous_override<F>(&self, modify: F) -> Self
-    where
-        F: FnOnce(FilestoreConfig) -> FilestoreConfig,
-    {
-        let filestore_config = modify(self.filestore_config.clone());
-        Self {
-            filestore_config,
-            ..self.clone()
-        }
-    }
 }

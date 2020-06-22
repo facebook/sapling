@@ -25,6 +25,7 @@ thiserror = "1.0"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
+blobrepo_override = { path = "../../blobrepo/override" }
 manifest = { path = "../../manifest" }
 mononoke_types = { path = "../../mononoke_types" }
 tests_utils = { path = "../../tests/utils" }

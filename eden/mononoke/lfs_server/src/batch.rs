@@ -554,8 +554,8 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 mod test {
     use super::*;
 
-    use blobrepo::DangerousOverride;
     use blobrepo_factory::TestRepoBuilder;
+    use blobrepo_override::DangerousOverride;
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;

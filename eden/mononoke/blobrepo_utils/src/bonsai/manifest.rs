@@ -7,8 +7,9 @@
 
 use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
 use anyhow::{bail, Error};
-use blobrepo::{BlobRepo, DangerousOverride};
+use blobrepo::BlobRepo;
 use blobrepo_hg::derive_hg_manifest::derive_hg_manifest;
+use blobrepo_override::DangerousOverride;
 use blobstore::{Blobstore, Loadable};
 use cacheblob::MemWritesBlobstore;
 use cloned::cloned;

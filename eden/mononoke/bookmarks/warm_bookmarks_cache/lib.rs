@@ -604,7 +604,7 @@ async fn single_bookmark_updater(
 mod tests {
     use super::*;
     use anyhow::anyhow;
-    use blobrepo::DangerousOverride;
+    use blobrepo_override::DangerousOverride;
     use blobstore::Blobstore;
     use cloned::cloned;
     use delayblob::DelayedBlobstore;

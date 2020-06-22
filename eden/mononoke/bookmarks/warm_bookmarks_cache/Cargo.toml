@@ -34,6 +34,7 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
+blobrepo_override = { path = "../../blobrepo/override" }
 blobstore = { path = "../../blobstore" }
 delayblob = { path = "../../blobstore/delayblob" }
 fixtures = { path = "../../tests/fixtures" }

@@ -1,0 +1,20 @@
+[package]
+name = "blobrepo_override"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = ".." }
+blobstore = { path = "../../blobstore" }
+bonsai_hg_mapping = { path = "../../bonsai_hg_mapping" }
+bookmarks = { path = "../../bookmarks" }
+cacheblob = { path = "../../blobstore/cacheblob" }
+changeset_fetcher = { path = "../changeset_fetcher" }
+changesets = { path = "../../changesets" }
+filenodes = { path = "../../filenodes" }
+filestore = { path = "../../filestore" }
+metaconfig_types = { path = "../../metaconfig/types" }
+repo_blobstore = { path = "../repo_blobstore" }

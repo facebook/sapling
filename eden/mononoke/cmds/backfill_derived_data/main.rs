@@ -10,7 +10,8 @@
 
 use anyhow::{anyhow, format_err, Error};
 use blame::BlameRoot;
-use blobrepo::{BlobRepo, DangerousOverride};
+use blobrepo::BlobRepo;
+use blobrepo_override::DangerousOverride;
 use bookmarks::{BookmarkPrefix, Freshness};
 use bulkops::fetch_all_public_changesets;
 use bytes::Bytes;

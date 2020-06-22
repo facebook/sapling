@@ -385,9 +385,10 @@ mod tests {
     use crate::mapping::{get_file_changes, RootUnodeManifestId};
     use anyhow::Result;
     use blobrepo::save_bonsai_changesets;
-    use blobrepo::{BlobRepo, DangerousOverride};
+    use blobrepo::BlobRepo;
     use blobrepo_factory::new_memblob_empty;
     use blobrepo_hg::BlobRepoHg;
+    use blobrepo_override::DangerousOverride;
     use blobstore::Storable;
     use bytes::Bytes;
     use derived_data::BonsaiDerived;

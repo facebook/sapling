@@ -8,7 +8,8 @@
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blame::{BlameRoot, BlameRootMapping};
-use blobrepo::{BlobRepo, DangerousOverride};
+use blobrepo::BlobRepo;
+use blobrepo_override::DangerousOverride;
 use blobstore::{Blobstore, Loadable};
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changeset_info::{ChangesetInfo, ChangesetInfoMapping};

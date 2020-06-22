@@ -1305,8 +1305,8 @@ mod tests {
     use super::*;
     use anyhow::{format_err, Context};
     use async_trait::async_trait;
-    use blobrepo::DangerousOverride;
     use blobrepo_hg::BlobRepoHg;
+    use blobrepo_override::DangerousOverride;
     use bookmarks::{BookmarkTransactionError, Bookmarks};
     use dbbookmarks::SqlBookmarks;
     use fbinit::FacebookInit;

@@ -7,7 +7,8 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use blobrepo::{BlobRepo, DangerousOverride};
+use blobrepo::BlobRepo;
+use blobrepo_override::DangerousOverride;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable};
 use cacheblob::MemWritesBlobstore;
 use context::CoreContext;

@@ -523,8 +523,8 @@ mod test {
     use super::*;
 
     use anyhow::Error;
-    use blobrepo::DangerousOverride;
     use blobrepo_hg::BlobRepoHg;
+    use blobrepo_override::DangerousOverride;
     use bookmarks::BookmarkName;
     use cacheblob::LeaseOps;
     use cloned::cloned;

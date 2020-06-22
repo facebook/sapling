@@ -14,7 +14,8 @@ mod utils;
 use ::manifest::{Entry, Manifest, ManifestOps};
 use anyhow::Error;
 use assert_matches::assert_matches;
-use blobrepo::{errors::ErrorKind, BlobRepo};
+use blobrepo::BlobRepo;
+use blobrepo_errors::ErrorKind;
 use blobrepo_hg::{
     derive_hg_changeset::{
         check_case_conflict_in_manifest, get_hg_from_bonsai_changeset_with_impl,

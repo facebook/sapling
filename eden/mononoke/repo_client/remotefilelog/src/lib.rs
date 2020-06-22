@@ -305,8 +305,8 @@ fn prepare_blob(
 mod test {
     use super::*;
     use assert_matches::assert_matches;
-    use blobrepo::DangerousOverride;
     use blobrepo_hg::BlobRepoHg;
+    use blobrepo_override::DangerousOverride;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use futures::compat::Future01CompatExt;

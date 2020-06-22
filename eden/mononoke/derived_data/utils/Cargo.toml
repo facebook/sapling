@@ -12,6 +12,7 @@ path = "lib.rs"
 [dependencies]
 blame = { path = "../blame" }
 blobrepo = { path = "../../blobrepo" }
+blobrepo_override = { path = "../../blobrepo/override" }
 blobstore = { path = "../../blobstore" }
 cacheblob = { path = "../../blobstore/cacheblob" }
 changeset_info = { path = "../changeset_info" }

@@ -13,6 +13,7 @@ path = "main.rs"
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
 blobrepo_factory = { path = "../../blobrepo/factory" }
+blobrepo_override = { path = "../../blobrepo/override" }
 bookmarks = { path = "../../bookmarks" }
 cache_warmup = { path = "../../cache_warmup" }
 changesets = { path = "../../changesets" }

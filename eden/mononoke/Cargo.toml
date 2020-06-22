@@ -63,6 +63,7 @@ blame = { path = "derived_data/blame" }
 blobrepo = { path = "blobrepo" }
 blobrepo_factory = { path = "blobrepo/factory" }
 blobrepo_hg = { path = "blobrepo/blobrepo_hg" }
+blobrepo_override = { path = "blobrepo/override" }
 blobrepo_utils = { path = "blobrepo_utils" }
 blobstore = { path = "blobstore" }
 blobstore_factory = { path = "blobstore/factory" }
@@ -135,6 +136,7 @@ members = [
     "blobrepo/changeset_fetcher",
     "blobrepo/errors",
     "blobrepo/factory",
+    "blobrepo/override",
     "blobrepo/repo_blobstore",
     "blobrepo_utils",
     "blobstore",

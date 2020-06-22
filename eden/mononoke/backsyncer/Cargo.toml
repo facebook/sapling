@@ -30,6 +30,7 @@ thiserror = "1.0"
 
 [dev-dependencies]
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
+blobrepo_override = { path = "../blobrepo/override" }
 blobstore = { path = "../blobstore" }
 bookmark_renaming = { path = "../commit_rewriting/bookmark_renaming" }
 dbbookmarks = { path = "../bookmarks/dbbookmarks" }

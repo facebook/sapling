@@ -14,17 +14,14 @@ name = "blobrepo_test"
 path = "test/main.rs"
 
 [dependencies]
-blobrepo_errors = { path = "errors" }
 blobstore = { path = "../blobstore" }
 bonsai_git_mapping = { path = "../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { path = "../bonsai_globalrev_mapping" }
-bonsai_hg_mapping = { path = "../bonsai_hg_mapping" }
 bookmarks = { path = "../bookmarks" }
 cacheblob = { path = "../blobstore/cacheblob" }
 changeset_fetcher = { path = "changeset_fetcher" }
 changesets = { path = "../changesets" }
 context = { path = "../server/context" }
-filenodes = { path = "../filenodes" }
 filestore = { path = "../filestore" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }
@@ -42,6 +39,7 @@ futures-old = { package = "futures", version = "0.1" }
 
 [dev-dependencies]
 benchmark_lib = { path = "../benchmark" }
+blobrepo_errors = { path = "errors" }
 blobrepo_factory = { path = "factory" }
 blobrepo_hg = { path = "blobrepo_hg" }
 cmdlib = { path = "../cmdlib" }

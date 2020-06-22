@@ -11,8 +11,9 @@ mod mem_writes_bonsai_hg_mapping;
 mod mem_writes_changesets;
 
 use anyhow::{format_err, Context, Error};
-use blobrepo::{BlobRepo, DangerousOverride};
+use blobrepo::BlobRepo;
 use blobrepo_hg::{derive_hg_changeset::get_manifest_from_bonsai, BlobRepoHg};
+use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bytes::Bytes;
