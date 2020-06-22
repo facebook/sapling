@@ -7,7 +7,7 @@
 import abc
 import argparse
 import typing
-from typing import Any, Callable, Dict, List, Optional, Type, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Type, Union, cast
 
 from . import util
 
@@ -69,7 +69,7 @@ class Subcmd(abc.ABC):
         return add_subcommands(parser, cmds)
 
     @abc.abstractmethod
-    def run(self, args: argparse.Namespace) -> int:
+    def run(self, args: argparse.Namespace) -> Union[Awaitable[int], int]:
         pass
 
 

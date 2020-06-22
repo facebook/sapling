@@ -5,8 +5,10 @@
 # GNU General Public License version 2.
 
 import argparse
+import asyncio
 import datetime
 import errno
+import inspect
 import json
 import os
 import signal
@@ -1964,7 +1966,11 @@ def main() -> int:
         parser.print_help()
         return EX_OK
     try:
-        return_code: int = args.func(args)
+        result = args.func(args)
+        if inspect.isawaitable(result):
+            return_code: int = asyncio.run(result)
+        else:
+            return_code: int = result
     except subcmd_mod.CmdError as ex:
         print(f"error: {ex}", file=sys.stderr)
         return EX_SOFTWARE
