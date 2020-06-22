@@ -6,10 +6,8 @@
 
 from __future__ import absolute_import
 
+from edenscm.mercurial import pycompat
 from testutil.dott import feature, sh, testtmp  # noqa: F401
-
-
-feature.require(["py2"])
 
 
 sh % "hg init repo"
@@ -17,7 +15,7 @@ sh % "cd repo"
 sh % "touch foo"
 sh % "hg add foo"
 for i in range(12):
-    open("foo", "ab").write("foo-%s\n" % i)
+    open("foo", "ab").write(b"foo-%s\n" % pycompat.encodeutf8(str(i)))
     sh.hg("ci", "-m", "foo-%s" % i)
 
 sh % "hg export -v -o 'foo-%nof%N.patch' 2:tip" == r"""
@@ -221,7 +219,7 @@ mode = ansi
 color =
 """ >> "$HGRCPATH"
 
-sh % "hg export --color always --nodates tip" == r"""
+sh % "hg export --color always --nodates tip" == br"""
     # HG changeset patch
     # User test
     # Date 0 0

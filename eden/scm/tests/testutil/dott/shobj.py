@@ -86,6 +86,8 @@ class LazyCommand(object):
     def __eq__(self, rhs):
         """Test output, with autofix ability"""
         # out is not mangled by "_repr"
+        if sys.version_info[0] >= 3 and isinstance(rhs, bytes):
+            rhs = rhs.decode("utf-8")
         out = self.output
         for func in _normalizefuncs:
             out = func(out) or out
@@ -268,7 +270,13 @@ def eqglob(a, b):
         return False
     for aline, bline in zip(alines, blines):
         if bline.endswith(" (esc)"):
-            bline = bline[:-6].decode("string-escape")
+            # If it's a unicode string that contains escapes, turn it to binary
+            # first.
+
+            if sys.version_info[0] < 3:
+                bline = bline[:-6].decode("string-escape")
+            else:
+                bline = bline[:-6].encode("raw_unicode_escape").decode("unicode-escape")
         if os.name == "nt":
             # Normalize path on Windows
             aline = aline.replace("\\", "/")
