@@ -12,6 +12,7 @@ use crate::{
 };
 use anyhow::{anyhow, format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_git_mapping::{
     bulk_add_git_mapping_in_transaction, extract_git_sha1_from_bonsai_extra, BonsaiGitMappingEntry,

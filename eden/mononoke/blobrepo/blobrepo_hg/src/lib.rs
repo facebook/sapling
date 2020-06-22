@@ -21,6 +21,7 @@ use futures_old::{
     stream::{self, futures_unordered},
     Future, IntoFuture, Stream,
 };
+use mercurial_mutation::HgMutationStore;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{ChangesetId, RepoPath};
 use std::{
@@ -34,6 +35,8 @@ pub trait BlobRepoHg {
     fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping>;
 
     fn get_filenodes(&self) -> &Arc<dyn Filenodes>;
+
+    fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore>;
 
     fn get_bonsai_from_hg(
         &self,
@@ -119,6 +122,15 @@ impl BlobRepoHg for BlobRepo {
         match self.get_attribute::<dyn Filenodes>() {
             Some(attr) => attr,
             None => panic!("BlboRepo initalized incorrectly and does not have Filenodes attribute"),
+        }
+    }
+
+    fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore> {
+        match self.get_attribute::<dyn HgMutationStore>() {
+            Some(attr) => attr,
+            None => panic!(
+                "BlboRepo initalized incorrectly and does not have HgMutationStore attribute"
+            ),
         }
     }
 

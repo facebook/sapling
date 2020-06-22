@@ -27,7 +27,6 @@ context = { path = "../server/context" }
 filenodes = { path = "../filenodes" }
 filestore = { path = "../filestore" }
 manifest = { path = "../manifest" }
-mercurial_mutation = { path = "../mercurial/mutation" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }

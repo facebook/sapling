@@ -751,6 +751,7 @@ pub fn blobrepo_new(
         let mut attributes = TypeMap::new();
         attributes.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
         attributes.insert::<dyn Filenodes>(filenodes);
+        attributes.insert::<dyn HgMutationStore>(hg_mutation_store);
         Arc::new(attributes)
     };
     BlobRepo::new_dangerous(
@@ -759,7 +760,6 @@ pub fn blobrepo_new(
         changesets,
         bonsai_git_mapping,
         bonsai_globalrev_mapping,
-        hg_mutation_store,
         derived_data_lease,
         filestore_config,
         phases_factory,

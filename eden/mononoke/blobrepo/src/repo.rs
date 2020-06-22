@@ -39,7 +39,6 @@ use futures_old::IntoFuture;
 use futures_stats::Timed;
 use manifest::{Entry, Manifest, ManifestOps};
 use maplit::hashmap;
-use mercurial_mutation::HgMutationStore;
 use mercurial_types::{
     blobs::{
         ChangesetMetadata, ContentBlobMeta, HgBlobChangeset, HgBlobEntry, HgChangesetContent,
@@ -111,7 +110,6 @@ pub struct BlobRepo {
     changesets: Arc<dyn Changesets>,
     bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-    hg_mutation_store: Arc<dyn HgMutationStore>,
     repoid: RepositoryId,
     // Returns new ChangesetFetcher that can be used by operation that work with commit graph
     // (for example, revsets).
@@ -136,7 +134,6 @@ impl BlobRepo {
         changesets: Arc<dyn Changesets>,
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-        hg_mutation_store: Arc<dyn HgMutationStore>,
         derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
         phases_factory: SqlPhasesFactory,
@@ -162,7 +159,6 @@ impl BlobRepo {
             changesets,
             bonsai_git_mapping,
             bonsai_globalrev_mapping,
-            hg_mutation_store,
             repoid,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
             derived_data_lease,
@@ -305,10 +301,6 @@ impl BlobRepo {
                     .collect()
             })
             .boxify()
-    }
-
-    pub fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore> {
-        &self.hg_mutation_store
     }
 
     pub fn list_bookmark_log_entries(
@@ -1737,7 +1729,6 @@ impl Clone for BlobRepo {
             changesets: self.changesets.clone(),
             bonsai_git_mapping: self.bonsai_git_mapping.clone(),
             bonsai_globalrev_mapping: self.bonsai_globalrev_mapping.clone(),
-            hg_mutation_store: self.hg_mutation_store.clone(),
             repoid: self.repoid.clone(),
             changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
             derived_data_lease: self.derived_data_lease.clone(),

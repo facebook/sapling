@@ -13,6 +13,7 @@ bonsai_hg_mapping = { path = "../../bonsai_hg_mapping" }
 bookmarks = { path = "../../bookmarks" }
 context = { path = "../../server/context" }
 filenodes = { path = "../../filenodes" }
+mercurial_mutation = { path = "../../mercurial/mutation" }
 mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
