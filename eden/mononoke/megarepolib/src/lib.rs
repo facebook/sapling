@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future, stream, Stream, StreamExt, TryStreamExt,
+    future, Stream, TryStreamExt,
 };
+use itertools::Itertools;
 use manifest::ManifestOps;
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobEnvelope},
@@ -29,37 +30,20 @@ use crate::common::{create_and_save_changeset, ChangesetArgs};
 const BUFFER_SIZE: usize = 100;
 const REPORTING_INTERVAL_FILES: usize = 10000;
 
-fn get_file_changes(
+struct FileMove {
     old_path: MPath,
     maybe_new_path: Option<MPath>,
     file_type: FileType,
     file_size: u64,
     content_id: ContentId,
-    parent_cs: ChangesetId,
-) -> Vec<(MPath, Option<FileChange>)> {
-    // Remove old file
-    let mut res = vec![(old_path.clone(), None)];
-    if let Some(new_path) = maybe_new_path {
-        // We are not just dropping the file,
-        // so let's add it's new location
-        let file_change = FileChange::new(
-            content_id,
-            file_type,
-            file_size,
-            Some((old_path, parent_cs)),
-        );
-        res.push((new_path, Some(file_change)))
-    }
-    res
 }
 
-fn get_move_file_changes<'a>(
+fn get_all_file_moves<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     hg_cs: HgBlobChangeset,
-    parent_cs_id: ChangesetId,
     path_converter: &'a Mover,
-) -> impl Stream<Item = Result<(MPath, Option<FileChange>), Error>> + 'a {
+) -> impl Stream<Item = Result<FileMove, Error>> + 'a {
     hg_cs
         .manifestid()
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
@@ -87,20 +71,19 @@ fn get_move_file_changes<'a>(
                     // The return type is `Option` to acommodate `HgManifestEnvelope`
                     // which returns `None`.
                     let file_size = file_envelope.get_size().unwrap();
-                    let stream = stream::iter(get_file_changes(
+
+                    let file_move = FileMove {
                         old_path,
                         maybe_new_path,
                         file_type,
                         file_size,
-                        file_envelope.content_id(),
-                        parent_cs_id,
-                    ));
-                    Ok(stream.map(Ok))
+                        content_id: file_envelope.content_id(),
+                    };
+                    Ok(file_move)
                 }
             }
         })
         .try_buffer_unordered(BUFFER_SIZE)
-        .try_flatten()
 }
 
 pub async fn perform_move<'a>(
@@ -110,6 +93,69 @@ pub async fn perform_move<'a>(
     path_converter: Mover,
     resulting_changeset_args: ChangesetArgs,
 ) -> Result<HgChangesetId, Error> {
+    let mut stack = perform_stack_move_impl(
+        ctx,
+        repo,
+        parent_bcs_id,
+        path_converter,
+        |file_moves| vec![file_moves],
+        move |_| resulting_changeset_args.clone(),
+    )
+    .await?;
+
+    if stack.len() == 1 {
+        stack
+            .pop()
+            .ok_or_else(|| anyhow!("not a single commit was created"))
+    } else {
+        Err(anyhow!(
+            "wrong number of commits was created. Expected 1, created {}: {:?}",
+            stack.len(),
+            stack
+        ))
+    }
+}
+
+/// Move files according to path_converter in a stack of commits.
+/// Each commit won't have more than `max_num_of_moves_in_commit` files.
+/// Creating a stack of commits might be desirable if we want to keep each commit smaller.
+pub async fn perform_stack_move<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
+    parent_bcs_id: ChangesetId,
+    path_converter: Mover,
+    max_num_of_moves_in_commit: usize,
+    resulting_changeset_args: impl Fn(usize) -> ChangesetArgs,
+) -> Result<Vec<HgChangesetId>, Error> {
+    perform_stack_move_impl(
+        ctx,
+        repo,
+        parent_bcs_id,
+        path_converter,
+        |file_changes| {
+            file_changes
+                .into_iter()
+                .chunks(max_num_of_moves_in_commit)
+                .into_iter()
+                .map(|chunk| chunk.collect())
+                .collect()
+        },
+        resulting_changeset_args,
+    )
+    .await
+}
+
+async fn perform_stack_move_impl<'a, Chunker>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
+    mut parent_bcs_id: ChangesetId,
+    path_converter: Mover,
+    chunker: Chunker,
+    resulting_changeset_args: impl Fn(usize) -> ChangesetArgs,
+) -> Result<Vec<HgChangesetId>, Error>
+where
+    Chunker: Fn(Vec<FileMove>) -> Vec<Vec<FileMove>>,
+{
     let parent_hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), parent_bcs_id)
         .compat()
@@ -120,27 +166,55 @@ pub async fn perform_move<'a>(
         .compat()
         .await?;
 
-    let file_changes =
-        get_move_file_changes(&ctx, &repo, parent_hg_cs, parent_bcs_id, &path_converter)
-            .try_fold(BTreeMap::new(), {
-                move |mut collected, (path, file_change)| {
-                    collected.insert(path, file_change);
-                    if collected.len() % REPORTING_INTERVAL_FILES == 0 {
-                        info!(ctx.logger(), "Processed {} files", collected.len());
-                    }
-                    future::ready(Ok(collected))
+    let mut file_changes = get_all_file_moves(&ctx, &repo, parent_hg_cs, &path_converter)
+        .try_fold(vec![], {
+            move |mut collected, file_move| {
+                collected.push(file_move);
+                if collected.len() % REPORTING_INTERVAL_FILES == 0 {
+                    info!(ctx.logger(), "Processed {} files", collected.len());
                 }
-            })
-            .await?;
+                future::ready(Ok(collected))
+            }
+        })
+        .await?;
 
-    create_and_save_changeset(
-        &ctx,
-        &repo,
-        vec![parent_bcs_id],
-        file_changes,
-        resulting_changeset_args,
-    )
-    .await
+    let mut res = vec![];
+    file_changes.sort_unstable_by(|first, second| first.old_path.cmp(&second.old_path));
+    let chunks_iter = chunker(file_changes);
+
+    for (idx, chunk) in chunks_iter.into_iter().enumerate() {
+        let mut file_changes = BTreeMap::new();
+        for file_move in chunk {
+            file_changes.insert(file_move.old_path.clone(), None);
+            if let Some(to) = file_move.maybe_new_path {
+                let fc = FileChange::new(
+                    file_move.content_id,
+                    file_move.file_type,
+                    file_move.file_size,
+                    Some((file_move.old_path, parent_bcs_id)),
+                );
+                file_changes.insert(to, Some(fc));
+            }
+        }
+
+        let hg_cs_id = create_and_save_changeset(
+            &ctx,
+            &repo,
+            vec![parent_bcs_id],
+            file_changes,
+            resulting_changeset_args(idx),
+        )
+        .await?;
+
+        parent_bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .compat()
+            .await?
+            .ok_or(anyhow!("not found bonsai commit for {}", hg_cs_id))?;
+        res.push(hg_cs_id)
+    }
+
+    Ok(res)
 }
 
 #[cfg(test)]
@@ -149,7 +223,7 @@ mod test {
     use anyhow::Result;
     use cloned::cloned;
     use fbinit::FacebookInit;
-    use fixtures::many_files_dirs;
+    use fixtures::{linear, many_files_dirs};
     use futures::compat::Future01CompatExt;
     use futures_old::{stream::Stream, Future};
     use maplit::btreemap;
@@ -157,6 +231,7 @@ mod test {
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime};
     use std::str::FromStr;
     use std::sync::Arc;
+    use tests_utils::resolve_cs_id;
 
     fn identity_mover(p: &MPath) -> Result<Option<MPath>> {
         Ok(Some(p.clone()))
@@ -188,6 +263,10 @@ mod test {
         }
 
         Ok(Some(p.clone()))
+    }
+
+    fn shift_all(p: &MPath) -> Result<Option<MPath>> {
+        Ok(Some(MPath::new("moved_dir")?.join(p)))
     }
 
     async fn prepare(
@@ -382,5 +461,67 @@ mod test {
             // After removing renamed and removed files, both working copies should be identical
             assert_eq!(old_wc, new_wc);
         });
+    }
+
+    #[fbinit::compat_test]
+    async fn test_stack_move(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+
+        let old_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+        let create_cs_args = |num| ChangesetArgs {
+            author: "user".to_string(),
+            message: format!("I like to move it: {}", num),
+            datetime: DateTime::from_rfc3339("1985-04-12T23:20:50.52Z").unwrap(),
+            bookmark: None,
+            mark_public: false,
+        };
+
+        let repo = linear::getrepo(fb).await;
+
+        let stack = perform_stack_move(
+            &ctx,
+            &repo,
+            old_bcs_id,
+            Arc::new(shift_all),
+            1,
+            create_cs_args,
+        )
+        .await?;
+
+        // 11 files, so create 1 commit for each
+        assert_eq!(stack.len(), 11);
+
+        let stack = perform_stack_move(
+            &ctx,
+            &repo,
+            old_bcs_id,
+            Arc::new(shift_all),
+            2,
+            create_cs_args,
+        )
+        .await?;
+        assert_eq!(stack.len(), 6);
+
+        let last_hg_cs_id = stack.last().unwrap();
+        let last_hg_cs = last_hg_cs_id
+            .load(ctx.clone(), repo.blobstore())
+            .compat()
+            .await?;
+
+        let leaf_entries = last_hg_cs
+            .manifestid()
+            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+            .compat()
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        assert_eq!(leaf_entries.len(), 11);
+        let prefix = MPath::new("moved_dir")?;
+        for (leaf, _) in &leaf_entries {
+            assert!(prefix.is_prefix_of(leaf));
+        }
+
+        Ok(())
     }
 }
