@@ -646,6 +646,9 @@ async fn process_frontier(
     max_gen: Generation,
 ) -> Result<NodeFrontier, Error> {
     let mut node_frontier = node_frontier;
+    let max_skips_without_yield = tunables::tunables().get_skiplist_max_skips_without_yield();
+    let mut skips_without_yield = 0;
+
     while let Some(val) = node_frontier.max_gen() {
         if val <= max_gen {
             break;
@@ -702,6 +705,11 @@ async fn process_frontier(
             for entry in s {
                 node_frontier.insert((entry, gen));
             }
+        }
+        skips_without_yield += 1;
+        if max_skips_without_yield != 0 && skips_without_yield >= max_skips_without_yield {
+            tokio::task::yield_now().await;
+            skips_without_yield = 0;
         }
     }
     Ok(node_frontier)
@@ -2790,6 +2798,35 @@ mod test {
                 vec![10, 9, 7, 3]
             );
         });
+    }
+
+    #[fbinit::compat_test]
+    async fn test_max_skips(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(linear::getrepo(fb).await);
+        let sli = SkiplistIndex::new();
+        let src_node = string_to_bonsai(
+            ctx.clone(),
+            &repo,
+            "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
+        )
+        .await;
+        let dst_node = string_to_bonsai(
+            ctx.clone(),
+            &repo,
+            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+        )
+        .await;
+        let cs_fetcher = repo.get_changeset_fetcher();
+        sli.add_node(&ctx, &cs_fetcher, src_node, 10).await?;
+
+        let f = sli.query_reachability(&ctx, &cs_fetcher, src_node, dst_node);
+
+        let tunables = tunables::MononokeTunables::default();
+        tunables.update_ints(&hashmap! {"skiplist_max_skips_without_yield".to_string() => 1});
+        tunables::with_tunables_async(tunables, f).await?;
+
+        Ok(())
     }
 
     skiplist_test!(test_lca_first_generation, linear);

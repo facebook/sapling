@@ -14,6 +14,7 @@ context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
 reachabilityindex = { path = ".." }
 skiplist-thrift = { path = "../if" }
+tunables = { path = "../../tunables" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 anyhow = "1.0"
@@ -24,6 +25,7 @@ futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-util = "0.3"
 maplit = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
+tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
 blobrepo = { path = "../../blobrepo" }
@@ -35,3 +37,4 @@ async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", br
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures-old = { package = "futures", version = "0.1" }
+tokio-compat = "0.1"
