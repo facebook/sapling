@@ -77,7 +77,8 @@ define_stats! {
     create_changeset_cf_count: timeseries("create_changeset.changed_files_count"; Average, Sum),
 }
 
-pub struct BlobRepo {
+#[derive(Clone)]
+pub struct BlobRepoInner {
     blobstore: RepoBlobstore,
     bookmarks: Arc<dyn Bookmarks>,
     changesets: Arc<dyn Changesets>,
@@ -94,6 +95,11 @@ pub struct BlobRepo {
     derived_data_config: DerivedDataConfig,
     reponame: String,
     attributes: Arc<TypeMap>,
+}
+
+#[derive(Clone)]
+pub struct BlobRepo {
+    inner: Arc<BlobRepoInner>,
 }
 
 impl BlobRepo {
@@ -126,7 +132,7 @@ impl BlobRepo {
             }
         };
 
-        BlobRepo {
+        let inner = BlobRepoInner {
             bookmarks,
             blobstore,
             changesets,
@@ -140,11 +146,14 @@ impl BlobRepo {
             derived_data_config,
             reponame,
             attributes,
+        };
+        BlobRepo {
+            inner: Arc::new(inner),
         }
     }
 
     pub fn get_attribute<T: ?Sized + Send + Sync + 'static>(&self) -> Option<&Arc<T>> {
-        self.attributes.get::<T>()
+        self.inner.attributes.get::<T>()
     }
 
     /// Get Bonsai changesets for Mercurial heads, which we approximate as Publishing Bonsai
@@ -154,7 +163,8 @@ impl BlobRepo {
         ctx: CoreContext,
     ) -> impl Stream<Item = ChangesetId, Error = Error> {
         STATS::get_bonsai_heads_maybe_stale.add_value(1);
-        self.bookmarks
+        self.inner
+            .bookmarks
             .list_publishing_by_prefix(
                 ctx,
                 &BookmarkPrefix::empty(),
@@ -170,10 +180,10 @@ impl BlobRepo {
         ctx: CoreContext,
     ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
         STATS::get_bonsai_publishing_bookmarks_maybe_stale.add_value(1);
-        self.bookmarks.list_publishing_by_prefix(
+        self.inner.bookmarks.list_publishing_by_prefix(
             ctx,
             &BookmarkPrefix::empty(),
-            self.repoid,
+            self.get_repoid(),
             Freshness::MaybeStale,
         )
     }
@@ -186,10 +196,10 @@ impl BlobRepo {
         max: u64,
     ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
-        self.bookmarks.list_all_by_prefix(
+        self.inner.bookmarks.list_all_by_prefix(
             ctx.clone(),
             prefix,
-            self.repoid,
+            self.get_repoid(),
             Freshness::MaybeStale,
             max,
         )
@@ -201,12 +211,9 @@ impl BlobRepo {
         changesetid: ChangesetId,
     ) -> BoxFuture<bool, Error> {
         STATS::changeset_exists_by_bonsai.add_value(1);
-        let changesetid = changesetid.clone();
-        let repo = self.clone();
-        let repoid = self.repoid.clone();
-
-        repo.changesets
-            .get(ctx, repoid, changesetid)
+        self.inner
+            .changesets
+            .get(ctx, self.get_repoid(), changesetid)
             .map(|res| res.is_some())
             .boxify()
     }
@@ -217,11 +224,9 @@ impl BlobRepo {
         changesetid: ChangesetId,
     ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
         STATS::get_changeset_parents_by_bonsai.add_value(1);
-        let repo = self.clone();
-        let repoid = self.repoid.clone();
-
-        repo.changesets
-            .get(ctx, repoid, changesetid)
+        self.inner
+            .changesets
+            .get(ctx, self.get_repoid(), changesetid)
             .and_then(move |maybe_bonsai| {
                 maybe_bonsai.ok_or(ErrorKind::BonsaiNotFound(changesetid).into())
             })
@@ -234,39 +239,42 @@ impl BlobRepo {
         name: &BookmarkName,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
-        self.bookmarks.get(ctx, name, self.repoid)
+        self.inner.bookmarks.get(ctx, name, self.get_repoid())
     }
 
     pub fn bonsai_git_mapping(&self) -> &Arc<dyn BonsaiGitMapping> {
-        &self.bonsai_git_mapping
+        &self.inner.bonsai_git_mapping
     }
 
     pub fn bonsai_globalrev_mapping(&self) -> &Arc<dyn BonsaiGlobalrevMapping> {
-        &self.bonsai_globalrev_mapping
+        &self.inner.bonsai_globalrev_mapping
     }
 
     pub fn get_bonsai_from_globalrev(
         &self,
         globalrev: Globalrev,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
-        self.bonsai_globalrev_mapping
-            .get_bonsai_from_globalrev(self.repoid, globalrev)
+        self.inner
+            .bonsai_globalrev_mapping
+            .get_bonsai_from_globalrev(self.get_repoid(), globalrev)
     }
 
     pub fn get_globalrev_from_bonsai(
         &self,
         bcs: ChangesetId,
     ) -> BoxFuture<Option<Globalrev>, Error> {
-        self.bonsai_globalrev_mapping
-            .get_globalrev_from_bonsai(self.repoid, bcs)
+        self.inner
+            .bonsai_globalrev_mapping
+            .get_globalrev_from_bonsai(self.get_repoid(), bcs)
     }
 
     pub fn get_bonsai_globalrev_mapping(
         &self,
         bonsai_or_globalrev_ids: impl Into<BonsaisOrGlobalrevs>,
     ) -> BoxFuture<Vec<(ChangesetId, Globalrev)>, Error> {
-        self.bonsai_globalrev_mapping
-            .get(self.repoid, bonsai_or_globalrev_ids.into())
+        self.inner
+            .bonsai_globalrev_mapping
+            .get(self.get_repoid(), bonsai_or_globalrev_ids.into())
             .map(|result| {
                 result
                     .into_iter()
@@ -285,10 +293,10 @@ impl BlobRepo {
         freshness: Freshness,
     ) -> impl Stream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
     {
-        self.bookmarks.list_bookmark_log_entries(
+        self.inner.bookmarks.list_bookmark_log_entries(
             ctx.clone(),
             name,
-            self.repoid,
+            self.get_repoid(),
             max_rec,
             offset,
             freshness,
@@ -302,8 +310,13 @@ impl BlobRepo {
         limit: u64,
         freshness: Freshness,
     ) -> impl Stream<Item = BookmarkUpdateLogEntry, Error = Error> {
-        self.bookmarks
-            .read_next_bookmark_log_entries(ctx, id, self.get_repoid(), limit, freshness)
+        self.inner.bookmarks.read_next_bookmark_log_entries(
+            ctx,
+            id,
+            self.get_repoid(),
+            limit,
+            freshness,
+        )
     }
 
     pub fn count_further_bookmark_log_entries(
@@ -312,7 +325,7 @@ impl BlobRepo {
         id: u64,
         exclude_reason: Option<BookmarkUpdateReason>,
     ) -> impl Future<Item = u64, Error = Error> {
-        self.bookmarks.count_further_bookmark_log_entries(
+        self.inner.bookmarks.count_further_bookmark_log_entries(
             ctx,
             id,
             self.get_repoid(),
@@ -322,7 +335,9 @@ impl BlobRepo {
 
     pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn bookmarks::Transaction> {
         STATS::update_bookmark_transaction.add_value(1);
-        self.bookmarks.create_transaction(ctx, self.repoid)
+        self.inner
+            .bookmarks
+            .create_transaction(ctx, self.get_repoid())
     }
 
     // Returns the generation number of a changeset
@@ -333,50 +348,42 @@ impl BlobRepo {
         cs: ChangesetId,
     ) -> impl Future<Item = Option<Generation>, Error = Error> {
         STATS::get_generation_number.add_value(1);
-        let repo = self.clone();
-        let repoid = self.repoid.clone();
-        repo.changesets
-            .get(ctx, repoid, cs)
+        self.inner
+            .changesets
+            .get(ctx, self.get_repoid(), cs)
             .map(|res| res.map(|res| Generation::new(res.gen)))
     }
 
     pub fn get_changeset_fetcher(&self) -> Arc<dyn ChangesetFetcher> {
-        (self.changeset_fetcher_factory)()
+        (self.inner.changeset_fetcher_factory)()
     }
 
     pub fn blobstore(&self) -> &RepoBlobstore {
-        &self.blobstore
+        &self.inner.blobstore
     }
 
     pub fn get_blobstore(&self) -> RepoBlobstore {
-        self.blobstore.clone()
+        self.inner.blobstore.clone()
     }
 
     pub fn filestore_config(&self) -> FilestoreConfig {
-        self.filestore_config
+        self.inner.filestore_config
     }
 
     pub fn get_repoid(&self) -> RepositoryId {
-        self.repoid
-    }
-
-    pub(crate) fn get_filenodes(&self) -> &Arc<dyn Filenodes> {
-        match self.get_attribute::<dyn Filenodes>() {
-            Some(attr) => attr,
-            None => panic!("BlboRepo initalized incorrectly and does not have Filenodes attribute"),
-        }
+        self.inner.repoid
     }
 
     pub fn get_phases(&self) -> Arc<dyn Phases> {
-        self.phases_factory.get_phases(
-            self.repoid,
-            (self.changeset_fetcher_factory)(),
+        self.inner.phases_factory.get_phases(
+            self.get_repoid(),
+            self.get_changeset_fetcher(),
             self.get_heads_fetcher(),
         )
     }
 
     pub fn name(&self) -> &String {
-        &self.reponame
+        &self.inner.reponame
     }
 
     pub fn get_heads_fetcher(&self) -> HeadsFetcher {
@@ -389,37 +396,24 @@ impl BlobRepo {
         })
     }
 
-    /// TODO (aslpavel):
-    /// This method will go away once all usages of BonsaiHgMapping will be removed
-    /// from blobrepo crate. Use `BlobRepoHg::get_bonsai_hg_mapping` instead.
-    /// Do not make this method public!!!
-    fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping> {
-        match self.get_attribute::<dyn BonsaiHgMapping>() {
-            Some(attr) => attr,
-            None => panic!(
-                "BlboRepo initalized incorrectly and does not have BonsaiHgMapping attribute",
-            ),
-        }
-    }
-
     pub fn get_bookmarks_object(&self) -> Arc<dyn Bookmarks> {
-        self.bookmarks.clone()
+        self.inner.bookmarks.clone()
     }
 
     pub fn get_phases_factory(&self) -> &SqlPhasesFactory {
-        &self.phases_factory
+        &self.inner.phases_factory
     }
 
     pub fn get_changesets_object(&self) -> Arc<dyn Changesets> {
-        self.changesets.clone()
+        self.inner.changesets.clone()
     }
 
     pub fn get_derived_data_config(&self) -> &DerivedDataConfig {
-        &self.derived_data_config
+        &self.inner.derived_data_config
     }
 
     pub fn get_derived_data_lease_ops(&self) -> Arc<dyn LeaseOps> {
-        self.derived_data_lease.clone()
+        self.inner.derived_data_lease.clone()
     }
 }
 
@@ -431,9 +425,9 @@ pub fn save_bonsai_changesets(
     ctx: CoreContext,
     repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
-    let complete_changesets = repo.changesets.clone();
-    let blobstore = repo.blobstore.clone();
-    let repoid = repo.repoid.clone();
+    let complete_changesets = repo.get_changesets_object();
+    let blobstore = repo.get_blobstore();
+    let repoid = repo.get_repoid();
 
     let mut parents_to_check: HashSet<ChangesetId> = HashSet::new();
     for bcs in &bonsai_changesets {
@@ -527,51 +521,46 @@ pub fn save_bonsai_changeset_object(
         .map(|_| ())
 }
 
-impl Clone for BlobRepo {
-    fn clone(&self) -> Self {
-        Self {
-            bookmarks: self.bookmarks.clone(),
-            blobstore: self.blobstore.clone(),
-            changesets: self.changesets.clone(),
-            bonsai_git_mapping: self.bonsai_git_mapping.clone(),
-            bonsai_globalrev_mapping: self.bonsai_globalrev_mapping.clone(),
-            repoid: self.repoid.clone(),
-            changeset_fetcher_factory: self.changeset_fetcher_factory.clone(),
-            derived_data_lease: self.derived_data_lease.clone(),
-            filestore_config: self.filestore_config.clone(),
-            phases_factory: self.phases_factory.clone(),
-            derived_data_config: self.derived_data_config.clone(),
-            reponame: self.reponame.clone(),
-            attributes: self.attributes.clone(),
+impl<T> DangerousOverride<T> for BlobRepo
+where
+    BlobRepoInner: DangerousOverride<T>,
+{
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(T) -> T,
+    {
+        let inner = (*self.inner).clone().dangerous_override(modify);
+        BlobRepo {
+            inner: Arc::new(inner),
         }
     }
 }
 
-impl DangerousOverride<Arc<dyn LeaseOps>> for BlobRepo {
+impl DangerousOverride<Arc<dyn LeaseOps>> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(Arc<dyn LeaseOps>) -> Arc<dyn LeaseOps>,
     {
         let derived_data_lease = modify(self.derived_data_lease.clone());
-        BlobRepo {
+        Self {
             derived_data_lease,
             ..self.clone()
         }
     }
 }
 
-impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepo {
+impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(Arc<dyn Blobstore>) -> Arc<dyn Blobstore>,
     {
         let (blobstore, repoid) = RepoBlobstoreArgs::new_with_wrapped_inner_blobstore(
             self.blobstore.clone(),
-            self.get_repoid(),
+            self.repoid,
             modify,
         )
         .into_blobrepo_parts();
-        BlobRepo {
+        Self {
             repoid,
             blobstore,
             ..self.clone()
@@ -579,41 +568,43 @@ impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepo {
     }
 }
 
-impl DangerousOverride<Arc<dyn Bookmarks>> for BlobRepo {
+impl DangerousOverride<Arc<dyn Bookmarks>> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(Arc<dyn Bookmarks>) -> Arc<dyn Bookmarks>,
     {
         let bookmarks = modify(self.bookmarks.clone());
-        BlobRepo {
+        Self {
             bookmarks,
             ..self.clone()
         }
     }
 }
 
-impl DangerousOverride<Arc<dyn Filenodes>> for BlobRepo {
+impl DangerousOverride<Arc<dyn Filenodes>> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(Arc<dyn Filenodes>) -> Arc<dyn Filenodes>,
     {
-        let filenodes = modify(self.get_filenodes().clone());
+        let filenodes = match self.attributes.get::<dyn Filenodes>() {
+            Some(attr) => modify(attr.clone()),
+            None => panic!("BlboRepo initalized incorrectly and does not have Filenodes attribute"),
+        };
         let mut attrs = self.attributes.as_ref().clone();
         attrs.insert::<dyn Filenodes>(filenodes);
-        BlobRepo {
+        Self {
             attributes: Arc::new(attrs),
             ..self.clone()
         }
     }
 }
 
-impl DangerousOverride<Arc<dyn Changesets>> for BlobRepo {
+impl DangerousOverride<Arc<dyn Changesets>> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(Arc<dyn Changesets>) -> Arc<dyn Changesets>,
     {
         let changesets = modify(self.changesets.clone());
-
         let changeset_fetcher_factory = {
             cloned!(changesets, self.repoid);
             move || {
@@ -624,7 +615,7 @@ impl DangerousOverride<Arc<dyn Changesets>> for BlobRepo {
             }
         };
 
-        BlobRepo {
+        Self {
             changesets,
             changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
             ..self.clone()
@@ -632,41 +623,46 @@ impl DangerousOverride<Arc<dyn Changesets>> for BlobRepo {
     }
 }
 
-impl DangerousOverride<Arc<dyn BonsaiHgMapping>> for BlobRepo {
+impl DangerousOverride<Arc<dyn BonsaiHgMapping>> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(Arc<dyn BonsaiHgMapping>) -> Arc<dyn BonsaiHgMapping>,
     {
-        let bonsai_hg_mapping = modify(self.get_bonsai_hg_mapping().clone());
+        let bonsai_hg_mapping = match self.attributes.get::<dyn BonsaiHgMapping>() {
+            Some(attr) => modify(attr.clone()),
+            None => panic!(
+                "BlboRepo initalized incorrectly and does not have BonsaiHgMapping attribute",
+            ),
+        };
         let mut attrs = self.attributes.as_ref().clone();
         attrs.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
-        BlobRepo {
+        Self {
             attributes: Arc::new(attrs),
             ..self.clone()
         }
     }
 }
 
-impl DangerousOverride<DerivedDataConfig> for BlobRepo {
+impl DangerousOverride<DerivedDataConfig> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(DerivedDataConfig) -> DerivedDataConfig,
     {
         let derived_data_config = modify(self.derived_data_config.clone());
-        BlobRepo {
+        Self {
             derived_data_config,
             ..self.clone()
         }
     }
 }
 
-impl DangerousOverride<FilestoreConfig> for BlobRepo {
+impl DangerousOverride<FilestoreConfig> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
         F: FnOnce(FilestoreConfig) -> FilestoreConfig,
     {
         let filestore_config = modify(self.filestore_config.clone());
-        BlobRepo {
+        Self {
             filestore_config,
             ..self.clone()
         }
