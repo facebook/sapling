@@ -1033,6 +1033,7 @@ def _dispatch(req):
         fullargs = args
 
         cmd, func, args, options, cmdoptions, foundaliases = _parse(lui, args)
+        lui.cmdname = ui.cmdname = cmd
 
         if cmd == "help" and len(foundaliases) > 0:
             cmd = foundaliases[0]

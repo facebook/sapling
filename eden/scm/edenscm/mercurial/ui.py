@@ -195,6 +195,8 @@ class ui(object):
         self._styles = {}
         # Whether the output stream is known to be a terminal.
         self._terminaloutput = None
+        # The current command name being executed.
+        self.cmdname = None
 
         if src:
             self._uiconfig = src._uiconfig.copy()
@@ -219,6 +221,7 @@ class ui(object):
             self._measuredtimes = src._measuredtimes
 
             self.metrics = src.metrics
+            self.cmdname = src.cmdname
         else:
             self._uiconfig = uiconfig.uiconfig()
 
