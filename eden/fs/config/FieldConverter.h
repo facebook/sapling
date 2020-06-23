@@ -9,6 +9,7 @@
 
 #include <chrono>
 #include <map>
+#include <optional>
 #include <string>
 #include <type_traits>
 
@@ -54,6 +55,20 @@ class FieldConverter<std::string> {
 
   std::string toDebugString(const std::string& value) const {
     return value;
+  }
+};
+
+template <typename T>
+class FieldConverter<std::optional<T>> {
+ public:
+  folly::Expected<std::optional<T>, std::string> fromString(
+      folly::StringPiece value,
+      const std::map<std::string, std::string>& convData) const {
+    return FieldConverter<T>{}.fromString(value, convData);
+  }
+
+  std::string toDebugString(const std::optional<T>& value) const {
+    return FieldConverter<T>{}.toDebugString(value.value_or(T{}));
   }
 };
 

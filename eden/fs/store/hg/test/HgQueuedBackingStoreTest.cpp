@@ -12,6 +12,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
@@ -63,7 +64,12 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
 
   std::unique_ptr<HgQueuedBackingStore> makeQueuedStore() {
     return std::make_unique<HgQueuedBackingStore>(
-        localStore, stats, std::move(backingStore), 1);
+        localStore,
+        stats,
+        std::move(backingStore),
+        std::shared_ptr<ReloadableConfig>(),
+        std::make_unique<BackingStoreLogger>(),
+        1);
   }
 };
 

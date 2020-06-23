@@ -21,6 +21,7 @@
 namespace facebook {
 namespace eden {
 
+class BackingStoreLogger;
 class ReloadableConfig;
 class HgBackingStore;
 class LocalStore;
@@ -41,6 +42,8 @@ class HgQueuedBackingStore : public BackingStore {
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<EdenStats> stats,
       std::unique_ptr<HgBackingStore> backingStore,
+      std::shared_ptr<ReloadableConfig> config,
+      std::unique_ptr<BackingStoreLogger> logger,
       uint8_t numberThreads = kNumberHgQueueWorker);
 
   ~HgQueuedBackingStore() override;
@@ -96,6 +99,17 @@ class HgQueuedBackingStore : public BackingStore {
   void processRequest();
 
   /**
+   * Logs a backing store fetch to scuba if the path being fetched is
+   * in the configured paths to log. If `identifer` is a RelativePathPiece this
+   * will be used as the "path being fetched". If the `identifer` is a Hash
+   * then this will look up the path with HgProxyHash to be used as the
+   * "path being fetched"
+   */
+  void logBackingStoreFetch(
+      ObjectFetchContext& context,
+      std::variant<RelativePathPiece, Hash> identifer);
+
+  /**
    * gets the watches timing `object` imports that are `stage`
    *    ex. HgQueuedBackingStore::getImportWatches(
    *          RequestMetricsScope::HgImportStage::PENDING,
@@ -120,6 +134,11 @@ class HgQueuedBackingStore : public BackingStore {
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<EdenStats> stats_;
 
+  /**
+   * Reference to the eden config, may be a null pointer in unit tests.
+   */
+  std::shared_ptr<ReloadableConfig> config_;
+
   std::unique_ptr<HgBackingStore> backingStore_;
 
   /**
@@ -133,6 +152,11 @@ class HgQueuedBackingStore : public BackingStore {
    * forever to process incoming import requests
    */
   std::vector<std::thread> threads_;
+
+  /**
+   * Logger for backing store imports
+   */
+  std::unique_ptr<BackingStoreLogger> logger_;
 
   // Track metrics for queued imports
   mutable RequestMetricsScope::LockedRequestWatchList pendingImportBlobWatches_;

@@ -40,6 +40,7 @@
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
@@ -1504,15 +1505,22 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
     return make_shared<EmptyBackingStore>();
   } else if (type == "hg") {
     const auto repoPath = realpath(name);
+    auto reloadableConfig = shared_ptr<ReloadableConfig>(
+        serverState_, &serverState_->getReloadableConfig());
     auto store = std::make_unique<HgBackingStore>(
         repoPath,
         localStore_.get(),
         serverState_->getThreadPool().get(),
-        shared_ptr<ReloadableConfig>(
-            serverState_, &serverState_->getReloadableConfig()),
+        reloadableConfig,
         getSharedStats());
     return make_shared<HgQueuedBackingStore>(
-        localStore_, getSharedStats(), std::move(store));
+        localStore_,
+        getSharedStats(),
+        std::move(store),
+        reloadableConfig,
+        std::make_unique<BackingStoreLogger>(
+            serverState_->getStructuredLogger(),
+            serverState_->getProcessNameCache()));
   } else if (type == "git") {
 #ifdef EDEN_HAVE_GIT
     const auto repoPath = realpath(name);

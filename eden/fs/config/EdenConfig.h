@@ -325,6 +325,16 @@ class EdenConfig : private ConfigSettingManager {
                                             this};
 
   /**
+   * Controls which paths eden will log data fetches for when this is set.
+   * Will only log paths which are subpaths of
+   * <checkout root>/<logObjectFetchPath>.
+   */
+  ConfigSetting<std::optional<std::string>> logObjectFetchPath{
+      "telemetry:log-object-fetch-path",
+      std::nullopt,
+      this};
+
+  /**
    * Controls whether if EdenFS caches blobs in local store.
    */
   ConfigSetting<bool> enableBlobCaching{"experimental:enable-blob-caching",

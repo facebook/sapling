@@ -17,6 +17,7 @@
 
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
@@ -26,6 +27,7 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
@@ -36,10 +38,14 @@ HgQueuedBackingStore::HgQueuedBackingStore(
     std::shared_ptr<LocalStore> localStore,
     std::shared_ptr<EdenStats> stats,
     std::unique_ptr<HgBackingStore> backingStore,
+    std::shared_ptr<ReloadableConfig> config,
+    std::unique_ptr<BackingStoreLogger> logger,
     uint8_t numberThreads)
     : localStore_(std::move(localStore)),
       stats_(std::move(stats)),
-      backingStore_(std::move(backingStore)) {
+      config_(std::move(config)),
+      backingStore_(std::move(backingStore)),
+      logger_(std::move(logger)) {
   threads_.reserve(numberThreads);
   for (int i = 0; i < numberThreads; i++) {
     threads_.emplace_back(&HgQueuedBackingStore::processRequest, this);
@@ -177,8 +183,10 @@ void HgQueuedBackingStore::processRequest() {
 
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     const Hash& id,
-    ObjectFetchContext& /*context*/,
+    ObjectFetchContext& context,
     ImportPriority priority) {
+  logBackingStoreFetch(context, id);
+
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
   auto [request, future] = HgImportRequest::makeTreeImportRequest(
@@ -189,9 +197,12 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
 
 folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     const Hash& id,
-    ObjectFetchContext& /*context*/,
+    ObjectFetchContext& context,
     ImportPriority priority) {
   auto proxyHash = HgProxyHash(localStore_.get(), id, "getBlob");
+  auto path = proxyHash.path();
+  logBackingStoreFetch(context, path);
+
   if (auto blob =
           backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
     return folly::makeSemiFuture(std::move(blob));
@@ -226,6 +237,37 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
   queue_.enqueue(std::move(request));
 
   return std::move(future);
+}
+
+void HgQueuedBackingStore::logBackingStoreFetch(
+    ObjectFetchContext& context,
+    std::variant<RelativePathPiece, Hash> identifier) {
+  if (!config_) {
+    return;
+  }
+  auto logFetchPath = config_->getEdenConfig()->logObjectFetchPath.getValue();
+  if (!logFetchPath) {
+    return;
+  }
+  std::optional<HgProxyHash> proxyHash;
+  RelativePathPiece path;
+  if (auto maybe_path = std::get_if<RelativePathPiece>(&identifier)) {
+    path = *maybe_path;
+  } else {
+    auto hash = std::get<Hash>(identifier);
+    try {
+      proxyHash = HgProxyHash(localStore_.get(), hash, "logBackingStoreFetch");
+      path = proxyHash.value().path();
+    } catch (const std::domain_error&) {
+      XLOG(WARN) << "Unable to get proxy hash for logging " << hash.toString();
+      return;
+    }
+  }
+
+  if (RelativePathPiece(logFetchPath.value())
+          .isParentDirOf(RelativePathPiece(path))) {
+    logger_->logImport(context, path);
+  }
 }
 
 size_t HgQueuedBackingStore::getImportMetric(
