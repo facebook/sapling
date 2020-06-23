@@ -994,6 +994,8 @@ Test list of internal help commands
                  (no help text available)
    debuggetbundle
                  retrieves a bundle from a repo
+   debuggetroottree
+                 (no help text available)
    debughttp     check whether api server is reachable
    debugignore   display the combined ignore pattern and information about
                  ignored files

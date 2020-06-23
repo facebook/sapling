@@ -361,6 +361,13 @@ def _setupupdates(ui):
         if changedprofiles and not branchmerge:
             scopename = "Calculating additional actions for sparse profile update"
             with util.traced(scopename):
+                # We're going to need a full manifest, so if treemanifest is in
+                # use, we should prefetch. Since our tree might be incomplete
+                # (and its root could be unknown to the server if this is a
+                # local commit), we use BFS prefetching to "complete" our tree.
+                if util.safehasattr(repo, "forcebfsprefetch"):
+                    repo.forcebfsprefetch("", [mctx.manifestnode()])
+
                 mf = mctx.manifest()
                 for file in mf:
                     old = oldsparsematch(file)

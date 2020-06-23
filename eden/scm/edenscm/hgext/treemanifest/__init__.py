@@ -674,6 +674,15 @@ def wraprepo(repo):
             if self.ui.interactive() and edenapi.debug(self.ui):
                 self.ui.warn(_("%s\n") % stats.to_str())
 
+        def forcebfsprefetch(self, rootdir, mfnodes, depth=None):
+            # It is always safe to enable ondemandfetch: this requires the
+            # underlying designatednodes capability on the server side, but if
+            # that capability is not present, it simply won't prefetch anything.
+            with self.ui.configoverride(
+                {("treemanifest", "ondemandfetch"): True}, "forcebfsprefetch"
+            ):
+                self._bfsprefetch(rootdir, mfnodes, depth)
+
         @perftrace.tracefunc("BFS Prefetch")
         def _bfsprefetch(self, rootdir, mfnodes, depth=None):
             with progress.spinner(self.ui, "prefetching trees using BFS"):
@@ -1436,6 +1445,11 @@ def _writemanifestwrapper(orig, self, tr, link, p1, p2, added, removed):
         _converttotree(tr, mfl, tmfl, self, linkrev=link, torevlog=True)
 
     return n
+
+
+@command("debuggetroottree", [], "NODE")
+def debuggetroottree(ui, repo, rootnode):
+    repo.prefetchtrees([bin(rootnode)], depth=1)
 
 
 @command(
@@ -2393,7 +2407,9 @@ def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories, depth)
     opts["basemfnodes"] = wireproto.encodelist(basemfnodes)
     # Serialize directories with a trailing , so we can differentiate the empty
     # directory from the end of the list!
-    opts["directories"] = "".join([wireproto.escapestringarg(d) + "," for d in directories])
+    opts["directories"] = "".join(
+        [wireproto.escapestringarg(d) + "," for d in directories]
+    )
     opts["depth"] = str(depth)
 
     ui = remote.ui
