@@ -1141,7 +1141,7 @@ class ui(object):
         # prompt ' ' must exist; otherwise readline may delete entire line
         # - http://bugs.python.org/issue12833
         with self.timeblockedsection("stdio"):
-            line = util.bytesinput(self.fin, self.fout, r" ")
+            line = util.bytesinput(self.fin, self.fout, b" ")
 
         # When stdin is in binary mode on Windows, it can cause
         # raw_input() to emit an extra trailing carriage return
@@ -1158,7 +1158,7 @@ class ui(object):
             return default
         try:
             with progress.suspend(), util.traced("prompt", cat="blocked"):
-                r = self._readline(self.label(msg, "ui.prompt"))
+                r = decodeutf8(self._readline(self.label(msg, "ui.prompt")))
                 if not r:
                     r = default
                 if self.configbool("ui", "promptecho"):

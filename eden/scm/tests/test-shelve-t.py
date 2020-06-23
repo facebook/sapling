@@ -6,12 +6,10 @@
 from __future__ import absolute_import
 
 import os
+import sys
 
 from edenscm.mercurial import extensions, hg, obsolete
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
-
-
-feature.require(["py2"])
 
 
 # TODO: Make this test compatibile with obsstore enabled.
@@ -1003,10 +1001,16 @@ sh % "rm -rf .hg/origbackups"
 # ---------------------------------------------------------------
 # Wreak havoc on the unshelve process
 sh % "rm .hg/unshelverebasestate"
-sh % "hg unshelve --abort" == r"""
-    unshelve of 'default' aborted
-    abort: $ENOENT$
-    [255]"""
+if sys.version_info[0] <= 2:
+    sh % "hg unshelve --abort" == r"""
+        unshelve of 'default' aborted
+        abort: $ENOENT$
+        [255]"""
+else:
+    sh % "hg unshelve --abort" == r"""
+        unshelve of 'default' aborted
+        abort: $ENOENT$: $TESTTMP/obssh-salvage/.hg/unshelverebasestate
+        [255]"""
 # Can the user leave the current state?
 sh % "hg up -C ." == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 
