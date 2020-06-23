@@ -44,6 +44,7 @@ const CONFIGERATOR_REGIONS_CONFIG: &str = "myrouter/regions.json";
 const QUIET_ARG: &'static str = "quiet";
 const ITER_LIMIT_ARG: &'static str = "iteration-limit";
 const HEAL_MIN_AGE_ARG: &'static str = "heal-min-age-secs";
+const HEAL_CONCURRENCY_ARG: &str = "heal-concurrency";
 
 lazy_static! {
     /// Minimal age of entry to consider if it has to be healed
@@ -100,6 +101,7 @@ async fn maybe_schedule_healer_for_storage(
     dry_run: bool,
     drain_only: bool,
     blobstore_sync_queue_limit: usize,
+    heal_concurrency: usize,
     storage_config: StorageConfig,
     mysql_options: MysqlOptions,
     source_blobstore_key: Option<String>,
@@ -205,6 +207,7 @@ async fn maybe_schedule_healer_for_storage(
 
     let multiplex_healer = Healer::new(
         blobstore_sync_queue_limit,
+        heal_concurrency,
         sync_queue,
         Arc::new(blobstores),
         multiplex_id,
@@ -297,6 +300,12 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false)
                 .help("Seconds. If specified, override default minimum age to heal of 120 seconds"),
+        ).arg(
+            Arg::with_name(HEAL_CONCURRENCY_ARG)
+                .long(HEAL_CONCURRENCY_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("How maby blobs to heal concurrently."),
         );
     args::add_fb303_args(app)
 }
@@ -319,6 +328,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .ok_or(format_err!("Storage id `{}` not found", storage_id))?;
     let source_blobstore_key = matches.value_of("blobstore-key-like");
     let blobstore_sync_queue_limit = value_t!(matches, "sync-queue-limit", usize).unwrap_or(10000);
+    let heal_concurrency = value_t!(matches, HEAL_CONCURRENCY_ARG, usize).unwrap_or(100);
     let dry_run = matches.is_present("dry-run");
     let drain_only = matches.is_present("drain-only");
     if drain_only && source_blobstore_key.is_none() {
@@ -344,6 +354,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         dry_run,
         drain_only,
         blobstore_sync_queue_limit,
+        heal_concurrency,
         storage_config,
         mysql_options,
         source_blobstore_key.map(|s| s.to_string()),

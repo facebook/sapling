@@ -25,6 +25,7 @@ use std::sync::Arc;
 
 pub struct Healer {
     blobstore_sync_queue_limit: usize,
+    heal_concurrency: usize,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     multiplex_id: MultiplexId,
@@ -35,6 +36,7 @@ pub struct Healer {
 impl Healer {
     pub fn new(
         blobstore_sync_queue_limit: usize,
+        heal_concurrency: usize,
         sync_queue: Arc<dyn BlobstoreSyncQueue>,
         blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
         multiplex_id: MultiplexId,
@@ -43,6 +45,7 @@ impl Healer {
     ) -> Self {
         Self {
             blobstore_sync_queue_limit,
+            heal_concurrency,
             sync_queue,
             blobstores,
             multiplex_id,
@@ -65,6 +68,7 @@ impl Healer {
         );
 
         let max_batch_size = self.blobstore_sync_queue_limit;
+        let heal_concurrency = self.heal_concurrency;
         let drain_only = self.drain_only;
         let multiplex_id = self.multiplex_id;
 
@@ -137,7 +141,8 @@ impl Healer {
                     "Found {} blobs to be healed... Doing it", last_batch_size
                 );
 
-                futures_old::stream::futures_unordered(healing_futures)
+                futures_old::stream::iter_ok(healing_futures)
+                    .buffered(heal_concurrency)
                     .collect()
                     .and_then(
                         move |heal_res: Vec<(HealStats, Vec<BlobstoreSyncQueueEntry>)>| {
@@ -1179,7 +1184,7 @@ mod tests {
             .compat()
             .await?;
 
-        let healer = Healer::new(1000, sync_queue.clone(), stores, mp, None, false);
+        let healer = Healer::new(1000, 10, sync_queue.clone(), stores, mp, None, false);
 
         healer.heal(ctx.clone(), DateTime::now()).compat().await?;
 
@@ -1238,7 +1243,7 @@ mod tests {
 
         // We aren't healing blobs for old_mp, so expect to only have 1 blob in each
         // blobstore at the end of the test.
-        let healer = Healer::new(1000, sync_queue.clone(), stores, mp, None, false);
+        let healer = Healer::new(1000, 10, sync_queue.clone(), stores, mp, None, false);
         healer.heal(ctx.clone(), DateTime::now()).compat().await?;
 
         assert_eq!(0, sync_queue.len(ctx.clone(), mp).compat().await?);
