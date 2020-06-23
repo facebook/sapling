@@ -48,9 +48,11 @@ def doctor(ui, **opts):
 
     from .. import dispatch  # avoid cycle
 
+    origui = ui
+
     # Minimal logic to get key repo objects without actually constructing
     # a real repo object.
-    repopath, ui = dispatch._getlocal(ui, "")
+    repopath, ui = dispatch._getlocal(origui, "")
     if not repopath:
         runedenfsdoctor(ui)
         return
@@ -77,7 +79,11 @@ def doctor(ui, **opts):
         repairsvfs(ui, svfs, "allheads", nodemap.nodeset)
 
     # Construct the real repo object as shallowutil requires it.
-    repo = hg.repository(ui, repopath)
+    # User the original ui, so we don't load the repo on top of the ui we
+    # manually loaded earlier. This caused unexpected side effects in the
+    # dynamicconfig validation layer.
+    repo = hg.repository(origui, repopath)
+    ui = repo.ui
     if "remotefilelog" in repo.requirements:
         from ...hgext.remotefilelog import shallowutil
 

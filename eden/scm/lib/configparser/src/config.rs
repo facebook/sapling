@@ -461,7 +461,6 @@ impl ConfigSet {
                     };
 
                     if location == superset_location {
-                        assert!(super_value.is_none());
                         super_value = value.value().clone();
                         super_index = index;
                     } else if subset_locations.contains(&location) {
