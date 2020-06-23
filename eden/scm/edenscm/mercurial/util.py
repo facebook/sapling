@@ -4681,3 +4681,19 @@ def fstat(fp):
             res = os.stat(fp.name)
 
     return wrapped_stat_result(res)
+
+
+def gcdir(path, mtimethreshold):
+    """Garbage collect path.
+
+    Delete files older than specified time in seconds.
+    """
+    paths = [os.path.join(path, p[0]) for p in listdir(path)]
+    stats = statfiles(paths)
+    deadline = time.time() - 24 * 3600 * 14
+    for path, stat in zip(paths, stats):
+        if stat is None:
+            continue
+
+        if stat.st_mtime < deadline:
+            unlink(path)

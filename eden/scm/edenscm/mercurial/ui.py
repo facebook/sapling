@@ -1377,15 +1377,7 @@ class ui(object):
                 os.unlink(name)
             else:
                 # If editing in .hg/edit-tmp, remove files older than 2 weeks.
-                paths = [os.path.join(rdir, p[0]) for p in util.listdir(rdir)]
-                stats = util.statfiles(paths)
-                deadline = time.time() - 24 * 3600 * 14
-                for path, stat in zip(paths, stats):
-                    if stat is None:
-                        continue
-
-                    if stat.st_mtime < deadline:
-                        os.unlink(path)
+                util.gcdir(rdir, 24 * 3600 * 14)
         return t
 
     def system(
