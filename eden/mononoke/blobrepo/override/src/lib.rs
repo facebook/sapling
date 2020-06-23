@@ -96,7 +96,7 @@ impl DangerousOverride<Arc<dyn Changesets>> for BlobRepoInner {
         let changesets = modify(self.changesets.clone());
         let changeset_fetcher_factory = {
             let repoid = self.repoid;
-            let changesets = self.changesets.clone();
+            let changesets = changesets.clone();
             move || {
                 let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
                     SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
