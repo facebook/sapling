@@ -1,8 +1,0 @@
-[package]
-name = "pystackdesc"
-version = "0.1.0"
-edition = "2018"
-
-[dependencies]
-cpython = { version = "0.5", default-features = false }
-stackdesc = { path = "../../../../lib/stackdesc/" }
