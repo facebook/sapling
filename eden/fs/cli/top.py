@@ -9,6 +9,7 @@ import collections
 import copy
 import datetime
 import os
+import re
 import shlex
 import socket
 import time
@@ -113,7 +114,13 @@ def format_time(elapsed, modulos, suffixes):
 
 
 def format_cmd(cmd):
-    args = os.fsdecode(cmd).split("\x00")
+    args = os.fsdecode(cmd)
+
+    # remove trailing null which would cause the command to show up with an
+    # exta empty string on the end
+    args = re.sub("\x00$", "", args)
+
+    args = args.split("\x00")
 
     # Focus on just the basename as the paths can be quite long
     cmd = args[0]

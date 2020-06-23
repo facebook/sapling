@@ -21,6 +21,10 @@ class TopTest(unittest.TestCase):
         self.assertEqual("ls -l", format_cmd(b"/bin/ls\x00-l"), "ls -l")
         self.assertEqual("ls -l 'one two'", format_cmd(b"ls\0-l\0one two"))
 
+    def test_format_cmd_trailing_null(self):
+        self.assertEqual("ls -l", format_cmd(b"ls\x00-l\x00"), "ls -l")
+        self.assertEqual("ls -l ''", format_cmd(b"ls\x00-l\x00\x00"), "ls -l ''")
+
     def test_format_mount(self):
         self.assertEqual(format_mount("/data/users/zuck/fbsource"), "fbsource")
 
