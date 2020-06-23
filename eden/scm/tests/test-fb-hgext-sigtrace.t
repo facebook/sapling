@@ -42,3 +42,11 @@ Test the signal config option
   $ ls $TESTTMP/dump-*.log || false
   ls: * (glob)
   [1]
+
+Test the interval config option
+
+  $ newrepo
+  $ setconfig sigtrace.interval=1
+  $ hg dbsh -c 'import time; time.sleep(2)'
+  $ ls .hg/sigtrace/
+  pid-*-debugshell (glob)

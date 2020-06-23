@@ -15,11 +15,16 @@ Config::
     memsignal = USR2
     pathformat = /tmp/trace-%(pid)s-%(time)s.log
     mempathformat = /tmp/memtrace-%(pid)s-%(time)s.log
+
+    # start a background thread that writes traces to .hg/traces every 120
+    # seconds.
+    interval = 120
 """
 
 import os
 import signal
 import sys
+import threading
 import time
 import traceback
 
@@ -36,21 +41,30 @@ configitem("sigtrace", "pathformat", default=pathformat)
 configitem("sigtrace", "signal", default="USR1")
 configitem("sigtrace", "mempathformat", default=mempathformat)
 configitem("sigtrace", "memsignal", default="USR2")
+configitem("sigtrace", "interval", default=0)
 
 
 def printstacks(sig, currentframe):
+    path = pathformat % {"time": time.time(), "pid": os.getpid()}
+    writesigtrace(path, writestderr=True)
+
+
+def writesigtrace(path, writestderr=False):
     content = ""
     for tid, frame in pycompat.iteritems(sys._current_frames()):
-        content += "Thread %s:\n%s\n" % (tid, util.smarttraceback(frame))
+        content += "Thread %s:\n%s\n" % (
+            tid,
+            util.smarttraceback(frame, skipboring=False),
+        )
 
-    path = pathformat % {"time": time.time(), "pid": os.getpid()}
     with open(path, "w") as f:
         f.write(content)
 
     # Also print to stderr
-    sys.stderr.write(content)
-    sys.stderr.write("\nStacktrace written to %s\n" % path)
-    sys.stderr.flush()
+    if writestderr:
+        sys.stderr.write(content)
+        sys.stderr.write("\nStacktrace written to %s\n" % path)
+        sys.stderr.flush()
 
     # Calculate the tracing data (can take a while) and write it.
     content = "Tracing Data:\n%s\n" % util.tracer.ascii()
@@ -58,9 +72,10 @@ def printstacks(sig, currentframe):
         f.write("\n")
         f.write(content)
 
-    sys.stderr.write(content)
-    sys.stderr.write("\nTracing data written to %s\n" % path)
-    sys.stderr.flush()
+    if writestderr:
+        sys.stderr.write(content)
+        sys.stderr.write("\nTracing data written to %s\n" % path)
+        sys.stderr.flush()
 
 
 memorytracker = []
@@ -95,3 +110,28 @@ def uisetup(ui):
     sig2 = getattr(signal, "SIG" + sig2name, None)
     if sig2:
         signal.signal(sig2, printmemory)
+
+
+def reposetup(ui, repo):
+    # Do not track known long-running commands.
+    if ui.cmdname in {"debugedenimporthelper"} and not util.istest():
+        return
+    interval = ui.configint("sigtrace", "interval")
+    if not interval or interval <= 0:
+        return
+
+    def writesigtracethread(path, interval):
+        dir = os.path.dirname(path)
+        util.makedirs(dir)
+        while True:
+            time.sleep(interval)
+            # Keep 10 minutes of sigtraces.
+            util.gcdir(dir, 60 * 10)
+            writesigtrace(path)
+
+    path = repo.localvfs.join("sigtrace", "pid-%s-%s" % (os.getpid(), ui.cmdname))
+    thread = threading.Thread(
+        target=writesigtracethread, args=(path, interval), name="sigtracethread"
+    )
+    thread.daemon = True
+    thread.start()
