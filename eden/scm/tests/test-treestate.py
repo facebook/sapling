@@ -13,9 +13,6 @@ from edenscm.mercurial import pycompat
 from hghave import require
 
 
-require(["py2"])
-
-
 testtmp = os.getenv("TESTTMP") or tempfile.mkdtemp("test-treestate")
 
 
@@ -81,7 +78,7 @@ class testtreestate(unittest.TestCase):
     def testempty(self):
         tree = treestate.treestate(os.path.join(testtmp, "empty"), 0)
         self.assertEqual(len(tree), 0)
-        self.assertEqual(tree.getmetadata(), "")
+        self.assertEqual(tree.getmetadata(), b"")
         self.assertEqual(tree.walk(0, 0), [])
         self.assertTrue(tree.hasdir("/"))
         for path in ["", "a", "/", "b/c", "d/"]:
@@ -171,41 +168,41 @@ class testtreestate(unittest.TestCase):
         treepath = os.path.join(testtmp, "flush")
         tree = treestate.treestate(treepath, 0)
         tree.insert("a", 1, 2, 3, 4, None)
-        tree.setmetadata("1")
+        tree.setmetadata(b"1")
         rootid1 = tree.flush()
 
         tree.remove("a")
         tree.insert("b", 1, 2, 3, 4, None)
-        tree.setmetadata("2")
+        tree.setmetadata(b"2")
         rootid2 = tree.flush()
 
         tree = treestate.treestate(treepath, rootid1)
         self.assertTrue("a" in tree)
         self.assertFalse("b" in tree)
-        self.assertEqual(tree.getmetadata(), "1")
+        self.assertEqual(tree.getmetadata(), b"1")
 
         tree = treestate.treestate(treepath, rootid2)
         self.assertFalse("a" in tree)
         self.assertTrue("b" in tree)
-        self.assertEqual(tree.getmetadata(), "2")
+        self.assertEqual(tree.getmetadata(), b"2")
 
     def testsaveas(self):
         treepath = os.path.join(testtmp, "saveas")
         tree = treestate.treestate(treepath, 0)
         tree.insert("a", 1, 2, 3, 4, None)
-        tree.setmetadata("1")
+        tree.setmetadata(b"1")
         tree.flush()
 
         tree.insert("b", 1, 2, 3, 4, None)
         tree.remove("a")
         treepath = "%s-savedas" % treepath
-        tree.setmetadata("2")
+        tree.setmetadata(b"2")
         rootid = tree.saveas(treepath)
 
         tree = treestate.treestate(treepath, rootid)
         self.assertFalse("a" in tree)
         self.assertTrue("b" in tree)
-        self.assertEqual(tree.getmetadata(), "2")
+        self.assertEqual(tree.getmetadata(), b"2")
 
     def testfiltered(self):
         treepath = os.path.join(testtmp, "filtered")

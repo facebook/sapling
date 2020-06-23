@@ -1,4 +1,3 @@
-#require py2
 #require fsmonitor
 
   $ setconfig format.dirstate=2
