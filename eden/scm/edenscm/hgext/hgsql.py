@@ -715,9 +715,14 @@ def wraprepo(repo):
             retry = 3
             while True:
                 try:
-                    self.sqlconn = mysql.connector.connect(
-                        force_ipv6=True, ssl_disabled=True, **self.sqlargs
-                    )
+                    try:
+                        self.sqlconn = mysql.connector.connect(
+                            force_ipv6=True, ssl_disabled=True, **self.sqlargs
+                        )
+                    except AttributeError:
+                        self.sqlconn = mysql.connector.connect(
+                            force_ipv6=True, **self.sqlargs
+                        )
 
                     # The default behavior is to return byte arrays, when we
                     # need strings. This custom convert returns strings.
