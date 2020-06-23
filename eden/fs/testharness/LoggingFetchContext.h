@@ -26,6 +26,14 @@ class LoggingFetchContext : public ObjectFetchContext {
     requests.emplace_back(type, hash, origin);
   }
 
+  std::optional<pid_t> getClientPid() const override {
+    return std::nullopt;
+  }
+
+  Cause getCause() const override {
+    return Cause::Unknown;
+  }
+
   std::vector<Request> requests;
 };
 

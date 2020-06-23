@@ -8,6 +8,8 @@
 #pragma once
 
 #include <atomic>
+#include <optional>
+
 #include "eden/fs/store/ObjectFetchContext.h"
 
 namespace facebook {
@@ -43,6 +45,10 @@ class StatsFetchContext : public ObjectFetchContext {
   StatsFetchContext(const StatsFetchContext& other);
 
   void didFetch(ObjectType type, const Hash& id, Origin origin) override;
+
+  std::optional<pid_t> getClientPid() const override;
+
+  Cause getCause() const override;
 
   uint64_t countFetchesOfType(ObjectType type) const;
   uint64_t countFetchesOfTypeAndOrigin(ObjectType type, Origin origin) const;

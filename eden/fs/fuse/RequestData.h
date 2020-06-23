@@ -93,8 +93,16 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
   }
 
   // Override of `ObjectFetchContext`
-  std::optional<pid_t> getPid() const override {
+  std::optional<pid_t> getClientPid() const override {
+    if (fuseHeader_.opcode == 0) {
+      return std::nullopt;
+    }
     return static_cast<pid_t>(fuseHeader_.pid);
+  }
+
+  // Override of `ObjectFetchContext`
+  Cause getCause() const override {
+    return ObjectFetchContext::Cause::Fuse;
   }
 
   // Returns true if the current context is being called from inside
@@ -118,8 +126,8 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
   const fuse_in_header& getReq() const;
 
   // Returns the underlying fuse request. Unlike getReq this function doesn't
-  // throw. The caller is responsible to verify that the fuse_in_header is valid
-  // by checking if (fuseHeader.opcode != 0)
+  // throw. The caller is responsible to verify that the fuse_in_header is
+  // valid by checking if (fuseHeader.opcode != 0)
   const fuse_in_header& examineReq() const;
 
   /** Append error handling clauses to a future chain

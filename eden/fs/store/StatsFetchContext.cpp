@@ -85,5 +85,13 @@ FetchStatistics StatsFetchContext::computeStatistics() const {
   return result;
 }
 
+std::optional<pid_t> StatsFetchContext::getClientPid() const {
+  return std::nullopt;
+}
+
+ObjectFetchContext::Cause StatsFetchContext::getCause() const {
+  return Cause::Unknown;
+}
+
 } // namespace eden
 } // namespace facebook

@@ -69,7 +69,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
       fetchContext.didFetch(
           ObjectFetchContext::Tree, id, ObjectFetchContext::FromDiskCache);
 
-      if (auto pid = fetchContext.getPid()) {
+      if (auto pid = fetchContext.getClientPid()) {
         self->pidFetchCounts_->recordProcessFetch(pid.value());
       }
 
@@ -106,7 +106,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
               id,
               ObjectFetchContext::FromBackingStore);
 
-          if (auto pid = fetchContext.getPid()) {
+          if (auto pid = fetchContext.getClientPid()) {
             self->pidFetchCounts_->recordProcessFetch(pid.value());
           }
           return shared_ptr<const Tree>(std::move(loadedTree));
@@ -189,7 +189,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
       self->updateBlobStats(true, false);
       fetchContext.didFetch(
           ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
-      if (auto pid = fetchContext.getPid()) {
+      if (auto pid = fetchContext.getClientPid()) {
         self->pidFetchCounts_->recordProcessFetch(pid.value());
       }
       return makeFuture(shared_ptr<const Blob>(std::move(blob)));
@@ -208,7 +208,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
                 id,
                 ObjectFetchContext::FromBackingStore);
 
-            if (auto pid = fetchContext.getPid()) {
+            if (auto pid = fetchContext.getClientPid()) {
               self->pidFetchCounts_->recordProcessFetch(pid.value());
             }
 
@@ -245,7 +245,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
           ObjectFetchContext::BlobMetadata,
           id,
           ObjectFetchContext::FromMemoryCache);
-      if (auto pid = context.getPid()) {
+      if (auto pid = context.getClientPid()) {
         pidFetchCounts_->recordProcessFetch(pid.value());
       }
       return cacheIter->second;
@@ -264,7 +264,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
               ObjectFetchContext::BlobMetadata,
               id,
               ObjectFetchContext::FromDiskCache);
-          if (auto pid = context.getPid()) {
+          if (auto pid = context.getClientPid()) {
             self->pidFetchCounts_->recordProcessFetch(pid.value());
           }
 
@@ -296,7 +296,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
                     id,
                     ObjectFetchContext::FromBackingStore);
 
-                if (auto pid = context.getPid()) {
+                if (auto pid = context.getClientPid()) {
                   self->pidFetchCounts_->recordProcessFetch(pid.value());
                 }
                 return makeFuture(metadata);

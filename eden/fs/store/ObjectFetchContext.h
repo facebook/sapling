@@ -44,13 +44,18 @@ class ObjectFetchContext {
     kOriginEnumMax,
   };
 
+  /**
+   * Which interface caused this object fetch
+   */
+  enum Cause : unsigned { Unknown, Fuse, Thrift };
+
   ObjectFetchContext() = default;
   virtual ~ObjectFetchContext() = default;
   virtual void didFetch(ObjectType, const Hash&, Origin) {}
 
-  virtual std::optional<pid_t> getPid() const {
-    return std::nullopt;
-  }
+  virtual std::optional<pid_t> getClientPid() const = 0;
+
+  virtual Cause getCause() const = 0;
 
   /**
    * Return a no-op fetch context suitable when no tracking is desired.

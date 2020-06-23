@@ -9,7 +9,14 @@
 
 namespace {
 using namespace facebook::eden;
-class NullObjectFetchContext : public ObjectFetchContext {};
+class NullObjectFetchContext : public ObjectFetchContext {
+  std::optional<pid_t> getClientPid() const override {
+    return std::nullopt;
+  }
+  ObjectFetchContext::Cause getCause() const override {
+    return ObjectFetchContext::Cause::Unknown;
+  }
+};
 } // namespace
 
 namespace facebook {
