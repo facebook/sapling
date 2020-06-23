@@ -31,6 +31,7 @@ from .util import (
     HealthStatus,
     print_stderr,
     readlink_retry_estale,
+    resolve_path,
     write_file_atomically,
 )
 
@@ -164,7 +165,7 @@ class EdenInstance:
         else:
             self._config_dir = self._home_dir / "local" / ".eden"
 
-        self._config_dir = self._config_dir.resolve(strict=False)
+        self._config_dir = resolve_path(self._config_dir, strict=False)
 
     def __repr__(self) -> str:
         return f"EdenInstance({self._config_dir!r})"
@@ -353,7 +354,7 @@ class EdenInstance:
         Given a path to a checkout, return a dictionary containing diagnostic
         information about it.
         """
-        path = Path(path).resolve(strict=False)
+        path = resolve_path(Path(path), strict=False)
         client_dir = self._get_client_dir_for_mount_point(path)
         checkout = EdenCheckout(self, path, client_dir)
         return self.get_checkout_info_from_checkout(checkout)
@@ -525,7 +526,7 @@ Do you want to run `eden mount %s` instead?"""
     def mount(self, path: Union[Path, str], read_only: bool) -> int:
         # Load the config info for this client, to make sure we
         # know about the client.
-        path = Path(path).resolve(strict=False)
+        path = resolve_path(Path(path), strict=False)
         client_dir = self._get_client_dir_for_mount_point(path)
         checkout = EdenCheckout(self, path, client_dir)
 

@@ -614,3 +614,15 @@ def write_file_atomically(path: Path, contents: bytes) -> None:
         except OSError:
             pass
         raise
+
+
+def resolve_path(path: Path, strict: bool) -> Path:
+    """
+    Python 3.6 on Windows has use of uninitialized memory bug in
+    `Path.resolve`. This is a helper method to work around that by using
+    `os.path.realpath`.
+    """
+    # TODO: remove this once Python on Windows is updated
+    if sys.platform == "win32":
+        return Path(os.path.realpath(path))
+    return path.resolve(strict=strict)
