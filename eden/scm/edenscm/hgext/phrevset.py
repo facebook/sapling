@@ -230,7 +230,7 @@ def diffidtonode(repo, diffid):
         # The graphql query finished but didn't return anything
         return None
 
-    vcs = resp["source_control_system"]
+    vcs = resp.get("source_control_system")
 
     repo.ui.debug("[diffrev] VCS is %s\n" % vcs)
 
@@ -279,13 +279,15 @@ def diffidtonode(repo, diffid):
 
         # commit is still local, get its hash
 
-        props = resp["phabricator_version_properties"]["edges"]
-        commits = []
-        for prop in props:
-            if prop["node"]["property_name"] == "local:commits":
-                commits = json.loads(prop["node"]["property_value"])
-
-        hexnodes = [c["commit"] for c in commits.values()]
+        try:
+            props = resp["phabricator_version_properties"]["edges"]
+            commits = []
+            for prop in props:
+                if prop["node"]["property_name"] == "local:commits":
+                    commits = json.loads(prop["node"]["property_value"])
+            hexnodes = [c["commit"] for c in commits.values()]
+        except (AttributeError, IndexError, KeyError):
+            hexnodes = []
 
         # find a better alternative of the commit hash specified in
         # graphql response by looking up successors.
