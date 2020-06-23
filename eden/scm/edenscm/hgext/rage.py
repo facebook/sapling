@@ -230,6 +230,17 @@ def readcommitcloudstate(repo):
     return "\n".join(lines) + "\n"
 
 
+def readsigtraces(repo):
+    vfs = repo.localvfs
+    names = vfs.listdir("sigtrace")
+    names.sort(key=lambda name: -vfs.stat("sigtrace/%s" % name).st_mtime)
+    result = ""
+    for name in names:
+        content = vfs.tryread("sigtrace/%s" % name)
+        result += "%s:\n%s\n\n" % (name, content.strip())
+    return result
+
+
 def _makerage(ui, repo, **opts):
     configoverrides = {
         # Make graphlog shorter.
@@ -320,6 +331,7 @@ def _makerage(ui, repo, **opts):
             'first 20 lines of "hg status"',
             lambda: "\n".join(hgcmd("status").splitlines()[:20]),
         ),
+        ("sigtrace", lambda: readsigtraces(repo)),
         (
             "hg blackbox",
             lambda: "\n".join(
