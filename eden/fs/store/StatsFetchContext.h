@@ -8,7 +8,7 @@
 #pragma once
 
 #include <atomic>
-#include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 
 namespace facebook {
 namespace eden {

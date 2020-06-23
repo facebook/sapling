@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 
 namespace {
 using namespace facebook::eden;

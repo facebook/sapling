@@ -20,6 +20,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/SystemError.h"
 
 using namespace folly;

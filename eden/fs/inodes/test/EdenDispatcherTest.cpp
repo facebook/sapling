@@ -11,7 +11,7 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/StoredObject.h"
 #include "eden/fs/testharness/TestMount.h"

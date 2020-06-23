@@ -14,7 +14,7 @@
 
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
-#include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 
@@ -92,6 +92,7 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
     }
   }
 
+  // Override of `ObjectFetchContext`
   std::optional<pid_t> getPid() const override {
     return static_cast<pid_t>(fuseHeader_.pid);
   }

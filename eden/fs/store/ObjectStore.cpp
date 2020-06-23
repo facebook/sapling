@@ -19,6 +19,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
 using folly::Future;

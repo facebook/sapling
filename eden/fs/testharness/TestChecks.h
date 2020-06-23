@@ -12,7 +12,7 @@
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 
 /**
  * Check that a FileInode has the expected contents and permissions.

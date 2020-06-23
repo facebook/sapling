@@ -27,54 +27,7 @@ class Blob;
 class BlobMetadata;
 class Hash;
 class Tree;
-
-/**
- * ObjectStore calls methods on this context when fetching objects.
- * It's primarily used to track when and why source control objects are fetched.
- */
-class ObjectFetchContext {
- public:
-  /**
-   * Which object type was fetched.
-   *
-   * Suitable for use as an index into an array of size kObjectTypeEnumMax
-   */
-  enum ObjectType : unsigned {
-    Blob,
-    BlobMetadata,
-    Tree,
-    kObjectTypeEnumMax,
-  };
-
-  /**
-   * Which cache satisfied a lookup request.
-   *
-   * Suitable for use as an index into an array of size kOriginEnumMax.
-   */
-  enum Origin : unsigned {
-    FromMemoryCache,
-    FromDiskCache,
-    FromBackingStore,
-    kOriginEnumMax,
-  };
-
-  ObjectFetchContext() = default;
-  virtual ~ObjectFetchContext() = default;
-  virtual void didFetch(ObjectType, const Hash&, Origin) {}
-
-  /**
-   * Return a no-op fetch context suitable when no tracking is desired.
-   */
-  static ObjectFetchContext& getNullContext();
-
-  virtual std::optional<pid_t> getPid() const {
-    return std::nullopt;
-  }
-
- private:
-  ObjectFetchContext(const ObjectFetchContext&) = delete;
-  ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;
-};
+class ObjectFetchContext;
 
 class IObjectStore {
  public:
