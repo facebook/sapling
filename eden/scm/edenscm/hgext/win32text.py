@@ -68,7 +68,7 @@ configitem = registrar.configitem(configtable)
 configitem("win32text", "warn", default=True)
 
 # regexp for single LF without CR preceding.
-re_single_lf = re.compile("(^|[^\r])\n", re.MULTILINE)
+re_single_lf = re.compile(b"(^|[^\r])\n", re.MULTILINE)
 
 newlinestr = {"\r\n": "CRLF", "\r": "CR"}
 filterstr = {"\r\n": "clever", "\r": "mac"}
@@ -92,13 +92,13 @@ def checknewline(s, newline, ui=None, repo=None, filename=None):
 
 
 def dumbdecode(s, cmd, **kwargs):
-    checknewline(s, "\r\n", **kwargs)
+    checknewline(s, b"\r\n", **kwargs)
     # replace single LF to CRLF
-    return re_single_lf.sub("\\1\r\n", s)
+    return re_single_lf.sub(b"\\1\r\n", s)
 
 
 def dumbencode(s, cmd):
-    return s.replace("\r\n", "\n")
+    return s.replace(b"\r\n", b"\n")
 
 
 def macdumbdecode(s, cmd, **kwargs):

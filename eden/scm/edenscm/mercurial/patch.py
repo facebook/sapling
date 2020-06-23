@@ -1202,16 +1202,17 @@ all lines of the hunk are removed, then the edit is aborted and
 the hunk is left unchanged.
 """
                 )
+                phelp = pycompat.encodeutf8(phelp)
                 (patchfd, patchfn) = tempfile.mkstemp(
                     prefix="hg-editor-", suffix=".diff", text=True
                 )
                 ncpatchfp = None
                 try:
                     # Write the initial patch
-                    f = util.fdopen(patchfd, "w")
+                    f = util.fdopen(patchfd, "wb")
                     chunk.header.write(f)
                     chunk.write(f)
-                    f.write("\n".join(["# " + i for i in phelp.splitlines()]))
+                    f.write(b"\n".join([b"# " + i for i in phelp.splitlines()]))
                     f.close()
                     # Start the editor and wait for it to complete
                     editor = ui.geteditor()
@@ -1224,10 +1225,10 @@ the hunk is left unchanged.
                         ui.warn(_("editor exited with exit code %d\n") % ret)
                         continue
                     # Remove comment lines
-                    patchfp = open(patchfn)
+                    patchfp = open(patchfn, "rb")
                     ncpatchfp = stringio()
                     for line in util.iterfile(patchfp):
-                        if not line.startswith("#"):
+                        if not line.startswith(b"#"):
                             ncpatchfp.write(line)
                     patchfp.close()
                     ncpatchfp.seek(0)

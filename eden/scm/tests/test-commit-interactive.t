@@ -1,4 +1,3 @@
-#require py2
   $ disable treemanifest
 Set up a repo
 
@@ -858,47 +857,6 @@ Help, quit
   abort: user quit
   [255]
 
-#if gettext normal-layout
-
-Test translated help message
-
-str.lower() instead of encoding.lower(str) on translated message might
-make message meaningless, because some encoding uses 0x41(A) - 0x5a(Z)
-as the second or later byte of multi-byte character.
-
-For example, "\x8bL\x98^" (translation of "record" in ja_JP.cp932)
-contains 0x4c (L). str.lower() replaces 0x4c(L) by 0x6c(l) and this
-replacement makes message meaningless.
-
-This tests that translated help message is lower()-ed correctly.
-
-  $ LANGUAGE=ja
-  $ export LANGUAGE
-
-  $ cat > $TESTTMP/escape.py <<EOF
-  > from __future__ import absolute_import
-  > import sys
-  > def escape(o):
-  >     if o < 0x80:
-  >         return chr(o)
-  >     else:
-  >         return r'\x%02x' % o  # escape char setting MSB
-  > if sys.version_info[0] >= 3:
-  >     inputs = sys.stdin.buffer.read()
-  > else:
-  >     inputs = bytearray(sys.stdin.read())
-  > for l in inputs:
-  >     sys.stdout.write(''.join(escape(l)))
-  > EOF
-
-  $ hg commit -i --encoding cp932 2>&1 <<EOF | $PYTHON $TESTTMP/escape.py | grep '^y - '
-  > ?
-  > q
-  > EOF
-  y - \x82\xb1\x82\xcc\x95\xcf\x8dX\x82\xf0\x8bL\x98^(yes)
-
-  $ LANGUAGE=
-#endif
 
 Skip
 
