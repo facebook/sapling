@@ -80,7 +80,7 @@ Create a _third_ draft commit, push to the (behind) server1:
 
   $ echo "foo" > foo
   $ commit "third commit"
-  $ rm ../server1/.hg/store/synclimiter_
+  $ LC_ALL=C rm ../server1/.hg/store/synclimiter_
   rm: cannot remove '../server1/.hg/store/synclimiter_': $ENOENT$
   [1]
   $ hg push --to master ssh://user@dummy/server1
