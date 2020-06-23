@@ -56,9 +56,13 @@ TEST_F(FakeBackingStoreTest, getNonExistent) {
   // when called on non-existent objects.
   auto hash = makeTestHash("1");
   EXPECT_THROW_RE(
-      store_->getBlob(hash), std::domain_error, "blob 0+1 not found");
+      store_->getBlob(hash, ObjectFetchContext::getNullContext()),
+      std::domain_error,
+      "blob 0+1 not found");
   EXPECT_THROW_RE(
-      store_->getTree(hash), std::domain_error, "tree 0+1 not found");
+      store_->getTree(hash, ObjectFetchContext::getNullContext()),
+      std::domain_error,
+      "tree 0+1 not found");
   EXPECT_THROW_RE(
       store_->getTreeForCommit(hash),
       std::domain_error,
@@ -74,9 +78,9 @@ TEST_F(FakeBackingStoreTest, getBlob) {
 
   // The blob is not ready yet, so calling getBlob() should yield not-ready
   // Future objects.
-  auto future1 = store_->getBlob(hash);
+  auto future1 = store_->getBlob(hash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future1.isReady());
-  auto future2 = store_->getBlob(hash);
+  auto future2 = store_->getBlob(hash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future2.isReady());
 
   // Calling trigger() should make the pending futures ready.
@@ -87,9 +91,9 @@ TEST_F(FakeBackingStoreTest, getBlob) {
   EXPECT_EQ("foobar", blobContents(*std::move(future2).get()));
 
   // But subsequent calls to getBlob() should still yield unready futures.
-  auto future3 = store_->getBlob(hash);
+  auto future3 = store_->getBlob(hash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future3.isReady());
-  auto future4 = store_->getBlob(hash);
+  auto future4 = store_->getBlob(hash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future4.isReady());
   bool future4Failed = false;
   folly::exception_wrapper future4Error;
@@ -113,7 +117,7 @@ TEST_F(FakeBackingStoreTest, getBlob) {
 
   // Calling setReady() should make the pending futures ready, as well
   // as all subsequent Futures returned by getBlob()
-  auto future5 = store_->getBlob(hash);
+  auto future5 = store_->getBlob(hash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future5.isReady());
 
   storedBlob->setReady();
@@ -122,7 +126,7 @@ TEST_F(FakeBackingStoreTest, getBlob) {
 
   // Subsequent calls to getBlob() should return Futures that are immediately
   // ready since we called setReady() above.
-  auto future6 = store_->getBlob(hash);
+  auto future6 = store_->getBlob(hash, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(future6.isReady());
   EXPECT_EQ("foobar", blobContents(*std::move(future6).get()));
 }
@@ -154,15 +158,18 @@ TEST_F(FakeBackingStoreTest, getTree) {
       });
 
   // Try getting the root tree but failing it with triggerError()
-  auto future1 = store_->getTree(rootHash);
+  auto future1 =
+      store_->getTree(rootHash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future1.isReady());
   rootDir->triggerError(std::runtime_error("cosmic rays"));
   EXPECT_THROW_RE(std::move(future1).get(), std::runtime_error, "cosmic rays");
 
   // Now try using trigger()
-  auto future2 = store_->getTree(rootHash);
+  auto future2 =
+      store_->getTree(rootHash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future2.isReady());
-  auto future3 = store_->getTree(rootHash);
+  auto future3 =
+      store_->getTree(rootHash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future3.isReady());
   rootDir->trigger();
   ASSERT_TRUE(future2.isReady());
@@ -191,13 +198,15 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_EQ(rootHash, std::move(future3).get()->getHash());
 
   // Now try using setReady()
-  auto future4 = store_->getTree(rootHash);
+  auto future4 =
+      store_->getTree(rootHash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future4.isReady());
   rootDir->setReady();
   ASSERT_TRUE(future4.isReady());
   EXPECT_EQ(rootHash, std::move(future4).get()->getHash());
 
-  auto future5 = store_->getTree(rootHash);
+  auto future5 =
+      store_->getTree(rootHash, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(future5.isReady());
   EXPECT_EQ(rootHash, std::move(future5).get()->getHash());
 }

@@ -18,6 +18,7 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -73,9 +74,11 @@ class HgBackingStore : public BackingStore {
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
+      ObjectFetchContext& context,
       ImportPriority priority = ImportPriority::kNormal()) override;
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
+      ObjectFetchContext& context,
       ImportPriority priority = ImportPriority::kNormal()) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;

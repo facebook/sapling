@@ -10,6 +10,7 @@
 #include <folly/Range.h>
 
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 struct git_oid;
@@ -45,9 +46,11 @@ class GitBackingStore : public BackingStore {
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
+      ObjectFetchContext& context,
       ImportPriority priority = ImportPriority::kNormal()) override;
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
+      ObjectFetchContext& context,
       ImportPriority priority = ImportPriority::kNormal()) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;

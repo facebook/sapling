@@ -25,6 +25,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
@@ -243,6 +244,7 @@ void HgBackingStore::initializeTreeManifestImport(
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     const Hash& id,
+    ObjectFetchContext& /*context*/,
     ImportPriority /* priority */) {
   HgProxyHash pathInfo(localStore_, id, "importTree");
   return importTreeImpl(
@@ -480,6 +482,7 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
 
 SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
     const Hash& id,
+    ObjectFetchContext& /*context*/,
     ImportPriority /* priority */) {
   folly::stop_watch<std::chrono::milliseconds> watch;
   // Look up the mercurial path and file revision hash,

@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 
 namespace folly {
 template <typename T>
@@ -40,9 +41,11 @@ class BackingStore {
 
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
+      ObjectFetchContext& context,
       ImportPriority priority = ImportPriority::kNormal()) = 0;
   virtual folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
+      ObjectFetchContext& context,
       ImportPriority priority = ImportPriority::kNormal()) = 0;
 
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(

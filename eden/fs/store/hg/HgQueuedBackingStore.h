@@ -13,6 +13,7 @@
 
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
@@ -46,9 +47,11 @@ class HgQueuedBackingStore : public BackingStore {
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
+      ObjectFetchContext& context,
       ImportPriority priority = ImportPriority::kNormal()) override;
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
+      ObjectFetchContext& context,
       ImportPriority priority = ImportPriority::kNormal()) override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
@@ -58,7 +61,7 @@ class HgQueuedBackingStore : public BackingStore {
       const Hash& manifestID) override;
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& /*ids*/) override;
+      const std::vector<Hash>& ids) override;
 
   HgBackingStore* getHgBackingStore() const {
     return backingStore_.get();

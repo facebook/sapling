@@ -18,6 +18,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/EnumValue.h"
 
 using folly::ByteRange;
@@ -75,6 +76,7 @@ const char* GitBackingStore::getPath() const {
 
 SemiFuture<unique_ptr<Tree>> GitBackingStore::getTree(
     const Hash& id,
+    ObjectFetchContext& /*context*/,
     ImportPriority /* priority */) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(getTreeImpl(id));
@@ -129,6 +131,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
 
 SemiFuture<unique_ptr<Blob>> GitBackingStore::getBlob(
     const Hash& id,
+    ObjectFetchContext& /*context*/,
     ImportPriority /* priority */) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(getBlobImpl(id));

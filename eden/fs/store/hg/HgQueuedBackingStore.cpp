@@ -18,6 +18,7 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
@@ -135,7 +136,10 @@ void HgQueuedBackingStore::processTreeImportRequests(
     auto parameter = request.getRequest<HgImportRequest::TreeImport>();
     request.getPromise<HgImportRequest::TreeImport::Response>()->setWith(
         [store = backingStore_.get(), hash = parameter->hash]() {
-          return store->getTree(hash).getTry();
+          // TODO(kmancini): follow up with threading the context all the way
+          // through the backing store
+          return store->getTree(hash, ObjectFetchContext::getNullContext())
+              .getTry();
         });
   }
 }
@@ -173,6 +177,7 @@ void HgQueuedBackingStore::processRequest() {
 
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     const Hash& id,
+    ObjectFetchContext& /*context*/,
     ImportPriority priority) {
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
@@ -184,6 +189,7 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
 
 folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     const Hash& id,
+    ObjectFetchContext& /*context*/,
     ImportPriority priority) {
   auto proxyHash = HgProxyHash(localStore_.get(), id, "getBlob");
   if (auto blob =

@@ -87,7 +87,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
     // this layer.
 
     // Load the tree from the BackingStore.
-    return self->backingStore_->getTree(id)
+    return self->backingStore_->getTree(id, fetchContext)
         .via(self->executor_)
         .thenValue([self, id, &fetchContext, localStore = self->localStore_](
                        unique_ptr<const Tree> loadedTree) {
@@ -196,7 +196,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
     }
 
     // Look in the BackingStore
-    return self->backingStore_->getBlob(id, priority)
+    return self->backingStore_->getBlob(id, fetchContext, priority)
         .via(self->executor_)
         .thenValue([self, &fetchContext, id](
                        unique_ptr<const Blob> loadedBlob) {
@@ -279,7 +279,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
         //
         // TODO: This should probably check the LocalStore for the blob first,
         // especially when we begin to expire entries in RocksDB.
-        return self->backingStore_->getBlob(id)
+        return self->backingStore_->getBlob(id, context)
             .via(self->executor_)
             .thenValue([self, id, &context](std::unique_ptr<Blob> blob) {
               if (blob) {

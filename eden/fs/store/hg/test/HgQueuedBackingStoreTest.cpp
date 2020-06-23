@@ -73,9 +73,11 @@ TEST_F(HgQueuedBackingStoreTest, getTree) {
                    .via(&folly::QueuedImmediateExecutor::instance())
                    .get(kTestTimeout);
 
-  auto tree2 = queuedStore->getTree(tree1->getHash())
-                   .via(&folly::QueuedImmediateExecutor::instance())
-                   .get(kTestTimeout);
+  auto tree2 =
+      queuedStore
+          ->getTree(tree1->getHash(), ObjectFetchContext::getNullContext())
+          .via(&folly::QueuedImmediateExecutor::instance())
+          .get(kTestTimeout);
 
   EXPECT_TRUE(*tree1 == *tree2);
 }
@@ -88,15 +90,19 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
 
   for (auto& entry : tree->getTreeEntries()) {
     if (entry.getName() == "foo.txt") {
-      auto blob = queuedStore->getBlob(entry.getHash())
-                      .via(&folly::QueuedImmediateExecutor::instance())
-                      .get(kTestTimeout);
+      auto blob =
+          queuedStore
+              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
+              .via(&folly::QueuedImmediateExecutor::instance())
+              .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "foo\n");
     } else if (entry.getName() == "bar.txt") {
-      auto blob = queuedStore->getBlob(entry.getHash())
-                      .via(&folly::QueuedImmediateExecutor::instance())
-                      .get(kTestTimeout);
+      auto blob =
+          queuedStore
+              ->getBlob(entry.getHash(), ObjectFetchContext::getNullContext())
+              .via(&folly::QueuedImmediateExecutor::instance())
+              .get(kTestTimeout);
 
       EXPECT_EQ(blob->getContents().cloneAsValue().moveToFbString(), "bar\n");
     }
