@@ -1691,7 +1691,7 @@ def truncate(fd, offset):
             raise
 
 
-def truncatefile(fname, vfs, size, checkambig=None):
+def truncatefile(fname, vfs, size, checkambig=False):
     """Truncate a file to 'size'
 
     Will first attempt to truncate it in place, if that fails, a copy of the
@@ -1710,13 +1710,17 @@ def truncatefile(fname, vfs, size, checkambig=None):
         if e.errno != errno.EACCES:
             raise
 
-    if vfs.exists(fname):
-        filepath = vfs.join(fname)
-        # TODO: Instead of copying and then truncating, only copy the first size bytes.
-        copyfile(filepath, filepath + ".new")
-        with vfs(fname + ".new", "ab", checkambig=checkambig) as fp:
-            truncate(fp, size)
-        rename(filepath + ".new", filepath)
+    newname = fname + ".new"
+    with vfs(fname, "r") as src, vfs(newname, "w") as dst:
+        while size > 0:
+            bufsize = min(size, 1 << 24)
+            buf = src.read(bufsize)
+            if not buf:
+                # EOF
+                break
+            dst.write(buf)
+            size -= len(buf)
+    vfs.rename(newname, fname, checkambig=checkambig)
 
 
 class filestat(object):
