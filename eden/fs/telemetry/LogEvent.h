@@ -183,5 +183,25 @@ struct ThriftAuthFailure {
   }
 };
 
+struct ServerDataFetch {
+  static constexpr const char* type = "server_data_fetch";
+
+  std::string cause;
+  std::optional<pid_t> client_pid;
+  std::optional<std::string> client_cmdline;
+  std::string fetched_path;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("interface", cause);
+    if (client_pid) {
+      event.addInt("client_pid", client_pid.value());
+    }
+    if (client_cmdline) {
+      event.addString("client_cmdline", client_cmdline.value());
+    }
+    event.addString("fetched_path", fetched_path);
+  }
+};
+
 } // namespace eden
 } // namespace facebook

@@ -6,11 +6,16 @@
  */
 
 #include "eden/fs/utils/ProcessNameCache.h"
+
+#include <optional>
+#include <vector>
+
 #include <folly/FileUtil.h>
 #include <folly/MapUtil.h>
 #include <folly/system/ThreadName.h>
-#include <optional>
+
 #include "eden/fs/utils/Synchronized.h"
+
 #ifdef __APPLE__
 #include <libproc.h> // @manual
 #include <sys/sysctl.h> // @manual
@@ -358,6 +363,14 @@ void ProcessNameCache::processActions() {
       }
     }
   }
+}
+
+std::optional<std::string> ProcessNameCache::getProcessName(pid_t pid) {
+  auto state = state_.rlock();
+  if (auto* processName = folly::get_ptr(state->names, pid)) {
+    return processName->name;
+  }
+  return std::nullopt;
 }
 
 } // namespace eden

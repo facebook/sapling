@@ -47,6 +47,13 @@ class ProcessNameCache {
    */
   std::map<pid_t, std::string> getAllProcessNames();
 
+  /**
+   * Called occassionally to produce the command line name of the pid. If the
+   * name has already been resolved this returns that name. Otherwise this will
+   * return nullopt. In the future it may wait for the name to be resolved.
+   */
+  std::optional<std::string> getProcessName(pid_t pid);
+
  private:
   struct ProcessName {
     ProcessName(std::string n, std::chrono::steady_clock::duration d)
