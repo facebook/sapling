@@ -359,15 +359,17 @@ def _setupupdates(ui):
         # Don't do this during a branch merge, since all incoming changes should
         # have been handled by the temporary includes above.
         if changedprofiles and not branchmerge:
-            mf = mctx.manifest()
-            for file in mf:
-                old = oldsparsematch(file)
-                new = sparsematch(file)
-                if not old and new:
-                    flags = mf.flags(file)
-                    prunedactions[file] = ("g", (flags, False), "")
-                elif old and not new:
-                    prunedactions[file] = ("r", [], "")
+            scopename = "Calculating additional actions for sparse profile update"
+            with util.traced(scopename):
+                mf = mctx.manifest()
+                for file in mf:
+                    old = oldsparsematch(file)
+                    new = sparsematch(file)
+                    if not old and new:
+                        flags = mf.flags(file)
+                        prunedactions[file] = ("g", (flags, False), "")
+                    elif old and not new:
+                        prunedactions[file] = ("r", [], "")
 
         return prunedactions, diverge, renamedelete
 
