@@ -44,6 +44,32 @@ common_pushrebase_bookmarks = ["master_bookmark"]
     "non_path_shifting" = "non_path_shifting"
 EOF
 
+  if [ -n "$COMMIT_SYNC_CONF" ]; then
+    cat > "$COMMIT_SYNC_CONF/current" << EOF
+{
+  "repos": {
+    "megarepo_test": {
+      "large_repo_id": 0,
+      "common_pushrebase_bookmarks": ["master_bookmark"],
+      "small_repos": [
+        {
+          "repoid": 1,
+          "bookmark_prefix": "bookprefix/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "smallrepofolder",
+          "direction": "large_to_small",
+          "mapping": {
+            "non_path_shifting": "non_path_shifting"
+          }
+        }
+      ]
+    }
+  }
+}
+EOF
+
+  fi
+
   echo "Setting up hg server repos"
 
   cd "$TESTTMP" || exit 1

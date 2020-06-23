@@ -551,7 +551,7 @@ CONFIG
 }
 
 function setup_commitsyncmap {
-  cp "$TEST_FIXTURES/commitsyncmap.toml" "$TESTTMP/mononoke-config/common/commitsyncmap.toml"
+  cp "$TEST_FIXTURES/commitsync/current.toml" "$TESTTMP/mononoke-config/common/commitsyncmap.toml"
 }
 
 
@@ -587,6 +587,12 @@ EOF
   "per_repo": {}
 }
 EOF
+
+  export COMMIT_SYNC_CONF
+  COMMIT_SYNC_CONF="$TESTTMP/configerator/scm/mononoke/repos/commitsyncmaps"
+  mkdir -p "$COMMIT_SYNC_CONF"
+  cp "$TEST_FIXTURES/commitsync/all.json" "$COMMIT_SYNC_CONF/all"
+  cp "$TEST_FIXTURES/commitsync/current.json" "$COMMIT_SYNC_CONF/current"
 }
 
 function setup_mononoke_repo_config {

@@ -1,0 +1,66 @@
+{
+  "repos": {
+    "megarepo_test": {
+      "TEST_VERSION_NAME_LIVE": {
+        "large_repo_id": 0,
+        "common_pushrebase_bookmarks": [
+          "master_bookmark"
+        ],
+        "small_repos": [                                                                                                                                                                                                                                                                                                     {
+            "repoid": 1,
+            "default_action": "preserve",
+            "bookmark_prefix": "fbsource/",
+            "mapping": {
+              "arvr": ".fbsource-rest/arvr"
+            },
+            "direction": "small_to_large"
+          },
+          {
+            "repoid": 2,
+            "default_action": "prepend_prefix",
+            "default_prefix": "arvr-legacy",
+            "bookmark_prefix": "ovrsource/",
+            "mapping": {
+              "arvr": "arvr",
+              "fbandroid": ".ovrsource-rest/fbandroid",
+              "fbcode": ".ovrsource-rest/fbcode",
+              "fbobjc": ".ovrsource-rest/fbobjc",
+              "xplat": ".ovrsource-rest/xplat"
+            },
+            "direction": "small_to_large"
+          }
+        ]
+      },
+      "TEST_VERSION_NAME_LIVE_OLD": {
+        "large_repo_id": 0,
+        "common_pushrebase_bookmarks": [
+          "master_bookmark"
+        ],
+        "small_repos": [                                                                                                                                                                                                                                                                                                     {
+            "repoid": 1,
+            "default_action": "preserve",
+            "bookmark_prefix": "fbsource/",
+            "mapping": {
+              "arvr": ".fbsource-rest/arvr_old"
+            },
+            "direction": "small_to_large"
+          },
+          {
+            "repoid": 2,
+            "default_action": "prepend_prefix",
+            "default_prefix": "arvr-legacy",
+            "bookmark_prefix": "ovrsource/",
+            "mapping": {
+              "arvr": "arvr",
+              "fbandroid": ".ovrsource-rest/fbandroid",
+              "fbcode": ".ovrsource-rest/fbcode_old",
+              "fbobjc": ".ovrsource-rest/fbobjc",
+              "xplat": ".ovrsource-rest/xplat"
+            },
+            "direction": "small_to_large"
+          }
+        ]
+      }
+    }
+  }
+}
