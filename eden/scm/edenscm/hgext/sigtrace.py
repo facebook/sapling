@@ -114,6 +114,8 @@ def uisetup(ui):
 
 def reposetup(ui, repo):
     # Do not track known long-running commands.
+    if not repo.local():
+        return
     if ui.cmdname in {"debugedenimporthelper"} and not util.istest():
         return
     interval = ui.configint("sigtrace", "interval")
