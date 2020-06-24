@@ -145,7 +145,7 @@ cdef class clindex(object):
         return self._nodemap
 
     def destroying(self):
-        _log(self._vfs, b'clindex: destroying')
+        _log(self._vfs, 'clindex: destroying')
         self._nodemap.destroying()
 
     def updatecaches(self):
@@ -180,13 +180,13 @@ cdef class nodemap(object):
         except IOError as ex:
             if ex.errno != errno.ENOENT:
                 raise
-            _log(self._vfs, b'nodemap: is empty')
+            _log(self._vfs, 'nodemap: is empty')
             index = self.emptyindex
         if config.nodemap:
             try:
                 rustnodemap = indexes.nodemap(changelog, index)
             except Exception as ex:
-                _log(self._vfs, b'nodemap: corrupted: %r' % ex)
+                _log(self._vfs, 'nodemap: corrupted: %r' % ex)
                 rustnodemap = indexes.nodemap(changelog, self.emptyindex)
             self._rustnodemap = rustnodemap
         self._updated = False
@@ -205,7 +205,7 @@ cdef class nodemap(object):
         lag = self._rustnodemap.lag()
         if lag == 0 or lag < self._config.lagthreshold:
             return
-        _log(self._vfs, b'nodemap: updating (lag=%s)' % lag)
+        _log(self._vfs, 'nodemap: updating (lag=%s)' % str(lag))
         with self._vfs('nodemap', 'w', atomictemp=True) as f:
             f.write(self._rustnodemap.build())
         self._updated = True
@@ -230,7 +230,7 @@ cdef class nodemap(object):
                                        'revorig': revorig})
             if rev != revorig:
                 _logandraise(self._vfs,
-                             b'nodemap: inconsistent getitem(%s): %r vs %r'
+                             'nodemap: inconsistent getitem(%s): %r vs %r'
                              % (hex(node), rev, revorig))
         else:
             rev = self._rustnodemap[node]
@@ -259,10 +259,10 @@ cdef class nodemap(object):
             res = _logifraise(self._vfs,
                               lambda: node in self._rustnodemap,
                               lambda: {'nodemap.contains': hex(node),
-                                       b'resorig': resorig})
+                                       'resorig': resorig})
             if res != resorig:
                 _logandraise(self._vfs,
-                             b'nodemap: inconsistent contains(%s): %r vs %r'
+                             'nodemap: inconsistent contains(%s): %r vs %r'
                              % (hex(node), res, resorig))
         else:
             res = node in self._rustnodemap
@@ -287,7 +287,7 @@ cdef class nodemap(object):
             if res != resorig:
                 _logandraise(
                     self._vfs,
-                    b'nodemap: inconsistent partialmatch(%s): %r vs %r'
+                    'nodemap: inconsistent partialmatch(%s): %r vs %r'
                     % (hexprefix, res, resorig))
         else:
             res = self._rustpartialmatch(hexprefix)
@@ -303,7 +303,7 @@ cdef class nodemap(object):
             if node is not None:
                 candidates.add(node)
         except (RuntimeError, RustError) as ex:
-            # Convert b'ambiguous prefix' to RevlogError. This is because the
+            # Convert 'ambiguous prefix' to RevlogError. This is because the
             # rust code cannot access RevlogError cleanly. So we do the
             # conversion here.
             if 'ambiguous prefix' in str(ex):
@@ -332,7 +332,7 @@ cdef class nodemap(object):
             return 0
 
     def destroying(self):
-        self._vfs.tryunlink(b'nodemap')
+        self._vfs.tryunlink('nodemap')
         self._config.nodemap = False
 
 # These are unfortunate. But we need vfs access inside index.__init__. Doing
@@ -383,26 +383,27 @@ def _logifraise(vfs, func, infofunc):
     try:
         return func()
     except RuntimeError as ex:
-        _log(vfs, b'exception: %r %r' % (ex, infofunc()))
+        _log(vfs, 'exception: %r %r' % (ex, infofunc()))
         _recover(vfs)
         raise
 
 def _recover(vfs):
-    vfs.tryunlink(b'nodemap')
-    vfs.tryunlink(b'childmap')
+    vfs.tryunlink('nodemap')
+    vfs.tryunlink('childmap')
 
 _logpath = None
 
 def _log(vfs, message):
     try:
         if _logpath:
-            f = open(_logpath, b'ab')
+            f = open(_logpath, 'ab')
         else:
             f = vfs('clindex.log', 'ab')
         with f:
-            timestamp = datetime.datetime.now().strftime(b'%Y-%m-%d %H:%M:%S.%f')
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
             pid = os.getpid()
-            f.write(b'%s [%d] %s\n' % (timestamp, pid, message))
+            f.write(pycompat.encodeutf8('%s [%d] %s\n' % (timestamp, pid,
+                message)))
     except IOError:
         # The log is not important. IOError like "Permission denied" should not
         # be fatal.
