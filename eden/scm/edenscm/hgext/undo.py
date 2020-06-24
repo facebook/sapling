@@ -1117,7 +1117,7 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
     # allows for branch undos using
     # findnextdelta logic
     if reverseindex != 0:
-        sign = reverseindex / abs(reverseindex)
+        sign = reverseindex // abs(reverseindex)
     else:
         sign = None
     if not absolute:
@@ -1157,7 +1157,7 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
         # from shifted index, find reverse index # of states that change
         # branch
         # remember that reverseindex can be negative
-        sign = reverseindex / abs(reverseindex)
+        sign = reverseindex // abs(reverseindex)
         for count in range(abs(reverseindex)):
             shiftedindex = _findnextdelta(repo, shiftedindex, branch, direction=sign)
         reverseindex = shiftedindex
