@@ -215,11 +215,11 @@ class HgServer(object):
           If in_fd is None, stdout will be used.
         """
         if not in_fd:
-            self.in_file = sys.stdin
+            self.in_file = pycompat.stdin
         else:
             self.in_file = fdopen(in_fd, "rb")
         if not out_fd:
-            self.out_file = sys.stdout
+            self.out_file = pycompat.stdout
         else:
             self.out_file = fdopen(out_fd, "wb")
 
