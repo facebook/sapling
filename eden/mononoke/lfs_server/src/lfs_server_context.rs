@@ -463,8 +463,8 @@ mod test {
     const TWOS_HASH: &str = "2222222222222222222222222222222222222222222222222222222222222222";
     const SIZE: u64 = 123;
 
-    pub fn uri_builder(self_uri: &str, upstream_uri: &str) -> Result<UriBuilder, Error> {
-        let server = ServerUris::new(self_uri, Some(upstream_uri))?;
+    pub fn uri_builder(self_uri: &str, upstream_uri: Option<&str>) -> Result<UriBuilder, Error> {
+        let server = ServerUris::new(self_uri, upstream_uri)?;
         Ok(UriBuilder {
             repository: "repo123".to_string(),
             server: Arc::new(server),
@@ -474,7 +474,8 @@ mod test {
     pub struct TestContextBuilder {
         fb: FacebookInit,
         repo: BlobRepo,
-        uri_builder: UriBuilder,
+        self_uri: String,
+        upstream_uri: Option<String>,
     }
 
     impl TestContextBuilder {
@@ -483,12 +484,20 @@ mod test {
             self
         }
 
+        pub fn upstream_uri(mut self, upstream_uri: Option<String>) -> Self {
+            self.upstream_uri = upstream_uri;
+            self
+        }
+
         pub fn build(self) -> Result<RepositoryRequestContext, Error> {
             let Self {
                 fb,
                 repo,
-                uri_builder,
+                self_uri,
+                upstream_uri,
             } = self;
+
+            let uri_builder = uri_builder(&self_uri, upstream_uri.as_deref())?;
 
             Ok(RepositoryRequestContext {
                 ctx: CoreContext::test_mock(fb),
@@ -504,12 +513,11 @@ mod test {
 
     impl RepositoryRequestContext {
         pub fn test_builder(fb: FacebookInit) -> Result<TestContextBuilder, Error> {
-            let uri_builder = uri_builder("http://foo.com/", "http://bar.com")?;
-
             Ok(TestContextBuilder {
                 fb,
                 repo: TestRepoBuilder::new().build()?,
-                uri_builder,
+                self_uri: "http://foo.com/".to_string(),
+                upstream_uri: Some("http://bar.com".to_string()),
             })
         }
     }
@@ -531,7 +539,7 @@ mod test {
 
     #[test]
     fn test_basic_upload_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com", "http://bar.com")?;
+        let b = uri_builder("http://foo.com", Some("http://bar.com"))?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
             format!("http://foo.com/repo123/upload/{}/{}", ONES_HASH, SIZE),
@@ -541,7 +549,7 @@ mod test {
 
     #[test]
     fn test_basic_upload_uri_slash() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com/", "http://bar.com")?;
+        let b = uri_builder("http://foo.com/", Some("http://bar.com"))?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
             format!("http://foo.com/repo123/upload/{}/{}", ONES_HASH, SIZE),
@@ -551,7 +559,7 @@ mod test {
 
     #[test]
     fn test_prefix_upload_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com/bar", "http://bar.com")?;
+        let b = uri_builder("http://foo.com/bar", Some("http://bar.com"))?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
             format!("http://foo.com/bar/repo123/upload/{}/{}", ONES_HASH, SIZE),
@@ -561,7 +569,7 @@ mod test {
 
     #[test]
     fn test_prefix_slash_upload_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com/bar/", "http://bar.com")?;
+        let b = uri_builder("http://foo.com/bar/", Some("http://bar.com"))?;
         assert_eq!(
             b.upload_uri(&obj()?)?.to_string(),
             format!("http://foo.com/bar/repo123/upload/{}/{}", ONES_HASH, SIZE),
@@ -571,7 +579,7 @@ mod test {
 
     #[test]
     fn test_basic_download_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com", "http://bar.com")?;
+        let b = uri_builder("http://foo.com", Some("http://bar.com"))?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
             format!("http://foo.com/repo123/download/{}", ONES_HASH),
@@ -581,7 +589,7 @@ mod test {
 
     #[test]
     fn test_basic_download_uri_slash() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com/", "http://bar.com")?;
+        let b = uri_builder("http://foo.com/", Some("http://bar.com"))?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
             format!("http://foo.com/repo123/download/{}", ONES_HASH),
@@ -591,7 +599,7 @@ mod test {
 
     #[test]
     fn test_prefix_download_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com/bar", "http://bar.com")?;
+        let b = uri_builder("http://foo.com/bar", Some("http://bar.com"))?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
             format!("http://foo.com/bar/repo123/download/{}", ONES_HASH),
@@ -601,7 +609,7 @@ mod test {
 
     #[test]
     fn test_prefix_slash_download_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com/bar/", "http://bar.com")?;
+        let b = uri_builder("http://foo.com/bar/", Some("http://bar.com"))?;
         assert_eq!(
             b.download_uri(&content_id()?)?.to_string(),
             format!("http://foo.com/bar/repo123/download/{}", ONES_HASH),
@@ -611,7 +619,7 @@ mod test {
 
     #[test]
     fn test_basic_consistent_download_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com", "http://bar.com")?;
+        let b = uri_builder("http://foo.com", Some("http://bar.com"))?;
         assert_eq!(
             b.consistent_download_uri(&content_id()?, oid()?)?
                 .to_string(),
@@ -625,7 +633,7 @@ mod test {
 
     #[test]
     fn test_basic_upstream_batch_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com", "http://bar.com")?;
+        let b = uri_builder("http://foo.com", Some("http://bar.com"))?;
         assert_eq!(
             b.upstream_batch_uri()?.map(|uri| uri.to_string()),
             Some(format!("http://bar.com/objects/batch")),
@@ -635,7 +643,7 @@ mod test {
 
     #[test]
     fn test_basic_upstream_batch_uri_slash() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com/", "http://bar.com")?;
+        let b = uri_builder("http://foo.com/", Some("http://bar.com"))?;
         assert_eq!(
             b.upstream_batch_uri()?.map(|uri| uri.to_string()),
             Some(format!("http://bar.com/objects/batch")),
@@ -645,7 +653,7 @@ mod test {
 
     #[test]
     fn test_prefix_upstream_batch_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com", "http://bar.com/foo")?;
+        let b = uri_builder("http://foo.com", Some("http://bar.com/foo"))?;
         assert_eq!(
             b.upstream_batch_uri()?.map(|uri| uri.to_string()),
             Some(format!("http://bar.com/foo/objects/batch")),
@@ -655,7 +663,7 @@ mod test {
 
     #[test]
     fn test_prefix_slash_upstream_batch_uri() -> Result<(), Error> {
-        let b = uri_builder("http://foo.com", "http://bar.com/foo/")?;
+        let b = uri_builder("http://foo.com", Some("http://bar.com/foo/"))?;
         assert_eq!(
             b.upstream_batch_uri()?.map(|uri| uri.to_string()),
             Some(format!("http://bar.com/foo/objects/batch")),

@@ -13,7 +13,6 @@ use bytes::Bytes;
 use futures::{
     channel::mpsc::{self, channel},
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::ready,
     SinkExt, Stream, StreamExt, TryStreamExt,
 };
 use futures_util::try_join;
@@ -51,6 +50,66 @@ define_stats! {
 // Small buffers for Filestore & Dewey
 const BUFFER_SIZE: usize = 5;
 
+mod closeable_sender {
+    use pin_project::pin_project;
+
+    use futures::{
+        channel::mpsc::{SendError, Sender},
+        sink::Sink,
+        task::{Context, Poll},
+    };
+    use std::pin::Pin;
+
+    #[pin_project]
+    pub struct CloseableSender<T> {
+        #[pin]
+        inner: Sender<T>,
+    }
+
+    impl<T> CloseableSender<T> {
+        pub fn new(inner: Sender<T>) -> Self {
+            Self { inner }
+        }
+    }
+
+    impl<T> Sink<T> for CloseableSender<T> {
+        type Error = SendError;
+
+        fn poll_ready(
+            self: Pin<&mut Self>,
+            ctx: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::Error>> {
+            match self.project().inner.poll_ready(ctx) {
+                Poll::Ready(Err(e)) if e.is_disconnected() => Poll::Ready(Ok(())),
+                x => x,
+            }
+        }
+
+        fn start_send(self: Pin<&mut Self>, msg: T) -> Result<(), Self::Error> {
+            match self.project().inner.start_send(msg) {
+                Err(e) if e.is_disconnected() => Ok(()),
+                x => x,
+            }
+        }
+
+        fn poll_flush(
+            self: Pin<&mut Self>,
+            ctx: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::Error>> {
+            self.project().inner.poll_flush(ctx)
+        }
+
+        fn poll_close(
+            self: Pin<&mut Self>,
+            ctx: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::Error>> {
+            self.project().inner.poll_close(ctx)
+        }
+    }
+}
+
+use closeable_sender::CloseableSender;
+
 // NOTE: We don't deserialize things beyond a String form, in order to report errors in our
 // controller, not in routing.
 #[derive(Deserialize, StateData, StaticResponseExtender)]
@@ -80,18 +139,6 @@ fn find_actions(
             }),
         Transfer::Unknown => Err(ErrorKind::UpstreamInvalidTransfer.into()),
     }
-}
-
-// TODO: The reason we have discard_stream instead of just droppping the Stream is because we need
-// to make sure we don't drop our receiver and break our sender in the multiplexing that happens
-// below. This is OK when the data is coming from a client and is going to be there anyway, but
-// it's still a bit crusty. A better way to do this would be to wrap the Sink somehow to ignore
-// errors sending.
-async fn discard_stream<S>(data: S) -> Result<(), Error>
-where
-    S: Stream<Item = Result<Bytes, Error>> + Unpin + Send + 'static,
-{
-    Ok(data.for_each(|_| ready(())).await)
 }
 
 async fn internal_upload<S>(
@@ -154,7 +201,7 @@ where
         Some(res) => res,
         None => {
             // We have no upstream: discard this copy.
-            return discard_stream(data).await;
+            return Ok(());
         }
     };
 
@@ -187,7 +234,7 @@ where
         return Ok(());
     }
 
-    discard_stream(data).await
+    Ok(())
 }
 
 async fn upload_from_client<S>(
@@ -202,6 +249,13 @@ where
 {
     let (internal_send, internal_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
     let (upstream_send, upstream_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
+
+    // CloseableSender lets us allow a stream to close without breaking the sender. This is useful
+    // if e.g. upstream already has the data we want to send, so we decide not to send it. This
+    // gives us better error messages, since if one of our uploads fail, we're guaranteed that the
+    // consume_stream future isn't the one that'll return an error.
+    let internal_send = CloseableSender::new(internal_send);
+    let upstream_send = CloseableSender::new(upstream_send);
 
     let mut sink = internal_send.fanout(upstream_send);
 
@@ -376,4 +430,27 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
     }
 
     Ok(EmptyBody::new())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use fbinit::FacebookInit;
+    use futures::{future, stream};
+
+    #[fbinit::compat_test]
+    async fn test_upload_from_client_discard_upstream(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = RepositoryRequestContext::test_builder(fb)?
+            .upstream_uri(None)
+            .build()?;
+
+        let body = stream::once(future::ready(Ok(Bytes::from("foobar"))));
+        let oid =
+            Sha256::from_str("c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2")?;
+        let size = 6;
+
+        upload_from_client(&ctx, oid, size, body, &mut None).await?;
+
+        Ok(())
+    }
 }
