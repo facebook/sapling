@@ -168,9 +168,6 @@ Setup another client and update to latest commit from mercurial
   resolving manifests
   lfs: downloading c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1 (40 bytes)
   lfs: processed: c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1
-  getting a
-  getting b
-  getting lfs-largefile
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ wc -c lfs-largefile
   40 lfs-largefile
@@ -178,14 +175,11 @@ Setup another client and update to latest commit from mercurial
   resolving manifests
   lfs: downloading 3c8bc2369a8a90ce1bd6ceb9883cfada7169dde4abe28d70034edea01c0c9a80 (30 bytes)
   lfs: processed: 3c8bc2369a8a90ce1bd6ceb9883cfada7169dde4abe28d70034edea01c0c9a80
-  getting lfs-largefile
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ wc -c lfs-largefile
   30 lfs-largefile
   $ hg up 4 -v
   resolving manifests
-  removing lfs-largefile
-  getting lfs-renamed-largefile
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ ls
   a

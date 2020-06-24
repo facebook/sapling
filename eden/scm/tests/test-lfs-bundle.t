@@ -154,8 +154,8 @@ Apply bundles
    Z: bin=0 lnk=0 flag=0 size=3 copied='' chain=0ad6e257ad34
   ---- Applying src-shallow-normal.bundle to dst-shallow-lfs ----
   9f4445d5e0fc: Y
-   X: bin=0 lnk=0 flag=0 size=42 copied='Y' chain=c6fdd3c3ab39
-   Y: bin=0 lnk=0 flag=0 size=42 copied='X' chain=88c7303c7f80
+   X: bin=0 lnk=0 flag=* size=42 copied='Y' chain=c6fdd3c3ab39 (glob)
+   Y: bin=0 lnk=0 flag=* size=42 copied='X' chain=88c7303c7f80 (glob)
   c73835eb729c: Z
    X: bin=0 lnk=0 flag=0 size=41 copied='Y' chain=5322d1c20036
    Y: bin=0 lnk=0 flag=0 size=41 copied='X' chain=78eb25c15608
@@ -178,8 +178,8 @@ Apply bundles
    Z: bin=0 lnk=0 flag=0 size=7 copied='' chain=0ad6e257ad34
   ---- Applying src-shallow-lfs.bundle to dst-shallow-normal ----
   9f4445d5e0fc: Y
-   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
-   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
+   X: bin=0 lnk=0 flag=* size=42 copied='Y' chain=c6fdd3c3ab39 (glob)
+   Y: bin=0 lnk=0 flag=* size=42 copied='X' chain=88c7303c7f80 (glob)
   c73835eb729c: Z
    X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
    Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608
@@ -218,8 +218,8 @@ Apply bundles
    Z: bin=0 lnk=0 flag=0 size=3 copied='' chain=0ad6e257ad34
   ---- Applying src-full-normal.bundle to dst-shallow-lfs ----
   9f4445d5e0fc: Y
-   X: bin=0 lnk=0 flag=0 size=42 copied='Y' chain=c6fdd3c3ab39
-   Y: bin=0 lnk=0 flag=0 size=42 copied='X' chain=88c7303c7f80
+   X: bin=0 lnk=0 flag=* size=42 copied='Y' chain=c6fdd3c3ab39 (glob)
+   Y: bin=0 lnk=0 flag=* size=42 copied='X' chain=88c7303c7f80 (glob)
   c73835eb729c: Z
    X: bin=0 lnk=0 flag=0 size=41 copied='Y' chain=5322d1c20036
    Y: bin=0 lnk=0 flag=0 size=41 copied='X' chain=78eb25c15608
@@ -242,8 +242,8 @@ Apply bundles
    Z: bin=0 lnk=0 flag=0 size=7 copied='' chain=0ad6e257ad34
   ---- Applying src-full-lfs.bundle to dst-shallow-normal ----
   9f4445d5e0fc: Y
-   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
-   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
+   X: bin=0 lnk=0 flag=* size=42 copied='Y' chain=c6fdd3c3ab39 (glob)
+   Y: bin=0 lnk=0 flag=* size=42 copied='X' chain=88c7303c7f80 (glob)
   c73835eb729c: Z
    X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
    Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608

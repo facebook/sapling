@@ -118,8 +118,6 @@
   resolving manifests
   lfs: downloading f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b (1.47 KB)
   lfs: processed: f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
-  getting lfs-largefile
-  getting smallfile
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # Check that alias.sha1.hgfilenode -> sha256.file_content is generated

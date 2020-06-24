@@ -59,7 +59,7 @@ Test that we can repack packs into indexedlog
   $ clone master shallow2
   fetching tree '' d80a4bdb312d799dffbbce4719a5e2ad7987058e, found via d34c38483be9
   1 trees fetched over 0.00s
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
 # Verify stuff normally goes to packs
   $ ls $CACHEDIR/master/packs | grep datapack

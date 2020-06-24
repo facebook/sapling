@@ -115,8 +115,7 @@
   committing manifest
   committing changelog
   committed changeset 5:ef28949d25cb
-  $ test -d $CACHEDIR/master/packs
-  [1]
+  $ ls $CACHEDIR/master/packs
 
 
 # Test that it doesn't break non-remotefilelog repos

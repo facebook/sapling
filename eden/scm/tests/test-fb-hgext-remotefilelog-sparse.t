@@ -60,10 +60,9 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   updating bookmark foo
   prefetching file contents
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # Dont consider filtered files when doing copy tracing
 

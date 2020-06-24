@@ -470,7 +470,7 @@ class remotefileslog(filelog.fileslog):
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
         self._memcachestore = None
-        self._ruststore = repo.ui.configbool("remotefilelog", "useruststore", False)
+        self._ruststore = repo.ui.configbool("remotefilelog", "useruststore", True)
         if self._ruststore:
             self.makeruststore(repo)
         else:

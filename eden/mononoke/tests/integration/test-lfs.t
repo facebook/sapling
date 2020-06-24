@@ -122,8 +122,6 @@
   resolving manifests
   lfs: downloading 2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe (1.95 KB)
   lfs: processed: 2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe
-  getting lfs-largefile
-  getting smallfile
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sha256sum lfs-largefile
   2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe  lfs-largefile

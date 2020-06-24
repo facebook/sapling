@@ -89,7 +89,6 @@ Repack
 
 The history for y has to be refetched from the server.
   $ hg log -f y -T '{desc}\n'
-  deleting corrupt pack '$TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440'
   xy2
   xy
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
@@ -118,8 +117,11 @@ Truncate the data in the middle of the filename length for "o"
   $ python $TESTDIR/truncate.py --size 130 .hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf.datapack
 
 Repack
-  $ hg repack
+  $ hg repack 2>&1 | grep 'Repack failure'
+  *RustError: Repack failure: [("$TESTTMP/shallow/.hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf", failed to fill whole buffer)] (glob)
   $ findfilessorted .hg/store/packs
+  .hg/store/packs/074daadf58a47b23b71741ac7c922b7c02343598.dataidx
+  .hg/store/packs/074daadf58a47b23b71741ac7c922b7c02343598.datapack
   .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histidx
   .hg/store/packs/822f755410ca9f664d7c706957b8391248327318.histpack
   .hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf.dataidx
@@ -139,20 +141,11 @@ The local data for n is still available
   n
 
 The history for n is lost
-  $ hg log -qf n
-  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318' - ignoring it
-  abort: stream ended unexpectedly (got 0 bytes, expected 2)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  [255]
+  $ hg log -qf n 2>&1 | grep 'KeyError'
+  KeyError: 'Key not found Key { path: RepoPathBuf("n"), hgid: HgId("c972a0820002b32c6fec4b7ca47d3aecdad8e1c5") }'
 
 The local data and history for o is lost
-  $ hg cat -q o
-  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/f0a7036b83e36fd41dc1ea89cc67e6a01487f2cf' - ignoring it
-  abort: stream ended unexpectedly (got 0 bytes, expected 2)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
-  [255]
-  $ hg log -qf o
-  detected corrupt pack '$TESTTMP/shallow/.hg/store/packs/822f755410ca9f664d7c706957b8391248327318' - ignoring it
-  abort: stream ended unexpectedly (got 0 bytes, expected 2)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  [255]
+  $ hg cat -q o 2>&1 | grep 'KeyError'
+  KeyError: 'Key not found Key { path: RepoPathBuf("o"), hgid: HgId("fd94f81d01bf8c9d960bb57abdd4e8375309ae43") }'
+  $ hg log -qf o 2>&1 | grep 'KeyError'
+  KeyError: 'Key not found Key { path: RepoPathBuf("o"), hgid: HgId("fd94f81d01bf8c9d960bb57abdd4e8375309ae43") }'

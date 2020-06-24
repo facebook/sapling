@@ -22,5 +22,5 @@
   > EOF
   $ hg debugdetectissues
   ran issue detector 'cachesizeexceedslimit', found 2 issues
-  'cache_size_exceeds_limit': 'cache size of 2610 exceeds configured limit of 0. 0 files skipped.'
-  'manifest_size_exceeds_limit': 'manifest cache size of 2426 exceeds configured limit of 0. 0 files skipped.'
+  'cache_size_exceeds_limit': 'cache size of * exceeds configured limit of 0. 0 files skipped.' (glob)
+  'manifest_size_exceeds_limit': 'manifest cache size of * exceeds configured limit of 0. 0 files skipped.' (glob)

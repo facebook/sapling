@@ -139,9 +139,12 @@
 
   $ chmod +w $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
   $ python $TESTDIR/truncate.py --size 200 $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
-  $ hg repack
+  $ hg repack 2>&1 | grep 'RustError'
+  *RustError: Repack failure: [("$TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1", failed to fill whole buffer)] (glob)
   $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
+  $TESTTMP/hgcache/master/packs/92ab34412b730e684858821f059758f697794be5.dataidx
+  $TESTTMP/hgcache/master/packs/92ab34412b730e684858821f059758f697794be5.datapack
   $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.dataidx
   $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
   $TESTTMP/hgcache/master/packs/ed01afd8e8527fd7e3473478b25f5b665b0ddfca.histidx

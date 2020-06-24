@@ -64,7 +64,6 @@ Fetch without designated nodes
   7 trees fetched over 0.00s
   fetching tree '' 1595f1646547518ea8bb6f15db03fcaed5f98ab0, based on 65b4f32575a18414983d65bbb6cdef3370aa582b, found via e1972bf883fd
   5 trees fetched over * (glob)
-  2 files fetched over 1 fetches * (glob)
 
 Fetch with designated ndoes
 
@@ -81,7 +80,6 @@ Fetch with designated ndoes
   1 trees fetched over * (glob)
   fetching 2 trees
   2 trees fetched over * (glob)
-  2 files fetched over 1 fetches * (glob)
 
 Confirm that Mononoke logged commands, but didn't log any missing filenodes
   $ grep "Command processed" "$SCUBA_LOGGING_PATH" | wc -l

@@ -173,9 +173,6 @@ Create a new client repository, using getpack (with its own cachepath)
   lfs: processed: d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982
   lfs: downloading e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d (1.95 KB)
   lfs: processed: e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d
-  getting lfs-largefile
-  getting lfs-largefile-renamed
-  getting smallfile
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ sha256sum lfs-largefile

@@ -88,8 +88,6 @@ Create a new client repository, using getpack (with its own cachepath).
 Make sure lfs is not used during update
   $ hgmn update -r master_bookmark -v
   resolving manifests
-  getting lfs-largefile
-  getting smallfile
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Create a new client repository, using getpack (with its own cachepath).
@@ -115,6 +113,4 @@ Now set wantslfspointers, make sure we download lfs pointers
   resolving manifests
   lfs: downloading e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d (1.95 KB)
   lfs: processed: e2fff2ce58d585b4b0572e0a323f9e7e5f98cc641489e12c03c401d05d0e350d
-  getting lfs-largefile
-  getting smallfile
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -92,10 +92,9 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  4 files fetched over * fetches - (4 misses, 0.00% hit ratio) over *s (glob) (?)
   adding remote bookmark foo
   prefetching file contents
-  4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s
+  4 files fetched over * fetches - (4 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg up tip
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved

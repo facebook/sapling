@@ -18,38 +18,6 @@ define an extension that reveals when Mercurial is fixing up linkrevs
   >     ui.__class__ = loglinkrevfixup
   > EOF
 
-define a remotefilelog cache process that just logs when things are added
-  $ cat > $TESTTMP/logcacheprocess.py << EOF
-  > import sys
-  > f = open('$TESTTMP/cachelog.log', 'w')
-  > def log(message):
-  >    f.write(message)
-  >    f.flush()
-  > try:
-  >     while True:
-  >         cmd = sys.stdin.readline().strip()
-  >         if cmd == 'exit':
-  >             sys.exit(0)
-  >         elif cmd == 'getdata' or cmd == 'gethistory':
-  >             count = int(sys.stdin.readline())
-  >             for _ in range(count):
-  >                 key = sys.stdin.readline()[:-1]
-  >                 log('cacheprocess: get %s\n' % key)
-  >                 sys.stdout.write(key + '\n')
-  >             sys.stdout.write('0\n')
-  >             sys.stdout.flush()
-  >         elif cmd == 'setdata' or cmd == 'sethistory':
-  >             count = int(sys.stdin.readline())
-  >             for _ in range(count):
-  >                 key = sys.stdin.readline()[:-1]
-  >                 log('cacheprocess: set %s\n' % key)
-  >         else:
-  >             assert False, 'unknown command! %r' % cmd
-  > except Exception as e:
-  >     log('Exception! %r\n' % e)
-  >     raise
-  > EOF
-
 setup configuration
   $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
   $ cd $TESTTMP
@@ -114,15 +82,8 @@ pull the infinitepush commit
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621 --config remotefilelog.cacheprocess="python $TESTTMP/logcacheprocess.py"
+  $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-the blob didn't get uploaded to the cache
-  $ cat $TESTTMP/cachelog.log
-  cacheprocess: get file\x00b4aa7b980f00bcd3ea58510798c1425dcdc511f3 (esc)
-  cacheprocess: get file\x00b4aa7b980f00bcd3ea58510798c1425dcdc511f3 (esc)
-  cacheprocess: set $TESTTMP/cachepath/repo-pull1/packs/07bbbe5abb17b910e6011232ceba22b0c6b29b9a
-  cacheprocess: set $TESTTMP/cachepath/repo-pull1/packs/f361a1ed16f4b87bbe47e638d8c2cc9f1de8e06f
 
   $ hg debughistorypack ../cachepath/repo-pull1/packs/f361a1ed16f4b87bbe47e638d8c2cc9f1de8e06f
   
@@ -190,15 +151,8 @@ pull only the master branch into another repo
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  $ hgmn up master_bookmark --config remotefilelog.cacheprocess="python $TESTTMP/logcacheprocess.py"
+  $ hgmn up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-the blob was uploaded to the cache
-  $ cat $TESTTMP/cachelog.log
-  cacheprocess: get file\x00b4aa7b980f00bcd3ea58510798c1425dcdc511f3 (esc)
-  cacheprocess: get file\x00b4aa7b980f00bcd3ea58510798c1425dcdc511f3 (esc)
-  cacheprocess: set $TESTTMP/cachepath/repo-pull2/packs/07bbbe5abb17b910e6011232ceba22b0c6b29b9a
-  cacheprocess: set $TESTTMP/cachepath/repo-pull2/packs/e5e1a8b81e9d2360fe54412f8370812c06c6cadb
 
   $ hg log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  6dbc3093b5955d7bb47512155149ec66791c277d master (default/master_bookmark)

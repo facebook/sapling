@@ -721,7 +721,7 @@ old repository into another repo.
   $ hgcloneshallow ssh://user@dummy/secondmaster secondclient -q
   fetching tree '' dcf227dd21f37ac6b3848ab69ee0d0910dbb4071, found via 0a0cac7a2bb2
   2 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd secondclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -739,7 +739,7 @@ old repository into another repo.
   remote: adding manifests
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 1 files
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
   $ hg log -G -T '{node}'
   @  0a0cac7a2bb2ff6613da8280f7f356863cee022b

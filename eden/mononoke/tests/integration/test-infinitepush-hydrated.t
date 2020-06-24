@@ -182,8 +182,6 @@ check unhydrated infinitepush pulls
    ancestor: 3903775176ed, local: 3903775176ed+, remote: c5564d074f73
   reusing connection from pool
   sending getpackv1 command
-   newfile: remote created -> g
-  getting newfile
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 stop mononoke before running it with a different config
@@ -252,6 +250,4 @@ check hydrated infinitepush pulls
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: 3903775176ed, local: 3903775176ed+, remote: 895414f853ef
-   newfile: remote created -> g
-  getting newfile
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
