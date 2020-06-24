@@ -8,7 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 tunables-derive = { path = "tunables-derive" }
-tunables_structs = { path = "../config_structs/tunables" }
+tunables_structs = { path = "../../../configerator/structs/scm/mononoke/tunables" }
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 arc-swap = "0.4"

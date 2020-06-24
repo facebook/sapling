@@ -18,12 +18,12 @@ context = { path = "../context" }
 hgproto = { path = "../../hgproto" }
 hooks = { path = "../../hooks" }
 hooks_content_stores = { path = "../../hooks/content-stores" }
-limits = { path = "../../config_structs/loadshedding" }
+limits = { path = "../../../../configerator/structs/scm/mononoke/loadshedding" }
 load_limiter = { path = "../../load_limiter" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 permission_checker = { path = "../../permission_checker" }
-pushredirect_enable = { path = "../../config_structs/pushredirect" }
+pushredirect_enable = { path = "../../../../configerator/structs/scm/mononoke/pushredirect" }
 repo_client = { path = "../../repo_client" }
 scuba_ext = { path = "../../common/scuba_ext" }
 slog_ext = { path = "../../common/rust/slog_ext" }

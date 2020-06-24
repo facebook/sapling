@@ -20,7 +20,7 @@ getbundle_response = { path = "../getbundle_response" }
 git_mapping_pushrebase_hook = { path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
 globalrev_pushrebase_hook = { path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }
 hooks = { path = "../../hooks" }
-limits = { path = "../../config_structs/loadshedding" }
+limits = { path = "../../../../configerator/structs/scm/mononoke/loadshedding" }
 mercurial_bundles = { path = "../../mercurial/bundles" }
 mercurial_mutation = { path = "../../mercurial/mutation" }
 mercurial_revlog = { path = "../../mercurial/revlog" }

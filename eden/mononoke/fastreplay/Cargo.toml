@@ -12,7 +12,7 @@ blobstore_factory = { path = "../blobstore/factory" }
 cache_warmup = { path = "../cache_warmup" }
 cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
-fastreplay_structs = { path = "../config_structs/fastreplay" }
+fastreplay_structs = { path = "../../../configerator/structs/scm/mononoke/fastreplay" }
 hgproto = { path = "../hgproto" }
 hooks = { path = "../hooks" }
 hooks_content_stores = { path = "../hooks/content-stores" }

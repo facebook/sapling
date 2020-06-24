@@ -22,7 +22,7 @@ mercurial_revlog = { path = "../mercurial/revlog" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_repo = { path = "mononoke_repo" }
-pushredirect_enable = { path = "../config_structs/pushredirect" }
+pushredirect_enable = { path = "../../../configerator/structs/scm/mononoke/pushredirect" }
 remotefilelog = { path = "remotefilelog" }
 repo_read_write_status = { path = "repo_read_write_status" }
 revisionstore_types = { path = "../../scm/lib/revisionstore/types" }
