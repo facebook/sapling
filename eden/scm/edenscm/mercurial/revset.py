@@ -1066,7 +1066,9 @@ def filelog(repo, subset, x):
                 scanpos = None
                 for r in cl.revs(start):
                     # minimize parsing of non-matching entries
-                    if f in cl.revision(r) and f in cl.readfiles(r):
+                    if pycompat.encodeutf8(f) in cl.revision(r) and f in cl.readfiles(
+                        r
+                    ):
                         try:
                             # try to use manifest delta fastpath
                             n = repo[r].filenode(f)

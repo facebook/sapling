@@ -209,7 +209,7 @@ def _parsetemplate(tmpl, start, stop, quote=""):
             # location of the error, since we will replace one-char newlines
             # with the two-char literal r'\n'.
             offset = tmpl[:loc].count("\n")
-            tmpl = tmpl.replace("\n", br"\n")
+            tmpl = tmpl.replace("\n", r"\n")
             # We want the caret to point to the place in the template that
             # failed to parse, but in a hint we get a open paren at the
             # start. Therefore, we print "loc" spaces (instead of "loc - 1")

@@ -2095,7 +2095,7 @@ class jsonchangeset(changeset_printer):
         else:
             jrev = "%d" % rev
             jnode = '"%s"' % hex(ctx.node())
-        j = lambda v: encoding.jsonescape(pycompat.encodeutf8(v))
+        j = lambda v: pycompat.decodeutf8(encoding.jsonescape(pycompat.encodeutf8(v)))
 
         if self._first:
             self.ui.write("[\n {")

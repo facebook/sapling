@@ -1191,7 +1191,7 @@ class revlog(object):
                 l = len(id) // 2  # grab an even number of digits
                 prefix = bbin(id[: l * 2])
                 nl = [e[7] for e in self.index if e[7].startswith(prefix)]
-                nl = [n for n in nl if bhex(n).startswith(id) and self.hasnode(n)]
+                nl = [n for n in nl if hex(n).startswith(id) and self.hasnode(n)]
                 if len(nl) > 0:
                     if len(nl) == 1 and not maybewdir:
                         self._pcache[id] = nl[0]
