@@ -46,11 +46,11 @@ def escape(s, quote=None):
     This is the same as cgi.escape in Python, but always operates on
     bytes, whereas cgi.escape in Python 3 only works on unicodes.
     """
-    s = s.replace(b"&", b"&amp;")
-    s = s.replace(b"<", b"&lt;")
-    s = s.replace(b">", b"&gt;")
+    s = s.replace("&", "&amp;")
+    s = s.replace("<", "&lt;")
+    s = s.replace(">", "&gt;")
     if quote:
-        s = s.replace(b'"', b"&quot;")
+        s = s.replace('"', "&quot;")
     return s
 
 

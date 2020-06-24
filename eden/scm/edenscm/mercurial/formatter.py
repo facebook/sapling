@@ -522,7 +522,7 @@ def lookuptemplate(ui, topic, tmpl):
         if os.path.basename(tmpl).startswith("map-"):
             return templatespec(topic, None, os.path.realpath(tmpl))
         with util.posixfile(tmpl, "rb") as f:
-            tmpl = f.read()
+            tmpl = pycompat.decodeutf8(f.read())
         return templatespec("", tmpl, None)
 
     # constant string?

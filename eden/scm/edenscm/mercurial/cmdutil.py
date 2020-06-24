@@ -2177,7 +2177,9 @@ class jsonchangeset(changeset_printer):
                 diffordiffstat(
                     self.ui, self.repo, diffopts, prev, node, match=matchfn, stat=False
                 )
-                self.ui.write(_x(',\n  "diff": "%s"') % j(self.ui.popbuffer()))
+                # Don't use the j() helper because it expects utf8 strings.
+                diff = encoding.jsonescape(self.ui.popbufferbytes())
+                self.ui.writebytes(b',\n  "diff": "%s"' % diff)
 
         self.ui.write("\n }")
 

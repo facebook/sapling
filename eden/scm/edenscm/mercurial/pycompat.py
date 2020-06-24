@@ -138,6 +138,11 @@ if sys.version_info[0] >= 3:
             s = s.decode("utf-8")
         return s
 
+    def ensureunicode(s, errors="strict"):
+        if not isinstance(s, str):
+            s = s.decode("utf-8", errors=errors)
+        return s
+
     def toutf8lossy(value):
         # type: (str) -> str
         return value
@@ -211,6 +216,11 @@ else:
         # type: Union[str, unicode] -> str
         if isinstance(s, unicode):
             s = s.encode("utf-8")
+        return s
+
+    def ensureunicode(s, errors="strict"):
+        if not isinstance(s, unicode):
+            s = s.decode("utf-8", errors=errors)
         return s
 
     def toutf8lossy(value):

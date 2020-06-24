@@ -168,14 +168,11 @@ def fill(text, width, initindent="", hangindent=""):
         while True:
             m = para_re.search(text, start)
             if not m:
-                uctext = unicode(text[start:], encoding.encoding)  # noqa
+                uctext = pycompat.ensureunicode(text[start:])
                 w = len(uctext)
                 while 0 < w and uctext[w - 1].isspace():
                     w -= 1
-                yield (
-                    uctext[:w].encode(encoding.encoding),
-                    uctext[w:].encode(encoding.encoding),
-                )
+                yield (pycompat.ensurestr(uctext[:w]), pycompat.ensurestr(uctext[w:]))
                 break
             yield text[start : m.start(0)], m.group(1)
             start = m.end(1)
@@ -210,14 +207,6 @@ def firstline(text):
         return text.splitlines(True)[0].rstrip("\r\n")
     except IndexError:
         return ""
-
-
-@templatefilter("hex")
-def hexfilter(text):
-    """Any text. Convert a binary Mercurial node identifier into
-    its long hexadecimal representation.
-    """
-    return node.hex(text)
 
 
 @templatefilter("hgdate")
@@ -295,7 +284,7 @@ def obfuscate(text):
     """Any text. Returns the input text rendered as a sequence of
     XML entities.
     """
-    text = unicode(text, encoding.encoding, "replace")  # noqa
+    text = pycompat.ensureunicode(text, errors="replace")  # noqa
     return "".join(["&#%d;" % ord(c) for c in text])
 
 
@@ -467,7 +456,9 @@ def emailuser(text):
 @templatefilter("utf8")
 def utf8(text):
     """Any text. Converts from the local character encoding to UTF-8."""
-    return encoding.fromlocal(text)
+    if sys.version_info[0] < 3:
+        return encoding.fromlocal(text)
+    return text
 
 
 @templatefilter("xmlescape")

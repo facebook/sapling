@@ -163,15 +163,15 @@ def tokenize(program, start, end, term=None):
 
 def _parsetemplate(tmpl, start, stop, quote=""):
     r"""
-    >>> _parsetemplate(b'foo{bar}"baz', 0, 12)
+    >>> _parsetemplate('foo{bar}"baz', 0, 12)
     ([('string', 'foo'), ('symbol', 'bar'), ('string', '"baz')], 12)
-    >>> _parsetemplate(b'foo{bar}"baz', 0, 12, quote=b'"')
+    >>> _parsetemplate('foo{bar}"baz', 0, 12, quote=b'"')
     ([('string', 'foo'), ('symbol', 'bar')], 9)
-    >>> _parsetemplate(b'foo"{bar}', 0, 9, quote=b'"')
+    >>> _parsetemplate('foo"{bar}', 0, 9, quote='"')
     ([('string', 'foo')], 4)
-    >>> _parsetemplate(br'foo\"bar"baz', 0, 12, quote=b'"')
+    >>> _parsetemplate(r'foo\"bar"baz', 0, 12, quote='"')
     ([('string', 'foo"'), ('string', 'bar')], 9)
-    >>> _parsetemplate(br'foo\\"bar', 0, 10, quote=b'"')
+    >>> _parsetemplate(r'foo\\"bar', 0, 10, quote='"')
     ([('string', 'foo\\')], 6)
     """
     parsed = []
@@ -1996,7 +1996,7 @@ class templater(object):
         """Get the template for the given template name. Use a local cache."""
         if t not in self.cache:
             try:
-                self.cache[t] = util.readfile(self.map[t][1])
+                self.cache[t] = pycompat.decodeutf8(util.readfile(self.map[t][1]))
             except KeyError as inst:
                 raise TemplateNotFound(_('"%s" not in template map') % inst.args[0])
             except IOError as inst:

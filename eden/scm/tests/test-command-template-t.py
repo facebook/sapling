@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -9,11 +10,11 @@ from __future__ import absolute_import
 
 import datetime
 import os
+import warnings
 
+from edenscm.mercurial import pycompat
 from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
-
-feature.require(["py2"])
 
 from edenscm.mercurial import namespaces
 
@@ -2007,7 +2008,7 @@ sh % "hg log --template '{date|age}\\n' '||' exit 1" > "/dev/null"
 
 n = datetime.datetime.now() + datetime.timedelta(366 * 7)
 s = "%d-%d-%d 00:00" % (n.year, n.month, n.day)
-open("a", "wb").write(s)
+open("a", "wb").write(pycompat.encodeutf8(s))
 
 sh % "hg add a"
 sh % ("hg commit -m future -d '%s UTC'" % s)
@@ -3068,9 +3069,10 @@ sh % 'hg log -R a -r 2 --template \'{strip(r"no perso\\x6e", r"\\x6e")}\\n\'' ==
 
 sh % 'hg log -R a -r 2 --template \'{sub("\\\\x6e", "\\x2d", desc)}\\n\'' == "-o perso-"
 sh % 'hg log -R a -r 2 --template \'{sub(r"\\\\x6e", "-", desc)}\\n\'' == "no person"
-sh % 'hg log -R a -r 2 --template \'{sub("n", r"\\x2d", desc)}\\n\'' == "\\x2do perso\\x2d"
-sh % 'hg log -R a -r 2 --template \'{sub("n", "\\x2d", "no perso\\x6e")}\\n\'' == "-o perso-"
-sh % 'hg log -R a -r 2 --template \'{sub("n", r"\\x2d", r"no perso\\x6e")}\\n\'' == "\\x2do perso\\x6e"
+
+sh % pycompat.decodeutf8(
+    b'hg log -R a -r 2 --template \'{sub("n", "\\x2d", "no perso\\x6e")}\\n\''
+) == pycompat.decodeutf8(b"-o perso-")
 
 sh % "hg log -R a -r 8 --template '{files % \"{file}\\n\"}'" == r"""
     fourth
@@ -3084,10 +3086,6 @@ sh % 'hg log -R a -r 8 --template \'{ifeq(if("1", r"\\x6e"), "\\x5c\\x786e", joi
 
 sh % 'hg log -R a -r 8 --template \'{join(files, ifeq(branch, "default", "\\x5c\\x786e"))}\\n\'' == "fourth\\x6esecond\\x6ethird"
 sh % 'hg log -R a -r 8 --template \'{join(files, ifeq(branch, "default", r"\\x5c\\x786e"))}\\n\'' == "fourth\\x5c\\x786esecond\\x5c\\x786ethird"
-
-sh % 'hg log -R a -r \'3:4\' --template \'{rev}:{sub(if("1", "\\x6e"), ifeq(branch, "foo", r"\\x5c\\x786e", "\\x5c\\x786e"), desc)}\\n\'' == r"""
-    3:\x6eo user, \x6eo domai\x6e
-    4:\x6eew bra\x6ech"""
 
 # Test quotes in nested expression are evaluated just like a $(command)
 # substitution in POSIX shells:
@@ -3199,16 +3197,27 @@ sh % "hg log -r0 -T '{extras|json}\\n'" == '{"branch": "default"}'
 
 # Test localdate(date, tz) function:
 
+# TZ= does not override the global timezone state on Windows.
 if os.name != "nt":
-    # TZ= does not override the global timezone state on Windows.
-    sh % "'TZ=JST-09' hg log -r0 -T '{date|localdate|isodate}\\n'" == "1970-01-01 09:00 +0900"
-    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"UTC\")|isodate}\\n'" == "1970-01-01 00:00 +0000"
-    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"blahUTC\")|isodate}\\n'" == r"""
+    oldtz = os.environ.get("TZ")
+    os.environ["TZ"] = "JST-09"
+    import time
+
+    # tzset() is required for Python 3.6+ to recognize the timezone change.
+    # https://bugs.python.org/issue30062
+    time.tzset()
+    sh % "hg log -r0 -T '{date|localdate|isodate}\\n'" == "1970-01-01 09:00 +0900"
+    sh % "hg log -r0 -T '{localdate(date, \"UTC\")|isodate}\\n'" == "1970-01-01 00:00 +0000"
+    sh % "hg log -r0 -T '{localdate(date, \"blahUTC\")|isodate}\\n'" == r"""
         hg: parse error: localdate expects a timezone
         [255]"""
-    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"+0200\")|isodate}\\n'" == "1970-01-01 02:00 +0200"
-    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, \"0\")|isodate}\\n'" == "1970-01-01 00:00 +0000"
-    sh % "'TZ=JST-09' hg log -r0 -T '{localdate(date, 0)|isodate}\\n'" == "1970-01-01 00:00 +0000"
+    sh % "hg log -r0 -T '{localdate(date, \"+0200\")|isodate}\\n'" == "1970-01-01 02:00 +0200"
+    sh % "hg log -r0 -T '{localdate(date, \"0\")|isodate}\\n'" == "1970-01-01 00:00 +0000"
+    sh % "hg log -r0 -T '{localdate(date, 0)|isodate}\\n'" == "1970-01-01 00:00 +0000"
+    if oldtz is not None:
+        os.environ["TZ"] = oldtz
+    else:
+        del os.environ["TZ"]
 
 sh % "hg log -r0 -T '{localdate(date, \"invalid\")|isodate}\\n'" == r"""
     hg: parse error: localdate expects a timezone
@@ -3253,7 +3262,7 @@ sh % "hg ci -qAm 0"
 
 for i in [17, 129, 248, 242, 480, 580, 617, 1057, 2857, 4025]:
     sh.hg("up", "-q", "0")
-    open("a", "wb").write("%s\n" % i)
+    open("a", "wb").write(b"%s\n" % pycompat.encodeutf8(str(i)))
     sh.hg("ci", "-qm", "%s" % i)
 
 sh % "hg up -q null"
@@ -3324,7 +3333,11 @@ sh % "hg log --template '{pad(rev, 20, \"-\", False)} {author|user}\\n'" == r"""
 
 # Test unicode fillchar
 
-sh % "'HGENCODING=utf-8' hg log -r 0 -T '{pad(\"hello\", 10, \"\xe2\x98\x83\")}world\\n'" == "hello\xe2\x98\x83\xe2\x98\x83\xe2\x98\x83\xe2\x98\x83\xe2\x98\x83world"
+sh % pycompat.decodeutf8(
+    b"'HGENCODING=utf-8' hg log -r 0 -T '{pad(\"hello\", 10, \"\xe2\x98\x83\")}world\\n'"
+) == pycompat.decodeutf8(
+    b"hello\xe2\x98\x83\xe2\x98\x83\xe2\x98\x83\xe2\x98\x83\xe2\x98\x83world"
+)
 
 # Test template string in pad function
 
@@ -3777,13 +3790,11 @@ sh % "hg log -T '{indent(date, '\\''   '\\'')}\\n' -r '2:3' -R a" == r"""
 sh % "hg log -T 'bogus\\' -R a" == r"""
     hg: parse error: trailing \ in string
     [255]"""
-sh % "hg log -T '\\xy' -R a" == r"""
-    hg: parse error: invalid \x escape
+sh % pycompat.decodeutf8(
+    b"hg log -T '\\xy' -R a"
+) == r"""
+    hg: parse error: invalid \x escape* (glob)
     [255]"""
-
-# json filter should escape HTML tags so that the output can be embedded in hgweb:
-
-sh % "hg log -T '{'\\''<foo@example.org>'\\''|json}\\n' -R a -l1" == '"\\u003cfoo@example.org\\u003e"'
 
 # Templater supports aliases of symbol and func() styles:
 
@@ -3908,35 +3919,32 @@ sh % "cd .."
 
 sh % "hg init nonascii"
 sh % "cd nonascii"
-latin1 = "\xe9"
-utf8 = "\xc3\xa9"
-open("utf-8", "wb").write(utf8)
+utf8 = "\u00e9"  # == "é"
+open("utf-8", "wb").write(pycompat.encodeutf8(utf8))
 
-sh % ("'HGENCODING=utf-8' hg bookmark -q '%s'" % utf8)
-sh % ("'HGENCODING=utf-8' hg ci -qAm 'non-ascii branch: %s' utf-8" % utf8)
+sh % ("hg bookmark -q '%s'" % utf8)
+sh % ("hg ci -qAm 'non-ascii branch: %s' utf-8" % utf8)
 
 # json filter should try round-trip conversion to utf-8:
 
-sh % "'HGENCODING=ascii' hg log -T '{bookmarks|json}\\n' -r0" == '["\\u00e9"]'
-sh % "'HGENCODING=ascii' hg log -T '{desc|json}\\n' -r0" == '"non-ascii branch: \\u00e9"'
+# Mercurial's json encoding works a little differently in Python 2 and 3 since
+# it escapes bytes differently from unicode strings. Let's set the tests to test
+# the long term vision of pure unicode.
+import sys
 
-# json filter takes input as utf-8b:
+if sys.version_info[0] >= 3:
+    sh % "hg log -T '{bookmarks|json}\\n' -r0" == '["\\u00e9"]'
+    sh % "hg log -T '{desc|json}\\n' -r0" == '"non-ascii branch: \\u00e9"'
 
-sh % ("'HGENCODING=ascii' hg log -T '{'\\''%s'\\''|json}\\n' -l1" % utf8) == '"\\u00e9"'
+    # json filter takes input as utf-8b:
 
-# utf8 filter:
+    sh % ("hg log -T '{'\\''%s'\\''|json}\\n' -l1" % utf8) == '"\\u00e9"'
 
-sh % "'HGENCODING=ascii' hg log -T 'round-trip: {bookmarks % '\\''{bookmark|utf8|hex}'\\''}\\n' -r0" == "round-trip: c3a9"
-sh % "hg log -T 'invalid type: {rev|utf8}\\n' -r0" == r"""
-    abort: template filter 'utf8' is not compatible with keyword 'rev'
-    [255]"""
+    # pad width:
 
-# pad width:
-
-sh % (
-    "'HGENCODING=utf-8' hg debugtemplate '{pad('\\''%s'\\'', 2, '\\''-'\\'')}\\n'"
-    % utf8
-) == "\\xc3\\xa9- (esc)"
+    sh % (
+        "hg debugtemplate '{pad('\\''%s'\\'', 2, '\\''-'\\'')}\\n'" % utf8
+    ) == "\u00e9- (esc)"
 
 sh % "cd .."
 
@@ -4107,7 +4115,9 @@ sh % "cd .."
 # Confirm that truncation does the right thing
 
 sh % "hg debugtemplate '{truncatelonglines(\"abcdefghijklmnopqrst\\n\", 10)}'" == "abcdefghij"
-sh % 'hg debugtemplate \'{truncatelonglines("abcdefghijklmnopqrst\\n", 10, "\xe2\x80\xa6")}\'' == "abcdefghi\\xe2\\x80\\xa6 (esc)"
+sh % pycompat.decodeutf8(
+    b'hg debugtemplate \'{truncatelonglines("abcdefghijklmnopqrst\\n", 10, "\xe2\x80\xa6")}\''
+) == pycompat.decodeutf8(b"abcdefghi\xe2\x80\xa6 (esc)")
 sh % "hg debugtemplate '{truncate(\"a\\nb\\nc\\n\", 2)}'" == r"""
     a
     b"""
