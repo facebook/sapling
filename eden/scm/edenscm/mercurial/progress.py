@@ -124,7 +124,7 @@ def estimatespeed(bar):
     delta = endpos - startpos
     elapsed = endtime - starttime
     if elapsed > 0:
-        return delta / elapsed
+        return delta // elapsed
     return None
 
 
