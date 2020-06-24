@@ -60,7 +60,7 @@ BLACKBOX_PATTERN = """
 
 def shcmd(cmd, input=None, check=True, keeperr=True):
     _, _, _, p = util.popen4(cmd)
-    out, err = p.communicate(input, universal_newlines=True)
+    out, err = p.communicate(input)
     if check and p.returncode:
         raise error.Abort(cmd + " error: " + err)
     elif keeperr:
@@ -533,7 +533,7 @@ def rage(ui, repo, *pats, **opts):
 
     if opts.get("preview"):
         ui.pager("rage")
-        ui.write("%s\n" % encoding.unitolocal(msg))
+        ui.write("%s\n" % encoding.unitolocal(msg.decode("utf-8")))
         return
 
     with progress.spinner(ui, "saving paste"):
