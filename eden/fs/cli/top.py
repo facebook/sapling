@@ -36,7 +36,7 @@ HELP_SECTION_CONCERN = "concern? "
 
 Row = collections.namedtuple(
     "Row",
-    "top_pid mount fuse_reads fuse_writes fuse_total fuse_backing_store_imports fuse_duration fuse_last_access command",
+    "top_pid mount fuse_reads fuse_writes fuse_total fuse_fetch fuse_backing_store_imports fuse_duration fuse_last_access command",
 )
 
 COLUMN_TITLES = Row(
@@ -45,6 +45,7 @@ COLUMN_TITLES = Row(
     fuse_reads="FUSE R",
     fuse_writes="FUSE W",
     fuse_total="FUSE COUNT",
+    fuse_fetch="FUSE FETCH",
     fuse_backing_store_imports="IMPORTS",
     fuse_duration="FUSE TIME",
     fuse_last_access="FUSE LAST",
@@ -56,6 +57,7 @@ COLUMN_SPACING = Row(
     fuse_reads=10,
     fuse_writes=10,
     fuse_total=10,
+    fuse_fetch=10,
     fuse_backing_store_imports=10,
     fuse_duration=10,
     fuse_last_access=10,
@@ -67,6 +69,7 @@ COLUMN_ALIGNMENT = Row(
     fuse_reads=">",
     fuse_writes=">",
     fuse_total=">",
+    fuse_fetch=">",
     fuse_backing_store_imports=">",
     fuse_duration=">",
     fuse_last_access=">",
@@ -78,6 +81,7 @@ COLUMN_REVERSE_SORT = Row(
     fuse_reads=True,
     fuse_writes=True,
     fuse_total=True,
+    fuse_fetch=True,
     fuse_backing_store_imports=True,
     fuse_duration=True,
     fuse_last_access=True,
@@ -137,6 +141,7 @@ COLUMN_FORMATTING = Row(
     fuse_reads=lambda x: x,
     fuse_writes=lambda x: x,
     fuse_total=lambda x: x,
+    fuse_fetch=lambda x: x,
     fuse_backing_store_imports=lambda x: x,
     fuse_duration=format_duration,
     fuse_last_access=format_last_access,
@@ -483,6 +488,14 @@ class Top:
                 self.processes[pid].increment_counts(access_counts)
                 self.processes[pid].last_access = time.monotonic()
 
+            for pid, fetch_counts in accesses.fetchCountsByPid.items():
+                if pid not in self.processes:
+                    cmd = counts.cmdsByPid.get(pid, b"<kernel>")
+                    self.processes[pid] = Process(pid, cmd, mount)
+
+                self.processes[pid].set_fetchs(fetch_counts)
+                self.processes[pid].last_access = time.monotonic()
+
         for pid in self.processes.keys():
             self.processes[pid].is_running = os.path.exists(f"/proc/{pid}/")
 
@@ -794,6 +807,8 @@ class Top:
         self.render_import_help(window)
         window.write_new_line()
         self.render_process_table_help(window)
+        window.write_new_line()
+        self.render_fuse_fetch_help(window)
         window.end_scrollable_section()
 
         instruction_line = (
@@ -827,6 +842,33 @@ class Top:
         )
         window.write_line(
             fuse_req_header, len(fuse_req_header), self.curses.A_UNDERLINE
+        )
+        window.write_labeled_rows(
+            {
+                HELP_SECTION_WHAT: fuse_what,
+                HELP_SECTION_WHY: fuse_why,
+                HELP_SECTION_CONCERN: fuse_concern,
+            }
+        )
+
+    def render_fuse_fetch_help(self, window):
+        fuse_fetch_header = "FUSE FETCH:"
+        fuse_what = (
+            "This column contains the total number of imports cause by "
+            "fuse requests for each process listed since eden daemon started."
+        )
+        fuse_why = (
+            "This indicates which recently running processes are causing a lot of "
+            "fetching activities. FUSE requests such as recursive searching will "
+            "cause a large number of fetches with significant overhead. "
+        )
+        fuse_concern = (
+            "When this number becomes large, the corresponding process "
+            "is very likely to be causing Eden running slow. (Those slow processes "
+            "will be detected and de-prioritized in our future releases.) "
+        )
+        window.write_line(
+            fuse_fetch_header, len(fuse_fetch_header), self.curses.A_UNDERLINE
         )
         window.write_labeled_rows(
             {
@@ -877,10 +919,12 @@ class Top:
             "eden through FUSE since eden top started. The columns in order are  "
             "the process id of the accessing process, the name of the eden  "
             "checkout accessed, number of FUSE reads, FUSE writes, total FUSE  "
-            "requests, number of imports from the backing store, sum of the "
-            "duration of all the FUSE requests, how long ago the last FUSE "
-            "request was, and the command that was run. Use left and right "
-            "arrow keys  to change the column the processes are sorted by "
+            "requests, total number of imports cause by fuse requests since this "
+            "eden daemon started (see FUSE FETCH section below for more info), "
+            "number of imports from the backing store, sum of the duration "
+            "of all the FUSE requests, how long ago the last FUSE request "
+            "was, and the command that was run. Use left and right arrow "
+            "keys  to change the column the processes are sorted by "
             "(highlighted in green). Use up and down arrow keys to move through "
             "the list."
         )
@@ -938,6 +982,7 @@ class Process:
         self.cmd = format_cmd(cmd)
         self.mount = format_mount(mount)
         self.access_counts = AccessCounts(0, 0, 0, 0, 0)
+        self.fuseFetch = 0
         self.last_access_time = time.monotonic()
         self.is_running = True
 
@@ -962,6 +1007,9 @@ class Process:
         )
         self.access_counts.fuseDurationNs += access_counts.fuseDurationNs
 
+    def set_fetchs(self, fetch_counts):
+        self.fuseFetch = fetch_counts
+
     def get_row(self):
         return Row(
             top_pid=self.pid,
@@ -969,6 +1017,7 @@ class Process:
             fuse_reads=self.access_counts.fuseReads,
             fuse_writes=self.access_counts.fuseWrites,
             fuse_total=self.access_counts.fuseTotal,
+            fuse_fetch=self.fuseFetch,
             fuse_backing_store_imports=self.access_counts.fuseBackingStoreImports,
             fuse_duration=self.access_counts.fuseDurationNs,
             fuse_last_access=self.last_access,

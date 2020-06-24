@@ -8,6 +8,7 @@ import binascii
 import hashlib
 import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Pattern, Union
 
@@ -27,6 +28,8 @@ class ThriftTest(testcase.EdenRepoTest):
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
+        self.repo.write_file("test_fetch1", "testing fetch\n")
+        self.repo.write_file("test_fetch2", "testing fetch\n")
         self.repo.write_file("README", "docs\n")
         self.repo.write_file("adir/file", "foo!\n")
         self.repo.write_file("bdir/file", "bar!\n")
@@ -52,6 +55,18 @@ class ThriftTest(testcase.EdenRepoTest):
                 if inode.loaded:
                     inode_count += 1
         return inode_count
+
+    def test_pid_fetch_counts(self) -> None:
+
+        touch_p = subprocess.Popen(
+            "touch test_fetch1 test_fetch2".split(), cwd=self.mount_path
+        )
+        touch_p.communicate()
+
+        with self.get_thrift_client() as client:
+            counts = client.getAccessCounts(1)
+            accesses = counts.accessesByMount[self.mount_path_bytes]
+            self.assertEqual(2, accesses.fetchCountsByPid[touch_p.pid])
 
     def test_list_mounts(self) -> None:
         with self.get_thrift_client() as client:
