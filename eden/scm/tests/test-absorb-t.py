@@ -6,10 +6,8 @@
 
 from __future__ import absolute_import
 
+from edenscm.mercurial import pycompat
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
-
-
-feature.require(["py2"])
 
 
 sh % "setconfig 'experimental.evolution='"
@@ -54,7 +52,7 @@ sh % "hg absorb" == r"""
 # Make some commits:
 
 for i in range(1, 6):
-    open("a", "ab").write(b"%s\n" % i)
+    open("a", "ab").write(b"%s\n" % pycompat.encodeutf8(str(i)))
     sh % ("hg commit -A a -q -m 'commit %s'" % i)
 
 # Change a few lines:
@@ -460,25 +458,24 @@ sh % "cat b" == r"""
 """
 sh % "cat" << "b line 1\nINS\nb line 2\n" > "b"
 
-if feature.check(["py2"]):
-    sh % "echo END" >> "b"
-    sh % "hg rm a"
-    sh % "echo y" | "hg amend --correlated --config 'ui.interactive=1'" == r"""
-        showing changes for b
-                @@ -1,0 +1,1 @@
-                +INS
-                @@ -2,0 +3,1 @@
-        a478955 +END
+sh % "echo END" >> "b"
+sh % "hg rm a"
+sh % "echo y" | "hg amend --correlated --config 'ui.interactive=1'" == r"""
+    showing changes for b
+            @@ -1,0 +1,1 @@
+            +INS
+            @@ -2,0 +3,1 @@
+    a478955 +END
 
-        1 changeset affected
-        a478955 commit b 2
-        apply changes (yn)?  y
-        1 of 2 chunks applied
+    1 changeset affected
+    a478955 commit b 2
+    apply changes (yn)?  y
+    1 of 2 chunks applied
 
-        # changes not applied and left in working directory:
-        # M b : 1 modified chunks were ignored
-        # M c : unsupported file type (ex. binary or link)
-        # R a : removed files were ignored"""
+    # changes not applied and left in working directory:
+    # M b : 1 modified chunks were ignored
+    # M c : unsupported file type (ex. binary or link)
+    # R a : removed files were ignored"""
 
 # Executable files:
 
