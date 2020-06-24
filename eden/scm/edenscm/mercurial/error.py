@@ -242,6 +242,8 @@ class RepoError(Hint, Context, Exception):
 class AbandonedTransactionFoundError(RepoError):
     """Exception raised when an unfinished transaction has been found"""
 
+    exitcode = 90
+
 
 class RepoLookupError(RepoError):
     pass
