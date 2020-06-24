@@ -47,10 +47,10 @@ class snapshotlist(object):
     def __init__(self, repo, check=True):
         try:
             with _getsnapshotlistfile(repo) as snaplistfile:
-                lines = snaplistfile.readlines()
-            if not lines or lines[0].strip() != FORMAT_VERSION:
+                lines = pycompat.decodeutf8(snaplistfile.read()).split()
+            if not lines or lines[0] != FORMAT_VERSION:
                 raise error.Abort("invalid snapshots file format")
-            self.snapshots = [snapshot.strip() for snapshot in lines[1:]]
+            self.snapshots = lines[1:]
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
@@ -71,9 +71,9 @@ class snapshotlist(object):
             self.snapshots = [s for s in self.snapshots if s not in toremove]
 
     def _write(self, fp):
-        fp.write("%s\n" % FORMAT_VERSION)
+        fp.write(("%s\n" % FORMAT_VERSION).encode("utf-8"))
         for s in self.snapshots:
-            fp.write("%s\n" % (s,))
+            fp.write(("%s\n" % (s,)).encode("utf-8"))
 
     def update(self, tr, addnodes=[], removenodes=[]):
         """transactionally update the list of snapshots

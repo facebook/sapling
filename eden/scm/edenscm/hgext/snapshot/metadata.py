@@ -11,6 +11,7 @@ import hashlib
 
 from edenscm.mercurial import error, pathutil
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
 from edenscm.mercurial.utils import cborutil
 
 
@@ -32,14 +33,17 @@ class filewrapper(object):
     def todict(self):
         self._check()
         if self.content is not None:
-            return {"content": self.content}
+            return {b"content": self.content}
         if self.oid is not None:
-            return {"oid": self.oid}
+            return {b"oid": encodeutf8(self.oid)}
         return None
 
     @classmethod
     def fromdict(cls, path, data):
-        return cls(path, oid=data.get("oid"), content=data.get("content"))
+        oid = data.get(b"oid")
+        if oid is not None:
+            oid = decodeutf8(oid)
+        return cls(path, oid=oid, content=data.get(b"content"))
 
     def getcontent(self, store):
         if self.content is not None:
@@ -102,35 +106,40 @@ class snapshotmetadata(object):
 
     def todict(self):
         files = {}
-        files["deleted"] = {d.path: d.todict() for d in self.deleted}
-        files["unknown"] = {u.path: u.todict() for u in self.unknown}
-        files["localvfsfiles"] = {f.path: f.todict() for f in self.localvfsfiles}
-        return {"files": files, "version": str(snapshotmetadata.VERSION)}
+        files[b"deleted"] = {encodeutf8(d.path): d.todict() for d in self.deleted}
+        files[b"unknown"] = {encodeutf8(u.path): u.todict() for u in self.unknown}
+        files[b"localvfsfiles"] = {
+            encodeutf8(f.path): f.todict() for f in self.localvfsfiles
+        }
+        return {b"files": files, b"version": encodeutf8(str(snapshotmetadata.VERSION))}
 
     def serialize(self):
-        return "".join(cborutil.streamencode(self.todict()))
+        return b"".join(cborutil.streamencode(self.todict()))
 
     @classmethod
     def fromdict(cls, metadatadict):
         # check version of metadata
         try:
-            version = int(metadatadict.get("version"))
+            version = int(metadatadict.get(b"version"))
         except ValueError:
             raise error.Abort(
-                "invalid metadata version: %s\n" % (metadatadict.get("version"),)
+                "invalid metadata version: %s\n" % (metadatadict.get(b"version"),)
             )
         if version != snapshotmetadata.VERSION:
             raise error.Abort("invalid version number %d" % (version,))
         try:
-            files = metadatadict["files"]
-            deleted = [filewrapper(path) for path in sorted(files["deleted"].keys())]
+            files = metadatadict[b"files"]
+            deleted = [
+                filewrapper(decodeutf8(path))
+                for path in sorted(files[b"deleted"].keys())
+            ]
             unknown = [
-                filewrapper.fromdict(path, data)
-                for path, data in sorted(files["unknown"].items())
+                filewrapper.fromdict(decodeutf8(path), data)
+                for path, data in sorted(files[b"unknown"].items())
             ]
             localvfsfiles = [
-                filewrapper.fromdict(path, data)
-                for path, data in sorted(files["localvfsfiles"].items())
+                filewrapper.fromdict(decodeutf8(path), data)
+                for path, data in sorted(files[b"localvfsfiles"].items())
             ]
             return cls(deleted=deleted, unknown=unknown, localvfsfiles=localvfsfiles)
         except ValueError:
