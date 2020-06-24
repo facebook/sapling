@@ -106,18 +106,22 @@ def _startttyserver():
         os.close(pipes[0])
         return pid, sockpath
 
-    # child, starts the server
-    ttyrfd, ttywfd = _ttyfds or [sys.stdin.fileno(), sys.stderr.fileno()]
-
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    getattr(util, "bindunixsocket", _sockbind)(sock, sockpath)
-    sock.listen(1)
-
-    # unblock parent
-    os.close(pipes[0])
-    os.write(pipes[1], " ")
-    os.close(pipes[1])
+    # terminate=true will force the child process to exit, regardless of if
+    # there's an exception or not. This is required to prevent it from returning
+    # to the parent process command execution and resulting in a double
+    # invocation of the command.
     with _silentexception(terminate=True):
+        # child, starts the server
+        ttyrfd, ttywfd = _ttyfds or [sys.stdin.fileno(), sys.stderr.fileno()]
+
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        getattr(util, "bindunixsocket", _sockbind)(sock, sockpath)
+        sock.listen(1)
+
+        # unblock parent
+        os.close(pipes[0])
+        os.write(pipes[1], b" ")
+        os.close(pipes[1])
         while True:
             conn, addr = sock.accept()
             # 0: a dummy destination_pid, is ignored on posix systems
