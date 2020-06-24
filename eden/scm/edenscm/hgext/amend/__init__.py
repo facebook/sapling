@@ -203,7 +203,7 @@ def uisetup(ui):
         + commands.walkopts
         + commands.commitopts
         + commands.commitopts2,
-        _("hg amend [OPTION]..."),
+        _("hg amend [OPTION]... [FILE]..."),
     )(amend)
 
     def has_automv(loaded):
