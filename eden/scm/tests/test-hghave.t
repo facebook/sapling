@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Testing that hghave does not crash when checking features
