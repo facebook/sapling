@@ -361,6 +361,7 @@ def run(
     mysql_schemas,
     devdb,
 ):
+    manifest = os.path.abspath(manifest)
     if is_libfb_present():
         from libfb.py.log import set_simple_logging
         from eden.mononoke.tests.integration.facebook.lib_runner import (
