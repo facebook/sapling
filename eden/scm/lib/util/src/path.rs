@@ -7,9 +7,8 @@
 
 //! Path-related utilities.
 
+use std::borrow::Cow;
 use std::env;
-#[cfg(not(unix))]
-use std::fs::rename;
 use std::fs::{self, remove_file as fs_remove_file};
 use std::io::{self, ErrorKind};
 #[cfg(unix)]
@@ -17,8 +16,6 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 
 use anyhow::Result;
-#[cfg(not(unix))]
-use tempfile::Builder;
 
 /// Removes the UNC prefix `\\?\` on Windows. Does nothing on unices.
 pub fn strip_unc_prefix(path: &Path) -> &Path {
@@ -74,38 +71,72 @@ pub fn absolute(path: impl AsRef<Path>) -> io::Result<PathBuf> {
 }
 
 /// Remove the file pointed by `path`.
-#[cfg(unix)]
-pub fn remove_file<P: AsRef<Path>>(path: P) -> Result<()> {
-    fs_remove_file(path)?;
-    Ok(())
-}
-
-/// Remove the file pointed by `path`.
-///
-/// On Windows, removing a file can fail for various reasons, including if the file is memory
-/// mapped. This can happen when the repository is accessed concurrently while a background task is
-/// trying to remove a packfile. To solve this, we can rename the file before trying to remove it.
-/// If the remove operation fails, a future repack will clean it up.
-#[cfg(not(unix))]
 pub fn remove_file<P: AsRef<Path>>(path: P) -> Result<()> {
     let path = path.as_ref();
-    let extension = path
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .map_or(".to-delete".to_owned(), |ext| ".".to_owned() + ext + "-tmp");
+    // On Windows, try to rename the file before removing.
+    // This allows re-creating a same file.
+    // See https://boostgsoc13.github.io/boost.afio/doc/html/afio/FAQ/deleting_open_files.html
+    let path: Cow<Path> = if cfg!(windows) {
+        let tmp_path = path.with_extension(format!("tmp.{:x}", rand::random::<u16>()));
+        fs::rename(path, &tmp_path)?;
+        Cow::Owned(tmp_path)
+    } else {
+        Cow::Borrowed(path)
+    };
+    let result = fs_remove_file(&path);
+    #[cfg(windows)]
+    match &result {
+        Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
+            // This file might be mmapp-ed. Try a different way.
+            if windows_remove_mmap_file(&path).is_ok() {
+                return Ok(());
+            }
+        }
+        _ => (),
+    }
+    result.map_err(Into::into)
+}
 
-    let dest_path = Builder::new()
-        .prefix("")
-        .suffix(&extension)
-        .rand_bytes(8)
-        .tempfile_in(path.parent().unwrap())?
-        .into_temp_path();
+/// Deletes a file even if it is being mmap-ed on Windows.
+/// See https://stackoverflow.com/questions/54138684.
+#[cfg(windows)]
+fn windows_remove_mmap_file(path: &Path) -> io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use winapi::shared::minwindef::FALSE;
+    use winapi::um::fileapi::CreateFileW;
+    use winapi::um::fileapi::OPEN_EXISTING;
+    use winapi::um::handleapi::CloseHandle;
+    use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+    use winapi::um::winbase::FILE_FLAG_DELETE_ON_CLOSE;
+    use winapi::um::winnt::DELETE;
+    use winapi::um::winnt::FILE_SHARE_DELETE;
+    use winapi::um::winnt::FILE_SHARE_READ;
+    use winapi::um::winnt::FILE_SHARE_WRITE;
 
-    rename(path, &dest_path)?;
-
-    // Ignore errors when removing the file, it will be cleaned up at a later time.
-    let _ = fs_remove_file(dest_path);
-    Ok(())
+    let wpath: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let handle = unsafe {
+        CreateFileW(
+            wpath.as_ptr(),
+            DELETE,
+            FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
+            std::ptr::null_mut(),
+            OPEN_EXISTING,
+            FILE_FLAG_DELETE_ON_CLOSE,
+            std::ptr::null_mut(),
+        )
+    };
+    if handle == INVALID_HANDLE_VALUE {
+        let err = io::Error::last_os_error();
+        if err.kind() == io::ErrorKind::NotFound {
+            Ok(())
+        } else {
+            Err(err)
+        }
+    } else if unsafe { CloseHandle(handle) } == FALSE {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
 }
 
 /// Create the directory with specified permission on UNIX systems. We create a temporary
@@ -348,6 +379,19 @@ mod tests {
 
             Ok(())
         }
+    }
+
+    #[test]
+    fn test_mmap_delete() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("foo");
+        fs::write(&path, b"bar").unwrap();
+        let file = fs::OpenOptions::new().read(true).open(&path).unwrap();
+        let _mmap = unsafe { memmap::Mmap::map(&file) }.unwrap();
+        remove_file(&path).unwrap();
+        assert!(!path.exists());
+        // The file can be recreated in-place.
+        fs::write(&path, b"baz").unwrap();
     }
 
     #[test]

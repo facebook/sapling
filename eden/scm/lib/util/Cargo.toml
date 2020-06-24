@@ -7,5 +7,12 @@ edition = "2018"
 anyhow = "1.0.20"
 dirs = "2.0.2"
 libc = "0.2"
+rand = "0.7"
 shellexpand = "1.0.0"
 tempfile = "3.0.4"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["fileapi", "winnt", "handleapi", "winbase"] }
+
+[dev-dependencies]
+memmap = "0.7"
