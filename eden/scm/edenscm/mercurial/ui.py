@@ -74,7 +74,7 @@ username =
 # uncomment these lines to enable some popular extensions
 # (see 'hg help extensions' for more info)
 #
-# churn =
+# amend =
 """,
     "cloned": """# example repository config (see 'hg help config' for more info)
 [paths]
@@ -121,7 +121,7 @@ default = %s
 # (see 'hg help extensions' for more info)
 #
 # blackbox =
-# churn =
+# amend =
 """,
 }
 

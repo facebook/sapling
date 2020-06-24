@@ -1065,8 +1065,8 @@ or ``foo = !`` when path is not supplied.
 Example for ``~/.hgrc``::
 
   [extensions]
-  # (the churn extension will get loaded from Mercurial's path)
-  churn =
+  # (the amend extension will get loaded from Mercurial's path)
+  amend =
   # (this extension will get loaded from the file specified)
   myfeature = ~/.hgext/myfeature.py
 

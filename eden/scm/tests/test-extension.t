@@ -894,8 +894,8 @@ Disabled extension commands:
   $ ORGHGRCPATH=$HGRCPATH
   $ HGRCPATH=
   $ export HGRCPATH
-  $ hg churn
-  unknown command 'churn'
+  $ hg amend
+  unknown command 'amend'
   (use 'hg help' to get help)
   [255]
 
@@ -903,8 +903,47 @@ Disabled extension commands:
 
 Disabled extensions:
 
-  $ hg help churn
-  churn extension - command to display statistics about repository history
+  $ hg help amend
+  amend extension - extends the existing commit amend functionality
+  
+  Adds an hg amend command that amends the current parent changeset with the
+  changes in the working copy.  Similar to the existing hg commit --amend except
+  it doesn't prompt for the commit message unless --edit is provided.
+  
+  Allows amending changesets that have children and can automatically rebase the
+  children onto the new version of the changeset.
+  
+  To make 'hg previous' and 'hg next' always pick the newest commit at each step
+  of walking up or down the stack instead of aborting when encountering non-
+  linearity (equivalent to the --newest flag), enable the following config
+  option:
+  
+    [amend]
+    alwaysnewest = true
+  
+  To automatically update the commit date, enable the following config option:
+  
+    [amend]
+    date = implicitupdate
+  
+  Commits are restacked automatically on amend, if doing so doesn't create
+  conflicts. To never automatically restack:
+  
+    [amend]
+    autorestack = none
+  
+  Note that if --date is specified on the command line, it takes precedence.
+  
+  If a split creates multiple commits that have the same phabricator diff, the
+  following advice for resolution will be shown:
+  
+    [split]
+    phabricatoradvice = edit the commit messages to remove the association
+  
+    To make `hg next` prefer draft commits in case of ambiguity, enable the following config option:
+  
+    [update]
+    nextpreferdraft = true
   
   (use 'hg help extensions' for information on enabling extensions)
 
