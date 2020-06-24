@@ -119,10 +119,6 @@ Configs:
 
     ``remotefilelog.userustpackstore`` use the Rust PackStore.
 
-    ``remotefilelog.useruststore`` use the Rust ContentStore and MetadataStore.
-
-    ``remotefilelog.cacheprocess2`` name of the cache client.
-
     ``remotefilelog.cachekey`` cache key prefix to use.
 
 Configs for Eden API (HTTP data fetching):
@@ -414,16 +410,15 @@ def reposetup(ui, repo):
 
 
 def uploadblobs(repo, nodes):
-    if repo.fileslog._ruststore:
-        toupload = []
-        for ctx in repo.set("%ln - public()", nodes):
-            for f in ctx.files():
-                if f not in ctx:
-                    continue
+    toupload = []
+    for ctx in repo.set("%ln - public()", nodes):
+        for f in ctx.files():
+            if f not in ctx:
+                continue
 
-                fctx = ctx[f]
-                toupload.append((fctx.path(), fctx.filenode()))
-        repo.fileslog.contentstore.upload(toupload)
+            fctx = ctx[f]
+            toupload.append((fctx.path(), fctx.filenode()))
+    repo.fileslog.contentstore.upload(toupload)
 
 
 def prepush(pushop):

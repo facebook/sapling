@@ -1676,11 +1676,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     z = 0
 
     def userustworker():
-        return (
-            "remotefilelog" in repo.requirements
-            and repo.fileslog._ruststore
-            and not wctx.isinmemory()
-        )
+        return "remotefilelog" in repo.requirements and not wctx.isinmemory()
 
     rustworkers = userustworker()
 

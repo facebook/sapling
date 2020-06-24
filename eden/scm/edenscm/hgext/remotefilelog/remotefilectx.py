@@ -62,11 +62,7 @@ class remotefilectx(context.filectx):
 
         # If we're comparing against a file context that isn't yet committed, a
         # full comparison is always necessary.
-        if (
-            fileslog._ruststore
-            and self._filenode is not None
-            and fctx.filenode() is not None
-        ):
+        if self._filenode is not None and fctx.filenode() is not None:
             try:
                 selfmeta = fileslog.contentstore.metadata(self._path, self._filenode)
                 othermeta = fileslog.contentstore.metadata(fctx._path, fctx._filenode)
@@ -80,7 +76,7 @@ class remotefilectx(context.filectx):
     def isbinary(self):
         fileslog = self.repo().fileslog
 
-        if fileslog._ruststore and self._filenode is not None:
+        if self._filenode is not None:
             try:
                 meta = fileslog.contentstore.metadata(self._path, self._filenode)
                 return meta["isbinary"]

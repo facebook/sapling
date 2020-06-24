@@ -48,24 +48,3 @@ class unionmetadatastore(object):
 
     def removestore(self, store):
         self.stores.remove(store)
-
-
-class remotemetadatastore(object):
-    def __init__(self, ui, fileservice, shared):
-        self._fileservice = fileservice
-        self._shared = shared
-
-    def _prefetch(self, name, node):
-        self._fileservice.prefetch(
-            [(name, hex(node))], force=True, fetchdata=False, fetchhistory=True
-        )
-
-    def getnodeinfo(self, name, node):
-        self._prefetch(name, node)
-        return self._shared.getnodeinfo(name, node)
-
-    def add(self, name, node, data):
-        raise RuntimeError("cannot add to a remote store")
-
-    def getmissing(self, keys):
-        return keys

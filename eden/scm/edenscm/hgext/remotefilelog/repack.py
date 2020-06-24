@@ -58,10 +58,7 @@ def _runrustrepack(ui, packpath, stores, incremental, shared):
 
 
 def _runrepack(repo, packpath, incremental, shared):
-    if repo.fileslog._ruststore:
-        stores = (repo.fileslog.contentstore, repo.fileslog.metadatastore)
-    else:
-        stores = None
+    stores = (repo.fileslog.contentstore, repo.fileslog.metadatastore)
 
     _runrustrepack(repo.ui, packpath, stores, incremental, shared)
 
@@ -71,18 +68,15 @@ def runrepacklegacy(ui, packpath, incremental, shared):
 
 
 def _shareddatastoresrepack(repo, incremental):
-    if util.safehasattr(repo.fileslog, "shareddatastores") or repo.fileslog._ruststore:
-        packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-        limit = repo.ui.configbytes("remotefilelog", "cachelimit", "10GB")
-        _cleanuppacks(repo.ui, packpath, limit)
+    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
+    limit = repo.ui.configbytes("remotefilelog", "cachelimit", "10GB")
+    _cleanuppacks(repo.ui, packpath, limit)
 
-        _runrepack(repo, packpath, incremental, True)
+    _runrepack(repo, packpath, incremental, True)
 
 
 def _localdatarepack(repo, incremental):
-    if repo.ui.configbool("remotefilelog", "localdatarepack") and (
-        util.safehasattr(repo.fileslog, "localdatastores") or repo.fileslog._ruststore
-    ):
+    if repo.ui.configbool("remotefilelog", "localdatarepack"):
         packpath = shallowutil.getlocalpackpath(
             repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
         )

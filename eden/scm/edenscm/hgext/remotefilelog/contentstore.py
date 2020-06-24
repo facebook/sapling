@@ -166,50 +166,6 @@ class unioncontentstore(object):
                 break
 
 
-class remotecontentstore(object):
-    def __init__(self, ui, fileservice, shared):
-        self._fileservice = fileservice
-        # type(shared) is usually remotefilelogcontentstore
-        self._shared = shared
-
-    def _prefetch(self, name, node):
-        assert isinstance(name, str)
-        assert isinstance(node, bytes)
-        self._fileservice.prefetch(
-            [(name, hex(node))], force=True, fetchdata=True, fetchhistory=False
-        )
-
-    def get(self, name, node):
-        assert isinstance(name, str)
-        assert isinstance(node, bytes)
-        self._prefetch(name, node)
-        return self._shared.get(name, node)
-
-    def getdelta(self, name, node):
-        assert isinstance(name, str)
-        assert isinstance(node, bytes)
-        self._prefetch(name, node)
-        return self._shared.getdelta(name, node)
-
-    def getdeltachain(self, name, node):
-        assert isinstance(name, str)
-        assert isinstance(node, bytes)
-        self._prefetch(name, node)
-        return self._shared.getdeltachain(name, node)
-
-    def getmeta(self, name, node):
-        assert isinstance(name, str)
-        assert isinstance(node, bytes)
-        self._prefetch(name, node)
-        return self._shared.getmeta(name, node)
-
-    def add(self, name, node, data):
-        raise RuntimeError("cannot add to a remote store")
-
-    def getmissing(self, keys):
-        return keys
-
-
 class manifestrevlogstore(object):
     def __init__(self, repo):
         # It's important that we store the repo, and not just the changelog,

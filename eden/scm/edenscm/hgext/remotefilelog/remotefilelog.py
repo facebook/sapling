@@ -15,11 +15,7 @@ from edenscm.mercurial import ancestor, error, filelog, mdiff, pycompat, revlog,
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
 
-from . import constants, fileserverclient, mutablestores, shallowutil
-from .contentstore import remotecontentstore, unioncontentstore
-from .datapack import makedatapackstore
-from .historypack import makehistorypackstore
-from .metadatastore import remotemetadatastore, unionmetadatastore
+from . import constants, fileserverclient, shallowutil
 
 
 # corresponds to uncompressed length of revlog's indexformatng (2 gigs, 4-byte
@@ -158,12 +154,11 @@ class remotefilelog(object):
 
     def size(self, node):
         """return the size of a given revision"""
-        if self.repo.fileslog._ruststore:
-            try:
-                meta = self.repo.fileslog.contentstore.metadata(self.filename, node)
-                return meta["size"]
-            except KeyError:
-                pass
+        try:
+            meta = self.repo.fileslog.contentstore.metadata(self.filename, node)
+            return meta["size"]
+        except KeyError:
+            pass
 
         return len(self.read(node))
 
@@ -470,23 +465,7 @@ class remotefileslog(filelog.fileslog):
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
         self._memcachestore = None
-        self._ruststore = repo.ui.configbool("remotefilelog", "useruststore", True)
-        if self._ruststore:
-            self.makeruststore(repo)
-        else:
-            self._mutablelocalpacks = mutablestores.pendingmutablepack(
-                repo,
-                lambda: shallowutil.getlocalpackpath(
-                    self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
-                ),
-            )
-            self._mutablesharedpacks = mutablestores.pendingmutablepack(
-                repo,
-                lambda: shallowutil.getcachepackpath(
-                    self.repo, constants.FILEPACK_CATEGORY
-                ),
-            )
-            self.makeunionstores()
+        self.makeruststore(repo)
 
     def memcachestore(self, repo):
         if self._memcachestore is None:
@@ -540,176 +519,26 @@ class remotefileslog(filelog.fileslog):
             os.umask(mask)
 
     def getmutablelocalpacks(self):
-        if self._ruststore:
-            return self.contentstore, self.metadatastore
-        else:
-            return self._mutablelocalpacks.getmutablepack()
-
-    def getmutablesharedpacks(self):
-        assert not self._ruststore
-        return self._mutablesharedpacks.getmutablepack()
+        return self.contentstore, self.metadatastore
 
     def commitsharedpacks(self):
         """Persist the dirty data written to the shared packs."""
-        if self._ruststore:
-            self.contentstore = None
-            self.metadatastore = None
-            self.makeruststore(self.repo)
-            return
-
-        dpackpath, hpackpath = self._mutablesharedpacks.commit()
-
-        self.repo.fileservice.updatecache(dpackpath, hpackpath)
-
-        self.contentstore.markforrefresh()
-        self.metadatastore.markforrefresh()
+        self.contentstore = None
+        self.metadatastore = None
+        self.makeruststore(self.repo)
 
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending
         additions."""
-        if self._ruststore:
-            if self.contentstore:
-                self.contentstore.flush()
-            if self.metadatastore:
-                self.metadatastore.flush()
-        else:
-            self._mutablelocalpacks.commit()
+        if self.contentstore:
+            self.contentstore.flush()
+        if self.metadatastore:
+            self.metadatastore.flush()
         self.commitsharedpacks()
 
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
-        if self._ruststore:
-            self.contentstore = None
-            self.metadatastore = None
-            self._memcachestore = None
-        else:
-            self._mutablelocalpacks.abort()
-            self.commitsharedpacks()
-
-    def makeunionstores(self):
-        """Union stores iterate the other stores and return the first result."""
-        repo = self.repo
-        self.shareddatastores = []
-        self.sharedhistorystores = []
-        self.localdatastores = []
-        self.localhistorystores = []
-
-        cachecontent = []
-        cachemetadata = []
-        localcontent = []
-        localmetadata = []
-
-        spackcontent, spackmetadata, lpackcontent, lpackmetadata = self.makepackstores()
-        cachecontent += [spackcontent]
-        cachemetadata += [spackmetadata]
-        localcontent += [lpackcontent]
-        localmetadata += [lpackmetadata]
-
-        mutablelocalstore = mutablestores.mutabledatahistorystore(
-            lambda: self._mutablelocalpacks
-        )
-
-        mutablesharedstore = mutablestores.mutabledatahistorystore(
-            lambda: self._mutablesharedpacks
-        )
-
-        sharedcontentstores = [spackcontent, mutablesharedstore]
-        sharedmetadatastores = [spackmetadata, mutablesharedstore]
-        if self.ui.configbool("remotefilelog", "indexedlogdatastore"):
-            path = shallowutil.getindexedlogdatastorepath(repo)
-            mask = os.umask(0o002)
-            try:
-                store = revisionstore.indexedlogdatastore(path)
-                sharedcontentstores.append(store)
-                self.shareddatastores.append(store)
-            finally:
-                os.umask(mask)
-
-        if self.ui.configbool("remotefilelog", "indexedloghistorystore"):
-            path = shallowutil.getindexedloghistorystorepath(repo)
-            mask = os.umask(0o002)
-            try:
-                store = revisionstore.indexedloghistorystore(path)
-                sharedmetadatastores.append(store)
-                self.sharedhistorystores.append(store)
-            finally:
-                os.umask(mask)
-
-        sunioncontentstore = unioncontentstore(*sharedcontentstores)
-        sunionmetadatastore = unionmetadatastore(*sharedmetadatastores)
-        remotecontent, remotemetadata = self.makeremotestores(
-            sunioncontentstore, sunionmetadatastore
-        )
-
-        contentstores = (
-            sharedcontentstores
-            + cachecontent
-            + localcontent
-            + [mutablelocalstore, remotecontent]
-        )
-        metadatastores = (
-            sharedmetadatastores
-            + cachemetadata
-            + localmetadata
-            + [mutablelocalstore, remotemetadata]
-        )
-
-        # Instantiate union stores
-        self.contentstore = unioncontentstore(*contentstores)
-        self.metadatastore = unionmetadatastore(*metadatastores)
-
-        repo.fileservice.setstore(self.contentstore, self.metadatastore)
-        shallowutil.reportpackmetrics(
-            repo.ui,
-            "filestore",
-            spackcontent,
-            spackmetadata,
-            lpackcontent,
-            lpackmetadata,
-        )
-
-    def makepackstores(self):
-        """Packs are more efficient (to read from) cache stores."""
-        repo = self.repo
-
-        def makepackstore(
-            datastores, historystores, packpath, deletecorrupt=False, shared=True
-        ):
-            packcontentstore = makedatapackstore(
-                repo.ui, packpath, deletecorruptpacks=deletecorrupt, shared=shared
-            )
-            packmetadatastore = makehistorypackstore(
-                repo.ui, packpath, deletecorruptpacks=deletecorrupt, shared=shared
-            )
-            datastores.append(packcontentstore)
-            historystores.append(packmetadatastore)
-
-            return packcontentstore, packmetadatastore
-
-        # Instantiate pack stores
-        spackpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
-        spackcontent, spackmetadata = makepackstore(
-            self.shareddatastores,
-            self.sharedhistorystores,
-            spackpath,
-            deletecorrupt=True,
-            shared=True,
-        )
-
-        lpackpath = shallowutil.getlocalpackpath(
-            repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
-        )
-        lpackcontent, lpackmetadata = makepackstore(
-            self.localdatastores, self.localhistorystores, lpackpath, shared=False
-        )
-
-        return (spackcontent, spackmetadata, lpackcontent, lpackmetadata)
-
-    def makeremotestores(self, cachecontent, cachemetadata):
-        """These stores fetch data from a remote server."""
-        repo = self.repo
-
-        remotecontent = remotecontentstore(repo.ui, repo.fileservice, cachecontent)
-        remotemetadata = remotemetadatastore(repo.ui, repo.fileservice, cachemetadata)
-        return remotecontent, remotemetadata
+        self.contentstore = None
+        self.metadatastore = None
+        self._memcachestore = None
