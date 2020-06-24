@@ -18,15 +18,12 @@ use std::{
 use crate::convert::Convert;
 use crate::errors::ConfigurationError;
 use anyhow::{anyhow, Result};
-use ascii::AsciiString;
 use fbinit::FacebookInit;
-use itertools::Itertools;
 use metaconfig_types::{
-    AllowlistEntry, CommitSyncConfig, CommitSyncDirection, CommonConfig,
-    DefaultSmallToLargeCommitSyncPathAction, HgsqlGlobalrevsName, HgsqlName, Redaction, RepoConfig,
-    RepoReadOnly, SmallRepoCommitSyncConfig, StorageConfig,
+    AllowlistEntry, CommitSyncConfig, CommonConfig, HgsqlGlobalrevsName, HgsqlName, Redaction,
+    RepoConfig, RepoReadOnly, StorageConfig,
 };
-use mononoke_types::{MPath, RepositoryId};
+use mononoke_types::RepositoryId;
 use repos::{
     RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawStorageConfig,
 };
@@ -373,99 +370,6 @@ fn is_commit_sync_config_relevant_to_repo(
             .any(|(k, _)| k == repoid)
 }
 
-/// Validate the commit sync config
-///
-/// Check that all the prefixes in the large repo (target prefixes in a map and prefixes
-/// from `DefaultSmallToLargeCommitSyncPathAction::PrependPrefix`) are independent, e.g. aren't prefixes
-/// of each other, if the sync direction is small-to-large. This is not allowed, because
-/// otherwise there is no way to prevent path conflicts. For example, if one repo maps
-/// `p1 => foo/bar` and the other maps `p2 => foo`, both repos can accept commits that
-/// change `foo` and these commits can contain path conflicts. Given that the repos have
-/// already replied successfully to their clients, it's too late to reject these commits.
-/// To avoid this problem, we remove the possiblity of path conflicts altogether.
-/// Also check that no two small repos use the same bookmark prefix. If they did, this would
-/// mean potentail bookmark name collisions.
-fn validate_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<()> {
-    let all_prefixes_with_direction: Vec<(&MPath, CommitSyncDirection)> = commit_sync_config
-        .small_repos
-        .values()
-        .flat_map(|small_repo_sync_config| {
-            let SmallRepoCommitSyncConfig {
-                default_action,
-                map,
-                direction,
-                ..
-            } = small_repo_sync_config;
-            let all_prefixes = map.values();
-            match default_action {
-                DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
-                    all_prefixes.chain(vec![prefix].into_iter())
-                }
-                DefaultSmallToLargeCommitSyncPathAction::Preserve => {
-                    all_prefixes.chain(vec![].into_iter())
-                }
-            }
-            .map(move |prefix| (prefix, direction.clone()))
-        })
-        .collect();
-
-    let bookmark_prefixes: Vec<&AsciiString> = commit_sync_config
-        .small_repos
-        .iter()
-        .map(|(_, sr)| &sr.bookmark_prefix)
-        .collect();
-
-    for ((first_prefix, first_direction), (second_prefix, second_direction)) in
-        all_prefixes_with_direction
-            .iter()
-            .tuple_combinations::<(_, _)>()
-    {
-        if first_prefix == second_prefix
-            && *first_direction == CommitSyncDirection::LargeToSmall
-            && *second_direction == CommitSyncDirection::LargeToSmall
-        {
-            // when syncing large-to-small, it is allowed to have identical prefixes,
-            // but not prefixes that are proper prefixes of other prefixes
-            continue;
-        }
-        validate_mpath_prefixes(first_prefix, second_prefix)?;
-    }
-
-    // No two small repos can have the same bookmark prefix
-    for (first_prefix, second_prefix) in bookmark_prefixes.iter().tuple_combinations::<(_, _)>() {
-        let fp = first_prefix.as_str();
-        let sp = second_prefix.as_str();
-        if fp.starts_with(sp) || sp.starts_with(fp) {
-            return Err(anyhow!(
-                "One bookmark prefix starts with another, which is prohibited: {:?}, {:?}",
-                fp,
-                sp
-            ));
-        }
-    }
-
-    Ok(())
-}
-
-/// Verify that two mpaths are not a prefix of each other
-fn validate_mpath_prefixes(first_prefix: &MPath, second_prefix: &MPath) -> Result<()> {
-    if first_prefix.is_prefix_of(second_prefix) {
-        return Err(anyhow!(
-            "{:?} is a prefix of {:?}, which is disallowed",
-            first_prefix,
-            second_prefix
-        ));
-    }
-    if second_prefix.is_prefix_of(first_prefix) {
-        return Err(anyhow!(
-            "{:?} is a prefix of {:?}, which is disallowed",
-            second_prefix,
-            first_prefix
-        ));
-    }
-    Ok(())
-}
-
 /// Parse a collection of raw commit sync config into commit sync config and validate it.
 fn parse_commit_sync_config(
     raw_commit_syncs: HashMap<String, RawCommitSyncConfig>,
@@ -474,7 +378,6 @@ fn parse_commit_sync_config(
         .into_iter()
         .map(|(config_name, commit_sync_config)| {
             let commit_sync_config = commit_sync_config.convert()?;
-            validate_commit_sync_config(&commit_sync_config)?;
             Ok((config_name, commit_sync_config))
         })
         .collect()
@@ -492,17 +395,20 @@ impl RepoConfigs {
 #[cfg(test)]
 mod test {
     use super::*;
+    use ascii::AsciiString;
     use bookmarks_types::BookmarkName;
     use maplit::{btreemap, btreeset, hashmap};
     use metaconfig_types::{
         BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-        DatabaseConfig, DerivedDataConfig, FilestoreParams, HookBypass, HookConfig,
-        HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
-        LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, PushParams, PushrebaseFlags,
-        PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
-        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SourceControlServiceMonitoring,
+        CommitSyncDirection, DatabaseConfig, DefaultSmallToLargeCommitSyncPathAction,
+        DerivedDataConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams, HookParams,
+        InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
+        MetadataDatabaseConfig, MultiplexId, PushParams, PushrebaseFlags, PushrebaseParams,
+        RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
+        ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
         SourceControlServiceParams, UnodeVersion, WireprotoLoggingConfig,
     };
+    use mononoke_types::MPath;
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
     use regex::Regex;
@@ -599,6 +505,67 @@ mod test {
         };
 
         assert_eq!(commit_sync, expected);
+    }
+
+    #[fbinit::test]
+    fn test_commit_sync_config_large_is_small(fb: FacebookInit) {
+        let commit_sync_config = r#"
+            [mega]
+            large_repo_id = 1
+            common_pushrebase_bookmarks = ["master"]
+
+                [[mega.small_repos]]
+                repoid = 1
+                bookmark_prefix = "repo2"
+                default_action = "preserve"
+                direction = "small_to_large"
+
+                    [mega.small_repos.mapping]
+                    "p1" = ".r2-legacy/p1"
+                    "p5" = "subdir"
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => commit_sync_config
+        };
+        let tmp_dir = write_files(&paths);
+        let res = load_repo_configs(fb, tmp_dir.path());
+        let msg = format!("{:#?}", res);
+        println!("res = {}", msg);
+        assert!(res.is_err());
+        assert!(msg.contains("is one of the small repos too"));
+    }
+
+    #[fbinit::test]
+    fn test_commit_sync_config_duplicated_small_repos(fb: FacebookInit) {
+        let commit_sync_config = r#"
+            [mega]
+            large_repo_id = 1
+            common_pushrebase_bookmarks = ["master"]
+
+                [[mega.small_repos]]
+                repoid = 2
+                bookmark_prefix = "repo2"
+                default_action = "preserve"
+                direction = "small_to_large"
+
+                [[mega.small_repos]]
+                repoid = 2
+                bookmark_prefix = "repo3"
+                default_action = "prepend_prefix"
+                default_prefix = "subdir"
+                direction = "small_to_large"
+        "#;
+
+        let paths = btreemap! {
+            "common/commitsyncmap.toml" => commit_sync_config
+        };
+        let tmp_dir = write_files(&paths);
+        let res = load_repo_configs(fb, tmp_dir.path());
+        let msg = format!("{:#?}", res);
+        println!("res = {}", msg);
+        assert!(res.is_err());
+        assert!(msg.contains("present multiple times in the same CommitSyncConfig"));
     }
 
     #[fbinit::test]
