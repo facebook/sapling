@@ -15,11 +15,7 @@ use std::sync::{
 use anyhow::{Context, Error};
 use bytes::Bytes;
 use cached_config::ConfigHandle;
-use futures::{
-    channel::oneshot,
-    future::{self, Future, FutureExt},
-    stream::{Stream, TryStreamExt},
-};
+use futures::stream::{Stream, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::StateData;
 use gotham_ext::body_ext::BodyExt;
@@ -248,11 +244,10 @@ impl RepositoryRequestContext {
         self.max_upload_size
     }
 
-    pub fn dispatch(
+    pub async fn dispatch(
         &self,
         request: Request<Body>,
-    ) -> impl Future<Output = Result<HttpClientResponse<impl Stream<Item = Result<Bytes, Error>>>, Error>>
-    {
+    ) -> Result<HttpClientResponse<impl Stream<Item = Result<Bytes, Error>>>, Error> {
         #[allow(clippy::infallible_destructuring_match)]
         let client = match self.client {
             HttpClient::Enabled(ref client) => client,
@@ -260,25 +255,15 @@ impl RepositoryRequestContext {
             HttpClient::Disabled => panic!("HttpClient is disabled in test"),
         };
 
-        let (sender, receiver) = oneshot::channel();
+        let res = client.request(request);
 
         // NOTE: We spawn the request on an executor because we'd like to read the response even if
         // we drop the future returned here. The reason for that is that if we don't read a
         // response, Hyper will not reuse the conneciton for its pool (which makes sense for the
         // general case: if your server is sending you 5GB of data and you drop the future, you
         // don't want to read all that later just to reuse a connection).
-        let fut = client.request(request).then(move |r| {
-            let _ = sender.send(r);
-            future::ready(())
-        });
-
-        tokio::spawn(fut);
-
-        async move {
-            let res = receiver
-                .await
-                .expect("spawned future cannot be dropped")
-                .context(ErrorKind::UpstreamDidNotRespond)?;
+        let fut = async move {
+            let res = res.await.context(ErrorKind::UpstreamDidNotRespond)?;
 
             let (head, body) = res.into_parts();
 
@@ -298,7 +283,9 @@ impl RepositoryRequestContext {
                 headers: head.headers,
                 body: body.map_err(Error::from),
             })
-        }
+        };
+
+        tokio::spawn(fut).await?
     }
 
     pub async fn upstream_batch(
