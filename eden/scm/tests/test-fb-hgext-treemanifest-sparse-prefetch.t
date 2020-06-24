@@ -37,7 +37,6 @@ support designated nodes.
   fetching tree '' 4ccb43944747fdc11a890fcae40e0bc0ac6732da
   2 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ enable sparse
   $ hg sparse enable sparse/profile
 
@@ -50,7 +49,6 @@ support designated nodes.
   fetching tree '' ad42fc7bd685adac2344311e2330b67b14e2beaf, based on 4bdc11054000cc0fbdbafe300c7589072b5426ca, found via bcc76e7555df
   3 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
 Check that we can create some commits, and that nothing breaks even if the
 server does not know about our root manifest.

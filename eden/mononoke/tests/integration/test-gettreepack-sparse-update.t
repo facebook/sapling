@@ -57,7 +57,6 @@ Checkout commits. Expect BFS prefetch to fill our tree
   fetching tree '' *, found via * (glob)
   2 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ hgmn sparse enable sparse/profile
 
   $ hgmn up 'master_bookmark~2'
@@ -87,7 +86,6 @@ Checkout commits. Expect BFS prefetch to fill our tree
   2 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)
-  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob)
 
 Check that we can create some commits, and that nothing breaks even if the
 server does not know about our root manifest.
