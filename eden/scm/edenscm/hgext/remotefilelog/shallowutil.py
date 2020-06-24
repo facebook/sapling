@@ -162,7 +162,7 @@ def reportpackmetrics(ui, prefix, *stores):
 
 
 def _parsepackmeta(metabuf):
-    # type: (bytes) -> (Dict[str, bytes])
+    # type: (bytes) -> Dict[str, bytes]
     """parse datapack meta, bytes (<metadata-list>) -> dict
 
     The dict contains raw content - both keys and values are strings.
@@ -175,7 +175,7 @@ def _parsepackmeta(metabuf):
     offset = 0
     buflen = len(metabuf)
     while buflen - offset >= 3:
-        key = metabuf[offset]
+        key = pycompat.decodeutf8(struct.unpack_from("!c", metabuf, offset)[0])
         offset += 1
         metalen = struct.unpack_from("!H", metabuf, offset)[0]
         offset += 2
