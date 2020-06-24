@@ -33,7 +33,7 @@ use futures_old::{
 };
 use futures_util::try_join;
 use load_limiter::Metric;
-use manifest::{find_intersection_of_diffs, Entry};
+use manifest::{find_intersection_of_diffs_and_parents, Entry};
 use mercurial_bundles::{
     changegroup::CgVersion,
     part_encode::PartEncodeBuilder,
@@ -903,20 +903,32 @@ async fn diff_with_parents(
     })?;
 
     let blobstore = Arc::new(repo.get_blobstore());
-    let new_entries: Vec<(Option<MPath>, Entry<_, _>)> =
-        find_intersection_of_diffs(ctx, blobstore, mf_id, parent_mf_ids)
+    let new_entries: Vec<(Option<MPath>, Entry<_, _>, _)> =
+        find_intersection_of_diffs_and_parents(ctx, blobstore, mf_id, parent_mf_ids)
             .compat()
             .try_collect()
             .await?;
 
     let mut mfs = vec![];
     let mut files = vec![];
-    for (path, entry) in new_entries {
+    for (path, entry, parent_entries) in new_entries {
         match entry {
             Entry::Tree(mf) => {
                 mfs.push((path, mf, hg_cs_id.clone()));
             }
             Entry::Leaf((_, file)) => {
+                let mut found_same_in_parents = false;
+                for p in parent_entries {
+                    if let Entry::Leaf((_, parent_file)) = p {
+                        if parent_file == file {
+                            found_same_in_parents = true;
+                            break;
+                        }
+                    }
+                }
+                if found_same_in_parents {
+                    continue;
+                }
                 let path = path.expect("empty file paths?");
                 files.push((path, file, hg_cs_id.clone()));
             }
