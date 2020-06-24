@@ -12,14 +12,11 @@
 
 from __future__ import absolute_import
 
-import errno
 import os
-import signal
-import sys
 import threading
 import time
 
-from . import encoding, error, pycompat, scmutil, util
+from . import encoding, error, pycompat, util
 from .i18n import _
 
 
@@ -73,8 +70,7 @@ def worthwhile(ui, costperop, nops):
 
 
 def worker(ui, costperarg, func, staticargs, args, preferthreads=False, callsite=None):
-    """run a function, possibly in parallel in multiple worker
-    processes.
+    """run a function, possibly in parallel in multiple worker threads.
 
     returns a progress iterator
 
@@ -95,143 +91,11 @@ def worker(ui, costperarg, func, staticargs, args, preferthreads=False, callsite
     callsiteenabled = callsite in ui.configlist("worker", "_enabledcallsites")
     enabled = workerenabled or callsiteenabled
     if enabled and worthwhile(ui, costperarg, len(args)):
-        if preferthreads:
-            return _windowsworker(ui, func, staticargs, args)
-        else:
-            return _platformworker(ui, func, staticargs, args)
+        return _threadedworker(ui, func, staticargs, args)
     return func(*staticargs + (args,))
 
 
-def _posixworker(ui, func, staticargs, args):
-    rfd, wfd = os.pipe()
-    workers = _numworkers(ui)
-    oldhandler = signal.getsignal(signal.SIGINT)
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    pids, problem = set(), [0]
-
-    def killworkers():
-        # unregister SIGCHLD handler as all children will be killed. This
-        # function shouldn't be interrupted by another SIGCHLD; otherwise pids
-        # could be updated while iterating, which would cause inconsistency.
-        signal.signal(signal.SIGCHLD, oldchldhandler)
-        # if one worker bails, there's no good reason to wait for the rest
-        for p in pids:
-            try:
-                os.kill(p, signal.SIGTERM)
-            except OSError as err:
-                if err.errno != errno.ESRCH:
-                    raise
-
-    def waitforworkers(blocking=True):
-        for pid in pids.copy():
-            p = st = 0
-            while True:
-                try:
-                    p, st = os.waitpid(pid, (0 if blocking else os.WNOHANG))
-                    break
-                except OSError as e:
-                    if e.errno == errno.EINTR:
-                        continue
-                    elif e.errno == errno.ECHILD:
-                        # child would already be reaped, but pids yet been
-                        # updated (maybe interrupted just after waitpid)
-                        pids.discard(pid)
-                        break
-                    else:
-                        raise
-            if not p:
-                # skip subsequent steps, because child process should
-                # be still running in this case
-                continue
-            pids.discard(p)
-            st = _exitstatus(st)
-            if st and not problem[0]:
-                problem[0] = st
-
-    def sigchldhandler(signum, frame):
-        waitforworkers(blocking=False)
-        if problem[0]:
-            killworkers()
-
-    oldchldhandler = signal.signal(signal.SIGCHLD, sigchldhandler)
-    ui.flush()
-    parentpid = os.getpid()
-    for pargs in partition(args, workers):
-        # make sure we use os._exit in all worker code paths. otherwise the
-        # worker may do some clean-ups which could cause surprises like
-        # deadlock. see sshpeer.cleanup for example.
-        # override error handling *before* fork. this is necessary because
-        # exception (signal) may arrive after fork, before "pid =" assignment
-        # completes, and other exception handler (dispatch.py) can lead to
-        # unexpected code path without os._exit.
-        ret = -1
-        try:
-            pid = os.fork()
-            if pid == 0:
-                signal.signal(signal.SIGINT, oldhandler)
-                signal.signal(signal.SIGCHLD, oldchldhandler)
-
-                def workerfunc():
-                    os.close(rfd)
-                    for i, size, item in func(*(staticargs + (pargs,))):
-                        os.write(
-                            wfd,
-                            b"%d %d %s\n" % (i, size, pycompat.encodeutf8(str(item))),
-                        )
-                    return 0
-
-                ret = scmutil.callcatch(ui, workerfunc)
-        except:  # parent re-raises, child never returns
-            if os.getpid() == parentpid:
-                raise
-            exctype = sys.exc_info()[0]
-            force = not issubclass(exctype, KeyboardInterrupt)
-            ui.traceback(force=force)
-        finally:
-            if os.getpid() != parentpid:
-                try:
-                    ui.flush()
-                except:  # never returns, no re-raises
-                    pass
-                finally:
-                    os._exit(ret & 255)
-        pids.add(pid)
-    os.close(wfd)
-    fp = util.fdopen(rfd, "rb", 0)
-
-    def cleanup():
-        signal.signal(signal.SIGINT, oldhandler)
-        waitforworkers()
-        signal.signal(signal.SIGCHLD, oldchldhandler)
-        status = problem[0]
-        if status:
-            if status < 0:
-                os.kill(os.getpid(), -status)
-            sys.exit(status)
-
-    try:
-        for line in util.iterfile(fp):
-            l = line.split(b" ", 2)
-            yield int(l[0]), int(l[1]), pycompat.decodeutf8(l[2][:-1])
-    except:  # re-raises
-        killworkers()
-        cleanup()
-        raise
-    cleanup()
-
-
-def _posixexitstatus(code):
-    """convert a posix exit status into the same form returned by
-    os.spawnv
-
-    returns None if the process was stopped instead of exiting"""
-    if os.WIFEXITED(code):
-        return os.WEXITSTATUS(code)
-    elif os.WIFSIGNALED(code):
-        return -(os.WTERMSIG(code))
-
-
-def _windowsworker(ui, func, staticargs, args):
+def _threadedworker(ui, func, staticargs, args):
     class Worker(threading.Thread):
         def __init__(
             self,
@@ -242,11 +106,8 @@ def _windowsworker(ui, func, staticargs, args):
             group=None,
             target=None,
             name=None,
-            verbose=None,
         ):
-            threading.Thread.__init__(
-                self, group=group, target=target, name=name, verbose=verbose
-            )
+            threading.Thread.__init__(self, group=group, target=target, name=name)
             self._taskqueue = taskqueue
             self._resultqueue = resultqueue
             self._func = func
@@ -325,13 +186,6 @@ def _windowsworker(ui, func, staticargs, args):
         raise
     while not resultqueue.empty():
         yield resultqueue.get()
-
-
-if pycompat.iswindows:
-    _platformworker = _windowsworker
-else:
-    _platformworker = _posixworker
-    _exitstatus = _posixexitstatus
 
 
 def partition(lst, nslices):

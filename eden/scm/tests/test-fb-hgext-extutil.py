@@ -9,12 +9,23 @@ import unittest
 
 import silenttestrunner
 from edenscm.hgext import extutil
-from edenscm.mercurial import error, vfs, worker
+from edenscm.mercurial import error, vfs
 from hghave import require
 
 
 locktimeout = 25
 locksuccess = 24
+
+
+def _exitstatus(code):
+    """convert a posix exit status into the same form returned by
+    os.spawnv
+
+    returns None if the process was stopped instead of exiting"""
+    if os.WIFEXITED(code):
+        return os.WEXITSTATUS(code)
+    elif os.WIFSIGNALED(code):
+        return -(os.WTERMSIG(code))
 
 
 class ExtutilTests(unittest.TestCase):
@@ -75,7 +86,7 @@ class ExtutilTests(unittest.TestCase):
                 os._exit(locktimeout)
         else:
             p, st = os.waitpid(pid, 0)
-            st = worker._exitstatus(st)  # Convert back to an int
+            st = _exitstatus(st)  # Convert back to an int
             return st
 
 

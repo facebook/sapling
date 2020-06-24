@@ -1731,10 +1731,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 repo.ui.debug("retrying %s\n" % f)
                 removeone(repo, wctx, f)
         else:
-            workerprog = worker.worker(
-                repo.ui, cost, batchremove, (repo, wctx), actions["r"] + actions["rg"]
-            )
-            for i, size, item in workerprog:
+            for i, size, item in batchremove(repo, wctx, actions["r"] + actions["rg"]):
                 z += i
                 prog.value = (z, item)
         # "rg" actions are counted in updated below
@@ -1775,14 +1772,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 repo.ui.debug("retrying %s\n" % f)
                 writesize += updateone(repo, fctx, wctx, f, flag)
         else:
-            workerprog = worker.worker(
-                repo.ui,
-                cost,
-                batchget,
-                (repo, mctx, wctx),
-                actions["g"] + actions["rg"],
-            )
-            for i, size, item in workerprog:
+            for i, size, item in batchget(
+                repo, mctx, wctx, actions["g"] + actions["rg"]
+            ):
                 z += i
                 writesize += size
                 prog.value = (z, item)
