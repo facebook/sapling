@@ -1,4 +1,7 @@
+#chg-compatible
+
   $ disable treemanifest
+
 Set up a repo
 
   $ setconfig ui.interactive=true
@@ -857,7 +860,6 @@ Help, quit
   abort: user quit
   [255]
 
-
 Skip
 
   $ hg commit -i <<EOF
@@ -1444,17 +1446,6 @@ random text in random positions is still an error
 
   $ hg up -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-With win32text
-
-  $ echo '[extensions]' >> .hg/hgrc
-  $ echo 'win32text = ' >> .hg/hgrc
-  $ echo '[decode]' >> .hg/hgrc
-  $ echo '** = cleverdecode:' >> .hg/hgrc
-  $ echo '[encode]' >> .hg/hgrc
-  $ echo '** = cleverencode:' >> .hg/hgrc
-  $ echo '[patch]' >> .hg/hgrc
-  $ echo 'eol = crlf' >> .hg/hgrc
 
 Ignore win32text deprecation warning for now:
 

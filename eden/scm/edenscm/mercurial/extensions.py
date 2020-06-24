@@ -67,6 +67,7 @@ _ignoreextensions = {
     "treedirstate",
     "uncommit",
     "upgradegeneraldelta",
+    "win32text",
 }
 _exclude_list = {"extlib"}
 
