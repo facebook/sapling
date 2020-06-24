@@ -394,10 +394,9 @@ impl RevlogIndex {
         let empty_nodemap_data = Bytes::from(nodemap::empty_index_buffer());
         let nodemap_data = read_path(nodemap_path, empty_nodemap_data.clone())?;
         let changelogi_data = read_path(changelogi_path, Bytes::default())?;
-        let nodemap =
-            NodeRevMap::new(changelogi_data.into(), nodemap_data.into()).or_else(|_| {
-                // Attempt to rebuild the index automatically.
-                let changelogi_data = read_path(changelogi_path, Bytes::default())?;
+        let nodemap = NodeRevMap::new(changelogi_data.clone().into(), nodemap_data.into())
+            .or_else(|_| {
+                // Attempt to rebuild the index (in-memory) automatically.
                 NodeRevMap::new(changelogi_data.into(), empty_nodemap_data.into())
             })?;
         // 20000 is chosen as it takes a few milliseconds to build up.
@@ -409,7 +408,16 @@ impl RevlogIndex {
                 let slice =
                     unsafe { slice::from_raw_parts(buf.as_ptr() as *const u8, buf.len() * 4) };
                 // Not fatal if we cannot update the on-disk index.
-                let _ = atomic_write(nodemap_path, slice, false);
+                if atomic_write(nodemap_path, slice, false).is_err() && cfg!(windows) {
+                    // On Windows it can fail if nodemap_path is mmap-ed. Retry after deleting the file.
+                    // Note: This makes the file disappear temporarily. Another process reading the
+                    // revlog at this time might have to rebuild the nodemap. The `remove_file`
+                    // strategy should be used with care and should not be used for cases where the
+                    // file needs to be always present.
+                    if util::path::remove_file(nodemap_path).is_ok() {
+                        let _ = atomic_write(nodemap_path, slice, false);
+                    }
+                }
             }
         }
         let result = Self {

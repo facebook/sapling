@@ -11,3 +11,4 @@ indexedlog = { path = "../indexedlog" }
 minibytes = { path = "../minibytes" }
 parking_lot = "0.10"
 radixbuf = { path = "../radixbuf" }
+util = { path = "../util" }
