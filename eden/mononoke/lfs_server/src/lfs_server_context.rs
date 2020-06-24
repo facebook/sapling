@@ -18,11 +18,15 @@ use cached_config::ConfigHandle;
 use futures::{
     channel::oneshot,
     future::{self, Future, FutureExt},
+    stream::{Stream, TryStreamExt},
 };
 use gotham::state::{FromState, State};
 use gotham_derive::StateData;
 use gotham_ext::body_ext::BodyExt;
-use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
+use http::{
+    header::HeaderMap,
+    uri::{Authority, Parts, PathAndQuery, Scheme, Uri},
+};
 use hyper::{Body, Request};
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet};
 use slog::Logger;
@@ -190,6 +194,27 @@ pub struct RepositoryRequestContext {
     client: HttpClient,
 }
 
+pub struct HttpClientResponse<S> {
+    headers: HeaderMap,
+    body: S,
+}
+
+impl<S: Stream<Item = Result<Bytes, Error>>> HttpClientResponse<S> {
+    pub async fn concat(self) -> Result<Bytes, Error> {
+        let body = self.body.try_concat_body(&self.headers)?.await?;
+        Ok(body)
+    }
+
+    pub async fn discard(self) -> Result<(), Error> {
+        self.concat().await?;
+        Ok(())
+    }
+
+    pub fn into_inner(self) -> S {
+        self.body
+    }
+}
+
 impl RepositoryRequestContext {
     pub async fn instantiate(
         state: &mut State,
@@ -223,7 +248,11 @@ impl RepositoryRequestContext {
         self.max_upload_size
     }
 
-    pub fn dispatch(&self, request: Request<Body>) -> impl Future<Output = Result<Bytes, Error>> {
+    pub fn dispatch(
+        &self,
+        request: Request<Body>,
+    ) -> impl Future<Output = Result<HttpClientResponse<impl Stream<Item = Result<Bytes, Error>>>, Error>>
+    {
         #[allow(clippy::infallible_destructuring_match)]
         let client = match self.client {
             HttpClient::Enabled(ref client) => client,
@@ -252,9 +281,9 @@ impl RepositoryRequestContext {
                 .context(ErrorKind::UpstreamDidNotRespond)?;
 
             let (head, body) = res.into_parts();
-            let body = body.try_concat_body(&head.headers)?.await?;
 
             if !head.status.is_success() {
+                let body = body.try_concat_body(&head.headers)?.await?;
                 return Err(ErrorKind::UpstreamError(
                     head.status,
                     String::from_utf8_lossy(&body).to_string(),
@@ -265,7 +294,10 @@ impl RepositoryRequestContext {
             // NOTE: This buffers the response here, since all our callsites need a concatenated
             // response. If we want to add callsites that need a streaming response, we should add
             // our own wrapper type that wraps the response and the headers.
-            Ok(body)
+            Ok(HttpClientResponse {
+                headers: head.headers,
+                body: body.map_err(Error::from),
+            })
         }
     }
 
@@ -289,7 +321,9 @@ impl RepositoryRequestContext {
         let res = self
             .dispatch(req)
             .await
-            .context(ErrorKind::UpstreamBatchNoResponse)?;
+            .context(ErrorKind::UpstreamBatchNoResponse)?
+            .concat()
+            .await?;
 
         let batch = serde_json::from_slice::<ResponseBatch>(&res)
             .context(ErrorKind::UpstreamBatchInvalid)?;

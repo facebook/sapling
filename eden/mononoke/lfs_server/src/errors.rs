@@ -69,6 +69,8 @@ pub enum ErrorKind {
     UploadTooLarge(u64, u64),
     #[error("Object is not internally available, and upstream is not available: {0:?}")]
     ObjectNotInternallyAvailableAndUpstreamUnavailable(RequestObject),
+    #[error("Object could not be synced from upstream")]
+    ObjectCannotBeSynced(RequestObject),
 }
 
 #[derive(Debug, Error)]

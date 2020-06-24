@@ -149,6 +149,7 @@ where
         // stream on its own task, and giving Hyper a channel that receives from it. Note that the
         // map(Ok) is here because we want to forward Result<Bytes, Error> instances over our
         // stream.
+        // TODO: This is fixed now in Hyper: https://github.com/hyperium/hyper/pull/2187
         let (sender, receiver) = mpsc::channel(0);
         tokio::spawn(stream.map(Ok).forward(sender));
 

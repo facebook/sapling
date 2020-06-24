@@ -76,6 +76,8 @@ pub enum ScubaKey {
     BatchRequestReceivedUs,
     BatchRequestParsedUs,
     BatchResponseReadyUs,
+    /// Whether the upload was a sync
+    UploadSync,
 }
 
 impl AsRef<str> for ScubaKey {
@@ -111,6 +113,7 @@ impl AsRef<str> for ScubaKey {
             BatchRequestReceivedUs => "batch_request_received_us",
             BatchRequestParsedUs => "batch_request_parsed_us",
             BatchResponseReadyUs => "batch_response_ready_us",
+            UploadSync => "upload_sync",
         }
     }
 }
