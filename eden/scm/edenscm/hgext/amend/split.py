@@ -31,6 +31,7 @@ from edenscm.mercurial import (
     visibility,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex
 
 from ..extlib.phabricator import diffprops
 from . import common
@@ -73,7 +74,7 @@ def split(ui, repo, *revs, **opts):
     if opts.get("no_rebase"):
         torebase = ()
     else:
-        torebase = repo.revs("descendants(%d) - (%d)", rev, rev)
+        torebase = list(map(hex, repo.nodes("descendants(%d) - (%d)", rev, rev)))
 
     with repo.wlock(), repo.lock():
         cmdutil.bailifchanged(repo)
