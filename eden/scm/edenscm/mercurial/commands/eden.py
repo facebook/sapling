@@ -493,7 +493,7 @@ class HgServer(object):
         Response body format:
           The response body is the manifest node, a 20-byte binary value.
         """
-        rev_name = request.body
+        rev_name = pycompat.decodeutf8(request.body)
         self.debug("resolving manifest node for revision %r", rev_name)
         try:
             node = self.get_manifest_node(rev_name)
@@ -649,7 +649,7 @@ class HgServer(object):
         )
 
     def _get_manifest_node_impl(self, rev):
-        # type: (bytes) -> bytes
+        # type: (str) -> bytes
         ctx = self.repo[rev]
         node_hash = ctx.manifestnode()
         if not node_hash:
@@ -666,7 +666,7 @@ class HgServer(object):
         return node_hash
 
     def get_manifest_node(self, rev):
-        # type: (bytes) -> bytes
+        # type: (str) -> bytes
         try:
             return self._get_manifest_node_impl(rev)
         except Exception:
@@ -833,9 +833,8 @@ def runedenimporthelper(repo, **opts):
     out_fd = int(fd) if fd else None
     server = HgServer(repo, in_fd=in_fd, out_fd=out_fd)
 
-    get_manifest_node_arg = opts.get("get_manifest_node")
-    if get_manifest_node_arg:
-        manifest_rev = bin(get_manifest_node_arg)
+    manifest_rev = opts.get("get_manifest_node")
+    if manifest_rev:
         node = server.get_manifest_node(manifest_rev)
         repo.ui.write(hex(node) + "\n")
         return 0
@@ -869,7 +868,7 @@ def runedenimporthelper(repo, **opts):
         if len(parts) == 1:
             path = parts[0]
             if path == "":
-                manifest_node = server.get_manifest_node(b".")
+                manifest_node = server.get_manifest_node(".")
             else:
                 # TODO: It would be nice to automatically look up the current
                 # manifest node ID for this path and use that here, assuming
