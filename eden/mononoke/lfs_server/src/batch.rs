@@ -18,7 +18,6 @@ use http::header::HeaderMap;
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
 use redactedblobstore::has_redaction_root_cause;
-use scuba::ScubaValue;
 use serde::Deserialize;
 use slog::debug;
 use stats::prelude::*;
@@ -388,7 +387,7 @@ fn batch_download_response_objects(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    add_to_sample(scuba, ScubaKey::BatchInternalMissingBlobs, upstream_blobs);
+    ScubaMiddlewareState::maybe_add(scuba, ScubaKey::BatchInternalMissingBlobs, upstream_blobs);
 
     Ok(responses)
 }
@@ -431,7 +430,7 @@ async fn batch_download(
     pin_mut!(upstream, internal);
 
     let mut update_batch_order = |status| {
-        add_to_sample(scuba, ScubaKey::BatchOrder, status);
+        ScubaMiddlewareState::maybe_add(scuba, ScubaKey::BatchOrder, status);
     };
 
     update_batch_order("error");
@@ -475,16 +474,6 @@ async fn batch_download(
     })
 }
 
-fn add_to_sample(
-    scuba: &mut Option<&mut ScubaMiddlewareState>,
-    key: ScubaKey,
-    value: impl Into<ScubaValue>,
-) {
-    if let Some(ref mut scuba) = scuba {
-        scuba.add(key, value);
-    }
-}
-
 // TODO: Do we want to validate the client's Accept & Content-Type headers here?
 pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let BatchParams { repository } = state.take();
@@ -493,7 +482,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let ctx =
         RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Batch).await?;
 
-    add_to_sample(
+    ScubaMiddlewareState::maybe_add(
         &mut state.try_borrow_mut::<ScubaMiddlewareState>(),
         ScubaKey::BatchRequestContextReadyUs,
         start_time.elapsed().as_micros_unchecked(),
@@ -511,7 +500,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
 
-    add_to_sample(
+    ScubaMiddlewareState::maybe_add(
         &mut scuba,
         ScubaKey::BatchRequestReceivedUs,
         start_time.elapsed().as_micros_unchecked(),
@@ -521,13 +510,13 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         .context(ErrorKind::InvalidBatch)
         .map_err(HttpError::e400)?;
 
-    add_to_sample(
+    ScubaMiddlewareState::maybe_add(
         &mut scuba,
         ScubaKey::BatchObjectCount,
         request_batch.objects.len(),
     );
 
-    add_to_sample(
+    ScubaMiddlewareState::maybe_add(
         &mut scuba,
         ScubaKey::BatchRequestParsedUs,
         start_time.elapsed().as_micros_unchecked(),
@@ -538,7 +527,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         Operation::Download => batch_download(&ctx, request_batch, &mut scuba).await,
     };
 
-    add_to_sample(
+    ScubaMiddlewareState::maybe_add(
         &mut scuba,
         ScubaKey::BatchResponseReadyUs,
         start_time.elapsed().as_micros_unchecked(),

@@ -190,12 +190,16 @@ where
     discard_stream(data).await
 }
 
-async fn upload_from_client(
+async fn upload_from_client<S>(
     ctx: &RepositoryRequestContext,
     oid: Sha256,
     size: u64,
-    state: &mut State,
-) -> Result<(), Error> {
+    body: S,
+    scuba: &mut Option<&mut ScubaMiddlewareState>,
+) -> Result<(), Error>
+where
+    S: Stream<Item = Result<Bytes, ()>> + Unpin + Send + 'static,
+{
     let (internal_send, internal_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
     let (upstream_send, upstream_recv) = channel::<Result<Bytes, ()>>(BUFFER_SIZE);
 
@@ -214,12 +218,11 @@ async fn upload_from_client(
 
     let mut received: usize = 0;
 
-    let mut data = Body::take_from(state)
+    let mut data = body
         .map_ok(|chunk| {
             received += chunk.len();
             chunk
         })
-        .map_err(|_| ())
         .map(Ok);
 
     // Note: this closure simply creates a single future that sends all data then closes the sink.
@@ -240,7 +243,7 @@ async fn upload_from_client(
 
     let res = try_join!(internal_upload, upstream_upload, consume_stream);
 
-    ScubaMiddlewareState::try_borrow_add(state, ScubaKey::RequestBytesReceived, received);
+    ScubaMiddlewareState::maybe_add(scuba, ScubaKey::RequestBytesReceived, received);
 
     res.map(|_| ())
 }
@@ -249,7 +252,7 @@ async fn sync_internal_and_upstream(
     ctx: &RepositoryRequestContext,
     oid: Sha256,
     size: u64,
-    state: &mut State,
+    scuba: &mut Option<&mut ScubaMiddlewareState>,
 ) -> Result<(), Error> {
     let key = FetchKey::Aliased(Alias::Sha256(oid));
 
@@ -260,21 +263,12 @@ async fn sync_internal_and_upstream(
     match res {
         Some(stream) => {
             // We have the data, so presumably upstream does not have it.
-            ScubaMiddlewareState::try_borrow_add(
-                state,
-                ScubaKey::UploadSync,
-                "internal_to_upstream",
-            );
+            ScubaMiddlewareState::maybe_add(scuba, ScubaKey::UploadSync, "internal_to_upstream");
             upstream_upload(ctx, oid, size, stream.compat()).await?
         }
         None => {
-            ScubaMiddlewareState::try_borrow_add(
-                state,
-                ScubaKey::UploadSync,
-                "upstream_to_internal",
-            );
-
             // We do not have the data. Get it from upstream.
+            ScubaMiddlewareState::maybe_add(scuba, ScubaKey::UploadSync, "upstream_to_internal");
             let object = RequestObject {
                 oid: LfsSha256(oid.into_inner()),
                 size,
@@ -366,13 +360,16 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
 
     match content_length {
         Some(0) if size > 0 => {
-            sync_internal_and_upstream(&ctx, oid, size, state)
+            let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
+            sync_internal_and_upstream(&ctx, oid, size, &mut scuba)
                 .await
                 .map_err(HttpError::e500)?;
         }
         _ => {
             // TODO: More appropriate status codes here
-            upload_from_client(&ctx, oid, size, state)
+            let body = Body::take_from(state).map_err(|_| ());
+            let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
+            upload_from_client(&ctx, oid, size, body, &mut scuba)
                 .await
                 .map_err(HttpError::e500)?;
         }

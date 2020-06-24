@@ -286,6 +286,16 @@ impl ScubaMiddlewareState {
             scuba.add(key, value);
         }
     }
+
+    pub fn maybe_add(
+        scuba: &mut Option<&mut ScubaMiddlewareState>,
+        key: ScubaKey,
+        value: impl Into<ScubaValue>,
+    ) {
+        if let Some(ref mut scuba) = scuba {
+            scuba.add(key, value);
+        }
+    }
 }
 
 #[async_trait::async_trait]
