@@ -1050,7 +1050,7 @@ impl LfsRemoteInner {
                 if let Some(body) = body.clone() {
                     builder.body(body)
                 } else {
-                    builder
+                    builder.header("Content-Length", 0)
                 }
             },
         )
