@@ -65,7 +65,6 @@ pub async fn backfill<P: AsRef<Path>>(
             cloned!(ctx, repo);
             move |id| {
                 id.load(ctx.clone(), repo.blobstore())
-                    .compat()
                     .map_err(anyhow::Error::from)
             }
         })

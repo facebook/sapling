@@ -14,8 +14,11 @@ use anyhow::{Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt},
+};
+use futures_old::future::{Future, IntoFuture};
 use mononoke_types::DateTime;
 use std::fmt::{self, Display};
 use std::{collections::BTreeMap, io::Write};
@@ -269,14 +272,14 @@ impl Loadable for HgChangesetId {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let csid = *self;
-        HgBlobChangeset::load(ctx, blobstore, csid)
-            .from_err()
-            .and_then(move |value| {
-                value.ok_or_else(|| LoadableError::Missing(csid.blobstore_key()))
-            })
-            .boxify()
+        let load = HgBlobChangeset::load(ctx, blobstore, csid).compat();
+        async move {
+            let value = load.await?;
+            value.ok_or_else(|| LoadableError::Missing(csid.blobstore_key()))
+        }
+        .boxed()
     }
 }
 

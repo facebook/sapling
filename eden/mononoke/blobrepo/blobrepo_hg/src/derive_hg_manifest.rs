@@ -10,12 +10,12 @@ use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use futures::future::try_join_all;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, sync::mpsc, Future, IntoFuture};
-use futures_util::{
+use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as Futures02Ext, TryFutureExt},
 };
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, sync::mpsc, Future, IntoFuture};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, Traced, TreeInfo};
 use mercurial_types::{
     blobs::{
@@ -210,7 +210,7 @@ async fn resolve_conflict(
     // so, we'll load the envelopes.
     let envelopes = parents
         .iter()
-        .map(|p| p.untraced().1.load(ctx.clone(), &blobstore).compat());
+        .map(|p| p.untraced().1.load(ctx.clone(), &blobstore));
 
     let envelopes = try_join_all(envelopes).await?;
 

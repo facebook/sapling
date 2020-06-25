@@ -289,7 +289,7 @@ impl ChangesetPathContext {
                 let info = if cs_info_enabled {
                     ChangesetInfo::derive(ctx, repo, cs_id).compat().await
                 } else {
-                    let bonsai = cs_id.load(ctx, repo.blobstore()).compat().await?;
+                    let bonsai = cs_id.load(ctx, repo.blobstore()).await?;
                     Ok(ChangesetInfo::new(cs_id, bonsai))
                 }?;
                 let date = info.author_date().as_chrono().clone();

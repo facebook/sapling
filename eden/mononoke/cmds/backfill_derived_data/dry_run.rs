@@ -178,10 +178,7 @@ async fn find_entries_to_preserve(
                     .list_tree_entries(ctx.clone(), repo.get_blobstore())
                     .compat()
                     .map_ok(move |(_, mf_id)| async move {
-                        let mf = mf_id
-                            .load(ctx.clone(), &repo.get_blobstore())
-                            .compat()
-                            .await?;
+                        let mf = mf_id.load(ctx.clone(), &repo.get_blobstore()).await?;
                         Ok((mf_id.blobstore_key(), mf.into_blob().into()))
                     })
                     .try_buffer_unordered(100),

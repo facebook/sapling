@@ -18,8 +18,9 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future::FutureExt as PreviewFutureExt};
-use futures_util::{
+use futures::{
+    compat::Future01CompatExt,
+    future::{FutureExt as PreviewFutureExt, TryFutureExt},
     stream::{self as new_stream, StreamExt as NewStreamExt},
     try_join,
 };
@@ -379,10 +380,12 @@ pub async fn verify_filenodes_have_same_contents<
                 let f1 = source_filenode_id
                     .0
                     .load(ctx.clone(), source_repo.0.blobstore())
+                    .compat()
                     .map(|e| Source(e.content_id()));
                 let f2 = target_filenode_id
                     .0
                     .load(ctx.clone(), target_repo.0.blobstore())
+                    .compat()
                     .map(|e| Target(e.content_id()));
 
                 f1.join(f2).map(move |(c1, c2)| (path, c1, c2))
@@ -518,7 +521,7 @@ pub async fn fetch_root_mf_id(
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .compat()
         .await?;
-    let changeset = hg_cs_id.load(ctx, repo.blobstore()).compat().await?;
+    let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(changeset.manifestid())
 }
 

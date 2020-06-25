@@ -199,10 +199,7 @@ mod tests {
             .get_hg_from_bonsai_changeset(ctx.clone(), csid)
             .compat()
             .await?;
-        let hg_cs = hg_cs_id
-            .load(ctx, &blob_repo.get_blobstore())
-            .compat()
-            .await?;
+        let hg_cs = hg_cs_id.load(ctx, &blob_repo.get_blobstore()).await?;
         Ok(hg_cs.manifestid())
     }
 }

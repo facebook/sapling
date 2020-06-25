@@ -8,8 +8,10 @@
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{Future, IntoFuture};
+use futures::{
+    compat::Future01CompatExt,
+    future::{self, BoxFuture, FutureExt},
+};
 use mononoke_types::{hash, ContentAlias, ContentId};
 
 /// Key for fetching - we can access with any of the supported key types
@@ -54,9 +56,9 @@ impl Loadable for FetchKey {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         match self {
-            FetchKey::Canonical(content_id) => Ok(*content_id).into_future().boxify(),
+            FetchKey::Canonical(content_id) => future::ok(*content_id).boxed(),
             FetchKey::Aliased(alias) => alias.load(ctx, blobstore),
         }
     }
@@ -88,19 +90,18 @@ impl Loadable for Alias {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let key = self.blobstore_key();
-        blobstore
-            .get(ctx, key.clone())
-            .from_err()
-            .and_then(move |maybe_alias| {
-                let blob = maybe_alias.ok_or(LoadableError::Missing(key))?;
+        let get = blobstore.get(ctx, key.clone()).compat();
+        async move {
+            let maybe_alias = get.await?;
+            let blob = maybe_alias.ok_or(LoadableError::Missing(key))?;
 
-                ContentAlias::from_bytes(blob.into_raw_bytes())
-                    .map(|alias| alias.content_id())
-                    .map_err(LoadableError::Error)
-            })
-            .boxify()
+            ContentAlias::from_bytes(blob.into_raw_bytes())
+                .map(|alias| alias.content_id())
+                .map_err(LoadableError::Error)
+        }
+        .boxed()
     }
 }
 
@@ -113,7 +114,10 @@ impl Storable for AliasBlob {
         self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Key, Error> {
-        blobstore.put(ctx, self.0.blobstore_key(), self.1.into_blob())
+    ) -> BoxFuture<'static, Result<Self::Key, Error>> {
+        blobstore
+            .put(ctx, self.0.blobstore_key(), self.1.into_blob())
+            .compat()
+            .boxed()
     }
 }

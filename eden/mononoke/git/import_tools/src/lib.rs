@@ -300,7 +300,6 @@ pub async fn gitimport(
                             .compat()
                             .await?
                             .load(ctx.clone(), repo.blobstore())
-                            .compat()
                             .await?
                             .manifestid()
                     };

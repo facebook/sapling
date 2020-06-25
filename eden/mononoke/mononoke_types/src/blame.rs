@@ -14,8 +14,11 @@ use anyhow::{bail, format_err, Error};
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::Future;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt},
+};
+use futures_old::Future as Future01;
 use std::{collections::HashMap, convert::TryFrom};
 use thiserror::Error;
 use xdiff::{diff_hunks, Hunk};
@@ -48,18 +51,20 @@ impl Loadable for BlameId {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let blobstore_key = self.blobstore_key();
-        blobstore
-            .get(ctx, blobstore_key.clone())
-            .from_err()
-            .and_then(move |bytes| {
-                let bytes = bytes.ok_or(LoadableError::Missing(blobstore_key))?;
-                let blame_t = compact_protocol::deserialize(bytes.as_raw_bytes().as_ref())?;
-                let blame = BlameMaybeRejected::from_thrift(blame_t)?;
-                Ok(blame)
-            })
-            .boxify()
+        let fetch = blobstore.get(ctx, blobstore_key.clone());
+
+        async move {
+            let bytes = fetch
+                .compat()
+                .await?
+                .ok_or(LoadableError::Missing(blobstore_key))?;
+            let blame_t = compact_protocol::deserialize(bytes.as_raw_bytes().as_ref())?;
+            let blame = BlameMaybeRejected::from_thrift(blame_t)?;
+            Ok(blame)
+        }
+        .boxed()
     }
 }
 
@@ -72,7 +77,7 @@ pub fn store_blame<B: Blobstore + Clone>(
     blobstore: &B,
     file_unode_id: FileUnodeId,
     blame: BlameMaybeRejected,
-) -> impl Future<Item = BlameId, Error = Error> {
+) -> impl Future01<Item = BlameId, Error = Error> {
     let blame_t = blame.into_thrift();
     let data = compact_protocol::serialize(&blame_t);
     let data = BlobstoreBytes::from_bytes(data);

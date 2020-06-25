@@ -21,8 +21,9 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
-use futures::{future::ok, Future};
+use futures::future::TryFutureExt;
 use futures_ext::FutureExt;
+use futures_old::{future::ok, Future};
 use manifest::BonsaiDiffFileChange;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::{FileChange, MPath};
@@ -41,6 +42,7 @@ pub fn convert_diff_result_into_file_change_for_diamond_merge(
         | BonsaiDiffFileChange::ChangedReusedId(path, ty, node_id) => {
             node_id
                 .load(ctx, repo.blobstore())
+                .compat()
                 .from_err()
                 .map(move |envelope| {
                     // Note that we intentionally do not set copy-from info,

@@ -821,7 +821,6 @@ impl PushRedirector {
                     async move {
                         let target_bcs = target_repo_bcs_id
                             .load(ctx, target_repo.blobstore())
-                            .compat()
                             .await?;
 
                         Ok((*small_bcs_id, target_bcs))

@@ -17,7 +17,8 @@ mod test {
                 use std::collections::HashSet;
 
                 use fbinit::FacebookInit;
-                use futures::{Future, Stream};
+                use futures::compat::Future01CompatExt;
+                use futures_old::{Future, Stream};
 
                 use blobrepo_hg::BlobRepoHg;
                 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
@@ -25,77 +26,74 @@ mod test {
 
                 use crate::$repo;
 
-                #[fbinit::test]
-                fn test(fb: FacebookInit) {
-                    async_unit::tokio_unit_test(async move {
-                        let ctx = CoreContext::test_mock(fb);
+                #[fbinit::compat_test]
+                async fn test(fb: FacebookInit) {
+                    let ctx = CoreContext::test_mock(fb);
 
-                        let repo = $repo::getrepo(fb).await;
-                        let heads = repo.get_heads_maybe_stale(ctx.clone()).collect();
+                    let repo = $repo::getrepo(fb).await;
+                    let heads = repo.get_heads_maybe_stale(ctx.clone()).collect();
 
-                        let verify = BonsaiMFVerify {
-                            ctx: ctx.clone(),
-                            logger: ctx.logger().clone(),
-                            repo,
-                            follow_limit: 1024,
-                            ignores: HashSet::new(),
-                            broken_merges_before: None,
-                            debug_bonsai_diff: false,
-                        };
+                    let verify = BonsaiMFVerify {
+                        ctx: ctx.clone(),
+                        logger: ctx.logger().clone(),
+                        repo,
+                        follow_limit: 1024,
+                        ignores: HashSet::new(),
+                        broken_merges_before: None,
+                        debug_bonsai_diff: false,
+                    };
 
-                        let results = heads
-                            .map_err(|err| panic!("cannot get the heads {}", err))
-                            .and_then(|heads| verify.verify(heads).collect());
-                        tokio::spawn(
-                            results
-                                .and_then(move |results| {
-                                    let diffs = results.into_iter().filter_map(
-                                        move |(res, meta)| match res {
-                                            BonsaiMFVerifyResult::Invalid(difference) => {
-                                                let cs_id = meta.changeset_id;
-                                                Some(
-                                                    difference
-                                                        .changes(ctx.clone())
-                                                        .collect()
-                                                        .map(move |changes| (cs_id, changes)),
-                                                )
-                                            }
-                                            _ => None,
-                                        },
-                                    );
-
-                                    futures::future::join_all(diffs)
-                                })
-                                .map(|diffs| {
-                                    let mut failed = false;
-                                    let mut desc = Vec::new();
-                                    for (changeset_id, changes) in diffs {
-                                        failed = true;
-                                        desc.push(format!(
-                                            "*** Inconsistent roundtrip for {}",
-                                            changeset_id,
-                                        ));
-                                        for changed_entry in changes {
-                                            desc.push(format!(
-                                                "  - Changed entry: {:?}",
-                                                changed_entry
-                                            ));
+                    let results = heads
+                        .map_err(|err| panic!("cannot get the heads {}", err))
+                        .and_then(|heads| verify.verify(heads).collect());
+                    results
+                        .and_then(move |results| {
+                            let diffs =
+                                results
+                                    .into_iter()
+                                    .filter_map(move |(res, meta)| match res {
+                                        BonsaiMFVerifyResult::Invalid(difference) => {
+                                            let cs_id = meta.changeset_id;
+                                            Some(
+                                                difference
+                                                    .changes(ctx.clone())
+                                                    .collect()
+                                                    .map(move |changes| (cs_id, changes)),
+                                            )
                                         }
-                                        desc.push("".to_string());
-                                    }
-                                    let desc = desc.join("\n");
-                                    if failed {
-                                        panic!(
-                                            "Inconsistencies detected, roundtrip test failed\n\n{}",
-                                            desc
-                                        );
-                                    }
-                                })
-                                .map_err(|err| {
-                                    panic!("verify error {}", err);
-                                }),
-                        );
-                    })
+                                        _ => None,
+                                    });
+
+                            futures_old::future::join_all(diffs)
+                        })
+                        .map(|diffs| {
+                            let mut failed = false;
+                            let mut desc = Vec::new();
+                            for (changeset_id, changes) in diffs {
+                                failed = true;
+                                desc.push(format!(
+                                    "*** Inconsistent roundtrip for {}",
+                                    changeset_id,
+                                ));
+                                for changed_entry in changes {
+                                    desc.push(format!("  - Changed entry: {:?}", changed_entry));
+                                }
+                                desc.push("".to_string());
+                            }
+                            let desc = desc.join("\n");
+                            if failed {
+                                panic!(
+                                    "Inconsistencies detected, roundtrip test failed\n\n{}",
+                                    desc
+                                );
+                            }
+                        })
+                        .map_err(|err| {
+                            panic!("verify error {}", err);
+                        })
+                        .compat()
+                        .await
+                        .unwrap()
                 }
             }
         };

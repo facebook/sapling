@@ -17,7 +17,7 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_ext::{FutureExt, StreamExt};
 use futures_old::{future, Future, IntoFuture, Stream};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
@@ -188,7 +188,10 @@ fn single_verify(
             cloned!(ctx, repo);
             move |hg_csid| {
                 println!("CHANGESET: hg_csid:{:?} csid:{:?}", hg_csid, csid);
-                hg_csid.load(ctx.clone(), repo.blobstore()).from_err()
+                hg_csid
+                    .load(ctx.clone(), repo.blobstore())
+                    .compat()
+                    .from_err()
             }
         })
         .and_then({

@@ -31,9 +31,9 @@ use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{Future, Stream};
-use futures_util::compat::Future01CompatExt;
 use maplit::btreemap;
 use memblob::LazyMemblob;
 use mercurial_types::{
@@ -68,10 +68,7 @@ async fn get_content(
     repo: &BlobRepo,
     id: HgFileNodeId,
 ) -> Result<bytes::Bytes, Error> {
-    let content_id = (id.load(ctx.clone(), repo.blobstore()))
-        .compat()
-        .await?
-        .content_id();
+    let content_id = id.load(ctx.clone(), repo.blobstore()).await?.content_id();
     let content = filestore::fetch_concat(repo.blobstore(), ctx.clone(), content_id);
     (content).compat().await
 }
@@ -364,7 +361,6 @@ async fn check_bonsai_creation(fb: FacebookInit, repo: BlobRepo) {
     let bonsai = bonsai_cs_id
         .unwrap()
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await
         .unwrap();
     assert_eq!(
@@ -452,7 +448,6 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit, repo: BlobRepo) {
     let bonsai = bonsai_cs_id
         .unwrap()
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await
         .unwrap();
     let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
@@ -587,8 +582,8 @@ fn test_compute_changed_files_no_parents(fb: FacebookInit) {
             MPath::new(b"dir2/file_1_in_dir2").unwrap(),
         ];
 
-        let cs = (HgChangesetId::new(nodehash).load(ctx.clone(), repo.blobstore()))
-            .compat()
+        let cs = HgChangesetId::new(nodehash)
+            .load(ctx.clone(), repo.blobstore())
             .await
             .unwrap();
 
@@ -626,12 +621,10 @@ fn test_compute_changed_files_one_parent(fb: FacebookInit) {
         ];
 
         let cs = (HgChangesetId::new(nodehash).load(ctx.clone(), repo.blobstore()))
-            .compat()
             .await
             .unwrap();
 
         let parent_cs = (HgChangesetId::new(parenthash).load(ctx.clone(), repo.blobstore()))
-            .compat()
             .await
             .unwrap();
 
@@ -686,6 +679,7 @@ fn make_file_change(
     FileContents::new_bytes(Bytes::copy_from_slice(content))
         .into_blob()
         .store(ctx, repo.blobstore())
+        .compat()
         .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))
 }
 
@@ -698,6 +692,7 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             cloned!(ctx, repo);
             move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Box<dyn HgEntry + Sync>>, Error> {
                 ms_hash.load(ctx.clone(), repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|ms| {
                         HgManifest::list(&ms)
@@ -723,7 +718,6 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             "264f01429683b3dd8042cb3979e8bf37007118bc",
         ))
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await
         .unwrap()
         .manifestid();
@@ -735,7 +729,6 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             "16839021e338500b3cf7c9b871c8a07351697d68",
         ))
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await
         .unwrap()
         .manifestid();
@@ -850,8 +843,8 @@ fn test_case_conflict_in_manifest(fb: FacebookInit) {
             "2f866e7e549760934e31bf0420a873f65100ad63",
         ));
 
-        let mf = (hg_cs.load(ctx.clone(), repo.blobstore()))
-            .compat()
+        let mf = hg_cs
+            .load(ctx.clone(), repo.blobstore())
             .await
             .unwrap()
             .manifestid();
@@ -885,8 +878,8 @@ fn test_case_conflict_in_manifest(fb: FacebookInit) {
                 .compat()
                 .await
                 .unwrap();
-            let child_mf = (child_hg_cs.load(ctx.clone(), repo.blobstore()))
-                .compat()
+            let child_mf = child_hg_cs
+                .load(ctx.clone(), repo.blobstore())
                 .await
                 .unwrap()
                 .manifestid();
@@ -1365,7 +1358,7 @@ fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
     let content_len = content_blob.len() as u64;
 
     let mut rt = Runtime::new()?;
-    rt.block_on(content_blob.store(ctx.clone(), repo.blobstore()))?;
+    rt.block_on_std(content_blob.store(ctx.clone(), repo.blobstore()))?;
 
     let path1 = RepoPath::file("path/1")?;
     let path2 = RepoPath::file("path/2")?;
@@ -1472,7 +1465,7 @@ fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error> {
     let content_len = content_blob.len() as u64;
 
     let mut rt = Runtime::new()?;
-    rt.block_on(content_blob.store(ctx.clone(), repo.blobstore()))?;
+    rt.block_on_std(content_blob.store(ctx.clone(), repo.blobstore()))?;
 
     let path1 = RepoPath::file("path/1")?;
     let path2 = RepoPath::file("path/2")?;
@@ -1525,7 +1518,6 @@ impl TestHelper {
 
         let hg_cs = hg_cs_id
             .load(self.ctx.clone(), self.repo.blobstore())
-            .compat()
             .await?;
 
         Ok(hg_cs)
@@ -1537,7 +1529,6 @@ impl TestHelper {
         let manifest = hg_cs
             .manifestid()
             .load(self.ctx.clone(), self.repo.blobstore())
-            .compat()
             .await?;
 
         Ok(manifest)
@@ -1571,10 +1562,7 @@ impl TestHelper {
             .into_tree()
             .ok_or_else(|| Error::msg(format!("Not a manifest: {}", path)))?;
 
-        let manifest = id
-            .load(self.ctx.clone(), self.repo.blobstore())
-            .compat()
-            .await?;
+        let manifest = id.load(self.ctx.clone(), self.repo.blobstore()).await?;
 
         Ok(manifest)
     }
@@ -1592,7 +1580,6 @@ impl TestHelper {
 
         let envelope = filenode
             .load(self.ctx.clone(), self.repo.blobstore())
-            .compat()
             .await?;
 
         Ok(envelope)
@@ -1631,15 +1618,11 @@ mod octopus_merges {
             .compat()
             .await?;
 
-        let hg_cs = hg_cs_id
-            .load(ctx.clone(), repo.blobstore())
-            .compat()
-            .await?;
+        let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
         let hg_manifest = hg_cs
             .manifestid()
             .load(ctx.clone(), repo.blobstore())
-            .compat()
             .await?;
 
         // Do we get the same files?

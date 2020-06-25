@@ -8,6 +8,7 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::{stream::futures_unordered, Future, IntoFuture, Stream};
 use manifest::derive_manifest;
@@ -120,6 +121,7 @@ fn derive_git_manifest<B: Blobstore + Clone>(
                 let tree: Tree = TreeBuilder::new(members).into();
 
                 tree.store(ctx.clone(), &blobstore)
+                    .compat()
                     .map(|handle| ((), handle))
             }
         },
@@ -140,7 +142,7 @@ fn derive_git_manifest<B: Blobstore + Clone>(
         Some(handle) => Ok(handle).into_future().left_future(),
         None => {
             let tree: Tree = TreeBuilder::default().into();
-            tree.store(ctx.clone(), &blobstore).right_future()
+            tree.store(ctx.clone(), &blobstore).compat().right_future()
         }
     })
 }

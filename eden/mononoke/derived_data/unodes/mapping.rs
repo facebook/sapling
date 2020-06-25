@@ -175,7 +175,7 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::future::Future as NewFuture;
+    use futures::future::{Future as NewFuture, TryFutureExt};
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
@@ -189,6 +189,7 @@ mod test {
     ) -> impl Future<Item = HgManifestId, Error = Error> {
         hg_cs_id
             .load(ctx, repo.blobstore())
+            .compat()
             .from_err()
             .map(|hg_cs| hg_cs.manifestid())
     }

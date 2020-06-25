@@ -11,7 +11,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::try_join_all};
+use futures::future::try_join_all;
 use maplit::hashset;
 use mononoke_types::{
     globalrev::{Globalrev, START_COMMIT_GLOBALREV},
@@ -53,7 +53,6 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
         .commit()
         .await?
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let book = bookmark(&ctx, &repo, "master").set_to(cs1).await?;
@@ -79,21 +78,18 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
         .ok_or(Error::msg("missing cs2"))?
         .id_new
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let cs3 = CreateCommitContext::new(&ctx, &repo, vec![root])
         .commit()
         .await?
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let cs4 = CreateCommitContext::new(&ctx, &repo, vec![cs3.get_changeset_id()])
         .commit()
         .await?
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let rebased = do_pushrebase_bonsai(
@@ -114,7 +110,6 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
         .ok_or(Error::msg("missing cs3"))?
         .id_new
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let cs4_rebased = rebased
@@ -123,7 +118,6 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
         .ok_or(Error::msg("missing cs4"))?
         .id_new
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     assert_eq!(
@@ -215,7 +209,6 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
             .commit()
             .await?
             .load(ctx.clone(), repo.blobstore())
-            .compat()
             .await?;
 
         let fut = async {
@@ -242,10 +235,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
             break;
         }
 
-        let cs = next_cs_id
-            .load(ctx.clone(), repo.blobstore())
-            .compat()
-            .await?;
+        let cs = next_cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
         assert_eq!(Globalrev::new(next_globalrev), Globalrev::from_bcs(&cs)?);
 

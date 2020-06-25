@@ -78,6 +78,7 @@ fn store_file_change(
             cloned!(ctx, change, path);
             parent
                 .load(ctx.clone(), &store)
+                .compat()
                 .from_err()
                 .map(move |parent_envelope| {
                     if parent_envelope.content_id() == change.content_id()
@@ -193,6 +194,7 @@ pub fn check_case_conflict_in_manifest(
     let child_mf_id = child_mf_id.clone();
     parent_mf_id
         .load(ctx.clone(), &repo.get_blobstore())
+        .compat()
         .from_err()
         .and_then(move |mf| {
             loop_fn(
@@ -210,6 +212,7 @@ pub fn check_case_conflict_in_manifest(
                                 Entry::Leaf(..) => future::ok(Loop::Break(None)).boxify(),
                                 Entry::Tree(manifest_id) => manifest_id
                                     .load(ctx.clone(), repo.blobstore())
+                                    .compat()
                                     .from_err()
                                     .map(move |mf| Loop::Continue((Some(cur_path), mf, elements)))
                                     .boxify(),
@@ -619,6 +622,7 @@ pub fn get_hg_from_bonsai_changeset_with_impl(
                             }
                             None => bcs_id
                                 .load(ctx.clone(), repo.blobstore())
+                                .compat()
                                 .from_err()
                                 .map(move |bcs| {
                                     commits_to_generate.push(bcs.clone());
@@ -659,7 +663,7 @@ pub fn get_hg_from_bonsai_changeset_with_impl(
         bonsai_hg_mapping
             .get_hg_from_bonsai(ctx.clone(), repoid, bcs_id)
             .and_then(move |maybe_hg| match maybe_hg {
-                Some(hg_cs_id) => hg_cs_id.load(ctx, repo.blobstore()).from_err(),
+                Some(hg_cs_id) => hg_cs_id.load(ctx, repo.blobstore()).compat().from_err(),
                 None => panic!("hg changeset must be generated already"),
             })
     }

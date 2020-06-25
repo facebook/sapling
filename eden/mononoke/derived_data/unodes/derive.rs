@@ -261,7 +261,7 @@ fn create_unode_file(
         }
         future::join_all(parents.clone().into_iter().map({
             cloned!(blobstore, ctx);
-            move |id| id.load(ctx.clone(), &blobstore.clone())
+            move |id| id.load(ctx.clone(), &blobstore.clone()).compat()
         }))
         .from_err()
         .and_then(
@@ -328,11 +328,11 @@ async fn reuse_manifest_parent(
     parents: &Vec<ManifestUnodeId>,
     subentries: &BTreeMap<MPathElement, UnodeEntry>,
 ) -> Result<Option<ManifestUnodeId>, Error> {
-    let parents = new_future::try_join_all(parents.into_iter().map(|id| {
-        id.load(ctx.clone(), blobstore)
-            .map_err(Error::from)
-            .compat()
-    }))
+    let parents = new_future::try_join_all(
+        parents
+            .iter()
+            .map(|id| id.load(ctx.clone(), blobstore).map_err(Error::from)),
+    )
     .await?;
 
     if let Some(mf_unode) = parents.iter().find(|p| p.subentries() == subentries) {
@@ -349,11 +349,11 @@ async fn reuse_file_parent(
     content_id: &ContentId,
     file_type: FileType,
 ) -> Result<Option<FileUnodeId>, Error> {
-    let parents = new_future::try_join_all(parents.into_iter().map(|id| {
-        id.load(ctx.clone(), blobstore)
-            .map_err(Error::from)
-            .compat()
-    }))
+    let parents = new_future::try_join_all(
+        parents
+            .iter()
+            .map(|id| id.load(ctx.clone(), blobstore).map_err(Error::from)),
+    )
     .await?;
 
     if let Some(file_unode) = parents
@@ -446,7 +446,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
             runtime
-                .block_on(unode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(unode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
             let all_unodes = runtime
                 .block_on(
@@ -481,8 +481,11 @@ mod tests {
 
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
-            let root_unode: Result<_> =
-                runtime.block_on(unode_id.load(ctx.clone(), repo.blobstore()).from_err());
+            let root_unode: Result<_> = runtime.block_on_std(
+                unode_id
+                    .load(ctx.clone(), repo.blobstore())
+                    .map_err(Error::from),
+            );
             let root_unode = root_unode.unwrap();
             assert_eq!(root_unode.parents(), &vec![parent_unode_id]);
 
@@ -542,7 +545,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
 
             let unode_mf: Result<_> =
-                runtime.block_on(unode_id.load(ctx.clone(), repo.blobstore()).from_err());
+                runtime.block_on_std(unode_id.load(ctx, repo.blobstore()).map_err(Error::from));
             let unode_mf = unode_mf.unwrap();
 
             // Unodes should be unique even if content is the same. Check it
@@ -690,10 +693,7 @@ mod tests {
         assert_ne!(p1_unodes, merge_unodes);
 
         for ((_, p1), (_, merge)) in p1_unodes.iter().zip(merge_unodes.iter()) {
-            let merge_unode = merge
-                .load(ctx.clone(), &repo.get_blobstore())
-                .compat()
-                .await?;
+            let merge_unode = merge.load(ctx.clone(), &repo.get_blobstore()).await?;
 
             match (p1, merge_unode) {
                 (Entry::Leaf(p1), Entry::Leaf(ref merge_unode)) => {
@@ -945,7 +945,7 @@ mod tests {
                     let content =
                         FileContents::Bytes(Bytes::copy_from_slice(content.as_bytes())).into_blob();
                     let content_id = runtime
-                        .block_on(content.store(ctx.clone(), repo.blobstore()))
+                        .block_on_std(content.store(ctx.clone(), repo.blobstore()))
                         .unwrap();
 
                     let file_change = FileChange::new(content_id, file_type, size as u64, None);
@@ -978,6 +978,7 @@ mod tests {
             match self {
                 UnodeEntry::File(file_unode_id) => file_unode_id
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
@@ -990,6 +991,7 @@ mod tests {
                     .boxify(),
                 UnodeEntry::Directory(mf_unode_id) => mf_unode_id
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
@@ -1008,11 +1010,13 @@ mod tests {
                 UnodeEntry::File(file_unode_id) => file_unode_id
                     .clone()
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|unode_file| unode_file.linknode().clone())
                     .boxify(),
                 UnodeEntry::Directory(mf_unode_id) => mf_unode_id
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|unode_mf| unode_mf.linknode().clone())
                     .boxify(),
@@ -1124,7 +1128,7 @@ mod tests {
             .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id))
             .unwrap();
         let hg_cs = runtime
-            .block_on(hg_cs_id.load(ctx.clone(), repo.blobstore()))
+            .block_on_std(hg_cs_id.load(ctx, repo.blobstore()))
             .unwrap();
 
         HgFileNodeId::new(hg_cs.manifestid().into_nodehash())

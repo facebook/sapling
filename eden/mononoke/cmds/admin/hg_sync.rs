@@ -475,7 +475,7 @@ async fn inspect(
     ) -> Result<Option<BonsaiChangeset>, Error> {
         let maybe_bcs = match cs_id {
             Some(ref cs_id) => {
-                let bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+                let bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
                 Some(bcs)
             }
             None => None,

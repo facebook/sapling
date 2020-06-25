@@ -10,6 +10,7 @@ use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Storable;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::FutureExt;
 use futures_old::{future, stream, Future, Stream};
 use mononoke_types::{
@@ -115,7 +116,7 @@ impl GenManifest {
                         let size = content.size();
                         let blob = content.into_blob();
                         let id = *blob.id();
-                        store_changes.push(blob.store(ctx.clone(), repo.blobstore()));
+                        store_changes.push(blob.store(ctx.clone(), repo.blobstore()).compat());
                         file_changes.insert(
                             path,
                             Some(FileChange::new(id, FileType::Regular, size as u64, None)),

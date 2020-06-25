@@ -22,9 +22,8 @@ use filestore::{self, Alias};
 use fsnodes::RootFsnodeId;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, Future, FutureExt},
+    future::{self, Future, FutureExt, TryFutureExt},
     stream::{BoxStream, StreamExt},
-    TryFutureExt,
 };
 use futures_ext::{FutureExt as Future01Ext, StreamExt as Stream01Ext};
 use futures_old::{future as old_future, Future as Future01, Stream as Stream01};
@@ -195,7 +194,7 @@ async fn bonsai_changeset_step(
     keep_edge_paths: bool,
 ) -> Result<StepOutput, Error> {
     // Get the data, and add direct file data for this bonsai changeset
-    let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+    let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
 
     // Parents deliberately first to resolve dependent reads as early as possible
     let mut recurse: Vec<OutgoingEdge> = bcs
@@ -391,8 +390,8 @@ fn hg_changeset_step(
     id: HgChangesetId,
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     id.load(ctx, repo.blobstore())
-        .from_err()
-        .map(|hgchangeset| {
+        .map_err(Error::from)
+        .map_ok(|hgchangeset| {
             let manifest_id = hgchangeset.manifestid();
             let mut recurse = vec![OutgoingEdge::new(
                 EdgeType::HgChangesetToHgManifest,
@@ -407,7 +406,6 @@ fn hg_changeset_step(
             }
             StepOutput(NodeData::HgChangeset(hgchangeset), recurse)
         })
-        .compat()
 }
 
 fn hg_file_envelope_step(
@@ -418,8 +416,8 @@ fn hg_file_envelope_step(
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     hg_file_node_id
         .load(ctx, repo.blobstore())
-        .from_err()
-        .map({
+        .map_err(Error::from)
+        .map_ok({
             move |envelope| {
                 let file_content_id = envelope.content_id();
                 let fnode = OutgoingEdge::new_with_path(
@@ -430,7 +428,6 @@ fn hg_file_envelope_step(
                 StepOutput(NodeData::HgFileEnvelope(envelope), vec![fnode])
             }
         })
-        .compat()
 }
 
 fn hg_file_node_step(
@@ -498,8 +495,8 @@ fn hg_manifest_step(
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     hg_manifest_id
         .load(ctx, repo.blobstore())
-        .from_err()
-        .map({
+        .map_err(Error::from)
+        .map_ok({
             move |hgmanifest| {
                 let (manifests, filenodes): (Vec<_>, Vec<_>) =
                     hgmanifest.list().partition_map(|child| {
@@ -554,7 +551,6 @@ fn hg_manifest_step(
                 StepOutput(NodeData::HgManifest(hgmanifest), children)
             }
         })
-        .compat()
 }
 
 fn alias_content_mapping_step(
@@ -564,7 +560,7 @@ fn alias_content_mapping_step(
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     alias
         .load(ctx, &repo.get_blobstore())
-        .map(|content_id| {
+        .map_ok(|content_id| {
             let recurse = vec![OutgoingEdge::new(
                 EdgeType::AliasContentMappingToFileContent,
                 Node::FileContent(content_id),
@@ -572,7 +568,6 @@ fn alias_content_mapping_step(
             StepOutput(NodeData::AliasContentMapping(content_id), recurse)
         })
         .map_err(Error::from)
-        .compat()
 }
 
 async fn bonsai_to_fsnode_mapping_step(
@@ -610,7 +605,6 @@ async fn fsnode_step(
     let fsnode = fsnode_id
         .load(ctx.clone(), &repo.get_blobstore())
         .map_err(Error::from)
-        .compat()
         .await?;
 
     let mut edges = vec![];

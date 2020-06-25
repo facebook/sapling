@@ -58,7 +58,6 @@ async fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId
     let content_id = content
         .into_blob()
         .store(ctx.clone(), repo.blobstore())
-        .compat()
         .await
         .unwrap();
     let file_change = FileChange::new(content_id, FileType::Regular, 3, None);
@@ -147,7 +146,6 @@ where
     let bookmark_name = BookmarkName::new("master").unwrap();
     let source_bcs = source_bcs_id
         .load(ctx.clone(), config.get_source_repo().blobstore())
-        .compat()
         .await
         .unwrap();
 
@@ -309,7 +307,6 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let content_id = content
         .into_blob()
         .store(ctx.clone(), repo.blobstore())
-        .compat()
         .await
         .unwrap();
     let file_change = FileChange::new(content_id, FileType::Regular, 3, None);
@@ -514,7 +511,6 @@ async fn megarepo_copy_file(
     let content_id = content
         .into_blob()
         .store(ctx.clone(), repo.blobstore())
-        .compat()
         .await
         .unwrap();
     let file_change = FileChange::new(
@@ -631,7 +627,6 @@ async fn sync_copyinfo(fb: FacebookInit) {
     let linear_bcs = linear_copyinfo_bcs_id
         .unwrap()
         .load(ctx.clone(), linear.blobstore())
-        .compat()
         .await
         .unwrap();
 
@@ -850,7 +845,6 @@ async fn sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
 
     let megarepo_implicit_delete_bcs = megarepo_implicit_delete_bcs_id
         .load(ctx.clone(), megarepo.blobstore())
-        .compat()
         .await
         .unwrap();
     let file_changes: BTreeMap<MPath, _> = megarepo_implicit_delete_bcs
@@ -891,7 +885,6 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
     let content_id = content
         .into_blob()
         .store(ctx.clone(), repo.blobstore())
-        .compat()
         .await
         .unwrap();
     let file_change = FileChange::new(content_id, FileType::Regular, 3, None);

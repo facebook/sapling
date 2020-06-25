@@ -19,7 +19,7 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_ext::{
     bounded_traversal::{bounded_traversal_dag, Iter},
     BoxFuture, FutureExt,
@@ -199,6 +199,7 @@ fn subcommand_show_diffs(
             move |file_unode_id| {
                 file_unode_id
                     .load(ctx, &blobstore)
+                    .compat()
                     .from_err()
                     .map(move |file_unode| (file_unode_id, file_unode))
             }
@@ -281,11 +282,13 @@ fn subcommand_compute_blame(
                             cloned!(ctx, repo, blobstore);
                             file_unode_id
                                 .load(ctx.clone(), &blobstore)
+                                .compat()
                                 .from_err()
                                 .and_then(move |file_unode| {
                                     let csid = *file_unode.linknode();
                                     csid
                                         .load(ctx.clone(), &blobstore)
+                                        .compat()
                                         .from_err()
                                         .and_then({
                                             cloned!(ctx, repo, path);

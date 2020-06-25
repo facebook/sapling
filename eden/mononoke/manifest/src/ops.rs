@@ -9,6 +9,7 @@ use crate::{Entry, Manifest, PathTree, StoreLoadable};
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, BoxFuture, BoxStream, FutureExt, StreamExt,
 };
@@ -117,46 +118,49 @@ where
                     value: select,
                 } = selector;
 
-                manifest_id.load(ctx.clone(), &store).map(move |manifest| {
-                    let mut output = Vec::new();
-                    let mut recurse = Vec::new();
+                manifest_id
+                    .load(ctx.clone(), &store)
+                    .compat()
+                    .map(move |manifest| {
+                        let mut output = Vec::new();
+                        let mut recurse = Vec::new();
 
-                    if recursive || select.is_recursive() {
-                        output.push((path.clone(), Entry::Tree(manifest_id)));
-                        for (name, entry) in manifest.list() {
-                            let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                            match entry {
-                                Entry::Leaf(_) => {
-                                    output.push((path.clone(), entry));
-                                }
-                                Entry::Tree(manifest_id) => {
-                                    recurse.push((manifest_id, Default::default(), path, true));
-                                }
-                            }
-                        }
-                    } else {
-                        if select.is_selected() {
+                        if recursive || select.is_recursive() {
                             output.push((path.clone(), Entry::Tree(manifest_id)));
-                        }
-                        for (name, selector) in subentries {
-                            if let Some(entry) = manifest.lookup(&name) {
+                            for (name, entry) in manifest.list() {
                                 let path = Some(MPath::join_opt_element(path.as_ref(), &name));
                                 match entry {
                                     Entry::Leaf(_) => {
-                                        if selector.value.is_selected() {
-                                            output.push((path.clone(), entry));
-                                        }
+                                        output.push((path.clone(), entry));
                                     }
                                     Entry::Tree(manifest_id) => {
-                                        recurse.push((manifest_id, selector, path, false));
+                                        recurse.push((manifest_id, Default::default(), path, true));
+                                    }
+                                }
+                            }
+                        } else {
+                            if select.is_selected() {
+                                output.push((path.clone(), Entry::Tree(manifest_id)));
+                            }
+                            for (name, selector) in subentries {
+                                if let Some(entry) = manifest.lookup(&name) {
+                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    match entry {
+                                        Entry::Leaf(_) => {
+                                            if selector.value.is_selected() {
+                                                output.push((path.clone(), entry));
+                                            }
+                                        }
+                                        Entry::Tree(manifest_id) => {
+                                            recurse.push((manifest_id, selector, path, false));
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    (output, recurse)
-                })
+                        (output, recurse)
+                    })
             },
         )
         .map(|entries| stream::iter_ok(entries))
@@ -294,7 +298,8 @@ where
                 match input {
                     Diff::Changed(path, left, right) => left
                         .load(ctx.clone(), &store)
-                        .join(right.load(ctx.clone(), &store))
+                        .compat()
+                        .join(right.load(ctx.clone(), &store).compat())
                         .map(move |(left_mf, right_mf)| {
                             for (name, left) in left_mf.list() {
                                 let path = Some(MPath::join_opt_element(path.as_ref(), &name));
@@ -341,32 +346,38 @@ where
                         })
                         .left_future(),
                     Diff::Added(path, tree) => {
-                        tree.load(ctx.clone(), &store).map(move |manifest| {
-                            for (name, entry) in manifest.list() {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                                match entry {
-                                    Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
-                                    _ => output.push(Diff::Added(path, entry)),
+                        tree.load(ctx.clone(), &store)
+                            .compat()
+                            .map(move |manifest| {
+                                for (name, entry) in manifest.list() {
+                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    match entry {
+                                        Entry::Tree(tree) => recurse.push(Diff::Added(path, tree)),
+                                        _ => output.push(Diff::Added(path, entry)),
+                                    }
                                 }
-                            }
-                            output.push(Diff::Added(path, Entry::Tree(tree)));
-                            (output.into_output(), recurse.into_diffs())
-                        })
+                                output.push(Diff::Added(path, Entry::Tree(tree)));
+                                (output.into_output(), recurse.into_diffs())
+                            })
                     }
                     .left_future()
                     .right_future(),
                     Diff::Removed(path, tree) => {
-                        tree.load(ctx.clone(), &store).map(move |manifest| {
-                            for (name, entry) in manifest.list() {
-                                let path = Some(MPath::join_opt_element(path.as_ref(), &name));
-                                match entry {
-                                    Entry::Tree(tree) => recurse.push(Diff::Removed(path, tree)),
-                                    _ => output.push(Diff::Removed(path, entry)),
+                        tree.load(ctx.clone(), &store)
+                            .compat()
+                            .map(move |manifest| {
+                                for (name, entry) in manifest.list() {
+                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    match entry {
+                                        Entry::Tree(tree) => {
+                                            recurse.push(Diff::Removed(path, tree))
+                                        }
+                                        _ => output.push(Diff::Removed(path, entry)),
+                                    }
                                 }
-                            }
-                            output.push(Diff::Removed(path, Entry::Tree(tree)));
-                            (output.into_output(), recurse.into_diffs())
-                        })
+                                output.push(Diff::Removed(path, Entry::Tree(tree)));
+                                (output.into_output(), recurse.into_diffs())
+                            })
                     }
                     .right_future()
                     .right_future(),

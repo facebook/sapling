@@ -14,6 +14,7 @@ use std::convert::TryInto;
 
 use anyhow::Error;
 use cloned::cloned;
+use futures::future::TryFutureExt;
 use futures_ext::FutureExt;
 use futures_old::{stream, Future, IntoFuture, Stream};
 
@@ -156,6 +157,7 @@ pub fn get_metadata<B: Blobstore + Clone>(
     key: &FetchKey,
 ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
     key.load(ctx.clone(), blobstore)
+        .compat()
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
@@ -179,6 +181,7 @@ pub fn get_metadata_readonly<B: Blobstore + Clone>(
     key: &FetchKey,
 ) -> impl Future<Item = Option<Option<ContentMetadata>>, Error = Error> {
     key.load(ctx.clone(), blobstore)
+        .compat()
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
@@ -203,6 +206,7 @@ pub fn exists<B: Blobstore + Clone>(
     key: &FetchKey,
 ) -> impl Future<Item = bool, Error = Error> {
     key.load(ctx.clone(), blobstore)
+        .compat()
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
@@ -226,6 +230,7 @@ pub fn fetch_with_size<B: Blobstore + Clone>(
     key: &FetchKey,
 ) -> impl Future<Item = Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error = Error> {
     key.load(ctx.clone(), blobstore)
+        .compat()
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
@@ -256,6 +261,7 @@ pub fn fetch_range_with_size<B: Blobstore + Clone>(
     size: u64,
 ) -> impl Future<Item = Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error = Error> {
     key.load(ctx.clone(), blobstore)
+        .compat()
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),

@@ -89,7 +89,6 @@ async fn blobstore_and_filenodes_warmup(
     let (cs, ()) = future::try_join(
         hg_cs_id
             .load(ctx.clone(), repo.blobstore())
-            .compat()
             .map_err(Error::from),
         FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), bcs_id)
             .compat()

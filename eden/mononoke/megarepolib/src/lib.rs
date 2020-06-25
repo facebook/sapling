@@ -62,10 +62,7 @@ fn get_all_file_moves<'a>(
         .map_ok({
             move |(old_path, maybe_new_path, file_type, filenode_id)| {
                 async move {
-                    let file_envelope = filenode_id
-                        .load(ctx.clone(), repo.blobstore())
-                        .compat()
-                        .await?;
+                    let file_envelope = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
 
                     // Note: it is always safe to unwrap here, since
                     // `HgFileEnvelope::get_size()` always returns `Some()`
@@ -162,10 +159,7 @@ where
         .compat()
         .await?;
 
-    let parent_hg_cs = parent_hg_cs_id
-        .load(ctx.clone(), repo.blobstore())
-        .compat()
-        .await?;
+    let parent_hg_cs = parent_hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
     let mut file_changes = get_all_file_moves(&ctx, &repo, parent_hg_cs, &path_converter)
         .try_fold(vec![], {
@@ -226,7 +220,7 @@ mod test {
     use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs};
-    use futures::compat::Future01CompatExt;
+    use futures::{compat::Future01CompatExt, future::TryFutureExt};
     use futures_old::{stream::Stream, Future};
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
@@ -311,11 +305,7 @@ mod test {
             .await
             .unwrap()
             .unwrap();
-        bcs_id
-            .load(ctx.clone(), repo.blobstore())
-            .compat()
-            .await
-            .unwrap()
+        bcs_id.load(ctx.clone(), repo.blobstore()).await.unwrap()
     }
 
     #[fbinit::test]
@@ -410,27 +400,21 @@ mod test {
         repo: BlobRepo,
         hg_cs_id: HgChangesetId,
     ) -> BTreeMap<MPath, (FileType, ContentId)> {
-        hg_cs_id
-            .load(ctx.clone(), repo.blobstore())
-            .from_err()
+        let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await.unwrap();
+        hg_cs
+            .manifestid()
+            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
             .and_then({
                 cloned!(ctx, repo);
-                move |hg_cs| {
-                    hg_cs
-                        .manifestid()
-                        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-                        .and_then({
-                            cloned!(ctx, repo);
-                            move |(path, (file_type, filenode_id))| {
-                                filenode_id
-                                    .load(ctx.clone(), repo.blobstore())
-                                    .from_err()
-                                    .map(move |env| (path, (file_type, env.content_id())))
-                            }
-                        })
-                        .collect()
+                move |(path, (file_type, filenode_id))| {
+                    filenode_id
+                        .load(ctx.clone(), repo.blobstore())
+                        .compat()
+                        .from_err()
+                        .map(move |env| (path, (file_type, env.content_id())))
                 }
             })
+            .collect()
             .compat()
             .await
             .unwrap()
@@ -506,10 +490,7 @@ mod test {
         assert_eq!(stack.len(), 6);
 
         let last_hg_cs_id = stack.last().unwrap();
-        let last_hg_cs = last_hg_cs_id
-            .load(ctx.clone(), repo.blobstore())
-            .compat()
-            .await?;
+        let last_hg_cs = last_hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
         let leaf_entries = last_hg_cs
             .manifestid()

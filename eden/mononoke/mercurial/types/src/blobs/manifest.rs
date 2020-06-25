@@ -18,8 +18,12 @@ use anyhow::{bail, ensure, Context, Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
-use futures::future::{self, Future};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt},
+};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
+use futures_old::future::{self, Future};
 use manifest::{Entry, Manifest};
 use std::{collections::BTreeMap, str, sync::Arc};
 
@@ -40,6 +44,7 @@ impl ManifestContent {
     // <filename>\0<hex file revision id>[<flags>]\n
     //
     // Source: mercurial/parsers.c:parse_manifest()
+
     //
     // NB: filenames are sequences of non-zero bytes, not strings
     fn parse_impl(data: &[u8]) -> Result<BTreeMap<MPathElement, HgEntryId>> {
@@ -82,7 +87,7 @@ pub fn fetch_raw_manifest_bytes<B: Blobstore>(
     ctx: CoreContext,
     blobstore: &B,
     manifest_id: HgManifestId,
-) -> BoxFuture<HgBlob, Error> {
+) -> BoxFuture01<HgBlob, Error> {
     fetch_manifest_envelope(ctx, blobstore, manifest_id)
         .map(move |envelope| {
             let envelope = envelope.into_mut();
@@ -227,13 +232,17 @@ impl Loadable for HgManifestId {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore.clone());
         let id = *self;
-        BlobManifest::load(ctx, blobstore, id)
-            .from_err()
-            .and_then(move |value| value.ok_or_else(|| LoadableError::Missing(id.blobstore_key())))
-            .boxify()
+        let value = BlobManifest::load(ctx, blobstore, id).compat();
+
+        async move {
+            value
+                .await?
+                .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))
+        }
+        .boxed()
     }
 }
 

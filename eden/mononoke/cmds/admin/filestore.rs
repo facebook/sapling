@@ -210,7 +210,6 @@ pub async fn execute_command<'a>(
                             .content_id
                             .load(ctx, &repo.get_blobstore())
                             .map_err(Error::from)
-                            .compat()
                             .await?;
                         match file_contents {
                             FileContents::Bytes(_) => {

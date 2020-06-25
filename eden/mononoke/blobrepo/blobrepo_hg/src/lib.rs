@@ -33,6 +33,7 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureExt;
 use filenodes::{FilenodeInfo, FilenodeResult, Filenodes};
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::{
     future,
@@ -448,6 +449,7 @@ impl BlobRepoHg for BlobRepo {
         linknode: HgChangesetId,
     ) -> BoxFuture<FilenodeInfo, Error> {
         node.load(ctx, &self.get_blobstore())
+            .compat()
             .with_context({
                 cloned!(path);
                 move || format!("While fetching filenode for {} {}", path, node)

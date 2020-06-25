@@ -49,7 +49,6 @@ where
     let bookmark_name = BookmarkName::new("master").unwrap();
     let source_bcs = source_bcs_id
         .load(ctx.clone(), commit_syncer.get_source_repo().blobstore())
-        .compat()
         .await
         .unwrap();
     if !source_bcs.parents().collect::<Vec<_>>().is_empty() {

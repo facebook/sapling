@@ -12,6 +12,7 @@ use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::{BufferedParams, FutureExt, StreamExt};
 use futures_old::{stream, Future, Stream};
 use itertools::Either;
@@ -126,6 +127,7 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
 
                 let fut = chunk_id
                     .load(ctx.clone(), &blobstore)
+                    .compat()
                     .or_else(move |err| match err {
                         LoadableError::Error(err) => Err(err),
                         LoadableError::Missing(_) => Err(ErrorKind::ChunkNotFound(chunk_id).into()),
@@ -159,6 +161,7 @@ pub fn fetch_with_size<B: Blobstore + Clone>(
 ) -> impl Future<Item = Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error = Error> {
     content_id
         .load(ctx.clone(), &blobstore)
+        .compat()
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),

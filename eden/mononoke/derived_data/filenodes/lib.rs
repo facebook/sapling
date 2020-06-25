@@ -239,6 +239,7 @@ pub async fn generate_all_filenodes(
             .compat(),
         Entry::Leaf((_, hg_filenode_id)) => hg_filenode_id
             .load(ctx.clone(), &blobstore)
+            .compat()
             .from_err()
             .and_then(move |envelope| create_file_filenode(path, envelope, linknode))
             .right_future()
@@ -448,10 +449,7 @@ async fn fetch_root_manifest_id(
         .compat()
         .await?;
 
-    let hg_cs = hg_cs_id
-        .load(ctx.clone(), repo.blobstore())
-        .compat()
-        .await?;
+    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
     Ok(hg_cs.manifestid())
 }

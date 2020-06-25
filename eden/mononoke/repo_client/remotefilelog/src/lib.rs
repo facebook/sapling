@@ -19,6 +19,7 @@ use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
+use futures::future::TryFutureExt;
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use futures_old::{Future, IntoFuture, Stream};
 use getbundle_response::SessionLfsParams;
@@ -214,91 +215,94 @@ fn prepare_blob(
     lfs_params: SessionLfsParams,
     validate_hash: bool,
 ) -> impl Future<Item = RemotefilelogBlob, Error = Error> {
-    node.load(ctx.clone(), repo.blobstore()).from_err().map({
-        cloned!(repo);
-        move |envelope| {
-            let file_size = envelope.content_size();
+    node.load(ctx.clone(), repo.blobstore())
+        .compat()
+        .from_err()
+        .map({
+            cloned!(repo);
+            move |envelope| {
+                let file_size = envelope.content_size();
 
-            let inline_file = match lfs_params.threshold {
-                Some(lfs_threshold) => (file_size <= lfs_threshold),
-                None => true,
-            };
-
-            // NOTE: It'd be nice if we could hoist up redaction checks to this point. Doing so
-            // would let us return a different kind based on whether the content is redacted or
-            // not, and therefore would make it more obvious which methods do redaction or not
-            // (based on their signature).
-
-            if inline_file {
-                let content_fut =
-                    filestore::fetch_concat(repo.blobstore(), ctx, envelope.content_id())
-                        .map(FileBytes);
-
-                let blob_fut = if validate_hash {
-                    content_fut
-                        .and_then(move |file_bytes| {
-                            let HgFileEnvelopeMut {
-                                p1, p2, metadata, ..
-                            } = envelope.into_mut();
-
-                            let mut validation_bytes = BytesMut::with_capacity(
-                                metadata.len() + file_bytes.as_bytes().len(),
-                            );
-                            validation_bytes.extend_from_slice(&metadata);
-                            validation_bytes.extend_from_slice(file_bytes.as_bytes());
-
-                            let p1 = p1.map(|p| p.into_nodehash());
-                            let p2 = p2.map(|p| p.into_nodehash());
-                            let actual = HgFileNodeId::new(calculate_hg_node_id(
-                                &validation_bytes.freeze(),
-                                &HgParents::new(p1, p2),
-                            ));
-
-                            if actual != node {
-                                return Err(ErrorKind::CorruptHgFileNode {
-                                    expected: node,
-                                    actual,
-                                }
-                                .into());
-                            }
-
-                            Ok((metadata, file_bytes))
-                        })
-                        .boxify()
-                } else {
-                    content_fut
-                        .map(move |file_bytes| (envelope.into_mut().metadata, file_bytes))
-                        .boxify()
+                let inline_file = match lfs_params.threshold {
+                    Some(lfs_threshold) => (file_size <= lfs_threshold),
+                    None => true,
                 };
 
-                RemotefilelogBlob {
-                    kind: RemotefilelogBlobKind::Inline(file_size),
-                    data: blob_fut,
-                }
-            } else {
-                // For LFS blobs, we'll create the LFS pointer. Note that there is no hg-style
-                // metadata encoded for LFS blobs (it's in the LFS pointer instead).
-                let key = FetchKey::from(envelope.content_id());
-                let blob_fut = (
-                    filestore::get_metadata(repo.blobstore(), ctx, &key).and_then(move |meta| {
-                        Ok(meta.ok_or(ErrorKind::MissingContent(key))?.sha256)
-                    }),
-                    File::extract_copied_from(envelope.metadata()).into_future(),
-                )
-                    .into_future()
-                    .and_then(move |(oid, copy_from)| {
-                        File::generate_lfs_file(oid, file_size, copy_from)
-                    })
-                    .map(|bytes| (Bytes::new(), FileBytes(bytes)))
-                    .boxify();
+                // NOTE: It'd be nice if we could hoist up redaction checks to this point. Doing so
+                // would let us return a different kind based on whether the content is redacted or
+                // not, and therefore would make it more obvious which methods do redaction or not
+                // (based on their signature).
 
-                RemotefilelogBlob {
-                    kind: RemotefilelogBlobKind::Lfs,
-                    data: blob_fut,
+                if inline_file {
+                    let content_fut =
+                        filestore::fetch_concat(repo.blobstore(), ctx, envelope.content_id())
+                            .map(FileBytes);
+
+                    let blob_fut = if validate_hash {
+                        content_fut
+                            .and_then(move |file_bytes| {
+                                let HgFileEnvelopeMut {
+                                    p1, p2, metadata, ..
+                                } = envelope.into_mut();
+
+                                let mut validation_bytes = BytesMut::with_capacity(
+                                    metadata.len() + file_bytes.as_bytes().len(),
+                                );
+                                validation_bytes.extend_from_slice(&metadata);
+                                validation_bytes.extend_from_slice(file_bytes.as_bytes());
+
+                                let p1 = p1.map(|p| p.into_nodehash());
+                                let p2 = p2.map(|p| p.into_nodehash());
+                                let actual = HgFileNodeId::new(calculate_hg_node_id(
+                                    &validation_bytes.freeze(),
+                                    &HgParents::new(p1, p2),
+                                ));
+
+                                if actual != node {
+                                    return Err(ErrorKind::CorruptHgFileNode {
+                                        expected: node,
+                                        actual,
+                                    }
+                                    .into());
+                                }
+
+                                Ok((metadata, file_bytes))
+                            })
+                            .boxify()
+                    } else {
+                        content_fut
+                            .map(move |file_bytes| (envelope.into_mut().metadata, file_bytes))
+                            .boxify()
+                    };
+
+                    RemotefilelogBlob {
+                        kind: RemotefilelogBlobKind::Inline(file_size),
+                        data: blob_fut,
+                    }
+                } else {
+                    // For LFS blobs, we'll create the LFS pointer. Note that there is no hg-style
+                    // metadata encoded for LFS blobs (it's in the LFS pointer instead).
+                    let key = FetchKey::from(envelope.content_id());
+                    let blob_fut = (
+                        filestore::get_metadata(repo.blobstore(), ctx, &key).and_then(
+                            move |meta| Ok(meta.ok_or(ErrorKind::MissingContent(key))?.sha256),
+                        ),
+                        File::extract_copied_from(envelope.metadata()).into_future(),
+                    )
+                        .into_future()
+                        .and_then(move |(oid, copy_from)| {
+                            File::generate_lfs_file(oid, file_size, copy_from)
+                        })
+                        .map(|bytes| (Bytes::new(), FileBytes(bytes)))
+                        .boxify();
+
+                    RemotefilelogBlob {
+                        kind: RemotefilelogBlobKind::Lfs,
+                        data: blob_fut,
+                    }
                 }
             }
-        }
-    })
+        })
 }
 
 #[cfg(test)]
@@ -333,11 +337,9 @@ mod test {
             .compat()
             .await?
             .load(ctx.clone(), repo.blobstore())
-            .compat()
             .await?
             .manifestid()
             .load(ctx.clone(), repo.blobstore())
-            .compat()
             .await?;
 
         let entry = hg_manifest

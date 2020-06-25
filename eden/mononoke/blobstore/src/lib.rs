@@ -331,7 +331,7 @@ pub trait Loadable: Sized + 'static {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture01<Self::Value, LoadableError>;
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>>;
 }
 
 pub trait Storable: Sized + 'static {
@@ -341,7 +341,7 @@ pub trait Storable: Sized + 'static {
         self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture01<Self::Key, Error>;
+    ) -> BoxFuture<'static, Result<Self::Key, Error>>;
 }
 
 /// StoreLoadable represents an object that be loaded asynchronously through a given store of type
@@ -351,14 +351,22 @@ pub trait Storable: Sized + 'static {
 pub trait StoreLoadable<S> {
     type Value;
 
-    fn load(&self, ctx: CoreContext, store: &S) -> BoxFuture01<Self::Value, LoadableError>;
+    fn load(
+        &self,
+        ctx: CoreContext,
+        store: &S,
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>>;
 }
 
 /// For convenience, all Blobstore Loadables are StoreLoadable through any Blobstore.
 impl<L: Loadable, S: Blobstore + Clone> StoreLoadable<S> for L {
     type Value = <L as Loadable>::Value;
 
-    fn load(&self, ctx: CoreContext, store: &S) -> BoxFuture01<Self::Value, LoadableError> {
-        self.load(ctx, store).boxify()
+    fn load(
+        &self,
+        ctx: CoreContext,
+        store: &S,
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        self.load(ctx, store)
     }
 }

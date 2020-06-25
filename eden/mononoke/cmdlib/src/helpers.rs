@@ -130,7 +130,7 @@ pub fn get_root_manifest_id(
         repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
             .and_then({
                 cloned!(ctx, repo);
-                move |cs_id| cs_id.load(ctx, repo.blobstore()).from_err()
+                move |cs_id| cs_id.load(ctx, repo.blobstore()).compat().from_err()
             })
             .map(|cs| cs.manifestid())
     })

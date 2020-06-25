@@ -15,7 +15,7 @@ use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::future;
 use futures_old::prelude::*;
@@ -131,7 +131,7 @@ fn fetch_content(
     let mf = resolved_hg_cs_id
         .and_then({
             cloned!(ctx, repo);
-            move |cs_id| cs_id.load(ctx, repo.blobstore()).from_err()
+            move |cs_id| cs_id.load(ctx, repo.blobstore()).compat().from_err()
         })
         .map(|cs| cs.manifestid().clone())
         .and_then({
@@ -139,6 +139,7 @@ fn fetch_content(
             move |root_mf_id| {
                 root_mf_id
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|mf| Box::new(mf) as Box<dyn HgManifest + Sync>)
             }

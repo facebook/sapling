@@ -25,7 +25,7 @@ use futures::{
     future::{FutureExt, TryFutureExt},
 };
 use futures_ext::spawn_future;
-use futures_old::{future, stream::Stream as OldStream, Future as OldFuture};
+use futures_old::{future, stream::Stream as OldStream};
 use manifest::{Entry, ManifestOps};
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
@@ -551,7 +551,6 @@ async fn verify_mapping_and_all_wc(
         // Empty commits should always be synced, except for merges
         let bcs = source_cs_id
             .load(ctx.clone(), csc.get_source_repo().blobstore())
-            .compat()
             .await?;
         if bcs.file_changes().collect::<Vec<_>>().is_empty() && !bcs.is_merge() {
             match outcome {
@@ -694,10 +693,7 @@ async fn list_content(
     hg_cs_id: HgChangesetId,
     repo: &BlobRepo,
 ) -> Result<HashMap<String, String>, Error> {
-    let cs = hg_cs_id
-        .load(ctx.clone(), repo.blobstore())
-        .compat()
-        .await?;
+    let cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
     let entries = cs
         .manifestid()
@@ -712,12 +708,8 @@ async fn list_content(
             Entry::Leaf((_, filenode_id)) => {
                 let blobstore = repo.get_blobstore();
                 let ctx = ctx.clone();
-                let content = filenode_id
-                    .load(ctx.clone(), &blobstore)
-                    .from_err()
-                    .and_then(move |envelope| {
-                        filestore::fetch_concat(&blobstore, ctx, envelope.content_id())
-                    })
+                let envelope = filenode_id.load(ctx.clone(), &blobstore).await?;
+                let content = filestore::fetch_concat(&blobstore, ctx, envelope.content_id())
                     .compat()
                     .await?;
                 let s = String::from_utf8_lossy(content.as_ref()).into_owned();
@@ -916,7 +908,6 @@ async fn init_repos(
         .unwrap();
     let first_bcs = initial_bcs_id
         .load(ctx.clone(), source_repo.blobstore())
-        .compat()
         .await?;
     upload_commits(
         ctx.clone(),

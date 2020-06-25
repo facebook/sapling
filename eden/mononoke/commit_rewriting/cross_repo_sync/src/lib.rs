@@ -87,14 +87,12 @@ async fn get_manifest_ids<I: IntoIterator<Item = ChangesetId>>(
         |bcs_id| {
             cloned!(ctx, repo);
             async move {
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                    .and_then({
-                        cloned!(ctx, repo);
-                        move |cs_id| cs_id.load(ctx, repo.blobstore()).from_err()
-                    })
-                    .map(|hg_blob_changeset| hg_blob_changeset.manifestid())
+                let cs_id = repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                     .compat()
-                    .await
+                    .await?;
+                let hg_blob_changeset = cs_id.load(ctx, repo.blobstore()).await?;
+                Ok(hg_blob_changeset.manifestid())
             }
         }
     }))
@@ -712,7 +710,6 @@ where
 
         let cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
-            .compat()
             .await?;
         let parents: Vec<_> = cs.parents().collect();
 
@@ -745,7 +742,6 @@ where
         let (source_repo, target_repo, _) = self.get_source_target_mover();
         let source_cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
-            .compat()
             .await?;
 
         match remap_parents_and_rewrite_commit(
@@ -886,7 +882,6 @@ where
         let (source_repo, target_repo, _) = self.get_source_target_mover();
         let cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
-            .compat()
             .await?;
 
         for p in cs.parents() {

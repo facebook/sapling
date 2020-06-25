@@ -49,7 +49,7 @@ impl HgFileContext {
         // file. The actual file contents are not fetched here.
         let ctx = repo.ctx().clone();
         let blobstore = repo.blob_repo().blobstore();
-        let envelope = filenode_id.load(ctx, blobstore).compat().await?;
+        let envelope = filenode_id.load(ctx, blobstore).await?;
         Ok(Self { repo, envelope })
     }
 
@@ -59,7 +59,7 @@ impl HgFileContext {
     ) -> Result<Option<Self>, MononokeError> {
         let ctx = repo.ctx().clone();
         let blobstore = repo.blob_repo().blobstore();
-        match filenode_id.load(ctx, blobstore).compat().await {
+        match filenode_id.load(ctx, blobstore).await {
             Ok(envelope) => Ok(Some(Self { repo, envelope })),
             Err(LoadableError::Missing(_)) => Ok(None),
             Err(e) => Err(e)?,

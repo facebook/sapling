@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 use anyhow::{Context, Error, Result};
 use cloned::cloned;
 use failure_ext::FutureFailureErrorExt;
+use futures::future::TryFutureExt;
 use futures_ext::{try_boxfuture, FutureExt};
 use futures_old::future::{join_all, Future};
 use futures_old::{IntoFuture, Stream};
@@ -110,6 +111,7 @@ fn find_file_changes(
             cloned!(ctx, bonsai_parents, repo, parent_manifests);
             file_node_id
                 .load(ctx.clone(), repo.blobstore())
+                .compat()
                 .from_err()
                 .and_then(move |envelope| {
                     let size = envelope.content_size();
@@ -139,6 +141,7 @@ fn find_file_changes(
             cloned!(ctx, repo);
             file_node_id
                 .load(ctx, repo.blobstore())
+                .compat()
                 .from_err()
                 .and_then(move |envelope| {
                     let size = envelope.content_size();

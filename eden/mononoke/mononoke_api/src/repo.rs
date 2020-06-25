@@ -406,7 +406,6 @@ impl Repo {
 
                 let compare_timestamp = compare_bcs_id
                     .load(ctx.clone(), repo.blobstore())
-                    .compat()
                     .await?
                     .author_date()
                     .timestamp_secs();

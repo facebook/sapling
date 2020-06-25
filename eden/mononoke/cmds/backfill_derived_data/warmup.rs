@@ -45,7 +45,7 @@ pub(crate) async fn warmup(
         cloned!(ctx, chunk, repo);
         async move {
             stream::iter(chunk)
-                .map(move |cs_id| Ok(cs_id.load(ctx.clone(), repo.blobstore()).compat()))
+                .map(move |cs_id| Ok(cs_id.load(ctx.clone(), repo.blobstore())))
                 .try_for_each_concurrent(100, |x| async {
                     x.await?;
                     Result::<_, Error>::Ok(())
@@ -100,7 +100,7 @@ async fn content_metadata_warmup(
     stream::iter(chunk)
         .map({
             |cs_id| async move {
-                let bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+                let bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
                 let mut content_ids = HashSet::new();
                 for (_, maybe_file_change) in bcs.file_changes() {
@@ -130,7 +130,7 @@ async fn unode_warmup(
     for cs_id in chunk {
         cloned!(ctx, repo);
         let f = async move {
-            let bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+            let bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
             let root_mf_id =
                 RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs.get_changeset_id())
@@ -169,7 +169,7 @@ async fn prefetch_content(
         file_unode_id: FileUnodeId,
     ) -> Result<(), Error> {
         let ctx = &ctx;
-        let file_unode = file_unode_id.load(ctx.clone(), &blobstore).compat().await?;
+        let file_unode = file_unode_id.load(ctx.clone(), &blobstore).await?;
         let parents_content: Vec<_> = file_unode
             .parents()
             .iter()
@@ -192,7 +192,7 @@ async fn prefetch_content(
         Ok(())
     }
 
-    let bonsai = csid.load(ctx.clone(), repo.blobstore()).compat().await?;
+    let bonsai = csid.load(ctx.clone(), repo.blobstore()).await?;
 
     let root_manifest_fut = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid.clone())
         .compat()

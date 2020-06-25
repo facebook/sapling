@@ -8,6 +8,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, Storable};
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::{try_left_future, FutureExt};
 use futures_old::{Future, IntoFuture};
 use mononoke_types::{BlobstoreValue, ContentAlias, ContentMetadata};
@@ -74,16 +75,21 @@ pub fn finalize<B: Blobstore + Clone>(
         }
     }
 
-    let put_contents = blob.store(ctx.clone(), &blobstore);
+    let put_contents = blob.store(ctx.clone(), &blobstore).compat();
 
     let alias = ContentAlias::from_content_id(content_id);
 
-    let put_sha1 = AliasBlob(Alias::Sha1(sha1), alias.clone()).store(ctx.clone(), &blobstore);
+    let put_sha1 = AliasBlob(Alias::Sha1(sha1), alias.clone())
+        .store(ctx.clone(), &blobstore)
+        .compat();
 
-    let put_sha256 = AliasBlob(Alias::Sha256(sha256), alias.clone()).store(ctx.clone(), &blobstore);
+    let put_sha256 = AliasBlob(Alias::Sha256(sha256), alias.clone())
+        .store(ctx.clone(), &blobstore)
+        .compat();
 
-    let put_git_sha1 =
-        AliasBlob(Alias::GitSha1(git_sha1.sha1()), alias.clone()).store(ctx.clone(), &blobstore);
+    let put_git_sha1 = AliasBlob(Alias::GitSha1(git_sha1.sha1()), alias)
+        .store(ctx.clone(), &blobstore)
+        .compat();
 
     let metadata = ContentMetadata {
         total_size,
@@ -93,7 +99,7 @@ pub fn finalize<B: Blobstore + Clone>(
         sha256,
     };
 
-    let put_metadata = metadata.clone().into_blob().store(ctx, &blobstore);
+    let put_metadata = metadata.clone().into_blob().store(ctx, &blobstore).compat();
 
     // Since we don't have atomicity for puts, we need to make sure they're ordered
     // correctly:

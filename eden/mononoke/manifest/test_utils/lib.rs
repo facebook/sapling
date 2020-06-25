@@ -10,8 +10,9 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
-use futures::{future, stream, Future, Stream};
+use futures::future::TryFutureExt;
 use futures_ext::{bounded_traversal::bounded_traversal_stream, FutureExt};
+use futures_old::{future, stream, Future, Stream};
 use manifest::{Entry, Manifest};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
@@ -31,7 +32,7 @@ pub fn get_bonsai_changeset(
         .unwrap()
         .unwrap();
     let bcs = runtime
-        .block_on(bcs_id.load(ctx.clone(), repo.blobstore()))
+        .block_on_std(bcs_id.load(ctx, repo.blobstore()))
         .unwrap();
     (bcs_id, bcs)
 }
@@ -51,6 +52,7 @@ where
         Entry::Leaf(_) => future::ok((vec![(path, entry.clone())], vec![])).left_future(),
         Entry::Tree(tree) => tree
             .load(ctx.clone(), &blobstore)
+            .compat()
             .map(move |mf| {
                 let recurse = mf
                     .list()

@@ -17,8 +17,9 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::{future, Future};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::TryFutureExt;
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
+use futures_old::{future as future01, Future as Future01};
 use itertools::Itertools;
 use std::collections::VecDeque;
 use std::iter::FromIterator;
@@ -55,7 +56,7 @@ impl FastlogBatch {
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
         raw_list: I,
-    ) -> impl Future<Item = FastlogBatch, Error = Error> {
+    ) -> impl Future01<Item = FastlogBatch, Error = Error> {
         let chunks = raw_list
             .into_iter()
             .take(max_entries_in_fastlog_batch())
@@ -64,10 +65,11 @@ impl FastlogBatch {
         let mut chunks = chunks.into_iter();
         let latest = chunks.next().unwrap_or(VecDeque::new());
 
-        let previous_batches = future::join_all(chunks.map(move |chunk| {
+        let previous_batches = future01::join_all(chunks.map(move |chunk| {
             FastlogBatch::new(VecDeque::from_iter(chunk), VecDeque::new())
                 .into_blob()
                 .store(ctx.clone(), &blobstore)
+                .compat()
         }));
 
         previous_batches.map(|previous_batches| FastlogBatch {
@@ -83,7 +85,7 @@ impl FastlogBatch {
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
         cs_id: ChangesetId,
-    ) -> impl Future<Item = FastlogBatch, Error = Error> {
+    ) -> impl Future01<Item = FastlogBatch, Error = Error> {
         let mut new_batch = self.clone();
         if new_batch.latest.len() >= MAX_LATEST_LEN {
             let previous_latest = std::mem::replace(&mut new_batch.latest, VecDeque::new());
@@ -91,6 +93,7 @@ impl FastlogBatch {
             new_previous_batch
                 .into_blob()
                 .store(ctx.clone(), &blobstore)
+                .compat()
                 .map(move |new_batch_id| {
                     if new_batch.previous_batches.len() >= MAX_BATCHES {
                         new_batch.previous_batches.pop_back();
@@ -102,7 +105,7 @@ impl FastlogBatch {
                 .left_future()
         } else {
             new_batch.latest.push_front((cs_id, vec![ParentOffset(1)]));
-            future::ok(new_batch).right_future()
+            future01::ok(new_batch).right_future()
         }
     }
 
@@ -110,18 +113,23 @@ impl FastlogBatch {
         &self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-    ) -> BoxFuture<Vec<(ChangesetId, Vec<ParentOffset>)>, Error> {
+    ) -> BoxFuture01<Vec<(ChangesetId, Vec<ParentOffset>)>, Error> {
         let mut v = vec![];
         for p in self.previous_batches.iter() {
-            v.push(p.load(ctx.clone(), &blobstore).from_err().and_then({
-                cloned!(ctx, blobstore);
-                move |full_batch| full_batch.fetch_raw_list(ctx, blobstore)
-            }));
+            v.push(
+                p.load(ctx.clone(), &blobstore)
+                    .compat()
+                    .from_err()
+                    .and_then({
+                        cloned!(ctx, blobstore);
+                        move |full_batch| full_batch.fetch_raw_list(ctx, blobstore)
+                    }),
+            );
         }
 
         let mut res = vec![];
         res.extend(self.latest.clone());
-        future::join_all(v)
+        future01::join_all(v)
             .map(move |previous_batches| {
                 for p in previous_batches {
                     res.extend(p);

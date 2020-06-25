@@ -19,8 +19,8 @@ use clap::{App, Arg, ArgMatches};
 use fbinit::FacebookInit;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::try_join;
 use futures_old::Future as OldFuture;
-use futures_util::try_join;
 use slog::{debug, info, Logger};
 
 use blobrepo::BlobRepo;
@@ -95,10 +95,7 @@ impl AliasVerification {
             info!(self.logger, "Commit processed {:?}", cs_cnt);
         }
 
-        let bcs = bcs_id
-            .load(ctx.clone(), self.blobrepo.blobstore())
-            .compat()
-            .await?;
+        let bcs = bcs_id.load(ctx.clone(), self.blobrepo.blobstore()).await?;
         let file_changes: Vec<_> = bcs
             .file_changes()
             .map(|(_, file_change)| file_change.cloned())
@@ -158,7 +155,6 @@ impl AliasVerification {
                         ContentAlias::from_content_id(content_id),
                     )
                     .store(ctx.clone(), &blobstore)
-                    .compat()
                     .await
                 } else {
                     Err(format_err!(
@@ -180,7 +176,6 @@ impl AliasVerification {
     ) -> Result<(), Error> {
         let result = FetchKey::from(alias.clone())
             .load(ctx.clone(), self.blobrepo.blobstore())
-            .compat()
             .await;
 
         match result {

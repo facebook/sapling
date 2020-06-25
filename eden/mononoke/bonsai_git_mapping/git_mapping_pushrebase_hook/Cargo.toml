@@ -25,6 +25,5 @@ blobstore = { path = "../../blobstore" }
 mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures = { version = "0.3", features = ["async-await", "compat"] }
 maplit = "1.0"
 tokio-compat = "0.1"

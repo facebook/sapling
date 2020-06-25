@@ -909,7 +909,6 @@ fn test_file_hooks_with_blob_store(fb: FacebookInit) {
 
         let bcs = bcs_id
             .load(ctx.clone(), &repo.get_blobstore())
-            .compat()
             .await
             .expect("Can't load commit");
         run_file_hooks_for_cs(

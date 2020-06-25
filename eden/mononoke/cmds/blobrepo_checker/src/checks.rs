@@ -12,8 +12,9 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, stream, sync::mpsc, Future, Sink, Stream};
+use futures::future::TryFutureExt;
 use futures_ext::{spawn_future, FutureExt};
+use futures_old::{future, stream, sync::mpsc, Future, Sink, Stream};
 use mercurial_types::{FileBytes, HgChangesetId};
 use mononoke_types::{
     blob::BlobstoreValue, ChangesetId, ContentId, FileChange, FileContents, MPath,
@@ -32,7 +33,10 @@ fn check_bonsai_cs(
     hg_cs_queue: mpsc::Sender<HgChangesetId>,
     file_queue: mpsc::Sender<FileInformation>,
 ) -> impl Future<Item = (), Error = Error> {
-    let changeset = cs_id.load(ctx.clone(), repo.blobstore()).from_err();
+    let changeset = cs_id
+        .load(ctx.clone(), repo.blobstore())
+        .compat()
+        .from_err();
     let repo_parents = repo
         .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
         .and_then(move |parents| {
@@ -190,6 +194,7 @@ fn check_one_file(
         .and_then(move |meta| {
             filestore::FetchKey::from(meta.sha256)
                 .load(ctx, repo.blobstore())
+                .compat()
                 .from_err()
                 .map(move |id| (meta.sha256, id))
         })
@@ -213,6 +218,7 @@ fn check_hg_cs(
     // Fetch the changeset and check its hash
     let changeset = cs
         .load(ctx.clone(), repo.blobstore())
+        .compat()
         .from_err()
         .and_then(move |changeset| {
             if changeset.get_changeset_id() == cs {

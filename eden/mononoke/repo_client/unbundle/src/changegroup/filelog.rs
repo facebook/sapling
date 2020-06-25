@@ -13,6 +13,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt};
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::future::Shared;
 use futures_old::{Future, IntoFuture, Stream};
@@ -166,6 +167,7 @@ fn generate_lfs_meta_data(
             (
                 FetchKey::from(lfs_content.oid())
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err(),
                 Ok(lfs_content.copy_from()),
                 Ok(lfs_content.size()),

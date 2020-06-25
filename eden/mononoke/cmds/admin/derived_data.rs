@@ -13,8 +13,11 @@ use cmdlib::{args, helpers::csid_resolve};
 use context::CoreContext;
 use derived_data_utils::{derived_data_utils, POSSIBLE_DERIVED_TYPES};
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::FutureExt as PreviewFutureExt, Future};
-use futures_util::future::try_join_all;
+use futures::{
+    compat::Future01CompatExt,
+    future::{try_join_all, FutureExt as PreviewFutureExt},
+    Future,
+};
 use slog::Logger;
 
 use crate::error::SubcommandError;

@@ -113,7 +113,7 @@ mod test {
             .unwrap()
             .unwrap();
         let bcs = runtime
-            .block_on(bcs_id.load(ctx.clone(), repo.blobstore()))
+            .block_on_std(bcs_id.load(ctx.clone(), repo.blobstore()))
             .unwrap();
 
         // Make sure that the changeset info was saved in the blobstore

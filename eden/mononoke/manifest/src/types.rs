@@ -8,8 +8,9 @@
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::Future;
+use futures::{future::BoxFuture, FutureExt, TryFutureExt};
+use futures_ext::FutureExt as _;
+use futures_old::Future as _;
 use mononoke_types::{
     fsnode::{Fsnode, FsnodeEntry},
     unode::{ManifestUnode, UnodeEntry},
@@ -114,10 +115,10 @@ where
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         match self {
-            Entry::Tree(tree_id) => tree_id.load(ctx, blobstore).map(Entry::Tree).boxify(),
-            Entry::Leaf(leaf_id) => leaf_id.load(ctx, blobstore).map(Entry::Leaf).boxify(),
+            Entry::Tree(tree_id) => tree_id.load(ctx, blobstore).map_ok(Entry::Tree).boxed(),
+            Entry::Leaf(leaf_id) => leaf_id.load(ctx, blobstore).map_ok(Entry::Leaf).boxed(),
         }
     }
 }
@@ -133,10 +134,10 @@ where
         self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Key, Error> {
+    ) -> BoxFuture<'static, Result<Self::Key, Error>> {
         match self {
-            Entry::Tree(tree) => tree.store(ctx, blobstore).map(Entry::Tree).boxify(),
-            Entry::Leaf(leaf) => leaf.store(ctx, blobstore).map(Entry::Leaf).boxify(),
+            Entry::Tree(tree) => tree.store(ctx, blobstore).map_ok(Entry::Tree).boxed(),
+            Entry::Leaf(leaf) => leaf.store(ctx, blobstore).map_ok(Entry::Leaf).boxed(),
         }
     }
 }
@@ -344,11 +345,14 @@ impl<I: Clone + 'static + Send, M: Loadable> Loadable for Traced<I, M> {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let id = self.0.clone();
-        self.1
-            .load(ctx, blobstore)
-            .map(move |v| Traced(id, v))
-            .boxify()
+        let load = self.1.load(ctx, blobstore);
+
+        async move {
+            let v = load.await?;
+            Ok(Traced(id, v))
+        }
+        .boxed()
     }
 }

@@ -16,12 +16,12 @@ use blobstore::Blobstore;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_old::{
     future::Future,
     stream::{self, Stream},
 };
-use futures_util::compat::Future01CompatExt;
 use lazy_static::lazy_static;
 use mononoke_types::{hash, typed_hash::MononokeId, ContentId, ContentMetadata, ContentMetadataId};
 use mononoke_types_mocks::contentid::ONES_CTID;

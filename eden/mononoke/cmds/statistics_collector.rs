@@ -19,11 +19,10 @@ use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::future::FutureExt;
 use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::{future::FutureExt, try_join};
 use futures_ext::{BoxStream, StreamExt as OldStreamExt};
 use futures_old::stream::Stream;
-use futures_util::try_join;
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, RepositoryId};
@@ -149,10 +148,7 @@ pub async fn get_manifest_from_changeset(
     repo: &BlobRepo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<HgManifestId, Error> {
-    let changeset = hg_cs_id
-        .load(ctx.clone(), repo.blobstore())
-        .compat()
-        .await?;
+    let changeset = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
     Ok(changeset.manifestid())
 }
 
@@ -161,10 +157,7 @@ pub async fn get_changeset_timestamp_from_changeset(
     repo: &BlobRepo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<i64, Error> {
-    let changeset = hg_cs_id
-        .load(ctx.clone(), repo.blobstore())
-        .compat()
-        .await?;
+    let changeset = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
     Ok(changeset.time().timestamp_secs())
 }
 
@@ -176,10 +169,7 @@ pub async fn get_statistics_from_entry(
 ) -> Result<RepoStatistics, Error> {
     match entry {
         Entry::Leaf((file_type, filenode_id)) => {
-            let envelope = filenode_id
-                .load(ctx.clone(), repo.blobstore())
-                .compat()
-                .await?;
+            let envelope = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
             let size = envelope.content_size();
             let content_id = envelope.content_id();
             let lines = if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {

@@ -24,7 +24,8 @@ blake2 = "0.8"
 bytes = { version = "0.5", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 faster-hex = "0.4"
-futures = "0.1"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
 itertools = "0.8"
 lazy_static = "1.0"
 quickcheck = "0.9"

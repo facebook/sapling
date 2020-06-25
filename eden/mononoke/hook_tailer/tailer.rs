@@ -158,7 +158,7 @@ async fn run_hooks_for_changeset(
     bm: &BookmarkName,
     cs_id: ChangesetId,
 ) -> Result<HookExecutionInstance, Error> {
-    let cs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+    let cs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
     debug!(ctx.logger(), "Running hooks for changeset {:?}", cs);
 

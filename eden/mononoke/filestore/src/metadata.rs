@@ -9,6 +9,7 @@ use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::FutureExt;
 use futures_old::{Future, IntoFuture};
 use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId};
@@ -70,6 +71,7 @@ pub fn get_metadata_readonly<B: Blobstore + Clone>(
 ) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
     ContentMetadataId::from(content_id)
         .load(ctx.clone(), blobstore)
+        .compat()
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
@@ -91,6 +93,7 @@ fn rebuild_metadata<B: Blobstore + Clone>(
 
     content_id
         .load(ctx.clone(), &blobstore)
+        .compat()
         .or_else(move |err| match err {
             LoadableError::Error(err) => Err(InternalError(content_id, err)),
             LoadableError::Missing(_) => Err(NotFound(content_id)),
@@ -126,6 +129,7 @@ fn rebuild_metadata<B: Blobstore + Clone>(
                 let blob = metadata.clone().into_blob();
 
                 blob.store(ctx, &blobstore)
+                    .compat()
                     .map_err(move |e| InternalError(content_id, e))
                     .map(|_| metadata)
             }

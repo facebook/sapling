@@ -24,10 +24,14 @@ use context::CoreContext;
 use failure_ext::{FutureFailureErrorExt, StreamFailureErrorExt};
 use filestore;
 use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt, TryFutureExt},
+};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _, StreamExt as _};
+use futures_old::{
     future::{lazy, Future},
     stream::Stream,
 };
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use itertools::Itertools;
 use mononoke_types::hash::Sha256;
 use std::{
@@ -57,9 +61,10 @@ pub fn fetch_raw_filenode_bytes(
     blobstore: &Arc<dyn Blobstore>,
     node_id: HgFileNodeId,
     validate_hash: bool,
-) -> BoxFuture<HgBlob, Error> {
+) -> BoxFuture01<HgBlob, Error> {
     node_id
         .load(ctx.clone(), blobstore)
+        .compat()
         .from_err()
         .and_then({
             let blobstore = blobstore.clone();
@@ -124,19 +129,18 @@ impl Loadable for HgFileNodeId {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let blobstore_key = self.blobstore_key();
-        blobstore
-            .get(ctx, blobstore_key.clone())
-            .from_err()
-            .and_then(move |bytes| {
-                let blobstore_bytes = match bytes {
-                    Some(bytes) => bytes,
-                    None => return Err(LoadableError::Missing(blobstore_key)),
-                };
-                Ok(HgFileEnvelope::from_blob(blobstore_bytes.into())?)
-            })
-            .boxify()
+        let get = blobstore.get(ctx, blobstore_key.clone()).compat();
+        async move {
+            let bytes = get.await?;
+            let blobstore_bytes = match bytes {
+                Some(bytes) => bytes,
+                None => return Err(LoadableError::Missing(blobstore_key)),
+            };
+            Ok(HgFileEnvelope::from_blob(blobstore_bytes.into())?)
+        }
+        .boxed()
     }
 }
 
@@ -165,7 +169,7 @@ impl HgBlobEntry {
         }
     }
 
-    fn get_raw_content_inner(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
+    fn get_raw_content_inner(&self, ctx: CoreContext) -> BoxFuture01<HgBlob, Error> {
         let validate_hash = false;
         match self.id {
             HgEntryId::Manifest(manifest_id) => {
@@ -180,13 +184,14 @@ impl HgBlobEntry {
         }
     }
 
-    pub fn get_envelope(&self, ctx: CoreContext) -> BoxFuture<Box<dyn HgBlobEnvelope>, Error> {
+    pub fn get_envelope(&self, ctx: CoreContext) -> BoxFuture01<Box<dyn HgBlobEnvelope>, Error> {
         match self.id {
             HgEntryId::Manifest(hash) => fetch_manifest_envelope(ctx, &self.blobstore, hash)
                 .map(|e| Box::new(e) as Box<dyn HgBlobEnvelope>)
                 .left_future(),
             HgEntryId::File(_, hash) => hash
                 .load(ctx, &self.blobstore)
+                .compat()
                 .from_err()
                 .map(|e| Box::new(e) as Box<dyn HgBlobEnvelope>)
                 .right_future(),
@@ -200,15 +205,15 @@ impl HgEntry for HgBlobEntry {
         self.id.get_type()
     }
 
-    fn get_parents(&self, ctx: CoreContext) -> BoxFuture<HgParents, Error> {
+    fn get_parents(&self, ctx: CoreContext) -> BoxFuture01<HgParents, Error> {
         self.get_envelope(ctx).map(|e| e.get_parents()).boxify()
     }
 
-    fn get_raw_content(&self, ctx: CoreContext) -> BoxFuture<HgBlob, Error> {
+    fn get_raw_content(&self, ctx: CoreContext) -> BoxFuture01<HgBlob, Error> {
         self.get_raw_content_inner(ctx)
     }
 
-    fn get_content(&self, ctx: CoreContext) -> BoxFuture<Content, Error> {
+    fn get_content(&self, ctx: CoreContext) -> BoxFuture01<Content, Error> {
         let blobstore = self.blobstore.clone();
 
         let id = self.id.clone();
@@ -237,6 +242,7 @@ impl HgEntry for HgBlobEntry {
             HgEntryId::File(file_type, filenode_id) => lazy(move || {
                 filenode_id
                     .load(ctx.clone(), &blobstore)
+                    .compat()
                     .from_err()
                     .map(move |envelope| {
                         let envelope = envelope.into_mut();
@@ -264,7 +270,7 @@ impl HgEntry for HgBlobEntry {
         }
     }
 
-    fn get_size(&self, ctx: CoreContext) -> BoxFuture<Option<u64>, Error> {
+    fn get_size(&self, ctx: CoreContext) -> BoxFuture01<Option<u64>, Error> {
         self.get_envelope(ctx).map(|e| e.get_size()).boxify()
     }
 

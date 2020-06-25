@@ -304,7 +304,7 @@ async fn do_derive_unfold(
     let parent_manifests = future::try_join_all(
         parents
             .iter()
-            .map(move |mf_id| mf_id.load(ctx.clone(), repo.blobstore()).compat()),
+            .map(move |mf_id| mf_id.load(ctx.clone(), repo.blobstore())),
     )
     .await?;
 
@@ -1027,7 +1027,7 @@ mod tests {
         let dfm_id = runtime.block_on(f).unwrap();
         // Make sure it's saved in the blobstore
         runtime
-            .block_on(dfm_id.load(ctx.clone(), repo.blobstore()))
+            .block_on_std(dfm_id.load(ctx.clone(), repo.blobstore()))
             .unwrap();
 
         let mut deleted_nodes = runtime
@@ -1096,6 +1096,7 @@ mod tests {
             move |(path, manifest_id)| {
                 manifest_id
                     .load(ctx.clone(), &blobstore)
+                    .compat()
                     .map(move |manifest| {
                         let entry = (
                             path.clone(),

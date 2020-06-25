@@ -345,15 +345,10 @@ fn subcommmand_hg_manifest_verify(
 
                         let bonsai_fut = csid
                             .load(ctx.clone(), repo.blobstore())
-                            .from_err::<Error>()
-                            .compat();
+                            .map_err(Error::from);
 
                         let parents_fut = async move {
-                            let blob_cs = cs_id
-                                .load(ctx.clone(), repo.blobstore())
-                                .from_err::<Error>()
-                                .compat()
-                                .await?;
+                            let blob_cs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
                             let expected = blob_cs.manifestid();
 
                             let hg_csid = blob_cs.get_changeset_id();
@@ -369,9 +364,8 @@ fn subcommmand_hg_manifest_verify(
                                     .map(|p| {
                                         HgChangesetId::new(p)
                                             .load(ctx.clone(), repo.blobstore())
-                                            .from_err::<Error>()
-                                            .map(|cs| cs.manifestid())
-                                            .compat()
+                                            .map_ok(|cs| cs.manifestid())
+                                            .map_err(Error::from)
                                     })
                                     .collect::<Vec<_>>(),
                             )

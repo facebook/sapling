@@ -365,10 +365,7 @@ async fn create_hg_changeset_part(
                 async move {
                     match res {
                         Ok((hg_cs_id, _bcs_id)) => {
-                            let cs = hg_cs_id
-                                .load(ctx.clone(), blobrepo.blobstore())
-                                .compat()
-                                .await?;
+                            let cs = hg_cs_id.load(ctx.clone(), blobrepo.blobstore()).await?;
                             Ok((hg_cs_id, cs))
                         }
                         Err(e) => Err(e),
@@ -766,10 +763,7 @@ fn prepare_filenode_entries_stream<'a>(
     stream::iter(filenodes.into_iter())
         .map({
             move |(path, filenode, linknode)| async move {
-                let envelope = filenode
-                    .load(ctx.clone(), repo.blobstore())
-                    .compat()
-                    .await?;
+                let envelope = filenode.load(ctx.clone(), repo.blobstore()).await?;
 
                 let file_size = envelope.content_size();
 
@@ -1036,6 +1030,6 @@ async fn fetch_manifest(
     repo: &BlobRepo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<HgManifestId, Error> {
-    let blob_cs = hg_cs_id.load(ctx, repo.blobstore()).compat().await?;
+    let blob_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(blob_cs.manifestid())
 }

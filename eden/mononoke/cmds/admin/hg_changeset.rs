@@ -14,7 +14,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_ext::FutureExt;
 use futures_old::prelude::*;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
@@ -157,8 +157,8 @@ fn hg_changeset_diff(
     right_id: HgChangesetId,
 ) -> impl Future<Item = ChangesetDiff, Error = Error> {
     (
-        left_id.load(ctx.clone(), repo.blobstore()),
-        right_id.load(ctx.clone(), repo.blobstore()),
+        left_id.load(ctx.clone(), repo.blobstore()).compat(),
+        right_id.load(ctx.clone(), repo.blobstore()).compat(),
     )
         .into_future()
         .from_err()

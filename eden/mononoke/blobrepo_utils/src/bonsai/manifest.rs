@@ -14,11 +14,12 @@ use blobstore::{Blobstore, Loadable};
 use cacheblob::MemWritesBlobstore;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
+use futures::future::TryFutureExt;
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_old::{
     future::{self, Either},
     Future, Stream,
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Diff, Entry, ManifestOps};
 use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset, HgBlobEntry},
@@ -208,6 +209,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
             .map(|p| {
                 HgChangesetId::new(p)
                     .load(ctx.clone(), repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|cs| cs.manifestid())
             })

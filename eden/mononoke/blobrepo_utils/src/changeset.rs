@@ -12,11 +12,12 @@ use blobstore::Loadable;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
+use futures::future::TryFutureExt;
+use futures_ext::{send_discard, BoxFuture};
+use futures_old::{
     sync::mpsc::{self, Sender},
     Future, Stream,
 };
-use futures_ext::{send_discard, BoxFuture};
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId};
 use slog::{o, Logger};
 use std::sync::Arc;
@@ -88,7 +89,7 @@ where
         // Start off with follow_limit + 1 because that's logically the previous follow_remaining.
         let visit_one = VisitOne::new(ctx.clone(), &inner, changeset_id, follow_limit, &mut sender);
         if let Some(visit_one) = visit_one {
-            tokio::spawn(visit_one.visit());
+            tokio_old::spawn(visit_one.visit());
         }
     }
 
@@ -194,7 +195,7 @@ where
                         if let Some(visit_one) = visit_one {
                             // Avoid unbounded recursion by spawning separate futures for each parent
                             // directly on the executor.
-                            tokio::spawn(visit_one.visit());
+                            tokio_old::spawn(visit_one.visit());
                         }
                     }
                 }
@@ -202,6 +203,7 @@ where
 
         let visit_fut = changeset_id
             .load(ctx.clone(), shared.repo.blobstore())
+            .compat()
             .from_err()
             .and_then({
                 cloned!(ctx, shared.visitor, shared.repo);

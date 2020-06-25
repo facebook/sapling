@@ -13,8 +13,10 @@ use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures::Future;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt},
+};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use crate::{
@@ -227,20 +229,18 @@ macro_rules! impl_typed_hash_loadable_storable {
                 &self,
                 ctx: CoreContext,
                 blobstore: &B,
-            ) -> BoxFuture<Self::Value, LoadableError> {
+            ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
                 let id = *self;
                 let blobstore_key = id.blobstore_key();
+                let get = blobstore
+                    .get(ctx, blobstore_key.clone()).compat();
 
-                blobstore
-                    .get(ctx, blobstore_key.clone())
-                    .from_err()
-                    .and_then(move |bytes| {
-                        let bytes = bytes.ok_or(LoadableError::Missing(blobstore_key))?;
-
-                        let blob: Blob<$typed> = Blob::new(id, bytes.into_raw_bytes());
-                        <$typed as MononokeId>::Value::from_blob(blob).map_err(LoadableError::Error)
-                    })
-                    .boxify()
+                async move {
+                    let bytes = get.await?.ok_or(LoadableError::Missing(blobstore_key))?;
+                    let blob: Blob<$typed> = Blob::new(id, bytes.into_raw_bytes());
+                    <$typed as MononokeId>::Value::from_blob(blob).map_err(LoadableError::Error)
+                }
+                .boxed()
             }
         }
 
@@ -252,12 +252,15 @@ macro_rules! impl_typed_hash_loadable_storable {
                 self,
                 ctx: CoreContext,
                 blobstore: &B,
-            ) -> BoxFuture<Self::Key, Error> {
+            ) -> BoxFuture<'static, Result<Self::Key, Error>> {
                 let id = *self.id();
-                blobstore
-                    .put(ctx, id.blobstore_key(), self.into())
-                    .map(move |_| id)
-                    .boxify()
+                let bytes = self.into();
+                let put = blobstore.put(ctx, id.blobstore_key(), bytes).compat();
+
+                async move {
+                    put.await?;
+                    Ok(id)
+                }.boxed()
             }
         }
     }

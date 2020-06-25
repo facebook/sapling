@@ -14,7 +14,7 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
-use futures::future::{Either, Future, IntoFuture};
+use futures_old::future::{Either, Future, IntoFuture};
 use mononoke_types::DateTime;
 use std::{
     collections::BTreeMap,

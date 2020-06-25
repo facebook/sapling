@@ -94,7 +94,7 @@ impl ChangesetHandle {
             })
             .and_then({
                 cloned!(ctx, repo);
-                move |csid| csid.load(ctx, repo.blobstore()).from_err()
+                move |csid| csid.load(ctx, repo.blobstore()).compat().from_err()
             });
 
         let (trigger, can_be_parent) = oneshot::channel();
@@ -107,7 +107,7 @@ impl ChangesetHandle {
             .shared();
 
         let completion_future = bonsai_cs
-            .join(hg_cs.load(ctx, repo.blobstore()).from_err())
+            .join(hg_cs.load(ctx, repo.blobstore()).compat().from_err())
             .map_err(Compat)
             .inspect(move |(bonsai_cs, hg_cs)| {
                 let _ = trigger.send((

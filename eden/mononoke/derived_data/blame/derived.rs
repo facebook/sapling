@@ -13,6 +13,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filestore::{self, FetchKey};
+use futures::future::TryFutureExt;
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use manifest::find_intersection_of_diffs;
@@ -142,6 +143,7 @@ fn create_blame(
 ) -> impl Future<Item = BlameId, Error = Error> {
     file_unode_id
         .load(ctx.clone(), &blobstore)
+        .compat()
         .from_err()
         .and_then(move |file_unode| {
             let parents_content_and_blame: Vec<_> = file_unode
@@ -156,6 +158,7 @@ fn create_blame(
                             fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id),
                             BlameId::from(file_unode_id)
                                 .load(ctx.clone(), &blobstore)
+                                .compat()
                                 .from_err(),
                         )
                             .into_future()
@@ -212,6 +215,7 @@ pub fn fetch_file_full_content(
 
     file_unode_id
         .load(ctx.clone(), &blobstore)
+        .compat()
         .map_err(|error| FetchError::Error(error.into()))
         .and_then(move |file_unode| {
             let content_id = *file_unode.content_id();

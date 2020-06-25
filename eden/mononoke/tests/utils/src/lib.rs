@@ -15,8 +15,8 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;
 use filestore::{self, StoreRequest};
-use futures::stream;
-use futures_util::{compat::Future01CompatExt, future};
+use futures::{compat::Future01CompatExt, future};
+use futures_old::stream;
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{
@@ -408,7 +408,6 @@ pub async fn store_files<T: AsRef<str>>(
                 let content_id = content
                     .into_blob()
                     .store(ctx.clone(), repo.blobstore())
-                    .compat()
                     .await
                     .unwrap();
 
@@ -436,7 +435,6 @@ pub async fn store_rename(
     let content_id = content
         .into_blob()
         .store(ctx, repo.blobstore())
-        .compat()
         .await
         .unwrap();
 

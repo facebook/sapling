@@ -9,7 +9,6 @@ use anyhow::Error;
 use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use maplit::hashset;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::hash::*;
@@ -49,7 +48,6 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .commit()
         .await?
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let book = bookmark(&ctx, &repo, "master").set_to(cs1).await?;
@@ -75,7 +73,6 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .ok_or(Error::msg("missing cs2"))?
         .id_new
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let cs3 = CreateCommitContext::new(&ctx, &repo, vec![root])
@@ -87,7 +84,6 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .commit()
         .await?
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let cs4 = CreateCommitContext::new(&ctx, &repo, vec![cs3.get_changeset_id()])
@@ -99,7 +95,6 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .commit()
         .await?
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let rebased = do_pushrebase_bonsai(
@@ -120,7 +115,6 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .ok_or(Error::msg("missing cs3"))?
         .id_new
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     let cs4_rebased = rebased
@@ -129,7 +123,6 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .ok_or(Error::msg("missing cs4"))?
         .id_new
         .load(ctx.clone(), repo.blobstore())
-        .compat()
         .await?;
 
     assert_eq!(

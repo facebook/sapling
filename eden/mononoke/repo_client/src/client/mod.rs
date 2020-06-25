@@ -21,7 +21,7 @@ use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
 use filenodes::FilenodeResult;
 use futures::{
     channel::oneshot::{self, Sender},
-    future,
+    future::{self, FutureExt, TryFutureExt},
 };
 use futures_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
@@ -32,7 +32,6 @@ use futures_old::{
     future as future_old, stream, try_ready, Async, Future, IntoFuture, Poll, Stream,
 };
 use futures_stats::{Timed, TimedStreamTrait};
-use futures_util::{FutureExt, TryFutureExt};
 use getbundle_response::{
     create_getbundle_response, DraftsInBundlesPolicy, PhasesPart, SessionLfsParams,
 };
@@ -982,6 +981,7 @@ impl HgCommands for RepoClient {
                     Some(
                         self.n
                             .load(self.ctx.clone(), self.repo.blobrepo().blobstore())
+                            .compat()
                             .from_err()
                             .boxify(),
                     )
@@ -1129,6 +1129,7 @@ impl HgCommands for RepoClient {
                 .map(|hg_csid| {
                     hg_csid
                         .load(ctx.clone(), repo.blobstore())
+                        .compat()
                         .from_err()
                         .map(move |cs| (cs.to_string().into_bytes(), cs.time().clone()))
                 })

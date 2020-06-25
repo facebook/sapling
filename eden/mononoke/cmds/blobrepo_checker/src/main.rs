@@ -11,7 +11,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{future, stream::futures_unordered, sync::mpsc, Future, Stream};
+use futures_old::{future, stream::futures_unordered, sync::mpsc, Future, Stream};
 use std::fmt::Debug;
 
 mod errors;

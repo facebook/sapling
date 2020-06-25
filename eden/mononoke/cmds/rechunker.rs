@@ -79,7 +79,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .try_for_each_concurrent(jobs, |fid| {
                 cloned!(blobrepo, ctx);
                 async move {
-                    let env = fid.load(ctx.clone(), blobrepo.blobstore()).compat().await?;
+                    let env = fid.load(ctx.clone(), blobrepo.blobstore()).await?;
                     let content_id = env.content_id();
                     filestore::force_rechunk(
                         blobrepo.get_blobstore(),

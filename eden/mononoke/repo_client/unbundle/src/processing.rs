@@ -280,7 +280,6 @@ async fn find_ancestors_without_git_mapping(
             Some(async move {
                 let bcs_fut = cs_id
                     .load(ctx.clone(), &repo.get_blobstore())
-                    .compat()
                     .map_err(Error::from);
 
                 let mapping_fut = repo.bonsai_git_mapping().get(ctx, cs_id.into());
@@ -1082,7 +1081,7 @@ mod tests {
         assert_eq!(res?, hashset! {});
 
         // Single bookmark to a single new commit - should be allowed
-        let master_bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+        let master_bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
         let res = check_bookmark_pushes_for_git_mirrors(
             &Some(PlainBookmarkPush {
@@ -1101,7 +1100,6 @@ mod tests {
         // Single bookmark with two new commits - should be allowed
         let parent_of_master_bcs = parent_of_master_cs_id
             .load(ctx.clone(), repo.blobstore())
-            .compat()
             .await?;
 
         let parent_of_parent_of_master_cs_id =
@@ -1124,7 +1122,7 @@ mod tests {
         // Single bookmark with one unrelated commit - should be disallowed
         let unrelated_cs_id = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
         let unrelated_cs_id = resolve_cs_id(&ctx, &repo, unrelated_cs_id).await?;
-        let unrelated_bcs = unrelated_cs_id.load(ctx, repo.blobstore()).compat().await?;
+        let unrelated_bcs = unrelated_cs_id.load(ctx, repo.blobstore()).await?;
 
         let res = check_bookmark_pushes_for_git_mirrors(
             &Some(PlainBookmarkPush {

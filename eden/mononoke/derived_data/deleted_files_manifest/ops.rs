@@ -8,6 +8,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::bounded_traversal::bounded_traversal_stream;
 use futures_old::{
     stream::{iter_ok, Stream},
@@ -52,69 +53,73 @@ where
         // starting point
         Some((None, Selector::Selector(path_tree), manifest_id)),
         move |(path, selector, manifest_id)| {
-            manifest_id.load(ctx.clone(), &blobstore).map(move |mf| {
-                let return_entry = if mf.is_deleted() {
-                    vec![(path.clone(), manifest_id)]
-                } else {
-                    vec![]
-                };
+            manifest_id
+                .load(ctx.clone(), &blobstore)
+                .compat()
+                .map(move |mf| {
+                    let return_entry = if mf.is_deleted() {
+                        vec![(path.clone(), manifest_id)]
+                    } else {
+                        vec![]
+                    };
 
-                match selector {
-                    Selector::Recursive => {
-                        // collect subentries to recurse into
-                        let mut recurse = Vec::new();
-                        for (name, mf_id) in mf.list() {
-                            let next_path = MPath::join_opt_element(path.as_ref(), &name);
-                            recurse.push((Some(next_path), Selector::Recursive, mf_id.clone()));
-                        }
-
-                        (return_entry, recurse)
-                    }
-                    Selector::Selector(path_tree) => {
-                        let PathTree { value, subentries } = path_tree;
-
-                        match value {
-                            Some(Pattern::Prefix) => {
-                                // collect subentries to recurse into
-                                let mut recurse = Vec::new();
-                                for (name, mf_id) in mf.list() {
-                                    let next_path = MPath::join_opt_element(path.as_ref(), &name);
-                                    recurse.push((
-                                        Some(next_path),
-                                        Selector::Recursive,
-                                        mf_id.clone(),
-                                    ));
-                                }
-
-                                (return_entry, recurse)
+                    match selector {
+                        Selector::Recursive => {
+                            // collect subentries to recurse into
+                            let mut recurse = Vec::new();
+                            for (name, mf_id) in mf.list() {
+                                let next_path = MPath::join_opt_element(path.as_ref(), &name);
+                                recurse.push((Some(next_path), Selector::Recursive, mf_id.clone()));
                             }
-                            None | Some(Pattern::Path) => {
-                                // need to recurse
-                                let mut recurse = vec![];
-                                // add path tree selectors
-                                for (name, tree) in subentries {
-                                    if let Some(mf_id) = mf.lookup(&name) {
+
+                            (return_entry, recurse)
+                        }
+                        Selector::Selector(path_tree) => {
+                            let PathTree { value, subentries } = path_tree;
+
+                            match value {
+                                Some(Pattern::Prefix) => {
+                                    // collect subentries to recurse into
+                                    let mut recurse = Vec::new();
+                                    for (name, mf_id) in mf.list() {
                                         let next_path =
                                             MPath::join_opt_element(path.as_ref(), &name);
                                         recurse.push((
                                             Some(next_path),
-                                            Selector::Selector(tree),
-                                            *mf_id,
+                                            Selector::Recursive,
+                                            mf_id.clone(),
                                         ));
                                     }
-                                }
 
-                                let return_path = if let Some(Pattern::Path) = value {
-                                    return_entry
-                                } else {
-                                    vec![]
-                                };
-                                (return_path, recurse)
+                                    (return_entry, recurse)
+                                }
+                                None | Some(Pattern::Path) => {
+                                    // need to recurse
+                                    let mut recurse = vec![];
+                                    // add path tree selectors
+                                    for (name, tree) in subentries {
+                                        if let Some(mf_id) = mf.lookup(&name) {
+                                            let next_path =
+                                                MPath::join_opt_element(path.as_ref(), &name);
+                                            recurse.push((
+                                                Some(next_path),
+                                                Selector::Selector(tree),
+                                                *mf_id,
+                                            ));
+                                        }
+                                    }
+
+                                    let return_path = if let Some(Pattern::Path) = value {
+                                        return_entry
+                                    } else {
+                                        vec![]
+                                    };
+                                    (return_path, recurse)
+                                }
                             }
                         }
                     }
-                }
-            })
+                })
         },
     )
     .map(|entries| iter_ok(entries))
@@ -151,6 +156,7 @@ pub fn list_all_entries(
         move |(path, manifest_id)| {
             manifest_id
                 .load(ctx.clone(), &blobstore)
+                .compat()
                 .map(move |manifest| {
                     let entry = if manifest.is_deleted() {
                         vec![(path.clone(), manifest_id)]

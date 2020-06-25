@@ -17,9 +17,7 @@ use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
-use futures::compat::Future01CompatExt;
 use futures::stream::TryStreamExt;
-use futures_old::Future;
 
 use crate::{
     changeset_path_diff::ChangesetPathDiffContext, ChangesetId, ChangesetIdPrefix,
@@ -632,8 +630,6 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
         .unwrap()
         .id()
         .load(ctx.clone(), smallrepo.blob_repo().blobstore())
-        .map_err(Error::from)
-        .compat()
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
     assert_eq!(file_changes, vec![MPath::new("remapped")?]);
@@ -652,8 +648,6 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
         .unwrap()
         .id()
         .load(ctx.clone(), largerepo.blob_repo().blobstore())
-        .map_err(Error::from)
-        .compat()
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
     assert_eq!(file_changes, vec![MPath::new("prefix/remapped2")?]);
@@ -696,8 +690,6 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
         .unwrap()
         .id()
         .load(ctx.clone(), smallrepo.blob_repo().blobstore())
-        .map_err(Error::from)
-        .compat()
         .await?;
     let file_changes: Vec<_> = bcs.file_changes().map(|(path, _)| path).cloned().collect();
     assert_eq!(file_changes, vec![MPath::new("remapped")?]);

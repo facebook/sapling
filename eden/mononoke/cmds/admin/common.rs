@@ -12,10 +12,11 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use cmdlib::helpers;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::{FutureExt, StreamExt};
 use futures_old::{
     future::{self, Future},
-    Stream,
+    stream::Stream,
 };
 use manifest::ManifestOps;
 use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
@@ -33,7 +34,7 @@ pub fn fetch_bonsai_changeset(
 ) -> impl Future<Item = BonsaiChangeset, Error = Error> {
     helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string()).and_then({
         cloned!(ctx, repo);
-        move |csid| csid.load(ctx, repo.blobstore()).from_err()
+        move |csid| csid.load(ctx, repo.blobstore()).compat().from_err()
     })
 }
 
@@ -102,6 +103,7 @@ pub fn get_file_nodes(
 ) -> impl Future<Item = Vec<HgFileNodeId>, Error = Error> {
     cs_id
         .load(ctx.clone(), repo.blobstore())
+        .compat()
         .from_err()
         .map(|cs| cs.manifestid().clone())
         .and_then({

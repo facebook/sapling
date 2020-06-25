@@ -140,17 +140,13 @@ where
 
     let node = async {
         let r = match node {
-            Some(node) => Some(node.load(ctx.clone(), &store).compat().await?),
+            Some(node) => Some(node.load(ctx.clone(), &store).await?),
             None => None,
         };
         Ok(r)
     };
 
-    let parents = try_join_all(
-        parents
-            .into_iter()
-            .map(|id| id.load(ctx.clone(), &store).compat()),
-    );
+    let parents = try_join_all(parents.into_iter().map(|id| id.load(ctx.clone(), &store)));
 
     let (node, parents) = try_join!(node, parents)?;
 

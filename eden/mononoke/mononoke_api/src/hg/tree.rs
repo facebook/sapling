@@ -137,7 +137,6 @@ mod tests {
         let hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let hg_cs = hg_cs_id
             .load(ctx.clone(), rctx.blob_repo().blobstore())
-            .compat()
             .await?;
         let manifest_id = hg_cs.manifestid();
 

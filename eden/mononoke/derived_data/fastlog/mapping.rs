@@ -126,7 +126,7 @@ async fn fetch_unode_parents(
     blobstore: &Arc<dyn Blobstore>,
     unode_entry_id: Entry<ManifestUnodeId, FileUnodeId>,
 ) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
-    let unode_entry = unode_entry_id.load(ctx.clone(), blobstore).compat().await?;
+    let unode_entry = unode_entry_id.load(ctx.clone(), blobstore).await?;
 
     let res = match unode_entry {
         Entry::Tree(tree) => tree
@@ -850,6 +850,7 @@ mod tests {
             match self {
                 Entry::Leaf(file_unode_id) => file_unode_id
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
@@ -862,6 +863,7 @@ mod tests {
                     .boxify(),
                 Entry::Tree(mf_unode_id) => mf_unode_id
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|unode_mf| {
                         unode_mf
@@ -880,11 +882,13 @@ mod tests {
                 Entry::Leaf(file_unode_id) => file_unode_id
                     .clone()
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|unode_file| unode_file.linknode().clone())
                     .boxify(),
                 Entry::Tree(mf_unode_id) => mf_unode_id
                     .load(ctx, repo.blobstore())
+                    .compat()
                     .from_err()
                     .map(|unode_mf| unode_mf.linknode().clone())
                     .boxify(),

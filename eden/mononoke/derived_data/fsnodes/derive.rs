@@ -17,6 +17,7 @@ use context::CoreContext;
 use digest::Digest;
 use failure_ext::FutureFailureExt;
 use filestore::{get_metadata, FetchKey};
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, stream, sync::mpsc, Future, IntoFuture, Stream};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
@@ -130,6 +131,7 @@ fn collect_fsnode_subentries(
         move |fsnode_id| {
             fsnode_id
                 .load(ctx.clone(), &blobstore)
+                .compat()
                 .context(ErrorKind::MissingParent(fsnode_id))
         }
     }))
@@ -178,6 +180,7 @@ fn collect_fsnode_subentries(
                             // summary from the blobstore.
                             fsnode_id
                                 .load(ctx.clone(), &blobstore)
+                                .compat()
                                 .with_context({
                                     cloned!(elem);
                                     move || {
@@ -418,7 +421,7 @@ mod test {
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -475,7 +478,7 @@ mod test {
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -562,7 +565,7 @@ mod test {
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -640,7 +643,7 @@ mod test {
                 _ => panic!("dir1/subdir1 fsnode should be a tree"),
             };
             let deep_fsnode = runtime
-                .block_on(deep_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(deep_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
             let deep_fsnode_entries: Vec<_> = deep_fsnode.list().collect();
             assert_eq!(
@@ -748,7 +751,7 @@ mod test {
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.

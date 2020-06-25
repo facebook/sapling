@@ -31,7 +31,8 @@ ascii = "1.0"
 bitflags = "1.2"
 bytes = { version = "0.5", features = ["serde"] }
 faster-hex = "0.4"
-futures = "0.1"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
 itertools = "0.8"
 percent-encoding = "2.1"
 quickcheck = "0.9"

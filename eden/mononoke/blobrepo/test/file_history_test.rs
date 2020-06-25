@@ -95,7 +95,6 @@ async fn assert_linknodes(
 ) -> Result<(), Error> {
     let root_mf_id = start_from
         .load(ctx.clone(), &repo.get_blobstore())
-        .compat()
         .await?
         .manifestid();
     let (_, files_hg_id) = root_mf_id

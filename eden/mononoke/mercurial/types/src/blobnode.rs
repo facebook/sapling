@@ -6,7 +6,7 @@
  */
 
 use bytes::Bytes;
-use futures::{Future, Stream};
+use futures_old::{Future, Stream};
 use quickcheck::{Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 
@@ -189,7 +189,7 @@ mod test {
     use super::*;
     use crate::blob::HgBlob;
     use bytes::BytesMut;
-    use futures::stream;
+    use futures_old::stream;
     use quickcheck::quickcheck;
     use tokio_compat::runtime::Runtime;
 

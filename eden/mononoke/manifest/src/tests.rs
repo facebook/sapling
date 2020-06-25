@@ -13,7 +13,11 @@ use anyhow::{format_err, Error};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable, StoreLoadable};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt, TryFutureExt},
+};
+use futures_ext::{bounded_traversal::bounded_traversal_stream, FutureExt as _};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use lock_ext::LockExt;
 use maplit::{btreemap, hashset};
@@ -42,18 +46,17 @@ impl Loadable for TestLeafId {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let key = self.0.to_string();
-        blobstore
-            .get(ctx, key.clone())
-            .from_err()
-            .and_then(move |bytes| {
-                let bytes = bytes.ok_or(LoadableError::Missing(key))?;
-                let bytes = std::str::from_utf8(bytes.as_raw_bytes())
-                    .map_err(|err| LoadableError::Error(Error::from(err)))?;
-                Ok(TestLeaf(bytes.to_owned()))
-            })
-            .boxify()
+        let get = blobstore.get(ctx, key.clone()).compat();
+
+        async move {
+            let bytes = get.await?.ok_or(LoadableError::Missing(key))?;
+            let bytes = std::str::from_utf8(bytes.as_raw_bytes())
+                .map_err(|err| LoadableError::Error(Error::from(err)))?;
+            Ok(TestLeaf(bytes.to_owned()))
+        }
+        .boxed()
     }
 }
 
@@ -64,14 +67,19 @@ impl Storable for TestLeaf {
         self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Key, Error> {
+    ) -> BoxFuture<'static, Result<Self::Key, Error>> {
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
         let key = TestLeafId(hasher.finish());
-        blobstore
+        let put = blobstore
             .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(self.0))
-            .map(move |_| key)
-            .boxify()
+            .compat();
+
+        async move {
+            put.await?;
+            Ok(key)
+        }
+        .boxed()
     }
 }
 
@@ -88,18 +96,17 @@ impl Loadable for TestManifestIdU64 {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let key = self.0.to_string();
-        blobstore
-            .get(ctx, key.clone())
-            .from_err()
-            .and_then(move |data| data.ok_or(LoadableError::Missing(key)))
-            .and_then(|bytes| {
-                let mf = serde_cbor::from_slice(bytes.as_raw_bytes().as_ref())
-                    .map_err(|err| LoadableError::Error(Error::from(err)))?;
-                Ok(mf)
-            })
-            .boxify()
+        let get = blobstore.get(ctx, key.clone()).compat();
+        async move {
+            let data = get.await?;
+            let bytes = data.ok_or(LoadableError::Missing(key))?;
+            let mf = serde_cbor::from_slice(bytes.as_raw_bytes().as_ref())
+                .map_err(|err| LoadableError::Error(Error::from(err)))?;
+            Ok(mf)
+        }
+        .boxed()
     }
 }
 
@@ -110,19 +117,21 @@ impl Storable for TestManifestU64 {
         self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Key, Error> {
+    ) -> BoxFuture<'static, Result<Self::Key, Error>> {
         let blobstore = blobstore.clone();
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
         let key = TestManifestIdU64(hasher.finish());
-        serde_cbor::to_vec(&self)
-            .into_future()
-            .from_err()
-            .and_then(move |bytes| {
-                blobstore.put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(bytes))
-            })
-            .map(move |_| key)
-            .boxify()
+
+        async move {
+            let bytes = serde_cbor::to_vec(&self)?;
+            blobstore
+                .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(bytes))
+                .compat()
+                .await?;
+            Ok(key)
+        }
+        .boxed()
     }
 }
 
@@ -167,6 +176,7 @@ fn derive_test_manifest(
                         .collect();
                     TestManifestU64(subentries)
                         .store(ctx.clone(), &blobstore)
+                        .compat()
                         .map(|id| ((), id))
                 }
             },
@@ -174,6 +184,7 @@ fn derive_test_manifest(
                 None => future::err(Error::msg("leaf only conflict")).left_future(),
                 Some(leaf) => leaf
                     .store(ctx.clone(), &blobstore)
+                    .compat()
                     .map(|id| ((), id))
                     .right_future(),
             },
@@ -190,25 +201,27 @@ impl Loadable for Files {
         &self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<Self::Value, LoadableError> {
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let blobstore = blobstore.clone();
 
         bounded_traversal_stream(
             256,
             Some((None, Entry::Tree(self.0))),
             move |(path, entry)| {
-                Loadable::load(&entry, ctx.clone(), &blobstore).map(move |content| match content {
-                    Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
-                    Entry::Tree(tree) => {
-                        let recurse = tree
-                            .list()
-                            .map(|(name, entry)| {
-                                (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
-                            })
-                            .collect();
-                        (None, recurse)
-                    }
-                })
+                Loadable::load(&entry, ctx.clone(), &blobstore)
+                    .compat()
+                    .map(move |content| match content {
+                        Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
+                        Entry::Tree(tree) => {
+                            let recurse = tree
+                                .list()
+                                .map(|(name, entry)| {
+                                    (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
+                                })
+                                .collect();
+                            (None, recurse)
+                        }
+                    })
             },
         )
         .filter_map(|item| {
@@ -219,7 +232,8 @@ impl Loadable for Files {
             acc.insert(path, leaf);
             Ok::<_, LoadableError>(acc)
         })
-        .boxify()
+        .compat()
+        .boxed()
     }
 }
 
@@ -276,7 +290,7 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
     // load all files for specified manifest
     let files = |manifest_id| {
         runtime.with(|runtime| {
-            runtime.block_on(Loadable::load(&Files(manifest_id), ctx.clone(), &blobstore))
+            runtime.block_on_std(Loadable::load(&Files(manifest_id), ctx.clone(), &blobstore))
         })
     };
 
@@ -910,14 +924,13 @@ impl StoreLoadable<ManifestStore> for TestManifestIdStr {
         &self,
         _ctx: CoreContext,
         store: &ManifestStore,
-    ) -> BoxFuture<Self::Value, LoadableError> {
-        store
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        let value = store
             .0
             .get(&self)
             .cloned()
-            .ok_or(LoadableError::Missing(format!("missing {}", self.0)))
-            .into_future()
-            .boxify()
+            .ok_or(LoadableError::Missing(format!("missing {}", self.0)));
+        async move { value }.boxed()
     }
 }
 

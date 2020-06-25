@@ -12,7 +12,6 @@ use std::pin::Pin;
 use anyhow::Error;
 use blobstore::{Loadable, LoadableError};
 use cloned::cloned;
-use futures::compat::Future01CompatExt;
 use futures::future::{FutureExt, Shared};
 use mononoke_types::fsnode::Fsnode;
 
@@ -57,7 +56,6 @@ impl TreeContext {
             cloned!(repo);
             async move {
                 id.load(repo.ctx().clone(), repo.blob_repo().blobstore())
-                    .compat()
                     .await
                     .map_err(Error::from)
                     .map_err(MononokeError::from)
@@ -77,7 +75,6 @@ impl TreeContext {
         // `new`, if the fsnode is missing, we simply return `Ok(None)`.
         match id
             .load(repo.ctx().clone(), repo.blob_repo().blobstore())
-            .compat()
             .await
         {
             Ok(fsnode) => {

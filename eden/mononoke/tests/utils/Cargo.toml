@@ -18,6 +18,6 @@ mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
-futures = "0.1"
-futures-util = "0.3"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
 maplit = "1.0"

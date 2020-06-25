@@ -9,8 +9,10 @@ use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::Future;
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt},
+};
 use std::convert::TryFrom;
 use std::convert::TryInto;
 
@@ -60,13 +62,15 @@ macro_rules! impl_loadable_storable {
                 self,
                 ctx: CoreContext,
                 blobstore: &B,
-            ) -> BoxFuture<Self::Key, Error> {
+            ) -> BoxFuture<'static, Result<Self::Key, Error>> {
                 let handle = *self.handle();
                 let key = handle.blobstore_key();
-                blobstore
-                    .put(ctx, key, self.into())
-                    .map(move |()| handle)
-                    .boxify()
+                let put = blobstore.put(ctx, key, self.into()).compat();
+                async move {
+                    put.await?;
+                    Ok(handle)
+                }
+                .boxed()
             }
         }
 
@@ -77,17 +81,17 @@ macro_rules! impl_loadable_storable {
                 &self,
                 ctx: CoreContext,
                 blobstore: &B,
-            ) -> BoxFuture<Self::Value, LoadableError> {
+            ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
                 let id = *self;
-
-                blobstore
-                    .get(ctx, id.blobstore_key())
-                    .from_err()
-                    .and_then(move |bytes| match bytes {
+                let get = blobstore.get(ctx, id.blobstore_key()).compat();
+                async move {
+                    let bytes = get.await?;
+                    match bytes {
                         Some(bytes) => bytes.try_into().map_err(LoadableError::Error),
                         None => Err(LoadableError::Missing(id.blobstore_key())),
-                    })
-                    .boxify()
+                    }
+                }
+                .boxed()
             }
         }
 

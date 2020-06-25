@@ -17,7 +17,7 @@ use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
-use futures::compat::Future01CompatExt;
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_ext::FutureExt;
 use futures_old::future::{join_all, Future};
 use futures_old::{IntoFuture, Stream};
@@ -168,6 +168,7 @@ fn handle_filenodes_at_revision(
                             let envelope = if log_envelope {
                                 filenode_id
                                     .load(ctx.clone(), blobrepo.blobstore())
+                                    .compat()
                                     .from_err()
                                     .map(Some)
                                     .left_future()
@@ -245,6 +246,7 @@ pub async fn subcommand_filenodes<'a>(
                                     filenode
                                         .filenode
                                         .load(ctx, blobrepo.blobstore())
+                                        .compat()
                                         .from_err()
                                         .map(Some)
                                         .left_future()

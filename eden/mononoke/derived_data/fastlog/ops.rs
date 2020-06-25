@@ -209,10 +209,7 @@ async fn fetch_linknodes_and_update_graph(
         move |entry| {
             cloned!(ctx, repo);
             async move {
-                let unode = entry
-                    .load(ctx.clone(), &repo.get_blobstore())
-                    .compat()
-                    .await?;
+                let unode = entry.load(ctx.clone(), &repo.get_blobstore()).await?;
                 Ok::<_, FastlogError>(match unode {
                     Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
                     Entry::Leaf(file_unode) => file_unode.linknode().clone(),
@@ -346,7 +343,7 @@ async fn resolve_path_state_unfold(
             // we need to get the linknode, so let's load the deleted manifest
             // if the linknodes is None it means that file should exist
             // but it doesn't, let's throw an error
-            let mf = mf_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+            let mf = mf_id.load(ctx.clone(), repo.blobstore()).await?;
             let linknode = mf.linknode().ok_or_else(|| {
                 let message = format!(
                     "there is no unode for the path '{}' and changeset {:?}, but it exists as a live entry in deleted manifest",
@@ -931,7 +928,7 @@ mod test {
 
         // prune right branch on fastlog batch fetching
         let terminator = move |ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| async move {
-            let cs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+            let cs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
             let files = cs.file_changes_map();
             Ok(files.len() > 1)
         };

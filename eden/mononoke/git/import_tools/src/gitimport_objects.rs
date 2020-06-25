@@ -12,9 +12,7 @@ use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::LoadableError;
 use context::CoreContext;
-use futures::future::{FutureExt as _, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::Future;
+use futures::future::{BoxFuture, FutureExt as _};
 use git2::{ObjectType, Oid, Repository, Revwalk};
 use git_types::mode;
 use manifest::{Entry, Manifest, StoreLoadable};
@@ -84,14 +82,14 @@ async fn load_git_tree(oid: Oid, pool: &GitPool) -> Result<GitManifest, Error> {
 impl StoreLoadable<GitPool> for GitTree {
     type Value = GitManifest;
 
-    fn load(&self, _ctx: CoreContext, pool: &GitPool) -> BoxFuture<Self::Value, LoadableError> {
+    fn load(
+        &self,
+        _ctx: CoreContext,
+        pool: &GitPool,
+    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let oid = self.0;
         let pool = pool.clone();
-        async move { load_git_tree(oid, &pool).await }
-            .boxed()
-            .compat()
-            .map_err(LoadableError::Error)
-            .boxify()
+        async move { load_git_tree(oid, &pool).await.map_err(LoadableError::from) }.boxed()
     }
 }
 

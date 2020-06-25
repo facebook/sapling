@@ -16,12 +16,14 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, try_boxfuture, BoxFuture, FutureExt,
 };
-use futures_old::future::{self, join_all, Future};
-use futures_old::stream::Stream;
+use futures_old::{
+    future::{self, join_all, Future},
+    stream::Stream,
+};
 use itertools::{Either, Itertools};
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, HgEntryId, HgManifest, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
@@ -102,6 +104,7 @@ fn find_files_with_given_content_id_blobstore_keys(
         move |(repo, manifest_id, path)| {
             manifest_id
                 .load(ctx.clone(), repo.blobstore())
+                .compat()
                 .from_err()
                 .map({
                     cloned!(repo);
@@ -137,6 +140,7 @@ fn find_files_with_given_content_id_blobstore_keys(
                 move |(full_path, filenode_id)| {
                     filenode_id
                         .load(ctx.clone(), repo.blobstore())
+                        .compat()
                         .from_err()
                         .map(|env| (env.content_id().blobstore_key(), full_path))
                 }
@@ -289,6 +293,7 @@ fn content_ids_for_paths(
                     move |hg_node_id| {
                         hg_node_id
                             .load(ctx.clone(), blobrepo.blobstore())
+                            .compat()
                             .from_err()
                             .map(|env| env.content_id())
                     }
@@ -338,7 +343,12 @@ fn redaction_list(
             info!(logger, "Please be patient.");
             redacted_blobs
                 .get_all_redacted_blobs()
-                .join(cs_id.load(ctx.clone(), blobrepo.blobstore()).from_err())
+                .join(
+                    cs_id
+                        .load(ctx.clone(), blobrepo.blobstore())
+                        .compat()
+                        .from_err(),
+                )
                 .and_then({
                     cloned!(logger);
                     move |(redacted_blobs, hg_cs)| {

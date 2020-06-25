@@ -25,7 +25,7 @@ use ascii::AsciiString;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::Future;
+use futures_old::Future;
 use mononoke_types::{BlobstoreBytes, ContentId, MPath};
 
 #[derive(Debug, Eq, Hash, PartialEq)]

@@ -18,7 +18,7 @@ use context::CoreContext;
 use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifestId};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_ext::FutureExt;
 use futures_old::{future::err, stream::futures_unordered, Future, IntoFuture, Stream};
 use manifest::{get_implicit_deletes, PathOrPrefix};
@@ -177,6 +177,7 @@ fn get_parents(
                 let parents = parent_hg_cs_ids.into_iter().map(|cs_id| {
                     cs_id
                         .load(ctx.clone(), repo.blobstore())
+                        .compat()
                         .from_err()
                         .map(move |blob_changeset| blob_changeset.manifestid().clone())
                 });
@@ -193,6 +194,7 @@ fn get_file_changes(
 ) -> impl Future<Item = (Vec<MPath>, Vec<MPath>), Error = Error> {
     let paths_added_fut = cs_id
         .load(ctx.clone(), &repo.get_blobstore())
+        .compat()
         .from_err()
         .map(move |bonsai| {
             bonsai

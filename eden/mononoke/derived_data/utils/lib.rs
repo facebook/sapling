@@ -23,7 +23,7 @@ use derived_data::{
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
-use futures::{compat::Future01CompatExt, stream, StreamExt, TryStreamExt};
+use futures::{stream, StreamExt, TryStreamExt};
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{future, stream as stream_old, Future, Stream};
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
@@ -225,9 +225,7 @@ where
                 // Let's use it as a proxy for the oldest underived commit
                 .map(|all_underived| all_underived.get(0).cloned())
                 .flatten()
-                .map(
-                    |cs_id| async move { cs_id.load(ctx.clone(), repo.blobstore()).compat().await },
-                ),
+                .map(|cs_id| async move { cs_id.load(ctx.clone(), repo.blobstore()).await }),
         )
         .map(Ok)
         .try_buffer_unordered(100)

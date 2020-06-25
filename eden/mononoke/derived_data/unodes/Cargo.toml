@@ -11,7 +11,6 @@ path = "lib.rs"
 
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
 context = { path = "../../server/context" }
 derived_data = { path = ".." }
@@ -29,6 +28,7 @@ thiserror = "1.0"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobrepo_override = { path = "../../blobrepo/override" }
 bookmarks = { path = "../../bookmarks" }
 derived_data_filenodes = { path = "../filenodes" }

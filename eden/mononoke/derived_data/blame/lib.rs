@@ -21,6 +21,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, DeriveError};
+use futures::future::TryFutureExt;
 use futures_ext::FutureExt;
 use futures_old::{future, Future};
 use manifest::ManifestOps;
@@ -64,6 +65,7 @@ pub fn fetch_blame(
                     .and_then(move |_| {
                         blame_id
                             .load(ctx.clone(), repo.blobstore())
+                            .compat()
                             .from_err()
                             .and_then(|blame_maybe_rejected| blame_maybe_rejected.into_blame())
                             .map(move |blame| (blame_id, blame))
@@ -114,6 +116,7 @@ fn fetch_blame_if_derived(
             move |blame_id| {
                 blame_id
                     .load(ctx.clone(), &blobstore)
+                    .compat()
                     .then(move |result| match result {
                         Ok(BlameMaybeRejected::Blame(blame)) => Ok(Ok((blame_id, blame))),
                         Ok(BlameMaybeRejected::Rejected(reason)) => Err(reason.into()),
