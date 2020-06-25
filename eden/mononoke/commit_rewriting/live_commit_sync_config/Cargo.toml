@@ -1,0 +1,30 @@
+[package]
+name = "live_commit_sync_config"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs", "test/**/*.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "live_commit_sync_config_test"
+path = "test/main.rs"
+
+[dependencies]
+commitsync = { path = "../../../../configerator/structs/scm/mononoke/repos/commitsync" }
+context = { path = "../../server/context" }
+metaconfig_parser = { path = "../../metaconfig/parser" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_types = { path = "../../mononoke_types" }
+pushredirect_enable = { path = "../../../../configerator/structs/scm/mononoke/pushredirect" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+slog = { version = "2.5", features = ["max_level_debug"] }
+thiserror = "1.0"
+
+[dev-dependencies]
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+ascii = "1.0"

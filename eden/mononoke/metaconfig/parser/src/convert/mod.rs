@@ -12,9 +12,11 @@ pub(crate) mod repo;
 mod storage;
 
 /// Trait for converting raw config into parsed config.
-pub(crate) trait Convert {
+pub trait Convert {
+    /// Conversion target
     type Output;
 
+    /// Try to convert `self` into `Self::Outpuf`
     fn convert(self) -> Result<Self::Output>;
 }
 

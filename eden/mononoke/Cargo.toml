@@ -180,6 +180,7 @@ members = [
     "commit_rewriting/bookmark_renaming",
     "commit_rewriting/cross_repo_sync",
     "commit_rewriting/cross_repo_sync/test_utils",
+    "commit_rewriting/live_commit_sync_config",
     "commit_rewriting/movers",
     "commit_rewriting/synced_commit_mapping",
     "common/allocation_tracing",
