@@ -21,8 +21,7 @@ use crate::{
     PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, UploadedBonsais,
 };
 use anyhow::{format_err, Error};
-use backsyncer::backsync_all_latest;
-use backsyncer::TargetRepoDbs;
+use backsyncer::{backsync_latest, BacksyncLimit, TargetRepoDbs};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -464,10 +463,11 @@ impl PushRedirector {
         // Let's make sure all the public pushes to the large repo
         // are backsynced to the small repo, by tailing the `bookmarks_update_log`
         // of the large repo
-        backsync_all_latest(
+        backsync_latest(
             ctx.clone(),
             self.large_to_small_commit_syncer.clone(),
             self.target_repo_dbs.clone(),
+            BacksyncLimit::NoLimit,
         )
         .await?;
 
@@ -509,10 +509,11 @@ impl PushRedirector {
         // `bookmark_push_part_id`, which does not need to be converted
         // We do, however, need to wait until the backsyncer catches up with
         // with the `bookmarks_update_log` tailing
-        backsync_all_latest(
+        backsync_latest(
             ctx.clone(),
             self.large_to_small_commit_syncer.clone(),
             self.target_repo_dbs.clone(),
+            BacksyncLimit::NoLimit,
         )
         .await?;
 
@@ -530,10 +531,11 @@ impl PushRedirector {
         // `changegroup_id` and `bookmark_ids`, which do not need to be converted
         // We do, however, need to wait until the backsyncer catches up with
         // with the `bookmarks_update_log` tailing
-        backsync_all_latest(
+        backsync_latest(
             ctx.clone(),
             self.large_to_small_commit_syncer.clone(),
             self.target_repo_dbs.clone(),
+            BacksyncLimit::NoLimit,
         )
         .await?;
 

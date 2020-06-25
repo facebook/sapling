@@ -64,10 +64,17 @@ pub enum BacksyncError {
     Other(#[from] Error),
 }
 
-pub async fn backsync_all_latest<M>(
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BacksyncLimit {
+    NoLimit,
+    Limit(u64),
+}
+
+pub async fn backsync_latest<M>(
     ctx: CoreContext,
     commit_syncer: CommitSyncer<M>,
     target_repo_dbs: TargetRepoDbs,
+    limit: BacksyncLimit,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -84,8 +91,14 @@ where
         .unwrap_or(0);
 
     debug!(ctx.logger(), "fetched counter {}", counter);
-    // Set limit extremely high to read all new values
-    let log_entries_limit = u64::max_value();
+
+    let log_entries_limit = match limit {
+        BacksyncLimit::Limit(limit) => limit,
+        BacksyncLimit::NoLimit => {
+            // Set limit extremely high to read all new values
+            u64::max_value()
+        }
+    };
     let next_entries = commit_syncer
         .get_source_repo()
         .read_next_bookmark_log_entries(
@@ -113,66 +126,7 @@ where
     }
 }
 
-pub async fn backsync_many<M>(
-    ctx: CoreContext,
-    commit_syncer: CommitSyncer<M>,
-    target_repo_dbs: TargetRepoDbs,
-    // TODO(stash): add a type for log_id?
-    while_log_id_less_than: i64,
-) -> Result<(), BacksyncError>
-where
-    M: SyncedCommitMapping + Clone + 'static,
-{
-    let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
-    let target_repo_id = commit_syncer.get_target_repo().get_repoid();
-    let source_repo_id = commit_syncer.get_source_repo().get_repoid();
-    let counter_name = format_counter(&source_repo_id);
-    let mut last_counter = None;
-
-    let log_entries_limit = 20;
-    loop {
-        let counter = counters
-            .get_counter(ctx.clone(), target_repo_id, &counter_name)
-            .compat()
-            .await?
-            .unwrap_or(0);
-        if counter >= while_log_id_less_than {
-            return Ok(());
-        }
-
-        if Some(counter) == last_counter {
-            // Counter hasn't moved after iteration of a loop, there might be a bug
-            // that leads to infinite loop. It's safer to return an error
-            return Err(Error::msg(
-                "backsyncer didn't make any progress in the iteration of the loop",
-            )
-            .into());
-        }
-        last_counter = Some(counter);
-
-        let next_entries = fetch_next_log_entries(
-            ctx.clone(),
-            commit_syncer.get_source_repo().clone(),
-            counter as u64,
-            log_entries_limit,
-        )
-        .await?;
-
-        sync_entries(
-            ctx.clone(),
-            &commit_syncer,
-            target_repo_dbs.clone(),
-            next_entries
-                .into_iter()
-                .filter(|entry| entry.id <= while_log_id_less_than)
-                .collect(),
-            counter as i64,
-        )
-        .await?;
-    }
-}
-
-pub async fn sync_entries<M>(
+async fn sync_entries<M>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
     target_repo_dbs: TargetRepoDbs,
@@ -251,52 +205,7 @@ where
     Ok(())
 }
 
-// If all entries have already been processed (i.e. last_processed_counter == max counter in db)
-// the function returns an error
-async fn fetch_next_log_entries(
-    ctx: CoreContext,
-    source_repo: BlobRepo,
-    last_processed_counter: u64,
-    log_entries_limit: u64,
-) -> Result<Vec<BookmarkUpdateLogEntry>, BacksyncError> {
-    let next_entries = source_repo
-        .read_next_bookmark_log_entries(
-            ctx.clone(),
-            last_processed_counter,
-            log_entries_limit,
-            Freshness::MostRecent,
-        )
-        .collect()
-        .compat()
-        .await?;
-
-    if !next_entries.is_empty() {
-        return Ok(next_entries);
-    }
-
-    // We are reading log entries from replica, so there's might be a delay until new
-    // entries show up in the log. Try to read from master
-    let next_entries = source_repo
-        .read_next_bookmark_log_entries(
-            ctx.clone(),
-            last_processed_counter,
-            log_entries_limit,
-            Freshness::MostRecent,
-        )
-        .collect()
-        .compat()
-        .await?;
-
-    // If we still found no entries - just fail
-    if next_entries.is_empty() {
-        return Err(BacksyncError::LogEntryNotFound {
-            latest_log_id: last_processed_counter,
-        });
-    }
-    Ok(next_entries)
-}
-
-pub async fn backsync_bookmark<M>(
+async fn backsync_bookmark<M>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
     target_repo_dbs: TargetRepoDbs,

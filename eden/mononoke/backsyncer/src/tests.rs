@@ -50,7 +50,7 @@ use tokio_compat::runtime::Runtime;
 
 use pretty_assertions::assert_eq;
 
-use crate::{backsync_all_latest, backsync_many, format_counter, sync_entries, TargetRepoDbs};
+use crate::{backsync_latest, format_counter, sync_entries, BacksyncLimit, TargetRepoDbs};
 
 const REPOMERGE_FOLDER: &str = "repomerge";
 const REPOMERGE_FILE: &str = "repomergefile";
@@ -79,11 +79,11 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
 
         // Backsync a few entries
         let ctx = CoreContext::test_mock(fb);
-        backsync_many(
+        backsync_latest(
             ctx.clone(),
             commit_syncer.clone(),
             target_repo_dbs.clone(),
-            2,
+            BacksyncLimit::Limit(2),
         )
         .map_err(Error::from)
         .await?;
@@ -236,7 +236,7 @@ fn backsync_linear_bookmark_renamer_and_mover(fb: FacebookInit) -> Result<(), Er
 fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
     runtime.block_on_std(async move {
-        let (small_repos, _large_repo, latest_log_id, dont_verify_commits) =
+        let (small_repos, _large_repo, _latest_log_id, dont_verify_commits) =
             init_merged_repos(fb, 2).await?;
 
         let ctx = CoreContext::test_mock(fb);
@@ -246,11 +246,11 @@ fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
             println!("backsyncing small repo#{}", small_repo_id.id());
 
             let small_repo_id = commit_syncer.get_target_repo().get_repoid();
-            backsync_many(
+            backsync_latest(
                 ctx.clone(),
                 commit_syncer.clone(),
                 target_repo_dbs.clone(),
-                latest_log_id,
+                BacksyncLimit::NoLimit,
             )
             .map_err(Error::from)
             .await?;
@@ -469,10 +469,11 @@ async fn backsync_and_verify_master_wc(
             cloned!(commit_syncer, ctx, target_repo_dbs);
             move || {
                 spawn_future(
-                    backsync_all_latest(
+                    backsync_latest(
                         ctx.clone(),
                         commit_syncer.clone(),
                         target_repo_dbs.clone(),
+                        BacksyncLimit::NoLimit,
                     )
                     .map_err(Error::from)
                     .boxed()
