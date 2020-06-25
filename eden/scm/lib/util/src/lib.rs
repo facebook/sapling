@@ -14,4 +14,5 @@
 //
 // Prefer using the Rust stdlib directly if possible.
 
+pub mod lock;
 pub mod path;
