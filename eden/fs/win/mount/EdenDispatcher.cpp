@@ -175,15 +175,9 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
     placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDirectory;
     placeholderInfo.FileBasicInfo.FileSize = metadata.size;
 
-    //
-    // Don't use "metadata.name.c_str()" for the second argument in
-    // PrjWritePlaceholderInfo. That seems to throw internal error for FS create
-    // operation.
-    //
-
     HRESULT result = PrjWritePlaceholderInfo(
         callbackData.NamespaceVirtualizationContext,
-        callbackData.FilePathName,
+        metadata.name.c_str(),
         &placeholderInfo,
         sizeof(placeholderInfo));
     if (FAILED(result)) {

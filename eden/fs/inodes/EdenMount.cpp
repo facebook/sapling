@@ -1519,6 +1519,14 @@ FOLLY_NODISCARD bool EdenMount::fetchFileInfo(
         metadata.size = 0;
       }
     }
+
+    auto path = child->getPath();
+    if (path.has_value()) {
+      // Ensure that the OS has a record of the canonical file name,
+      // and not just whatever case was used to lookup the file
+      metadata.name = edenToWinPath(path.value().stringPiece());
+    }
+
     return true;
 
   } catch (const std::system_error& ex) {

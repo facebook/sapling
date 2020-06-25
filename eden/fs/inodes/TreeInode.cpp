@@ -72,7 +72,16 @@ namespace eden {
 
 namespace {
 static constexpr PathComponentPiece kIgnoreFilename{".gitignore"};
+
+/**
+ * For case insensitive system, we need to use the casing of the file as
+ * present in the SCM rather than the one used for lookup.
+ */
+static inline PathComponent copyCanonicalInodeName(
+    const DirContents::const_iterator& iter) {
+  return PathComponent(iter->first);
 }
+} // namespace
 
 /**
  * A helper class to track info about inode loads that we started while holding
@@ -258,6 +267,8 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
                // the process of being loaded, or if we need to start loading it
                // now.
                auto iter = contents->entries.find(name);
+               auto inodeName = copyCanonicalInodeName(iter);
+               name = inodeName.piece();
                auto& entry = iter->second;
                folly::Promise<InodePtr> promise;
                returnFuture = promise.getFuture();
@@ -433,6 +444,7 @@ void TreeInode::loadUnlinkedChildInode(
 }
 
 void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
+  std::optional<PathComponent> inodeName;
   auto future = Future<unique_ptr<InodeBase>>::makeEmpty();
   {
     auto contents = contents_.rlock();
@@ -446,6 +458,8 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
       return;
     }
 
+    inodeName = copyCanonicalInodeName(iter);
+    name = inodeName->piece();
     auto& entry = iter->second;
     // InodeMap makes sure to only try loading each inode once, so this entry
     // should not already be loaded.
@@ -1217,6 +1231,7 @@ int TreeInode::tryRemoveChild(
   // Lock our contents in write mode.
   // We will hold it for the duration of the unlink.
   std::unique_ptr<InodeBase> deletedInode;
+  std::optional<PathComponent> inodeName;
   {
     auto contents = contents_.wlock();
 
@@ -1226,6 +1241,8 @@ int TreeInode::tryRemoveChild(
     if (entIter == contents->entries.end()) {
       return ENOENT;
     }
+    inodeName = copyCanonicalInodeName(entIter);
+    name = inodeName->piece();
     auto& ent = entIter->second;
     if (!ent.getInode()) {
       // The inode in question is not loaded.  The caller will need to load it
@@ -2851,6 +2868,7 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       return InvalidationRequired::No;
     }
 
+    std::optional<PathComponent> inodeName;
     {
       std::unique_ptr<InodeBase> deletedInode;
       auto contents = contents_.wlock();
@@ -2863,6 +2881,8 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             << "entry removed while holding rename lock during checkout: "
             << inode->getLogPath();
       }
+      inodeName = copyCanonicalInodeName(it);
+      name = inodeName->piece();
       if (it->second.getInode() != inode.get()) {
         return EDEN_BUG_FUTURE(InvalidationRequired)
             << "entry changed while holding rename lock during checkout: "
