@@ -378,9 +378,13 @@ impl SqlHgMutationStore {
                 break;
             }
             let to_fetch: Vec<_> = to_fetch.into_iter().collect();
-            let rows = SelectByPrimordial::query(connection, &self.repo_id, to_fetch.as_slice())
-                .compat()
-                .await?;
+            let rows = SelectByPrimordialOrSuccessor::query(
+                connection,
+                &self.repo_id,
+                to_fetch.as_slice(),
+            )
+            .compat()
+            .await?;
             self.collect_entries(connection, entry_set, rows).await?;
             fetched_primordials.extend(to_fetch);
         }
@@ -639,7 +643,7 @@ queries! {
         ORDER BY m.successor, p.seq ASC"
     }
 
-    read SelectByPrimordial(repo_id: RepositoryId, >list cs_id: HgChangesetId) -> (
+    read SelectByPrimordialOrSuccessor(repo_id: RepositoryId, >list cs_id: HgChangesetId) -> (
         HgChangesetId,
         HgChangesetId,
         u64,
@@ -661,7 +665,7 @@ queries! {
         FROM
             hg_mutation_info m LEFT JOIN hg_mutation_preds p
             ON m.repo_id = p.repo_id AND m.successor = p.successor
-        WHERE m.repo_id = {repo_id} AND m.primordial IN {cs_id}
+        WHERE m.repo_id = {repo_id} AND (m.primordial IN {cs_id} OR m.successor IN {cs_id})
         ORDER BY m.successor, p.seq ASC"
     }
 

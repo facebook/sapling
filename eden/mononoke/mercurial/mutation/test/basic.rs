@@ -217,5 +217,74 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
+    // Extend history backwards.  The original client was missing some earlier
+    // data.  A new client sends commits with additional history for commit 1.
+    //
+    //   14 --> 15 --> 1 --> 16 --> 17
+    //
+    // Note that the fast-path addition of mutation data won't process this,
+    // but that's a reasonable trade-off.  We add two additional successors to
+    // ensure we use the slow path.
+    let new_entries = vec![
+        HgMutationEntry::new(
+            make_hg_cs_id(15),
+            smallvec![make_hg_cs_id(14)],
+            vec![],
+            String::from("amend"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ),
+        HgMutationEntry::new(
+            make_hg_cs_id(1),
+            smallvec![make_hg_cs_id(15)],
+            vec![],
+            String::from("amend"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ),
+        HgMutationEntry::new(
+            make_hg_cs_id(16),
+            smallvec![make_hg_cs_id(1)],
+            vec![],
+            String::from("amend"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ),
+        HgMutationEntry::new(
+            make_hg_cs_id(17),
+            smallvec![make_hg_cs_id(16)],
+            vec![],
+            String::from("amend"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ),
+    ];
+
+    store
+        .add_entries(&ctx, hashset![make_hg_cs_id(17)], new_entries.clone())
+        .await?;
+    entries.extend(vec![15, 1, 16, 17].into_iter().zip(new_entries));
+
+    check_entries(
+        &store,
+        &ctx,
+        hashset![make_hg_cs_id(17)],
+        &entries,
+        &[1, 15, 16, 17],
+    )
+    .await?;
+    check_entries(
+        &store,
+        &ctx,
+        hashset![make_hg_cs_id(4)],
+        &entries,
+        &[1, 2, 4, 15],
+    )
+    .await?;
+
     Ok(())
 }
