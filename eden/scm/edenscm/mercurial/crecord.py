@@ -20,7 +20,7 @@ import os
 import re
 import signal
 
-from . import blackbox, encoding, error, patch as patchmod, progress, scmutil, util
+from . import encoding, error, patch as patchmod, progress, pycompat, scmutil, util
 from .i18n import _
 
 
@@ -385,11 +385,11 @@ class uihunk(patchnode):
 
     def countchanges(self):
         """changedlines -> (n+,n-)"""
-        add = len(
-            [l for l in self.changedlines if l.applied and l.prettystr()[0] == "+"]
+        add = sum(
+            1 for l in self.changedlines if l.applied and l.prettystr().startswith(b"+")
         )
-        rem = len(
-            [l for l in self.changedlines if l.applied and l.prettystr()[0] == "-"]
+        rem = sum(
+            1 for l in self.changedlines if l.applied and l.prettystr().startswith(b"-")
         )
         return add, rem
 
@@ -398,7 +398,7 @@ class uihunk(patchnode):
         removedconvertedtocontext = self.originalremoved - self.removed
 
         contextlen = len(self.before) + len(self.after) + removedconvertedtocontext
-        if self.after and self.after[-1] == "\\ No newline at end of file\n":
+        if self.after and self.after[-1] == b"\\ No newline at end of file\n":
             contextlen -= 1
         fromlen = contextlen + self.removed
         tolen = contextlen + self.added
@@ -416,12 +416,12 @@ class uihunk(patchnode):
             if tolen == 0 and toline > 0:
                 toline -= 1
 
-        fromtoline = "@@ -%d,%d +%d,%d @@%s\n" % (
+        fromtoline = b"@@ -%d,%d +%d,%d @@%s\n" % (
             fromline,
             fromlen,
             toline,
             tolen,
-            self.proc and (" " + self.proc),
+            self.proc and (b" " + self.proc),
         )
         return fromtoline
 
@@ -437,10 +437,10 @@ class uihunk(patchnode):
             changedlinestr = changedline.prettystr()
             if changedline.applied:
                 hunklinelist.append(changedlinestr)
-            elif changedlinestr[0] == "-":
-                hunklinelist.append(" " + changedlinestr[1:])
+            elif changedlinestr[0] == b"-":
+                hunklinelist.append(b" " + changedlinestr[1:])
 
-        fp.write("".join(self.before + hunklinelist + self.after))
+        fp.write(b"".join(self.before + hunklinelist + self.after))
 
     pretty = write
 
@@ -949,9 +949,9 @@ class curseschunkselector(object):
         width = self.xscreensize
         # turn tabs into spaces
         instr = instr.expandtabs(4)
-        strwidth = encoding.colwidth(instr)
+        strwidth = encoding.colwidth(pycompat.decodeutf8(instr))
         numspaces = width - ((strwidth + xstart) % width) - 1
-        return instr + " " * numspaces + "\n"
+        return instr + b" " * numspaces + b"\n"
 
     def printstring(
         self,
@@ -987,10 +987,9 @@ class curseschunkselector(object):
         # preprocess the text, converting tabs to spaces
         text = text.expandtabs(4)
         # strip \n, and convert control characters to ^[char] representation
+        text = text.strip(b"\n")
         text = re.sub(
-            r"[\x00-\x08\x0a-\x1f]",
-            lambda m: "^" + chr(ord(m.group()) + 64),
-            text.strip("\n"),
+            br"[\x00-\x08\x0a-\x1f]", lambda m: b"^" + chr(ord(m.group()) + 64), text
         )
 
         if pair is not None:
@@ -1020,11 +1019,11 @@ class curseschunkselector(object):
                     colorpair |= textattr
 
         y, xstart = self.chunkpad.getyx()
-        t = ""  # variable for counting lines printed
+        t = b""  # variable for counting lines printed
         # if requested, show trailing whitespace
         if showwhtspc:
             origlen = len(text)
-            text = text.rstrip(" \n")  # tabs have already been expanded
+            text = text.rstrip(b" \n")  # tabs have already been expanded
             strippedlen = len(text)
             numtrailingspaces = origlen - strippedlen
 
@@ -1037,11 +1036,11 @@ class curseschunkselector(object):
             if towin:
                 for i in range(numtrailingspaces):
                     window.addch(curses.ACS_CKBOARD, wscolorpair)
-            t += " " * numtrailingspaces
+            t += b" " * numtrailingspaces
 
         if align:
             if towin:
-                extrawhitespace = self.alignstring("", window)
+                extrawhitespace = self.alignstring(b"", window)
                 window.addstr(extrawhitespace, colorpair)
             else:
                 # need to use t, since the x position hasn't incremented
@@ -1050,7 +1049,7 @@ class curseschunkselector(object):
 
         # is reset to 0 at the beginning of printitem()
 
-        linesprinted = (xstart + len(t)) / self.xscreensize
+        linesprinted = (xstart + len(t)) // self.xscreensize
         self.linesprintedtopadsofar += linesprinted
         return t
 
@@ -1108,7 +1107,9 @@ class curseschunkselector(object):
         # print out the status lines at the top
         try:
             for line in self._getstatuslines():
-                printstring(self.statuswin, line, pairname="legend")
+                printstring(
+                    self.statuswin, pycompat.encodeutf8(line), pairname="legend"
+                )
             self.statuswin.refresh()
         except curses.error:
             pass
@@ -1139,27 +1140,27 @@ class curseschunkselector(object):
         # create checkbox string
         if item.applied:
             if not isinstance(item, uihunkline) and item.partial:
-                checkbox = "[~]"
+                checkbox = b"[~]"
             else:
-                checkbox = "[x]"
+                checkbox = b"[x]"
         else:
-            checkbox = "[ ]"
+            checkbox = b"[ ]"
 
         try:
             if item.folded:
-                checkbox += "**"
+                checkbox += b"**"
                 if isinstance(item, uiheader):
                     # one of "m", "a", or "d" (modified, added, deleted)
                     filestatus = item.changetype
 
-                    checkbox += filestatus + " "
+                    checkbox += filestatus + b" "
             else:
-                checkbox += "  "
+                checkbox += b"  "
                 if isinstance(item, uiheader):
                     # add two more spaces for headers
-                    checkbox += "  "
+                    checkbox += b"  "
         except AttributeError:  # not foldable
-            checkbox += "  "
+            checkbox += b"  "
 
         return checkbox
 
@@ -1169,14 +1170,14 @@ class curseschunkselector(object):
         anything, but just count the number of lines which would be printed.
         """
 
-        outstr = ""
+        outstr = b""
         text = header.prettystr()
         chunkindex = self.chunklist.index(header)
 
         if chunkindex != 0 and not header.folded:
             # add separating line before headers
             outstr += self.printstring(
-                self.chunkpad, "_" * self.xscreensize, towin=towin, align=False
+                self.chunkpad, b"_" * self.xscreensize, towin=towin, align=False
             )
         # select color-pair based on if the header is selected
         colorpair = self.getcolorpair(
@@ -1189,15 +1190,15 @@ class curseschunkselector(object):
         indentnumchars = 0
         checkbox = self.getstatusprefixstring(header)
         if not header.folded or ignorefolding:
-            textlist = text.split("\n")
+            textlist = text.split(b"\n")
             linestr = checkbox + textlist[0]
         else:
-            linestr = checkbox + header.filename()
+            linestr = checkbox + pycompat.encodeutf8(header.filename())
         outstr += self.printstring(self.chunkpad, linestr, pair=colorpair, towin=towin)
         if not header.folded or ignorefolding:
             if len(textlist) > 1:
                 for line in textlist[1:]:
-                    linestr = " " * (indentnumchars + len(checkbox)) + line
+                    linestr = b" " * (indentnumchars + len(checkbox)) + line
                     outstr += self.printstring(
                         self.chunkpad, linestr, pair=colorpair, towin=towin
                     )
@@ -1208,14 +1209,14 @@ class curseschunkselector(object):
         self, hunk, selected=False, towin=True, ignorefolding=False
     ):
         "includes start/end line indicator"
-        outstr = ""
+        outstr = b""
         # where hunk is in list of siblings
         hunkindex = hunk.header.hunks.index(hunk)
 
         if hunkindex != 0:
             # add separating line before headers
             outstr += self.printstring(
-                self.chunkpad, " " * self.xscreensize, towin=towin, align=False
+                self.chunkpad, b" " * self.xscreensize, towin=towin, align=False
             )
 
         colorpair = self.getcolorpair(
@@ -1225,8 +1226,8 @@ class curseschunkselector(object):
         # print out from-to line with checkbox
         checkbox = self.getstatusprefixstring(hunk)
 
-        lineprefix = " " * self.hunkindentnumchars + checkbox
-        frtoline = "   " + hunk.getfromtoline().strip("\n")
+        lineprefix = b" " * self.hunkindentnumchars + checkbox
+        frtoline = b"   " + hunk.getfromtoline().strip(b"\n")
 
         outstr += self.printstring(
             self.chunkpad, lineprefix, towin=towin, align=False
@@ -1239,41 +1240,41 @@ class curseschunkselector(object):
 
         # print out lines of the chunk preceeding changed-lines
         for line in hunk.before:
-            linestr = " " * (self.hunklineindentnumchars + len(checkbox)) + line
+            linestr = b" " * (self.hunklineindentnumchars + len(checkbox)) + line
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)
 
         return outstr
 
     def printhunklinesafter(self, hunk, towin=True, ignorefolding=False):
-        outstr = ""
+        outstr = b""
         if hunk.folded and not ignorefolding:
             return outstr
 
         # a bit superfluous, but to avoid hard-coding indent amount
         checkbox = self.getstatusprefixstring(hunk)
         for line in hunk.after:
-            linestr = " " * (self.hunklineindentnumchars + len(checkbox)) + line
+            linestr = b" " * (self.hunklineindentnumchars + len(checkbox)) + line
             outstr += self.printstring(self.chunkpad, linestr, towin=towin)
 
         return outstr
 
     def printhunkchangedline(self, hunkline, selected=False, towin=True):
-        outstr = ""
+        outstr = b""
         checkbox = self.getstatusprefixstring(hunkline)
 
-        linestr = hunkline.prettystr().strip("\n")
+        linestr = hunkline.prettystr().strip(b"\n")
 
         # select color-pair based on whether line is an addition/removal
         if selected:
             colorpair = self.getcolorpair(name="selected")
-        elif linestr.startswith("+"):
+        elif linestr.startswith(b"+"):
             colorpair = self.getcolorpair(name="addition")
-        elif linestr.startswith("-"):
+        elif linestr.startswith(b"-"):
             colorpair = self.getcolorpair(name="deletion")
-        elif linestr.startswith("\\"):
+        elif linestr.startswith(b"\\"):
             colorpair = self.getcolorpair(name="normal")
 
-        lineprefix = " " * self.hunklineindentnumchars + checkbox
+        lineprefix = b" " * self.hunklineindentnumchars + checkbox
         outstr += self.printstring(
             self.chunkpad, lineprefix, towin=towin, align=False
         )  # add uncolored checkbox/indent
@@ -1298,7 +1299,7 @@ class curseschunkselector(object):
 
         outstr = []
         self.__printitem(item, ignorefolding, recursechildren, outstr, towin=towin)
-        return "".join(outstr)
+        return b"".join(outstr)
 
     def outofdisplayedarea(self):
         y, _ = self.chunkpad.getyx()  # cursor location
@@ -1388,7 +1389,7 @@ class curseschunkselector(object):
         patchdisplaystring = self.printitem(
             item, ignorefolding, recursechildren, towin=False
         )
-        numlines = len(patchdisplaystring) / self.xscreensize
+        numlines = len(patchdisplaystring) // self.xscreensize
         return numlines
 
     def sigwinchhandler(self, n, frame):
@@ -1693,7 +1694,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         """
         if keypressed in ["k", "KEY_UP", "KEY_A2"]:
             self.uparrowevent()
-        if keypressed in ["K", "KEY_PPAGE", "KEY_A3"]:
+        elif keypressed in ["K", "KEY_PPAGE", "KEY_A3"]:
             self.uparrowshiftevent()
         elif keypressed in ["j", "KEY_DOWN", "KEY_C2"]:
             self.downarrowevent()
@@ -1738,7 +1739,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.helpwindow()
             self.stdscr.clear()
             self.stdscr.refresh()
-        elif curses.unctrl(keypressed) in ["^L"]:
+        elif curses.unctrl(keypressed) in [b"^L"]:
             # scroll the current line to the top of the screen
             self.scrolllines(self.selecteditemstartline)
 
