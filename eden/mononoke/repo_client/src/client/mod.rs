@@ -2334,9 +2334,9 @@ fn with_command_monitor<T>(ctx: CoreContext, t: T) -> Monitor<T, Sender<()>> {
                 );
             }
 
-            ctx.scuba()
-                .clone()
-                .log_with_msg("Long running command", None);
+            let mut scuba = ctx.scuba().clone();
+            ctx.perf_counters().insert_perf_counters(&mut scuba);
+            scuba.log_with_msg("Long running command", None);
         }
     };
 
