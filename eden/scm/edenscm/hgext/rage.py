@@ -304,7 +304,6 @@ def _makerage(ui, repo, **opts):
                 "edenscm.mercurial.__version__"
             ).mercurial.__version__.version,
         ),
-        ("obsstore size", lambda: str(repo.svfs.stat("obsstore").st_size)),
     ]
 
     detailed = [
@@ -315,21 +314,15 @@ def _makerage(ui, repo, **opts):
             "hg debugmetalog -t 'since 2d ago'",
             lambda: hgcmd("debugmetalog", time_range=["since 2d ago"]),
         ),
-        # unfiltered smartlog for recent hidden changesets, including full
-        # node identity
-        (
-            "hg sl --master='interestingmaster()' -r 'predecessors(draft())'",
-            lambda: hgcmd(
-                "smartlog",
-                master="interestingmaster()",
-                rev=["predecessors(draft())"],
-                _repo=repo.unfiltered(),
-                template='{sub("\\n", " ", "{node} {sl_debug}")}',
-            ),
-        ),
         (
             'first 20 lines of "hg status"',
             lambda: "\n".join(hgcmd("status").splitlines()[:20]),
+        ),
+        (
+            "hg debugmutation -r 'draft() & date(-4)' -t 'since 4d ago'",
+            lambda: hgcmd(
+                "debugmutation", rev=["draft() & date(-4)"], time_range=["since 4d ago"]
+            ),
         ),
         ("sigtrace", lambda: readsigtraces(repo)),
         (
@@ -367,16 +360,6 @@ def _makerage(ui, repo, **opts):
             ),
         ),
         ("hg debugnetwork", lambda: hgcmd("debugnetwork")),
-        (
-            "hg debugmutation -r 'draft() & date(-4)' -t 'since 4d ago'",
-            lambda: hgcmd(
-                "debugmutation", rev=["draft() & date(-4)"], time_range=["since 4d ago"]
-            ),
-        ),
-        (
-            'last 100 lines of "hg debugobsolete"',
-            lambda: "\n".join(hgcmd("debugobsolete").splitlines()[-100:]),
-        ),
         ("infinitepush backup state", lambda: readinfinitepushbackupstate(repo)),
         ("commit cloud workspace sync state", lambda: readcommitcloudstate(repo)),
         (
