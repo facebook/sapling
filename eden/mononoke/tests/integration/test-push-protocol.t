@@ -23,13 +23,11 @@ setup repo
 setup master bookmarks
 
   $ hg bookmark master_bookmark -r 'tip'
-  $ hg bookmark master_bookmark2 -r 'tip'
 
 verify content
   $ hg log
   changeset:   0:0e7ec5675652
   bookmark:    master_bookmark
-  bookmark:    master_bookmark2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -113,7 +111,6 @@ END Creation of new commits
 move master bookmarks
 
   $ hg bookmark -f master_bookmark -r 'tip'
-  $ hg bookmark -f master_bookmark2 -r 'f40c09205504'
 
   $ hg log -r "reverse(all())" --stat
   changeset:   6:634de738bb0f
@@ -162,7 +159,6 @@ move master bookmarks
    2 files changed, 2 insertions(+), 1 deletions(-)
   
   changeset:   2:f40c09205504
-  bookmark:    master_bookmark2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -198,7 +194,6 @@ move master bookmarks
   summary:     b
    (re)
   changeset:   2:f40c09205504
-  bookmark:    master_bookmark2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -247,7 +242,7 @@ push to Mononoke
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command
-  received listkey for "bookmarks": 115 bytes
+  received listkey for "bookmarks": 57 bytes
   6 changesets found
   list of changesets:
   bb0985934a0f8a493887892173b68940ceb40b4f
@@ -257,19 +252,16 @@ push to Mononoke
   8315ea53ef41d34f56232c88669cc80225b6e66d
   634de738bb0ff135e32d48567718fb9d7dedf575
   sending unbundle command
-  bundle2-output-bundle: "HG20", 5 parts total
+  bundle2-output-bundle: "HG20", 4 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   bundle2-input-bundle: 1 params no-transaction
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
   bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
-  bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
-  bundle2-input-bundle: 2 parts total
+  bundle2-input-bundle: 1 parts total
   updating bookmark master_bookmark
-  updating bookmark master_bookmark2
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 0 bytes
@@ -280,7 +272,6 @@ Now pull what was just pushed
   $ hgmn log -r "reverse(all())" --stat
   changeset:   0:0e7ec5675652
   bookmark:    master_bookmark
-  bookmark:    master_bookmark2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -294,7 +285,8 @@ Because the revision numbers are assigned nondeterministically we cannot
 compare output of the entire tree. Instead we compare only linear histories
 
   $ hgmn log --graph --template '{node} {bookmarks}' -r "::f40c09205504"
-  o  f40c09205504d8410f8c8679bf7a85fef25f9337 master_bookmark2
+  pulling 'f40c09205504' from 'ssh://user@dummy/repo'
+  o  f40c09205504d8410f8c8679bf7a85fef25f9337
   |
   o  bb0985934a0f8a493887892173b68940ceb40b4f
   |

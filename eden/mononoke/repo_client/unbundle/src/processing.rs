@@ -157,7 +157,7 @@ async fn run_push(
     debug!(ctx.logger(), "unbundle processing: running push.");
     let PostResolvePush {
         changegroup_id,
-        bookmark_pushes,
+        mut bookmark_pushes,
         mutations,
         maybe_raw_bundle2_id,
         non_fast_forward_policy,
@@ -172,28 +172,38 @@ async fn run_push(
             .context("Failed to store mutation data")?;
     }
 
-    let bookmark_ids = bookmark_pushes.iter().map(|bp| bp.part_id).collect();
+    if bookmark_pushes.len() > 1 {
+        return Err(anyhow!(
+            "only push to at most one bookmark is allowed, got {:?}",
+            bookmark_pushes
+        ));
+    }
+    let maybe_bookmark_push = bookmark_pushes.pop();
+
+    let maybe_bookmark_id = match &maybe_bookmark_push {
+        Some(bp) => Some(bp.part_id),
+        None => None,
+    };
     let reason = BookmarkUpdateReason::Push {
         bundle_replay_data: maybe_raw_bundle2_id.map(BundleReplayData::new),
     };
 
-    let bookmark_pushes_futures: FuturesUnordered<_> = bookmark_pushes
-        .into_iter()
-        .map({
-            |bookmark_push| async {
-                check_plain_bookmark_push_allowed(
-                    &ctx,
-                    &repo,
-                    &bookmark_attrs,
-                    non_fast_forward_policy,
-                    &infinitepush_params,
-                    bookmark_push,
-                    lca_hint,
-                )
-                .await
-            }
-        })
-        .collect();
+    let maybe_bookmark_push = match maybe_bookmark_push {
+        Some(bookmark_push) => {
+            let bp = check_plain_bookmark_push_allowed(
+                &ctx,
+                &repo,
+                &bookmark_attrs,
+                non_fast_forward_policy,
+                &infinitepush_params,
+                bookmark_push,
+                lca_hint,
+            )
+            .await?;
+            Some(bp)
+        }
+        None => None,
+    };
 
     let uploaded_bonsais: HashMap<_, _> = uploaded_bonsais
         .into_iter()
@@ -201,11 +211,10 @@ async fn run_push(
         .collect();
 
     let repo_id = repo.get_repoid();
-    let bookmark_pushes = bookmark_pushes_futures.try_collect::<Vec<_>>().await?;
     let mut txn_hook = None;
     if populate_git_mapping {
         let parents_of_uploaded =
-            check_bookmark_pushes_for_git_mirrors(&bookmark_pushes, &uploaded_bonsais)?;
+            check_bookmark_pushes_for_git_mirrors(&maybe_bookmark_push, &uploaded_bonsais)?;
         let ancestors_no_git_mapping =
             find_ancestors_without_git_mapping(&ctx, &repo, parents_of_uploaded).await?;
 
@@ -216,12 +225,10 @@ async fn run_push(
         ));
     }
 
-    let bookmark_pushes = bookmark_pushes
-        .into_iter()
-        .map(|bp| Some(BookmarkPush::PlainPush(bp)))
-        .collect::<Vec<_>>();
+    let maybe_bookmark_push = maybe_bookmark_push.map(BookmarkPush::PlainPush);
 
-    save_bookmark_pushes_to_db(ctx, repo, reason, bookmark_pushes, txn_hook).await?;
+    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push], txn_hook).await?;
+    let bookmark_ids = maybe_bookmark_id.into_iter().collect();
     Ok(UnbundlePushResponse {
         changegroup_id,
         bookmark_ids,
@@ -374,21 +381,19 @@ fn upload_git_mapping_bookmark_txn_hook(
 // This function returns parents of `uploaded_bonsais` that are not in
 // uploaded_bonsais
 fn check_bookmark_pushes_for_git_mirrors(
-    bookmark_pushes: &[PlainBookmarkPush<ChangesetId>],
+    bookmark_push: &Option<PlainBookmarkPush<ChangesetId>>,
     uploaded_bonsais: &HashMap<ChangesetId, BonsaiChangeset>,
 ) -> Result<HashSet<ChangesetId>, Error> {
     let only_single_book_err = anyhow!(
         "only pushes of a single bookmark are allowed for repos that are mirrored from git repos"
     );
 
-    if bookmark_pushes.len() != 1 {
-        return Err(only_single_book_err);
-    }
-
-    let bookmark_push = bookmark_pushes
-        .iter()
-        .next()
-        .ok_or_else(|| only_single_book_err)?;
+    let bookmark_push = match bookmark_push {
+        Some(bp) => bp,
+        None => {
+            return Err(only_single_book_err);
+        }
+    };
 
     let new = match bookmark_push.new {
         Some(new) => new,
@@ -1065,47 +1070,27 @@ mod tests {
 
         // Moving a single bookmark to already existing commit - should be allowed
         let res = check_bookmark_pushes_for_git_mirrors(
-            &[PlainBookmarkPush {
+            &Some(PlainBookmarkPush {
                 part_id: 0,
                 name: BookmarkName::new("master")?,
                 old: None,
                 new: Some(cs_id),
-            }],
+            }),
             &HashMap::new(),
         );
         assert!(res.is_ok());
         assert_eq!(res?, hashset! {});
 
-        // Moving two bookmarks should fail
-        let res = check_bookmark_pushes_for_git_mirrors(
-            &[
-                PlainBookmarkPush {
-                    part_id: 0,
-                    name: BookmarkName::new("master")?,
-                    old: None,
-                    new: Some(cs_id),
-                },
-                PlainBookmarkPush {
-                    part_id: 0,
-                    name: BookmarkName::new("master2")?,
-                    old: None,
-                    new: Some(cs_id),
-                },
-            ],
-            &HashMap::new(),
-        );
-        assert!(res.is_err());
-
         // Single bookmark to a single new commit - should be allowed
         let master_bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
 
         let res = check_bookmark_pushes_for_git_mirrors(
-            &[PlainBookmarkPush {
+            &Some(PlainBookmarkPush {
                 part_id: 0,
                 name: BookmarkName::new("master")?,
                 old: None,
                 new: Some(cs_id),
-            }],
+            }),
             &hashmap! {
                 cs_id => master_bcs.clone(),
             },
@@ -1122,12 +1107,12 @@ mod tests {
         let parent_of_parent_of_master_cs_id =
             resolve_cs_id(&ctx, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await?;
         let res = check_bookmark_pushes_for_git_mirrors(
-            &[PlainBookmarkPush {
+            &Some(PlainBookmarkPush {
                 part_id: 0,
                 name: BookmarkName::new("master")?,
                 old: None,
                 new: Some(cs_id),
-            }],
+            }),
             &hashmap! {
                 cs_id => master_bcs.clone(),
                 parent_of_master_cs_id => parent_of_master_bcs.clone(),
@@ -1142,12 +1127,12 @@ mod tests {
         let unrelated_bcs = unrelated_cs_id.load(ctx, repo.blobstore()).compat().await?;
 
         let res = check_bookmark_pushes_for_git_mirrors(
-            &[PlainBookmarkPush {
+            &Some(PlainBookmarkPush {
                 part_id: 0,
                 name: BookmarkName::new("master")?,
                 old: None,
                 new: Some(cs_id),
-            }],
+            }),
             &hashmap! {
                 cs_id => master_bcs,
                 parent_of_master_cs_id => parent_of_master_bcs,
