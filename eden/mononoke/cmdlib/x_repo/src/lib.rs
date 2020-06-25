@@ -14,39 +14,75 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
 use clap::ArgMatches;
 use cmdlib::{args, helpers::open_sql_with_config_and_mysql_options};
-use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
+use cross_repo_sync::{CommitSyncer, CommitSyncerArgs};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures_util::try_join;
-use metaconfig_types::RepoConfig;
+use metaconfig_types::{CommitSyncConfig, RepoConfig};
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 // Creates commits syncer from source to target
-pub async fn create_commit_syncer_from_matches<'a>(
+pub async fn create_commit_syncer_from_matches(
     fb: FacebookInit,
     logger: &Logger,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches<'_>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
-    create_commit_syncer_from_matches_impl(fb, logger, matches, false /*reverse*/).await
+    let (args, config): (CommitSyncerArgs<SqlSyncedCommitMapping>, CommitSyncConfig) =
+        create_commit_syncer_args_and_config_from_matches_impl(
+            fb, logger, matches, false, /*reverse*/
+        )
+        .await?;
+    args.try_into_commit_syncer(&config)
 }
 
 // Creates commit syncer from target to source
-pub async fn create_reverse_commit_syncer_from_matches<'a>(
+pub async fn create_reverse_commit_syncer_from_matches(
     fb: FacebookInit,
     logger: &Logger,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches<'_>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
-    create_commit_syncer_from_matches_impl(fb, logger, matches, true /*reverse*/).await
+    let (args, config): (CommitSyncerArgs<SqlSyncedCommitMapping>, CommitSyncConfig) =
+        create_commit_syncer_args_and_config_from_matches_impl(
+            fb, logger, matches, true, /*reverse*/
+        )
+        .await?;
+    args.try_into_commit_syncer(&config)
 }
 
-async fn create_commit_syncer_from_matches_impl<'a>(
+pub async fn create_commit_syncer_args_from_matches(
     fb: FacebookInit,
     logger: &Logger,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches<'_>,
+) -> Result<CommitSyncerArgs<SqlSyncedCommitMapping>, Error> {
+    let (args, _): (CommitSyncerArgs<SqlSyncedCommitMapping>, CommitSyncConfig) =
+        create_commit_syncer_args_and_config_from_matches_impl(
+            fb, logger, matches, false, /*reverse*/
+        )
+        .await?;
+    Ok(args)
+}
+
+pub async fn create_reverse_commit_syncer_args_from_matches(
+    fb: FacebookInit,
+    logger: &Logger,
+    matches: &ArgMatches<'_>,
+) -> Result<CommitSyncerArgs<SqlSyncedCommitMapping>, Error> {
+    let (args, _): (CommitSyncerArgs<SqlSyncedCommitMapping>, CommitSyncConfig) =
+        create_commit_syncer_args_and_config_from_matches_impl(
+            fb, logger, matches, true, /*reverse*/
+        )
+        .await?;
+    Ok(args)
+}
+
+async fn create_commit_syncer_args_and_config_from_matches_impl(
+    fb: FacebookInit,
+    logger: &Logger,
+    matches: &ArgMatches<'_>,
     reverse: bool,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+) -> Result<(CommitSyncerArgs<SqlSyncedCommitMapping>, CommitSyncConfig), Error> {
     let source_repo_id = args::get_source_repo_id(fb, &matches)?;
     let target_repo_id = args::get_target_repo_id(fb, &matches)?;
 
@@ -61,7 +97,7 @@ async fn create_commit_syncer_from_matches_impl<'a>(
     let readonly_storage = args::parse_readonly_storage(&matches);
 
     if reverse {
-        create_commit_syncer(
+        create_commit_syncer_and_config(
             fb,
             (target_repo, target_repo_config),
             (source_repo, source_repo_config),
@@ -70,7 +106,7 @@ async fn create_commit_syncer_from_matches_impl<'a>(
         )
         .await
     } else {
-        create_commit_syncer(
+        create_commit_syncer_and_config(
             fb,
             (source_repo, source_repo_config),
             (target_repo, target_repo_config),
@@ -81,13 +117,13 @@ async fn create_commit_syncer_from_matches_impl<'a>(
     }
 }
 
-async fn create_commit_syncer<'a>(
+async fn create_commit_syncer_and_config<'a>(
     fb: FacebookInit,
     (source_repo, source_config): (BlobRepo, RepoConfig),
     (target_repo, target_config): (BlobRepo, RepoConfig),
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+) -> Result<(CommitSyncerArgs<SqlSyncedCommitMapping>, CommitSyncConfig), Error> {
     if source_config.storage_config.metadata != target_config.storage_config.metadata {
         return Err(Error::msg(
             "source repo and target repo have different metadata database configs!",
@@ -105,9 +141,8 @@ async fn create_commit_syncer<'a>(
 
     let commit_sync_config = source_config
         .commit_sync_config
-        .as_ref()
         .ok_or_else(|| format_err!("missing CommitSyncMapping config"))?;
 
-    let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, &commit_sync_config)?;
-    Ok(CommitSyncer::new(mapping, commit_sync_repos))
+    let commit_syncer_args = CommitSyncerArgs::new(source_repo, target_repo, mapping);
+    Ok((commit_syncer_args, commit_sync_config))
 }
