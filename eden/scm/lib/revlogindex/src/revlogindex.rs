@@ -21,7 +21,7 @@ use dag::Id;
 use dag::IdSet;
 use dag::Set;
 use dag::Vertex;
-use indexedlog::utils::{atomic_write, mmap_bytes};
+use indexedlog::utils::mmap_bytes;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
@@ -34,6 +34,7 @@ use std::ops::Deref;
 use std::path::Path;
 use std::slice;
 use std::sync::Arc;
+use util::path::atomic_write_symlink;
 
 impl RevlogIndex {
     /// Calculate `heads(ancestors(revs))`.
@@ -408,16 +409,7 @@ impl RevlogIndex {
                 let slice =
                     unsafe { slice::from_raw_parts(buf.as_ptr() as *const u8, buf.len() * 4) };
                 // Not fatal if we cannot update the on-disk index.
-                if atomic_write(nodemap_path, slice, false).is_err() && cfg!(windows) {
-                    // On Windows it can fail if nodemap_path is mmap-ed. Retry after deleting the file.
-                    // Note: This makes the file disappear temporarily. Another process reading the
-                    // revlog at this time might have to rebuild the nodemap. The `remove_file`
-                    // strategy should be used with care and should not be used for cases where the
-                    // file needs to be always present.
-                    if util::path::remove_file(nodemap_path).is_ok() {
-                        let _ = atomic_write(nodemap_path, slice, false);
-                    }
-                }
+                let _ = atomic_write_symlink(nodemap_path, slice);
             }
         }
         let result = Self {
