@@ -344,8 +344,6 @@ pub struct RepoClient {
     hash_validation_percentage: usize,
     // Whether to save raw bundle2 content into the blobstore
     preserve_raw_bundle2: bool,
-    // Whether to allow non-pushrebase pushes
-    pure_push_allowed: bool,
     // There is a race condition in bookmarks handling in Mercurial, which needs protocol-level
     // fixes. See `test-bookmark-race.t` for a reproducer; the issue is that between discovery
     // and bookmark handling (listkeys), we can get new commits and a bookmark change.
@@ -411,7 +409,6 @@ impl RepoClient {
         logging: LoggingContainer,
         hash_validation_percentage: usize,
         preserve_raw_bundle2: bool,
-        pure_push_allowed: bool,
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
@@ -422,7 +419,6 @@ impl RepoClient {
             logging,
             hash_validation_percentage,
             preserve_raw_bundle2,
-            pure_push_allowed,
             cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
             wireproto_logging,
             maybe_push_redirector_args,
@@ -1490,7 +1486,6 @@ impl HgCommands for RepoClient {
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     ) -> HgCommandRes<BytesOld> {
         let client = self.clone();
-        let pure_push_allowed = self.pure_push_allowed;
         let reponame = self.repo.reponame().clone();
         cloned!(self.cached_pull_default_bookmarks_maybe_stale);
 
@@ -1522,6 +1517,7 @@ impl HgCommands for RepoClient {
                     let infinitepush_params = client.repo.infinitepush().clone();
                     let infinitepush_writes_allowed = infinitepush_params.allow_writes;
                     let pushrebase_params = client.repo.pushrebase_params().clone();
+                    let pure_push_allowed = client.repo.push_params().pure_push_allowed;
 
                     let res = {
                         cloned!(ctx);

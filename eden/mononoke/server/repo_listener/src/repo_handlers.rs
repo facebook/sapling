@@ -51,7 +51,6 @@ struct IncompleteRepoHandler {
     repo: MononokeRepo,
     hash_validation_percentage: usize,
     preserve_raw_bundle2: bool,
-    pure_push_allowed: bool,
     maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
 }
 
@@ -104,7 +103,6 @@ impl IncompleteRepoHandler {
             repo,
             hash_validation_percentage,
             preserve_raw_bundle2,
-            pure_push_allowed,
             maybe_incomplete_push_redirector_args,
         } = self;
 
@@ -122,7 +120,6 @@ impl IncompleteRepoHandler {
             repo,
             hash_validation_percentage,
             preserve_raw_bundle2,
-            pure_push_allowed,
             maybe_push_redirector_args,
         })
     }
@@ -136,7 +133,6 @@ pub struct RepoHandler {
     pub repo: MononokeRepo,
     pub hash_validation_percentage: usize,
     pub preserve_raw_bundle2: bool,
-    pub pure_push_allowed: bool,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
 }
 
@@ -177,7 +173,6 @@ pub fn repo_handlers(
             let db_config = config.storage_config.metadata.clone();
             let hash_validation_percentage = config.hash_validation_percentage.clone();
             let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
-            let pure_push_allowed = config.push.pure_push_allowed.clone();
             let wireproto_logging = config.wireproto_logging.clone();
             let commit_sync_config = config.commit_sync_config.clone();
             let hook_manager_params = config.hook_manager_params.clone();
@@ -325,7 +320,6 @@ pub fn repo_handlers(
                         repo,
                         hash_validation_percentage,
                         preserve_raw_bundle2,
-                        pure_push_allowed,
                         maybe_incomplete_push_redirector_args,
                     },
                 ))

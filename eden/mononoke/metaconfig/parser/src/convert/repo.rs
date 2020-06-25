@@ -180,6 +180,7 @@ impl Convert for RawPushParams {
         let default = PushParams::default();
         Ok(PushParams {
             pure_push_allowed: self.pure_push_allowed.unwrap_or(default.pure_push_allowed),
+            commit_scribe_category: self.commit_scribe_category,
         })
     }
 }

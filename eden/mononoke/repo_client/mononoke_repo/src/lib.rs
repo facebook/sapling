@@ -15,7 +15,8 @@ use futures_old::future::Future;
 use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
 use metaconfig_types::{
-    BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushrebaseParams, RepoReadOnly,
+    BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushParams, PushrebaseParams,
+    RepoReadOnly,
 };
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
@@ -66,6 +67,7 @@ pub struct MononokeRepo {
     // Reverse filler queue for recording accepted infinitepush bundles
     // This field is `None` if we don't want recording to happen
     maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
+    push_params: PushParams,
 }
 
 impl MononokeRepo {
@@ -85,6 +87,7 @@ impl MononokeRepo {
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
         mutable_counters: Arc<dyn MutableCounters>,
         maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
+        push_params: PushParams,
     ) -> Result<Self, Error> {
         let lfs_rolled_out_hostnames = Arc::new(RwLock::new(HashSet::new()));
         if let Some(rollout_smc_tier) = &lfs_params.rollout_smc_tier {
@@ -118,6 +121,7 @@ impl MononokeRepo {
             mutable_counters,
             lfs_rolled_out_hostnames,
             maybe_reverse_filler_queue,
+            push_params,
         })
     }
 
@@ -128,6 +132,10 @@ impl MononokeRepo {
 
     pub fn pushrebase_params(&self) -> &PushrebaseParams {
         &self.pushrebase_params
+    }
+
+    pub fn push_params(&self) -> &PushParams {
+        &self.push_params
     }
 
     pub fn bookmark_attrs(&self) -> BookmarkAttrs {

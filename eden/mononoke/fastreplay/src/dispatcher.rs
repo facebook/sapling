@@ -57,7 +57,6 @@ impl FastReplayDispatcher {
             logging,
             self.hash_validation_percentage,
             false, // Don't preserve raw bundle 2 (we don't push)
-            false, // Don't allow pushes (we don't push)
             self.wireproto_logging.clone(),
             None, // Don't push redirect (we don't push)
             None, // No need to query live commit sync config

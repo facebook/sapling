@@ -915,6 +915,7 @@ mod test {
 
             [push]
             pure_push_allowed = false
+            commit_scribe_category = "cat"
 
             [pushrebase]
             rewritedates = false
@@ -1079,6 +1080,7 @@ mod test {
                 ],
                 push: PushParams {
                     pure_push_allowed: false,
+                    commit_scribe_category: Some("cat".to_string()),
                 },
                 pushrebase: PushrebaseParams {
                     flags: PushrebaseFlags {

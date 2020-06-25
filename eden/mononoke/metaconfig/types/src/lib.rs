@@ -433,12 +433,15 @@ pub struct HookParams {
 pub struct PushParams {
     /// Whether normal non-pushrebase pushes are allowed
     pub pure_push_allowed: bool,
+    /// Scribe category we log new commits to
+    pub commit_scribe_category: Option<String>,
 }
 
 impl Default for PushParams {
     fn default() -> Self {
         PushParams {
             pure_push_allowed: true,
+            commit_scribe_category: None,
         }
     }
 }

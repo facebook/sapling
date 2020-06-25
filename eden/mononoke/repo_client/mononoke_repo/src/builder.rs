@@ -89,6 +89,7 @@ impl MononokeRepoBuilder {
             readonly,
             skiplist_index_blobstore_key,
             hgsql_name,
+            push,
             ..
         } = config;
 
@@ -189,6 +190,7 @@ impl MononokeRepoBuilder {
             lca_hint,
             Arc::new(mutable_counters),
             maybe_reverse_filler_queue,
+            push,
         );
 
         repo.await
