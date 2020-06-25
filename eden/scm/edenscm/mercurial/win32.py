@@ -745,17 +745,22 @@ def unlink(f):
     try:
         os.unlink(temp)
     except OSError:
-        # The unlink might have failed because the READONLY attribute may heave
+        # The unlink might have failed because the READONLY attribute may have
         # been set on the original file. Rename works fine with READONLY set,
         # but not os.unlink. Reset all attributes and try again.
         _kernel32.SetFileAttributesA(temp, _FILE_ATTRIBUTE_NORMAL)
         try:
             os.unlink(temp)
         except OSError:
-            # The unlink might have failed due to some very rude AV-Scanners.
-            # Leaking a tempfile is the lesser evil than aborting here and
-            # leaving some potentially serious inconsistencies.
-            pass
+            try:
+                # Last effort, open it as a temporary file which will remove it
+                # when it's unmapped.
+                os.open(temp, os.O_TEMPORARY)
+            except OSError:
+                # The unlink might have failed due to some very rude AV-Scanners.
+                # Leaking a tempfile is the lesser evil than aborting here and
+                # leaving some potentially serious inconsistencies.
+                pass
 
 
 def makedir(path, notindexed):
