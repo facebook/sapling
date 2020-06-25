@@ -2356,21 +2356,22 @@ def _findrecenttree(repo, startrev, targetmfnodes):
     cl = repo.changelog
     mfstore = repo.manifestlog.datastore
     targetmfnodes = set(targetmfnodes)
+    startnode = repo.changelog.node(startrev)
 
     with progress.spinner(repo.ui, _("finding nearest trees")):
         # Look up and down from the given rev
         ancestors = iter(
             repo.revs(
-                "limit(reverse(ancestors(%d)), %d) & public()",
-                startrev,
+                "limit(reverse(ancestors(%n)), %d) & public()",
+                startnode,
                 BASENODESEARCHMAX,
             )
         )
 
-        descendantquery = "limit(descendants(%d), %d) & public()"
+        descendantquery = "limit(descendants(%n), %d) & public()"
         if extensions.enabled().get("remotenames", False):
             descendantquery += " & ::remotenames()"
-        descendants = iter(repo.revs(descendantquery, startrev, BASENODESEARCHMAX))
+        descendants = iter(repo.revs(descendantquery, startnode, BASENODESEARCHMAX))
 
         revs = []
 
