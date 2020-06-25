@@ -62,8 +62,8 @@ def setup_hg_dir(checkout: EdenCheckout, commit_id: str) -> None:
     # Write the parents to the dirstate file.
     with typing.cast(BinaryIO, (checkout_hg_dir / "dirstate").open("wb")) as f:
         parents = (binascii.unhexlify(commit_id), b"\x00" * 20)
-        tuples_dict: Dict[bytes, Tuple[str, int, int]] = {}
-        copymap: Dict[bytes, bytes] = {}
+        tuples_dict: Dict[str, Tuple[str, int, int]] = {}
+        copymap: Dict[str, str] = {}
         eden.dirstate.write(f, parents, tuples_dict, copymap)
 
 

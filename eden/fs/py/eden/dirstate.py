@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import binascii
 import hashlib
 import struct
+import sys
 from typing import IO, Any, Callable, Dict, Tuple
 
 from six import iteritems
@@ -24,7 +25,7 @@ MERGE_STATE_OTHER_PARENT = -2
 
 
 def write(file, parents, tuples_dict, copymap):
-    # type: (IO[bytes], Tuple[bytes, bytes], Dict[bytes, Tuple[str, int, int]], Dict[bytes, bytes]) -> None
+    # type: (IO[bytes], Tuple[bytes, bytes], Dict[str, Tuple[str, int, int]], Dict[str, str]) -> None
     #
     # The serialization format of the dirstate is as follows:
     # - The first 40 bytes are the hashes of the two parent pointers.
@@ -186,9 +187,13 @@ def read(fp, filename):  # noqa: C901
 
 
 def _write_path(writer, path):
-    # type: (Callable[[bytes], None], bytes) -> None
-    writer(struct.pack(">H", len(path)))
-    writer(path)
+    # type: (Callable[[bytes], None], str) -> None
+    if sys.version_info[0] < 3:
+        byte_path = path
+    else:
+        byte_path = path.encode("utf-8")
+    writer(struct.pack(">H", len(byte_path)))
+    writer(byte_path)
 
 
 def _read_path(reader, filename):

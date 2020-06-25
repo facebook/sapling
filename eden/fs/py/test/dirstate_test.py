@@ -106,8 +106,8 @@ class DirstateWriteTest(unittest.TestCase):
         )
         parents = (b"P\x03\xc2x?z\xf1\xec\xc9\x99+\xc0\xdb\xb6n[}\x92nr", b"\x00" * 20)
         tuples_dict = {
-            b"fbcode/eden/py/test/dirstate_test.py": ("a", 0, -1),
-            b"fbcode/eden/py/test/TARGETS": ("a", 0, -1),
+            "fbcode/eden/py/test/dirstate_test.py": ("a", 0, -1),
+            "fbcode/eden/py/test/TARGETS": ("a", 0, -1),
         }
         copymap = {}
         with io.BytesIO() as dirstate_file:
@@ -124,8 +124,8 @@ class DirstateWriteTest(unittest.TestCase):
             b"\xbb\x82\xaf\xb5D;\x02Q*7\xc8\xcd\xe3\x1e\x98\xf6\xe8\x97\x13\xa0"
         )
         parents = (b"\xa8umh0M\xfbGO\xc5\xe2\xc4p\xe0\xd2I<\x1a\x9d\x01", b"\x00" * 20)
-        tuples_dict = {b"fbcode/eden/py/test/TARGETS4": ("a", 0, -1)}
-        copymap = {b"fbcode/eden/py/test/TARGETS4": b"fbcode/eden/py/test/TARGETS"}
+        tuples_dict = {"fbcode/eden/py/test/TARGETS4": ("a", 0, -1)}
+        copymap = {"fbcode/eden/py/test/TARGETS4": "fbcode/eden/py/test/TARGETS"}
         with io.BytesIO() as dirstate_file:
             eden.dirstate.write(dirstate_file, parents, tuples_dict, copymap)
             self.assertEqual(dirstate_file.getvalue(), expected_raw_dirstate)
