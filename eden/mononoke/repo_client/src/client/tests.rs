@@ -512,8 +512,8 @@ async fn run_and_check_if_lfs(
         false, // Don't allow pushes (we don't push)
         true,  // Support bundle2_listkeys
         Arc::new(noop_wireproto),
-        None, // Don't push redirect (we don't push)
-        None, // Don't push redirect (we don't push)
+        None, // No PushRedirectorArgs
+        None, // Don't listen to LiveCommitSyncConfig
     );
 
     let bytes = repo_client

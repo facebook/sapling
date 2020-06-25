@@ -20,9 +20,9 @@ use futures_stats::TimedFutureExt;
 use hgproto::{sshproto, HgProtoHandler};
 use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
+use live_commit_sync_config::LiveCommitSyncConfig;
 use load_limiter::{LoadLimiterBuilder, Metric};
 use maplit::{hashmap, hashset};
-use pushredirect_enable::types::MononokePushRedirectEnable;
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use repo_client::RepoClient;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -117,8 +117,8 @@ pub async fn request_handler(
     }: RepoHandler,
     stdio: Stdio,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
-    pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
     addr: IpAddr,
+    maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
 ) {
     let Stdio {
         stdin,
@@ -239,7 +239,7 @@ pub async fn request_handler(
             pure_push_allowed,
             wireproto_logging,
             maybe_push_redirector_args,
-            pushredirect_config,
+            maybe_live_commit_sync_config,
         ),
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,

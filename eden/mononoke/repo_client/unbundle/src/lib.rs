@@ -25,7 +25,7 @@ mod upload_changesets;
 
 pub use hook_running::{run_hooks, run_remapped_hooks};
 pub use processing::{get_pushrebase_hooks, run_post_resolve_action};
-pub use push_redirector::{PushRedirector, PushRedirectorArgs, CONFIGERATOR_PUSHREDIRECT_ENABLE};
+pub use push_redirector::{PushRedirector, PushRedirectorArgs};
 pub use resolver::{
     resolve, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush,
     NonFastForwardPolicy, PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase,

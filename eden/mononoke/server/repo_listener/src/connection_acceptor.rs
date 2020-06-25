@@ -26,13 +26,13 @@ use futures_old::sync::mpsc;
 use futures_old::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use itertools::join;
 use lazy_static::lazy_static;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::{AllowlistEntry, CommonConfig};
 use openssl::ssl::SslAcceptor;
 use permission_checker::{
     BoxMembershipChecker, BoxPermissionChecker, MembershipCheckerBuilder, MononokeIdentity,
     MononokeIdentitySet, PermissionCheckerBuilder,
 };
-use repo_client::CONFIGERATOR_PUSHREDIRECT_ENABLE;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{crit, error, o, Drain, Level, Logger};
 use slog_kvfilter::KVFilter;
@@ -43,7 +43,6 @@ use tokio_openssl::SslAcceptorExt;
 
 use cmdlib::monitoring::ReadyFlagService;
 use limits::types::MononokeThrottleLimits;
-use pushredirect_enable::types::MononokePushRedirectEnable;
 use sshrelay::{SenderBytesWrite, SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
 
 use crate::errors::ErrorKind;
@@ -81,7 +80,7 @@ pub fn connection_acceptor(
         .expect("failed to create listener")
         .map_err(Error::from);
 
-    let (load_limiting_config, pushredirect_config) = match config_store {
+    let (load_limiting_config, maybe_live_commit_sync_config) = match config_store {
         Some(config_store) => {
             let load_limiting_config = {
                 let config_loader = config_store
@@ -95,10 +94,10 @@ pub fn connection_acceptor(
                 })
             };
 
-            let pushredirect_config = Some(try_boxfuture!(
-                config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string(),)
-            ));
-            (load_limiting_config, pushredirect_config)
+            let maybe_live_commit_sync_config = Some(try_boxfuture!({
+                LiveCommitSyncConfig::new(&root_log, &config_store)
+            }));
+            (load_limiting_config, maybe_live_commit_sync_config)
         }
         None => (None, None),
     };
@@ -116,7 +115,7 @@ pub fn connection_acceptor(
                 // Accept the request without blocking the listener
                 cloned!(
                     load_limiting_config,
-                    pushredirect_config,
+                    maybe_live_commit_sync_config,
                     root_log,
                     repo_handlers,
                     tls_acceptor,
@@ -132,7 +131,7 @@ pub fn connection_acceptor(
                         tls_acceptor,
                         security_checker.clone(),
                         load_limiting_config.clone(),
-                        pushredirect_config.clone(),
+                        maybe_live_commit_sync_config.clone(),
                     )
                     .then(|res| {
                         OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
@@ -153,7 +152,7 @@ fn accept(
     tls_acceptor: Arc<SslAcceptor>,
     security_checker: Arc<ConnectionsSecurityChecker>,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
-    pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
+    maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
 ) -> impl Future<Item = (), Error = ()> {
     let addr = sock.peer_addr();
 
@@ -253,8 +252,8 @@ fn accept(
                                 handler,
                                 stdio,
                                 load_limiting_config,
-                                pushredirect_config,
                                 addr.ip(),
+                                maybe_live_commit_sync_config,
                             )
                             .map(Ok)
                             .boxed()

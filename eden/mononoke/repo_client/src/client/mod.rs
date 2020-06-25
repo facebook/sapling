@@ -16,7 +16,6 @@ use blobstore::Loadable;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::Bytes;
 use bytes_old::{BufMut as BufMutOld, Bytes as BytesOld, BytesMut as BytesMutOld};
-use cached_config::ConfigHandle;
 use cloned::cloned;
 use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
 use filenodes::FilenodeResult;
@@ -41,6 +40,7 @@ use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hostname::get_hostname;
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use load_limiter::Metric;
 use manifest::{Diff, Entry, ManifestOps};
 use maplit::hashmap;
@@ -54,7 +54,6 @@ use mercurial_types::{
 };
 use metaconfig_types::RepoReadOnly;
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
-use pushredirect_enable::types::MononokePushRedirectEnable;
 use rand::{self, Rng};
 use remotefilelog::{
     create_getpack_v1_blob, create_getpack_v2_blob, get_unordered_file_history_for_multiple_nodes,
@@ -356,8 +355,8 @@ pub struct RepoClient {
     cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
-    pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
     force_lfs: Arc<AtomicBool>,
+    maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
 }
 
 fn get_pull_default_bookmarks_maybe_stale_raw(
@@ -415,7 +414,7 @@ impl RepoClient {
         pure_push_allowed: bool,
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
-        pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
+        maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
     ) -> Self {
         Self {
             repo,
@@ -427,8 +426,8 @@ impl RepoClient {
             cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
             wireproto_logging,
             maybe_push_redirector_args,
-            pushredirect_config,
             force_lfs: Arc::new(AtomicBool::new(false)),
+            maybe_live_commit_sync_config,
         }
     }
 
@@ -867,27 +866,47 @@ impl RepoClient {
     ) -> Result<Option<PushRedirector>> {
         let push_redirector_args = match self.maybe_push_redirector_args.clone() {
             Some(push_redirector_args) => push_redirector_args,
-            None => return Ok(None),
+            None => {
+                debug!(
+                    ctx.logger(),
+                    "maybe_push_redirector_args are none, no push_redirector for unbundle"
+                );
+                return Ok(None);
+            }
         };
 
-        let repo_id = self.repo.blobrepo().get_repoid();
-        let pushredirect_config = self.pushredirect_config.as_ref();
-        let maybe_config = pushredirect_config.map(|config| config.get());
-
-        let enabled = maybe_config.and_then(move |config| {
-            config.per_repo.get(&(repo_id.id() as i64)).map(|enables| {
+        match self.maybe_live_commit_sync_config {
+            None => Ok(None),
+            Some(ref live_commit_sync_config) => {
                 use unbundle::PostResolveAction::*;
 
-                match action {
-                    InfinitePush(_) => enables.draft_push,
-                    Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => enables.public_push,
-                }
-            })
-        });
+                let repo_id = self.repo.blobrepo().get_repoid();
+                let redirect = match action {
+                    InfinitePush(_) => {
+                        live_commit_sync_config.push_redirector_enabled_for_draft(repo_id)
+                    }
+                    Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => {
+                        live_commit_sync_config.push_redirector_enabled_for_public(repo_id)
+                    }
+                };
 
-        match enabled {
-            None | Some(false) => Ok(None),
-            Some(true) => Ok(Some(push_redirector_args.into_push_redirector(ctx)?)),
+                if redirect {
+                    debug!(
+                        ctx.logger(),
+                        "live_commit_sync_config says push redirection is on"
+                    );
+                    Ok(Some(push_redirector_args.into_push_redirector(
+                        ctx,
+                        &self.maybe_live_commit_sync_config,
+                    )?))
+                } else {
+                    debug!(
+                        ctx.logger(),
+                        "live_commit_sync_config says push redirection is off"
+                    );
+                    Ok(None)
+                }
+            }
         }
     }
 }

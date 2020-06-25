@@ -60,7 +60,7 @@ impl FastReplayDispatcher {
             false, // Don't allow pushes (we don't push)
             self.wireproto_logging.clone(),
             None, // Don't push redirect (we don't push)
-            None, // Don't push redirect (we don't push)
+            None, // No need to query live commit sync config
         )
     }
 

@@ -36,6 +36,7 @@ use futures::{
     try_join,
 };
 use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
+use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfig;
 use mononoke_repo::MononokeRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -46,8 +47,6 @@ use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use topo_sort::sort_topological;
 use tunables::tunables;
-
-pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
 
 /// An auxillary struct, which contains nearly
 /// everything needed to create a full `PushRedirector`
@@ -81,17 +80,28 @@ impl PushRedirectorArgs {
     }
 
     /// Create `PushRedirector` for a given source repo
-    pub fn into_push_redirector(self, ctx: &CoreContext) -> Result<PushRedirector, Error> {
+    pub fn into_push_redirector(
+        self,
+        ctx: &CoreContext,
+        maybe_live_commit_sync_config: &Option<LiveCommitSyncConfig>,
+    ) -> Result<PushRedirector, Error> {
         // TODO: This function needs to be extended
         //       and query configerator for the fresh
         //       value of `commit_sync_config`
         let PushRedirectorArgs {
-            commit_sync_config,
+            commit_sync_config: original_commit_sync_config,
             target_repo,
             source_blobrepo,
             synced_commit_mapping,
             target_repo_dbs,
         } = self;
+
+        debug!(ctx.logger(), "Original: {:?}", original_commit_sync_config);
+        let commit_sync_config = match maybe_live_commit_sync_config {
+            None => original_commit_sync_config,
+            Some(live_commmit_sync_config) => live_commmit_sync_config
+                .get_current_commit_sync_config(&ctx, source_blobrepo.get_repoid())?,
+        };
 
         let small_repo = source_blobrepo;
         let large_repo = target_repo.blobrepo().clone();

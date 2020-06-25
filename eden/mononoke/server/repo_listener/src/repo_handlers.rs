@@ -29,7 +29,7 @@ use metaconfig_types::{CommitSyncConfig, RepoConfig, WireprotoLoggingConfig};
 use mononoke_types::RepositoryId;
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirectorArgs, WireprotoLogging};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use slog::{info, o, Logger};
+use slog::{debug, info, o, Logger};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
@@ -287,12 +287,22 @@ pub fn repo_handlers(
                     )
                     .await?;
 
-                info!(logger, "Constructing incomplete push redirection args");
-                let maybe_incomplete_push_redirector_args =
-                    commit_sync_config.and_then(move |commit_sync_config| {
+                let maybe_incomplete_push_redirector_args = commit_sync_config.and_then({
+                    cloned!(logger);
+                    move |commit_sync_config| {
                         if commit_sync_config.large_repo_id == blobrepo.get_repoid() {
+                            debug!(
+                                logger,
+                                "Not constructing push redirection args: {:?}",
+                                blobrepo.get_repoid()
+                            );
                             None
                         } else {
+                            debug!(
+                                logger,
+                                "Constructing incomplete push redirection args: {:?}",
+                                blobrepo.get_repoid()
+                            );
                             Some(IncompletePushRedirectorArgs {
                                 commit_sync_config,
                                 synced_commit_mapping: sql_commit_sync_mapping,
@@ -300,7 +310,8 @@ pub fn repo_handlers(
                                 source_blobrepo: blobrepo,
                             })
                         }
-                    });
+                    }
+                });
 
                 initial_warmup.await??;
 
