@@ -9,13 +9,111 @@
 
 use std::borrow::Cow;
 use std::env;
+use std::ffi::OsStr;
 use std::fs::{self, remove_file as fs_remove_file};
-use std::io::{self, ErrorKind};
+use std::io::{self, ErrorKind, Write};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 
 use anyhow::Result;
+
+/// Pick a random file name `path.$RAND.atomic` as `real_path`. Write `data` to
+/// it.  Then modify the symlink `path` to point to `real_path`.  Attempt to
+/// delete files that are no longer referred.
+///
+/// Since the symlink itself cannot be mmap-ed on Windows, this function is
+/// suitable for large mmap buffer on Windows. Without a symlink the mmap
+/// file has to be removed first, otherwise it cannot be replaced.
+///
+/// Unlike `tempfile::NamedTempFile`, this function does not `chmod` the file.
+///
+/// This function has a side effect of creating a `path.lock` file for
+/// locking.
+///
+/// Attention: the deletion attempt is based on file name. So do not use
+/// confusing file names like `path.0001.atomic` in the same directory.
+pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> Result<()> {
+    let append_name = |suffix: &str| -> PathBuf {
+        let mut s = path.to_path_buf().into_os_string();
+        s.push(suffix);
+        s.into()
+    };
+    let temp_name = || -> PathBuf { append_name(&format!(".{:x}.atomic", rand::random::<u32>())) };
+
+    // Protect racy write operations by a lock.
+    let _lock = crate::lock::PathLock::exclusive(&append_name(".lock"))?;
+
+    // Pick a name. Open the file.
+    let (real_path, mut file) = loop {
+        let real_path = temp_name();
+        match fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&real_path)
+        {
+            Ok(file) => break Ok((real_path, file)),
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue, // try another file name
+            Err(e) => break Err(e),
+        }
+    }?;
+    let real_file_name = real_path
+        .file_name()
+        .expect("real_path should have a file name");
+
+    // Write the content.
+    file.write_all(data)?;
+    drop(file);
+
+    // Update the symlink by creating a temporary symlink and rename it.
+    let symlink_tmp_path = loop {
+        let symlink_path = temp_name();
+        match symlink_file(Path::new(real_file_name), &symlink_path) {
+            Ok(()) => break Ok(symlink_path),
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue, // try another file name
+            Err(e) => break Err(e),
+        }
+    }?;
+
+    // Overwrite the original symlink. This works on both Windows and Linux.
+    fs::rename(&symlink_tmp_path, path)?;
+
+    // Scan. Remove unreferenced files.
+    let _ = (|| -> io::Result<()> {
+        let looks_like_atomic = |s: &OsStr, prefix: &OsStr| -> bool {
+            if let (Some(s), Some(prefix)) = (s.to_str(), prefix.to_str()) {
+                s.starts_with(prefix) && s.ends_with(".atomic")
+            } else {
+                false
+            }
+        };
+        if let (Some(dir), Some(prefix)) = (path.parent(), path.file_name()) {
+            for entry in fs::read_dir(dir)? {
+                let entry = entry?;
+                let name = entry.file_name();
+                if name != prefix && looks_like_atomic(&name, prefix) && name != real_file_name {
+                    let _ = remove_file(&entry.path());
+                }
+            }
+        }
+        Ok(())
+    })();
+
+    Ok(())
+}
+
+/// Create symlink for a file.
+pub fn symlink_file(src: &Path, dst: &Path) -> io::Result<()> {
+    #[cfg(windows)]
+    return std::os::windows::fs::symlink_file(src, dst);
+    #[cfg(unix)]
+    return std::os::unix::fs::symlink(src, dst);
+    #[cfg(all(not(unix), not(windows)))]
+    return Err(io::Error::new(
+        ErrorKind::Other,
+        "symlink is not supported by the system",
+    ));
+}
 
 /// Removes the UNC prefix `\\?\` on Windows. Does nothing on unices.
 pub fn strip_unc_prefix(path: &Path) -> &Path {
@@ -379,6 +477,47 @@ mod tests {
 
             Ok(())
         }
+    }
+
+    #[test]
+    fn test_atomic_write_symlink() -> Result<()> {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path();
+        let j = |name| -> PathBuf { path.join(name) };
+        // a: unrelated file
+        fs::write(j("a"), b"1")?;
+        // c: symlink -> c.xxxx: "2"
+        atomic_write_symlink(&j("c"), b"2")?;
+        // Keep an mmap of the current "c".
+        let file = fs::OpenOptions::new().read(true).open(&j("c"))?;
+        let mmap = unsafe { memmap::Mmap::map(&file) }?;
+        // This file should be automatically deleted.
+        fs::write(j("c.aaaa.atomic"), b"0")?;
+        // Rewrite c with different data.
+        atomic_write_symlink(&j("c"), b"3")?;
+        // mmap has the old content.
+        assert_eq!(mmap.as_ref(), b"2");
+        // Reading c gets new data.
+        assert_eq!(fs::read(&j("c"))?, b"3");
+        // a: should exist
+        assert!(j("a").exists());
+        // 4 files: a, c, c.xxxx, c.lock
+        let count = || {
+            fs::read_dir(&path)
+                .unwrap()
+                .filter(|e| e.as_ref().unwrap().path().exists())
+                .count()
+        };
+        assert_eq!(count(), 4);
+
+        // It's possible to replace a non-symlink to a symlink.
+        atomic_write_symlink(&j("a"), b"4")?;
+        // Exercise the GC logic a bit.
+        atomic_write_symlink(&j("a"), b"5")?;
+        atomic_write_symlink(&j("a"), b"6")?;
+        // 6 files: a, a.xxxx, a.lock, c, c.xxxx, c.lock
+        assert_eq!(count(), 6);
+        Ok(())
     }
 
     #[test]
