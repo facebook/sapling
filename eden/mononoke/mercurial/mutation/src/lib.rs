@@ -24,6 +24,7 @@ use mercurial_types::HgChangesetId;
 
 mod builder;
 mod entry;
+mod grouper;
 mod store;
 
 pub use crate::builder::SqlHgMutationStoreBuilder;

@@ -17,7 +17,7 @@ fn compare_entries(a: &HgMutationEntry, b: &HgMutationEntry) -> Ordering {
     a.successor().cmp(b.successor())
 }
 
-fn get_entries(
+pub(crate) fn get_entries(
     entries: &HashMap<usize, HgMutationEntry>,
     indexes: &[usize],
 ) -> Vec<HgMutationEntry> {

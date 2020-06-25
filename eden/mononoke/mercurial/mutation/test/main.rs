@@ -10,4 +10,5 @@
 #![deny(warnings)]
 
 mod basic;
+mod cycles;
 mod util;

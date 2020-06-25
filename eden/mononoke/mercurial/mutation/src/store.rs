@@ -404,6 +404,15 @@ impl HgMutationStore for SqlHgMutationStore {
         let mut entry_set = HgMutationEntrySet::new();
         let entries: HashMap<_, _> = entries
             .into_iter()
+            .filter(|entry| {
+                // Filter out entries that are self-referential (these are
+                // revive obsmarkers incorrectly converted to mutation entries).
+                let successor = entry.successor();
+                !entry
+                    .predecessors()
+                    .iter()
+                    .any(|predecessor| predecessor == successor)
+            })
             .map(|entry| (*entry.successor(), entry))
             .collect();
 

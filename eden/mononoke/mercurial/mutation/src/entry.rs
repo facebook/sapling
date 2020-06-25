@@ -16,6 +16,8 @@ use smallvec::SmallVec;
 use types::mutation::MutationEntry;
 use types::HgId;
 
+use crate::grouper::Grouper;
+
 /// Record of a Mercurial mutation operation (e.g. amend or rebase).
 #[derive(Clone, Debug, PartialEq)]
 pub struct HgMutationEntry {
@@ -331,69 +333,97 @@ impl HgMutationEntrySet {
     /// searching all predecessors for either a known primordial, or a new
     /// primordial.
     ///
+    /// If the set of entries contains cycles, then it may not be possible to
+    /// determine an appropriate primordial commit.  In which case, the
+    /// entries that form a cycle will be ignored.
+    ///
     /// Returns all changeset IDs that were added.
     pub(crate) fn add_entries_and_find_primordials<'a>(
         &mut self,
         mut new_entries: HashMap<HgChangesetId, HgMutationEntry>,
         new_ids: impl IntoIterator<Item = &'a HgChangesetId>,
     ) -> Result<Vec<HgChangesetId>> {
+        // The changesets IDs that were added
         let mut added = Vec::new();
 
         // We will allocate primordials by seeking back to the first commit with
         // a known primordial, or the primordial commit itself.
         //
-        // The candidate_primordials vector will contain the current set of
-        // commits that could be primordial, along with the commits that they
-        // would be primordial for, if they are primordial, which is initially
-        // empty.
-        let mut candidate_primordials: Vec<_> = new_ids
-            .into_iter()
-            .map(|changeset_id| (*changeset_id, Vec::new()))
-            .collect();
+        // Commits that are yet to be processed are candidates.
+        let mut candidates: Vec<_> = new_ids.into_iter().copied().collect();
 
-        // Look at each candidate primoridial.  If it really is primoridial, or
-        // we know what its primordial should be, then we are done.  Otherwise,
-        // expand it to its predecessors, which are the new candidate
-        // primordials.
-        while let Some((candidate_primordial_id, mut changeset_ids)) = candidate_primordials.pop() {
-            let primordial_id = if let Some(primordial_id) =
-                self.changeset_primordials.get(&candidate_primordial_id)
-            {
+        // Commits that are queued to be processed or have been
+        // processed (to break cycles).
+        let mut seen: HashSet<_> = candidates.iter().copied().collect();
+
+        // A Grouper to group commits together into primordial groups.
+        let mut grouper = Grouper::new();
+
+        // Look at each candidate.  If it is primoridial, or we know
+        // what its primordial should be, then we are done.  Otherwise,
+        // expand it to its predecessors, which are the new candidates.
+        while let Some(candidate) = candidates.pop() {
+            if let Some(primordial_id) = self.changeset_primordials.get(&candidate) {
                 // We have reached a changeset with a known primordial
-                *primordial_id
-            } else if let Some(entry) = new_entries.get(&candidate_primordial_id) {
+                grouper.set_primordial(candidate, *primordial_id);
+            } else if let Some(entry) = new_entries.get(&candidate) {
                 // This is not the primordial commit, we must look at its
-                // predecessors.  The first predecessor is the new candidate
-                // primordial commit for itself, this changeset and its
-                // successors.  The subsequent predecessors are all candidate
-                // primordial commits for themselves.
-                if entry.predecessors().is_empty() {
+                // predecessors.
+                let predecessors = entry.predecessors();
+                if let Some(first) = predecessors.first() {
+                    // Merge this candidate's group with the group of its
+                    // first predecessor: they will have the same primordial.
+                    grouper.merge(candidate, *first);
+                } else {
                     return Err(anyhow!(
                         "Mutation entry for {} has no predecessors",
                         entry.successor()
                     ));
                 }
-                changeset_ids.push(candidate_primordial_id);
-                for predecessor in entry.predecessors() {
-                    candidate_primordials.push((*predecessor, changeset_ids));
-                    changeset_ids = Vec::new();
+                for &predecessor in predecessors.iter() {
+                    if seen.insert(predecessor) {
+                        candidates.push(predecessor);
+                    }
                 }
-                continue;
             } else {
                 // We have reached a new primordial changeset.
-                changeset_ids.push(candidate_primordial_id);
-                candidate_primordial_id
+                grouper.set_primordial(candidate, candidate);
+                added.push(candidate);
             };
+        }
 
-            // Now we know the primordial ID, apply it to all of the associated
-            // changesets.
-            for changeset_id in changeset_ids {
-                self.changeset_primordials
-                    .insert(changeset_id, primordial_id);
-                if let Some(new_entry) = new_entries.remove(&changeset_id) {
-                    self.entries.insert(changeset_id, new_entry);
+        // Apply calculated primordials to their groups, and work out
+        // which entries should be moved into the store.
+        let mut move_entries = Vec::new();
+        for (primordial, members) in grouper.groups() {
+            if let Some(primordial) = primordial {
+                // Apply this primordial changeset to all of the members
+                // of this group.
+                for changeset_id in members {
+                    if self
+                        .changeset_primordials
+                        .insert(changeset_id, primordial)
+                        .is_none()
+                    {
+                        move_entries.push(changeset_id);
+                    }
                 }
-                added.push(changeset_id);
+            }
+        }
+
+        // Move valid entries into the store.
+        for changeset_id in move_entries.into_iter() {
+            if let Some(new_entry) = new_entries.remove(&changeset_id) {
+                if new_entry
+                    .predecessors()
+                    .iter()
+                    .all(|predecessor| self.changeset_primordials.contains_key(predecessor))
+                {
+                    // We have found primordials for all predecessors of this
+                    // entry, so we can add it.
+                    self.entries.insert(changeset_id, new_entry);
+                    added.push(changeset_id);
+                }
             }
         }
 
