@@ -346,6 +346,7 @@ mod test {
     use super::*;
     use ascii::AsciiString;
     use maplit::hashmap;
+    use metaconfig_types::CommitSyncConfigVersion;
 
     fn mp(s: &'static str) -> MPath {
         MPath::new(s).unwrap()
@@ -495,7 +496,7 @@ mod test {
                 RepositoryId::new(1) => get_small_repo_sync_config_1_non_ovelapping(),
                 RepositoryId::new(2) => get_small_repo_sync_config_2_non_ovelapping(),
             },
-            version_name: "TEST_VERSION_NAME".to_string(),
+            version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         }
     }
 
@@ -654,7 +655,7 @@ mod test {
                     direction: CommitSyncDirection::LargeToSmall,
                 },
             },
-            version_name: "TEST_VERSION_NAME".to_string(),
+            version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         }
     }
 

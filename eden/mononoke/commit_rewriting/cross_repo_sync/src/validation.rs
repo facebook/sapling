@@ -632,7 +632,7 @@ mod test {
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures_old::stream::Stream;
-    use metaconfig_types::CommitSyncDirection;
+    use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
     use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
@@ -828,7 +828,7 @@ mod test {
                 reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer,
                 reverse_bookmark_renamer,
-                version_name: "TEST_VERSION_NAME".to_string(),
+                version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
@@ -837,7 +837,7 @@ mod test {
                 reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer,
                 reverse_bookmark_renamer,
-                version_name: "TEST_VERSION_NAME".to_string(),
+                version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
         };
 

@@ -978,6 +978,10 @@ pub enum CommitSyncDirection {
     SmallToLarge,
 }
 
+/// CommitSyncConfig version name
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CommitSyncConfigVersion(pub String);
+
 /// Commit sync configuration for a large repo
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CommitSyncConfig {
@@ -988,7 +992,7 @@ pub struct CommitSyncConfig {
     /// Corresponding small repo configs
     pub small_repos: HashMap<RepositoryId, SmallRepoCommitSyncConfig>,
     /// Version name of the commit sync config
-    pub version_name: String,
+    pub version_name: CommitSyncConfigVersion,
 }
 
 /// Configuration for logging wireproto commands and arguments

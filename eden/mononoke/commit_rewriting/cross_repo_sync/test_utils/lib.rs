@@ -22,8 +22,8 @@ use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction,
-    SmallRepoCommitSyncConfig,
+    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
+    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
 };
 use mononoke_types::RepositoryId;
 use mononoke_types::{ChangesetId, DateTime, MPath};
@@ -121,7 +121,7 @@ where
         target_bcs.get_changeset_id(),
         source_repo.get_repoid(),
         source_bcs_id,
-        Some("TEST_VERSION_NAME".to_string()),
+        Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
     );
     commit_syncer
         .get_mapping()
@@ -154,7 +154,7 @@ pub async fn init_small_large_repo(
         reverse_mover: Arc::new(reverse_prefix_mover),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let small_to_large_commit_syncer = CommitSyncer::new(mapping.clone(), repos.clone());
 
@@ -165,7 +165,7 @@ pub async fn init_small_large_repo(
         reverse_mover: Arc::new(prefix_mover),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let large_to_small_commit_syncer = CommitSyncer::new(mapping.clone(), repos.clone());
 
@@ -264,7 +264,7 @@ pub async fn init_small_large_repo(
         small_repos: hashmap! {
             smallrepo.get_repoid() => small_repo_sync_config,
         },
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     Ok((

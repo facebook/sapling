@@ -32,7 +32,9 @@ use futures_old::Stream as StreamOld;
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
 use mercurial_types::HgManifestId;
-use metaconfig_types::{CommitSyncConfig, CommitSyncDirection, PushrebaseFlags};
+use metaconfig_types::{
+    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, PushrebaseFlags,
+};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
@@ -408,7 +410,7 @@ pub enum CommitSyncRepos {
         reverse_mover: Mover,
         bookmark_renamer: BookmarkRenamer,
         reverse_bookmark_renamer: BookmarkRenamer,
-        version_name: String,
+        version_name: CommitSyncConfigVersion,
     },
     SmallToLarge {
         small_repo: BlobRepo,
@@ -417,7 +419,7 @@ pub enum CommitSyncRepos {
         reverse_mover: Mover,
         bookmark_renamer: BookmarkRenamer,
         reverse_bookmark_renamer: BookmarkRenamer,
-        version_name: String,
+        version_name: CommitSyncConfigVersion,
     },
 }
 
@@ -576,7 +578,7 @@ where
         self.repos.get_bookmark_renamer()(bookmark)
     }
 
-    pub fn get_version_name(&self) -> &str {
+    pub fn get_version_name(&self) -> &CommitSyncConfigVersion {
         &self.repos.get_version_name()
     }
 
@@ -1381,7 +1383,7 @@ impl CommitSyncRepos {
         }
     }
 
-    pub(crate) fn get_version_name(&self) -> &str {
+    pub(crate) fn get_version_name(&self) -> &CommitSyncConfigVersion {
         match self {
             CommitSyncRepos::LargeToSmall { version_name, .. } => version_name,
             CommitSyncRepos::SmallToLarge { version_name, .. } => version_name,
@@ -1479,13 +1481,13 @@ pub fn create_synced_commit_mapping_entry(
 
     let source_repoid = source_repo.get_repoid();
     let target_repoid = target_repo.get_repoid();
-    let version_name: Option<String> = if from == to {
+    let version_name: Option<CommitSyncConfigVersion> = if from == to {
         // For preserved commits we explicitly avoid writing down
         // version_name, as it it makes no difference which commit
         // sync config is used, when the commit is preserved
         None
     } else {
-        Some(version_name.to_owned())
+        Some(version_name.clone())
     };
 
     if source_is_large {

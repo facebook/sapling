@@ -18,6 +18,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, Future};
+use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::queries;
 use stats::prelude::*;
@@ -50,7 +51,7 @@ pub struct SyncedCommitMappingEntry {
     pub large_bcs_id: ChangesetId,
     pub small_repo_id: RepositoryId,
     pub small_bcs_id: ChangesetId,
-    pub version_name: Option<String>,
+    pub version_name: Option<CommitSyncConfigVersion>,
 }
 
 impl SyncedCommitMappingEntry {
@@ -59,7 +60,7 @@ impl SyncedCommitMappingEntry {
         large_bcs_id: ChangesetId,
         small_repo_id: RepositoryId,
         small_bcs_id: ChangesetId,
-        version_name: Option<String>,
+        version_name: Option<CommitSyncConfigVersion>,
     ) -> Self {
         Self {
             large_repo_id,
@@ -436,28 +437,51 @@ pub fn add_many_in_txn(
 ) -> impl Future<Item = (Transaction, u64), Error = Error> {
     STATS::add_many_in_txn.add_value(1);
 
-    let insert_entries: Vec<_> = entries
-        .iter()
+    // `unwrapped_entries` is built only to turn `entry.version_name`
+    // (of type `Option<CommitSyncConfigVersion>`) into `entry.version_name.0`
+    // (of type `Option<String>`). We need to do this, so that below we can
+    // get `&Option<String>` for `insert_entries` vec
+    let unwrapped_entries: Vec<_> = entries
+        .into_iter()
         .map(|entry| {
             (
-                &entry.large_repo_id,
-                &entry.large_bcs_id,
-                &entry.small_repo_id,
-                &entry.small_bcs_id,
-                &entry.version_name,
+                entry.large_repo_id,
+                entry.large_bcs_id,
+                entry.small_repo_id,
+                entry.small_bcs_id,
+                entry.version_name.map(|vn| vn.0),
             )
         })
         .collect();
 
+    let insert_entries: Vec<_> = unwrapped_entries
+        .iter()
+        .map(
+            |(large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, version_name)| {
+                (
+                    large_repo_id,
+                    large_bcs_id,
+                    small_repo_id,
+                    small_bcs_id,
+                    version_name,
+                )
+            },
+        )
+        .collect();
+
     InsertMapping::query_with_transaction(txn, &insert_entries).and_then(move |(txn, _result)| {
-        let wces: Vec<_> = entries
+        let wces: Vec<_> = unwrapped_entries
             .into_iter()
-            .map(|e| EquivalentWorkingCopyEntry {
-                large_repo_id: e.large_repo_id,
-                large_bcs_id: e.large_bcs_id,
-                small_repo_id: e.small_repo_id,
-                small_bcs_id: Some(e.small_bcs_id),
-            })
+            .map(
+                |(large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, _)| {
+                    EquivalentWorkingCopyEntry {
+                        large_repo_id,
+                        large_bcs_id,
+                        small_repo_id,
+                        small_bcs_id: Some(small_bcs_id),
+                    }
+                },
+            )
             .collect();
         let wce_entries: Vec<_> = wces
             .iter()

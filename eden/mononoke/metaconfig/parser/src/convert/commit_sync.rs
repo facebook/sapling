@@ -13,8 +13,8 @@ use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use itertools::Itertools;
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction,
-    SmallRepoCommitSyncConfig,
+    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
+    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use repos::{RawCommitSyncConfig, RawCommitSyncSmallRepoConfig};
@@ -186,7 +186,7 @@ impl Convert for RawCommitSyncConfig {
 
         let large_repo_id = RepositoryId::new(large_repo_id);
 
-        let version_name = version_name.unwrap_or_default();
+        let version_name = CommitSyncConfigVersion(version_name.unwrap_or_default());
         let commit_sync_config = CommitSyncConfig {
             large_repo_id,
             common_pushrebase_bookmarks,

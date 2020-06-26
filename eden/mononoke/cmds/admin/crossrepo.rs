@@ -433,8 +433,8 @@ mod test {
     use futures_old::stream::Stream;
     use maplit::{hashmap, hashset};
     use metaconfig_types::{
-        CommitSyncConfig, CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction,
-        SmallRepoCommitSyncConfig,
+        CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
+        DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
     };
     use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;
@@ -531,7 +531,7 @@ mod test {
                 small_repos: hashmap! {
                     small_repo.get_repoid() => small_repo_sync_config,
                 },
-                version_name: "TEST_VERSION_NAME".to_string(),
+                version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             };
             update_large_repo_bookmarks(
                 ctx.clone(),
@@ -623,7 +623,7 @@ mod test {
                 reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: Arc::new(noop_book_renamer),
                 reverse_bookmark_renamer: Arc::new(noop_book_renamer),
-                version_name: "TEST_VERSION_NAME".to_string(),
+                version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
@@ -632,7 +632,7 @@ mod test {
                 reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: Arc::new(noop_book_renamer),
                 reverse_bookmark_renamer: Arc::new(noop_book_renamer),
-                version_name: "TEST_VERSION_NAME".to_string(),
+                version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
         };
 

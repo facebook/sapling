@@ -400,13 +400,14 @@ mod test {
     use maplit::{btreemap, btreeset, hashmap};
     use metaconfig_types::{
         BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-        CommitSyncDirection, DatabaseConfig, DefaultSmallToLargeCommitSyncPathAction,
-        DerivedDataConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams, HookParams,
-        InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
-        MetadataDatabaseConfig, MultiplexId, PushParams, PushrebaseFlags, PushrebaseParams,
-        RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
-        ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
-        SourceControlServiceParams, UnodeVersion, WireprotoLoggingConfig,
+        CommitSyncConfigVersion, CommitSyncDirection, DatabaseConfig,
+        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, FilestoreParams, HookBypass,
+        HookConfig, HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams,
+        LfsParams, LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, PushParams,
+        PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
+        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig,
+        SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion,
+        WireprotoLoggingConfig,
     };
     use mononoke_types::MPath;
     use nonzero_ext::nonzero;
@@ -500,7 +501,7 @@ mod test {
                         direction: CommitSyncDirection::SmallToLarge,
                     }
                 },
-                version_name: "TEST_VERSION_NAME".to_string(),
+                version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             }
         };
 

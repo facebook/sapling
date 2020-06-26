@@ -29,6 +29,7 @@ use futures_old::{future, stream::Stream as OldStream};
 use manifest::{Entry, ManifestOps};
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
+use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::RepositoryId;
 use mononoke_types::{ChangesetId, MPath};
 use movers::Mover;
@@ -883,7 +884,7 @@ async fn init_repos(
         reverse_mover: mover_type.get_reverse_mover(),
         bookmark_renamer: bookmark_renamer_type.get_bookmark_renamer(),
         reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     let empty: BTreeMap<_, Option<&str>> = BTreeMap::new();
@@ -940,7 +941,7 @@ async fn init_repos(
         initial_bcs_id,
         target_repo.get_repoid(),
         rewritten_first_bcs_id,
-        Some("TEST_VERSION_NAME".to_string()),
+        Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
     );
     mapping.add(ctx.clone(), first_entry).compat().await?;
 
@@ -1183,7 +1184,7 @@ async fn init_merged_repos(
             reverse_mover: mover_type.get_mover(),
             bookmark_renamer,
             reverse_bookmark_renamer,
-            version_name: "TEST_VERSION_NAME".to_string(),
+            version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         };
 
         let commit_syncer = CommitSyncer::new(mapping.clone(), repos);
@@ -1283,7 +1284,7 @@ async fn init_merged_repos(
             first_after_merge_commit,
             small_repo.get_repoid(),
             small_repo_first_after_merge,
-            Some("TEST_VERSION_NAME".to_string()),
+            Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
         );
         mapping.add(ctx.clone(), entry).compat().await?;
     }
@@ -1419,7 +1420,7 @@ async fn preserve_premerge_commit(
             reverse_mover: Arc::new(identity_mover),
             bookmark_renamer: bookmark_renamer.clone(),
             reverse_bookmark_renamer: bookmark_renamer.clone(),
-            version_name: "TEST_VERSION_NAME".to_string(),
+            version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         };
 
         CommitSyncer::new(mapping.clone(), repos)

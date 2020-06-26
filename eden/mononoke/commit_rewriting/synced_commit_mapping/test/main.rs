@@ -13,6 +13,7 @@ use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 
 use context::CoreContext;
+use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sql_construct::SqlConstruct;
@@ -28,7 +29,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         bonsai::ONES_CSID,
         REPO_ONE,
         bonsai::TWOS_CSID,
-        Some("TEST_VERSION_NAME".to_string()),
+        Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
     );
     assert_eq!(
         true,
@@ -64,7 +65,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         bonsai::THREES_CSID,
         REPO_ONE,
         bonsai::FOURS_CSID,
-        Some("TEST_VERSION_NAME".to_string()),
+        Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
     );
     assert_eq!(
         true,

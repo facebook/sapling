@@ -79,7 +79,7 @@ fn test_changing_commit_sync_config(fb: FacebookInit) {
         .unwrap();
 
     assert_eq!(
-        csc_r1_v1.version_name,
+        csc_r1_v1.version_name.0,
         "TEST_VERSION_NAME_LIVE_1".to_string()
     );
     assert_eq!(
@@ -106,7 +106,7 @@ fn test_changing_commit_sync_config(fb: FacebookInit) {
         .unwrap();
 
     assert_eq!(
-        csc_r1_v2.version_name,
+        csc_r1_v2.version_name.0,
         "TEST_VERSION_NAME_LIVE_2".to_string()
     );
 

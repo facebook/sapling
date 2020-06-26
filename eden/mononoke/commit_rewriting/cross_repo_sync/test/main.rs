@@ -29,6 +29,7 @@ use cross_repo_sync_test_utils::rebase_root_on_master;
 use fixtures::{linear, many_files_dirs};
 use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
+use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, RepositoryId,
@@ -235,7 +236,7 @@ async fn sync_parentage(fb: FacebookInit) {
         reverse_mover: reverse_prefix_mover("linear"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     let config = CommitSyncer::new(mapping, repos);
@@ -354,7 +355,7 @@ async fn sync_causes_conflict(fb: FacebookInit) {
         reverse_mover: reverse_prefix_mover("linear"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     let master_file_repos = CommitSyncRepos::SmallToLarge {
@@ -364,7 +365,7 @@ async fn sync_causes_conflict(fb: FacebookInit) {
         reverse_mover: reverse_prefix_mover("master_file"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
@@ -439,7 +440,7 @@ async fn sync_empty_commit(fb: FacebookInit) {
         reverse_mover: prefix_mover("linear"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let stl_repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
@@ -448,7 +449,7 @@ async fn sync_empty_commit(fb: FacebookInit) {
         reverse_mover: reverse_prefix_mover("linear"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     let lts_config = CommitSyncer::new(mapping.clone(), lts_repos);
@@ -564,7 +565,7 @@ async fn sync_copyinfo(fb: FacebookInit) {
         reverse_mover: prefix_mover("linear"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let stl_repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
@@ -573,7 +574,7 @@ async fn sync_copyinfo(fb: FacebookInit) {
         reverse_mover: reverse_prefix_mover("linear"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     let stl_config = CommitSyncer::new(mapping.clone(), stl_repos);
@@ -657,7 +658,7 @@ async fn sync_remap_failure(fb: FacebookInit) {
         reverse_mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let stl_repos = CommitSyncRepos::SmallToLarge {
         small_repo: linear.clone(),
@@ -666,7 +667,7 @@ async fn sync_remap_failure(fb: FacebookInit) {
         reverse_mover: reverse_prefix_mover("linear"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let linear_path_in_megarepo = mpath("linear");
     let copyfrom_fail_repos = CommitSyncRepos::LargeToSmall {
@@ -686,7 +687,7 @@ async fn sync_remap_failure(fb: FacebookInit) {
         ),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
@@ -788,7 +789,7 @@ async fn sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         reverse_mover,
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     let commit_syncer = CommitSyncer::new(mapping.clone(), commit_sync_repos);
@@ -934,7 +935,7 @@ async fn sync_parent_search(fb: FacebookInit) {
         reverse_mover: reverse_prefix_mover("linear"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let reverse_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
@@ -943,7 +944,7 @@ async fn sync_parent_search(fb: FacebookInit) {
         reverse_mover: prefix_mover("linear"),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
-        version_name: "TEST_VERSION_NAME".to_string(),
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let config = CommitSyncer::new(mapping.clone(), repos);
     let reverse_config = CommitSyncer::new(mapping, reverse_repos);
