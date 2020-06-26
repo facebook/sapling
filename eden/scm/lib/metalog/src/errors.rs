@@ -32,6 +32,8 @@ impl ForeignError for anyhow::Error {}
 impl ForeignError for indexedlog::Error {}
 impl ForeignError for mincode::Error {}
 impl ForeignError for std::io::Error {}
+impl ForeignError for std::str::Utf8Error {}
+impl ForeignError for std::num::ParseIntError {}
 impl ForeignError for zstore::Error {}
 impl ForeignError for git2::Error {}
 impl ForeignError for String {}

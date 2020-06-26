@@ -6,6 +6,7 @@
  */
 
 use crate::{Error, Result};
+use anyhow::Context;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::log as ilog;
 use indexedlog::Repair;
@@ -14,6 +15,7 @@ use minibytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
+use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 pub use zstore::Id20;
@@ -40,6 +42,10 @@ use zstore::Zstore;
 /// upper layer to define them.
 pub struct MetaLog {
     pub(crate) path: PathBuf,
+
+    /// blobs/log storage (sub) directory
+    store_path: PathBuf,
+    compaction_epoch: Option<u64>,
 
     /// An append-only store - each entry contains a plain Id20
     /// to an object that should be a root.
@@ -85,7 +91,8 @@ impl MetaLog {
     /// be used. Otherwise the specific `root_id` is used.
     pub fn open(path: impl AsRef<Path>, root_id: Option<Id20>) -> Result<MetaLog> {
         let path = path.as_ref();
-        let log = Self::ilog_open_options().open(path.join("roots"))?;
+        let (store_path, compaction_epoch) = resolve_compaction_epoch(path)?;
+        let log = Self::ilog_open_options().open(store_path.join("roots"))?;
         let orig_root_id = match root_id {
             Some(id) => id,
             None => find_last_root_id(&log)?,
@@ -94,10 +101,12 @@ impl MetaLog {
         let cache_size = 100;
         let blobs = zstore::OpenOptions::default()
             .cache_size(cache_size)
-            .open(&path.join("blobs"))?;
+            .open(&store_path.join("blobs"))?;
         let root = load_root(&blobs, orig_root_id)?;
         let metalog = MetaLog {
             path: path.to_path_buf(),
+            store_path,
+            compaction_epoch,
             log,
             blobs,
             orig_root_id,
@@ -106,12 +115,63 @@ impl MetaLog {
         Ok(metalog)
     }
 
+    /// Compact the metalog. Compaction reclaims storage by retaining only blobs
+    /// reachable from the current root. All other roots (and blobs) are
+    /// discarded.
+    ///
+    /// After compaction writes through outstanding metalog handles will fail.
+    /// Reads through outstanding metalog handles are unaffected.
+    pub fn compact(path: impl AsRef<Path>) -> Result<()> {
+        let _lock = ScopedDirLock::new(&path.as_ref());
+        let metalog = Self::open(path, None)?;
+        let curr_epoch = metalog.compaction_epoch.unwrap_or(0);
+        // allow for a small (and arbitrary) number of failures to compact the metalog
+        // note the side-effect of creating the new store sub-directory
+        let next_epoch = (curr_epoch.checked_add(1).unwrap()..curr_epoch.checked_add(10).unwrap())
+            .find(|epoch| fs::create_dir(metalog.path.join(epoch.to_string())).is_ok())
+            .ok_or_else(|| "Failed to create compaction directory".to_string())?;
+        {
+            // the metalog open (create) happens directly against the *new* store sub-directory,
+            // bypassing the current "pointer" resolution and defeating the write locking
+            // (this function took the needed lock).
+            let mut compact_metalog = Self::open(metalog.path.join(next_epoch.to_string()), None)?;
+            for key in metalog.keys() {
+                if let Some(value) = metalog.get(&key)? {
+                    compact_metalog.set(&key, &value)?;
+                }
+            }
+            let opts = CommitOptions {
+                timestamp: metalog.root.timestamp,
+                message: &metalog.root.message,
+                ..Default::default()
+            };
+            compact_metalog
+                .commit(opts)
+                .with_context(|| "Failed to commit to compacted metalog")?;
+        }
+        indexedlog::utils::atomic_write(
+            metalog.path.join("current"),
+            next_epoch.to_string().as_bytes(),
+            true,
+        )
+        .with_context(|| "Could not update metalog store pointer")?;
+        if metalog.compaction_epoch.is_none() {
+            let _ = fs::remove_dir_all(metalog.store_path.join("roots"));
+            let _ = fs::remove_dir_all(metalog.store_path.join("blobs"));
+        } else {
+            assert!(metalog.store_path != metalog.path);
+            let _ = fs::remove_dir_all(metalog.store_path);
+        }
+
+        Ok(())
+    }
+
     /// List all `root_id`s stored in `path`.
     ///
     /// The oldest `root_id` is returned as the first item.
     pub fn list_roots(path: impl AsRef<Path>) -> Result<Vec<Id20>> {
-        let path = path.as_ref();
-        let log = Self::ilog_open_options().open(path.join("roots"))?;
+        let (store_path, _) = resolve_compaction_epoch(path.as_ref())?;
+        let log = Self::ilog_open_options().open(store_path.join("roots"))?;
         let result = std::iter::once(EMPTY_ROOT_ID.clone())
             .chain(
                 log.iter()
@@ -174,6 +234,14 @@ impl MetaLog {
             return Ok(self.orig_root_id);
         }
         let _lock = ScopedDirLock::new(&self.path);
+        let (_, actual_compaction_epoch) = resolve_compaction_epoch(&self.path)?;
+        if self.compaction_epoch != actual_compaction_epoch {
+            return Err(Error(format!(
+                "Commit failed. Compaction epoch changed since open; expected: {}, actual: {}",
+                self.compaction_epoch.unwrap_or(0),
+                actual_compaction_epoch.unwrap_or(0)
+            )));
+        }
         if self.log.is_changed() && !options.detached {
             // If 'detached' is set, then just write it in a conflict-free way,
             // since the final root object is not committed yet.
@@ -192,6 +260,28 @@ impl MetaLog {
             self.log.sync()?;
             self.orig_root_id = id;
         }
+        let current_store_paths = match self.compaction_epoch {
+            Some(epoch) => vec![epoch.to_string()],
+            None => vec!["roots".to_string(), "blobs".to_string()],
+        };
+        // try to cleanup any old metalog stores
+        if let Ok(entries) = fs::read_dir(&self.path) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    if let Ok(file_name) = entry.file_name().into_string() {
+                        if current_store_paths.contains(&file_name) {
+                            continue;
+                        }
+                        // only remove directories that conform to the metalog store naming conventions
+                        let is_numeric = file_name.parse::<u64>().is_ok();
+                        if is_numeric || file_name == "blobs" || file_name == "roots" {
+                            let _ = fs::remove_dir_all(entry.path());
+                        }
+                    }
+                }
+            }
+        }
+
         Ok(id)
     }
 
@@ -238,15 +328,21 @@ impl Repair<()> for MetaLog {
     fn repair(path: impl AsRef<Path>) -> indexedlog::Result<String> {
         let path = path.as_ref();
         let _lock = ScopedDirLock::new(path);
-        let blobs_path = path.join("blobs");
-        let roots_path = path.join("roots");
+        let (store_path, _) = resolve_compaction_epoch(path).map_err(|e| {
+            indexedlog::Error::from((
+                "cannot locate storage dir (compaction epoch resolution failed)",
+                e,
+            ))
+        })?;
+        let blobs_path = store_path.join("blobs");
+        let roots_path = store_path.join("roots");
 
         // Repair indexedlog without considering their dependencies.
         let mut message = format!(
             "Checking blobs at {:?}:\n{}\nChecking roots at {:?}:\n{}\n",
-            &path,
+            &store_path,
             Zstore::repair(&blobs_path)?,
-            &path,
+            &store_path,
             Self::ilog_open_options().repair(&roots_path)?,
         );
 
@@ -292,7 +388,7 @@ impl Repair<()> for MetaLog {
                 let mut backup = std::fs::OpenOptions::new()
                     .append(true)
                     .create(true)
-                    .open(path.join("roots.backup"))?;
+                    .open(store_path.join("roots.backup"))?;
                 backup.write_all(
                     &root_ids.iter().map(|id| id.as_ref()).collect::<Vec<_>>()[..].concat(),
                 )
@@ -319,6 +415,17 @@ fn find_last_root_id(log: &ilog::Log) -> Result<Id20> {
         return Ok(Id20::from_slice(entry?)?);
     }
     Ok(EMPTY_ROOT_ID.clone())
+}
+
+fn resolve_compaction_epoch(path: &Path) -> Result<(PathBuf, Option<u64>)> {
+    match indexedlog::utils::atomic_read(&path.join("current")) {
+        Ok(data) => {
+            let epoch = std::str::from_utf8(&data)?;
+            Ok((path.join(epoch), Some(epoch.parse()?)))
+        }
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok((path.to_path_buf(), None)),
+        Err(err) => Err(err.into()),
+    }
 }
 
 pub(crate) fn load_root(blobs: &Zstore, id: Id20) -> Result<Root> {
@@ -515,6 +622,145 @@ mod tests {
         assert_eq!(metalog3.get("c").unwrap().unwrap(), b"c");
     }
 
+    #[test]
+    fn test_compaction() {
+        let dir = TempDir::new().unwrap();
+        // ensure current "pointer" resolution works if pointer is encoded as symlink target. (Flip
+        // to symlinks here because the symlink encoding increases total size of store, affecting
+        // the size assertions.)
+        #[cfg(unix)]
+        {
+            indexedlog::utils::SYMLINK_ATOMIC_WRITE
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+        let mut metalog = MetaLog::open(&dir, None).unwrap();
+        fn get_store_size(path: &Path) -> u64 {
+            fs::read_dir(path)
+                .unwrap()
+                .map(|res| res.unwrap().metadata().unwrap().len())
+                .sum()
+        }
+        metalog.set("00", b"ab").unwrap();
+        metalog.set("10", b"cd").unwrap();
+        metalog.set("01", b"ef").unwrap();
+        metalog.set("11a", b"gh").unwrap();
+        metalog.set("11b", b"ij").unwrap();
+        metalog.commit(commit_opt("commit 0", 0)).unwrap();
+        let metalog_stale = MetaLog::open(&dir, None).unwrap();
+        metalog.set("00", b"abc").unwrap();
+        metalog.set("10", b"001").unwrap();
+        metalog.remove("01").unwrap();
+        metalog.commit(commit_opt("commit 1", 1)).unwrap();
+        let pre_compact_root_size = get_store_size(&dir.path().join("roots"));
+        let pre_compact_blob_size = get_store_size(&dir.path().join("blobs"));
+        assert_eq!(MetaLog::list_roots(&dir).unwrap().len(), 3);
+        assert_eq!(metalog.keys().len(), 4);
+
+        MetaLog::compact(&dir).unwrap();
+        #[cfg(unix)]
+        {
+            indexedlog::utils::SYMLINK_ATOMIC_WRITE
+                .store(false, std::sync::atomic::Ordering::SeqCst);
+        }
+
+        let mut metalog2 = MetaLog::open(&dir, None).unwrap();
+        assert_eq!(metalog2.message(), metalog.message());
+        assert_eq!(metalog2.timestamp(), metalog.timestamp());
+        assert_eq!(metalog2.compaction_epoch, Some(1u64));
+        let post_compact_root_size = get_store_size(&dir.path().join("1").join("roots"));
+        let post_compact_blob_size = get_store_size(&dir.path().join("1").join("blobs"));
+
+        assert!(
+            post_compact_root_size < pre_compact_root_size,
+            "roots size should be smaller after compaction, before: {}, after: {}",
+            pre_compact_root_size,
+            post_compact_root_size
+        );
+        assert!(
+            post_compact_blob_size < pre_compact_blob_size,
+            "blobs size should be smaller after compaction"
+        );
+        assert_eq!(metalog2.get("00").unwrap().unwrap(), b"abc");
+        assert_eq!(metalog2.get("10").unwrap().unwrap(), b"001");
+        assert_eq!(metalog2.get("01").unwrap(), None);
+        assert_eq!(metalog2.get("11a").unwrap().unwrap(), b"gh");
+        assert_eq!(metalog2.get("11b").unwrap().unwrap(), b"ij");
+        assert_eq!(MetaLog::list_roots(&dir).unwrap().len(), 2);
+
+        assert_eq!(
+            MetaLog::open(&dir, None).unwrap().orig_root_id,
+            metalog.orig_root_id
+        );
+
+        metalog.set("00", b"xyz").unwrap();
+        metalog
+            .commit(commit_opt("commit 2", 2))
+            .expect_err("commit against old compaction epoch should fail");
+
+        assert_eq!(
+            metalog_stale
+                .get("00")
+                .expect("reads against stale metalog handles should succeed")
+                .unwrap(),
+            b"ab"
+        );
+
+        #[cfg(unix)]
+        {
+            assert!(
+                !&dir.path().join("roots").exists(),
+                "compaction should have removed old roots"
+            );
+            assert!(
+                !&dir.path().join("blobs").exists(),
+                "compaction should have removed old blobs"
+            );
+        }
+
+        metalog2.set("00", b"qrs").unwrap();
+        metalog2.commit(commit_opt("compact commit 1", 2)).unwrap();
+        MetaLog::compact(&dir).unwrap();
+
+        let mut metalog3 = MetaLog::open(&dir, None).unwrap();
+        assert_eq!(metalog3.compaction_epoch, Some(2u64));
+        assert_eq!(metalog3.get("00").unwrap().unwrap(), b"qrs");
+        assert_eq!(metalog3.get("10").unwrap().unwrap(), b"001");
+        assert_eq!(metalog3.get("01").unwrap(), None);
+        assert_eq!(metalog3.get("11a").unwrap().unwrap(), b"gh");
+        assert_eq!(metalog3.get("11b").unwrap().unwrap(), b"ij");
+
+        #[cfg(unix)]
+        {
+            assert!(
+                !&dir.path().join("1").exists(),
+                "compaction should have removed old store path"
+            );
+        }
+        drop(metalog);
+        drop(metalog_stale);
+        drop(metalog2);
+        metalog3.set("00", b"tuv").unwrap();
+        // commit here should result in old metalog stores being deleted on all platforms
+        metalog3.commit(commit_opt("compact commit 2", 3)).unwrap();
+
+        let deleted_paths = vec!["blobs", "roots", "1"];
+        for path in &deleted_paths {
+            assert!(!&dir.path().join(path).exists());
+        }
+
+        // verify that delete on commit works
+        fs::create_dir(&dir.path().join("roots")).unwrap();
+        fs::create_dir(&dir.path().join("1")).unwrap();
+        fs::create_dir(&dir.path().join("1").join("roots")).unwrap();
+        metalog3.set("00", b"xyz").unwrap();
+        metalog3.commit(commit_opt("compact commit 3", 4)).unwrap();
+        for path in &deleted_paths {
+            assert!(!&dir.path().join(path).exists());
+        }
+        assert!(&dir.path().join("current").exists());
+        assert!(&dir.path().join("2").exists());
+    }
+
     quickcheck! {
         fn test_random_round_trips(map: BTreeMap<String, (Vec<u8>, Vec<u8>)>) -> bool {
             test_round_trips(map);
@@ -670,25 +916,28 @@ Removing 1 bad Root IDs.
 Rebuilt Root log with 4 Root IDs."#
         );
 
-        // Break the blob referred by commits. To do that, we need to reorder
-        // blobs in "blobs/" so the large "noise" blob is at the end.
-        let zpath = dir.path().join("blobs");
-        let blobs = {
-            let zlog = Zstore::default_open_options().open(&zpath).unwrap();
-            let mut blobs: Vec<Vec<u8>> = zlog.iter().map(|e| e.unwrap().to_vec()).collect();
-            blobs.sort_unstable_by_key(|b| b.len());
-            blobs
-        };
-        {
-            Zstore::default_open_options()
-                .delete_content(&zpath)
-                .unwrap();
-            let mut zlog = Zstore::default_open_options().open(&zpath).unwrap();
-            for blob in blobs {
-                zlog.append(blob).unwrap();
+        fn reorder_blobs_log(path: &Path) {
+            // Break the blob referred by commits. To do that, we need to reorder
+            // blobs in "blobs/" so the large "noise" blob is at the end.
+            let zpath = path.join("blobs");
+            let blobs = {
+                let zlog = Zstore::default_open_options().open(&zpath).unwrap();
+                let mut blobs: Vec<Vec<u8>> = zlog.iter().map(|e| e.unwrap().to_vec()).collect();
+                blobs.sort_unstable_by_key(|b| b.len());
+                blobs
+            };
+            {
+                Zstore::default_open_options()
+                    .delete_content(&zpath)
+                    .unwrap();
+                let mut zlog = Zstore::default_open_options().open(&zpath).unwrap();
+                for blob in blobs {
+                    zlog.append(blob).unwrap();
+                }
+                zlog.flush().unwrap();
             }
-            zlog.flush().unwrap();
         }
+        reorder_blobs_log(&dir.path());
 
         // Now the last blob is the 4KB "noise" blob. Break it without breaking
         // other blobs.
@@ -710,6 +959,32 @@ Key "c" referred by Root c4d3e70640748daac548adb39b07818b0dc34e4f (commit 2) can
 Key "c" referred by Root b0f57751e2ec36db46dc3d38b88d538b40eebdb9 (commit 3) cannot be read.
 Removing 2 bad Root IDs.
 Rebuilt Root log with 3 Root IDs."#
+        );
+
+        MetaLog::compact(&dir).unwrap();
+        create_log();
+        reorder_blobs_log(&dir.path().join("1"));
+
+        corrupt("1/blobs/log", -1000);
+        assert_eq!(
+            repair(),
+            r#"
+Checking blobs at "<path>/1":
+Verified first 7 entries, 583 of 4650 bytes in log
+Reset log size to 583
+Rebuilt index "id"
+
+Checking roots at "<path>/1":
+Verified 5 entries, 142 bytes in log
+Index "reverse" passed integrity check
+
+Checking blobs referred by 6 Roots:
+Key "c" referred by Root c4d3e70640748daac548adb39b07818b0dc34e4f (commit 2) cannot be read.
+Key "c" referred by Root b0f57751e2ec36db46dc3d38b88d538b40eebdb9 (commit 3) cannot be read.
+Key "c" referred by Root 93b756c5e512ebd0dd7c4dfdb17924287869ec33 (commit 4) cannot be read.
+Key "c" referred by Root 46652bcd89caba5046f90f37046266a60a2c1743 (commit 5) cannot be read.
+Removing 4 bad Root IDs.
+Rebuilt Root log with 2 Root IDs."#
         );
     }
 
