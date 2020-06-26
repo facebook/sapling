@@ -38,6 +38,15 @@ Verify enabling a single profile works
   index.html
   webpage.sparse
 
+Match files with sparse profile
+
+  $ hg debugsparsematch --sparse-profile webpage.sparse backend.sparse index.html foo.py bar.html
+  index.html
+  bar.html
+
+  $ hg debugsparsematch --sparse-profile backend.sparse backend.sparse index.html foo.py bar.html
+  foo.py
+
 Verify enabling two profiles works
 
   $ hg sparse enableprofile backend.sparse

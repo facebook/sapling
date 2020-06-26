@@ -1726,6 +1726,33 @@ def show(ui, repo, **opts):
                 fm.write("name", "  %s\n", fname, label="sparse.exclude")
 
 
+@command("debugsparsematch", [("f", "sparse-profile", "", "sparse profile name")])
+def debugsparsematch(ui, repo, *args, **opts):
+    """Filter paths using the given sparse profile
+
+    Print paths that match the given sparse profile.
+    Paths are relative to repo root.
+
+    Unlike 'sparse files', paths to test do not have to be present in the
+    working copy.
+    """
+    # Make it work in an edenfs checkout.
+    repo = repo.unfiltered()
+    if "eden" in repo.requirements:
+        _wraprepo(ui, repo)
+    filename = opts.get("sparse_profile")
+    if not filename:
+        raise error.Abort(_("--sparse-profile is required"))
+    ctx = repo["."]
+    raw = ctx[filename].data()
+    matcher, _key = repo._sparsematch_and_key(
+        revs=[nullrev], config=repo.readsparseconfig(raw=raw, filename=filename)
+    )
+    for path in args:
+        if matcher(path):
+            ui.write(_("%s\n") % path)
+
+
 def _contains_files(load_matcher, profile, files):
     matcher = load_matcher(profile)
     return all(matcher(f) for f in files)
