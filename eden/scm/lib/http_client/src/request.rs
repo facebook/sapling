@@ -37,51 +37,39 @@ pub struct Request<'a> {
     headers: Vec<(&'a str, &'a str)>,
     body: Option<Vec<u8>>,
     creds: Option<(&'a Path, &'a Path)>,
+    cainfo: Option<&'a Path>,
 }
 
 impl<'a> Request<'a> {
-    /// Create a GET request.
-    pub fn get(url: &'a Url) -> Self {
+    fn new(url: &'a Url, method: Method) -> Self {
         Self {
             url,
-            method: Method::Get,
+            method,
             headers: Vec::new(),
             body: None,
             creds: None,
+            cainfo: None,
         }
+    }
+
+    /// Create a GET request.
+    pub fn get(url: &'a Url) -> Self {
+        Self::new(url, Method::Get)
     }
 
     /// Create a HEAD request.
     pub fn head(url: &'a Url) -> Self {
-        Self {
-            url,
-            method: Method::Head,
-            headers: Vec::new(),
-            body: None,
-            creds: None,
-        }
+        Self::new(url, Method::Head)
     }
 
     /// Create a POST request.
     pub fn post(url: &'a Url) -> Self {
-        Self {
-            url,
-            method: Method::Post,
-            headers: Vec::new(),
-            body: None,
-            creds: None,
-        }
+        Self::new(url, Method::Post)
     }
 
     /// Create a PUT request.
     pub fn put(url: &'a Url) -> Self {
-        Self {
-            url,
-            method: Method::Put,
-            headers: Vec::new(),
-            body: None,
-            creds: None,
-        }
+        Self::new(url, Method::Put)
     }
 
     /// Set the data to be uploaded in the request body.
@@ -132,6 +120,21 @@ impl<'a> Request<'a> {
 
         Ok(Self {
             creds: Some((cert, key)),
+            ..self
+        })
+    }
+
+    /// Specify a CA certificate bundle to be used to verify the
+    /// server's certificate. If not specified, the client will
+    /// use the system default CA certificate bundle.
+    pub fn cainfo<C: AsRef<Path>>(self, cainfo: &'a C) -> Result<Self, CertOrKeyMissing> {
+        let cainfo = cainfo.as_ref();
+        if !cainfo.is_file() {
+            return Err(CertOrKeyMissing(cainfo.into()));
+        }
+
+        Ok(Self {
+            cainfo: Some(cainfo),
             ..self
         })
     }
@@ -189,6 +192,9 @@ impl<'a> Request<'a> {
         if let Some((cert, key)) = self.creds {
             easy.ssl_cert(cert)?;
             easy.ssl_key(key)?;
+        }
+        if let Some(cainfo) = self.cainfo {
+            easy.cainfo(cainfo)?;
         }
 
         // Always use attempt to use HTTP/2. Will fall back to HTTP/1.1
@@ -368,10 +374,11 @@ mod tests {
     }
 
     #[test]
-    fn test_cert_and_key_exist() -> Result<()> {
-        let tmp = TempDir::new("test_cert_and_key_exist")?;
+    fn test_creds_exist() -> Result<()> {
+        let tmp = TempDir::new("test_creds_exist")?;
         let cert = tmp.path().to_path_buf().join("cert.pem");
         let key = tmp.path().to_path_buf().join("key.pem");
+        let cainfo = tmp.path().to_path_buf().join("cainfo.pem");
         let url = Url::parse("https://example.com")?;
 
         // Cert and key missing.
@@ -384,6 +391,13 @@ mod tests {
         // Both present.
         let _ = File::create(&key)?;
         let _ = Request::get(&url).creds(&cert, &key)?;
+
+        // CA cert bundle missing.
+        assert!(Request::get(&url).cainfo(&cainfo).is_err());
+
+        // CA cert bundle present.
+        let _ = File::create(&cainfo)?;
+        let _ = Request::get(&url).cainfo(&cainfo)?;
 
         Ok(())
     }
