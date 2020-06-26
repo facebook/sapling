@@ -122,8 +122,6 @@ void PrjfsChannel::start(AbsolutePath mountPath, bool readOnly) {
            PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_MODIFIED |
            PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_DELETED,
        L""},
-      {PRJ_NOTIFY_SUPPRESS_NOTIFICATIONS, L".hg"},
-      {PRJ_NOTIFY_SUPPRESS_NOTIFICATIONS, L".eden"},
   };
 
   PRJ_STARTVIRTUALIZING_OPTIONS startOpts = {};
