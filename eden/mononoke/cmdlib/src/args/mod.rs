@@ -77,8 +77,13 @@ const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
 const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd-level";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
+const TEST_INSTANCE_ARG: &str = "test-instance";
+const LOCAL_CONFIGERATOR_PATH_ARG: &str = "local-configerator-path";
 
 const CRYPTO_PROJECT: &str = "SCM";
+
+const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
+const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
 
 pub struct MononokeApp {
     /// The app name.
@@ -109,6 +114,9 @@ pub struct MononokeApp {
 
     /// Adds --fb303-thrift-port
     fb303: bool,
+
+    /// Adds `--test-instance` and `--local-configerator-path` args
+    test_args: bool,
 }
 
 /// Create a default root logger for Facebook services
@@ -135,7 +143,14 @@ impl MononokeApp {
             shutdown_timeout: false,
             scuba_logging: false,
             fb303: false,
+            test_args: false,
         }
+    }
+
+    /// Enable args that help to use this binary in integration tests
+    pub fn with_test_args(mut self) -> Self {
+        self.test_args = true;
+        self
     }
 
     /// Hide advanced args.
@@ -296,8 +311,27 @@ impl MononokeApp {
             app = add_fb303_args(app);
         }
 
+        if self.test_args {
+            app = add_test_args(app);
+        }
+
         app
     }
+}
+
+pub fn add_test_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(TEST_INSTANCE_ARG)
+            .long(TEST_INSTANCE_ARG)
+            .takes_value(false)
+            .help("disables some functionality for tests"),
+    )
+    .arg(
+        Arg::with_name(LOCAL_CONFIGERATOR_PATH_ARG)
+            .long(LOCAL_CONFIGERATOR_PATH_ARG)
+            .takes_value(true)
+            .help("local path to fetch configerator configs from. used only if --test-instance is"),
+    )
 }
 
 pub fn add_tunables_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -1204,4 +1238,33 @@ where
         None => Ok(ConfigHandle::default()),
         Some((source, path)) => source.get_config_handle(path),
     })
+}
+
+pub fn maybe_init_config_store<'a>(
+    fb: FacebookInit,
+    root_log: &Logger,
+    matches: &ArgMatches<'a>,
+) -> Option<ConfigStore> {
+    let test_instance = matches.is_present(TEST_INSTANCE_ARG);
+    if test_instance {
+        let local_configerator_path = matches.value_of(LOCAL_CONFIGERATOR_PATH_ARG);
+        local_configerator_path.map(|path| {
+            ConfigStore::file(
+                root_log.clone(),
+                PathBuf::from(path),
+                String::new(),
+                CONFIGERATOR_POLL_INTERVAL,
+            )
+        })
+    } else {
+        Some(
+            ConfigStore::configerator(
+                fb,
+                root_log.clone(),
+                CONFIGERATOR_POLL_INTERVAL,
+                CONFIGERATOR_REFRESH_TIMEOUT,
+            )
+            .expect("can't set up configerator API"),
+        )
+    }
 }
