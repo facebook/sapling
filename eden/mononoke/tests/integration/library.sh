@@ -1685,3 +1685,13 @@ function commitcloud_forwardfiller_iteration() {
     --stop-after-n-iterations=10 \
     --debug "$@"
 }
+
+function repo_import() {
+  log="$TESTTMP/repo_import.out"
+
+  "$MONONOKE_REPO_IMPORT" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
