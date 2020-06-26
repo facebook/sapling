@@ -160,3 +160,16 @@ function backsync_large_to_small() {
     --target-repo-id "$REPOIDSMALL" \
     backsync-all
 }
+
+function backsync_large_to_small_forever {
+  "$BACKSYNCER" "${COMMON_ARGS[@]}" --debug \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --source-repo-id "$REPOIDLARGE" \
+    --target-repo-id "$REPOIDSMALL" \
+    --test-instance \
+    "$@" \
+    backsync-forever >> "$TESTTMP/backsyncer.out" 2>&1 &
+
+  export BACKSYNCER_PID=$!
+  echo "$BACKSYNCER_PID" >> "$DAEMON_PIDS"
+}
