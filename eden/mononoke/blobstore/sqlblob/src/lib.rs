@@ -23,7 +23,9 @@ use crate::facebook::myadmin_delay;
 use crate::myadmin_delay_dummy as myadmin_delay;
 use crate::store::{ChunkSqlStore, ChunkingMethod, DataSqlStore};
 use anyhow::{format_err, Error, Result};
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata, CountedBlobstore};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstoreWithLink, CountedBlobstore,
+};
 use bytes::BytesMut;
 use cloned::cloned;
 use context::CoreContext;
@@ -372,5 +374,31 @@ impl Blobstore for Sqlblob {
     ) -> BoxFuture<'static, Result<bool, Error>> {
         cloned!(self.data_store);
         async move { data_store.is_present(&key).await }.boxed()
+    }
+}
+
+impl BlobstoreWithLink for Sqlblob {
+    fn link(
+        &self,
+        _ctx: CoreContext,
+        existing_key: String,
+        link_key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        cloned!(self.data_store);
+        async move {
+            let existing_data = data_store.get(&existing_key).await?.ok_or_else(|| {
+                format_err!("Key {} does not exist in the blobstore", existing_key)
+            })?;
+            data_store
+                .put(
+                    &link_key,
+                    existing_data.ctime,
+                    &existing_data.id,
+                    existing_data.count,
+                    existing_data.chunking_method,
+                )
+                .await
+        }
+        .boxed()
     }
 }
