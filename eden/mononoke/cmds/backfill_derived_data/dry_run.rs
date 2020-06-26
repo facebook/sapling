@@ -104,7 +104,7 @@ impl FsnodeCleaner {
                 // Note - it's important to use repo.get_blobstore() and not
                 // use mem_writes blobstore. This is repo.get_blobstore()
                 // add a few wrapper blobstores (e.g. the one that adds repo prefix)
-                repo.get_blobstore().put(ctx.clone(), key, value).compat()
+                repo.get_blobstore().put(ctx.clone(), key, value)
             })
             .map(Result::<_, Error>::Ok)
             .try_for_each_concurrent(100, |f| async move { f.await })

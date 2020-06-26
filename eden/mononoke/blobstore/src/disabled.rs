@@ -7,8 +7,7 @@
 
 use anyhow::{format_err, Error};
 use context::CoreContext;
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
-use futures_old::future::IntoFuture as IntoFuture01;
+use futures::future::{err, BoxFuture, FutureExt};
 
 use super::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 
@@ -28,10 +27,12 @@ impl DisabledBlob {
 }
 
 impl Blobstore for DisabledBlob {
-    fn get(&self, _ctx: CoreContext, _key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
-        Err(format_err!("Blobstore disabled: {}", self.reason))
-            .into_future()
-            .boxify()
+    fn get(
+        &self,
+        _ctx: CoreContext,
+        _key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+        err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
     }
 
     fn put(
@@ -39,10 +40,8 @@ impl Blobstore for DisabledBlob {
         _ctx: CoreContext,
         _key: String,
         _value: BlobstoreBytes,
-    ) -> BoxFuture01<(), Error> {
-        Err(format_err!("Blobstore disabled: {}", self.reason))
-            .into_future()
-            .boxify()
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
     }
 }
 
@@ -58,12 +57,12 @@ mod test {
 
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
-        match runtime.block_on(disabled.get(ctx.clone(), "foobar".to_string())) {
+        match runtime.block_on_std(disabled.get(ctx.clone(), "foobar".to_string())) {
             Ok(_) => panic!("Unexpected success"),
             Err(err) => println!("Got error: {:?}", err),
         }
 
-        match runtime.block_on(disabled.put(
+        match runtime.block_on_std(disabled.put(
             ctx,
             "foobar".to_string(),
             BlobstoreBytes::from_bytes(vec![]),

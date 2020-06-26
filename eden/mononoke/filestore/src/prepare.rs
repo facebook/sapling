@@ -10,6 +10,7 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::FutureExt;
 use futures_old::{
     future::{lazy, IntoFuture},
@@ -104,6 +105,7 @@ where
                             // MononokeId.
                             blobstore
                                 .put(ctx, blob.id().blobstore_key(), blob.into())
+                                .compat()
                                 .map(move |_| pointer)
                         }
                     });

@@ -14,8 +14,8 @@ use bytes::Bytes;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt, TryFutureExt},
     stream::{FuturesUnordered, TryStreamExt},
-    FutureExt, TryFutureExt,
 };
 use futures_ext::{try_boxfuture, BoxFuture as BoxFuture01, FutureExt as Future01Ext};
 use mononoke_types::BlobstoreBytes;
@@ -63,7 +63,11 @@ fn compress_if_worthwhile(value: Bytes, zstd_level: i32) -> Result<SingleValue, 
 pub const ENVELOPE_SUFFIX: &str = ".pack";
 
 impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let inner_get_data = {
             let mut inner_key = key.clone();
             inner_key.push_str(ENVELOPE_SUFFIX);
@@ -71,7 +75,6 @@ impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
         };
         async move {
             let inner_get_data = match inner_get_data
-                .compat()
                 .await
                 .with_context(|| format!("While getting inner data for {:?}", key))?
             {
@@ -95,8 +98,6 @@ impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
             Ok(Some(get_data))
         }
         .boxed()
-        .compat()
-        .boxify()
     }
 
     fn put(
@@ -104,26 +105,35 @@ impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
         ctx: CoreContext,
         mut key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture01<(), Error> {
+    ) -> BoxFuture<'static, Result<(), Error>> {
         key.push_str(ENVELOPE_SUFFIX);
 
         let value = value.into_bytes();
 
         let single = if let Some(zstd_level) = self.options.put_compress_level {
-            try_boxfuture!(compress_if_worthwhile(value, zstd_level))
+            compress_if_worthwhile(value, zstd_level)
         } else {
-            SingleValue::Raw(value.to_vec())
+            Ok(SingleValue::Raw(value.to_vec()))
         };
 
-        // Wrap in thrift encoding
-        let envelope: PackEnvelope = PackEnvelope(StorageEnvelope {
-            storage: StorageFormat::Single(single),
-        });
-        // pass through the put after wrapping
-        self.inner.put(ctx, key, envelope.into())
+        let inner = self.inner.clone();
+
+        async move {
+            // Wrap in thrift encoding
+            let envelope: PackEnvelope = PackEnvelope(StorageEnvelope {
+                storage: StorageFormat::Single(single?),
+            });
+            // pass through the put after wrapping
+            inner.put(ctx, key, envelope.into()).await
+        }
+        .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, mut key: String) -> BoxFuture01<bool, Error> {
+    fn is_present(
+        &self,
+        ctx: CoreContext,
+        mut key: String,
+    ) -> BoxFuture<'static, Result<bool, Error>> {
         key.push_str(ENVELOPE_SUFFIX);
         self.inner.is_present(ctx, key)
     }
@@ -158,7 +168,6 @@ impl<T: Blobstore + BlobstoreWithLink + Clone> PackBlob<T> {
         // pass through the put after wrapping
         self.inner
             .put(ctx.clone(), pack_key.clone(), pack.into())
-            .compat()
             .await?;
 
         // add the links
@@ -210,7 +219,7 @@ mod tests {
             roundtrip(ctx.clone(), innerblob.clone(), &packblob, outer_key, value).await?;
 
         // check inner value is smaller
-        let inner_value = innerblob.get(ctx.clone(), inner_key).compat().await?;
+        let inner_value = innerblob.get(ctx.clone(), inner_key).await?;
         assert!(inner_value.unwrap().into_bytes().len() < bytes_in.len());
         Ok(())
     }
@@ -232,7 +241,7 @@ mod tests {
             roundtrip(ctx.clone(), innerblob.clone(), &packblob, outer_key, value).await?;
 
         // check inner value is larger (due to being raw plus thrift encoding)
-        let inner_value = innerblob.get(ctx.clone(), inner_key).compat().await?;
+        let inner_value = innerblob.get(ctx.clone(), inner_key).await?;
         assert!(inner_value.unwrap().into_bytes().len() > bytes_in.len());
         Ok(())
     }
@@ -247,15 +256,10 @@ mod tests {
         // Put, this will apply the thrift envelope and save to the inner store
         packblob
             .put(ctx.clone(), outer_key.clone(), value.clone())
-            .compat()
             .await?;
 
         // Get, should remove the thrift envelope as it is loaded
-        let fetched_value = packblob
-            .get(ctx.clone(), outer_key.clone())
-            .compat()
-            .await?
-            .unwrap();
+        let fetched_value = packblob.get(ctx.clone(), outer_key.clone()).await?.unwrap();
 
         // Make sure the thrift wrapper is not still there!
         assert_eq!(value, fetched_value.into_bytes());
@@ -265,7 +269,6 @@ mod tests {
         inner_key.push_str(ENVELOPE_SUFFIX);
         let fetched_value = inner_blobstore
             .get(ctx.clone(), inner_key.clone())
-            .compat()
             .await?
             .unwrap();
 
@@ -274,15 +277,11 @@ mod tests {
         // Check is_present matches
         let is_present = inner_blobstore
             .is_present(ctx.clone(), inner_key.clone())
-            .compat()
             .await?;
         assert!(is_present);
 
         // Check the key without suffix is not there
-        let is_not_present = !inner_blobstore
-            .is_present(ctx.clone(), outer_key)
-            .compat()
-            .await?;
+        let is_not_present = !inner_blobstore.is_present(ctx.clone(), outer_key).await?;
         assert!(is_not_present);
 
         Ok(inner_key)
@@ -320,16 +319,12 @@ mod tests {
             .await?;
 
         // Check the inner key is present (as we haven't unlinked it yet)
-        let is_present = inner_blobstore
-            .is_present(ctx.clone(), inner_key)
-            .compat()
-            .await?;
+        let is_present = inner_blobstore.is_present(ctx.clone(), inner_key).await?;
         assert!(is_present);
 
         // Get, should remove the thrift envelope as it is loaded
         let fetched_value = packblob
             .get(ctx.clone(), input_entries[1].key.clone())
-            .compat()
             .await?;
 
         assert!(fetched_value.is_some());

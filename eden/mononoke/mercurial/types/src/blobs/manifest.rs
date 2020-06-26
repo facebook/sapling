@@ -20,7 +20,7 @@ use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use futures::{
     compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
+    future::{BoxFuture, FutureExt, TryFutureExt},
 };
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::future::{self, Future};
@@ -122,6 +122,7 @@ pub fn fetch_manifest_envelope_opt<B: Blobstore>(
     let blobstore_key = node_id.blobstore_key();
     blobstore
         .get(ctx, blobstore_key.clone())
+        .compat()
         .context("While fetching manifest envelope blob")
         .map_err(Error::from)
         .and_then(move |bytes| {

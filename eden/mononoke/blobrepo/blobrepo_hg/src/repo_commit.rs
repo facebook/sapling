@@ -274,7 +274,7 @@ impl UploadEntries {
         } else {
             HgFileNodeId::new(node_id).blobstore_key()
         };
-        blobstore.assert_present(ctx, key)
+        blobstore.assert_present(ctx, key).compat().boxify()
     }
 
     pub fn finalize(

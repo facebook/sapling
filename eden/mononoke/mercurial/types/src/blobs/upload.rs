@@ -19,6 +19,7 @@ use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use filestore::FilestoreConfig;
 use filestore::{self, FetchKey};
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use futures_stats::{FutureStats, Timed};
@@ -157,6 +158,7 @@ impl UploadHgTreeEntry {
         // Upload the blob.
         let upload = blobstore
             .put(ctx, blobstore_key, envelope_blob.into())
+            .compat()
             .map({
                 let path = path.clone();
                 move |()| (blob_entry, path)
@@ -442,6 +444,7 @@ impl UploadHgFileEntry {
 
                 blobstore
                     .put(ctx, blobstore_key, envelope_blob.into())
+                    .compat()
                     .timed({
                         let path = path.clone();
                         move |stats, result| {

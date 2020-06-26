@@ -9,7 +9,7 @@ use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use context_concurrency_blobstore::ContextConcurrencyBlobstore;
-use futures_ext::BoxFuture;
+use futures::future::BoxFuture;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig};
@@ -57,16 +57,29 @@ impl<B> Blobstore for AbstractRepoBlobstore<B>
 where
     B: Blobstore + Clone,
 {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         self.0.get(ctx, key)
     }
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.0.put(ctx, key, value)
     }
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.0.is_present(ctx, key)
     }
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.0.assert_present(ctx, key)
     }
 }

@@ -11,10 +11,10 @@ blobstore = { path = ".." }
 context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-futures = "0.1"
+futures = { version = "0.3", features = ["async-await", "compat"] }
 
 [dev-dependencies]
 memblob = { path = "../memblob" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tokio = { version = "=0.2.13", features = ["full"] }

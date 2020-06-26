@@ -12,7 +12,8 @@ use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::{self, BoxFuture, FutureExt};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::prelude::*;
 use metaconfig_types::MultiplexId;
 use mononoke_types::{BlobstoreBytes, DateTime};
@@ -31,25 +32,38 @@ impl<B: Blobstore> DummyBlobstore<B> {
 }
 
 impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         self.inner.get(ctx, key)
     }
 
-    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         info!(
             self.logger,
             "I would have written blob {} of size {}",
             key,
             value.len()
         );
-        Ok(()).into_future().boxify()
+        future::ok(()).boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.inner.is_present(ctx, key)
     }
 
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.inner.assert_present(ctx, key)
     }
 }
@@ -70,7 +84,7 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         &self,
         _ctx: CoreContext,
         entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture01<(), Error> {
         let entries: Vec<_> = entries.map(|e| format!("{:?}", e)).collect();
         info!(self.logger, "I would have written {}", entries.join(",\n"));
         Ok(()).into_future().boxify()
@@ -83,7 +97,7 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
-    ) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
+    ) -> BoxFuture01<Vec<BlobstoreSyncQueueEntry>, Error> {
         self.inner
             .iter(ctx, key_like, multiplex_id, older_than, limit)
     }
@@ -92,13 +106,17 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         &self,
         _ctx: CoreContext,
         entries: Vec<BlobstoreSyncQueueEntry>,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture01<(), Error> {
         let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
         info!(self.logger, "I would have deleted {}", entries.join(",\n"));
         Ok(()).into_future().boxify()
     }
 
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Vec<BlobstoreSyncQueueEntry>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture01<Vec<BlobstoreSyncQueueEntry>, Error> {
         self.inner.get(ctx, key)
     }
 }

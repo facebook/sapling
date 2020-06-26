@@ -9,8 +9,7 @@ use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::Future;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use std::sync::Arc;
 
@@ -57,48 +56,54 @@ impl<T: Blobstore + Clone> SamplingBlobstore<T> {
 
 impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
     #[inline]
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
-        self.inner
-            .get(ctx.clone(), key.clone())
-            .and_then({
-                cloned!(self.handler);
-                move |opt_blob| {
-                    handler
-                        .sample_get(ctx, key, opt_blob.as_ref().map(|blob| blob.as_bytes()))
-                        .map(|()| opt_blob)
-                }
-            })
-            .boxify()
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+        cloned!(self.handler);
+        let get = self.inner.get(ctx.clone(), key.clone());
+        async move {
+            let opt_blob = get.await?;
+            handler.sample_get(ctx, key, opt_blob.as_ref().map(|blob| blob.as_bytes()))?;
+            Ok(opt_blob)
+        }
+        .boxed()
     }
 
     #[inline]
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let sample_res = self.handler.sample_put(&ctx, &key, &value);
-        self.inner
-            .put(ctx, key, value)
-            .and_then(|()| sample_res)
-            .boxify()
+        let put = self.inner.put(ctx, key, value);
+        async move {
+            put.await?;
+            sample_res
+        }
+        .boxed()
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
-        self.inner
-            .is_present(ctx.clone(), key.clone())
-            .and_then({
-                cloned!(self.handler);
-                move |is_present| {
-                    handler
-                        .sample_is_present(ctx, key, is_present)
-                        .map(|()| is_present)
-                }
-            })
-            .boxify()
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+        let is_present = self.inner.is_present(ctx.clone(), key.clone());
+        cloned!(self.handler);
+        async move {
+            let is_present = is_present.await?;
+            handler.sample_is_present(ctx, key, is_present)?;
+            Ok(is_present)
+        }
+        .boxed()
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
     use fbinit::FacebookInit;
     use futures::Future;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -150,7 +155,7 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_sample_called(fb: FacebookInit) {
+    async fn test_sample_called(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let base = EagerMemblob::new();
         let sample_this = SamplingKey::new();
@@ -169,16 +174,16 @@ mod test {
                 key.clone(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
-            .wait();
+            .await;
         assert!(r.is_ok());
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(!was_sampled);
         let ctx = ctx.clone_and_sample(sample_this);
-        let base_present = base.is_present(ctx.clone(), key.clone()).wait().unwrap();
+        let base_present = base.is_present(ctx.clone(), key.clone()).await.unwrap();
         assert!(base_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(!was_sampled);
-        let wrapper_present = wrapper.is_present(ctx, key.clone()).wait().unwrap();
+        let wrapper_present = wrapper.is_present(ctx, key.clone()).await.unwrap();
         assert!(wrapper_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(was_sampled);

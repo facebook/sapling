@@ -171,6 +171,7 @@ impl BonsaiDerivedMapping for RootFastlogMapping {
         let gets = csids.into_iter().map(|cs_id| {
             self.blobstore
                 .get(ctx.clone(), self.format_key(&cs_id))
+                .compat()
                 .map(move |maybe_val| maybe_val.map(|_| (cs_id.clone(), RootFastlog(cs_id))))
         });
         FuturesUnordered::from_iter(gets)
@@ -180,12 +181,15 @@ impl BonsaiDerivedMapping for RootFastlogMapping {
     }
 
     fn put(&self, ctx: CoreContext, csid: ChangesetId, _id: Self::Value) -> BoxFuture<(), Error> {
-        self.blobstore.put(
-            ctx,
-            self.format_key(&csid),
-            // Value doesn't matter here, so just put empty Value
-            BlobstoreBytes::from_bytes(Bytes::new()),
-        )
+        self.blobstore
+            .put(
+                ctx,
+                self.format_key(&csid),
+                // Value doesn't matter here, so just put empty Value
+                BlobstoreBytes::from_bytes(Bytes::new()),
+            )
+            .compat()
+            .boxify()
     }
 }
 

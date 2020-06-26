@@ -7,8 +7,8 @@
 
 #![deny(warnings)]
 use anyhow::Error;
-use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::Future;
 use mononoke_types::Timestamp;
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -93,10 +93,10 @@ impl SqlRedactedContentStore {
 #[cfg(test)]
 mod test {
     use super::*;
-    use tokio_compat::runtime::Runtime;
+    use futures::compat::Future01CompatExt;
 
-    #[test]
-    fn test_redacted_store() {
+    #[fbinit::compat_test]
+    async fn test_redacted_store(_fb: fbinit::FacebookInit) {
         let key_a = "aaaaaaaaaaaaaaaaaaaa".to_string();
         let key_b = "bbbbbbbbbbbbbbbbbbbb".to_string();
         let key_c = "cccccccccccccccccccc".to_string();
@@ -106,23 +106,35 @@ mod test {
         let redacted_keys1 = vec![key_a.clone(), key_b.clone()];
         let redacted_keys2 = vec![key_c.clone(), key_d.clone()];
 
-        let mut rt = Runtime::new().unwrap();
         let store = SqlRedactedContentStore::with_sqlite_in_memory().unwrap();
 
-        rt.block_on(store.insert_redacted_blobs(&redacted_keys1, &task1, &Timestamp::now()))
+        store
+            .insert_redacted_blobs(&redacted_keys1, &task1, &Timestamp::now())
+            .compat()
+            .await
             .expect("insert failed");
-        rt.block_on(store.insert_redacted_blobs(&redacted_keys2, &task2, &Timestamp::now()))
+        store
+            .insert_redacted_blobs(&redacted_keys2, &task2, &Timestamp::now())
+            .compat()
+            .await
             .expect("insert failed");
 
-        let res = rt
-            .block_on(store.get_all_redacted_blobs())
+        let res = store
+            .get_all_redacted_blobs()
+            .compat()
+            .await
             .expect("select failed");
         assert_eq!(res.len(), 4);
 
-        rt.block_on(store.delete_redacted_blobs(&redacted_keys1))
+        store
+            .delete_redacted_blobs(&redacted_keys1)
+            .compat()
+            .await
             .expect("delete failed");
-        let res = rt
-            .block_on(store.get_all_redacted_blobs())
+        let res = store
+            .get_all_redacted_blobs()
+            .compat()
+            .await
             .expect("select failed");
 
         assert_eq!(res.contains_key(&key_c), true);

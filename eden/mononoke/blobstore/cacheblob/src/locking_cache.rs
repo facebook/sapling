@@ -9,8 +9,11 @@ use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt, TryFutureExt},
+};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as OldFutureExt};
 use futures_old::{future, future::Either, Future, IntoFuture};
 use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
@@ -37,12 +40,12 @@ pub trait CacheBlobstoreExt: Blobstore {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error>;
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error>;
     fn get_cache_only(
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error>;
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error>;
 }
 
 /// The operations a cache must provide in order to be usable as the caching layer for a
@@ -71,16 +74,16 @@ pub trait CacheOps: fmt::Debug + Send + Sync + 'static {
 
     /// Fetch the blob from the cache, if possible. Return `None` if the cache does not have a
     /// copy of the blob (i.e. the cache entry is not in Known state).
-    fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreGetData>, ()>;
+    fn get(&self, key: &str) -> BoxFuture01<Option<BlobstoreGetData>, ()>;
 
     /// Tell the cache that the backing store value for this `key` is `value`. This should put the
     /// cache entry for this `key` into Known state or a demotion of Known state (Present, Empty).
-    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture<(), ()>;
+    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture01<(), ()>;
 
     /// Ask the cache if it knows whether the backing store has a value for this key. Returns
     /// `true` if there is definitely a value (i.e. cache entry in Present or Known state), `false`
     /// otherwise (Empty or Leased states).
-    fn check_present(&self, key: &str) -> BoxFuture<bool, ()>;
+    fn check_present(&self, key: &str) -> BoxFuture01<bool, ()>;
 }
 
 /// The operations a cache must provide to take part in the update lease protocol. This reduces the
@@ -95,35 +98,35 @@ pub trait LeaseOps: fmt::Debug + Send + Sync + 'static {
     /// the entry is Empty, it changes it to the Leased state.
     /// The result is `true` if the test-and-set changed the entry to Leased state, `false`
     /// otherwise
-    fn try_add_put_lease(&self, key: &str) -> BoxFuture<bool, ()>;
+    fn try_add_put_lease(&self, key: &str) -> BoxFuture01<bool, ()>;
 
     /// Will keep the lease alive until `done` future resolves.
     /// Note that it should only be called after successful try_add_put_lease()
-    fn renew_lease_until(&self, ctx: CoreContext, key: &str, done: BoxFuture<(), ()>);
+    fn renew_lease_until(&self, ctx: CoreContext, key: &str, done: BoxFuture01<(), ()>);
 
     /// Wait for a suitable (cache-defined) period between `try_add_put_lease` attempts.
     /// For caches without a notification method, this should just be a suitable delay.
     /// For caches that can notify on key change, this should wait for that notification.
     /// It is acceptable to return from this future without checking the state of the cache entry.
-    fn wait_for_other_leases(&self, key: &str) -> BoxFuture<(), ()>;
+    fn wait_for_other_leases(&self, key: &str) -> BoxFuture01<(), ()>;
 
     /// Releases any leases held on `key`. The entry must transition from Leased to Empty.
-    fn release_lease(&self, key: &str) -> BoxFuture<(), ()>;
+    fn release_lease(&self, key: &str) -> BoxFuture01<(), ()>;
 }
 
 impl<C> CacheOps for Arc<C>
 where
     C: ?Sized + CacheOps,
 {
-    fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreGetData>, ()> {
+    fn get(&self, key: &str) -> BoxFuture01<Option<BlobstoreGetData>, ()> {
         self.as_ref().get(key)
     }
 
-    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture<(), ()> {
+    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture01<(), ()> {
         self.as_ref().put(key, value)
     }
 
-    fn check_present(&self, key: &str) -> BoxFuture<bool, ()> {
+    fn check_present(&self, key: &str) -> BoxFuture01<bool, ()> {
         self.as_ref().check_present(key)
     }
 }
@@ -132,19 +135,19 @@ impl<L> LeaseOps for Arc<L>
 where
     L: LeaseOps,
 {
-    fn try_add_put_lease(&self, key: &str) -> BoxFuture<bool, ()> {
+    fn try_add_put_lease(&self, key: &str) -> BoxFuture01<bool, ()> {
         self.as_ref().try_add_put_lease(key)
     }
 
-    fn renew_lease_until(&self, ctx: CoreContext, key: &str, done: BoxFuture<(), ()>) {
+    fn renew_lease_until(&self, ctx: CoreContext, key: &str, done: BoxFuture01<(), ()>) {
         self.as_ref().renew_lease_until(ctx, key, done)
     }
 
-    fn wait_for_other_leases(&self, key: &str) -> BoxFuture<(), ()> {
+    fn wait_for_other_leases(&self, key: &str) -> BoxFuture01<(), ()> {
         self.as_ref().wait_for_other_leases(key)
     }
 
-    fn release_lease(&self, key: &str) -> BoxFuture<(), ()> {
+    fn release_lease(&self, key: &str) -> BoxFuture01<(), ()> {
         self.as_ref().release_lease(key)
     }
 }
@@ -261,7 +264,11 @@ where
     L: LeaseOps + Clone,
     T: Blobstore + Clone,
 {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let cache_get = CacheOpsUtil::get(&self.cache, &key);
         let cache_put = CacheOpsUtil::put_closure(&self.cache, &key);
 
@@ -280,21 +287,27 @@ where
                             ctx.perf_counters().increment_counter(counter);
                         }
                         STATS::get_miss.add_value(1, (C::CACHE_NAME,));
-                        future::Either::B(blobstore.get(ctx, key).map(cache_put))
+                        future::Either::B(blobstore.get(ctx, key).compat().map(cache_put))
                     }
                 }
             })
-            .boxify()
+            .compat()
+            .boxed()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        let can_put = self.take_put_lease(&key);
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let can_put = self.take_put_lease(&key).compat();
         let cache_put = CacheOpsUtil::put(&self.cache, &key, value.clone().into());
 
         cloned!(self.blobstore, self.lease);
         async move {
-            if can_put.compat().await? {
-                let () = blobstore.put(ctx, key.clone(), value).compat().await?;
+            if can_put.await? {
+                let () = blobstore.put(ctx, key.clone(), value).await?;
 
                 tokio::spawn(
                     cache_put
@@ -306,15 +319,13 @@ where
             Ok(())
         }
         .boxed()
-        .compat()
-        .boxify()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         let cache_check = CacheOpsUtil::is_present(&self.cache, &key);
         let blobstore_check = future::lazy({
             let blobstore = self.blobstore.clone();
-            move || blobstore.is_present(ctx, key)
+            move || blobstore.is_present(ctx, key).compat()
         });
 
         cache_check
@@ -327,7 +338,8 @@ where
                     Either::B(blobstore_check)
                 }
             })
-            .boxify()
+            .compat()
+            .boxed()
     }
 }
 
@@ -341,7 +353,7 @@ where
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         let cache_get = CacheOpsUtil::get(&self.cache, &key);
         let blobstore_get = self.blobstore.get(ctx, key);
 
@@ -350,7 +362,7 @@ where
                 if blob.is_some() {
                     Ok(blob).into_future().boxify()
                 } else {
-                    blobstore_get.boxify()
+                    blobstore_get.compat().boxify()
                 }
             })
             .boxify()
@@ -360,7 +372,7 @@ where
         &self,
         _ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         CacheOpsUtil::get(&self.cache, &key).boxify()
     }
 }
@@ -386,7 +398,7 @@ impl<T: CacheBlobstoreExt> CacheBlobstoreExt for CountedBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         self.as_inner().get_no_cache_fill(ctx, key)
     }
 
@@ -395,7 +407,7 @@ impl<T: CacheBlobstoreExt> CacheBlobstoreExt for CountedBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         self.as_inner().get_cache_only(ctx, key)
     }
 }
@@ -406,7 +418,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for PrefixBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         self.as_inner().get_no_cache_fill(ctx, self.prepend(key))
     }
 
@@ -415,7 +427,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for PrefixBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         self.as_inner().get_cache_only(ctx, self.prepend(key))
     }
 }
@@ -426,7 +438,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         self.access_blobstore(&key)
             .map_err({
                 cloned!(ctx, key);
@@ -450,7 +462,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
         self.access_blobstore(&key)
             .map_err({
                 cloned!(ctx, key);

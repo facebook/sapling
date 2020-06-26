@@ -14,7 +14,6 @@ use context::CoreContext;
 use fbthrift::compact_protocol;
 use filenodes::{FilenodeInfo, PreparedFilenode};
 use futures::{
-    compat::Future01CompatExt,
     future,
     stream::{Stream, StreamExt},
 };
@@ -123,7 +122,6 @@ impl Snapshot {
                         snapshot_name(),
                         BlobstoreBytes::from_bytes(serialized),
                     )
-                    .compat()
                     .await?;
             }
         };
@@ -157,7 +155,6 @@ async fn load_snapshot(
             let bytes = repo
                 .get_blobstore()
                 .get(ctx.clone(), snapshot_name())
-                .compat()
                 .await?
                 .ok_or(Error::msg("Snapshot is missing"))?
                 .into_raw_bytes();

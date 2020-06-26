@@ -214,7 +214,9 @@ pub fn exists<B: Blobstore + Clone>(
         })
         .and_then({
             cloned!(blobstore, ctx);
-            move |maybe_id| maybe_id.map(|id| blobstore.is_present(ctx, id.blobstore_key()))
+            move |maybe_id| {
+                maybe_id.map(|id| blobstore.is_present(ctx, id.blobstore_key()).compat())
+            }
         })
         .map(|exists: Option<bool>| exists.unwrap_or(false))
 }

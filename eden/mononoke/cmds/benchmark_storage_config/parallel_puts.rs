@@ -8,10 +8,7 @@
 use std::sync::Arc;
 
 use criterion::{BenchmarkId, Criterion, Throughput};
-use futures::{
-    compat::Future01CompatExt,
-    stream::{FuturesUnordered, TryStreamExt},
-};
+use futures::stream::{FuturesUnordered, TryStreamExt};
 use rand::{thread_rng, Rng, RngCore};
 use tokio_compat::runtime::Runtime;
 
@@ -51,7 +48,7 @@ pub fn benchmark(
                                 .into_iter()
                                 .map(|block| {
                                     let key = format!("benchmark.{:x}", thread_rng().next_u64());
-                                    blobstore.put(ctx.clone(), key, block).compat()
+                                    blobstore.put(ctx.clone(), key, block)
                                 })
                                 .collect();
 

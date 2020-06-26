@@ -244,7 +244,9 @@ fn build_skiplist_index<S: ToString>(
             cloned!(ctx);
             move |bytes| {
                 debug!(logger, "storing {} bytes", bytes.len());
-                blobstore.put(ctx, key, BlobstoreBytes::from_bytes(bytes))
+                blobstore
+                    .put(ctx, key, BlobstoreBytes::from_bytes(bytes))
+                    .compat()
             }
         })
         .boxify()
@@ -258,6 +260,7 @@ fn read_skiplist_index<S: ToString>(
 ) -> BoxFuture<Option<SkiplistIndex>, Error> {
     repo.get_blobstore()
         .get(ctx, key.to_string())
+        .compat()
         .and_then(move |maybebytes| match maybebytes {
             Some(bytes) => {
                 debug!(

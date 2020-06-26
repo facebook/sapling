@@ -29,10 +29,10 @@ use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    future::{FutureExt, TryFutureExt},
+    future::{self, BoxFuture, FutureExt},
     stream::{FuturesOrdered, TryStreamExt},
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt as _};
+use futures_ext::{try_boxfuture, BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::future::join_all;
 use futures_old::prelude::*;
 use mononoke_types::{hash::Context as HashContext, BlobstoreBytes};
@@ -72,7 +72,7 @@ impl Sqlblob {
         read_con_type: ReadConnectionType,
         shard_num: NonZeroUsize,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob, Error> {
+    ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
         Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
             Ok(create_myrouter_connections(
@@ -95,7 +95,7 @@ impl Sqlblob {
         port: u16,
         read_con_type: ReadConnectionType,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob, Error> {
+    ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
             delay,
@@ -123,7 +123,7 @@ impl Sqlblob {
         read_con_type: ReadConnectionType,
         shard_num: NonZeroUsize,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob, Error> {
+    ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
         Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
             create_raw_xdb_connections(
@@ -141,7 +141,7 @@ impl Sqlblob {
         db_address: String,
         read_con_type: ReadConnectionType,
         readonly: bool,
-    ) -> BoxFuture<CountedSqlblob, Error> {
+    ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
             delay,
@@ -157,8 +157,8 @@ impl Sqlblob {
         delay: BlobDelay,
         label: String,
         shard_num: NonZeroUsize,
-        connection_factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
-    ) -> BoxFuture<CountedSqlblob, Error> {
+        connection_factory: impl Fn(usize) -> BoxFuture01<SqlConnections, Error>,
+    ) -> BoxFuture01<CountedSqlblob, Error> {
         let shard_count = shard_num.get();
 
         let futs: Vec<_> = (0..shard_count)
@@ -282,7 +282,11 @@ impl fmt::Debug for Sqlblob {
 }
 
 impl Blobstore for Sqlblob {
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         cloned!(self.data_store, self.chunk_store);
 
         async move {
@@ -304,19 +308,21 @@ impl Blobstore for Sqlblob {
             }
         }
         .boxed()
-        .compat()
-        .boxify()
     }
 
-    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         if key.as_bytes().len() > MAX_KEY_SIZE {
-            return Err(format_err!(
+            return future::err(format_err!(
                 "Key {} exceeded max key size {}",
                 key,
                 MAX_KEY_SIZE
             ))
-            .into_future()
-            .boxify();
+            .boxed();
         }
 
         let chunking_method = ChunkingMethod::ByContentHashBlake2;
@@ -357,15 +363,14 @@ impl Blobstore for Sqlblob {
                 .await
         }
         .boxed()
-        .compat()
-        .boxify()
     }
 
-    fn is_present(&self, _ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<bool, Error>> {
         cloned!(self.data_store);
-        async move { data_store.is_present(&key).await }
-            .boxed()
-            .compat()
-            .boxify()
+        async move { data_store.is_present(&key).await }.boxed()
     }
 }

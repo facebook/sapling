@@ -11,10 +11,9 @@ use futures::{
     future::{self, Future, FutureExt},
     stream::StreamExt,
 };
-use futures_util::future::TryFutureExt;
 use ratelimit_meter::{algorithms::Algorithm, clock::Clock, DirectRateLimiter};
 
-use crate::{EarliestPossible, ErrorKind, RateLimitStream, TokioFlavor};
+use crate::{EarliestPossible, ErrorKind, RateLimitStream};
 
 /// A shared asynchronous rate limiter.
 #[derive(Clone)]
@@ -25,14 +24,14 @@ pub struct AsyncLimiter {
 impl AsyncLimiter {
     // NOTE: This function is async because it requires a Tokio runtme to spawn things. The best
     // way to require a Tokio runtime to be present is to just make the function async.
-    pub async fn new<A, C>(limiter: DirectRateLimiter<A, C>, flavor: TokioFlavor) -> Self
+    pub async fn new<A, C>(limiter: DirectRateLimiter<A, C>) -> Self
     where
         A: Algorithm<C::Instant> + 'static,
         C: Clock + Send + 'static,
         A::NegativeDecision: EarliestPossible,
     {
         let (dispatch, dispatch_recv) = mpsc::unbounded();
-        let rate_limit = RateLimitStream::new(flavor, limiter);
+        let rate_limit = RateLimitStream::new(limiter);
 
         let worker =
             dispatch_recv
@@ -42,14 +41,7 @@ impl AsyncLimiter {
                     future::ready(())
                 });
 
-        match flavor {
-            TokioFlavor::V01 => {
-                tokio_old::spawn(worker.map(Ok).boxed().compat());
-            }
-            TokioFlavor::V02 => {
-                tokio::spawn(worker.boxed());
-            }
-        }
+        tokio::spawn(worker.boxed());
 
         Self { dispatch }
     }
@@ -62,13 +54,11 @@ impl AsyncLimiter {
     /// to the number of pending accesses. Note that this isn't an async fn so as to not capture a
     /// refernce to &self in the future returned by this method, which makes it more suitable for
     /// use in e.g. a futures 0.1 context.
-    pub fn access(
-        &self,
-    ) -> Result<impl Future<Output = Result<(), Error>> + 'static + Send + Sync, Error> {
+    pub fn access(&self) -> impl Future<Output = Result<(), Error>> + 'static + Send + Sync {
         let (send, recv) = oneshot::channel();
         let dispatch = self.dispatch.clone();
 
-        Ok(async move {
+        async move {
             // NOTE: We do the dispatch in this future here, which effectively makes this lazy.
             // This ensures that if you create a future, but don't poll it immediately, it only
             // tries to enter the queue once it's polled.
@@ -79,7 +69,7 @@ impl AsyncLimiter {
             recv.await.map_err(|_| ErrorKind::RuntimeShuttingDown)?;
 
             Ok(())
-        })
+        }
     }
 }
 
@@ -93,15 +83,15 @@ mod test {
     #[tokio::test]
     async fn test_access_enters_queue_lazily() -> Result<(), Error> {
         let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-        let limiter = AsyncLimiter::new(limiter, TokioFlavor::V02).await;
+        let limiter = AsyncLimiter::new(limiter).await;
 
         for _ in 0..10 {
-            let _ = limiter.access()?;
+            let _ = limiter.access();
         }
 
         let now = Instant::now();
-        limiter.access()?.await?;
-        limiter.access()?.await?;
+        limiter.access().await?;
+        limiter.access().await?;
 
         assert!((Instant::now() - now) < Duration::from_millis(100));
         Ok(())

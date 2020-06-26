@@ -14,6 +14,7 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
+use futures::future::TryFutureExt;
 use futures_old::future::{Either, Future, IntoFuture};
 use mononoke_types::DateTime;
 use std::{
@@ -227,6 +228,7 @@ impl RevlogChangeset {
 
             let fut = blobstore
                 .get(ctx, key.clone())
+                .compat()
                 .and_then(move |got| match got {
                     None => Ok(None),
                     Some(bytes) => {

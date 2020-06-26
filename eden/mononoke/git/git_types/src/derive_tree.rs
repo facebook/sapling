@@ -46,6 +46,7 @@ impl TreeMapping {
     ) -> impl Future<Item = Option<(ChangesetId, TreeHandle)>, Error = Error> {
         self.blobstore
             .get(ctx, self.root_key(cs_id))
+            .compat()
             .and_then(move |bytes| match bytes {
                 Some(bytes) => bytes.try_into().map(|handle| Some((cs_id, handle))),
                 None => Ok(None),
@@ -72,7 +73,10 @@ impl BonsaiDerivedMapping for TreeMapping {
     }
 
     fn put(&self, ctx: CoreContext, csid: ChangesetId, root: Self::Value) -> BoxFuture<(), Error> {
-        self.blobstore.put(ctx, self.root_key(csid), root.into())
+        self.blobstore
+            .put(ctx, self.root_key(csid), root.into())
+            .compat()
+            .boxify()
     }
 }
 

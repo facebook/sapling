@@ -6,7 +6,7 @@
  */
 
 use anyhow::{Context, Error};
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
+use futures::future::TryFutureExt;
 use futures_util::{future::try_join_all, pin_mut, select, try_join, FutureExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -158,7 +158,6 @@ async fn resolve_internal_object(
     // upstream, its alias existing locally, but not its content (T57777060).
     let exists = blobstore
         .get(ctx.ctx.clone(), content_id.blobstore_key())
-        .compat()
         .map_ok(|b| b.is_some())
         .or_else(|e| async move {
             // If a load error was caused by redaction, then check for existence instead, which
@@ -170,7 +169,6 @@ async fn resolve_internal_object(
             if has_redaction_root_cause(&e) {
                 Ok(blobstore
                     .is_present(ctx.ctx.clone(), content_id.blobstore_key())
-                    .compat()
                     .await?)
             } else {
                 Err(e)
@@ -546,6 +544,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use filestore::{self, StoreRequest};
+    use futures::compat::Future01CompatExt;
     use futures_old::stream as stream_old;
     use hyper::Uri;
     use mononoke_types_mocks::hash::ONES_SHA256;

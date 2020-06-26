@@ -12,6 +12,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::{
     stream::{self, FuturesUnordered},
@@ -121,6 +122,7 @@ impl RootUnodeManifestMapping {
     ) -> impl Future<Item = Option<(ChangesetId, RootUnodeManifestId)>, Error = Error> {
         self.blobstore
             .get(ctx.clone(), self.format_key(cs_id))
+            .compat()
             .and_then(|maybe_bytes| maybe_bytes.map(|bytes| bytes.try_into()).transpose())
             .map(move |maybe_root_mf_id| maybe_root_mf_id.map(|root_mf_id| (cs_id, root_mf_id)))
     }
@@ -145,7 +147,10 @@ impl BonsaiDerivedMapping for RootUnodeManifestMapping {
     }
 
     fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
-        self.blobstore.put(ctx, self.format_key(csid), id.into())
+        self.blobstore
+            .put(ctx, self.format_key(csid), id.into())
+            .compat()
+            .boxify()
     }
 }
 

@@ -8,10 +8,7 @@
 use std::{iter::repeat, sync::Arc};
 
 use criterion::{BenchmarkId, Criterion, Throughput};
-use futures::{
-    compat::Future01CompatExt,
-    stream::{FuturesUnordered, TryStreamExt},
-};
+use futures::stream::{FuturesUnordered, TryStreamExt};
 use rand::{thread_rng, Rng, RngCore};
 use tokio_compat::runtime::Runtime;
 
@@ -43,7 +40,6 @@ pub fn benchmark(
                     runtime.block_on_std(async {
                         blobstore
                             .put(ctx.clone(), key.clone(), block)
-                            .compat()
                             .await
                             .expect("Put failed")
                     });
@@ -51,9 +47,8 @@ pub fn benchmark(
                     let test = |ctx: CoreContext, blobstore: Arc<dyn Blobstore>| {
                         let keys = keys.clone();
                         async move {
-                            let futs: FuturesUnordered<_> = keys
-                                .map(|key| blobstore.get(ctx.clone(), key).compat())
-                                .collect();
+                            let futs: FuturesUnordered<_> =
+                                keys.map(|key| blobstore.get(ctx.clone(), key)).collect();
                             futs.try_for_each(|_| async move { Ok(()) })
                                 .await
                                 .expect("Gets failed");

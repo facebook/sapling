@@ -8,7 +8,7 @@
 use anyhow::Error;
 use inlinable_string::InlinableString;
 
-use futures_ext::BoxFuture;
+use futures::future::BoxFuture;
 
 use context::CoreContext;
 
@@ -47,18 +47,36 @@ impl<T: Blobstore + Clone> PrefixBlobstore<T> {
 
 impl<T: Blobstore + Clone> Blobstore for PrefixBlobstore<T> {
     #[inline]
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         self.blobstore.get(ctx, self.prepend(key))
     }
 
     #[inline]
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.blobstore.put(ctx, self.prepend(key), value)
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.blobstore.is_present(ctx, self.prepend(key))
+    }
+
+    #[inline]
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        self.blobstore.assert_present(ctx, self.prepend(key))
     }
 }
 
@@ -72,8 +90,8 @@ mod test {
 
     use memblob::EagerMemblob;
 
-    #[fbinit::test]
-    fn test_prefix(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn test_prefix(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let base = EagerMemblob::new();
         let prefixed = PrefixBlobstore::new(base.clone(), "prefix123-");
@@ -87,14 +105,14 @@ mod test {
                 unprefixed_key.clone(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
-            .wait()
+            .await
             .expect("put should succeed");
 
         // Test that both the prefixed and the unprefixed stores can access the key.
         assert_eq!(
             prefixed
                 .get(ctx.clone(), unprefixed_key.clone())
-                .wait()
+                .await
                 .expect("get should succeed")
                 .expect("value should be present")
                 .into_raw_bytes(),
@@ -102,7 +120,7 @@ mod test {
         );
         assert_eq!(
             base.get(ctx.clone(), prefixed_key.clone())
-                .wait()
+                .await
                 .expect("get should succeed")
                 .expect("value should be present")
                 .into_raw_bytes(),
@@ -112,11 +130,11 @@ mod test {
         // Test that is_present works for both the prefixed and unprefixed stores.
         assert!(prefixed
             .is_present(ctx.clone(), unprefixed_key.clone())
-            .wait()
+            .await
             .expect("is_present should succeed"));
         assert!(base
             .is_present(ctx.clone(), prefixed_key.clone())
-            .wait()
+            .await
             .expect("is_present should succeed"));
     }
 }

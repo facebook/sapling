@@ -13,7 +13,11 @@ use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use cloned::cloned;
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt},
+};
+use futures_ext::FutureExt as _;
 use futures_old::future::{self, Future};
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::BlobstoreBytes;
@@ -122,7 +126,11 @@ impl fmt::Debug for ScrubBlobstore {
 }
 
 impl Blobstore for ScrubBlobstore {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         self.inner
             .blobstore
             .scrub_get(ctx.clone(), key.clone())
@@ -243,14 +251,20 @@ impl Blobstore for ScrubBlobstore {
                         .right_future()
                 }
             })
-            .boxify()
+            .compat()
+            .boxed()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.inner.put(ctx, key, value)
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.inner.is_present(ctx, key)
     }
 }

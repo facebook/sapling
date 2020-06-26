@@ -19,7 +19,10 @@ use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfig;
-use futures::{compat::Future01CompatExt, future::FutureExt as NewFutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{FutureExt as NewFutureExt, TryFutureExt},
+};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{loop_fn, ok, Future, Loop};
 use futures_old::stream::{self, FuturesUnordered, Stream};
@@ -505,5 +508,6 @@ pub fn save_bonsai_changeset_object(
 
     blobstore
         .put(ctx, blobstore_key, bonsai_blob.into())
+        .compat()
         .map(|_| ())
 }

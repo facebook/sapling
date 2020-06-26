@@ -8,8 +8,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures::future;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 mod errors;
 pub use crate::errors::ErrorKind;
@@ -28,18 +27,36 @@ impl<T: Blobstore + Clone> ReadOnlyBlobstore<T> {
 
 impl<T: Blobstore + Clone> Blobstore for ReadOnlyBlobstore<T> {
     #[inline]
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         self.blobstore.get(ctx, key)
     }
 
     #[inline]
-    fn put(&self, _ctx: CoreContext, key: String, _value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        future::err(ErrorKind::ReadOnlyPut(key).into()).boxify()
+    fn put(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+        _value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        future::err(ErrorKind::ReadOnlyPut(key).into()).boxed()
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.blobstore.is_present(ctx, key)
+    }
+
+    #[inline]
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        self.blobstore.assert_present(ctx, key)
     }
 }
 
@@ -47,12 +64,11 @@ impl<T: Blobstore + Clone> Blobstore for ReadOnlyBlobstore<T> {
 mod test {
     use super::*;
     use fbinit::FacebookInit;
-    use futures::Future;
 
     use memblob::EagerMemblob;
 
-    #[fbinit::test]
-    fn test_error_on_write(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn test_error_on_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let base = EagerMemblob::new();
         let wrapper = ReadOnlyBlobstore::new(base.clone());
@@ -65,9 +81,9 @@ mod test {
                 key.clone(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
-            .wait();
+            .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key.clone()).wait().unwrap();
+        let base_present = base.is_present(ctx, key.clone()).await.unwrap();
         assert!(!base_present);
     }
 }

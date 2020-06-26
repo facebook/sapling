@@ -8,7 +8,6 @@
 use super::*;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
 
 #[fbinit::compat_test]
@@ -26,27 +25,20 @@ async fn read_write(fb: FacebookInit) {
     let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
     assert!(
-        !bs.is_present(ctx.clone(), key.clone())
-            .compat()
-            .await
-            .unwrap(),
+        !bs.is_present(ctx.clone(), key.clone()).await.unwrap(),
         "Blob should not exist yet"
     );
 
     // Write a fresh blob
     bs.put(ctx.clone(), key.clone(), blobstore_bytes)
-        .compat()
         .await
         .unwrap();
     // Read back and verify
-    let bytes_out = bs.get(ctx.clone(), key.clone()).compat().await.unwrap();
+    let bytes_out = bs.get(ctx.clone(), key.clone()).await.unwrap();
     assert_eq!(&bytes_in.to_vec(), bytes_out.unwrap().as_raw_bytes());
 
     assert!(
-        bs.is_present(ctx.clone(), key.clone())
-            .compat()
-            .await
-            .unwrap(),
+        bs.is_present(ctx.clone(), key.clone()).await.unwrap(),
         "Blob should exist now"
     );
 }
@@ -66,29 +58,21 @@ async fn double_put(fb: FacebookInit) {
     let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
     assert!(
-        !bs.is_present(ctx.clone(), key.clone())
-            .compat()
-            .await
-            .unwrap(),
+        !bs.is_present(ctx.clone(), key.clone()).await.unwrap(),
         "Blob should not exist yet"
     );
 
     // Write a fresh blob
     bs.put(ctx.clone(), key.clone(), blobstore_bytes.clone())
-        .compat()
         .await
         .unwrap();
     // Write it again
     bs.put(ctx.clone(), key.clone(), blobstore_bytes.clone())
-        .compat()
         .await
         .unwrap();
 
     assert!(
-        bs.is_present(ctx.clone(), key.clone())
-            .compat()
-            .await
-            .unwrap(),
+        bs.is_present(ctx.clone(), key.clone()).await.unwrap(),
         "Blob should exist now"
     );
 }
@@ -110,29 +94,21 @@ async fn dedup(fb: FacebookInit) {
     let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
     assert!(
-        !bs.is_present(ctx.clone(), key1.clone())
-            .compat()
-            .await
-            .unwrap(),
+        !bs.is_present(ctx.clone(), key1.clone()).await.unwrap(),
         "Blob should not exist yet"
     );
 
     assert!(
-        !bs.is_present(ctx.clone(), key2.clone())
-            .compat()
-            .await
-            .unwrap(),
+        !bs.is_present(ctx.clone(), key2.clone()).await.unwrap(),
         "Blob should not exist yet"
     );
 
     // Write a fresh blob
     bs.put(ctx.clone(), key1.clone(), blobstore_bytes.clone())
-        .compat()
         .await
         .unwrap();
     // Write it again under a different key
     bs.put(ctx.clone(), key2.clone(), blobstore_bytes.clone())
-        .compat()
         .await
         .unwrap();
 

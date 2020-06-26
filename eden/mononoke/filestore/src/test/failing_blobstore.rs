@@ -8,8 +8,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::IntoFuture;
+use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
 use thiserror::Error;
@@ -39,39 +38,52 @@ impl<B> Blobstore for FailingBlobstore<B>
 where
     B: Blobstore,
 {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let mut rng = thread_rng();
         if rng.gen_bool(self.read_success_probability) {
             self.inner.get(ctx, key)
         } else {
-            Err(FailingBlobstoreError.into()).into_future().boxify()
+            future::err(FailingBlobstoreError.into()).boxed()
         }
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let mut rng = thread_rng();
         if rng.gen_bool(self.write_success_probability) {
             self.inner.put(ctx, key, value)
         } else {
-            Err(FailingBlobstoreError.into()).into_future().boxify()
+            future::err(FailingBlobstoreError.into()).boxed()
         }
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         let mut rng = thread_rng();
         if rng.gen_bool(self.read_success_probability) {
             self.inner.is_present(ctx, key)
         } else {
-            Err(FailingBlobstoreError.into()).into_future().boxify()
+            future::err(FailingBlobstoreError.into()).boxed()
         }
     }
 
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let mut rng = thread_rng();
         if rng.gen_bool(self.read_success_probability) {
             self.inner.assert_present(ctx, key)
         } else {
-            Err(FailingBlobstoreError.into()).into_future().boxify()
+            future::err(FailingBlobstoreError.into()).boxed()
         }
     }
 }

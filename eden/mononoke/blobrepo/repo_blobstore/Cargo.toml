@@ -14,5 +14,5 @@ mononoke_types = { path = "../../mononoke_types" }
 prefixblob = { path = "../../blobstore/prefixblob" }
 redactedblobstore = { path = "../../blobstore/redactedblobstore" }
 scuba_ext = { path = "../../common/scuba_ext" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
+futures = { version = "0.3", features = ["async-await", "compat"] }

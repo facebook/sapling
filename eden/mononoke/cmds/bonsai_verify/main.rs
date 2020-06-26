@@ -246,7 +246,7 @@ fn subcommand_round_trip(
         .discard()
     };
 
-    tokio_old::run(verify_fut);
+    tokio_compat::run(verify_fut);
 
     let end_points: Vec<_> = end_receiver.into_iter().collect();
     process::exit(summarize(

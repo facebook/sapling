@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use async_limiter::{AsyncLimiter, TokioFlavor};
+use async_limiter::AsyncLimiter;
 use cached_config::ConfigHandle;
 use context::{
     generate_session_id, is_quicksand, LoggingContainer, SessionContainer, SessionContainerBuilder,
@@ -81,21 +81,13 @@ async fn set_blobstore_limiters(builder: &mut SessionContainerBuilder, priority:
         Priority::Wishlist => {
             if let Some(qps) = maybe_qps(tunables().get_wishlist_read_qps()) {
                 builder.blobstore_read_limiter(
-                    AsyncLimiter::new(
-                        DirectRateLimiter::<LeakyBucket>::per_second(qps),
-                        TokioFlavor::V01,
-                    )
-                    .await,
+                    AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
                 );
             }
 
             if let Some(qps) = maybe_qps(tunables().get_wishlist_write_qps()) {
                 builder.blobstore_write_limiter(
-                    AsyncLimiter::new(
-                        DirectRateLimiter::<LeakyBucket>::per_second(qps),
-                        TokioFlavor::V01,
-                    )
-                    .await,
+                    AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
                 );
             }
         }

@@ -223,7 +223,6 @@ pub async fn gitimport(
 
                     repo.blobstore()
                         .put(ctx.clone(), bcs_id.blobstore_key(), blob.into())
-                        .compat()
                         .await?;
 
                     repo.get_changesets_object()

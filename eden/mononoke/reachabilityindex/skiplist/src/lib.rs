@@ -137,7 +137,6 @@ pub async fn fetch_skiplist_index(
             info!(ctx.logger(), "Fetching and initializing skiplist");
             let maybebytes = blobstore
                 .get(ctx.clone(), skiplist_index_blobstore_key.to_string())
-                .compat()
                 .await?;
             let slg = match maybebytes {
                 Some(bytes) => {

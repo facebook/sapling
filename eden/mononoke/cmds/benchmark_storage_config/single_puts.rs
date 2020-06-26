@@ -8,7 +8,6 @@
 use std::sync::Arc;
 
 use criterion::{BenchmarkId, Criterion, Throughput};
-use futures::compat::Future01CompatExt;
 use rand::{thread_rng, Rng, RngCore};
 use tokio_compat::runtime::Runtime;
 
@@ -36,11 +35,7 @@ pub fn benchmark(
                 let block = block.clone();
                 async move {
                     let key = format!("benchmark.{:x}", thread_rng().next_u64());
-                    blobstore
-                        .put(ctx, key, block)
-                        .compat()
-                        .await
-                        .expect("Put failed");
+                    blobstore.put(ctx, key, block).await.expect("Put failed");
                 }
             };
             b.iter(|| {

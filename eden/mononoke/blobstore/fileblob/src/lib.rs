@@ -8,27 +8,22 @@
 #![deny(warnings)]
 
 use std::convert::TryFrom;
-use std::fs::{create_dir_all, hard_link, File};
-use std::io::{self, Read, Write};
+use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use anyhow::{bail, Error, Result};
-use futures::{
-    future::{self, BoxFuture},
-    FutureExt, TryFutureExt,
-};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
-use futures_old::{
-    future::{poll_fn as poll_fn01, Future as Future01},
-    Async,
-};
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstoreWithLink};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use tempfile::NamedTempFile;
+use tokio::{
+    fs::{hard_link, File},
+    io::{self, AsyncReadExt, AsyncWriteExt},
+};
 
 const PREFIX: &str = "blob";
 /// https://url.spec.whatwg.org/#fragment-percent-encode-set
@@ -66,62 +61,77 @@ impl Fileblob {
     }
 }
 
-fn ctime(file: &File) -> Option<i64> {
-    let meta = file.metadata().ok()?;
+async fn ctime(file: &File) -> Option<i64> {
+    let meta = file.metadata().await.ok()?;
     let ctime = meta.modified().ok()?;
     let ctime_dur = ctime.duration_since(SystemTime::UNIX_EPOCH).ok()?;
     i64::try_from(ctime_dur.as_secs()).ok()
 }
 
 impl Blobstore for Fileblob {
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let p = self.path(&key);
 
-        poll_fn01(move || {
-            let mut v = Vec::new();
-            let ret = match File::open(&p) {
-                Err(ref e) if e.kind() == io::ErrorKind::NotFound => None,
-                Err(e) => return Err(e),
+        async move {
+            let ret = match File::open(&p).await {
+                Err(ref r) if r.kind() == io::ErrorKind::NotFound => None,
+                Err(e) => return Err(e.into()),
                 Ok(mut f) => {
-                    f.read_to_end(&mut v)?;
+                    let mut v = Vec::new();
+                    f.read_to_end(&mut v).await?;
 
                     Some(BlobstoreGetData::new(
-                        BlobstoreMetadata::new(ctime(&f)),
+                        BlobstoreMetadata::new(ctime(&f).await),
                         BlobstoreBytes::from_bytes(v),
                     ))
                 }
             };
-            Ok(Async::Ready(ret))
-        })
-        .from_err()
-        .boxify()
+            Ok(ret)
+        }
+        .boxed()
     }
 
-    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
+    fn put(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let p = self.path(&key);
 
-        poll_fn01::<_, Error, _>(move || {
+        async move {
+            // block_in_place on tempfile would be ideal here, but it interacts
+            // badly with tokio_compat
             let tempfile = NamedTempFile::new()?;
-            tempfile.as_file().write_all(value.as_bytes().as_ref())?;
+            let new_file = tempfile.as_file().try_clone()?;
+            let mut tokio_file = File::from_std(new_file);
+            tokio_file.write_all(value.as_bytes().as_ref()).await?;
             tempfile.persist(&p)?;
-            Ok(Async::Ready(()))
-        })
-        .boxify()
+            Ok(())
+        }
+        .boxed()
     }
 
-    fn is_present(&self, _ctx: CoreContext, key: String) -> BoxFuture01<bool, Error> {
+    fn is_present(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<bool, Error>> {
         let p = self.path(&key);
 
-        poll_fn01(move || {
-            let ret = match File::open(&p) {
+        async move {
+            let ret = match File::open(&p).await {
                 Err(ref e) if e.kind() == io::ErrorKind::NotFound => false,
-                Err(e) => return Err(e),
+                Err(e) => return Err(e.into()),
                 Ok(_) => true,
             };
-            Ok(Async::Ready(ret))
-        })
-        .from_err()
-        .boxify()
+            Ok(ret)
+        }
+        .boxed()
     }
 }
 
@@ -137,8 +147,6 @@ impl BlobstoreWithLink for Fileblob {
         // from std::fs::hard_link: The dst path will be a link pointing to the src path
         let src_path = self.path(&existing_key);
         let dst_path = self.path(&link_key);
-        future::ready(hard_link(src_path, dst_path))
-            .map_err(Error::from)
-            .boxed()
+        hard_link(src_path, dst_path).map_err(Error::from).boxed()
     }
 }

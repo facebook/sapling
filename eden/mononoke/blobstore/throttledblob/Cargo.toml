@@ -11,8 +11,6 @@ async_limiter = { path = "../../common/async_limiter" }
 blobstore = { path = ".." }
 context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-futures = "0.1"
-futures-util = "0.3"
+futures = { version = "0.3", features = ["async-await", "compat"] }
 ratelimit_meter = "5"

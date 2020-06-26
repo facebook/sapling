@@ -10,11 +10,9 @@ include = ["src/**/*.rs"]
 [dependencies]
 anyhow = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
-futures-util = "0.3"
 ratelimit_meter = "5"
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
-tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]
 nonzero_ext = "0.2"

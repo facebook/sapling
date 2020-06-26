@@ -11,8 +11,9 @@ use std::vec::Vec;
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures::Future;
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::Future;
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -85,6 +86,7 @@ fn fetch_blob<B: Blobstore>(
     let key = String::from_utf8_lossy(key).into_owned();
     blobstore
         .get(ctx.clone(), key.clone())
+        .compat()
         .and_then(move |data| match data {
             None => Err(ErrorKind::MissingStreamingBlob(key).into()),
             Some(data) if data.as_bytes().len() == expected_size => Ok(data.into_raw_bytes()),

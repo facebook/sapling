@@ -13,8 +13,9 @@ use blobstore::Blobstore;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use fbthrift::compact_protocol;
-use futures::{future, stream::FuturesUnordered, Future, Stream};
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, stream::FuturesUnordered, Future, Stream};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId};
 
 use crate::ChangesetInfo;
@@ -64,6 +65,7 @@ impl BonsaiDerivedMapping for ChangesetInfoMapping {
         let futs = csids.into_iter().map(|csid| {
             self.blobstore
                 .get(ctx.clone(), self.format_key(&csid))
+                .compat()
                 .map(move |value| {
                     value.map(|bytes| {
                         let info = ChangesetInfo::from_bytes(bytes.as_raw_bytes())?;
@@ -83,7 +85,10 @@ impl BonsaiDerivedMapping for ChangesetInfoMapping {
             let data = compact_protocol::serialize(&info.into_thrift());
             BlobstoreBytes::from_bytes(data)
         };
-        self.blobstore.put(ctx, self.format_key(&csid), data)
+        self.blobstore
+            .put(ctx, self.format_key(&csid), data)
+            .compat()
+            .boxify()
     }
 }
 

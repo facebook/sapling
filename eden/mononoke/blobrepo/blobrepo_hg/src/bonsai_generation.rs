@@ -88,6 +88,7 @@ pub fn save_bonsai_changeset_object(
 
     blobstore
         .put(ctx, blobstore_key, bonsai_blob.into())
+        .compat()
         .map(|_| ())
 }
 

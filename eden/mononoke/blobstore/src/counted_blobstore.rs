@@ -10,8 +10,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use futures::future::{BoxFuture, FutureExt};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
-use futures_old::Future as Future01;
 use stats::prelude::*;
 
 use context::CoreContext;
@@ -61,64 +59,77 @@ impl<T: Blobstore> CountedBlobstore<T> {
 }
 
 impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let stats = self.stats.clone();
         stats.get.add_value(1);
-        self.blobstore
-            .get(ctx, key)
-            .then(move |res| {
-                match res {
-                    Ok(_) => stats.get_ok.add_value(1),
-                    Err(_) => stats.get_err.add_value(1),
-                }
-                res
-            })
-            .boxify()
+        let get = self.blobstore.get(ctx, key);
+        async move {
+            let res = get.await;
+            match res {
+                Ok(_) => stats.get_ok.add_value(1),
+                Err(_) => stats.get_err.add_value(1),
+            }
+            res
+        }
+        .boxed()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let stats = self.stats.clone();
         stats.put.add_value(1);
-        self.blobstore
-            .put(ctx, key, value)
-            .then(move |res| {
-                match res {
-                    Ok(()) => stats.put_ok.add_value(1),
-                    Err(_) => stats.put_err.add_value(1),
-                }
-                res
-            })
-            .boxify()
+        let put = self.blobstore.put(ctx, key, value);
+        async move {
+            let res = put.await;
+            match res {
+                Ok(()) => stats.put_ok.add_value(1),
+                Err(_) => stats.put_err.add_value(1),
+            }
+            res
+        }
+        .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture01<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         let stats = self.stats.clone();
         stats.is_present.add_value(1);
-        self.blobstore
-            .is_present(ctx, key)
-            .then(move |res| {
-                match res {
-                    Ok(_) => stats.is_present_ok.add_value(1),
-                    Err(_) => stats.is_present_err.add_value(1),
-                }
-                res
-            })
-            .boxify()
+        let is_present = self.blobstore.is_present(ctx, key);
+        async move {
+            let res = is_present.await;
+            match res {
+                Ok(_) => stats.is_present_ok.add_value(1),
+                Err(_) => stats.is_present_err.add_value(1),
+            }
+            res
+        }
+        .boxed()
     }
 
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture01<(), Error> {
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let stats = self.stats.clone();
         stats.assert_present.add_value(1);
-        self.blobstore
-            .assert_present(ctx, key)
-            .then(move |res| {
-                match res {
-                    Ok(()) => stats.assert_present_ok.add_value(1),
-                    Err(_) => stats.assert_present_err.add_value(1),
-                }
-                res
-            })
-            .boxify()
+        let assert_present = self.blobstore.assert_present(ctx, key);
+        async move {
+            let res = assert_present.await;
+            match res {
+                Ok(()) => stats.assert_present_ok.add_value(1),
+                Err(_) => stats.assert_present_err.add_value(1),
+            }
+            res
+        }
+        .boxed()
     }
 }
 

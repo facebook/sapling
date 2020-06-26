@@ -13,10 +13,7 @@ use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
-};
+use futures::future::{BoxFuture, FutureExt};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use crate::{
@@ -233,7 +230,7 @@ macro_rules! impl_typed_hash_loadable_storable {
                 let id = *self;
                 let blobstore_key = id.blobstore_key();
                 let get = blobstore
-                    .get(ctx, blobstore_key.clone()).compat();
+                    .get(ctx, blobstore_key.clone());
 
                 async move {
                     let bytes = get.await?.ok_or(LoadableError::Missing(blobstore_key))?;
@@ -255,7 +252,7 @@ macro_rules! impl_typed_hash_loadable_storable {
             ) -> BoxFuture<'static, Result<Self::Key, Error>> {
                 let id = *self.id();
                 let bytes = self.into();
-                let put = blobstore.put(ctx, id.blobstore_key(), bytes).compat();
+                let put = blobstore.put(ctx, id.blobstore_key(), bytes);
 
                 async move {
                     put.await?;

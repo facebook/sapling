@@ -9,10 +9,7 @@ use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
-};
+use futures::future::{BoxFuture, FutureExt};
 use std::convert::TryFrom;
 use std::convert::TryInto;
 
@@ -65,7 +62,7 @@ macro_rules! impl_loadable_storable {
             ) -> BoxFuture<'static, Result<Self::Key, Error>> {
                 let handle = *self.handle();
                 let key = handle.blobstore_key();
-                let put = blobstore.put(ctx, key, self.into()).compat();
+                let put = blobstore.put(ctx, key, self.into());
                 async move {
                     put.await?;
                     Ok(handle)
@@ -83,7 +80,7 @@ macro_rules! impl_loadable_storable {
                 blobstore: &B,
             ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
                 let id = *self;
-                let get = blobstore.get(ctx, id.blobstore_key()).compat();
+                let get = blobstore.get(ctx, id.blobstore_key());
                 async move {
                     let bytes = get.await?;
                     match bytes {

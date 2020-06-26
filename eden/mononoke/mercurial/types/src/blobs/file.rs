@@ -23,10 +23,7 @@ use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use failure_ext::{FutureFailureErrorExt, StreamFailureErrorExt};
 use filestore;
-use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt, TryFutureExt},
-};
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _, StreamExt as _};
 use futures_old::{
     future::{lazy, Future},
@@ -131,7 +128,7 @@ impl Loadable for HgFileNodeId {
         blobstore: &B,
     ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let blobstore_key = self.blobstore_key();
-        let get = blobstore.get(ctx, blobstore_key.clone()).compat();
+        let get = blobstore.get(ctx, blobstore_key.clone());
         async move {
             let bytes = get.await?;
             let blobstore_bytes = match bytes {

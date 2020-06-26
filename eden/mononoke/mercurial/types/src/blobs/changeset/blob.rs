@@ -16,7 +16,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
+    future::{BoxFuture, FutureExt, TryFutureExt},
 };
 use futures_old::future::{Future, IntoFuture};
 use mononoke_types::DateTime;
@@ -208,7 +208,7 @@ impl HgBlobChangeset {
                 Ok(envelope.into_blob())
             })
             .into_future()
-            .and_then(move |blob| blobstore.put(ctx, key, blob.into()))
+            .and_then(move |blob| blobstore.put(ctx, key, blob.into()).compat())
     }
 
     #[inline]

@@ -11,10 +11,8 @@ use anyhow::Error;
 use std::fmt;
 use std::num::NonZeroU32;
 
-use async_limiter::{AsyncLimiter, TokioFlavor};
-use futures::future::Future;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt as Futures01FutureExt};
-use futures_util::future::{FutureExt, TryFutureExt};
+use async_limiter::AsyncLimiter;
+use futures::future::{BoxFuture, FutureExt};
 use ratelimit_meter::{algorithms::LeakyBucket, example_algorithms::Allower, DirectRateLimiter};
 
 use blobstore::{Blobstore, BlobstoreGetData};
@@ -52,14 +50,8 @@ pub struct ThrottledBlob<T: Blobstore + Clone> {
 
 async fn limiter(qps: Option<NonZeroU32>) -> AsyncLimiter {
     match qps {
-        Some(qps) => {
-            AsyncLimiter::new(
-                DirectRateLimiter::<LeakyBucket>::per_second(qps),
-                TokioFlavor::V01,
-            )
-            .await
-        }
-        None => AsyncLimiter::new(Allower::ratelimiter(), TokioFlavor::V01).await,
+        Some(qps) => AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
+        None => AsyncLimiter::new(Allower::ratelimiter()).await,
     }
 }
 
@@ -77,44 +69,57 @@ impl<T: Blobstore + Clone> ThrottledBlob<T> {
 // NOTE: All the methods below make a clone of the Blobstore first then dispach the get after the
 // limiter has allowed access, which ensures even eager work is delayed.
 impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
-        let access = try_boxfuture!(self.read_limiter.access());
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+        let access = self.read_limiter.access();
         let blobstore = self.blobstore.clone();
-        access
-            .boxed()
-            .compat()
-            .and_then(move |_| blobstore.get(ctx, key))
-            .boxify()
+        async move {
+            access.await?;
+            blobstore.get(ctx, key).await
+        }
+        .boxed()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        let access = try_boxfuture!(self.write_limiter.access());
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let access = self.write_limiter.access();
         let blobstore = self.blobstore.clone();
-        access
-            .boxed()
-            .compat()
-            .and_then(move |_| blobstore.put(ctx, key, value))
-            .boxify()
+        async move {
+            access.await?;
+            blobstore.put(ctx, key, value).await
+        }
+        .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
-        let access = try_boxfuture!(self.read_limiter.access());
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+        let access = self.read_limiter.access();
         let blobstore = self.blobstore.clone();
-        access
-            .boxed()
-            .compat()
-            .and_then(move |_| blobstore.is_present(ctx, key))
-            .boxify()
+        async move {
+            access.await?;
+            blobstore.is_present(ctx, key).await
+        }
+        .boxed()
     }
 
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
-        let access = try_boxfuture!(self.read_limiter.access());
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let access = self.read_limiter.access();
         let blobstore = self.blobstore.clone();
-        access
-            .boxed()
-            .compat()
-            .and_then(move |_| blobstore.assert_present(ctx, key))
-            .boxify()
+        async move {
+            access.await?;
+            blobstore.assert_present(ctx, key).await
+        }
+        .boxed()
     }
 }
 

@@ -8,10 +8,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{self, BoxFuture, FutureExt},
-};
+use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::{hash, ContentAlias, ContentId};
 
 /// Key for fetching - we can access with any of the supported key types
@@ -92,7 +89,7 @@ impl Loadable for Alias {
         blobstore: &B,
     ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let key = self.blobstore_key();
-        let get = blobstore.get(ctx, key.clone()).compat();
+        let get = blobstore.get(ctx, key.clone());
         async move {
             let maybe_alias = get.await?;
             let blob = maybe_alias.ok_or(LoadableError::Missing(key))?;
@@ -115,9 +112,6 @@ impl Storable for AliasBlob {
         ctx: CoreContext,
         blobstore: &B,
     ) -> BoxFuture<'static, Result<Self::Key, Error>> {
-        blobstore
-            .put(ctx, self.0.blobstore_key(), self.1.into_blob())
-            .compat()
-            .boxed()
+        blobstore.put(ctx, self.0.blobstore_key(), self.1.into_blob())
     }
 }

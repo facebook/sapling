@@ -25,6 +25,7 @@ use ascii::AsciiString;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_old::Future;
 use mononoke_types::{BlobstoreBytes, ContentId, MPath};
 
@@ -84,7 +85,7 @@ pub fn store_filenode_id<B: Blobstore>(
     filenode_id: &HgFileNodeId,
 ) -> impl Future<Item = (), Error = Error> {
     let contents = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(filenode_id.as_bytes()));
-    blobstore.put(ctx, key.0, contents)
+    blobstore.put(ctx, key.0, contents).compat()
 }
 
 pub fn lookup_filenode_id<B: Blobstore>(
@@ -92,7 +93,7 @@ pub fn lookup_filenode_id<B: Blobstore>(
     blobstore: &B,
     key: FileNodeIdPointer,
 ) -> impl Future<Item = Option<HgFileNodeId>, Error = Error> {
-    blobstore.get(ctx.clone(), key.0).map(|maybe_blob| {
+    blobstore.get(ctx, key.0).compat().map(|maybe_blob| {
         maybe_blob.and_then(|blob| HgFileNodeId::from_bytes(blob.as_raw_bytes()).ok())
     })
 }

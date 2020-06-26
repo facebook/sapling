@@ -11,7 +11,11 @@ use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt, TryFutureExt},
+};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::future::{self, Future, Loop};
 use futures_stats::Timed;
 use itertools::{Either, Itertools};
@@ -28,9 +32,9 @@ use std::sync::{
 use std::time::Duration;
 use thiserror::Error;
 use time_ext::DurationExt;
-use tokio::executor::spawn;
-use tokio::prelude::FutureExt as TokioFutureExt;
-use tokio::timer::timeout::Error as TimeoutError;
+use tokio_old::executor::spawn;
+use tokio_old::prelude::FutureExt as TokioFutureExt;
+use tokio_old::timer::timeout::Error as TimeoutError;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 
@@ -65,7 +69,7 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
         multiplex_id: MultiplexId,
         operation_key: OperationKey,
         key: String,
-    ) -> BoxFuture<(), Error>;
+    ) -> BoxFuture01<(), Error>;
 }
 
 pub struct MultiplexedBlobstoreBase {
@@ -99,7 +103,7 @@ impl MultiplexedBlobstoreBase {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreGetData>, ErrorKind> {
+    ) -> BoxFuture01<Option<BlobstoreGetData>, ErrorKind> {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
 
@@ -187,6 +191,7 @@ pub fn inner_put(
     let session = ctx.session_id().clone();
     blobstore
         .put(ctx, key.clone(), value.clone())
+        .compat()
         .timeout(REQUEST_TIMEOUT)
         .map(move |_| blobstore_id)
         .map_err(remap_timeout_error)
@@ -207,7 +212,11 @@ pub fn inner_put(
 }
 
 impl Blobstore for MultiplexedBlobstoreBase {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobGets);
 
@@ -275,10 +284,16 @@ impl Blobstore for MultiplexedBlobstoreBase {
             );
             Ok(())
         })
-        .boxify()
+        .compat()
+        .boxed()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPuts);
         let write_order = Arc::new(AtomicUsize::new(0));
@@ -316,10 +331,11 @@ impl Blobstore for MultiplexedBlobstoreBase {
             );
             Ok(())
         })
-        .boxify()
+        .compat()
+        .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPresenceChecks);
         let requests = self
@@ -328,6 +344,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
             .map(|&(blobstore_id, ref blobstore)| {
                 blobstore
                     .is_present(ctx.clone(), key.clone())
+                    .compat()
                     .map_err(move |error| (blobstore_id, error))
             })
             .collect();
@@ -371,7 +388,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
             );
             Ok(())
         })
-        .boxify()
+        .compat()
+        .boxed()
     }
 }
 
@@ -394,12 +412,13 @@ fn multiplexed_get(
     key: &String,
     operation: OperationType,
     scuba: ScubaSampleBuilder,
-) -> Vec<BoxFuture<(BlobstoreId, Option<BlobstoreGetData>), (BlobstoreId, Error)>> {
+) -> Vec<BoxFuture01<(BlobstoreId, Option<BlobstoreGetData>), (BlobstoreId, Error)>> {
     blobstores
         .iter()
         .map(|&(blobstore_id, ref blobstore)| {
             blobstore
                 .get(ctx.clone(), key.clone())
+                .compat()
                 .map({
                     cloned!(blobstore_id);
                     move |val| (blobstore_id, val)
@@ -458,7 +477,7 @@ fn finish_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
     multiplex_id: MultiplexId,
     operation_key: OperationKey,
     other_puts: Vec<F>,
-) -> BoxFuture<(), Error> {
+) -> BoxFuture01<(), Error> {
     // Ocne we finished a put in one blobstore, we want to return once this blob is in a position
     // to be replicated properly to the multiplexed stores. This can happen in two cases:
     // - We wrote it to the SQL queue that will replicate it to other blobstores.

@@ -7,22 +7,22 @@
 
 use anyhow::Error;
 use chrono::Local;
-use futures_util::future::join_all;
+use futures::future::join_all;
 use nonzero_ext::nonzero;
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 
-use async_limiter::{AsyncLimiter, TokioFlavor};
+use async_limiter::AsyncLimiter;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-    let limiter = AsyncLimiter::new(limiter, TokioFlavor::V02).await;
+    let limiter = AsyncLimiter::new(limiter).await;
 
     let futs = (0..10).map(|i| {
         let limiter = limiter.clone();
         async move {
             loop {
-                limiter.access()?.await?;
+                limiter.access().await?;
                 println!("[{}] {}", i, Local::now().format("%H:%M:%S%.3f"));
             }
         }

@@ -11,6 +11,7 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, Operatio
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
+use futures::future::TryFutureExt;
 use futures_ext::FutureExt;
 use futures_old::{self, future::join_all, prelude::*};
 use itertools::{Either, Itertools};
@@ -307,6 +308,7 @@ fn heal_blob(
                     .expect("stores_to_heal contains unknown blobstore?");
                 blobstore
                     .put(ctx.clone(), key.clone(), fetch_data.blob.clone())
+                    .compat()
                     .then(move |result| Ok((bid, result.is_ok())))
             })
             .collect();
@@ -407,6 +409,7 @@ fn fetch_blob(
                 .expect("blobstores_to_fetch contains only existing blobstores");
             blobstore
                 .get(ctx.clone(), key.clone())
+                .compat()
                 .then(move |result| Ok((bid, result)))
         })
         .collect();
@@ -501,8 +504,11 @@ mod tests {
     use blobstore_sync_queue::SqlBlobstoreSyncQueue;
     use bytes::Bytes;
     use fbinit::FacebookInit;
-    use futures_ext::BoxFuture;
-    use futures_util::compat::Future01CompatExt;
+    use futures::{
+        compat::Future01CompatExt,
+        future::{BoxFuture, FutureExt},
+    };
+    use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
     use sql_construct::SqlConstruct;
     use std::iter::FromIterator;
     use std::sync::Mutex;
@@ -543,7 +549,7 @@ mod tests {
             _ctx: CoreContext,
             key: String,
             value: BlobstoreBytes,
-        ) -> BoxFuture<(), Error> {
+        ) -> BoxFuture<'static, Result<(), Error>> {
             let mut inner = self.hash.lock().expect("lock poison");
             let inner_flag = self.fail_puts.lock().expect("lock poison");
             let res = if *inner_flag {
@@ -552,27 +558,26 @@ mod tests {
                 inner.insert(key, value);
                 Ok(())
             };
-            res.into_future().boxify()
+            async move { res }.boxed()
         }
 
         fn get(
             &self,
             _ctx: CoreContext,
             key: String,
-        ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+        ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
             let inner = self.hash.lock().expect("lock poison");
-            Ok(inner.get(&key).map(|bytes| bytes.clone().into()))
-                .into_future()
-                .boxify()
+            let bytes = inner.get(&key).map(|bytes| bytes.clone().into());
+            async move { Ok(bytes) }.boxed()
         }
     }
 
     trait BlobstoreSyncQueueExt {
-        fn len(&self, ctx: CoreContext, multiplex_id: MultiplexId) -> BoxFuture<usize, Error>;
+        fn len(&self, ctx: CoreContext, multiplex_id: MultiplexId) -> BoxFuture01<usize, Error>;
     }
 
     impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueueExt for Q {
-        fn len(&self, ctx: CoreContext, multiplex_id: MultiplexId) -> BoxFuture<usize, Error> {
+        fn len(&self, ctx: CoreContext, multiplex_id: MultiplexId) -> BoxFuture01<usize, Error> {
             let zero_date = DateTime::now();
             self.iter(ctx.clone(), None, multiplex_id, zero_date, 100)
                 .and_then(|entries| {
@@ -1210,7 +1215,6 @@ mod tests {
                 .get(&bids[1])
                 .unwrap()
                 .get(ctx.clone(), "specialk".to_string())
-                .compat()
                 .await?,
             Some(BlobstoreGetData::from_bytes(Bytes::from("specialv"))),
         );

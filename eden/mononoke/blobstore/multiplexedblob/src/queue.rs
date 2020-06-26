@@ -11,8 +11,12 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::{self, Future};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt},
+};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
+use futures_old::future::Future;
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use scuba::ScubaSampleBuilder;
@@ -70,7 +74,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
         multiplex_id: MultiplexId,
         operation_key: OperationKey,
         key: String,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture01<(), Error> {
         self.queue
             .add(
                 ctx,
@@ -88,66 +92,79 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
 }
 
 impl Blobstore for MultiplexedBlobstore {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
-        self.blobstore
-            .get(ctx.clone(), key.clone())
-            .then({
-                cloned!(self.queue);
-                move |result| match result {
-                    Ok(value) => future::ok(value).left_future(),
-                    Err(error) => {
-                        if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
-                            return future::err(error).left_future();
-                        }
-                        // This means that some underlying blobstore returned error, and
-                        // other return None. To distinguish incomplete sync from true-none we
-                        // check synchronization queue. If it does not contain entries with this key
-                        // it means it is true-none otherwise, only replica containing key has
-                        // failed and we need to return error.
-                        queue
-                            .get(ctx, key)
-                            .and_then(|entries| {
-                                if entries.is_empty() {
-                                    Ok(None)
-                                } else {
-                                    Err(error)
-                                }
-                            })
-                            .right_future()
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+        let get = self.blobstore.get(ctx.clone(), key.clone());
+        cloned!(self.queue);
+
+        async move {
+            let result = get.await;
+            match result {
+                Ok(value) => Ok(value),
+                Err(error) => {
+                    if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
+                        return Err(error);
                     }
+                    // This means that some underlying blobstore returned error, and
+                    // other return None. To distinguish incomplete sync from true-none we
+                    // check synchronization queue. If it does not contain entries with this key
+                    // it means it is true-none otherwise, only replica containing key has
+                    // failed and we need to return error.
+                    queue
+                        .get(ctx, key)
+                        .and_then(|entries| {
+                            if entries.is_empty() {
+                                Ok(None)
+                            } else {
+                                Err(error)
+                            }
+                        })
+                        .compat()
+                        .await
                 }
-            })
-            .boxify()
+            }
+        }
+        .boxed()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.blobstore.put(ctx, key, value)
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
-        self.blobstore
-            .is_present(ctx.clone(), key.clone())
-            .then({
-                cloned!(self.queue);
-                move |result| match result {
-                    Ok(value) => future::ok(value).left_future(),
-                    Err(error) => {
-                        if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
-                            return future::err(error).left_future();
-                        }
-                        queue
-                            .get(ctx, key)
-                            .and_then(|entries| {
-                                if entries.is_empty() {
-                                    Ok(false)
-                                } else {
-                                    Err(error)
-                                }
-                            })
-                            .right_future()
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+        cloned!(self.queue);
+        let is_present = self.blobstore.is_present(ctx.clone(), key.clone());
+
+        async move {
+            let result = is_present.await;
+            match result {
+                Ok(value) => Ok(value),
+                Err(error) => {
+                    if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
+                        return Err(error);
                     }
+                    queue
+                        .get(ctx, key)
+                        .and_then(|entries| {
+                            if entries.is_empty() {
+                                Ok(false)
+                            } else {
+                                Err(error)
+                            }
+                        })
+                        .compat()
+                        .await
                 }
-            })
-            .boxify()
+            }
+        }
+        .boxed()
     }
 }

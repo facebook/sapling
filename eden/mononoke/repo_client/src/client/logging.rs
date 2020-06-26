@@ -10,6 +10,7 @@ use blobstore::{Blobstore, BlobstoreBytes};
 use chrono::Utc;
 use context::{CoreContext, SessionId};
 use fbinit::FacebookInit;
+use futures::future::TryFutureExt;
 use futures_ext::FutureExt;
 use futures_old::{future, Future};
 use futures_stats::{FutureStats, StreamStats};
@@ -242,6 +243,7 @@ fn do_wireproto_logging<'a>(
 
                     blobstore
                         .put(ctx.clone(), key.clone(), BlobstoreBytes::from_bytes(args))
+                        .compat()
                         .map(move |()| {
                             STATS::wireproto_blobstore_success.add_value(1);
                             builder.add("remote_args", key);

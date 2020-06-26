@@ -566,8 +566,7 @@ mod tests {
     use blobrepo_hg::BlobRepoHg;
     use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
     use fixtures::linear;
-    use futures::future::{FutureExt, TryFutureExt};
-    use futures_ext::BoxFuture;
+    use futures::future::{BoxFuture, FutureExt};
     use mercurial_types::HgChangesetId;
     use std::str::FromStr;
     use tests_utils::resolve_cs_id;
@@ -723,18 +722,21 @@ mod tests {
             ctx: CoreContext,
             key: String,
             value: BlobstoreBytes,
-        ) -> BoxFuture<(), Error> {
+        ) -> BoxFuture<'static, Result<(), Error>> {
             if key.find(&self.bad_key_substring).is_some() {
                 tokio::time::delay_for(Duration::from_millis(250))
                     .map(|()| Err(format_err!("failed")))
-                    .compat()
-                    .boxify()
+                    .boxed()
             } else {
-                self.inner.put(ctx, key, value).boxify()
+                self.inner.put(ctx, key, value)
             }
         }
 
-        fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+        fn get(
+            &self,
+            ctx: CoreContext,
+            key: String,
+        ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
             self.inner.get(ctx, key)
         }
     }
@@ -764,12 +766,16 @@ mod tests {
             ctx: CoreContext,
             key: String,
             value: BlobstoreBytes,
-        ) -> BoxFuture<(), Error> {
+        ) -> BoxFuture<'static, Result<(), Error>> {
             self.count.fetch_add(1, Ordering::Relaxed);
-            self.inner.put(ctx, key, value).boxify()
+            self.inner.put(ctx, key, value)
         }
 
-        fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+        fn get(
+            &self,
+            ctx: CoreContext,
+            key: String,
+        ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
             self.inner.get(ctx, key)
         }
     }

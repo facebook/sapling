@@ -169,10 +169,7 @@ pub(crate) async fn fetch_fastlog_batch_by_unode_id(
 ) -> Result<Option<FastlogBatch>, Error> {
     let fastlog_batch_key = generate_fastlog_batch_key(unode_entry);
 
-    let maybe_bytes = blobstore
-        .get(ctx.clone(), fastlog_batch_key)
-        .compat()
-        .await?;
+    let maybe_bytes = blobstore.get(ctx.clone(), fastlog_batch_key).await?;
 
     match maybe_bytes {
         Some(serialized) => FastlogBatch::from_bytes(serialized.as_raw_bytes()).map(Some),
@@ -195,7 +192,6 @@ pub(crate) async fn save_fastlog_batch_by_unode_id(
             fastlog_batch_key,
             BlobstoreBytes::from_bytes(serialized),
         )
-        .compat()
         .await
 }
 

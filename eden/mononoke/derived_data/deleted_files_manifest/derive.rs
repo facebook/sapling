@@ -414,7 +414,7 @@ fn create_manifest(
     let mut created = created.lock();
     if created.insert(key.clone()) {
         let blob = manifest.into_blob();
-        let f = old_future::lazy(move || blobstore.put(ctx, key, blob.into())).boxify();
+        let f = old_future::lazy(move || blobstore.put(ctx, key, blob.into()).compat()).boxify();
 
         sender
             .unbounded_send(f)

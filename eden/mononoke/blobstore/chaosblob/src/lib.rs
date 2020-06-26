@@ -8,8 +8,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures::future;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
 use std::num::NonZeroU32;
@@ -81,33 +80,57 @@ impl<T: Blobstore + Clone> ChaosBlobstore<T> {
 
 impl<T: Blobstore + Clone> Blobstore for ChaosBlobstore<T> {
     #[inline]
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
-        if should_error {
-            future::err(ErrorKind::InjectedChaosGet(key).into()).boxify()
-        } else {
-            self.blobstore.get(ctx, key)
+        let get = self.blobstore.get(ctx, key.clone());
+        async move {
+            if should_error {
+                Err(ErrorKind::InjectedChaosGet(key).into())
+            } else {
+                get.await
+            }
         }
+        .boxed()
     }
 
     #[inline]
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_write;
-        if should_error {
-            future::err(ErrorKind::InjectedChaosPut(key).into()).boxify()
+        let put = if should_error {
+            None
         } else {
-            self.blobstore.put(ctx, key, value)
+            Some(self.blobstore.put(ctx, key.clone(), value))
+        };
+        async move {
+            match put {
+                None => Err(ErrorKind::InjectedChaosPut(key).into()),
+                Some(put) => put.await,
+            }
         }
+        .boxed()
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
-        if should_error {
-            future::err(ErrorKind::InjectedChaosIsPresent(key).into()).boxify()
-        } else {
-            self.blobstore.is_present(ctx, key)
+        let is_present = self.blobstore.is_present(ctx, key.clone());
+        async move {
+            if should_error {
+                Err(ErrorKind::InjectedChaosIsPresent(key).into())
+            } else {
+                is_present.await
+            }
         }
+        .boxed()
     }
 }
 
@@ -115,51 +138,48 @@ impl<T: Blobstore + Clone> Blobstore for ChaosBlobstore<T> {
 mod test {
     use super::*;
     use fbinit::FacebookInit;
-    use futures::Future;
 
     use memblob::EagerMemblob;
 
-    #[fbinit::test]
-    fn test_error_on_write(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn test_error_on_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let base = EagerMemblob::new();
         let wrapper =
             ChaosBlobstore::new(base.clone(), ChaosOptions::new(None, NonZeroU32::new(1)));
         let key = "foobar".to_string();
 
-        // We're using EagerMemblob (immediate future completion) so calling wait() is fine.
         let r = wrapper
             .put(
                 ctx.clone(),
                 key.clone(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
-            .wait();
+            .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key.clone()).wait().unwrap();
+        let base_present = base.is_present(ctx, key.clone()).await.unwrap();
         assert!(!base_present);
     }
 
-    #[fbinit::test]
-    fn test_error_on_read(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn test_error_on_read(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let base = EagerMemblob::new();
         let wrapper =
             ChaosBlobstore::new(base.clone(), ChaosOptions::new(NonZeroU32::new(1), None));
         let key = "foobar".to_string();
 
-        // We're using EagerMemblob (immediate future completion) so calling wait() is fine.
         let r = wrapper
             .put(
                 ctx.clone(),
                 key.clone(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
-            .wait();
+            .await;
         assert!(r.is_ok());
-        let base_present = base.is_present(ctx.clone(), key.clone()).wait().unwrap();
+        let base_present = base.is_present(ctx.clone(), key.clone()).await.unwrap();
         assert!(base_present);
-        let r = wrapper.get(ctx.clone(), key.clone()).wait();
+        let r = wrapper.get(ctx.clone(), key.clone()).await;
         assert!(!r.is_ok());
     }
 }

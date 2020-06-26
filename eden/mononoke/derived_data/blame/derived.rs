@@ -116,6 +116,7 @@ impl BonsaiDerivedMapping for BlameRootMapping {
         let futs = csids.into_iter().map(|csid| {
             self.blobstore
                 .get(ctx.clone(), self.format_key(&csid))
+                .compat()
                 .map(move |val| val.map(|_| (csid.clone(), BlameRoot(csid))))
         });
         stream::FuturesUnordered::from_iter(futs)
@@ -125,11 +126,14 @@ impl BonsaiDerivedMapping for BlameRootMapping {
     }
 
     fn put(&self, ctx: CoreContext, csid: ChangesetId, _id: Self::Value) -> BoxFuture<(), Error> {
-        self.blobstore.put(
-            ctx,
-            self.format_key(&csid),
-            BlobstoreBytes::from_bytes(Bytes::new()),
-        )
+        self.blobstore
+            .put(
+                ctx,
+                self.format_key(&csid),
+                BlobstoreBytes::from_bytes(Bytes::new()),
+            )
+            .compat()
+            .boxify()
     }
 }
 

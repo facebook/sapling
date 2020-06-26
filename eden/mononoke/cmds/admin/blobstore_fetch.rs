@@ -296,7 +296,7 @@ fn get_from_sources<T: Blobstore + Clone>(
                 blobstore,
                 RedactedBlobstoreConfig::new(redacted_blobs, scuba_redaction_builder),
             );
-            blobstore.get(ctx, key.clone()).boxify()
+            blobstore.get(ctx, key).compat().boxify()
         }
     }
 }
@@ -349,6 +349,6 @@ fn get_cache<B: CacheBlobstoreExt>(
     } else if mode == "no-fill" {
         blobstore.get_no_cache_fill(ctx, key)
     } else {
-        blobstore.get(ctx, key)
+        blobstore.get(ctx, key).compat().boxify()
     }
 }

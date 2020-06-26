@@ -9,8 +9,7 @@ use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures::{compat::Future01CompatExt, FutureExt as _, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::BlobstoreBytes;
 use time_ext::DurationExt;
@@ -50,7 +49,7 @@ async fn access(ctx: &CoreContext, reason: AccessReason) -> Result<(), Error> {
         }
     };
 
-    let (stats, ()) = limiter.access()?.try_timed().await?;
+    let (stats, ()) = limiter.access().try_timed().await?;
 
     let counter = match reason {
         AccessReason::Read => PerfCounterType::BlobGetsAccessWait,
@@ -70,37 +69,53 @@ impl<T: Blobstore + Clone> ContextConcurrencyBlobstore<T> {
 }
 
 impl<T: Blobstore + Clone> Blobstore for ContextConcurrencyBlobstore<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         cloned!(self.blobstore);
         async move {
             access(&ctx, AccessReason::Read).await?;
-            blobstore.get(ctx, key).compat().await
+            blobstore.get(ctx, key).await
         }
         .boxed()
-        .compat()
-        .boxify()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         cloned!(self.blobstore);
         async move {
             access(&ctx, AccessReason::Write).await?;
-            blobstore.put(ctx, key, value).compat().await
+            blobstore.put(ctx, key, value).await
         }
         .boxed()
-        .compat()
-        .boxify()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         cloned!(self.blobstore);
         async move {
             access(&ctx, AccessReason::Read).await?;
-            blobstore.is_present(ctx, key).compat().await
+            blobstore.is_present(ctx, key).await
         }
         .boxed()
-        .compat()
-        .boxify()
+    }
+
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        cloned!(self.blobstore);
+        async move {
+            access(&ctx, AccessReason::Read).await?;
+            blobstore.assert_present(ctx, key).await
+        }
+        .boxed()
     }
 }
 
@@ -108,7 +123,6 @@ impl<T: Blobstore + Clone> Blobstore for ContextConcurrencyBlobstore<T> {
 mod test {
     use super::*;
     use async_limiter::AsyncLimiter;
-    use async_limiter::TokioFlavor;
     use context::SessionContainer;
     use fbinit::FacebookInit;
     use nonzero_ext::nonzero;
@@ -132,8 +146,8 @@ mod test {
             &self,
             _ctx: CoreContext,
             _key: String,
-        ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
-            async move { Ok(None) }.boxed().compat().boxify()
+        ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+            async move { Ok(None) }.boxed()
         }
 
         fn put(
@@ -141,12 +155,16 @@ mod test {
             _ctx: CoreContext,
             _key: String,
             _value: BlobstoreBytes,
-        ) -> BoxFuture<(), Error> {
-            async move { Ok(()) }.boxed().compat().boxify()
+        ) -> BoxFuture<'static, Result<(), Error>> {
+            async move { Ok(()) }.boxed()
         }
 
-        fn is_present(&self, _ctx: CoreContext, _key: String) -> BoxFuture<bool, Error> {
-            async move { Ok(false) }.boxed().compat().boxify()
+        fn is_present(
+            &self,
+            _ctx: CoreContext,
+            _key: String,
+        ) -> BoxFuture<'static, Result<bool, Error>> {
+            async move { Ok(false) }.boxed()
         }
     }
 
@@ -158,10 +176,10 @@ mod test {
     #[fbinit::test]
     async fn test_qps(fb: FacebookInit) -> Result<(), Error> {
         let l1 = DirectRateLimiter::<LeakyBucket>::new(nonzero!(1u32), Duration::from_millis(10));
-        let l1 = AsyncLimiter::new(l1, TokioFlavor::V02).await;
+        let l1 = AsyncLimiter::new(l1).await;
 
         let l2 = DirectRateLimiter::<LeakyBucket>::new(nonzero!(1u32), Duration::from_millis(10));
-        let l2 = AsyncLimiter::new(l2, TokioFlavor::V02).await;
+        let l2 = AsyncLimiter::new(l2).await;
 
         let mut builder = SessionContainer::builder(fb);
         builder.blobstore_read_limiter(l1);
@@ -173,7 +191,7 @@ mod test {
 
         // get
         let (stats, _) = futures::future::try_join_all(
-            (0..10usize).map(|_| blob.get(ctx.clone(), "foo".to_string()).compat()),
+            (0..10usize).map(|_| blob.get(ctx.clone(), "foo".to_string())),
         )
         .try_timed()
         .await?;
@@ -181,7 +199,7 @@ mod test {
 
         // is_present
         let (stats, _) = futures::future::try_join_all(
-            (0..10usize).map(|_| blob.is_present(ctx.clone(), "foo".to_string()).compat()),
+            (0..10usize).map(|_| blob.is_present(ctx.clone(), "foo".to_string())),
         )
         .try_timed()
         .await?;
@@ -189,10 +207,9 @@ mod test {
 
         // put
         let bytes = BlobstoreBytes::from_bytes("test foobar");
-        let (stats, _) = futures::future::try_join_all((0..10usize).map(|_| {
-            blob.put(ctx.clone(), "foo".to_string(), bytes.clone())
-                .compat()
-        }))
+        let (stats, _) = futures::future::try_join_all(
+            (0..10usize).map(|_| blob.put(ctx.clone(), "foo".to_string(), bytes.clone())),
+        )
         .try_timed()
         .await?;
         assert!(stats.completion_time.as_millis_unchecked() > 50);

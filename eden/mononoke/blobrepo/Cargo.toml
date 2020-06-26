@@ -27,7 +27,6 @@ metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }
 phases = { path = "../phases" }
 repo_blobstore = { path = "repo_blobstore" }
-scuba_ext = { path = "../common/scuba_ext" }
 topo_sort = { path = "../common/topo_sort" }
 type_map = { path = "../common/type_map" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -50,6 +49,7 @@ manifest = { path = "../manifest" }
 memblob = { path = "../blobstore/memblob" }
 mercurial_types = { path = "../mercurial/types" }
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }
+scuba_ext = { path = "../common/scuba_ext" }
 tests_utils = { path = "../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

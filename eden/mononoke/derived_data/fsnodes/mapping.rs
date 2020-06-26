@@ -15,7 +15,8 @@ use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use futures::{
-    compat::Future01CompatExt, stream as new_stream, StreamExt as NewStreamExt, TryStreamExt,
+    compat::Future01CompatExt, stream as new_stream, StreamExt as NewStreamExt, TryFutureExt,
+    TryStreamExt,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::{
@@ -147,6 +148,7 @@ impl RootFsnodeMapping {
     ) -> impl Future<Item = Option<(ChangesetId, RootFsnodeId)>, Error = Error> {
         self.blobstore
             .get(ctx.clone(), self.format_key(cs_id))
+            .compat()
             .and_then(|opt_blob| opt_blob.map(TryInto::try_into).transpose())
             .map(move |maybe_root_fsnode_id| {
                 maybe_root_fsnode_id.map(|root_fsnode_id| (cs_id, root_fsnode_id))
@@ -173,7 +175,10 @@ impl BonsaiDerivedMapping for RootFsnodeMapping {
     }
 
     fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
-        self.blobstore.put(ctx, self.format_key(csid), id.into())
+        self.blobstore
+            .put(ctx, self.format_key(csid), id.into())
+            .compat()
+            .boxify()
     }
 }
 

@@ -10,8 +10,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures::future::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use mononoke_types::{BlobstoreBytes, Timestamp};
 use scuba_ext::ScubaSampleBuilder;
 use slog::debug;
@@ -158,8 +157,13 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
 }
 
 impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
-        self.access_blobstore(&key)
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+        let get = self
+            .access_blobstore(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
@@ -171,14 +175,18 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
                     err
                 }
             })
-            .map(move |blobstore| blobstore.get(ctx, key))
-            .into_future()
-            .flatten()
-            .boxify()
+            .map(move |blobstore| blobstore.get(ctx, key));
+        async move { get?.await }.boxed()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        self.access_blobstore(&key)
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let put = self
+            .access_blobstore(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
@@ -191,17 +199,19 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
                     err
                 }
             })
-            .map(move |blobstore| blobstore.put(ctx, key, value))
-            .into_future()
-            .flatten()
-            .boxify()
+            .map(move |blobstore| blobstore.put(ctx, key, value));
+        async move { put?.await }.boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.blobstore.is_present(ctx, key)
     }
 
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.blobstore.assert_present(ctx, key)
     }
 }
@@ -210,16 +220,29 @@ impl<B> Blobstore for RedactedBlobstore<B>
 where
     B: Blobstore + Clone,
 {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         self.inner.get(ctx, key)
     }
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.inner.put(ctx, key, value)
     }
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.inner.is_present(ctx, key)
     }
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.inner.assert_present(ctx, key)
     }
 }
@@ -241,12 +264,9 @@ mod test {
     use maplit::hashmap;
     use memblob::EagerMemblob;
     use prefixblob::PrefixBlobstore;
-    use tokio_compat::runtime::Runtime;
 
-    #[fbinit::test]
-    fn test_redacted_key(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
-
+    #[fbinit::compat_test]
+    async fn test_redacted_key(fb: FacebookInit) {
         let unredacted_key = "foo".to_string();
         let redacted_key = "bar".to_string();
         let redacted_task = "bar task".to_string();
@@ -264,11 +284,13 @@ mod test {
         );
 
         //Test put with redacted key
-        let res = rt.block_on(blob.put(
-            ctx.clone(),
-            redacted_key.clone(),
-            BlobstoreBytes::from_bytes("test bar"),
-        ));
+        let res = blob
+            .put(
+                ctx.clone(),
+                redacted_key.clone(),
+                BlobstoreBytes::from_bytes("test bar"),
+            )
+            .await;
 
         assert_matches!(
             res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
@@ -276,15 +298,17 @@ mod test {
         );
 
         //Test key added to the blob
-        let res = rt.block_on(blob.put(
-            ctx.clone(),
-            unredacted_key.clone(),
-            BlobstoreBytes::from_bytes("test foo"),
-        ));
+        let res = blob
+            .put(
+                ctx.clone(),
+                unredacted_key.clone(),
+                BlobstoreBytes::from_bytes("test foo"),
+            )
+            .await;
         assert!(res.is_ok(), "the key should be added successfully");
 
         // Test accessing a key which is redacted
-        let res = rt.block_on(blob.get(ctx.clone(), redacted_key.clone()));
+        let res = blob.get(ctx.clone(), redacted_key.clone()).await;
 
         assert_matches!(
             res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
@@ -292,7 +316,7 @@ mod test {
         );
 
         // Test accessing a key which exists and is accesible
-        let res = rt.block_on(blob.get(ctx.clone(), unredacted_key.clone()));
+        let res = blob.get(ctx.clone(), unredacted_key.clone()).await;
         assert!(res.is_ok(), "the key should be found and available");
     }
 }

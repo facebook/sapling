@@ -303,7 +303,7 @@ fn create_fsnode(
         let fsnode_id = fsnode.get_fsnode_id();
         let key = fsnode_id.blobstore_key();
         let blob = fsnode.into_blob();
-        let f = blobstore.put(ctx, key, blob.into()).boxify();
+        let f = blobstore.put(ctx, key, blob.into()).compat().boxify();
 
         let res = match sender {
             Some(sender) => sender

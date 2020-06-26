@@ -13,7 +13,7 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future,
+    future::{self, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
 use futures_old::{Future, IntoFuture};
@@ -273,6 +273,7 @@ async fn get_resume_state(manifold: &ThriftManifoldBlob, config: &Config) -> Res
         Some(state_key) => {
             manifold
                 .get(config.ctx.clone(), state_key.clone())
+                .compat()
                 .map(|data| {
                     data.and_then(|data| {
                         serde_json::from_slice::<StateSerde>(&*data.into_raw_bytes()).ok()
@@ -323,7 +324,7 @@ async fn put_resume_state(
                 .map(|state_json| BlobstoreBytes::from_bytes(state_json))
                 .map_err(Error::from)
                 .into_future()
-                .and_then(move |state_data| manifold.put(ctx, state_key, state_data))
+                .and_then(move |state_data| manifold.put(ctx, state_key, state_data).compat())
                 .map(move |_| {
                     if termion::is_tty(&std::io::stderr()) {
                         let elapsed = started_at.elapsed().as_secs() as f64;

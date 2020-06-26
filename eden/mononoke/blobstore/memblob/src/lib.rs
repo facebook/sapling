@@ -10,12 +10,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 
 use anyhow::{format_err, Error};
-use futures::{
-    future::{self, lazy, BoxFuture},
-    FutureExt,
-};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
-use futures_old::future::{lazy as lazy01, IntoFuture as IntoFuture01};
+use futures::future::{self, lazy, BoxFuture, FutureExt};
 
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreWithLink};
 use context::CoreContext;
@@ -105,19 +100,26 @@ impl LazyMemblob {
 }
 
 impl Blobstore for EagerMemblob {
-    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
+    fn put(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let mut inner = self.state.lock().expect("lock poison");
 
         inner.put(key, value);
-        Ok(()).into_future().boxify()
+        future::ok(()).boxed()
     }
 
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let inner = self.state.lock().expect("lock poison");
 
-        Ok(inner.get(&key).map(|blob_ref| blob_ref.clone().into()))
-            .into_future()
-            .boxify()
+        future::ok(inner.get(&key).map(|blob_ref| blob_ref.clone().into())).boxed()
     }
 }
 
@@ -134,26 +136,35 @@ impl BlobstoreWithLink for EagerMemblob {
 }
 
 impl Blobstore for LazyMemblob {
-    fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error> {
+    fn put(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let state = self.state.clone();
 
-        lazy01(move || {
+        lazy(move |_| {
             let mut inner = state.lock().expect("lock poison");
 
             inner.put(key, value);
-            Ok(()).into_future()
+            Ok(())
         })
-        .boxify()
+        .boxed()
     }
 
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let state = self.state.clone();
 
-        lazy01(move || {
+        lazy(move |_| {
             let inner = state.lock().expect("lock poison");
-            Ok(inner.get(&key).map(|bytes| bytes.clone().into())).into_future()
+            Ok(inner.get(&key).map(|bytes| bytes.clone().into()))
         })
-        .boxify()
+        .boxed()
     }
 }
 

@@ -48,7 +48,7 @@ impl Loadable for TestLeafId {
         blobstore: &B,
     ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let key = self.0.to_string();
-        let get = blobstore.get(ctx, key.clone()).compat();
+        let get = blobstore.get(ctx, key.clone());
 
         async move {
             let bytes = get.await?.ok_or(LoadableError::Missing(key))?;
@@ -71,9 +71,7 @@ impl Storable for TestLeaf {
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
         let key = TestLeafId(hasher.finish());
-        let put = blobstore
-            .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(self.0))
-            .compat();
+        let put = blobstore.put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(self.0));
 
         async move {
             put.await?;
@@ -98,7 +96,7 @@ impl Loadable for TestManifestIdU64 {
         blobstore: &B,
     ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let key = self.0.to_string();
-        let get = blobstore.get(ctx, key.clone()).compat();
+        let get = blobstore.get(ctx, key.clone());
         async move {
             let data = get.await?;
             let bytes = data.ok_or(LoadableError::Missing(key))?;
@@ -127,7 +125,6 @@ impl Storable for TestManifestU64 {
             let bytes = serde_cbor::to_vec(&self)?;
             blobstore
                 .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(bytes))
-                .compat()
                 .await?;
             Ok(key)
         }

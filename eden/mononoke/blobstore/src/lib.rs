@@ -13,9 +13,7 @@ use std::fmt;
 
 use abomonation_derive::Abomonation;
 use anyhow::Error;
-use futures::future::BoxFuture;
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
-use futures_old::future::{self as future01, Future as Future01};
+use futures::future::{BoxFuture, FutureExt};
 use std::io::Cursor;
 use thiserror::Error;
 
@@ -278,30 +276,49 @@ impl From<BlobstoreBytesSerialisable> for BlobstoreBytes {
 #[auto_impl(Arc, Box)]
 pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
     /// Fetch the value associated with `key`, or None if no value is present
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture01<Option<BlobstoreGetData>, Error>;
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>>;
     /// Associate `value` with `key` for future gets; if `put` is called with different `value`s
     /// for the same key, the implementation may return any `value` it's been given in response
     /// to a `get` for that `key`.
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture01<(), Error>;
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>>;
     /// Check that `get` will return a value for a given `key`, and not None. The provided
     /// implentation just calls `get`, and discards the return value; this can be overridden to
     /// avoid transferring data. In the absence of concurrent `put` calls, this must return
     /// `false` if `get` would return `None`, and `true` if `get` would return `Some(_)`.
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture01<bool, Error> {
-        self.get(ctx, key).map(|opt| opt.is_some()).boxify()
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+        let get = self.get(ctx, key);
+        async move {
+            let opt = get.await?;
+            Ok(opt.is_some())
+        }
+        .boxed()
     }
     /// Errors if a given `key` is not present in the blob store. Useful to abort a chained
     /// future computation early if it cannot succeed unless the `key` is present
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture01<(), Error> {
-        self.is_present(ctx, key.clone())
-            .and_then(|present| {
-                if present {
-                    future01::ok(())
-                } else {
-                    future01::err(ErrorKind::NotFound(key).into())
-                }
-            })
-            .boxify()
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let is_present = self.is_present(ctx, key.clone());
+        async move {
+            let present = is_present.await?;
+            if present {
+                Ok(())
+            } else {
+                Err(ErrorKind::NotFound(key).into())
+            }
+        }
+        .boxed()
     }
 }
 

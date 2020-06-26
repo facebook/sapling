@@ -5,8 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use futures::{compat::Compat01As03, ready, task::Context, Stream};
-use futures_util::{compat::Future01CompatExt, FutureExt};
+use futures::{ready, task::Context, FutureExt, Stream};
 use ratelimit_meter::{
     algorithms::{leaky_bucket::TooEarly, Algorithm},
     clock::Clock,
@@ -17,22 +16,14 @@ use std::pin::Pin;
 use std::task::Poll;
 use std::time::Instant;
 
-use crate::TokioFlavor;
-
-enum TokioDelay {
-    V01(Compat01As03<tokio_old::timer::Delay>),
-    V02(tokio::time::Delay),
-}
-
 #[must_use = "streams do nothing unless you poll them"]
 pub struct RateLimitStream<A, C>
 where
     A: Algorithm<C::Instant> + 'static,
     C: Clock + Send + 'static,
 {
-    flavor: TokioFlavor,
     limiter: DirectRateLimiter<A, C>,
-    pending: Option<TokioDelay>,
+    pending: Option<tokio::time::Delay>,
 }
 
 impl<A, C> RateLimitStream<A, C>
@@ -40,9 +31,8 @@ where
     A: Algorithm<C::Instant> + 'static,
     C: Clock + Send + 'static,
 {
-    pub fn new(flavor: TokioFlavor, limiter: DirectRateLimiter<A, C>) -> Self {
+    pub fn new(limiter: DirectRateLimiter<A, C>) -> Self {
         Self {
-            flavor,
             limiter,
             pending: None,
         }
@@ -69,15 +59,7 @@ where
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         loop {
             if let Some(ref mut pending) = self.pending {
-                match pending {
-                    TokioDelay::V01(p) => {
-                        let _ = ready!(p.poll_unpin(cx));
-                    }
-                    TokioDelay::V02(p) => {
-                        let _ = ready!(p.poll_unpin(cx));
-                    }
-                };
-
+                let _ = ready!(pending.poll_unpin(cx));
                 self.pending = None;
             }
 
@@ -85,16 +67,9 @@ where
                 Ok(()) => return Poll::Ready(Some(())),
                 Err(nc) => {
                     let instant = nc.earliest_possible();
-                    self.pending = Some(match self.flavor {
-                        TokioFlavor::V01 => {
-                            let delay = tokio_old::timer::Delay::new(instant).compat();
-                            TokioDelay::V01(delay)
-                        }
-                        TokioFlavor::V02 => {
-                            let instant = tokio::time::Instant::from_std(instant);
-                            let delay = tokio::time::delay_until(instant);
-                            TokioDelay::V02(delay)
-                        }
+                    self.pending = Some({
+                        let instant = tokio::time::Instant::from_std(instant);
+                        tokio::time::delay_until(instant)
                     });
                 }
             }

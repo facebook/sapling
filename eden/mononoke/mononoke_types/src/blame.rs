@@ -14,10 +14,7 @@ use anyhow::{bail, format_err, Error};
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
-};
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use futures_old::Future as Future01;
 use std::{collections::HashMap, convert::TryFrom};
 use thiserror::Error;
@@ -56,10 +53,7 @@ impl Loadable for BlameId {
         let fetch = blobstore.get(ctx, blobstore_key.clone());
 
         async move {
-            let bytes = fetch
-                .compat()
-                .await?
-                .ok_or(LoadableError::Missing(blobstore_key))?;
+            let bytes = fetch.await?.ok_or(LoadableError::Missing(blobstore_key))?;
             let blame_t = compact_protocol::deserialize(bytes.as_raw_bytes().as_ref())?;
             let blame = BlameMaybeRejected::from_thrift(blame_t)?;
             Ok(blame)
@@ -84,6 +78,7 @@ pub fn store_blame<B: Blobstore + Clone>(
     let blame_id = BlameId::from(file_unode_id);
     blobstore
         .put(ctx, blame_id.blobstore_key(), data)
+        .compat()
         .map(move |_| blame_id)
 }
 

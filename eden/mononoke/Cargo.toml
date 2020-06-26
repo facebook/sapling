@@ -115,7 +115,6 @@ sha2 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"
-tokio-old = { package = "tokio", version = "0.1" }
 toml = "=0.5.6"
 
 [dev-dependencies]
@@ -185,7 +184,6 @@ members = [
     "commit_rewriting/synced_commit_mapping",
     "common/allocation_tracing",
     "common/async_limiter",
-    "common/async_limiter/examples/tokio_v1",
     "common/async_limiter/examples/tokio_v2",
     "common/bounded_traversal",
     "common/dedupmap",

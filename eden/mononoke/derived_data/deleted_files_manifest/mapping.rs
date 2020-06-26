@@ -111,6 +111,7 @@ impl RootDeletedManifestMapping {
     ) -> impl Future<Item = Option<(ChangesetId, RootDeletedManifestId)>, Error = Error> {
         self.blobstore
             .get(ctx.clone(), self.format_key(cs_id))
+            .compat()
             .and_then(|maybe_bytes| maybe_bytes.map(|bytes| bytes.try_into()).transpose())
             .map(move |maybe_root_mf_id| maybe_root_mf_id.map(|root_mf_id| (cs_id, root_mf_id)))
     }
@@ -135,6 +136,9 @@ impl BonsaiDerivedMapping for RootDeletedManifestMapping {
     }
 
     fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
-        self.blobstore.put(ctx, self.format_key(csid), id.into())
+        self.blobstore
+            .put(ctx, self.format_key(csid), id.into())
+            .compat()
+            .boxify()
     }
 }

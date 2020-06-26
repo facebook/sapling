@@ -10,10 +10,7 @@
 use std::time::Duration;
 
 use anyhow::Error;
-use futures::future::FutureExt;
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::future::Future;
-use futures_util::future::TryFutureExt;
+use futures::future::{BoxFuture, FutureExt};
 use rand::Rng;
 use rand_distr::Distribution;
 
@@ -41,40 +38,68 @@ impl<B> DelayedBlobstore<B> {
 }
 
 impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
-        delay(self.get_dist, self.inner.get(ctx, key)).boxify()
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+        let delay = delay(self.get_dist);
+        let get = self.inner.get(ctx, key);
+        async move {
+            delay.await;
+            get.await
+        }
+        .boxed()
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        delay(self.put_dist, self.inner.put(ctx, key, value)).boxify()
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let delay = delay(self.put_dist);
+        let put = self.inner.put(ctx, key, value);
+        async move {
+            delay.await;
+            put.await
+        }
+        .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
-        delay(self.get_dist, self.inner.is_present(ctx, key)).boxify()
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+        let delay = delay(self.get_dist);
+        let is_present = self.inner.is_present(ctx, key);
+        async move {
+            delay.await;
+            is_present.await
+        }
+        .boxed()
     }
 
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
-        delay(self.get_dist, self.inner.assert_present(ctx, key)).boxify()
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        let delay = delay(self.get_dist);
+        let assert_present = self.inner.assert_present(ctx, key);
+        async move {
+            delay.await;
+            assert_present.await
+        }
+        .boxed()
     }
 }
 
-fn delay<F, D>(distribution: D, target: F) -> impl Future<Item = F::Item, Error = Error>
+async fn delay<D>(distribution: D)
 where
     D: Distribution<f64>,
-    F: Future<Error = Error>,
 {
     let seconds = rand::thread_rng().sample(distribution).abs();
-    async move {
-        tokio::time::delay_for(Duration::new(
-            seconds.trunc() as u64,
-            (seconds.fract() * 1e+9) as u32,
-        ))
-        .await;
-
-        let res: Result<_, Error> = Ok(());
-        res
-    }
-    .boxed()
-    .compat()
-    .and_then(|()| target)
+    tokio::time::delay_for(Duration::new(
+        seconds.trunc() as u64,
+        (seconds.fract() * 1e+9) as u32,
+    ))
+    .await;
 }

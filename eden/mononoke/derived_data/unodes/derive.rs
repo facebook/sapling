@@ -10,10 +10,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt},
-};
+use futures::future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, sync::mpsc, Future};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
@@ -150,9 +147,9 @@ fn create_unode_manifest(
 
         match sender {
             Some(sender) => sender
-                .unbounded_send(f)
+                .unbounded_send(f.compat().boxify())
                 .map_err(|err| format_err!("failed to send manifest future {}", err))?,
-            None => f.compat().await?,
+            None => f.await?,
         };
         Ok(((), mf_unode_id))
     }
@@ -191,11 +188,13 @@ fn create_unode_file(
             let file_unode_id = file_unode.get_unode_id();
 
             let f = future::lazy(move || {
-                blobstore.put(
-                    ctx,
-                    file_unode_id.blobstore_key(),
-                    file_unode.into_blob().into(),
-                )
+                blobstore
+                    .put(
+                        ctx,
+                        file_unode_id.blobstore_key(),
+                        file_unode.into_blob().into(),
+                    )
+                    .compat()
             })
             .boxify();
 

@@ -8,7 +8,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures_ext::BoxFuture;
+use futures::future::BoxFuture;
 use mononoke_types::BlobstoreBytes;
 use std::sync::{Arc, Mutex};
 
@@ -36,22 +36,35 @@ impl<T> Blobstore for TracingBlobstore<T>
 where
     T: Blobstore,
 {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+    fn get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let mut gets = self.gets.lock().expect("poisoned lock");
         gets.push(key.clone());
 
         self.inner.get(ctx, key)
     }
 
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.inner.put(ctx, key, value)
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.inner.is_present(ctx, key)
     }
 
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
+    fn assert_present(
+        &self,
+        ctx: CoreContext,
+        key: String,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         self.inner.assert_present(ctx, key)
     }
 }
