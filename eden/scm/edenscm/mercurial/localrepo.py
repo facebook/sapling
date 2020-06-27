@@ -2657,7 +2657,7 @@ class localrepository(object):
             # Do not treat the draft heads returned by remotenames as
             # unconditionally visible. This makes it possible to hide
             # them by "hg hide".
-            publicnodes, _draftnodes = changelog._remotenodes(cl)
+            publicnodes, _draftnodes = _remotenodes(self)
             cl = self.changelog
             torev = cl.nodemap.get
             if includepublic:
@@ -2934,3 +2934,29 @@ def newrepostorerequirements(repo):
         requirements.add("zstorecommitdata")
 
     return requirements
+
+
+def _remotenodes(repo):
+    """Return (remote public nodes, remote draft nodes)."""
+    publicnodes = []
+    draftnodes = []
+
+    draftpattern = repo.ui.config("infinitepush", "branchpattern")
+    if draftpattern:
+        isdraft = util.stringmatcher(draftpattern)[-1]
+    else:
+
+        def isdraft(name):
+            return False
+
+    remotebookmarks = repo._remotenames["bookmarks"]
+    for fullname, nodes in remotebookmarks.items():
+        # fullname: remote/foo/bar
+        # remote: remote, name: foo/bar
+        remote, name = bookmarks.splitremotename(fullname)
+        if isdraft(name):
+            draftnodes += nodes
+        else:
+            publicnodes += nodes
+
+    return publicnodes, draftnodes

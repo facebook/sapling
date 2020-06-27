@@ -31,7 +31,6 @@ import typing
 
 from edenscm.mercurial import (
     bookmarks,
-    changelog as changelogmod,
     commands,
     discovery,
     encoding,
@@ -635,31 +634,7 @@ def exreachablerevs(orig, repo, bookmarks):
     return orig(repo, bookmarks) - repo.revs("ancestors(remotenames())")
 
 
-def _remotenodes(orig, cl):
-    """Return (remote public nodes, and draft nodes)"""
-    publicnodes = []
-    draftnodes = []
-
-    draftpattern = cl._uiconfig.config("infinitepush", "branchpattern")
-    if draftpattern:
-        isdraft = util.stringmatcher(draftpattern)[-1]
-    else:
-
-        def isdraft(name):
-            return False
-
-    svfs = cl.opener
-    for hexnode, nametype, remotename, rname in readremotenames(svfs=svfs):
-        if isdraft(rname):
-            draftnodes.append(bin(hexnode))
-        else:
-            publicnodes.append(bin(hexnode))
-
-    return publicnodes, draftnodes
-
-
 def extsetup(ui):
-    extensions.wrapfunction(changelogmod, "_remotenodes", _remotenodes)
     extensions.wrapfunction(bookmarks, "calculateupdate", exbookcalcupdate)
     extensions.wrapfunction(exchange.pushoperation, "__init__", expushop)
     extensions.wrapfunction(exchange, "push", expush)
