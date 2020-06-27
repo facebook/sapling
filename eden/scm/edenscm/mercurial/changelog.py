@@ -419,38 +419,6 @@ class changelog(revlog.revlog):
         """
         return self.index.headrevsfiltered(self.filteredrevs)
 
-    def _headrevs(self, additionalheads, includepublic=True, includedraft=True):
-        # This should only be used by repo.heads()
-        if self._uiconfig.configbool("experimental", "narrow-heads"):
-            # Do not treat the draft heads returned by remotenames as
-            # unconditionally visible. This makes it possible to hide
-            # them by "hg hide".
-            publicnodes, _draftnodes = self._remotenodes()
-            torev = self.nodemap.__getitem__
-            nodes = list(additionalheads)
-            if includepublic:
-                nodes += publicnodes
-            if includedraft:
-                if self._uiconfig.configbool("visibility", "all-heads"):
-                    visibleheads = self._visibleheads.allheads()
-                else:
-                    visibleheads = self._visibleheads.heads
-                nodes += visibleheads
-            # Do not report nullid. index2.headsancestors does not support it.
-            revs = [r for r in map(torev, nodes) if r >= 0]
-            r = self.index2.headsancestors(revs)
-            return r
-
-        if self.filteredrevs:
-            try:
-                return self.index.headrevsfiltered(self.filteredrevs)
-            # AttributeError covers non-c-extension environments and
-            # old c extensions without filter handling.
-            except AttributeError:
-                return self._headrevs()
-
-        return super(changelog, self).headrevs()
-
     def strip(self, *args, **kwargs):
         # XXX make something better than assert
         # We can't expect proper strip behavior if we are filtered.

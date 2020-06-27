@@ -2644,12 +2644,37 @@ class localrepository(object):
         del self._postdsstatus[:]
 
     def headrevs(self, start=None, includepublic=True, includedraft=True, reverse=True):
-        if includedraft:
-            nodes = list(self.nodes("parents() + bookmark()"))
-        else:
-            nodes = []
         cl = self.changelog
-        headrevs = cl._headrevs(nodes, includepublic, includedraft)
+        if self.ui.configbool("experimental", "narrow-heads"):
+            if includedraft:
+                nodes = [
+                    n
+                    for n in self.dirstate.parents() + list(self._bookmarks.values())
+                    if n != nullid
+                ]
+            else:
+                nodes = []
+            # Do not treat the draft heads returned by remotenames as
+            # unconditionally visible. This makes it possible to hide
+            # them by "hg hide".
+            publicnodes, _draftnodes = changelog._remotenodes(cl)
+            cl = self.changelog
+            torev = cl.nodemap.get
+            if includepublic:
+                nodes += publicnodes
+            if includedraft:
+                if cl._uiconfig.configbool("visibility", "all-heads"):
+                    visibleheads = cl._visibleheads.allheads()
+                else:
+                    visibleheads = cl._visibleheads.heads
+                nodes += visibleheads
+            # Do not report nullid. index2.headsancestors does not support it.
+            revs = [r for r in map(torev, nodes) if r is not None and r >= 0]
+            headrevs = cl.index2.headsancestors(revs)
+        elif cl.filteredrevs:
+            headrevs = cl.index.headrevsfiltered(cl.filteredrevs)
+        else:
+            headrevs = cl.index.headrevs()
         if start is not None:
             startrev = cl.rev(start)
             headrevs = [r for r in headrevs if r > startrev]
