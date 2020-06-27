@@ -281,7 +281,7 @@ def diffidtonode(repo, diffid):
 
         try:
             props = resp["phabricator_version_properties"]["edges"]
-            commits = []
+            commits = {}
             for prop in props:
                 if prop["node"]["property_name"] == "local:commits":
                     commits = json.loads(prop["node"]["property_value"])
