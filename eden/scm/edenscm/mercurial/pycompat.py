@@ -115,9 +115,9 @@ if sys.version_info[0] >= 3:
     unicode = str
     shlexsplit = shlex.split
 
-    def encodeutf8(s):
+    def encodeutf8(s, errors="strict"):
         # type: (str) -> bytes
-        return s.encode("utf-8")
+        return s.encode("utf-8", errors=errors)
 
     def decodeutf8(s, errors="strict"):
         # type: (bytes, str) -> str
@@ -190,7 +190,7 @@ else:
     ziplist = zip
     rawinput = raw_input  # noqa
 
-    def encodeutf8(s):
+    def encodeutf8(s, errors="strict"):
         # type: (str) -> bytes
         if istest():
             assert isinstance(s, str), "expected str, actual %s" % s.__class__

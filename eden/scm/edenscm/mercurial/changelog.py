@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from typing import IO, Any, Optional, Union
+from typing import IO, Any, Dict, List, Optional, Union
 
 from . import encoding, error, mdiff, revlog, util, visibility
 from .i18n import _
@@ -43,6 +43,7 @@ def _string_escape(text):
 
 
 def decodeextra(text):
+    # type: (bytes) -> Dict[str, str]
     """
     >>> from .pycompat import bytechr as chr
     >>> sorted(decodeextra(encodeextra({b'foo': b'bar', b'baz': chr(0) + b'2'})
@@ -59,9 +60,8 @@ def decodeextra(text):
             if b"\\0" in l:
                 # fix up \0 without getting into trouble with \\0
                 l = l.replace(b"\\\\", b"\\\\\n")
-                l = l.replace(b"\\0", "\0")
+                l = l.replace(b"\\0", b"\0")
                 l = l.replace(b"\n", b"")
-            l = decodeutf8(l)
             k, v = util.unescapestr(l).split(":", 1)
             extra[k] = v
     return extra
@@ -701,11 +701,21 @@ class changelog(revlog.revlog):
 
 
 def readfiles(text):
+    # type: (bytes) -> List[str]
     if not text:
         return []
+
     last = text.index(b"\n\n")
-    l = decodeutf8(text[:last]).split("\n")
-    return l[3:]
+
+    def findfiles(text):
+        start = 0
+        n = 3
+        while n != 0:
+            first = text.index(b"\n", start, last)
+            n -= 1
+        return text[first:last]
+
+    return decodeutf8(findfiles(text)).split("\n")
 
 
 def hgcommittext(manifest, files, desc, user, date, extra):

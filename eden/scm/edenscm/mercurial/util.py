@@ -2547,11 +2547,11 @@ else:
 def escapestr(s):
     # call underlying function of s.encode('string_escape') directly for
     # Python 3 compatibility
-    return decodeutf8(codecs.escape_encode(encodeutf8(s))[0])
+    return decodeutf8(codecs.escape_encode(encodeutf8(s, errors="surrogateescape"))[0])
 
 
 def unescapestr(s):
-    return decodeutf8(codecs.escape_decode(s)[0])
+    return decodeutf8(codecs.escape_decode(s)[0], errors="surrogateescape")
 
 
 def forcebytestr(obj):
