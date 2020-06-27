@@ -52,6 +52,7 @@ use topo_sort::sort_topological;
 
 pub use commit_syncer_args::CommitSyncerArgs;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
+use types::{Source, Target};
 
 mod commit_syncer_args;
 mod pushrebase_hook;
@@ -275,22 +276,58 @@ pub async fn rewrite_commit(
     Ok(Some(cs))
 }
 
-async fn remap_changeset_id<'a, M: SyncedCommitMapping>(
-    ctx: CoreContext,
-    cs: ChangesetId,
-    source_repo: &'a BlobRepo,
-    target_repo: &'a BlobRepo,
+pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
+    ctx: &'a CoreContext,
+    source_repo_id: Source<RepositoryId>,
+    target_repo_id: Target<RepositoryId>,
+    source_cs_id: Source<ChangesetId>,
     mapping: &'a M,
-) -> Result<Option<ChangesetId>, Error> {
-    mapping
+) -> Result<Option<CommitSyncOutcome>, Error> {
+    let remapped = mapping
         .get(
             ctx.clone(),
-            source_repo.get_repoid(),
-            cs,
-            target_repo.get_repoid(),
+            source_repo_id.0,
+            source_cs_id.0,
+            target_repo_id.0,
         )
         .compat()
-        .await
+        .await?;
+
+    if let Some(cs_id) = remapped {
+        // If we have a mapping for this commit, then it is already synced
+        if cs_id == source_cs_id.0 {
+            return Ok(Some(CommitSyncOutcome::Preserved));
+        } else {
+            return Ok(Some(CommitSyncOutcome::RewrittenAs(cs_id)));
+        }
+    }
+
+    let maybe_wc_equivalence = mapping
+        .clone()
+        .get_equivalent_working_copy(
+            ctx.clone(),
+            source_repo_id.0,
+            source_cs_id.0,
+            target_repo_id.0,
+        )
+        .compat()
+        .await?;
+
+    match maybe_wc_equivalence {
+        None => Ok(None),
+        Some(WorkingCopyEquivalence::NoWorkingCopy) => {
+            Ok(Some(CommitSyncOutcome::NotSyncCandidate))
+        }
+        Some(WorkingCopyEquivalence::WorkingCopy(cs_id)) => {
+            if source_cs_id.0 == cs_id {
+                Ok(Some(CommitSyncOutcome::Preserved))
+            } else {
+                Ok(Some(CommitSyncOutcome::EquivalentWorkingCopyAncestor(
+                    cs_id,
+                )))
+            }
+        }
+    }
 }
 
 /// Applies `Mover` to all paths in `cs`, dropping any entry whose path rewrites to `None`
@@ -587,50 +624,14 @@ where
         ctx: CoreContext,
         source_cs_id: ChangesetId,
     ) -> Result<Option<CommitSyncOutcome>, Error> {
-        let remapped = remap_changeset_id(
-            ctx.clone(),
-            source_cs_id,
-            self.repos.get_source_repo(),
-            self.repos.get_target_repo(),
+        get_commit_sync_outcome(
+            &ctx,
+            Source(self.repos.get_source_repo().get_repoid()),
+            Target(self.repos.get_target_repo().get_repoid()),
+            Source(source_cs_id),
             &self.mapping,
         )
-        .await?;
-
-        if let Some(cs_id) = remapped {
-            // If we have a mapping for this commit, then it is already synced
-            if cs_id == source_cs_id {
-                return Ok(Some(CommitSyncOutcome::Preserved));
-            } else {
-                return Ok(Some(CommitSyncOutcome::RewrittenAs(cs_id)));
-            }
-        }
-
-        let mapping = self.mapping.clone();
-        let maybe_wc_equivalence = mapping
-            .get_equivalent_working_copy(
-                ctx.clone(),
-                self.repos.get_source_repo().get_repoid(),
-                source_cs_id,
-                self.repos.get_target_repo().get_repoid(),
-            )
-            .compat()
-            .await?;
-
-        match maybe_wc_equivalence {
-            None => Ok(None),
-            Some(WorkingCopyEquivalence::NoWorkingCopy) => {
-                Ok(Some(CommitSyncOutcome::NotSyncCandidate))
-            }
-            Some(WorkingCopyEquivalence::WorkingCopy(cs_id)) => {
-                if source_cs_id == cs_id {
-                    Ok(Some(CommitSyncOutcome::Preserved))
-                } else {
-                    Ok(Some(CommitSyncOutcome::EquivalentWorkingCopyAncestor(
-                        cs_id,
-                    )))
-                }
-            }
-        }
+        .await
     }
 
     // This is the function that safely syncs a commit and all of its unsynced ancestors from a
