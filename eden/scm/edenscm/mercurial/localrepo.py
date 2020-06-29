@@ -645,12 +645,6 @@ class localrepository(object):
             if narrowheadsdesired:
                 # Migrating up is easy: Just add the requirement.
                 with self.lock(wait=False):
-                    self.ui.write_err(
-                        _(
-                            "migrating repo to new-style visibility and phases\n"
-                            "(this does not affect most workflows; post in Source Control @ FB if you have issues)\n"
-                        )
-                    )
                     self.storerequirements.add("narrowheads")
                     self._writestorerequirements()
             else:
@@ -660,12 +654,6 @@ class localrepository(object):
                 self.ui.setconfig("experimental", "narrow-heads", True)
                 with self.lock(wait=False):
                     # Writing to <shared repo path>/.hg/phaseroots
-                    self.ui.write_err(
-                        _(
-                            "migrating repo to old-style visibility and phases\n"
-                            "(this restores the behavior to a known good state; post in Source Control @ FB if you have issues)\n"
-                        )
-                    )
                     # Accessing the raw file directly without going through
                     # complicated phasescache APIs.
                     draftroots = self.nodes("roots(draft())")
@@ -678,10 +666,6 @@ class localrepository(object):
                             toadd += line
                     with self.svfs.open("phaseroots", "ab") as f:
                         f.write(pycompat.encodeutf8(toadd))
-                    if toadd:
-                        self.ui.write_err(
-                            _("(added %s draft roots)\n") % toadd.count("\n")
-                        )
                     self.storerequirements.remove("narrowheads")
                     self._writestorerequirements()
 
@@ -901,6 +885,10 @@ class localrepository(object):
 
     def _writestorerequirements(self):
         if "store" in self.requirements:
+            util.info(
+                "writestorerequirements",
+                requirements=" ".join(sorted(self.storerequirements)),
+            )
             scmutil.writerequires(self.svfs, self.storerequirements)
 
     def peer(self):

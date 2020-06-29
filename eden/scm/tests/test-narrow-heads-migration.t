@@ -29,9 +29,6 @@ Migrate down.
   112478962961147124edd43549aedd1a335e44bf: public
 
   $ hg phase $B
-  migrating repo to old-style visibility and phases
-  (this restores the behavior to a known good state; post in Source Control @ FB if you have issues)
-  (added 1 draft roots)
   112478962961147124edd43549aedd1a335e44bf: public
   $ hg phase $C
   dc0947a82db884575bb76ea10ac97b08536bfa03: draft
@@ -47,8 +44,6 @@ Migrate up.
 
   $ setconfig experimental.narrow-heads=true
   $ hg phase $B
-  migrating repo to new-style visibility and phases
-  (this does not affect most workflows; post in Source Control @ FB if you have issues)
   112478962961147124edd43549aedd1a335e44bf: public
   $ hg phase $C
   dc0947a82db884575bb76ea10ac97b08536bfa03: draft
@@ -69,8 +64,6 @@ Test (legacy) secret commit migration.
   > |/
   > A
   > EOS
-  migrating repo to old-style visibility and phases
-  (this restores the behavior to a known good state; post in Source Control @ FB if you have issues)
   $ hg debugremotebookmark master $M
   $ hg phase --force --public $M
   $ hg phase --force --draft $C
@@ -81,8 +74,6 @@ Migrate up.
 
   $ setconfig experimental.narrow-heads=true
   $ hg log -G -T '{desc} {phase}'
-  migrating repo to new-style visibility and phases
-  (this does not affect most workflows; post in Source Control @ FB if you have issues)
   o  M public
   |
   | o  C draft
@@ -96,9 +87,6 @@ Migrate down.
   $ rm .hg/store/phaseroots
   $ setconfig experimental.narrow-heads=false
   $ hg log -G -T '{desc} {phase}'
-  migrating repo to old-style visibility and phases
-  (this restores the behavior to a known good state; post in Source Control @ FB if you have issues)
-  (added 2 draft roots)
   o  M public
   |
   | o  C draft
