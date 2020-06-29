@@ -3,6 +3,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+cat >> $HGRCPATH << EOF
+[experimental]
+narrow-heads = false
+EOF
+
 HGSQL_TESTDIR="${RUN_TESTS_LIBRARY:-"${TESTDIR:-.}"}"
 
 GETDB_PATH="${HGTEST_GETDB_SH:-$HGSQL_TESTDIR}/getdb.sh"
