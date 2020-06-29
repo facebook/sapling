@@ -32,7 +32,7 @@ use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use maplit::hashset;
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
+use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id, RepositoryId};
 use pushrebase::{self, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -71,6 +71,7 @@ pub async fn run_post_resolve_action(
     lca_hint: &dyn LeastCommonAncestorsHint,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
+    push_params: &PushParams,
     maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
     action: PostResolveAction,
 ) -> Result<UnbundleResponse, BundleResolverError> {
@@ -90,6 +91,7 @@ pub async fn run_post_resolve_action(
             infinitepush_params,
             action,
             populate_git_mapping,
+            push_params,
         )
         .await
         .context("While doing a push")
@@ -153,6 +155,7 @@ async fn run_push(
     infinitepush_params: &InfinitepushParams,
     action: PostResolvePush,
     populate_git_mapping: bool,
+    push_params: &PushParams,
 ) -> Result<UnbundlePushResponse, Error> {
     debug!(ctx.logger(), "unbundle processing: running push.");
     let PostResolvePush {
@@ -210,6 +213,8 @@ async fn run_push(
         .map(|bcs| (bcs.get_changeset_id(), bcs))
         .collect();
 
+    let new_commits = uploaded_bonsais.keys().map(|k| *k).collect::<Vec<_>>();
+
     let repo_id = repo.get_repoid();
     let mut txn_hook = None;
     if populate_git_mapping {
@@ -225,10 +230,19 @@ async fn run_push(
         ));
     }
 
+    let maybe_bookmark = maybe_bookmark_push.clone().map(|bp| bp.name);
     let maybe_bookmark_push = maybe_bookmark_push.map(BookmarkPush::PlainPush);
 
     save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push], txn_hook).await?;
     let bookmark_ids = maybe_bookmark_id.into_iter().collect();
+    log_commits_to_scribe(
+        ctx,
+        repo,
+        maybe_bookmark.as_ref(),
+        new_commits,
+        push_params.commit_scribe_category.clone(),
+    )
+    .await;
 
     Ok(UnbundlePushResponse {
         changegroup_id,
@@ -584,7 +598,6 @@ async fn run_pushrebase(
         .await
         .context("While marking pushrebased changeset as public")?;
 
-    // TODO: (dbudischek) T41565649 log pushed changesets as well, not only pushrebased
     let new_commits = pushrebased_changesets.iter().map(|p| p.id_new).collect();
 
     log_commits_to_scribe(

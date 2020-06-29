@@ -95,6 +95,7 @@ impl RepoWriteContext {
             self.skiplist_index(),
             &self.config().infinitepush,
             &self.config().pushrebase,
+            &self.config().push,
             None, // maybe_reverse_filler_queue
             action,
         )

@@ -72,3 +72,19 @@ create new commits in repo2 and check that they are seen as outgoing
 
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
   "master_bookmark"
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
+
+Use normal push (non-pushrebase)
+  $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
+  $ echo push > push
+  $ hg add -q push
+  $ hg ci -m 'commit'
+  $ hgmn push --force
+  pushing to ssh://user@dummy/repo
+  searching for changes
+
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  null
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  "1286c4a83f690c129224e904ddea4640a441c2a01051973b08acd495ded29e67"

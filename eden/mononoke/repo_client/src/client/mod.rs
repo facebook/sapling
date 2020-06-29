@@ -1520,7 +1520,8 @@ impl HgCommands for RepoClient {
                     let infinitepush_params = client.repo.infinitepush().clone();
                     let infinitepush_writes_allowed = infinitepush_params.allow_writes;
                     let pushrebase_params = client.repo.pushrebase_params().clone();
-                    let pure_push_allowed = client.repo.push_params().pure_push_allowed;
+                    let push_params = client.repo.push_params().clone();
+                    let pure_push_allowed = push_params.pure_push_allowed;
 
                     let res = {
                         cloned!(ctx);
@@ -1582,6 +1583,7 @@ impl HgCommands for RepoClient {
                                             &*lca_hint,
                                             &infinitepush_params,
                                             &pushrebase_params,
+                                            &push_params,
                                             maybe_reverse_filler_queue,
                                             action,
                                         )

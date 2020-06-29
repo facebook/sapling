@@ -157,6 +157,7 @@ impl PushRedirector {
         let lca_hint = self.repo.lca_hint();
         let infinitepush_params = self.repo.infinitepush().clone();
         let puhsrebase_params = self.repo.pushrebase_params().clone();
+        let push_params = self.repo.push_params().clone();
 
         let large_repo_action = self
             .convert_post_resolve_action(ctx.clone(), action)
@@ -169,6 +170,7 @@ impl PushRedirector {
             &*lca_hint,
             &infinitepush_params,
             &puhsrebase_params,
+            &push_params,
             self.repo.maybe_reverse_filler_queue(),
             large_repo_action,
         )
