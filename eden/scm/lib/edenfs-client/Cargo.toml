@@ -15,7 +15,7 @@ tokio-core = "0.1"
 tokio-uds = "0.1"
 
 [target.'cfg(unix)'.dependencies]
-fbthrift-socket = { path = "../../../../common/rust/thrift/socket" }
+fbthrift_socket = { path = "../../../../common/rust/shed/fbthrift_ext/socket" }
 
 [dev-dependencies]
 telemetry = { path = "../../../../scm/telemetry/telemetry" }
