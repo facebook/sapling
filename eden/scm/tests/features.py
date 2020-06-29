@@ -141,9 +141,6 @@ narrowheadsincompatiblelist = """
     test-hgsql-local-commands-t.py
     test-revset-t.py
     test-shelve-t.py
-
-    # Mononotke tests
-    test-pushrebase.t
 """
 
 

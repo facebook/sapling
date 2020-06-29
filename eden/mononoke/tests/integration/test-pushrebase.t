@@ -32,7 +32,7 @@ Pushrebase commit 1
 
   $ hgmn up master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ log -r ":"
+  $ log -r "all()"
   @  1 [public;rev=4;c2e526aacb51] default/master_bookmark
   |
   | o  1 [draft;rev=3;a0c9c5791058]
@@ -124,7 +124,7 @@ Push stack
   updating bookmark master_bookmark
   $ hg hide -r ".^ + ." -q
   $ hgmn up -q master_bookmark
-  $ log -r ":"
+  $ log -r "all()"
   @  4 [public;rev=11;4f5a4463b24b] default/master_bookmark
   |
   o  3 [public;rev=10;7796136324ad]
@@ -150,7 +150,7 @@ Push fast-forward
   adding file changes
   added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
-  $ log -r ":"
+  $ log -r "all()"
   @  5 [public;rev=12;59e5396444cf] default/master_bookmark
   |
   o  4 [public;rev=11;4f5a4463b24b]
@@ -185,7 +185,7 @@ Push a merge commit with both parents not ancestors of destination bookmark
   $ hg up -q 1
   $ echo 7 > 7 && hg add 7 && hg ci -m 7
   $ hg merge -q -r 13 && hg ci -m "merge 6 and 7"
-  $ log -r ":"
+  $ log -r "all()"
   @    merge 6 and 7 [draft;rev=15;fad460d85200]
   |\
   | o  7 [draft;rev=14;299aa3fbbd3f]
@@ -216,7 +216,7 @@ Push a merge commit with both parents not ancestors of destination bookmark
   added 3 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hgmn up master_bookmark -q && hg hide -r "13+14+15" -q
-  $ log -r ":"
+  $ log -r "all()"
   @    merge 6 and 7 [public;rev=18;4a0002072071] default/master_bookmark
   |\
   \| o  (6|7) \[public;rev=17;.*\] (re)
@@ -388,13 +388,12 @@ Test non-fast-forward force pushrebase
   adding file changes
   added 0 changesets with 0 changes to 0 files
   updating bookmark newbook
+-- "20 draft newbook" gets moved to 26 and 20 gets hidden.
   $ log -r "20::"
   @  26 [public;rev=27;4899f9112d9b] default/newbook
   |
-  | o  draft [public;rev=26;7a037594e202]
-  | |
-  | | o  merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
-  | |/|
+  | o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  | |\
   +---o  12 [public;rev=23;cd5aac4439e5]
   | |
   | o  11 [public;rev=22;589551466f25]
