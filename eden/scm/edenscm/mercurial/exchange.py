@@ -570,6 +570,9 @@ def _pushdiscoveryphase(pushop):
     """discover the phase that needs to be pushed
 
     (computed for both success and failure case for changesets push)"""
+    # Skip phase exchange if narrow-heads is on.
+    if pushop.repo.ui.configbool("experimental", "narrow-heads"):
+        return
     outgoing = pushop.outgoing
     unfi = pushop.repo.unfiltered()
     remotephases = pushop.remote.listkeys("phases")
@@ -825,6 +828,9 @@ def _pushb2ctx(pushop, bundler):
 @b2partsgenerator("phase")
 def _pushb2phases(pushop, bundler):
     """handle phase push through bundle2"""
+    # Skip phase sync if narrow-heads is on.
+    if pushop.repo.ui.configbool("experimental", "narrow-heads"):
+        return
     if "phases" in pushop.stepsdone:
         return
     b2caps = bundle2.bundle2caps(pushop.remote)
@@ -1110,6 +1116,9 @@ def _pushchangeset(pushop):
 
 def _pushsyncphase(pushop):
     """synchronise phase information locally and remotely"""
+    # Skip phase sync if narrow-heads is on.
+    if pushop.repo.ui.configbool("experimental", "narrow-heads"):
+        return
     cheads = pushop.commonheads
     # even when we don't push, exchanging phase data is useful
     remotephases = pushop.remote.listkeys("phases")
