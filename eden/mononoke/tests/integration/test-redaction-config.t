@@ -100,7 +100,7 @@ Restart mononoke
   $ hgmn up -q 14961831bd3a
 
   $ tglogpnr
-  @  14961831bd3a public 'add b'
+  @  14961831bd3a public 'add b'  default/master_bookmark
   |
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
@@ -122,7 +122,7 @@ Restart mononoke and disable redaction verification
   $ hgmn up -q 14961831bd3a
 
   $ tglogpnr
-  @  14961831bd3a public 'add b'
+  @  14961831bd3a public 'add b'  default/master_bookmark
   |
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   

@@ -88,7 +88,7 @@ Push files
   $ hgmn push -q -r .  --to master_bookmark
 
   $ tglogpnr
-  @  064d994d0240 public 'add censored c'
+  @  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -100,7 +100,7 @@ Push files
 
   $ hgmn up -q 064d994d0240
   $ tglogpnr
-  @  064d994d0240 public 'add censored c'
+  @  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -150,7 +150,7 @@ Update redacted blob
   $ hgmn push -q -r .  --to master_bookmark
 
   $ tglogpnr
-  @  bbb84cdc8ec0 public 'uncensore c'
+  @  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
   |
   o  064d994d0240 public 'add censored c'
   |
@@ -214,7 +214,7 @@ Try push a new version of a redacted blob
   $ tglogpnr
   @  bb65510879c8 draft 'update c'
   |
-  o  064d994d0240 public 'add censored c'
+  o  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -240,7 +240,7 @@ As of the time of writing, updating redacted files throws an error - artifact of
   $ tglogpnr
   @  bb65510879c8 draft 'update c'
   |
-  o  064d994d0240 public 'add censored c'
+  o  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |

@@ -74,11 +74,11 @@ create new bookmarks, then update their properties
   not_pull_default|publishing
   scratch|scratch
   $ tglogpnr
-  @  b2d646f64a99 public 'add c'
+  @  b2d646f64a99 public 'add c'  default/scratch
   |
-  o  907767d421e4 public 'add b'
+  o  907767d421e4 public 'add b'  default/not_pull_default
   |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  o  ac82d8b1f7c4 public 'add a' master_bookmark default/master_bookmark
   
 test publishing
   $ cd "$TESTTMP/repo-pull"

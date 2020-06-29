@@ -659,7 +659,7 @@ More sophisticated test for phases
   $ hgmn pull -r 5e59ac0f4dd0 -r bf677f20a49d -r 7d67c7248d48 -r b9f080ea9500 -q
 
   $ tglogpnr -r "::b9f080ea9500 - ::default/master_bookmark"
-  o  b9f080ea9500 public 'zzzzz'
+  o  b9f080ea9500 public 'zzzzz'  default/release 4
   |
   o  6e068f112af8 public 'yyyyy'
   |
@@ -671,7 +671,7 @@ More sophisticated test for phases
   $ tglogpnr -r "::7d67c7248d48 - ::default/master_bookmark"
   o  7d67c7248d48 draft 'zzzz'
   |
-  o  859e9fdde968 public 'yyyy'
+  o  859e9fdde968 public 'yyyy'  default/release 3
   |
   o  abe01677f4a6 public 'xxxx'
   |
@@ -683,7 +683,7 @@ More sophisticated test for phases
   |
   o  43db2471732d draft 'yyy'
   |
-  o  f743965444d9 public 'xxx'
+  o  f743965444d9 public 'xxx'  default/release 2
   |
   o  83da839eb4d2 public 'www'
   |
@@ -695,6 +695,6 @@ More sophisticated test for phases
   |
   o  c2234433b092 draft 'xx'
   |
-  o  2ba1f5f6cccd public 'ww'
+  o  2ba1f5f6cccd public 'ww'  default/release 1
   |
   ~

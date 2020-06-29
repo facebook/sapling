@@ -1327,7 +1327,7 @@ function aliasverify() {
 
 # Without rev
 function tglogpnr() {
-  hg log -G -T "{node|short} {phase} '{desc}' {bookmarks} {branches}" "$@"
+  hg log -G -T "{node|short} {phase} '{desc}' {bookmarks} {remotenames}" "$@"
 }
 
 function mkcommit() {
