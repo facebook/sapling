@@ -130,6 +130,7 @@ Show debug commands if there are no other candidates
   debugknown
   debuglabelcomplete
   debuglocks
+  debugmakepublic
   debugmanifestdirs
   debugmergestate
   debugmetalog
@@ -337,6 +338,7 @@ Show all commands + options
   debugknown: 
   debuglabelcomplete: 
   debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock
+  debugmakepublic: rev, delete
   debugmanifestdirs: rev
   debugmergestate: 
   debugmetalog: time-range

@@ -1836,6 +1836,35 @@ def debugmanifestdirs(ui, repo, rev):
         ui.write(_("%s %s\n") % (hex(hgid), path))
 
 
+@command(
+    "debugmakepublic",
+    [
+        ("r", "rev", [], _("revisions to show")),
+        ("d", "delete", False, _("delete public heads")),
+    ],
+    "",
+)
+def debugmakepublic(ui, repo, *revs, **opts):
+    """make revisions public"""
+    revspec = list(revs) + list(opts.get("rev") or [])
+    revs = scmutil.revrange(repo, revspec or ["."])
+    delete = opts.get("delete")
+    if repo.ui.configbool("experimental", "narrow-heads"):
+        nodes = list(repo.nodes("%ld", revs))
+        with repo.wlock(), repo.lock(), repo.transaction("debugmakepublic"):
+            if delete:
+                changes = {("public/%s" % hex(node)): hex(nullid) for node in nodes}
+            else:
+                changes = {("public/%s" % hex(node)): hex(node) for node in nodes}
+            repo._remotenames.applychanges({"bookmarks": changes})
+    else:
+        from . import phase
+
+        if delete:
+            raise error.Abort(_("--delete only supports narrow-heads"))
+        phase(ui, repo, rev=revspec, public=True, force=True, draft=False, secret=False)
+
+
 @command("debugmergestate", [], "")
 def debugmergestate(ui, repo, *args):
     """print merge state
