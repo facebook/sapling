@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ enable remotenames
 
 Setup repo, and create test repo
 
@@ -85,7 +86,7 @@ Checkout commits. Expect BFS prefetch to fill our tree
   fetching 6 trees
   2 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
 Check that we can create some commits, and that nothing breaks even if the
 server does not know about our root manifest.
