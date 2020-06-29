@@ -214,7 +214,7 @@ Prepare the server repo with draft branches
 
 Prepare the client repo
 
-  $ hg clone $TESTTMP/server1 $TESTTMP/client1 -q --pull
+  $ hg clone $TESTTMP/server1 $TESTTMP/client1 -q --pull -U
   $ cd $TESTTMP/client1
 
   $ hg log -r 'draft()' -T '{desc}\n'

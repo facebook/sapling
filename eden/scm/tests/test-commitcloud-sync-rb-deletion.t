@@ -23,6 +23,7 @@
   $ cd $TESTTMP
   $ clone server client1
   $ cd client1
+  $ hg up -q remote/master
   $ hg cloud sync -q
   $ showgraph
   @  1 public1: public  remote/master
@@ -33,6 +34,7 @@
   $ cd $TESTTMP
   $ clone server client2
   $ cd client2
+  $ hg up -q remote/master
   $ hg cloud sync -q
   $ showgraph
   @  1 public1: public  remote/master
@@ -43,6 +45,7 @@
   $ cd $TESTTMP
   $ clone server client3
   $ cd client3
+  $ hg up -q remote/master
   $ hg cloud sync -q
   $ showgraph
   @  1 public1: public  remote/master
@@ -53,6 +56,7 @@
   $ cd $TESTTMP
   $ clone server client4
   $ cd client4
+  $ hg up -q remote/master
   $ hg cloud sync -q
   $ showgraph
   @  1 public1: public  remote/master

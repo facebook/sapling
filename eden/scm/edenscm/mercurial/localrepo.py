@@ -2659,6 +2659,8 @@ class localrepository(object):
             # Do not report nullid. index2.headsancestors does not support it.
             revs = [r for r in map(torev, nodes) if r is not None and r >= 0]
             headrevs = cl.index2.headsancestors(revs)
+            # headrevs is already in DESC.
+            reverse = not reverse
         elif cl.filteredrevs:
             headrevs = cl.index.headrevsfiltered(cl.filteredrevs)
         else:

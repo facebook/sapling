@@ -31,6 +31,7 @@ manually.
   $ cd $TESTTMP
   $ clone server client1
   $ cd client1
+  $ hg update -q 'desc(Y)'
   $ hg pull -B other
   pulling from ssh://user@dummy/server
   no changes found
