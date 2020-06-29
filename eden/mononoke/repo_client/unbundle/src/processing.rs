@@ -229,6 +229,7 @@ async fn run_push(
 
     save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push], txn_hook).await?;
     let bookmark_ids = maybe_bookmark_id.into_iter().collect();
+
     Ok(UnbundlePushResponse {
         changegroup_id,
         bookmark_ids,
@@ -515,7 +516,7 @@ async fn run_infinitepush(
         new_commits,
         infinitepush_params.commit_scribe_category.clone(),
     )
-    .await?;
+    .await;
 
     Ok(UnbundleInfinitePushResponse { changegroup_id })
 }
@@ -593,7 +594,7 @@ async fn run_pushrebase(
         new_commits,
         pushrebase_params.commit_scribe_category.clone(),
     )
-    .await?;
+    .await;
 
     Ok(UnbundlePushRebaseResponse {
         commonheads,
@@ -976,7 +977,7 @@ async fn log_commits_to_scribe(
     bookmark: Option<&BookmarkName>,
     changesets: Vec<ChangesetId>,
     commit_scribe_category: Option<String>,
-) -> Result<(), Error> {
+) {
     let queue = match commit_scribe_category {
         Some(category) if !category.is_empty() => LogToScribe::new(ctx.scribe().clone(), category),
         _ => LogToScribe::new_with_discard(),
@@ -1017,7 +1018,12 @@ async fn log_commits_to_scribe(
             }
         })
         .collect();
-    futs.try_for_each(|()| async { Ok(()) }).await
+    let res = futs.try_for_each(|()| async { Ok(()) }).await;
+    if let Err(err) = res {
+        ctx.scuba()
+            .clone()
+            .log_with_msg("Failed to log pushed commits", Some(format!("{}", err)));
+    }
 }
 
 /// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this BlobRepo when
