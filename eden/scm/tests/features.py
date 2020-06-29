@@ -17,7 +17,6 @@ mutationblacklist = """
     test-fb-hgext-snapshot-show.t
     test-fb-hgext-treemanifest-infinitepush.t
     test-fb-hgext-treemanifest-treeonly-linknodes.t
-    test-fb-hgext-undo.t
     test-hggit-incoming.t
     test-infinitepush-bundlestore.t
     test-infinitepush-forwardfillerqueue.t
