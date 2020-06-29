@@ -20,7 +20,7 @@ setup configuration
   > EOF
 
 setup common configuration for these tests
-  $ enable amend infinitepush commitcloud
+  $ enable amend infinitepush commitcloud remotenames
   $ setconfig ui.ssh="\"$DUMMYSSH\""
   $ setconfig mutation.date="0 0" mutation.enabled=true mutation.record=true visibility.enabled=true
   $ setconfig experimental.evolution=obsolete
@@ -74,7 +74,7 @@ Do initial infinitepush of a small stack
   |
   o  1: 9b5a540873ab draft 'A1'
   |
-  o  0: df4f53cec30a public 'base' master_bookmark
+  o  0: df4f53cec30a public 'base'
   
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
   pushing to ssh://user@dummy/repo
@@ -94,7 +94,7 @@ Amend the bottom commit
   |
   o  3: a8543df036f1 draft 'A2'
   |
-  o  0: df4f53cec30a public 'base' master_bookmark
+  o  0: df4f53cec30a public 'base'
   
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
   pushing to ssh://user@dummy/repo
@@ -120,7 +120,7 @@ Pull the amended stack to the other repo
   |
   o  1: a8543df036f1 draft 'A2'
   |
-  o  0: df4f53cec30a public 'base' master_bookmark
+  o  0: df4f53cec30a public 'base'
   
 
 Check mutation metadata.
@@ -163,7 +163,7 @@ Pull the amended stack to the other repo.
   | |
   | x  1: a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
   |/
-  o  0: df4f53cec30a 'base' master_bookmark
+  o  0: df4f53cec30a 'base'
   
 
 Do some more complicated mutations
@@ -189,7 +189,7 @@ Do some more complicated mutations
   |
   o  10: cdf849fe4126 'A3'
   |
-  o  0: df4f53cec30a 'base' master_bookmark
+  o  0: df4f53cec30a 'base'
   
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
   pushing to ssh://user@dummy/repo
@@ -217,5 +217,5 @@ Pull the modified stack to the other repo.
   | |
   | x  1: a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
   |/
-  o  0: df4f53cec30a 'base' master_bookmark
+  o  0: df4f53cec30a 'base'
   
