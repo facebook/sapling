@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ enable remotenames
 
 Setup repo, and create test repo
 
@@ -83,7 +84,7 @@ Fetch with designated ndoes
 
 Confirm that Mononoke logged commands, but didn't log any missing filenodes
   $ grep "Command processed" "$SCUBA_LOGGING_PATH" | wc -l
-  37
+  38
   $ grep NullLinknode "$SCUBA_LOGGING_PATH"
   [1]
 
