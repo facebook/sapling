@@ -22,7 +22,7 @@ setup configuration
   > name="master_bookmark"
   > CONFIG
 
-  $ register_hook always_fail_changeset  PerChangeset <(
+  $ register_hook always_fail_changeset <(
   >   echo 'bypass_pushvar="BYPASS_REVIEW=true"'
   > )
 

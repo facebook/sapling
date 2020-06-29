@@ -827,9 +827,8 @@ CONFIG
 
 function register_hook {
   hook_name="$1"
-  hook_type="$2"
-
-  shift 2
+  
+  shift 1
   EXTRA_CONFIG_DESCRIPTOR=""
   if [[ $# -gt 0 ]]; then
     EXTRA_CONFIG_DESCRIPTOR="$1"
@@ -841,7 +840,6 @@ function register_hook {
 hook_name="$hook_name"
 [[hooks]]
 name="$hook_name"
-hook_type="$hook_type"
 CONFIG
     [ -n "$EXTRA_CONFIG_DESCRIPTOR" ] && cat "$EXTRA_CONFIG_DESCRIPTOR"
   ) >> "repos/$REPONAME/server.toml"
@@ -1223,15 +1221,14 @@ name="$HOOKBOOKMARK"
 CONFIG
 
   HOOK_NAME="$1"
-  HOOK_TYPE="$2"
-  shift 2
+  shift 1
   EXTRA_CONFIG_DESCRIPTOR=""
   if [[ $# -gt 0 ]]; then
     EXTRA_CONFIG_DESCRIPTOR="$1"
   fi
 
 
-  register_hook "$HOOK_NAME" "$HOOK_TYPE" "$EXTRA_CONFIG_DESCRIPTOR"
+  register_hook "$HOOK_NAME" "$EXTRA_CONFIG_DESCRIPTOR"
 
   setup_common_hg_configs
   cd "$TESTTMP" || exit 1

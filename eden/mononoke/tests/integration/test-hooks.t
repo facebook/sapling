@@ -15,7 +15,7 @@ setup configuration
   > name="master_bookmark"
   > CONFIG
 
-  $ register_hook limit_filesize PerAddedOrModifiedFile <(
+  $ register_hook limit_filesize <(
   >   cat <<CONF 
   > bypass_commit_string="@allow_large_files"
   > config_ints={filesizelimit=10}

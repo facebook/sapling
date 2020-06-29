@@ -31,7 +31,6 @@
   > hook_name="deny_files"
   > [[hooks]]
   > name="deny_files"
-  > hook_type="PerAddedOrModifiedFile"
   > CONFIG
   $ start_large_small_repo --local-configerator-path="$TESTTMP/configerator"
   Starting Mononoke server
