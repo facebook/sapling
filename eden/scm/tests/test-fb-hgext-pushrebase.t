@@ -971,7 +971,7 @@ Push an already-public changeset and confirm it is rejected
   $ hg update -q '.^'
   $ echo 2 > C
   $ hg commit -m C -A C
-  $ hg phase -r. --public
+  $ hg debugmakepublic -r.
   $ hg push -r . --to default
   pushing to $TESTTMP/server2 (glob)
   searching for changes
@@ -984,7 +984,7 @@ Push an already-public changeset and confirm it is rejected
   $ hg commit -m C3
   $ echo 5 >> C
   $ hg commit -m C4
-  $ hg phase -r. --public
+  $ hg debugmakepublic -r.
   $ hg push -r . --to default
   pushing to $TESTTMP/server2 (glob)
   searching for changes

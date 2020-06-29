@@ -284,7 +284,7 @@ Uncommit with draft parent
 
 Uncommit with public parent
 
-  $ hg phase -p "::.^"
+  $ hg debugmakepublic "::.^"
   $ hg uncommit
   $ hg phase -r .
   8eb87968f2edb7f27f27fe676316e179de65fff6: public

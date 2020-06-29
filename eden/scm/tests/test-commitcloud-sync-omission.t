@@ -21,7 +21,7 @@
   > EOF
   $ touch base
   $ hg commit -Aqm base
-  $ hg phase -p .
+  $ hg debugmakepublic .
   $ cd ..
 
 Make shared part of config
@@ -774,7 +774,7 @@ Make a new public commit
   $ cd ../server
   $ echo public1 > public1
   $ hg commit -Aqm public1
-  $ hg phase -p .
+  $ hg debugmakepublic .
 
 Pull this into client1
   $ cd ../client1

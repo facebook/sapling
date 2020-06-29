@@ -64,7 +64,7 @@ Restack will only restack the "current" stack and leave other stacks untouched.
   >  A   E   I   Z  # amend: J -> L
   > EOS
 
-  $ hg phase --public -r $Z+$I+$A+$E
+  $ hg debugmakepublic -r $Z+$I+$A+$E
 
   $ hg update -q $Z
   $ hg rebase --restack

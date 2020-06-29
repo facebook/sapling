@@ -557,7 +557,7 @@ sh % "cat e.orig" == "z"
 
 sh % "rm 'e.orig'"
 sh % "hg ci -qm 'commit stuff'"
-sh % "hg phase -p 'null:'"
+sh % "hg debugmakepublic 'null:'"
 
 #  no other changes - no merge:
 

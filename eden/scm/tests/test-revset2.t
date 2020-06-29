@@ -1716,7 +1716,7 @@ Test `draft() & ::x` optimization
   >    |
   >   P0
   > EOS
-  $ hg phase --public -r P5
+  $ hg debugmakepublic -r P5
   $ hg phase --force --secret -r S1+S2
   $ hg log -G -T '{rev} {desc} {phase}' -r 'sort(all(), topo, topo.firstbranch=P5)'
   o  8 P5 public

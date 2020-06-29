@@ -397,7 +397,7 @@ rollback should not work after a histedit
   $ hg ci -m 'add b'
   $ echo foo >> a
   $ hg ci -m 'extend a'
-  $ hg phase --public 1
+  $ hg debugmakepublic 1
 Attempting to fold a change into a public change should not work:
   $ cat > ../edit.sh <<EOF
   > cat "\$1" | sed s/pick/fold/ > tmp

@@ -369,13 +369,13 @@ Set up default base revision tests
   $ hg -q commit -A -m root
   $ echo 1 > foo
   $ hg commit -m 'public 1'
-  $ hg phase --force --public -r .
+  $ hg debugmakepublic -r .
   $ echo 2 > foo
   $ hg commit -m 'draft after public'
   $ hg -q up -r 1
   $ echo 3 > foo
   $ hg commit -m 'head 1 public'
-  $ hg phase --force --public -r .
+  $ hg debugmakepublic -r .
   $ echo 4 > foo
   $ hg commit -m 'head 1 draft 1'
   $ echo 5 > foo

@@ -24,7 +24,7 @@
   $ cd client
   $ echo y > y
   $ hg commit -qAm y
-  $ hg phase -p -r 'all()'
+  $ hg debugmakepublic -r 'all()'
   $ hg push ../master --traceback
   pushing to ../master
   searching for changes

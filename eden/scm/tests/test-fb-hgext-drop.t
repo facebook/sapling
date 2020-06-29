@@ -150,7 +150,7 @@ TEST: aborting drop on merge changeset
   [255]
 
 TEST: abort when dropping a public changeset
-  $ hg phase --public -r 1
+  $ hg debugmakepublic -r 1
   $ hg drop 1
   abort: public changeset which landed cannot be dropped
   [255]

@@ -15,7 +15,7 @@
   > EOF
   $ mkcommit a
   $ mkcommit b
-  $ hg phase -p -r 'all()'
+  $ hg debugmakepublic -r 'all()'
 
 Clone it
   $ cd ..
@@ -46,7 +46,7 @@ Add a few more public server comits
   $ cp -R . ../master-lagged
   $ mkcommit d
   $ mkcommit e
-  $ hg phase -p -r 'all()'
+  $ hg debugmakepublic -r 'all()'
 
 Create an extension the prints out whenever we compare manifests on the server
   $ cat > "$TESTTMP/diffdebug.py" << EOF

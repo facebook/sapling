@@ -65,7 +65,7 @@ Test (legacy) secret commit migration.
   > A
   > EOS
   $ hg debugremotebookmark master $M
-  $ hg phase --force --public $M
+  $ hg debugmakepublic $M
   $ hg phase --force --draft $C
   $ hg phase --force --secret $D+$B
   $ hg hide $D -q

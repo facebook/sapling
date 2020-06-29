@@ -18,7 +18,7 @@ Create repo
   adding bin1
   $ hg commit -m a
   $ hg push -q -r . --to releasebranch --create
-  $ hg phase -p .
+  $ hg debugmakepublic .
 
   $ printf "A\nB\nC\nD\nE\nF\n" > a
   $ printf "a\0b\n" > bin1
@@ -489,7 +489,7 @@ Test use globalrev instead of svnrev
 
   $ echo >> Y
   $ hg commit -Aqm "commit with no globalrev"
-  $ hg phase -pfr '.'
+  $ hg debugmakepublic '.'
   $ echo >> Z
   $ hg commit -Aqm "local commit"
   $ hg debugcrdump -r '.' | jq -e '.commits[].public_base.svnrev' > /dev/null
@@ -498,7 +498,7 @@ Test use globalrev instead of svnrev
   $ echo >> Y
   $ hg commit --config "extensions.commitextras=" \
   > -Aqm "commit with globalrev" --extra global_rev="100098765"
-  $ hg phase -pfr '.'
+  $ hg debugmakepublic '.'
   $ echo >> Z
   $ hg commit -Aqm "local commit"
   $ hg debugcrdump -r '.' | jq -e '.commits[].public_base.svnrev' > /dev/null

@@ -188,7 +188,7 @@ Test prefetching when a draft commit is marked public
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ echo foo > foo
   $ hg commit -Aqm 'add foo'
-  $ hg phase -p -r .
+  $ hg debugmakepublic -r .
   $ hg log -G -T '{rev} {phase} {manifest}'
   @  3 public 5cf0d3bd4f40594eff7f0c945bec8baa8d115d01
   |

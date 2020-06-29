@@ -135,7 +135,7 @@ Using commit hash to access C should be allowed
 
 Phases
 
-  $ hg phase --force --public $D
+  $ hg phase --public $D
   (phases are now managed by remotenames and heads; manully editing phases is a no-op)
   $ hg phase $D
   e7b3f00ed42ef8977173765eccff8a861809549b: secret

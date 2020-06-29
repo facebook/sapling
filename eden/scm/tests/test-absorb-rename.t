@@ -44,7 +44,7 @@ rename a to b, then b to a
 
 when the first changeset is public
 
-  $ hg phase --public -r 3
+  $ hg debugmakepublic -r 3
 
   $ sedi 's/a/A/' a
 

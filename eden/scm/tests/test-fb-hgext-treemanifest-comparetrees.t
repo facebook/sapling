@@ -15,7 +15,7 @@
   > server=True
   > EOF
   $ mkcommit root
-  $ hg phase -p -r 'all()'
+  $ hg debugmakepublic -r 'all()'
 
 Clone it
   $ cd ..

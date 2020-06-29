@@ -230,7 +230,7 @@ sh % "hg status" == r"""
 
 # Public commits will not be changed:
 
-sh % "hg phase -p '.^^'"
+sh % "hg debugmakepublic '.^^'"
 sh % "sedi s/Insert/insert/ a"
 sh % "hg absorb -n" == r"""
     showing changes for a

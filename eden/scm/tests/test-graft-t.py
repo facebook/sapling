@@ -47,7 +47,7 @@ sh % "hg ci -m6"
 #  (Force "refersh" treestate)
 sh % "hg up -qC null"
 sh % "hg up -qC tip"
-sh % "hg phase --public 3"
+sh % "hg debugmakepublic 3"
 sh % "hg phase --force --secret 6"
 
 sh % "hg log -G --template '{author}@{rev}.{phase}: {desc}\\n'" == r"""

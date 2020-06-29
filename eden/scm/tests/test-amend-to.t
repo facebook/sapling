@@ -11,9 +11,9 @@ Test that amend --to option
   >    hg ci -m "$1"
   > }
   $ mkcommit "ROOT"
-  $ hg phase --public "desc(ROOT)"
+  $ hg debugmakepublic "desc(ROOT)"
   $ mkcommit "SIDE"
-  $ hg phase --public "desc(SIDE)"
+  $ hg debugmakepublic "desc(SIDE)"
   $ hg update -r "desc(ROOT)"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit "A"

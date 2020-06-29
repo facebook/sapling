@@ -137,5 +137,5 @@ setup
 
 actual test
 
-  $ hg phase --public .
+  $ hg debugmakepublic .
   tip: cb9a9f314b8b

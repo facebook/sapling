@@ -978,7 +978,7 @@ Make two stacks
   
 Make one of the commits public when it shouldn't be.
 
-  $ hg phase -p e58a6603d256
+  $ hg debugmakepublic e58a6603d256
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 9a3e7907fd5c

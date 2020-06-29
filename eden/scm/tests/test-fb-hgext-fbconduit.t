@@ -42,7 +42,7 @@ Basic functionality.
   $ hg add file
   $ hg ci -m "initial commit"
   $ commitid=`hg log -T "{label('custom.fullrev',node)}"`
-  $ hg phase -p $commitid
+  $ hg debugmakepublic $commitid
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/basic/hg/basic/git/$commitid/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg log -T '{gitnode}\n'
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -87,7 +87,7 @@ Test with one backing repos specified.
   $ hg add file
   $ hg ci -m "initial commit"
   $ commitid=`hg log -T "{label('custom.fullrev',node)}"`
-  $ hg phase -p $commitid
+  $ hg debugmakepublic $commitid
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/single/hg/single_src/git/$commitid/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg log -T '{gitnode}\n'
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -129,9 +129,9 @@ Test with multiple backing repos specified.
   $ commit_a_id=`hg log -T "{label('custom.fullrev',node)}" -r ".^^"`
   $ commit_b_id=`hg log -T "{label('custom.fullrev',node)}" -r ".^"`
   $ commit_c_id=`hg log -T "{label('custom.fullrev',node)}" -r .`
-  $ hg phase -p $commit_a_id
-  $ hg phase -p $commit_b_id
-  $ hg phase -p $commit_c_id
+  $ hg debugmakepublic $commit_a_id
+  $ hg debugmakepublic $commit_b_id
+  $ hg debugmakepublic $commit_c_id
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/multiple/hg/src_a/git/$commit_a_id/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/multiple/hg/src_b/git/$commit_b_id/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/multiple/hg/src_c/git/$commit_c_id/cccccccccccccccccccccccccccccccccccccccc
@@ -182,7 +182,7 @@ Test with a bad server port, where we get connection refused errors.
   $ hg add file
   $ hg ci -m "initial commit"
   $ commitid=`hg log -T "{label('custom.fullrev',node)}"`
-  $ hg phase -p $commitid
+  $ hg debugmakepublic $commitid
   $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'
   Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: * (glob)
   $ cd ..

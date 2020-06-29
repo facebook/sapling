@@ -11,7 +11,7 @@
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
   $ touch base
   $ hg commit -Aqm base
-  $ hg phase -p .
+  $ hg debugmakepublic .
   $ cd ..
 
   $ hg clone ssh://user@dummy/server client1 -q
@@ -66,7 +66,7 @@ Fake land the commit
   > Differential Revision: https://phabricator.fb.com/D1234"
   $ echo 2 > serverfile
   $ hg commit -Aqm public-commit-2
-  $ hg phase -p .
+  $ hg debugmakepublic .
   $ cd ..
 
   $ cd client1

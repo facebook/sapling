@@ -22,7 +22,7 @@
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
   $ touch base
   $ hg commit -Aqm base
-  $ hg phase -p .
+  $ hg debugmakepublic .
   $ BASEREV="$(hg id -i)"
   $ echo "$BASEREV"
   df4f53cec30a

@@ -97,7 +97,7 @@ Test pruning
 
 Create a public ancestor
   $ hg up 0 -q
-  $ hg phase --public .
+  $ hg debugmakepublic .
   $ hg log dir -T '{rev} {desc}\n'
   0 a
   $ hg up 3 -q
@@ -184,7 +184,7 @@ Globbing with parent
 
 Public follow
 
-  $ hg phase --public .
+  $ hg debugmakepublic .
   $ find parent -type f | sort | xargs hg log -f -T '{rev} {desc}\n'
   6 major repo reorg
   5 dir2-b
@@ -216,7 +216,7 @@ Multiple public / draft directories
   8 treats
   7 cookies
   6 major repo reorg
-  $ hg phase --public .
+  $ hg debugmakepublic .
   $ hg log parent/dir -T '{rev} {desc}\n'
   7 cookies
   6 major repo reorg

@@ -28,7 +28,7 @@
   f9719601f84ab527273dc915bfb41704b111058c commit1-amended
 
 Set the phase of the obsolete commit to public, simulating the older version being landed.
-  $ hg phase -p 1 --hidden
+  $ hg debugmakepublic 1 --hidden
 
 The commit should no longer show up as amended.
   $ tglogm --hidden

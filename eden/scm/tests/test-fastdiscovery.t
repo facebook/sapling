@@ -45,7 +45,7 @@ Make sure that fastdiscovery is used for push
 
 Make public head on the client - fastdiscovery is NOT used because no common nodes found
   $ mkcommit publichead
-  $ hg phase -r . -p
+  $ hg debugmakepublic .
   $ hg pull
   pulling from ssh://user@dummy/server
   searching for changes

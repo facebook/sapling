@@ -180,7 +180,7 @@ the server supports our custom getfiles method.
   $ cd ../shallow
   $ echo p > p
   $ hg commit -qAm p
-  $ hg phase -f -p -r .
+  $ hg debugmakepublic .
   $ echo d > d
   $ hg commit -qAm d
 

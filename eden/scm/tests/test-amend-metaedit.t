@@ -61,7 +61,7 @@ We start with a plain base repo::
 
   $ hg init $TESTTMP/metaedit; cd $TESTTMP/metaedit
   $ mkcommit "ROOT"
-  $ hg phase --public "desc(ROOT)"
+  $ hg debugmakepublic "desc(ROOT)"
   $ mkcommit "A"
   $ mkcommit "B"
   $ hg up "desc(A)"

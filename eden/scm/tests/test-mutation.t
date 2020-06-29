@@ -759,7 +759,7 @@ Successors Sets
   ba2b7fa7166d X
   54fe561aeb5b Y
   e67cd4473b7c Z
-  $ hg phase -p $Z --hidden
+  $ hg debugmakepublic $Z --hidden
 
   $ hg debugsuccessorssets 'all()'
   ba2b7fa7166d
@@ -1299,7 +1299,7 @@ Simulate pushrebase happening remotely and stripping the mutation information.
   > |
   > $Y  $C  # rebase: $C -> X
   > EOS
-  $ hg phase -p $X
+  $ hg debugmakepublic $X
 
 If we unhide B, we don't know that it was landed.
 
@@ -1333,7 +1333,7 @@ Test pullcreatemarkers can do this
   $ newrepo master
   $ echo base > base
   $ hg commit -Aqm base
-  $ hg phase -p .
+  $ hg debugmakepublic .
   $ cd ..
   $ hg clone ssh://user@dummy/master client1 -q
   $ cd client1
@@ -1351,7 +1351,7 @@ Test pullcreatemarkers can do this
   $ echo file1a > file1
   $ hg commit -Aqm "file1
   > Differential Revision: http://phabricator.fb.com/D1234"
-  $ hg phase -p .
+  $ hg debugmakepublic .
   $ cd ../client1
   $ hg pull -q
   $ hg log -G -T "{node|short} {desc|firstline} {phabdiff} {mutation_nodes}\n" -r "all()"

@@ -521,7 +521,7 @@ Use exec to create a new commit at the bottom of a stack (that is,
 on top of a public commit).  Histedit shouldn't try to obsolete the
 public commit.
 
-  $ hg phase -p ::d8249471110a
+  $ hg debugmakepublic ::d8249471110a
   $ hg histedit --commands - 2>&1 << EOF
   > exec touch x; hg add x; hg commit -m "x (inserted)"
   > pick 6bd17118649c

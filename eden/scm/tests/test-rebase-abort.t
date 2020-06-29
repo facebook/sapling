@@ -178,7 +178,7 @@ Construct new repo:
   adding c
 
   $ hg phase --force --secret 1
-  $ hg phase --public 1
+  $ hg debugmakepublic 1
 
 Rebase and abort without generating new changesets:
 
@@ -241,7 +241,7 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   $ echo b > b && hg ci -Aqm b
   $ hg up -q master
   $ echo c > c && hg ci -Aqm c
-  $ hg phase -p -r .
+  $ hg debugmakepublic -r .
   $ hg up -q foo
   $ echo C > c && hg ci -Aqm C
   $ hg log -G --template "{rev} {desc} {bookmarks}"
@@ -433,7 +433,7 @@ set up public branch
 commit will cause merge conflict on rebase
   $ echo '' > root
   $ hg commit -m 'remove content public' -q
-  $ hg phase --public
+  $ hg debugmakepublic
 
 setup the draft branch that will be rebased onto public commit
   $ hg up -r 0 -q

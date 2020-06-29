@@ -365,7 +365,7 @@ Check that temporary bundle doesn't lose phase when not using generaldelta
   $ hg co -q '.^'
   $ echo c > c
   $ hg ci -Aqm c
-  $ hg phase --public
+  $ hg debugmakepublic .
   $ hg log -G -T '{rev}:{node|shortest} {phase} {desc}\n'
   @  2:d36c public c
   |

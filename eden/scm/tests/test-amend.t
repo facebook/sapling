@@ -146,7 +146,7 @@ Amend in the middle of a stack
   
 Cannot amend public changeset
 
-  $ hg phase -r A --public
+  $ hg debugmakepublic -r A
   $ hg update -C -q A
   $ hg amend -m AMEND
   abort: cannot amend public changesets

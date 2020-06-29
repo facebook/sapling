@@ -54,7 +54,7 @@ sh % "hg diff"
 # Reset should recover from backup bundles (with correct phase)
 
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == "@  b292c1e3311f foo"
-sh % "hg phase -p b292c1e3311f"
+sh % "hg debugmakepublic b292c1e3311f"
 sh % "hg reset --clean 66ee28d0328c" == ""
 sh % "hg log -G -T '{node|short} {bookmarks} {phase}\\n'" == r"""
     @  66ee28d0328c foo draft

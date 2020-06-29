@@ -279,7 +279,7 @@ Here we have 2 draft children.
   (use the --newest or --towards flags to specify which child to pick)
   [255]
 Let's make one of child commits public.
-  $ hg phase -p top
+  $ hg debugmakepublic top
 Now we have only 1 draft child.
   $ hg next
   changeset * has multiple children, namely: (glob)

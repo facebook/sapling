@@ -19,7 +19,7 @@ Setup
   $ mkcommit root
   $ mkcommit public1
   $ mkcommit public2
-  $ hg phase -p .
+  $ hg debugmakepublic .
   $ hg debugvisibility status
   commit visibility is tracked explicitly
 
@@ -100,7 +100,7 @@ Simple creation and amending of draft commits
 
 Simple phase adjustments
 
-  $ hg phase -p 6
+  $ hg debugmakepublic 6
   $ hg debugvisibleheads
   af54c09bb37da36975b8d482f660f62f95697a35 draft2a
   $ hg phase -df 6
@@ -128,11 +128,11 @@ Simple phase adjustments
   $ hg debugvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
   f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
-  $ hg phase -p 9
+  $ hg debugmakepublic 9
   $ hg debugvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
   f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
-  $ hg phase -p 10
+  $ hg debugmakepublic 10
   $ hg debugvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
   $ hg phase -sf 9
@@ -186,10 +186,10 @@ Simple phase adjustments
   00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
 
-  $ hg phase -p 11
+  $ hg debugmakepublic 11
   $ hg debugvisibleheads
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
-  $ hg phase -p 12
+  $ hg debugmakepublic 12
   $ hg debugvisibleheads
   $ hg phase -df 11
   $ hg debugvisibleheads

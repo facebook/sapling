@@ -22,7 +22,7 @@
 # Add some files to the store
   $ mkcommit root
   $ mkcommit public1
-  $ hg phase -p .
+  $ hg debugmakepublic .
   $ echo "foo" > foofile
   $ mkdir bar
   $ echo "bar" > bar/file

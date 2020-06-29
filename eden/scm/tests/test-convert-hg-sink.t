@@ -33,7 +33,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo and bar
   
-  $ hg phase --public -r tip
+  $ hg debugmakepublic -r tip
   $ cd ..
   $ hg convert orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
   initializing destination new repository
@@ -149,7 +149,7 @@ Create a tricky source repo
   dir/c
   dir/d
   e
-  $ hg phase --public -r tip
+  $ hg debugmakepublic -r tip
   $ glog
   @  6 0613c8e59a3d (public) "6: change a" files: a
   |

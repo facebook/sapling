@@ -101,7 +101,7 @@ As a revset
 
 With --master
   $ hg phase -r 'all()' --draft -f
-  $ hg phase -r 1 --public
+  $ hg debugmakepublic 1
 
   $ hg smartlog -T compact --master 1
   @  6[feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
@@ -153,7 +153,7 @@ Specific revs
 
 Test master ordering
   $ hg phase -r 'all()' --draft -f
-  $ hg phase -r 49cdb4091aca --public
+  $ hg debugmakepublic 49cdb4091aca
 
   $ hg boo -f master -r 49cdb4091aca
   $ hg smartlog -T compact
@@ -175,7 +175,7 @@ Test master ordering
 
 Test overriding master
   $ hg phase -r 'all()' --draft -f
-  $ hg phase -r 38d85b506754 --public
+  $ hg debugmakepublic 38d85b506754
 
   $ hg boo -f master -r 38d85b506754
   $ hg smartlog -T compact
@@ -193,7 +193,7 @@ Test overriding master
   |
 
   $ hg phase -r 'all()' --draft -f
-  $ hg phase -r feature1 --public
+  $ hg debugmakepublic feature1
 
   $ hg smartlog -T compact --master feature1
   o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
@@ -247,7 +247,7 @@ Test overriding master
   |
 
   $ hg phase -r 'all()' --draft -f
-  $ hg phase -r . --public
+  $ hg debugmakepublic .
 
 Test with weird bookmark names
 
@@ -264,7 +264,7 @@ Test with weird bookmark names
   |
 
   $ hg phase -r 'all()' --draft -f
-  $ hg phase -r foo-bar --public
+  $ hg debugmakepublic foo-bar
 
   $ hg smartlog --config smartlog.master=foo-bar -T compact
   o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
@@ -324,7 +324,7 @@ A draft stack at the top
   $ hg debugbuilddag '+4'
   $ hg bookmark curr
   $ hg bookmark master -r 1
-  $ hg phase --public -r 1
+  $ hg debugmakepublic -r 1
   $ hg smartlog -T compact --all
   o  3   2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
   |    r3
@@ -437,7 +437,7 @@ Make sure public commits that are descendants of master are not drawn
   $ cd repo3
   $ hg debugbuilddag '+5'
   $ hg bookmark master -r 1
-  $ hg phase --public -r 1
+  $ hg debugmakepublic -r 1
   $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
     o  4   bebd167eb94d   1970-01-01 00:00 +0000   debugbuilddag
     |    r4
@@ -451,7 +451,7 @@ Make sure public commits that are descendants of master are not drawn
   o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
   |    r1
   |
-  $ hg phase -r 3 --public --force
+  $ hg debugmakepublic 3
   $ hg up -q 4
   $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
     @  4   bebd167eb94d   1970-01-01 00:00 +0000   debugbuilddag
@@ -463,7 +463,7 @@ Make sure public commits that are descendants of master are not drawn
   o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
   |    r1
   |
-  $ hg phase -r 4 --public --force
+  $ hg debugmakepublic 4
   $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
   @  4   bebd167eb94d   1970-01-01 00:00 +0000   debugbuilddag
   .    r4

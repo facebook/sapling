@@ -13,7 +13,7 @@
   >    hg ci -m "$1"
   >    S="serv"
   >    if [ "$2" = "$S" ]; then
-  >       hg phase --public .
+  >       hg debugmakepublic .
   >    else
   >       hg phase --draft .
   >    fi

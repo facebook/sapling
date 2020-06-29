@@ -545,7 +545,7 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
 
 Test pushing from a public treeonly client to a treeonly server *with* pushrebase
 (it should send tree data, versus p2p pushes which wouldnt)
-  $ hg phase -pr tip~2
+  $ hg debugmakepublic -r tip~2
   $ hg push -r . --config extensions.pushrebase=! -f
   pushing to ssh://user@dummy/master
   searching for changes

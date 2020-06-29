@@ -14,8 +14,6 @@
   $ setconfig treemanifest.server=True
   $ touch base
   $ hg commit -Aqm base
-  $ hg phase -p .
-  (phases are now managed by remotenames and heads; manully editing phases is a no-op)
   $ hg bookmark master
   $ cd ..
 

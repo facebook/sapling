@@ -39,7 +39,7 @@ sh % "hg smartlog -T '{rev} {bookmarks}'" == r"""
     o  0"""
 sh % "hg unamend"
 sh % "hg up 2" == "0 files updated, 0 files merged, 0 files removed, 0 files unresolved"
-sh % "hg phase -r . --public"
+sh % "hg debugmakepublic -r ."
 sh % "hg smartlog -T '{rev} {bookmarks}'" == r"""
     o  3 test
     |

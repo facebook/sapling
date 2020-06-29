@@ -526,7 +526,7 @@ Recreate the repo
   $ cd repo
   $ setupserver
   $ mkcommit initialcommit
-  $ hg phase --public .
+  $ hg debugmakepublic .
 
 Recreate the clients
   $ cd ..
@@ -620,7 +620,7 @@ Make public commit in the repo and pull it.
 Make sure phase on the client is public.
   $ cd ../repo
   $ mkcommit publiccommit
-  $ hg phase --public .
+  $ hg debugmakepublic .
   $ cd ../client3
   $ hg pull
   pulling from ssh://user@dummy/repo

@@ -228,8 +228,8 @@ Rebasing B onto E:
 Change phase on B and B'
 
   $ hg up -q -C 5 --config 'extensions.rebase=!'
-  $ hg phase --public 1
-  $ hg phase --public 5
+  $ hg debugmakepublic 1
+  $ hg debugmakepublic 5
   $ hg phase --secret -f 2
 
   $ tglogp
