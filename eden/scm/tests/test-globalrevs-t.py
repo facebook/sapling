@@ -13,7 +13,7 @@ feature.require(["py2"])
 
 sh % ". '$TESTDIR/hgsql/library.sh'"
 sh % "initdb"
-sh % "setconfig 'extensions.treemanifest=!'"
+sh % "setconfig 'extensions.treemanifest=!' 'format.use-zstore-commit-data=0'"
 
 # Test operations on server repository with bad configuration fail in expected
 # ways.
@@ -458,11 +458,12 @@ sh % "hg push -R client2 -q -f 'ssh://user@dummy/master2' --to master"
 
 
 def getglobalrev(commit):
-    return int(getglobalrevstr(commit))
+    s = getglobalrevstr(commit)
+    return int(s)
 
 
 def getglobalrevstr(commit):
-    return shlib.hg("log", "-r", commit, "-T", "{globalrev}")
+    return shlib.hg("log", "--hidden", "-r", commit, "-T", "{globalrev}")
 
 
 shlib.getglobalrev = getglobalrevstr
