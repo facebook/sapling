@@ -11,12 +11,8 @@ setup configuration
   $ cd $TESTTMP
 
 setup common configuration for these tests
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > amend=
-  > infinitepush=
-  > commitcloud=
-  > EOF
+
+  $ enable amend infinitepush commitcloud remotenames
 
 setup repo
 
@@ -73,9 +69,6 @@ Do infinitepush (aka commit cloud) push
   sending batch command
   searching for changes
   all remote heads known locally
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
@@ -94,9 +87,6 @@ Do infinitepush (aka commit cloud) push
   bundle2-input-bundle: 1 params no-transaction
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
   bundle2-input-bundle: 0 parts total
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
@@ -104,7 +94,7 @@ Do infinitepush (aka commit cloud) push
   $ tglogp
   @  1: 47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
   $ cd ../repo-pull
@@ -129,7 +119,7 @@ Do infinitepush (aka commit cloud) push
   $ tglogp
   @  1: 47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
 Do infinitepush (aka commit cloud) push, to a bookmark
@@ -173,7 +163,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   |
   o  1: 47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
@@ -255,7 +245,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   |
   o  1: 47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
   $ hg book --remote
      default/master_bookmark   0:3903775176ed
@@ -304,7 +294,7 @@ Pushbackup also works
   |
   o  1: 47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
   $ cd ../repo-pull
@@ -326,7 +316,7 @@ Pushbackup also works
   |
   o  1: 47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
 Pushbackup that pushes only bookmarks
@@ -354,7 +344,7 @@ Pushbackup that pushes only bookmarks
   |
   o  1: 47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
 Finally, try to push existing commit to a public bookmark
@@ -370,7 +360,7 @@ Finally, try to push existing commit to a public bookmark
   |
   o  1: 47da8b81097c public 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
 
@@ -386,13 +376,13 @@ Check phases on another side (for pull command and pull -r)
   added 0 changesets with 0 changes to 0 files
 
   $ tglogp
-  @  3: 2cfeca6399fd draft 'newrepo'
+  @  3: 2cfeca6399fd public 'newrepo'
   |
-  o  2: 007299f6399f draft 'new2'
+  o  2: 007299f6399f public 'new2'
   |
   o  1: 47da8b81097c public 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
   $ hgmn pull
@@ -412,7 +402,7 @@ Check phases on another side (for pull command and pull -r)
   |
   o  1: 47da8b81097c public 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
 # Test phases a for stack that is partially public
@@ -446,7 +436,7 @@ Check phases on another side (for pull command and pull -r)
   | |
   | o  1: 47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
  
   $ hg log -r . -T '{node}\n'
@@ -472,7 +462,7 @@ Check phases on another side (for pull command and pull -r)
   | |
   | o  1: 47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
   $ hgmn pull -r test_release_1.0.0
@@ -495,7 +485,7 @@ Check phases on another side (for pull command and pull -r)
   | |
   | o  1: 47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
  
 
@@ -533,7 +523,7 @@ Test phases with pushrebase
   | |
   o |  1: 47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
 Repos clean up
@@ -630,7 +620,7 @@ More sophisticated test for phases
   | |
   o |  1: 47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
   $ cd ../repo-pull
