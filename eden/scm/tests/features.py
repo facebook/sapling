@@ -146,7 +146,6 @@ narrowheadsincompatiblelist = """
     test-commitcloud.t
     test-pushrebase-emit-obsmarkers.t
     test-pushrebase.t
-    test-push-redirector-sync-job.t
     test-redaction.t
     test-sqlblob.t
     test-walker-scrub-blobstore.t

@@ -6,6 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
+  $ enable remotenames
+
   $ setup_configerator_configs
   $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
   > {
@@ -73,13 +75,13 @@
   * successful sync of entries [6] (glob)
   $ cd small-hg-srv
   $ log -r :
-  o  empty [public;rev=3;*] (glob)
+  o  empty [draft;rev=3;*] (glob)
   |
-  o  newcommit [public;rev=2;*] (glob)
+  o  newcommit [draft;rev=2;*] (glob)
   |
-  @  first post-move commit [public;rev=1;*] (glob)
+  @  first post-move commit [draft;rev=1;*] (glob)
   |
-  o  pre-move commit [public;rev=0;*] (glob)
+  o  pre-move commit [draft;rev=0;*] (glob)
   $
 
   $ hg show master_bookmark
