@@ -7,6 +7,7 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
+  $ enable remotenames
 
 Setup server
   $ hg init repo
@@ -59,9 +60,11 @@ Make commit and backup it.
   infinitepush/backups/test/testhost$TESTTMP/client/heads/7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455
 
 Make first commit public (by doing push) and then backup new commit
-  $ hg push
-  pushing to ssh://user@dummy/repo
+  $ hg debugmakepublic .
+  $ hg push --to master --create --force
+  pushing rev 7e6a6fd9c7c8 to destination ssh://user@dummy/repo bookmark master
   searching for changes
+  exporting bookmark master
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -236,11 +239,13 @@ Make a few public commits. Make sure we don't backup them
   (leaving bookmark newbook)
   $ mkcommit public1
   $ mkcommit public2
+  $ hg debugmakepublic .
   $ hg log -r tip -T '{rev}'
   11 (no-eol)
-  $ hg push -r '2d2e01441947::.'
-  pushing to ssh://user@dummy/repo
+  $ hg push -r '.' -f --to master
+  pushing rev 3446a384dd70 to destination ssh://user@dummy/repo bookmark master
   searching for changes
+  updating bookmark master
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -333,9 +338,11 @@ Clean client and repo
 
 Create public commit
   $ mkcommit initial
-  $ hg push
-  pushing to ssh://user@dummy/repo
+  $ hg debugmakepublic .
+  $ hg push --to master --create --force
+  pushing rev 630839011471 to destination ssh://user@dummy/repo bookmark master
   searching for changes
+  exporting bookmark master
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -358,12 +365,12 @@ Make sure cloud backup works
 
 Make secret commit and bookmark on top of it. Then run cloud backup.
 Make sure it was backed up.
-t
+(with narrow-heads the concept "secret phase" is gone and the commit is no longer secret)
+
   $ hg book bookonsecret
   $ echo secret >> secret
   $ hg add secret
   $ hg ci -Am secret
-  $ hg phase -qfs '.'
   $ hg cloud backup
   backing up stack rooted at dc80aa94cb8b
   commitcloud: backed up 1 commit
@@ -372,6 +379,7 @@ t
   $ scratchbookmarks
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
+  infinitepush/backups/test/testhost$TESTTMP/client/heads/dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3 dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
 
 Create two heads, set maxheadstobackup to 1, make sure only latest head was backed up
   $ hg up -q 0
@@ -388,6 +396,7 @@ Create two heads, set maxheadstobackup to 1, make sure only latest head was back
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
   infinitepush/backups/test/testhost$TESTTMP/client/heads/6c4f4b30ae4c2dd928d551836c70c741ee836650 6c4f4b30ae4c2dd928d551836c70c741ee836650
+  infinitepush/backups/test/testhost$TESTTMP/client/heads/dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3 dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
 
 Now set maxheadstobackup to 0 and backup again. Make sure nothing is backed up now
   $ hg cloud backup --config infinitepushbackup.maxheadstobackup=0
@@ -397,6 +406,7 @@ Now set maxheadstobackup to 0 and backup again. Make sure nothing is backed up n
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
   infinitepush/backups/test/testhost$TESTTMP/client/heads/6c4f4b30ae4c2dd928d551836c70c741ee836650 6c4f4b30ae4c2dd928d551836c70c741ee836650
+  infinitepush/backups/test/testhost$TESTTMP/client/heads/dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3 dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
 
 Test cloud check command
   $ hg cloud backup
@@ -417,15 +427,18 @@ Delete a commit from the server
 
 Local state still shows it as backed up, but can check the remote
   $ hg cloud check -r "draft()"
+  dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3 backed up
   cf2adfba146909529bcca8c1626de6b4d9e73846 backed up
   6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
   $ hg cloud check -r "draft()" --remote
+  dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3 backed up
   cf2adfba146909529bcca8c1626de6b4d9e73846 backed up
   6c4f4b30ae4c2dd928d551836c70c741ee836650 not backed up
 
 Delete backup state file and try again
   $ rm .hg/commitcloud/backedupheads.*
   $ hg cloud check -r "draft()"
+  dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3 backed up
   cf2adfba146909529bcca8c1626de6b4d9e73846 backed up
   6c4f4b30ae4c2dd928d551836c70c741ee836650 not backed up
 
@@ -453,6 +466,7 @@ Test hostname option
   infinitepush/backups/test/hostname$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/hostname$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
   infinitepush/backups/test/hostname$TESTTMP/client/heads/cf2adfba146909529bcca8c1626de6b4d9e73846 cf2adfba146909529bcca8c1626de6b4d9e73846
+  infinitepush/backups/test/hostname$TESTTMP/client/heads/dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3 dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
 
 Malformed backup state file
   $ echo rubbish > .hg/infinitepushbackups/infinitepushbackupstate*
@@ -510,8 +524,12 @@ Create logs directory and set correct permissions
   |
   o  B 1ef11233b74dfa8b57e8285fd6f546096af8f4c2
   |
-  o  D b18e25de2cf5fc4699a029ed635882849e53ef73
-  |
+  | o  C 26805aba1e600a82e93661149f2313866a221a7b
+  | |
+  o |  D b18e25de2cf5fc4699a029ed635882849e53ef73
+  | |
+  | o  B 112478962961147124edd43549aedd1a335e44bf
+  |/
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   
   @  initial 630839011471e17f808b92ab084bedfaca33b110

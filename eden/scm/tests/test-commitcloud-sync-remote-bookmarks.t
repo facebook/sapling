@@ -11,12 +11,6 @@
   >    echo $1 > $1
   >    hg add $1
   >    hg ci -m "$1"
-  >    S="serv"
-  >    if [ "$2" = "$S" ]; then
-  >       hg debugmakepublic .
-  >    else
-  >       hg phase --draft .
-  >    fi
   > }
   $ showgraph() {
   >    hg log -G -T "{rev} {desc}: {phase} {bookmarks} {remotenames}"
@@ -42,15 +36,15 @@ Setup remote repo
   $ hg book master
 
   $ showgraph
-  @  4 a2: public master
+  @  4 a2: draft master
   |
-  o  3 a1: public
+  o  3 a1: draft
   |
-  | o  2 b1: public stable
+  | o  2 b1: draft stable
   |/
-  | o  1 c1: public warm
+  | o  1 c1: draft warm
   |/
-  o  0 root: public
+  o  0 root: draft
   
 
 Setup first client repo
@@ -62,6 +56,8 @@ Setup first client repo
 
   $ hg clone -q ssh://user@dummy/remoterepo client1
   $ cd client1
+  $ hg pull -B stable -B warm -q
+  $ hg up 'desc(a2)' -q
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ setconfig commitcloud.user_token_path=$TESTTMP
   $ hg cloud auth -t xxxxxx
@@ -77,9 +73,9 @@ Setup first client repo
   |
   o  3 a1: public
   |
-  | o  2 b1: public
+  | o  2 b1: public  default/stable
   |/
-  | o  1 c1: public
+  | o  1 c1: public  default/warm
   |/
   o  0 root: public
   
@@ -127,10 +123,6 @@ Common case of unsynchronized remote bookmarks
   |
   o  3 a1: public
   |
-  | o  2 b1: public
-  |/
-  | o  1 c1: public
-  |/
   o  0 root: public
   
 
@@ -146,10 +138,6 @@ default/master should point to the new commit
   |
   o  3 a1: public
   |
-  | o  2 b1: public
-  |/
-  | o  1 c1: public
-  |/
   o  0 root: public
   
 Subscribe to a new remote bookmark
@@ -168,13 +156,14 @@ Subscribe to a new remote bookmark
   |
   | o  2 b1: public  default/stable
   |/
-  | o  1 c1: public
+  | o  1 c1: public  default/warm
   |/
   o  0 root: public
   
   $ hg book --list-subscriptions
      default/master            5:1b6e90080435
      default/stable            2:b2bfab231667
+     default/warm              1:b8063fc7de93
 
 the other client should be subscribed to this bookmark as well
   $ cd ../client2
@@ -190,13 +179,14 @@ the other client should be subscribed to this bookmark as well
   |
   | o  2 b1: public  default/stable
   |/
-  | o  1 c1: public
+  | o  1 c1: public  default/warm
   |/
   o  0 root: public
   
   $ hg book --list-subscriptions
      default/master            5:1b6e90080435
      default/stable            2:b2bfab231667
+     default/warm              1:b8063fc7de93
 
 try to create a commit on top of the default/stable
   $ cd ../client1
@@ -219,7 +209,7 @@ try to create a commit on top of the default/stable
   | |
   o |  2 b1: public  default/stable
   |/
-  | o  1 c1: public
+  | o  1 c1: public  default/warm
   |/
   o  0 root: public
   
@@ -262,15 +252,15 @@ sync and create a new commit on top of the draft-3
   | |
   | | o  6 draft-3: draft
   | | |
-  | o |  5 a3: public
+  | o |  5 a3: draft
   | | |
   | o |  4 a2: public  default/master
   | | |
   | o |  3 a1: public
   | | |
-  o | |  2 b1: public
+  o | |  2 b1: draft
   |/ /
-  | o  1 c1: public
+  | o  1 c1: draft
   |/
   o  0 root: public
   

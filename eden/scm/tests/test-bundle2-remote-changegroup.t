@@ -149,21 +149,21 @@ Test a pull with an remote-changegroup
   adding file changes
   added 3 changesets with 2 changes to 2 files
   $ hg -R clone log -G
-  o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
+  o  7:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
-  | o  6:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com>  G
+  | o  6:eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com>  G
   |/|
-  o |  5:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
+  o |  5:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   | |
-  | o  4:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com>  E
+  | o  4:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com>  E
   |/
-  | @  3:32af7686d403 public Nicolas Dumazet <nicdumz.commits@gmail.com>  D
+  | @  3:32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  D
   | |
-  | o  2:5fddd98957c8 public Nicolas Dumazet <nicdumz.commits@gmail.com>  C
+  | o  2:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
   | |
-  | o  1:42ccdea3bb16 public Nicolas Dumazet <nicdumz.commits@gmail.com>  B
+  | o  1:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
   |/
-  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com>  A
+  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  A
   
   $ rm -rf clone
 
@@ -198,21 +198,21 @@ Test a pull with an remote-changegroup and a following changegroup
   adding file changes
   added 3 changesets with 2 changes to 2 files
   $ hg -R clone log -G
-  o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
+  o  7:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
-  | o  6:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com>  G
+  | o  6:eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com>  G
   |/|
-  o |  5:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
+  o |  5:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   | |
-  | o  4:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com>  E
+  | o  4:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com>  E
   |/
-  | o  3:32af7686d403 public Nicolas Dumazet <nicdumz.commits@gmail.com>  D
+  | o  3:32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  D
   | |
-  | @  2:5fddd98957c8 public Nicolas Dumazet <nicdumz.commits@gmail.com>  C
+  | @  2:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
   | |
-  | o  1:42ccdea3bb16 public Nicolas Dumazet <nicdumz.commits@gmail.com>  B
+  | o  1:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
   |/
-  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com>  A
+  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  A
   
   $ rm -rf clone
 
@@ -247,21 +247,21 @@ Test a pull with a changegroup followed by an remote-changegroup
   adding file changes
   added 3 changesets with 2 changes to 2 files
   $ hg -R clone log -G
-  o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
+  o  7:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
-  | o  6:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com>  G
+  | o  6:eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com>  G
   |/|
-  o |  5:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
+  o |  5:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   | |
-  | o  4:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com>  E
+  | o  4:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com>  E
   |/
-  | o  3:32af7686d403 public Nicolas Dumazet <nicdumz.commits@gmail.com>  D
+  | o  3:32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  D
   | |
-  | @  2:5fddd98957c8 public Nicolas Dumazet <nicdumz.commits@gmail.com>  C
+  | @  2:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
   | |
-  | o  1:42ccdea3bb16 public Nicolas Dumazet <nicdumz.commits@gmail.com>  B
+  | o  1:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
   |/
-  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com>  A
+  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  A
   
   $ rm -rf clone
 
@@ -306,21 +306,21 @@ Test a pull with two remote-changegroups and a changegroup
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg -R clone log -G
-  o  7:02de42196ebe public Nicolas Dumazet <nicdumz.commits@gmail.com>  H
+  o  7:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
-  | o  6:eea13746799a public Nicolas Dumazet <nicdumz.commits@gmail.com>  G
+  | o  6:eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com>  G
   |/|
-  o |  5:24b6387c8c8c public Nicolas Dumazet <nicdumz.commits@gmail.com>  F
+  o |  5:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   | |
-  | o  4:9520eea781bc public Nicolas Dumazet <nicdumz.commits@gmail.com>  E
+  | o  4:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com>  E
   |/
-  | o  3:32af7686d403 public Nicolas Dumazet <nicdumz.commits@gmail.com>  D
+  | o  3:32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  D
   | |
-  | @  2:5fddd98957c8 public Nicolas Dumazet <nicdumz.commits@gmail.com>  C
+  | @  2:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
   | |
-  | o  1:42ccdea3bb16 public Nicolas Dumazet <nicdumz.commits@gmail.com>  B
+  | o  1:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
   |/
-  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com>  A
+  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  A
   
   $ rm -rf clone
 
@@ -464,11 +464,11 @@ Corruption tests
 The entire transaction has been rolled back in the pull above
 
   $ hg -R clone log -G
-  @  2:5fddd98957c8 public Nicolas Dumazet <nicdumz.commits@gmail.com>  C
+  @  2:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
   |
-  o  1:42ccdea3bb16 public Nicolas Dumazet <nicdumz.commits@gmail.com>  B
+  o  1:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
   |
-  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com>  A
+  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  A
   
 
 No params
@@ -593,11 +593,11 @@ Not a bundle 1.0
   [255]
 
   $ hg -R clone log -G
-  @  2:5fddd98957c8 public Nicolas Dumazet <nicdumz.commits@gmail.com>  C
+  @  2:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
   |
-  o  1:42ccdea3bb16 public Nicolas Dumazet <nicdumz.commits@gmail.com>  B
+  o  1:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
   |
-  o  0:cd010b8cd998 public Nicolas Dumazet <nicdumz.commits@gmail.com>  A
+  o  0:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  A
   
   $ rm -rf clone
 

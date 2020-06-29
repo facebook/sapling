@@ -19,12 +19,12 @@ Cannot amend null:
 Refuse to amend public csets:
 
   $ hg up -Cq $B
-  $ hg phase -r . -p
-  $ hg ci --amend
+  $ cp -R . ../repo-public
+  $ hg -R ../repo-public debugmakepublic .
+  $ hg -R ../repo-public ci --amend
   abort: cannot amend public changesets
   (see 'hg help phases' for details)
   [255]
-  $ hg phase -r . -f -d
 
 Nothing to amend:
 

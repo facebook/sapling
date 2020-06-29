@@ -4,6 +4,7 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setconfig extensions.commitcloud=
+  $ enable remotenames
 
   $ mkcommit() {
   >   echo "$1" > "$1"
@@ -22,6 +23,7 @@
   > EOF
 
   $ mkcommit "base" > /dev/null
+  $ hg bookmark master
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/server shallow -q

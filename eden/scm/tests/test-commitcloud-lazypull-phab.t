@@ -29,6 +29,7 @@
   > EOF
 
   $ mkcommit "base"
+  $ hg bookmark master
   $ cd ..
 
 Make shared part of config

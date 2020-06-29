@@ -22,6 +22,7 @@
   $ touch base
   $ hg commit -Aqm base
   $ hg debugmakepublic .
+  $ hg bookmark master
   $ cd ..
 
 Make shared part of config
@@ -794,14 +795,15 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
 
   $ cd ../client2
   $ hg cloud sync -q
-  f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
   $ tglogp
-  o  10: 2ace67ee4791 draft 'oldstack-mar4 amended'
+  o  11: f770b7f72fa5 draft 'public1' midbook
   |
-  o  8: d16408588b2d draft 'oldstack-feb4'
-  |
-  o  7: 1f9ebd6d1390 draft 'oldstack-feb1'
-  |
+  | o  10: 2ace67ee4791 draft 'oldstack-mar4 amended'
+  | |
+  | o  8: d16408588b2d draft 'oldstack-feb4'
+  | |
+  | o  7: 1f9ebd6d1390 draft 'oldstack-feb1'
+  |/
   @  0: df4f53cec30a public 'base'
   
   $ cd ../client1
@@ -823,12 +825,15 @@ from the cloud workspace, but the sync should still work.
   $ cd ../client4
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 2ace67ee4791 from ssh://user@dummy/server
+  pulling 2ace67ee4791 f770b7f72fa5 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
+  added 1 changesets with 1 changes to 1 files
+  adding changesets
+  adding manifests
+  adding file changes
   added 1 changesets with 0 changes to 3 files
-  f770b7f72fa59cf01503318ed2b26904cb255d03 not found, omitting midbook bookmark
   commitcloud: commits synchronized
   finished in 0.00 sec

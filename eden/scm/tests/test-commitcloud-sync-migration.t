@@ -22,6 +22,7 @@ Make a server
   > EOF
 
   $ mkcommit "base"
+  $ hg bookmark master
 
   $ cd ..
 

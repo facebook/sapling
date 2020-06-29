@@ -74,6 +74,8 @@ Sync in client2 (remote bookmarks sync disabled). The master bookmark doesn't mo
   $ cd $TESTTMP/client2
   $ hg cloud sync -q
   $ showgraph
+  o  1 public1: draft
+  |
   @  0 base: public  default/base default/master
   
 

@@ -90,18 +90,18 @@ Pull the new commits in the clone
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_NODE_LAST=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_NODE_LAST=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PENDING=$TESTTMP/clone HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   pullop.cgresult is 1
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_NODE_LAST=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_NODE_LAST=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_NODE_LAST=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   $ hg update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
-  @  2:f838bfaca5c7 public test  C
+  @  2:f838bfaca5c7 draft test  C
   |
-  o  1:27547f69f254 public test  B
+  o  1:27547f69f254 draft test  B
   |
-  o  0:4a2df7238c3b public test  A
+  o  0:4a2df7238c3b draft test  A
   
 Add more changesets with multiple heads to the original repository
 
@@ -157,26 +157,26 @@ pullop.cgresult
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_NODE_LAST=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_NODE_LAST=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_PENDING=$TESTTMP/clone HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   pullop.cgresult is 1
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_NODE_LAST=8a5212ebc8527f9fb821601504794e3eb11a1ed3 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_NODE_LAST=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_NODE_LAST=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   $ hg log -G
-  o  7:5cd59d311f65 public test  H
+  o  7:5cd59d311f65 draft test  H
   |
-  | o  6:1d14c3ce6ac0 public test  G
+  | o  6:1d14c3ce6ac0 draft test  G
   | |
-  | | o  5:7f219660301f public test  F
+  | | o  5:7f219660301f draft test  F
   | | |
-  | | o  4:8a5212ebc852 public test  E
+  | | o  4:8a5212ebc852 draft test  E
   | |/
-  o |  3:b3325c91a4d9 public test  D
+  o |  3:b3325c91a4d9 draft test  D
   | |
-  @ |  2:f838bfaca5c7 public test  C
+  @ |  2:f838bfaca5c7 draft test  C
   |/
-  o  1:27547f69f254 public test  B
+  o  1:27547f69f254 draft test  B
   |
-  o  0:4a2df7238c3b public test  A
+  o  0:4a2df7238c3b draft test  A
   
 Removing a head from the original repository by merging it
 
@@ -224,28 +224,28 @@ pullop.cgresult
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PENDING=$TESTTMP/clone HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   pullop.cgresult is 1
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_NODE_LAST=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   $ hg log -G
-  o  9:9d18e5bd9ab0 public test  H
+  o  9:9d18e5bd9ab0 draft test  H
   |
-  o    8:71bd7b46de72 public test  Merge
+  o    8:71bd7b46de72 draft test  Merge
   |\
-  | o  7:5cd59d311f65 public test  H
+  | o  7:5cd59d311f65 draft test  H
   | |
-  o |  6:1d14c3ce6ac0 public test  G
+  o |  6:1d14c3ce6ac0 draft test  G
   | |
-  | | o  5:7f219660301f public test  F
+  | | o  5:7f219660301f draft test  F
   | | |
-  +---o  4:8a5212ebc852 public test  E
+  +---o  4:8a5212ebc852 draft test  E
   | |
-  | o  3:b3325c91a4d9 public test  D
+  | o  3:b3325c91a4d9 draft test  D
   | |
-  | @  2:f838bfaca5c7 public test  C
+  | @  2:f838bfaca5c7 draft test  C
   |/
-  o  1:27547f69f254 public test  B
+  o  1:27547f69f254 draft test  B
   |
-  o  0:4a2df7238c3b public test  A
+  o  0:4a2df7238c3b draft test  A
   

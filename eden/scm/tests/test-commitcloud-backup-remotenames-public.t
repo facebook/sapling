@@ -7,6 +7,7 @@ test covers the issue.
 
   $ . $TESTDIR/library.sh
   $ . $TESTDIR/infinitepush/library.sh
+  $ enable remotenames
 
   $ setupcommon
 
@@ -37,12 +38,12 @@ may be used by remotenames extension in fastheaddiscovery heuristic
   $ mkcommit second
   $ mkcommit third
   $ mkcommit fourth
+  $ hg bookmark master
   $ cd ..
 
 Create new client
   $ hg clone ssh://user@dummy/repo --config extensions.remotenames= client -q
   $ cd client
-  $ enable remotenames
 
 Create scratch commit and back it up.
   $ hg up -q -r 'desc(third)'
@@ -78,6 +79,7 @@ Pull to get remote names
   searching for changes
   no changes found
   $ hg book --remote
+     default/master            3:05fb75d88dcd
      default/remotebook        0:b75a450e74d5
 
 Strip public commits from the repo, otherwise fastheaddiscovery heuristic will
@@ -91,6 +93,8 @@ Download scratch commit. It also downloads a few public commits
   $ hg log --graph -T '{desc}'
   @  scratch
   |
+  | o  fourth
+  |/
   o  third
   |
   o  second
@@ -98,6 +102,7 @@ Download scratch commit. It also downloads a few public commits
   o  first
   
   $ hg book --remote
+     default/master            3:05fb75d88dcd
      default/remotebook        0:b75a450e74d5
 
 Run cloud backup and make sure only scratch commits are backed up.

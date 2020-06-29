@@ -43,9 +43,10 @@ We will also run few checks with `hg hide` / `hg up` commands.
   
 Backup commit
   $ hg cloud backup
-  backing up stack rooted at c1b6fe8fce73
+  backing up stack rooted at f8b49bf62d4d
   commitcloud: backed up 1 commit
-  remote: pushing 1 commit:
+  remote: pushing 2 commits:
+  remote:     f8b49bf62d4d  somecommit
   remote:     c1b6fe8fce73  someothercommit
 
 Quick test `hg hide` / `hg up`

@@ -43,6 +43,7 @@ To be run if some test require full sync state before the test
   > EOF
 
   $ mkcommit "base"
+  $ hg bookmark publicbookmark1
   $ cd ..
 
 Make shared part of config
@@ -97,7 +98,7 @@ Run cloud status after setting a workspace
   Workspace: user/test/feature
   Automatic Sync: OFF
   Last Sync Version: 1
-  Last Sync Heads: 0 (0 omitted)
+  Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
   Last Sync Snapshots: 0
@@ -140,7 +141,7 @@ Run cloud status after setting workspace
   Workspace: user/test/default
   Automatic Sync: OFF
   Last Sync Version: 1
-  Last Sync Heads: 0 (0 omitted)
+  Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
   Last Sync Snapshots: 0
@@ -155,7 +156,7 @@ Run cloud status after enabling autosync
   Workspace: user/test/default
   Automatic Sync: ON
   Last Sync Version: 1
-  Last Sync Heads: 0 (0 omitted)
+  Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
   Last Sync Snapshots: 0
@@ -169,7 +170,7 @@ Run cloud status after disabling autosync
   Workspace: user/test/default
   Automatic Sync: OFF
   Last Sync Version: 1
-  Last Sync Heads: 0 (0 omitted)
+  Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
   Last Sync Snapshots: 0
@@ -1026,12 +1027,11 @@ Commit still becomes available in the other repo
   
 Fix up that public commit, set it back to draft
   $ cd ../client1
-  $ hg phase -fd e58a6603d256
+  $ hg debugmakepublic -d -r e58a6603d256
 
 Make a public commit and put two bookmarks on it
   $ cd ../server
   $ mkcommit 'public'
-  $ hg bookmark publicbookmark1
   $ hg bookmark publicbookmark2
 
 Pull it into one of the clients and rebase one of the stacks onto it
@@ -1092,7 +1092,7 @@ Sync this onto the second client, the remote bookmarks don't change.
   | |
   | o  3597ff85ead0 'stack 2 first'
   |/
-  @  d20a80d4def3 'base'
+  @  d20a80d4def3 'base'  default/publicbookmark1
   
 Do a pull on this client.  The remote bookmarks now get updated.
   $ hg pull

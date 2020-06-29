@@ -11,6 +11,7 @@
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
   $ touch base
   $ hg commit -Aqm base
+  $ hg bookmark master
   $ hg debugmakepublic .
   $ cd ..
 

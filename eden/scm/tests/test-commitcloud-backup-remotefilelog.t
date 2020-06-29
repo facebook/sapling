@@ -5,6 +5,7 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
+  $ enable remotenames
 
 Setup infinitepush and remotefilelog server
   $ hg init repo
@@ -18,7 +19,7 @@ Make client shallow clone
   streaming all changes
   0 files to transfer, 0 bytes of data
   transferred 0 bytes in \d+(\.\d+)? seconds \(0 bytes/sec\) (re)
-  no changes found
+  requesting all changes
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -32,6 +33,7 @@ downloaded to the client
   $ echo 'committostripsecond' >> committostripsecond
   $ hg add committostripsecond
   $ hg ci -m committostripsecond
+  $ hg bookmark master
 
 Pull changes client-side
   $ cd ../client
@@ -152,6 +154,8 @@ the client doesn't receive the public commit file data during the pull.
   added 1 changesets with 1 changes to 1 files
   $ hg log -r 7644808a0e88 --stat
   changeset:   6:7644808a0e88
+  bookmark:    default/master
+  hoistedname: master
   parent:      0:22ea264ff89d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

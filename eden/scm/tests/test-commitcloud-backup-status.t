@@ -7,6 +7,7 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
+  $ enable remotenames
 
   $ hgfakedate() {
   >   fakedate="$1"
@@ -35,9 +36,10 @@ Setup client
   $ hg add file2
   $ commit_time=`expr $now - 15 \* 60`
   $ hg commit -d "$commit_time 0" -m "Public changeset 2"
-  $ hg push
-  pushing to ssh://user@dummy/repo
+  $ hg push --to master --create --force
+  pushing rev c46481f83c9b to destination ssh://user@dummy/repo bookmark master
   searching for changes
+  exporting bookmark master
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -250,7 +252,10 @@ show as backed up if '--hidden' is passed.
   6 Not backed up changeset 2
   8 Not backed up changeset 3 (amended)
   $ hg log -T '{rev} {desc}\n' -r 'notbackedup()' --hidden
+  4 Not backed up changeset
+  5 Backup pending changeset
   6 Not backed up changeset 2
+  7 Not backed up changeset 3
   8 Not backed up changeset 3 (amended)
   $ hg sl -T '{rev} {desc}\n'
   @  8 Not backed up changeset 3 (amended)
@@ -269,6 +274,8 @@ show as backed up if '--hidden' is passed.
   note: 2 changesets are not backed up.
   (run 'hg cloud backup' to perform a backup)
   (if this fails, please report to the Source Control Team)
+
+(3, 4, 5 do not have successors. They show up as 'o' not 'x' with --hidden)
   $ hg sl -T '{rev} {desc}\n' --hidden
   @  8 Not backed up changeset 3 (amended)
   |
@@ -278,11 +285,11 @@ show as backed up if '--hidden' is passed.
   |
   | o  6 Not backed up changeset 2
   | |
-  | | x  5 Backup pending changeset
+  | | o  5 Backup pending changeset
   | | |
-  | | x  4 Not backed up changeset
+  | | o  4 Not backed up changeset
   | | |
-  | | x  3 Backed up changeset 2
+  | | o  3 Backed up changeset 2
   | |/
   | o  2 Backed up changeset
   |/
@@ -291,6 +298,6 @@ show as backed up if '--hidden' is passed.
   note: background backup is currently disabled until Thu Jan 07 13:00:00 2016 +0000
   so your commits are not being backed up.
   (run 'hg cloud enable' to turn automatic backups back on)
-  note: 2 changesets are not backed up.
+  note: 4 changesets are not backed up.
   (run 'hg cloud backup' to perform a backup)
   (if this fails, please report to the Source Control Team)

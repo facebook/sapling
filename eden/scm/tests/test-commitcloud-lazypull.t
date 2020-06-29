@@ -28,6 +28,7 @@
   > EOF
 
   $ mkcommit "base"
+  $ hg bookmark master
   $ cd ..
 
 Make shared part of config
@@ -113,10 +114,14 @@ Sync from the second client and `hg unamend` there
   o  0: d20a80d4def3 'base'
   
 
+(with mutation and visibility, it's not possible to undo the relationship of
+amend, therefore the "has been replaced" message)
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
+  commitcloud: current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions
+  (run 'hg update HASH' to go to the desired revision)
 
   $ cd ..
 
@@ -179,9 +184,5 @@ Now cloud sync in the other client.  The cycle means we can't reliably pick a de
   added 1 changesets with 0 changes to 1 files
   commitcloud: commits synchronized
   finished in * sec (glob)
-  commitcloud: current revision 1cf4a5a0e8fc has been moved remotely to 74b668b6b779
-  hint[commitcloud-update-on-move]: if you would like to update to the moved version automatically add
-  [commitcloud]
-  updateonmove = true
-  to your .hgrc config file
-  hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
+  commitcloud: current revision 1cf4a5a0e8fc has been replaced remotely with multiple revisions
+  (run 'hg update HASH' to go to the desired revision)

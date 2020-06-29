@@ -23,6 +23,7 @@
   $ cd shallow
 
 Test pushing of specific sets of commits
+  $ hg debugmakepublic .
   $ drawdag <<'EOS'
   >  B  C          
   >  |  |          

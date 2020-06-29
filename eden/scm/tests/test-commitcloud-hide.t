@@ -35,6 +35,7 @@ manually.
   $ hg pull -B other
   pulling from ssh://user@dummy/server
   no changes found
+  $ hg up -qC other
 
   $ drawdag <<EOS
   >             S

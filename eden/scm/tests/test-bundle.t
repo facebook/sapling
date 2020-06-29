@@ -41,15 +41,6 @@ Setting up test
   $ cd ..
   $ hg init empty
 
-Bundle and phase
-
-  $ hg -R test phase --force --secret 0
-  $ hg -R test bundle phase.hg empty
-  searching for changes
-  no changes found (ignored 9 secret changesets)
-  [1]
-  $ hg -R test phase --draft -r 'head()'
-
 Bundle --all
 
   $ hg -R test bundle --all all.hg
@@ -294,20 +285,6 @@ generaldelta requirement is not listed in stream clone bundles unless used
   $ hg debugbundle --spec packednongd.hg
   none-packed1;requirements%3Drevlogv1
 
-Warning emitted when packed bundles contain secret changesets
-
-  $ hg init testsecret
-  $ cd testsecret
-  $ touch foo
-  $ hg -q commit -A -m initial
-  $ hg phase --force --secret -r .
-  $ cd ..
-
-  $ hg -R testsecret debugcreatestreamclonebundle packedsecret.hg
-  (warning: stream clone bundle will contain secret revisions)
-  writing 301 bytes for 4 files
-  bundle requirements: generaldelta, revlogv1
-
 Unpacking packed1 bundles with "hg unbundle" isn't allowed
 
   $ hg init packed
@@ -422,25 +399,25 @@ Log -R full.hg in partial
   summary:     1.1
   
   changeset:   3:eebf5a27f8ca
-  phase:       public
+  phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3
   
   changeset:   2:e38ba6f5b7e0
-  phase:       public
+  phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.2
   
   changeset:   1:34c2bf6b0626
-  phase:       public
+  phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.1
   
   changeset:   0:f9ee2f85a263
-  phase:       public
+  phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.0

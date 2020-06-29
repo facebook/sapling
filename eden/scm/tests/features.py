@@ -33,33 +33,7 @@ mutationblacklist = """
 """.split()
 
 narrowheadsincompatiblelist = """
-    test-blackbox.t
-    test-bookmarks-strip.t
     test-bookmarks.t
-    test-bundle.t
-    test-bundle2-multiple-changegroups.t
-    test-bundle2-remote-changegroup.t
-    test-clone-r.t
-    test-clone-uncompressed.t
-    test-commit-amend.t
-    test-commitcloud-backup-all.t
-    test-commitcloud-backup-bundlestore-short-hash.t
-    test-commitcloud-backup-lfs.t
-    test-commitcloud-backup-remotefilelog.t
-    test-commitcloud-backup-remotenames-public.t
-    test-commitcloud-backup-rev.t
-    test-commitcloud-backup-status.t
-    test-commitcloud-backup.t
-    test-commitcloud-hide.t
-    test-commitcloud-lazypull-phab.t
-    test-commitcloud-lazypull.t
-    test-commitcloud-sync-bookmarks.t
-    test-commitcloud-sync-migration.t
-    test-commitcloud-sync-omission.t
-    test-commitcloud-sync-rb-deletion.t
-    test-commitcloud-sync-rb-enabling.t
-    test-commitcloud-sync-remote-bookmarks.t
-    test-commitcloud-sync.t
     test-debugstrip.t
     test-default-push.t
     test-directaccess-revset.t
