@@ -54,7 +54,7 @@ Push commits that will be obsoleted
   $ hg up -q 0
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
-  $ log -r ":"
+  $ log -r "all()"
   @  2 [draft;rev=4;0c67ec8c24b9]
   |
   o  1 [draft;rev=3;a0c9c5791058]
@@ -74,7 +74,7 @@ Push commits that will be obsoleted
   added 2 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ log -r ":"
+  $ log -r "all()"
   @  2 [public;rev=6;dc31470c8386] default/master_bookmark
   |
   o  1 [public;rev=5;c2e526aacb51]
@@ -89,7 +89,7 @@ Push commits that will be obsoleted
 Push commits that will not be obsoleted
   $ hg up -q dc31470c8386
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
-  $ log -r ":"
+  $ log -r "all()"
   @  3 [draft;rev=7;6398085ceb9d]
   |
   o  2 [public;rev=6;dc31470c8386] default/master_bookmark
@@ -110,7 +110,7 @@ Push commits that will not be obsoleted
   adding file changes
   added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
-  $ log -r ":"
+  $ log -r "all()"
   @  3 [public;rev=7;6398085ceb9d] default/master_bookmark
   |
   o  2 [public;rev=6;dc31470c8386]
