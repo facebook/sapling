@@ -143,7 +143,6 @@ narrowheadsincompatiblelist = """
     test-shelve-t.py
 
     # Mononotke tests
-    test-commitcloud.t
     test-pushrebase.t
 """
 

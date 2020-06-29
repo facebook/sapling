@@ -14,12 +14,21 @@ setup configuration
   >   setup_common_config
   $ cd $TESTTMP
 
+  $ cat > $TESTTMP/mononoke_tunables.json <<EOF
+  > {
+  >   "killswitches": {
+  >     "mutation_advertise_for_infinitepush": true,
+  >     "mutation_accept_for_infinitepush": true,
+  >     "mutation_generate_for_draft": true
+  >   }
+  > }
+  > EOF
+
 setup common configuration for these tests
 mononoke + local commit cloud backend
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > amend =
-  > directaccess=
   > commitcloud =
   > infinitepush =
   > rebase =
@@ -27,8 +36,6 @@ mononoke + local commit cloud backend
   > share =
   > [infinitepush]
   > server=False
-  > [experimental]
-  > evolution = createmarkers, allowunstable
   > [commitcloud]
   > hostname = testhost
   > servicetype = local
@@ -36,9 +43,6 @@ mononoke + local commit cloud backend
   > user_token_path = $TESTTMP
   > owner_team = The Test Team
   > updateonmove = true
-  > [mutation]
-  > enabled = False
-  > proxy-obsstore = False
   > EOF
 
 setup repo
@@ -251,7 +255,6 @@ On the first client check that all commits were hidden
   $ cd ../client1
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  detected obsmarker inconsistency (fixing by obsoleting [660cb078da57, eba3648c3275, 44641a2b1a42] and reviving [])
   commitcloud: commits synchronized
   finished in * (glob)
   $ hgmn up master_bookmark -q
@@ -279,7 +282,7 @@ On the first client make 2 stacks
   o  0: 8b2dca0c8a72 public 'base_commit' bookmark1
   
 Make one of the commits public when it shouldn't be.
-  $ hgmn phase -p 8d621fa11677
+  $ hgmn debugmakepublic 8d621fa11677
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
   backing up stack rooted at ec61bf312a03
@@ -360,7 +363,7 @@ Commit still becomes available in the other repo
 
 Fix up that public commit, set it back to draft
   $ cd ../client1
-  $ hg phase -fd 8d621fa11677
+  $ hgmn debugmakepublic -d 8d621fa11677
 
 Clean up
   $ hgmn hide -r 'draft()' -q
