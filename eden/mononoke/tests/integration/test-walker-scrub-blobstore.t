@@ -111,7 +111,7 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
-  27 scrub: blobstore_id BlobstoreId(0) repaired for repo0000.
+  * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Final count: (40, 40)
   1 Bytes/s,* (glob)
   1 Walked* (glob)
