@@ -11,12 +11,8 @@ setup configuration
   $ cd $TESTTMP
 
 setup common configuration for these tests
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > amend=
-  > infinitepush=
-  > commitcloud=
-  > EOF
+
+  $ enable amend infinitepush commitcloud remotenames
 
 setup repo
 
@@ -89,7 +85,7 @@ Do infinitepush (aka commit cloud) push
   $ tglogp
   @  1: 47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
 Bookmark push should have been ignored

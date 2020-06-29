@@ -144,7 +144,6 @@ narrowheadsincompatiblelist = """
 
     # Mononotke tests
     test-commitcloud.t
-    test-infinitepush-commits-disabled.t
     test-infinitepush-hydrated.t
     test-infinitepush-mutation.t
     test-infinitepush.t
