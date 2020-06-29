@@ -10,6 +10,7 @@ setup configuration
 
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
+  $ enable remotenames
 
   $ cd $TESTTMP
 
@@ -57,14 +58,12 @@ start mononoke
   > [extensions]
   > pushrebase =
   > rebase =
-  > remotenames =
   > EOF
 
   $ cd ../repo-push2
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
-  > remotenames =
   > EOF
 
   $ cd ../repo-push3
@@ -92,7 +91,7 @@ Push files
   |
   o  14961831bd3a public 'add b'
   |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  o  ac82d8b1f7c4 public 'add a'
   
 
   $ cd "$TESTTMP/repo-push2"
@@ -104,7 +103,7 @@ Push files
   |
   o  14961831bd3a public 'add b'
   |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  o  ac82d8b1f7c4 public 'add a'
   
 
   $ cd "$TESTTMP/repo-pull"
@@ -112,7 +111,7 @@ Push files
   $ hgmn pull -q
 
   $ tglogpnr
-  o  064d994d0240 public 'add censored c' master_bookmark
+  o  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -128,10 +127,9 @@ Push files
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  updating bookmark master_bookmark
 
   $ tglogpnr
-  o  064d994d0240 public 'add censored c' master_bookmark
+  o  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -140,7 +138,6 @@ Push files
 
   $ hgmn up master_bookmark
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
 
 Update redacted blob
   $ cd "$TESTTMP/repo-push"
@@ -156,7 +153,7 @@ Update redacted blob
   |
   o  14961831bd3a public 'add b'
   |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  o  ac82d8b1f7c4 public 'add a'
   
 
   $ hg log -T '{node}\n'
@@ -179,7 +176,7 @@ Restart mononoke
 
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
-  o  064d994d0240 public 'add censored c' master_bookmark
+  o  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -188,10 +185,9 @@ Restart mononoke
 
   $ hgmn up master_bookmark
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master_bookmark)
 
   $ tglogpnr
-  @  064d994d0240 public 'add censored c' master_bookmark
+  @  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -218,7 +214,7 @@ Try push a new version of a redacted blob
   |
   o  14961831bd3a public 'add b'
   |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  o  ac82d8b1f7c4 public 'add a'
   
 
 As of the time of writing, updating redacted files throws an error - artifact of the existing implementation.
@@ -244,12 +240,12 @@ As of the time of writing, updating redacted files throws an error - artifact of
   |
   o  14961831bd3a public 'add b'
   |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  o  ac82d8b1f7c4 public 'add a'
   
 
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
-  @  064d994d0240 public 'add censored c' master_bookmark
+  @  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -259,7 +255,7 @@ As of the time of writing, updating redacted files throws an error - artifact of
   $ hgmn pull -q
 
   $ tglogpnr
-  o  bbb84cdc8ec0 public 'uncensore c' master_bookmark
+  o  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
   |
   @  064d994d0240 public 'add censored c'
   |
@@ -270,14 +266,13 @@ As of the time of writing, updating redacted files throws an error - artifact of
 
   $ hgmn up 064d994d0240
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (leaving bookmark master_bookmark)
 
 Expect success (no blob in this commit is redacted)
   $ hgmn up bbb84cdc8ec0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ tglogpnr
-  @  bbb84cdc8ec0 public 'uncensore c' master_bookmark
+  @  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
   |
   o  064d994d0240 public 'add censored c'
   |
@@ -289,7 +284,7 @@ Expect success (no blob in this commit is redacted)
 Test rebasing local commit on top of master_bookmark, when base commit contains censored blob
   $ cd "$TESTTMP/repo-push3"
   $ tglogpnr
-  @  064d994d0240 public 'add censored c' master_bookmark
+  @  064d994d0240 public 'add censored c'  default/master_bookmark
   |
   o  14961831bd3a public 'add b'
   |
@@ -300,11 +295,10 @@ Test rebasing local commit on top of master_bookmark, when base commit contains 
   $ hg ci -q -m "update a"
 
   $ hgmn pull -q
-  divergent bookmark master_bookmark stored as master_bookmark@default
   $ tglogpnr
-  o  bbb84cdc8ec0 public 'uncensore c' master_bookmark@default
+  o  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
   |
-  | @  c6e4e7cae299 draft 'update a' master_bookmark
+  | @  c6e4e7cae299 draft 'update a'
   |/
   o  064d994d0240 public 'add censored c'
   |
@@ -315,12 +309,12 @@ Test rebasing local commit on top of master_bookmark, when base commit contains 
 
 Should be successful
   $ hgmn rebase -s . -d bbb84cdc8ec0
-  rebasing c6e4e7cae299 "update a" (master_bookmark)
+  rebasing c6e4e7cae299 "update a"
 
   $ tglogpnr
-  @  d967612e0cc1 draft 'update a' master_bookmark
+  @  d967612e0cc1 draft 'update a'
   |
-  o  bbb84cdc8ec0 public 'uncensore c'
+  o  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
   |
   o  064d994d0240 public 'add censored c'
   |
@@ -333,9 +327,9 @@ Should be successful
   $ echo "bb" > b
 
   $ tglogpnr
-  o  d967612e0cc1 draft 'update a' master_bookmark
+  o  d967612e0cc1 draft 'update a'
   |
-  o  bbb84cdc8ec0 public 'uncensore c'
+  o  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
   |
   @  064d994d0240 public 'add censored c'
   |
@@ -348,9 +342,9 @@ Updating from a commit that contains a redacted file to another commit should su
   $ hgmn up -q bbb84cdc8ec0
 
   $ tglogpnr
-  o  d967612e0cc1 draft 'update a' master_bookmark
+  o  d967612e0cc1 draft 'update a'
   |
-  @  bbb84cdc8ec0 public 'uncensore c'
+  @  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
   |
   o  064d994d0240 public 'add censored c'
   |
