@@ -17,17 +17,10 @@ use time_ext::DurationExt;
 use tracing::TraceContext;
 use tunables::tunables;
 
-use anyhow as _; // oss uses anyhow
-
 #[cfg(fbcode_build)]
 mod facebook;
-#[cfg(not(fbcode_build))]
-mod oss;
 
-#[cfg(fbcode_build)]
-pub use facebook::*;
-#[cfg(not(fbcode_build))]
-pub use oss::ScribeClientImplementation;
+pub use scribe_ext::ScribeClientImplementation;
 
 pub trait ScubaSampleBuilderExt {
     fn with_opt_table(fb: FacebookInit, scuba_table: Option<String>) -> Self;

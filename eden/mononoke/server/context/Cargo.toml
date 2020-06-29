@@ -18,6 +18,7 @@ doc = false
 async_limiter = { path = "../../common/async_limiter" }
 load_limiter = { path = "../../load_limiter" }
 permission_checker = { path = "../../permission_checker" }
+scribe_ext = { path = "../../common/scribe_ext" }
 scuba_ext = { path = "../../common/scuba_ext" }
 session_id = { path = "../session_id" }
 sshrelay = { path = "../../sshrelay" }

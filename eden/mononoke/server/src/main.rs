@@ -45,6 +45,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 
     let app = args::add_mcrouter_args(app);
     let app = args::add_disabled_hooks_args(app);
+    let app = args::add_scribe_logging_args(app);
     app
 }
 
@@ -97,6 +98,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         config_source,
         cmdlib::args::parse_readonly_storage(&matches),
         cmdlib::args::parse_blobstore_options(&matches),
+        cmdlib::args::get_scribe(fb, &matches)?,
     );
 
     #[cfg(fbcode_build)]

@@ -456,7 +456,9 @@ impl RepoClient {
         scuba.add("command", command);
         scuba.log_with_msg("Start processing", None);
 
-        let ctx = self.session.new_context(logger, scuba);
+        let ctx =
+            self.session
+                .new_context_with_scribe(logger, scuba, self.logging.scribe().clone());
 
         let command_logger = CommandLogger::new(
             ctx.clone(),

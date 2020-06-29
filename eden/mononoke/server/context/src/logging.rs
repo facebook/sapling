@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use fbinit::FacebookInit;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use std::sync::{
@@ -13,6 +14,7 @@ use std::sync::{
 };
 
 use crate::perf_counters::PerfCounters;
+use scribe_ext::Scribe;
 
 /// Used to correlation a high level action on a CoreContext
 /// e.g. walk of a repo,  with low level actions using that context
@@ -41,15 +43,17 @@ pub struct LoggingContainer {
     scuba: Arc<ScubaSampleBuilder>,
     perf_counters: Arc<PerfCounters>,
     sampling_key: Option<SamplingKey>,
+    scribe: Scribe,
 }
 
 impl LoggingContainer {
-    pub fn new(logger: Logger, scuba: ScubaSampleBuilder) -> Self {
+    pub fn new(fb: FacebookInit, logger: Logger, scuba: ScubaSampleBuilder) -> Self {
         Self {
             logger,
             scuba: Arc::new(scuba),
             perf_counters: Arc::new(PerfCounters::default()),
             sampling_key: None,
+            scribe: Scribe::new(fb),
         }
     }
 
@@ -59,7 +63,13 @@ impl LoggingContainer {
             scuba: self.scuba.clone(),
             perf_counters: self.perf_counters.clone(),
             sampling_key: Some(sampling_key),
+            scribe: self.scribe.clone(),
         }
+    }
+
+    pub fn with_scribe(&mut self, scribe: Scribe) -> &mut Self {
+        self.scribe = scribe;
+        self
     }
 
     pub fn logger(&self) -> &Logger {
@@ -76,5 +86,9 @@ impl LoggingContainer {
 
     pub fn sampling_key(&self) -> Option<&SamplingKey> {
         self.sampling_key.as_ref()
+    }
+
+    pub fn scribe(&self) -> &Scribe {
+        &self.scribe
     }
 }

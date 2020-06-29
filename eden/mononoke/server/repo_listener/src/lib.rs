@@ -24,6 +24,7 @@ use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
 use openssl::ssl::SslAcceptor;
+use scribe_ext::Scribe;
 use slog::{debug, Logger};
 use sql_ext::facebook::MysqlOptions;
 use std::collections::{HashMap, HashSet};
@@ -50,6 +51,7 @@ pub fn create_repo_listeners(
     config_store: Option<ConfigStore>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
+    scribe: Scribe,
 ) -> BoxFuture<(), Error> {
     let sockname = String::from(sockname);
     let root_log = root_log.clone();
@@ -77,6 +79,7 @@ pub fn create_repo_listeners(
             tls_acceptor,
             terminate_process,
             config_store,
+            scribe,
         )
     })
     .boxify()

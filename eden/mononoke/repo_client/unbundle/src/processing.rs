@@ -37,7 +37,7 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id, RepositoryId};
 use pushrebase::{self, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
 use reverse_filler_queue::ReverseFillerQueue;
-use scribe_commit_queue::{self, ScribeCommitQueue};
+use scribe_commit_queue::{self, LogToScribe};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, o, warn};
 use stats::prelude::*;
@@ -978,10 +978,8 @@ async fn log_commits_to_scribe(
     commit_scribe_category: Option<String>,
 ) -> Result<(), Error> {
     let queue = match commit_scribe_category {
-        Some(category) => {
-            scribe_commit_queue::LogToScribe::new_with_default_scribe(ctx.fb, category)
-        }
-        None => scribe_commit_queue::LogToScribe::new_with_discard(),
+        Some(category) if !category.is_empty() => LogToScribe::new(ctx.scribe().clone(), category),
+        _ => LogToScribe::new_with_discard(),
     };
 
     let repo_id = repo.get_repoid();
@@ -1015,7 +1013,7 @@ async fn log_commits_to_scribe(
                     ctx.user_unix_name().as_deref(),
                     ctx.source_hostname().as_deref(),
                 );
-                queue.queue_commit(&ci).await
+                queue.queue_commit(&ci)
             }
         })
         .collect();

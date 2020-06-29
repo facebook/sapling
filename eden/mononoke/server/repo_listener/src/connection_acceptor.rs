@@ -33,6 +33,7 @@ use permission_checker::{
     BoxMembershipChecker, BoxPermissionChecker, MembershipCheckerBuilder, MononokeIdentity,
     MononokeIdentitySet, PermissionCheckerBuilder,
 };
+use scribe_ext::Scribe;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{crit, error, o, Drain, Level, Logger};
 use slog_kvfilter::KVFilter;
@@ -73,6 +74,7 @@ pub fn connection_acceptor(
     tls_acceptor: SslAcceptor,
     terminate_process: Arc<AtomicBool>,
     config_store: Option<ConfigStore>,
+    scribe: Scribe,
 ) -> BoxFuture<(), Error> {
     let repo_handlers = Arc::new(repo_handlers);
     let tls_acceptor = Arc::new(tls_acceptor);
@@ -119,7 +121,8 @@ pub fn connection_acceptor(
                     root_log,
                     repo_handlers,
                     tls_acceptor,
-                    security_checker
+                    security_checker,
+                    scribe,
                 );
                 OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
                 tokio_old::spawn(future::lazy(move || {
@@ -132,6 +135,7 @@ pub fn connection_acceptor(
                         security_checker.clone(),
                         load_limiting_config.clone(),
                         maybe_live_commit_sync_config.clone(),
+                        scribe,
                     )
                     .then(|res| {
                         OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
@@ -153,6 +157,7 @@ fn accept(
     security_checker: Arc<ConnectionsSecurityChecker>,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
+    scribe: Scribe,
 ) -> impl Future<Item = (), Error = ()> {
     let addr = sock.peer_addr();
 
@@ -254,6 +259,7 @@ fn accept(
                                 load_limiting_config,
                                 addr.ip(),
                                 maybe_live_commit_sync_config,
+                                scribe,
                             )
                             .map(Ok)
                             .boxed()

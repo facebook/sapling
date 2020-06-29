@@ -29,6 +29,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::Future;
 use maplit::hashmap;
 use panichandler::{self, Fate};
+use scribe_ext::Scribe;
 use scuba::ScubaSampleBuilder;
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_term::TermDecorator;
@@ -826,6 +827,22 @@ pub fn get_scuba_sample_builder<'a>(
         scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
     }
     Ok(scuba_logger)
+}
+
+pub fn add_scribe_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name("scribe-logging-directory")
+            .long("scribe-logging-directory")
+            .takes_value(true)
+            .help("Filesystem directory where to log all scribe writes"),
+    )
+}
+
+pub fn get_scribe<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<Scribe> {
+    match matches.value_of("scribe-logging-directory") {
+        Some(dir) => Ok(Scribe::new_to_file(PathBuf::from(dir))),
+        None => Ok(Scribe::new(fb)),
+    }
 }
 
 pub fn get_config_path<'a>(matches: &'a ArgMatches<'a>) -> Result<&'a str> {

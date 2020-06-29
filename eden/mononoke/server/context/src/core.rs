@@ -7,6 +7,7 @@
 
 use fbinit::FacebookInit;
 use permission_checker::MononokeIdentitySet;
+use scribe_ext::Scribe;
 use scuba_ext::ScubaSampleBuilder;
 use session_id::SessionId;
 use slog::{o, Drain, Level, Logger};
@@ -114,5 +115,9 @@ impl CoreContext {
 
     pub fn identities(&self) -> Option<&MononokeIdentitySet> {
         self.session().identities()
+    }
+
+    pub fn scribe(&self) -> &Scribe {
+        self.logging.scribe()
     }
 }

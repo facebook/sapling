@@ -18,6 +18,7 @@ mercurial_types = { path = "../mercurial/types" }
 metaconfig_parser = { path = "../metaconfig/parser" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }
+scribe_ext = { path = "../common/scribe_ext" }
 sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
 tunables = { path = "../tunables" }

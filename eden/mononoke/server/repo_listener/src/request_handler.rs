@@ -25,6 +25,7 @@ use load_limiter::{LoadLimiterBuilder, Metric};
 use maplit::{hashmap, hashset};
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use repo_client::RepoClient;
+use scribe_ext::Scribe;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{self, error, info, o, warn, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
@@ -110,6 +111,7 @@ pub async fn request_handler(
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     addr: IpAddr,
     maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
+    scribe: Scribe,
 ) {
     let Stdio {
         stdin,
@@ -215,7 +217,8 @@ pub async fn request_handler(
 
     let session = session_builder.build();
 
-    let logging = LoggingContainer::new(conn_log.clone(), scuba.clone());
+    let mut logging = LoggingContainer::new(fb, conn_log.clone(), scuba.clone());
+    logging.with_scribe(scribe);
 
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(

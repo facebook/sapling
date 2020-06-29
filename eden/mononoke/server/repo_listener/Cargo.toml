@@ -25,6 +25,7 @@ metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 permission_checker = { path = "../../permission_checker" }
 repo_client = { path = "../../repo_client" }
+scribe_ext = { path = "../../common/scribe_ext" }
 scuba_ext = { path = "../../common/scuba_ext" }
 slog_ext = { path = "../../common/rust/slog_ext" }
 sql_construct = { path = "../../common/sql_construct" }

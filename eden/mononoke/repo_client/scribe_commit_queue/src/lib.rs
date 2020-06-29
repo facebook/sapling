@@ -5,19 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#[cfg(fbcode_build)]
-mod facebook;
-#[cfg(not(fbcode_build))]
-mod oss;
-
-#[cfg(fbcode_build)]
-pub use crate::facebook::LogToScribe;
-#[cfg(not(fbcode_build))]
-pub use crate::oss::LogToScribe;
-
 use anyhow::Error;
-use async_trait::async_trait;
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
+use scribe_ext::Scribe;
 use serde_derive::Serialize;
 
 #[derive(Serialize)]
@@ -56,7 +46,33 @@ impl<'a> CommitInfo<'a> {
     }
 }
 
-#[async_trait]
-pub trait ScribeCommitQueue: Send + Sync {
-    async fn queue_commit(&self, commit: &CommitInfo<'_>) -> Result<(), Error>;
+pub struct LogToScribe {
+    client: Option<Scribe>,
+    category: String,
+}
+
+impl LogToScribe {
+    pub fn new(client: Scribe, category: String) -> Self {
+        Self {
+            client: Some(client),
+            category,
+        }
+    }
+
+    pub fn new_with_discard() -> Self {
+        Self {
+            client: None,
+            category: String::new(),
+        }
+    }
+
+    pub fn queue_commit(&self, commit: &CommitInfo<'_>) -> Result<(), Error> {
+        match &self.client {
+            Some(ref client) => {
+                let commit = serde_json::to_string(commit)?;
+                client.offer(&self.category, &commit)
+            }
+            None => Ok(()),
+        }
+    }
 }

@@ -60,8 +60,14 @@ function mononoke {
   export MONONOKE_SOCKET
   MONONOKE_SOCKET=$(get_free_socket)
 
+  SCRIBE_LOGS_DIR="$TESTTMP/scribe_logs"
+  if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
+    mkdir "$SCRIBE_LOGS_DIR"
+  fi
+
   PYTHONWARNINGS="ignore:::requests" \
   GLOG_minloglevel=5 "$MONONOKE_SERVER" "$@" \
+  --scribe-logging-directory "$TESTTMP/scribe_logs" \
   --ca-pem "$TEST_CERTDIR/root-ca.crt" \
   --private-key "$TEST_CERTDIR/localhost.key" \
   --cert "$TEST_CERTDIR/localhost.crt" \
@@ -705,6 +711,12 @@ fi
 forbid_p2_root_rebases=false
 CONFIG
 
+if [[ -v COMMIT_SCRIBE_CATEGORY ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+commit_scribe_category = "$COMMIT_SCRIBE_CATEGORY"
+CONFIG
+fi
+
 if [[ -v ALLOW_CASEFOLDING ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 casefolding_check=false
@@ -762,6 +774,17 @@ if [[ -v DISALLOW_NON_PUSHREBASE ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [push]
 pure_push_allowed = false
+CONFIG
+else
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[push]
+pure_push_allowed = true
+CONFIG
+fi
+
+if [[ -v COMMIT_SCRIBE_CATEGORY ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+commit_scribe_category = "$COMMIT_SCRIBE_CATEGORY"
 CONFIG
 fi
 

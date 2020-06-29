@@ -190,6 +190,7 @@ members = [
     "common/rust/caching_ext",
     "common/rust/slog_ext",
     "common/rust/sql_ext",
+    "common/scribe_ext",
     "common/scuba_ext",
     "common/sql_construct",
     "common/topo_sort",
