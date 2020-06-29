@@ -8,12 +8,11 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-use anyhow::{anyhow, Result};
-use clap::{App, ArgMatches};
+use anyhow::Result;
+use clap::App;
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use metaconfig_parser::{load_repo_configs, RepoConfigs};
 use slog::info;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -33,9 +32,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("serve repos")
         .args_from_usage(
             r#"
-            [cpath]      -P, --config_path [PATH]           'path to the config files (DEPRECATED)'
-
-                          --listening-host-port <PATH>           'tcp address to listen to in format `host:port`'
+            --listening-host-port <PATH>           'tcp address to listen to in format `host:port`'
 
             -p, --thrift_port [PORT] 'if provided the thrift server will start on this port'
 
@@ -51,17 +48,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     app
 }
 
-// TODO(harveyhunt): Remove this once all uses of --config_path are gone.
-fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    if let Some(config_path) = matches.value_of("cpath") {
-        load_repo_configs(fb, config_path)
-    } else if let Some(config_path) = matches.value_of(args::CONFIG_PATH) {
-        load_repo_configs(fb, config_path)
-    } else {
-        Err(anyhow!("a config path must be specified"))
-    }
-}
-
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
@@ -71,7 +57,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     info!(root_log, "Starting up");
 
-    let config = get_config(fb, &matches)?;
+    let config = args::load_repo_configs(fb, &matches)?;
     let acceptor = {
         let cert = matches.value_of("cert").unwrap().to_string();
         let private_key = matches.value_of("private_key").unwrap().to_string();

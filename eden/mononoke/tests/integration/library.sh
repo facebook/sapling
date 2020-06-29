@@ -69,7 +69,7 @@ function mononoke {
   --debug \
   --test-instance \
   --listening-host-port "[::1]:$MONONOKE_SOCKET" \
-  -P "$TESTTMP/mononoke-config" \
+  --mononoke-config-path "$TESTTMP/mononoke-config" \
    "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
   export MONONOKE_PID=$!
   echo "$MONONOKE_PID" >> "$DAEMON_PIDS"

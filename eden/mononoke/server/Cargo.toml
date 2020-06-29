@@ -8,10 +8,8 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 cmdlib = { path = "../cmdlib" }
-metaconfig_parser = { path = "../metaconfig/parser" }
 monitoring = { path = "monitoring" }
 repo_listener = { path = "repo_listener" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"

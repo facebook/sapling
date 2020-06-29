@@ -52,8 +52,7 @@ use crate::log;
 
 use self::cache::parse_caching;
 
-pub const CONFIG_PATH: &str = "mononoke-config-path";
-
+const CONFIG_PATH: &str = "mononoke-config-path";
 const REPO_ID: &str = "repo-id";
 const REPO_NAME: &str = "repo-name";
 const SOURCE_REPO_GROUP: &str = "source-repo";
