@@ -12,12 +12,8 @@ Disable boookmarks cache because we manually modify bookmarks table
   $ cd $TESTTMP
 
 setup common configuration for these tests
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > amend=
-  > infinitepush=
-  > infinitepushbackup=
-  > EOF
+
+  $ enable amend infinitepush infinitepushbackup remotenames
 
 setup repo
 
@@ -78,12 +74,12 @@ create new bookmarks, then update their properties
   |
   o  907767d421e4 public 'add b'  default/not_pull_default
   |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark default/master_bookmark
+  o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
   
 test publishing
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
   
   $ hgmn pull
   pulling from ssh://user@dummy/rep* (glob)
@@ -100,12 +96,12 @@ test publishing
   $ tglogpnr
   @  b2d646f64a99 draft 'add c'
   |
-  o  907767d421e4 public 'add b'
+  o  907767d421e4 draft 'add b'
   |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
+  o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
   
   $ hgmn bookmarks
-     master_bookmark           0:ac82d8b1f7c4
+  no bookmarks set
   $ hgmn bookmarks --list-remote "*"
      master_bookmark           ac82d8b1f7c418c61a493ed229ffaa981bda8e90
      not_pull_default          907767d421e4cb28c7978bedef8ccac7242b155e

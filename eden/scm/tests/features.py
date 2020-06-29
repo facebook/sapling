@@ -143,7 +143,6 @@ narrowheadsincompatiblelist = """
     test-shelve-t.py
 
     # Mononotke tests
-    test-bookmark-hg-kind.t
     test-commitcloud.t
     test-gettreepack-designated-nodes.t
     test-gettreepack-sparse-update.t
