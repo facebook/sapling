@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 mod envelope;
 mod pack;
 mod store;

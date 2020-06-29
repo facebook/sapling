@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData};
 use cloned::cloned;
@@ -105,7 +107,6 @@ mod test {
     use super::*;
 
     use fbinit::FacebookInit;
-    use futures::Future;
     use std::sync::atomic::{AtomicBool, Ordering};
 
     use context::SamplingKey;

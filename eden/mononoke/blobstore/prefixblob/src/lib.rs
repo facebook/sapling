@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 use anyhow::Error;
 use inlinable_string::InlinableString;
 
@@ -86,7 +88,6 @@ mod test {
 
     use bytes::Bytes;
     use fbinit::FacebookInit;
-    use futures::Future;
 
     use memblob::EagerMemblob;
 

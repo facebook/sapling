@@ -13,11 +13,9 @@ use blobstore::{Blobstore, BlobstoreGetData, BlobstoreWithLink};
 use bytes::Bytes;
 use context::CoreContext;
 use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt, TryFutureExt},
+    future::{BoxFuture, FutureExt},
     stream::{FuturesUnordered, TryStreamExt},
 };
-use futures_ext::{try_boxfuture, BoxFuture as BoxFuture01, FutureExt as Future01Ext};
 use mononoke_types::BlobstoreBytes;
 use packblob_thrift::{PackedEntry, SingleValue, StorageEnvelope, StorageFormat};
 use std::{convert::TryInto, io::Cursor};
