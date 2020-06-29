@@ -50,6 +50,7 @@ _ignoreextensions = {
     "hbisect",
     "hgcia",
     "hgk",
+    "hiddenerror",
     "inotify",
     "interhg",
     "morecolors",

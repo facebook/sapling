@@ -129,7 +129,6 @@ Somehow problematic: With many extensions
   > gitrevset=!
   > grpcheck=
   > hgevents=
-  > hiddenerror=
   > histedit=
   > infinitepush=
   > journal=

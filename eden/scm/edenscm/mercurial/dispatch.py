@@ -278,7 +278,6 @@ def _preimportmodules():
         "gitlookup",
         "grpcheck",
         "hgevents",
-        "hiddenerror",
         "histedit",
         "infinitepush",
         "journal",
