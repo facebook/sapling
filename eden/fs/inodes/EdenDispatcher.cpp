@@ -377,7 +377,12 @@ folly::Future<fuse_entry_out> EdenDispatcher::symlink(
     PathComponentPiece name,
     StringPiece link) {
   FB_LOGF(
-      mount_->getStraceLogger(), DBG7, "rmdir({}, {}, {})", parent, name, link);
+      mount_->getStraceLogger(),
+      DBG7,
+      "symlink({}, {}, {})",
+      parent,
+      name,
+      link);
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [linkContents = link.str(),
        childName = PathComponent{name}](const TreeInodePtr& inode) {
