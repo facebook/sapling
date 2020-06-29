@@ -11,12 +11,8 @@ setup configuration
   $ cd $TESTTMP
 
 setup common configuration for these tests
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > amend=
-  > infinitepush=
-  > commitcloud=
-  > EOF
+
+  $ enable amend infinitepush commitcloud remotenames
 
 setup repo
 
@@ -75,9 +71,6 @@ Do infinitepush (aka commit cloud) push
   sending batch command
   searching for changes
   all remote heads known locally
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
@@ -97,9 +90,6 @@ Do infinitepush (aka commit cloud) push
   bundle2-input-bundle: 1 params no-transaction
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
   bundle2-input-bundle: 0 parts total
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
@@ -109,7 +99,7 @@ Do infinitepush (aka commit cloud) push
   |
   o  1: 895414f853ef draft 'new1'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed public 'a'
   
 
 check unhydrated infinitepush pulls
@@ -142,6 +132,9 @@ check unhydrated infinitepush pulls
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
   sending lookup command
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 57 bytes
   query 1; heads
   sending batch command
   searching for changes
@@ -159,7 +152,7 @@ check unhydrated infinitepush pulls
   bundle2-input-part: "phase-heads" supported
   bundle2-input-part: total payload size * (glob)
   bundle2-input-bundle: 1 parts total
-  checking for updated bookmarks
+  remotenames: skipped syncing local bookmarks
 
 -- update to the recently pulled draft commit
 -- note the presence of peer connection, the `gettreepack` and `getpackv1` wireproto commands
@@ -222,6 +215,9 @@ check hydrated infinitepush pulls
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
   sending lookup command
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 57 bytes
   query 1; heads
   sending batch command
   searching for changes
@@ -242,7 +238,7 @@ check hydrated infinitepush pulls
   bundle2-input-part: "phase-heads" supported
   bundle2-input-part: total payload size * (glob)
   bundle2-input-bundle: 2 parts total
-  checking for updated bookmarks
+  remotenames: skipped syncing local bookmarks
 
 -- update to the draft commit in the middle of the stack
 -- note the absence of any wireproto commands
