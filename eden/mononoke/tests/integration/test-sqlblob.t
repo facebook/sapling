@@ -11,6 +11,10 @@ setup configuration
   $ REPOID=1 REPONAME=disabled_repo ENABLED=false setup_mononoke_config
   $ cd $TESTTMP
 
+  $ configure selectivepull
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,master_bookmark2
+  $ setconfig experimental.new-clone-path=true
+
 setup common configuration
   $ cat >> $HGRCPATH <<EOF
   > [ui]
@@ -135,8 +139,7 @@ start mononoke
   $ hg up -q 0
 Test a pull of one specific revision
   $ hgmn pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
-Pull the rest
-  $ hgmn pull -q
+(with selectivepull, pulling a commit hash also pulls the selected bookmarks)
 
   $ hg log -r '3903775176ed::329b10223740' --graph  -T '{node|short} {desc}'
   o  329b10223740 modify file
@@ -202,14 +205,8 @@ to create a fileblob bookmark
 #     test-bookmark             0:3903775176ed
 
 Do a streaming clone of the repo
-  $ hgmn clone --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true --config extensions.lz4revlog=
-  streaming all changes
+  $ hgmn clone -U --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true --config extensions.lz4revlog=
+  fetching changelog
   2 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (* bytes/sec) (glob)
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 10 changesets with 0 changes to 0 files
-  updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  fetching selected remote bookmarks
