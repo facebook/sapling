@@ -158,8 +158,6 @@ def _hg_runner(
             manifest_env["BINARY_HGPYTHON"],
             os.path.join(manifest_env["RUN_TESTS_LIBRARY"], "run-tests.py"),
             "--maxdifflines=1000",
-            "--extra-config-opt",
-            "experimental.narrow-heads=false",
             "--with-hg",
             manifest_env["BINARY_HG"],
             "--chg",

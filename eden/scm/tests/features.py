@@ -141,6 +141,26 @@ narrowheadsincompatiblelist = """
     test-hgsql-local-commands-t.py
     test-revset-t.py
     test-shelve-t.py
+
+    # Mononotke tests
+    test-bookmark-hg-kind.t
+    test-commitcloud.t
+    test-gettreepack-designated-nodes.t
+    test-gettreepack-sparse-update.t
+    test-infinitepush-commits-disabled.t
+    test-infinitepush-hydrated.t
+    test-infinitepush-lfs.t
+    test-infinitepush-mutation.t
+    test-infinitepush.t
+    test-push-protocol-lfs.t
+    test-push-protocol.t
+    test-push-readonly.t
+    test-pushrebase-emit-obsmarkers.t
+    test-pushrebase.t
+    test-push-redirector-sync-job.t
+    test-redaction.t
+    test-sqlblob.t
+    test-walker-scrub-blobstore.t
 """
 
 
