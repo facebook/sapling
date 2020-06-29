@@ -66,9 +66,6 @@ create new commit in repo2 and check that push fails
   sending batch command
   searching for changes
   all remote heads known locally
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command

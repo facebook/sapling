@@ -71,9 +71,6 @@ Do infinitepush (aka commit cloud) push
   sending batch command
   searching for changes
   all remote heads known locally
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
@@ -96,9 +93,6 @@ Do infinitepush (aka commit cloud) push
   bundle2-input-bundle: 1 params no-transaction
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
   bundle2-input-bundle: 0 parts total
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes

@@ -56,9 +56,6 @@ Create new commits
   sending batch command
   searching for changes
   all remote heads known locally
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command
@@ -83,9 +80,6 @@ Create new commits
   bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
   bundle2-input-bundle: 1 parts total
   updating bookmark master_bookmark
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
 
 Clone the repository, and pull
 

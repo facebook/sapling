@@ -149,12 +149,8 @@ narrowheadsincompatiblelist = """
     test-gettreepack-sparse-update.t
     test-infinitepush-commits-disabled.t
     test-infinitepush-hydrated.t
-    test-infinitepush-lfs.t
     test-infinitepush-mutation.t
     test-infinitepush.t
-    test-push-protocol-lfs.t
-    test-push-protocol.t
-    test-push-readonly.t
     test-pushrebase-emit-obsmarkers.t
     test-pushrebase.t
     test-push-redirector-sync-job.t

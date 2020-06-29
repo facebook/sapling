@@ -236,9 +236,6 @@ push to Mononoke
   sending batch command
   searching for changes
   all remote heads known locally
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command
@@ -262,9 +259,6 @@ push to Mononoke
   bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
   bundle2-input-bundle: 1 parts total
   updating bookmark master_bookmark
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
 
 Now pull what was just pushed
 
