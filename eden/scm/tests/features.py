@@ -28,7 +28,6 @@ mutationblacklist = """
     test-mutation-fromobsmarkers.t
     test-rebase-copy-relations.t
     test-rebase-dest.t
-    test-rebase-obsolete.t
     test-revset2.t
     test-globalrevs-t.py
     test-obsmarker-template-t.py
