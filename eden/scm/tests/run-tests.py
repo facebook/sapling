@@ -2820,6 +2820,7 @@ class TestSuite(unittest.TestSuite):
             statthread.start()
         elif showprogress:
             progressthread = threading.Thread(target=progressrenderer, name="progress")
+            progressthread.daemon = True
             progressthread.start()
 
         try:
