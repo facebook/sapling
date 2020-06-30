@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::time::Instant;
-
 use curl::multi::Multi;
 
 use crate::{
@@ -72,31 +70,10 @@ impl HttpClient {
             driver.add(handle)?;
         }
 
-        let start = Instant::now();
-
         driver.perform(|res| {
             let res = res.map_err(Into::into).and_then(Response::from_handle);
             response_cb(res)
-        })?;
-
-        let elapsed = start.elapsed();
-
-        let progress = driver.progress().aggregate();
-        let latency = driver
-            .progress()
-            .first_byte_received()
-            .unwrap_or(start)
-            .duration_since(start);
-
-        let stats = Stats {
-            downloaded: progress.downloaded,
-            uploaded: progress.uploaded,
-            requests: driver.num_transfers(),
-            time: elapsed,
-            latency,
-        };
-
-        Ok(stats)
+        })
     }
 }
 

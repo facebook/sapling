@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::{cell::RefCell, time::Duration};
+use std::cell::RefCell;
+use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use curl::{
@@ -17,6 +18,7 @@ use curl::{
 use crate::{
     errors::HttpClientError,
     progress::{MonitorProgress, Progress, ProgressReporter},
+    stats::Stats,
 };
 
 /// Timeout for a single iteration of waiting for activity
@@ -63,10 +65,6 @@ where
         }
     }
 
-    pub(crate) fn progress(&self) -> &ProgressReporter<P> {
-        &self.progress
-    }
-
     pub(crate) fn num_transfers(&self) -> usize {
         (&*self.handles.borrow()).len()
     }
@@ -95,12 +93,14 @@ where
     /// The user-supplied callback will be called whenever a transfer
     /// completes, successfully or otherwise. The callback may cause this
     /// method to return early (aborting all other active transfers).
-    pub(crate) fn perform<F>(&self, mut callback: F) -> Result<(), HttpClientError>
+    pub(crate) fn perform<F>(&self, mut callback: F) -> Result<Stats, HttpClientError>
     where
         F: FnMut(Result<Easy2<H>, curl::Error>) -> bool,
     {
         let total = self.num_transfers();
         let mut in_progress = total;
+
+        let start = Instant::now();
 
         loop {
             log::trace!("{}/{} transfers complete", total - in_progress, total);
@@ -148,7 +148,22 @@ where
             }
         }
 
-        Ok(())
+        let elapsed = start.elapsed();
+
+        let progress = self.progress.aggregate();
+        let latency = self
+            .progress
+            .first_byte_received()
+            .unwrap_or(start)
+            .duration_since(start);
+
+        Ok(Stats {
+            downloaded: progress.downloaded,
+            uploaded: progress.uploaded,
+            requests: self.num_transfers(),
+            time: elapsed,
+            latency,
+        })
     }
 
     /// Handle a message emitted by the Multi session for any of the
