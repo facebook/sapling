@@ -646,8 +646,13 @@ def validatedynamicconfig(ui):
         ("configs", "generationtime"),
         ("configs", "loaddynamicconfig"),
         ("configs", "mismatchsampling"),
+        ("configs", "remote_allowlist"),
         ("configs", "validatedynamicconfig"),
     ]
+
+    for sectionkey in ui.configlist("configs", "remote_allowlist", []):
+        section, key = sectionkey.split(".", 1)
+        allowedlist.append((section, key))
 
     testrcs = ui.configlist("configs", "testdynamicconfigsubset")
     if testrcs:
