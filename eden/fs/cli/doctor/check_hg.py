@@ -94,7 +94,7 @@ class DirstateChecker(HgFileChecker):
         if (
             self._new_parents != self._old_dirstate_parents
             # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.
-            or self._new_parents[0] != self._old_snapshot
+            and self._new_parents[0] != self._old_snapshot
         ):
             assert errors
 

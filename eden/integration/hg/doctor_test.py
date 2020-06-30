@@ -34,6 +34,21 @@ class DoctorTest(EdenHgTestCase):
             args.append("-n")
         return self.eden.run_unchecked(*args, stdout=subprocess.PIPE)
 
+    def test_eden_doctor_doesnt_crash_on_merge_commit(self) -> None:
+        self.repo.write_file("hello.txt", "one")
+        commit3 = self.repo.commit("Commit three")
+
+        self.repo.update(self.commit2)
+        self.repo.write_file("hello.txt", "two")
+        commit4 = self.repo.commit("Commit four")
+
+        with self.assertRaises(hgrepo.HgError):
+            self.hg("rebase", "-r", commit4, "-d", commit3)
+        self.assert_unresolved(unresolved=["hello.txt"])
+
+        cmd_result = self.run_doctor(dry_run=False)
+        self.assertNotIn(b"AssertionError", cmd_result.stdout)
+
     def test_eden_doctor_fixes_valid_mismatched_parents(self) -> None:
         # this specifically tests when EdenFS and Mercurial are out of sync,
         # but and mercurial does know about EdenFS's WCP
