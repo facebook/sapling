@@ -17,7 +17,7 @@ thrift-types = { path = "../thrift-types" }
 types = { path = "../types" }
 
 [dev-dependencies]
-tempdir = "0.3.7"
+tempfile = "3.1"
 
 [features]
 default = []

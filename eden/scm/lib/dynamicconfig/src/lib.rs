@@ -67,6 +67,16 @@ impl HgGroup {
             HgGroup::Stable => "stable",
         }
     }
+
+    pub(crate) fn from_str(string: &str) -> Result<HgGroup> {
+        Ok(match string {
+            "hg_dev" => HgGroup::Dev,
+            "alpha" => HgGroup::Alpha,
+            "beta" => HgGroup::Beta,
+            "stable" => HgGroup::Stable,
+            _ => bail!("unknown hg group: {}", string),
+        })
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -79,10 +89,34 @@ pub enum Platform {
     Windows,
 }
 
+impl Platform {
+    #[allow(dead_code)]
+    pub(crate) fn to_str(&self) -> &'static str {
+        match self {
+            Platform::Centos => "centos",
+            Platform::Fedora => "fedora",
+            Platform::OSX => "osx",
+            Platform::Ubuntu => "ubuntu",
+            Platform::Unknown => "unknown",
+            Platform::Windows => "windows",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Domain {
     Corp,
     Prod,
+}
+
+impl Domain {
+    #[allow(dead_code)]
+    pub(crate) fn to_str(&self) -> &'static str {
+        match self {
+            Domain::Corp => "corp",
+            Domain::Prod => "prod",
+        }
+    }
 }
 
 pub struct Generator {
@@ -114,16 +148,7 @@ impl Generator {
 
         let group = get_hg_group(&tiers, shard);
 
-        let os_info = os_info::get();
-        use os_info::Type;
-        let platform = match os_info.os_type() {
-            Type::Fedora => Platform::Fedora,
-            Type::Macos => Platform::OSX,
-            Type::Centos => Platform::Centos,
-            Type::Ubuntu => Platform::Ubuntu,
-            Type::Windows => Platform::Windows,
-            _ => Platform::Unknown,
-        };
+        let platform = get_platform();
 
         let domain = if Path::new("/etc/fbwhoami").exists() {
             Domain::Prod
@@ -263,6 +288,19 @@ fn get_shard() -> Result<u8> {
     let mut hasher = DefaultHasher::new();
     hostname.hash(&mut hasher);
     Ok((hasher.finish() % 100).try_into().unwrap())
+}
+
+pub(crate) fn get_platform() -> Platform {
+    let os_info = os_info::get();
+    use os_info::Type;
+    match os_info.os_type() {
+        Type::Fedora => Platform::Fedora,
+        Type::Macos => Platform::OSX,
+        Type::Centos => Platform::Centos,
+        Type::Ubuntu => Platform::Ubuntu,
+        Type::Windows => Platform::Windows,
+        _ => Platform::Unknown,
+    }
 }
 
 fn get_hg_group(tiers: &HashSet<String>, shard: u8) -> HgGroup {
