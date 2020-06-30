@@ -22,8 +22,8 @@ use anyhow::Error;
 use ascii::AsciiString;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, ready, Future},
-    stream::{futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
+    future,
+    stream::{StreamExt, TryStreamExt},
 };
 use futures_ext::StreamExt as OldStreamExt;
 use futures_old::{Future as OldFuture, Stream};
@@ -33,49 +33,13 @@ use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{bulk_import_globalrevs, BonsaiGlobalrevMapping};
 use context::CoreContext;
-use derived_data_utils::derived_data_utils;
+use derived_data_utils::derive_data_for_csids;
 use mercurial_revlog::{revlog::RevIdx, RevlogRepo};
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::RepositoryId;
 use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
 
 use crate::changeset::UploadChangesets;
-
-fn derive_data_for_csids(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    csids: Vec<ChangesetId>,
-    derived_data_types: &[String],
-) -> Result<impl Future<Output = Result<(), Error>>, Error> {
-    let derivations = FuturesUnordered::new();
-
-    for data_type in derived_data_types {
-        let derived_utils = derived_data_utils(repo.clone(), data_type)?;
-
-        let mut futs = vec![];
-        for csid in &csids {
-            let fut = derived_utils
-                .derive(ctx.clone(), repo.clone(), *csid)
-                .map(|_| ())
-                .compat();
-            futs.push(fut);
-        }
-
-        derivations.push(async move {
-            // Call functions sequentially because derived data is sequential
-            // so there's no point in trying to derive it in parallel
-            for f in futs {
-                f.await?;
-            }
-            Result::<_, Error>::Ok(())
-        });
-    }
-
-    Ok(async move {
-        derivations.try_for_each(|_| ready(Ok(()))).await?;
-        Ok(())
-    })
-}
 
 // What to do with bookmarks when blobimporting a repo
 pub enum BookmarkImportPolicy {

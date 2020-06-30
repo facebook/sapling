@@ -23,9 +23,14 @@ use derived_data::{
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::ready,
+    stream::{self, futures_unordered::FuturesUnordered},
+    Future, StreamExt, TryStreamExt,
+};
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{future, stream as stream_old, Future, Stream};
+use futures_old::{future, stream as stream_old, Future as OldFuture, Stream};
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use std::{
@@ -44,6 +49,42 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootDeletedManifestId::NAME,
     FilenodesOnlyPublic::NAME,
 ];
+
+pub fn derive_data_for_csids(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    csids: Vec<ChangesetId>,
+    derived_data_types: &[String],
+) -> Result<impl Future<Output = Result<(), Error>>, Error> {
+    let derivations = FuturesUnordered::new();
+
+    for data_type in derived_data_types {
+        let derived_utils = derived_data_utils(repo.clone(), data_type)?;
+
+        let mut futs = vec![];
+        for csid in &csids {
+            let fut = derived_utils
+                .derive(ctx.clone(), repo.clone(), *csid)
+                .map(|_| ())
+                .compat();
+            futs.push(fut);
+        }
+
+        derivations.push(async move {
+            // Call functions sequentially because derived data is sequential
+            // so there's no point in trying to derive it in parallel
+            for f in futs {
+                f.await?;
+            }
+            Result::<_, Error>::Ok(())
+        });
+    }
+
+    Ok(async move {
+        derivations.try_for_each(|_| ready(Ok(()))).await?;
+        Ok(())
+    })
+}
 
 #[async_trait]
 pub trait DerivedUtils: Send + Sync + 'static {
