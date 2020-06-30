@@ -201,6 +201,9 @@ impl<'a> Request<'a> {
         // if version negotiation with the server fails.
         easy.http_version(HttpVersion::V2)?;
 
+        // Tell libcurl to report progress to the handler.
+        easy.progress(true)?;
+
         Ok(easy)
     }
 }

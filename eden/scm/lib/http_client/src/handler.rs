@@ -13,6 +13,8 @@ use std::{
 use curl::easy::{Handler, ReadError, WriteError};
 use once_cell::unsync::OnceCell;
 
+use crate::progress::{MonitorProgress, Progress, ProgressUpdater};
+
 /// Initial buffer capacity to allocate if we don't get a Content-Length header.
 /// Usually, the lack of a Content-Length header indicates a streaming response,
 /// in which case the body size is expected to be relatively large.
@@ -26,6 +28,7 @@ pub(crate) struct Buffered {
     headers: Vec<(String, String)>,
     payload: Option<Vec<u8>>,
     bytes_sent: usize,
+    updater: Option<ProgressUpdater>,
 }
 
 impl Buffered {
@@ -105,6 +108,19 @@ impl Handler for Buffered {
         self.headers.push((name.into(), value.into()));
         true
     }
+
+    fn progress(&mut self, dltotal: f64, dlnow: f64, ultotal: f64, ulnow: f64) -> bool {
+        if let Some(ref updater) = self.updater {
+            updater.update(Progress::from_curl(dltotal, dlnow, ultotal, ulnow));
+        }
+        true
+    }
+}
+
+impl MonitorProgress for Buffered {
+    fn monitor_progress(&mut self, updater: ProgressUpdater) {
+        self.updater = Some(updater);
+    }
 }
 
 fn split_header(header: &[u8]) -> Result<(&str, &str), Utf8Error> {
@@ -119,6 +135,8 @@ fn split_header(header: &[u8]) -> Result<(&str, &str), Utf8Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::progress::ProgressReporter;
 
     #[test]
     fn test_read() {
@@ -189,5 +207,19 @@ mod tests {
 
         let _ = handler.write(&[1, 2, 3][..]).unwrap();
         assert_eq!(handler.received.get().unwrap().capacity(), 42);
+    }
+
+    #[test]
+    fn test_progress() {
+        let reporter = ProgressReporter::with_callback(|_| ());
+
+        let mut handler = Buffered::new();
+        handler.monitor_progress(reporter.updater());
+        let _ = handler.progress(1.0, 2.0, 3.0, 4.0);
+
+        // Note that Progress struct has different argument order.
+        let expected = Progress::new(2, 1, 4, 3);
+        let progress = reporter.aggregate();
+        assert_eq!(progress, expected);
     }
 }

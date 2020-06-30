@@ -11,9 +11,11 @@
 
 mod errors;
 mod handler;
+mod progress;
 mod request;
 mod response;
 
 pub use errors::{CertOrKeyMissing, HttpClientError};
+pub use progress::Progress;
 pub use request::Request;
 pub use response::Response;
