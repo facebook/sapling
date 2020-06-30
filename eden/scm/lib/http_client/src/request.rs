@@ -16,7 +16,7 @@ use url::Url;
 
 use crate::{
     errors::{CertOrKeyMissing, HttpClientError},
-    handler::Buffered,
+    handler::{Buffered, Configure},
     response::Response,
 };
 
@@ -155,7 +155,7 @@ impl<'a> Request<'a> {
     /// Turn this Request into a `curl::Easy2` handle.
     pub(crate) fn into_handle(self) -> Result<Easy2<Buffered>, HttpClientError> {
         let body_size = self.body.as_ref().map(|body| body.len() as u64);
-        let handler = Buffered::with_payload(self.body);
+        let handler = Buffered::new().with_payload(self.body);
 
         let mut easy = Easy2::new(handler);
         easy.url(self.url.as_str())?;

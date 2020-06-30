@@ -10,9 +10,9 @@ use std::io::Read;
 use curl::easy::{Handler, ReadError, WriteError};
 use once_cell::unsync::OnceCell;
 
-use crate::progress::{MonitorProgress, Progress, ProgressUpdater};
+use crate::progress::{Progress, ProgressUpdater};
 
-use super::util;
+use super::{util, Configure};
 
 /// Initial buffer capacity to allocate if we don't get a Content-Length header.
 /// Usually, the lack of a Content-Length header indicates a streaming response,
@@ -33,14 +33,6 @@ pub struct Buffered {
 impl Buffered {
     pub(crate) fn new() -> Self {
         Default::default()
-    }
-
-    /// Specify a payload that will be uploaded as the *request* body.
-    pub(crate) fn with_payload(payload: Option<Vec<u8>>) -> Self {
-        Self {
-            payload,
-            ..Self::new()
-        }
     }
 
     /// Access the received headers.
@@ -100,7 +92,11 @@ impl Handler for Buffered {
     }
 }
 
-impl MonitorProgress for Buffered {
+impl Configure for Buffered {
+    fn with_payload(self, payload: Option<Vec<u8>>) -> Self {
+        Self { payload, ..self }
+    }
+
     fn monitor_progress(&mut self, updater: ProgressUpdater) {
         self.updater = Some(updater);
     }
@@ -120,7 +116,7 @@ mod tests {
         let mut buf2 = [0xFF; 3];
         let mut buf3 = [0xFF; 4];
 
-        let mut handler = Buffered::with_payload(Some(data.into()));
+        let mut handler = Buffered::new().with_payload(Some(data.into()));
 
         assert_eq!(handler.read(&mut buf1[..]).unwrap(), 5);
         assert_eq!(handler.read(&mut buf2[..]).unwrap(), 3);

@@ -196,14 +196,6 @@ impl ProgressInner {
     }
 }
 
-/// Trait indiciating that a type is able to report progress
-/// using the given updater. Transfer handlers will typically
-/// implement this trait so that the code managing the transfers
-/// can arrange for progress to be reported in a generic way.
-pub(crate) trait MonitorProgress {
-    fn monitor_progress(&mut self, updater: ProgressUpdater);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -17,7 +17,8 @@ use curl::{
 
 use crate::{
     errors::{Abort, HttpClientError},
-    progress::{MonitorProgress, Progress, ProgressReporter},
+    handler::Configure,
+    progress::{Progress, ProgressReporter},
     stats::Stats,
 };
 
@@ -50,7 +51,7 @@ impl<H> Complete<H> {
 /// all of the transfers therein to completion.
 pub(crate) struct MultiDriver<'a, H, P>
 where
-    H: MonitorProgress,
+    H: Configure,
     P: FnMut(Progress),
 {
     multi: &'a Multi,
@@ -60,7 +61,7 @@ where
 
 impl<'a, H, P> MultiDriver<'a, H, P>
 where
-    H: MonitorProgress,
+    H: Configure,
     P: FnMut(Progress),
 {
     pub(crate) fn new(multi: &'a Multi, progress_cb: P) -> Self {
@@ -222,7 +223,7 @@ where
 
 impl<'a, H, P> Drop for MultiDriver<'a, H, P>
 where
-    H: MonitorProgress,
+    H: Configure,
     P: FnMut(Progress),
 {
     fn drop(&mut self) {
