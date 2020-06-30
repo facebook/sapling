@@ -315,6 +315,8 @@ impl RevlogIndex {
 
 /// Minimal code to read the DAG (i.e. parents) stored in non-inlined revlog.
 pub struct RevlogIndex {
+    pub changelogi_data: Bytes,
+
     /// Inserted entries that are not flushed to disk.
     pub pending_parents: Vec<ParentRevs>,
 
@@ -398,7 +400,7 @@ impl RevlogIndex {
         let nodemap = NodeRevMap::new(changelogi_data.clone().into(), nodemap_data.into())
             .or_else(|_| {
                 // Attempt to rebuild the index (in-memory) automatically.
-                NodeRevMap::new(changelogi_data.into(), empty_nodemap_data.into())
+                NodeRevMap::new(changelogi_data.clone().into(), empty_nodemap_data.into())
             })?;
         // 20000 is chosen as it takes a few milliseconds to build up.
         if nodemap.lag() > 20000 {
@@ -414,6 +416,7 @@ impl RevlogIndex {
         }
         let result = Self {
             nodemap,
+            changelogi_data,
             pending_parents: Default::default(),
             pending_nodes: Default::default(),
             pending_nodes_index: Default::default(),
@@ -475,6 +478,7 @@ impl RevlogIndex {
                     pending_nodes_index: self.pending_nodes_index.clone(),
                     snapshot: Default::default(),
                     nodemap: self.nodemap.clone(),
+                    changelogi_data: self.changelogi_data.clone(),
                 });
                 *snapshot = Some(result.clone());
                 result

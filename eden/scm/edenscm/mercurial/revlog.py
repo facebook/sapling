@@ -409,24 +409,43 @@ class revlog(object):
                 % self._chunkcachesize
             )
 
-        indexdata = b""
-        self._initempty = True
-        try:
-            f = self.opener(self.indexfile)
-            if (
-                mmapindexthreshold is not None
-                and self.opener.fstat(f).st_size >= mmapindexthreshold
+        if index2:
+            nodemapfile = indexfile[:-2] + ".nodemap"
+            self.index2 = bindings.revlogindex.revlogindex(
+                opener.join(indexfile), opener.join(nodemapfile)
+            )
+            # Use indexdata read by Rust to be consistent.
+            # indexdata is alive as long as index2 is alive.
+            indexdata = self.index2.indexdata().asref()
+            # Rust code uses mmap to read. Avoid mmap if the config is not set.
+            if not (
+                mmapindexthreshold is not None and len(indexdata) >= mmapindexthreshold
             ):
-                indexdata = util.buffer(util.mmapread(f))
-            else:
-                indexdata = f.read()
-            f.close()
-            if len(indexdata) > 0:
-                v = versionformat_unpack(indexdata[:4])[0]
-                self._initempty = False
-        except IOError as inst:
-            if inst.errno != errno.ENOENT:
-                raise
+                indexdata = bytes(indexdata)
+        else:
+            # Load indexdata from disk.
+            indexdata = b""
+            try:
+                f = self.opener(self.indexfile)
+                if (
+                    mmapindexthreshold is not None
+                    and self.opener.fstat(f).st_size >= mmapindexthreshold
+                ):
+                    indexdata = util.buffer(util.mmapread(f))
+                else:
+                    indexdata = f.read()
+                f.close()
+            except IOError as inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+        if len(indexdata) > 0:
+            v = versionformat_unpack(indexdata[:4])[0]
+            self._initempty = False
+        else:
+            self._initempty = True
+
+        # Expose indexdata for easier debugging.
+        self.indexdata = indexdata
 
         self.version = v
         self._inline = v & FLAG_INLINE_DATA
@@ -456,11 +475,6 @@ class revlog(object):
         self.index, nodemap, self._chunkcache = d
         if nodemap is not None:
             self.nodemap = self._nodecache = nodemap
-        if index2:
-            nodemapfile = indexfile[:-2] + ".nodemap"
-            self.index2 = bindings.revlogindex.revlogindex(
-                opener.join(indexfile), opener.join(nodemapfile)
-            )
         if not self._chunkcache:
             self._chunkclear()
         # revnum -> (chain-length, sum-delta-length)

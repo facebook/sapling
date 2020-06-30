@@ -39,6 +39,12 @@ py_class!(class revlogindex |py| {
         Self::create_instance(py, RefCell::new(index))
     }
 
+    /// Obtain the index data.
+    def indexdata(&self) -> PyResult<pybytes::Bytes> {
+        let bytes = self.index(py).borrow().changelogi_data.clone();
+        pybytes::Bytes::from_bytes(py, bytes)
+    }
+
     /// Calculate `heads(ancestors(revs))`.
     def headsancestors(&self, revs: Vec<u32>) -> PyResult<Vec<u32>> {
         let revlog = self.index(py).borrow();
