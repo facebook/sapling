@@ -6,7 +6,9 @@
  */
 
 use async_trait::async_trait;
+use futures::future::try_join_all;
 use futures_util::try_join;
+use itertools::Itertools;
 use mononoke_api::{
     ChangesetContext, ChangesetPathContext, ChangesetPathDiffContext, FileMetadata, FileType,
     MononokeError, TreeEntry, UnifiedDiff,
@@ -196,5 +198,46 @@ impl AsyncIntoResponse<thrift::CommitInfo>
             extra: extra.into_iter().collect(),
             generation: generation.value() as i64,
         })
+    }
+}
+
+#[async_trait]
+impl AsyncIntoResponse<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>>
+    for (
+        Vec<ChangesetContext>,
+        &BTreeSet<thrift::CommitIdentityScheme>,
+    )
+{
+    async fn into_response(
+        self,
+    ) -> Result<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>, errors::ServiceError>
+    {
+        let (changesets, identity_schemes) = self;
+        let res = try_join_all({
+            let changesets_grouped_by_repo = changesets
+                .into_iter()
+                .map(|c| c.into_repo_and_id())
+                .into_group_map();
+
+            changesets_grouped_by_repo
+                .into_iter()
+                .map(|(repo, changesets)| async move {
+                    Ok::<
+                        Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>,
+                        errors::ServiceError,
+                    >(
+                        map_commit_identities(&repo, changesets, identity_schemes)
+                            .await?
+                            .into_iter()
+                            .map(|(_k, v)| v)
+                            .collect(),
+                    )
+                })
+        })
+        .await?
+        .into_iter()
+        .flatten()
+        .collect();
+        Ok(res)
     }
 }

@@ -132,6 +132,11 @@ impl ChangesetContext {
         self.id
     }
 
+    pub fn into_repo_and_id(self) -> (RepoContext, ChangesetId) {
+        let Self { repo, id, .. } = self;
+        (repo, id)
+    }
+
     /// The Mercurial ID for the changeset.
     pub async fn hg_id(&self) -> Result<Option<HgChangesetId>, MononokeError> {
         let mapping = self

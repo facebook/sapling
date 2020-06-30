@@ -38,7 +38,7 @@ use metaconfig_types::{CommitSyncConfig, SourceControlServiceParams};
 use metaconfig_types::{CommonConfig, RepoConfig};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
-    Generation,
+    Generation, RepositoryId,
 };
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
 use revset::AncestorsNodeStream;
@@ -50,6 +50,7 @@ use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use warm_bookmarks_cache::WarmBookmarksCache;
 
@@ -563,8 +564,13 @@ impl RepoContext {
     }
 
     /// The name of the underlying repo.
-    pub(crate) fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.repo.name
+    }
+
+    /// The internal id of the repo. Used for comparing the repo objects with each other.
+    pub fn repoid(&self) -> RepositoryId {
+        self.repo.blob_repo.get_repoid()
     }
 
     /// The underlying `BlobRepo`.
@@ -1078,5 +1084,18 @@ mod tests {
         let child = maybe_child.ok_or(format_err!("didn't find child"))?;
         assert_eq!(child, descendant);
         Ok(())
+    }
+}
+
+impl PartialEq for RepoContext {
+    fn eq(&self, other: &Self) -> bool {
+        self.repoid() == other.repoid()
+    }
+}
+impl Eq for RepoContext {}
+
+impl Hash for RepoContext {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.repoid().hash(state);
     }
 }
