@@ -100,6 +100,28 @@ impl HttpClient {
     }
 }
 
+/// From [libcurl's documentation][1]:
+///
+/// > You must never share the same handle in multiple threads. You can pass the
+/// > handles around among threads, but you must never use a single handle from
+/// > more than one thread at any given time.
+///
+/// `curl::Multi` does not implement `Send` or `Sync` because of the above
+/// constraints. In particular, it is not `Sync` because libcurl has no
+/// internal synchronization, and it is not `Send` because a single Multi
+/// session can only be used to drive transfers from a single thread at
+/// any one time.
+///
+/// In this case, all usage of the `Multi` session to drive a collection of
+/// transfers is confined to an individual call to `HttpClient::send`. All
+/// of the transfer handles are created, driven to completion, and removed
+/// from the `Multi` session within that single call. As such, the client
+/// maintains the invariant that the `Multi` session contains no transfers
+/// outside of a `send` call, so it can be safely sent across threads.
+///
+/// [1]: https://curl.haxx.se/libcurl/c/threadsafe.html
+unsafe impl Send for HttpClient {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
