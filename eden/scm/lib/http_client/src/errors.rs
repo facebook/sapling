@@ -11,10 +11,14 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum HttpClientError {
+    #[error("Operation was aborted by user callback")]
+    CallbackAborted,
     #[error("Received invalid status code: {0}")]
     InvalidStatusCode(u32),
     #[error(transparent)]
     Curl(#[from] curl::Error),
+    #[error(transparent)]
+    CurlMulti(#[from] curl::MultiError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

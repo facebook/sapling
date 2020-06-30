@@ -9,12 +9,15 @@
 
 #![deny(warnings)]
 
+mod client;
+mod driver;
 mod errors;
 mod handler;
 mod progress;
 mod request;
 mod response;
 
+pub use client::HttpClient;
 pub use errors::{CertOrKeyMissing, HttpClientError};
 pub use progress::Progress;
 pub use request::Request;
