@@ -906,12 +906,10 @@ mod test {
 
             [[hooks]]
             name="hook1"
-            hook_type="PerAddedOrModifiedFile"
             bypass_commit_string="@allow_hook1"
 
             [[hooks]]
             name="rust:rusthook"
-            hook_type="PerChangeset"
             config_ints={ int1 = 44 }
 
             [push]
@@ -1259,7 +1257,6 @@ mod test {
             hook_name="hook1"
             [[hooks]]
             name="hook1"
-            hook_type="PerAddedOrModifiedFile"
             bypass_commit_string="@allow_hook1"
             bypass_pushvar="var=val"
         "#;
@@ -1294,7 +1291,6 @@ mod test {
             hook_name="hook1"
             [[hooks]]
             name="hook1"
-            hook_type="PerAddedOrModifiedFile"
             bypass_pushvar="var"
         "#;
 
