@@ -488,7 +488,9 @@ class Top:
                 self.processes[pid].increment_counts(access_counts)
                 self.processes[pid].last_access = time.monotonic()
 
-            for pid, fetch_counts in accesses.fetchCountsByPid.items():
+            # When querying older versions of EdenFS fetchCountsByPid will be None
+            fetch_counts_by_pid = accesses.fetchCountsByPid or {}
+            for pid, fetch_counts in fetch_counts_by_pid.items():
                 if pid not in self.processes:
                     cmd = counts.cmdsByPid.get(pid, b"<kernel>")
                     self.processes[pid] = Process(pid, cmd, mount)
