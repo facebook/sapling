@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clidispatch::{
     command::{CommandTable, Register},
     errors,
@@ -14,6 +14,7 @@ use clidispatch::{
 };
 use cliparser::define_flags;
 use filetime::{set_file_mtime, FileTime};
+use tempfile::tempfile_in;
 
 use blackbox::{event::Event, json, SessionId};
 use dynamicconfig::Generator;
@@ -297,6 +298,14 @@ pub fn debugdynamicconfig(_opts: NoOpts, _io: &mut IO, repo: Repo) -> Result<u8>
     let repo_name: String = repo
         .repo_name()
         .map_or_else(|| "".to_string(), |s| s.to_string());
+
+    // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
+    // the config.
+    let repo_path = repo.shared_dot_hg_path();
+    if tempfile_in(&repo_path).is_err() {
+        bail!("no write access to {:?}", repo_path);
+    }
+
     let config = Generator::new(repo_name, repo.shared_dot_hg_path().to_path_buf())?.execute()?;
     let config_str = config.to_string();
     let config_str = format!(
@@ -305,7 +314,7 @@ pub fn debugdynamicconfig(_opts: NoOpts, _io: &mut IO, repo: Repo) -> Result<u8>
         config_str
     );
 
-    let hgrc_path = repo.shared_dot_hg_path().join("hgrc.dynamic");
+    let hgrc_path = repo_path.join("hgrc.dynamic");
 
     // If the file exists and will be unchanged, just update the mtime.
     if hgrc_path.exists()

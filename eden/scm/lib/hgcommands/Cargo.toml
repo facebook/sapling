@@ -34,6 +34,7 @@ python27-sys = { version = "0.5", optional = true }
 python3-sys = { version = "0.5", optional = true }
 pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }
 revisionstore = { path = "../revisionstore"}
+tempfile = "3.1"
 tracing = "0.1"
 tracing-collector = { path = "../tracing-collector" }
 types = { path = "../types" }
