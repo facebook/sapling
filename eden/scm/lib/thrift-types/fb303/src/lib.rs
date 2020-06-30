@@ -60,6 +60,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::CountersInformation {}
+    unsafe impl ::std::marker::Sync for self::CountersInformation {}
+
     impl ::fbthrift::GetTType for self::CountersInformation {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -110,6 +113,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::CpuProfileOptions {}
+    unsafe impl ::std::marker::Sync for self::CpuProfileOptions {}
 
     impl ::fbthrift::GetTType for self::CpuProfileOptions {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -173,6 +179,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::PcapLoggingConfig {}
+    unsafe impl ::std::marker::Sync for self::PcapLoggingConfig {}
 
     impl ::fbthrift::GetTType for self::PcapLoggingConfig {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -265,6 +274,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::PcapLoggingConfigException {}
+    unsafe impl ::std::marker::Sync for self::PcapLoggingConfigException {}
 
     impl ::fbthrift::GetTType for self::PcapLoggingConfigException {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;

@@ -391,6 +391,8 @@ pub mod types {
     pub struct MountAccesses {
         #[serde(default)]
         pub accessCountsByPid: ::std::collections::BTreeMap<crate::types::pid_t, crate::types::AccessCounts>,
+        #[serde(default)]
+        pub fetchCountsByPid: ::std::collections::BTreeMap<crate::types::pid_t, ::std::primitive::i64>,
     }
 
     #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -1188,6 +1190,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::EdenError {}
+    unsafe impl ::std::marker::Sync for self::EdenError {}
+
     impl ::fbthrift::GetTType for self::EdenError {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -1252,6 +1257,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::NoValueForKeyError {}
+    unsafe impl ::std::marker::Sync for self::NoValueForKeyError {}
+
     impl ::fbthrift::GetTType for self::NoValueForKeyError {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -1304,6 +1312,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::DaemonInfo {}
+    unsafe impl ::std::marker::Sync for self::DaemonInfo {}
 
     impl ::fbthrift::GetTType for self::DaemonInfo {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -1379,6 +1390,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::MountInfo {}
+    unsafe impl ::std::marker::Sync for self::MountInfo {}
+
     impl ::fbthrift::GetTType for self::MountInfo {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -1442,6 +1456,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::MountArgument {}
+    unsafe impl ::std::marker::Sync for self::MountArgument {}
 
     impl ::fbthrift::GetTType for self::MountArgument {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -1583,6 +1600,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::TimeSpec {}
+    unsafe impl ::std::marker::Sync for self::TimeSpec {}
+
     impl ::fbthrift::GetTType for self::TimeSpec {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -1638,6 +1658,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::EntryInformation {}
+    unsafe impl ::std::marker::Sync for self::EntryInformation {}
 
     impl ::fbthrift::GetTType for self::EntryInformation {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -1767,6 +1790,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::FileInformation {}
+    unsafe impl ::std::marker::Sync for self::FileInformation {}
 
     impl ::fbthrift::GetTType for self::FileInformation {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -1909,6 +1935,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::JournalPosition {}
+    unsafe impl ::std::marker::Sync for self::JournalPosition {}
+
     impl ::fbthrift::GetTType for self::JournalPosition {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -1975,6 +2004,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::FileDelta {}
+    unsafe impl ::std::marker::Sync for self::FileDelta {}
 
     impl ::fbthrift::GetTType for self::FileDelta {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -2058,6 +2090,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::DebugGetRawJournalParams {}
+    unsafe impl ::std::marker::Sync for self::DebugGetRawJournalParams {}
+
     impl ::fbthrift::GetTType for self::DebugGetRawJournalParams {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -2123,6 +2158,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::DebugPathChangeInfo {}
+    unsafe impl ::std::marker::Sync for self::DebugPathChangeInfo {}
+
     impl ::fbthrift::GetTType for self::DebugPathChangeInfo {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -2181,6 +2219,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::DebugJournalDelta {}
+    unsafe impl ::std::marker::Sync for self::DebugJournalDelta {}
 
     impl ::fbthrift::GetTType for self::DebugJournalDelta {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -2250,6 +2291,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::DebugGetRawJournalResponse {}
+    unsafe impl ::std::marker::Sync for self::DebugGetRawJournalResponse {}
+
     impl ::fbthrift::GetTType for self::DebugGetRawJournalResponse {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -2300,6 +2344,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::ScmStatus {}
+    unsafe impl ::std::marker::Sync for self::ScmStatus {}
 
     impl ::fbthrift::GetTType for self::ScmStatus {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -2358,6 +2405,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::CheckoutConflict {}
+    unsafe impl ::std::marker::Sync for self::CheckoutConflict {}
 
     impl ::fbthrift::GetTType for self::CheckoutConflict {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -2422,6 +2472,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::ScmBlobMetadata {}
+    unsafe impl ::std::marker::Sync for self::ScmBlobMetadata {}
+
     impl ::fbthrift::GetTType for self::ScmBlobMetadata {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -2479,6 +2532,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::ScmTreeEntry {}
+    unsafe impl ::std::marker::Sync for self::ScmTreeEntry {}
 
     impl ::fbthrift::GetTType for self::ScmTreeEntry {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -2547,6 +2603,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::TreeInodeEntryDebugInfo {}
+    unsafe impl ::std::marker::Sync for self::TreeInodeEntryDebugInfo {}
 
     impl ::fbthrift::GetTType for self::TreeInodeEntryDebugInfo {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -2637,6 +2696,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::WorkingDirectoryParents {}
+    unsafe impl ::std::marker::Sync for self::WorkingDirectoryParents {}
+
     impl ::fbthrift::GetTType for self::WorkingDirectoryParents {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -2699,6 +2761,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::TreeInodeDebugInfo {}
+    unsafe impl ::std::marker::Sync for self::TreeInodeDebugInfo {}
 
     impl ::fbthrift::GetTType for self::TreeInodeDebugInfo {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -2782,6 +2847,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::InodePathDebugInfo {}
+    unsafe impl ::std::marker::Sync for self::InodePathDebugInfo {}
+
     impl ::fbthrift::GetTType for self::InodePathDebugInfo {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -2844,6 +2912,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::SetLogLevelResult {}
+    unsafe impl ::std::marker::Sync for self::SetLogLevelResult {}
+
     impl ::fbthrift::GetTType for self::SetLogLevelResult {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -2895,6 +2966,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::JournalInfo {}
+    unsafe impl ::std::marker::Sync for self::JournalInfo {}
 
     impl ::fbthrift::GetTType for self::JournalInfo {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -2959,6 +3033,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::MountInodeInfo {}
+    unsafe impl ::std::marker::Sync for self::MountInodeInfo {}
 
     impl ::fbthrift::GetTType for self::MountInodeInfo {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3026,6 +3103,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::CacheStats {}
+    unsafe impl ::std::marker::Sync for self::CacheStats {}
 
     impl ::fbthrift::GetTType for self::CacheStats {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3113,6 +3193,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::InternalStats {}
+    unsafe impl ::std::marker::Sync for self::InternalStats {}
 
     impl ::fbthrift::GetTType for self::InternalStats {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3206,6 +3289,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::ManifestEntry {}
+    unsafe impl ::std::marker::Sync for self::ManifestEntry {}
+
     impl ::fbthrift::GetTType for self::ManifestEntry {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -3261,6 +3347,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::FuseCall {}
+    unsafe impl ::std::marker::Sync for self::FuseCall {}
 
     impl ::fbthrift::GetTType for self::FuseCall {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3348,6 +3437,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::GetConfigParams {}
+    unsafe impl ::std::marker::Sync for self::GetConfigParams {}
+
     impl ::fbthrift::GetTType for self::GetConfigParams {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -3402,6 +3494,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::GlobParams {}
+    unsafe impl ::std::marker::Sync for self::GlobParams {}
 
     impl ::fbthrift::GetTType for self::GlobParams {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3484,6 +3579,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::Glob {}
+    unsafe impl ::std::marker::Sync for self::Glob {}
+
     impl ::fbthrift::GetTType for self::Glob {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -3543,6 +3641,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::AccessCounts {}
+    unsafe impl ::std::marker::Sync for self::AccessCounts {}
 
     impl ::fbthrift::GetTType for self::AccessCounts {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3614,9 +3715,13 @@ pub mod types {
         fn default() -> Self {
             Self {
                 accessCountsByPid: ::std::default::Default::default(),
+                fetchCountsByPid: ::std::default::Default::default(),
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::MountAccesses {}
+    unsafe impl ::std::marker::Sync for self::MountAccesses {}
 
     impl ::fbthrift::GetTType for self::MountAccesses {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3631,6 +3736,9 @@ pub mod types {
             p.write_field_begin("accessCountsByPid", ::fbthrift::TType::Map, 1);
             ::fbthrift::Serialize::write(&self.accessCountsByPid, p);
             p.write_field_end();
+            p.write_field_begin("fetchCountsByPid", ::fbthrift::TType::Map, 2);
+            ::fbthrift::Serialize::write(&self.fetchCountsByPid, p);
+            p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -3642,12 +3750,14 @@ pub mod types {
     {
         fn read(p: &mut P) -> ::anyhow::Result<Self> {
             let mut field_accessCountsByPid = ::std::option::Option::None;
+            let mut field_fetchCountsByPid = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
                 match (fty, fid as ::std::primitive::i32) {
                     (::fbthrift::TType::Stop, _) => break,
                     (::fbthrift::TType::Map, 1) => field_accessCountsByPid = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::Map, 2) => field_fetchCountsByPid = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3655,6 +3765,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 accessCountsByPid: field_accessCountsByPid.unwrap_or_default(),
+                fetchCountsByPid: field_fetchCountsByPid.unwrap_or_default(),
             })
         }
     }
@@ -3668,6 +3779,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::GetAccessCountsResult {}
+    unsafe impl ::std::marker::Sync for self::GetAccessCountsResult {}
 
     impl ::fbthrift::GetTType for self::GetAccessCountsResult {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3729,6 +3843,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::TracePoint {}
+    unsafe impl ::std::marker::Sync for self::TracePoint {}
 
     impl ::fbthrift::GetTType for self::TracePoint {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3815,6 +3932,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::FaultDefinition {}
+    unsafe impl ::std::marker::Sync for self::FaultDefinition {}
 
     impl ::fbthrift::GetTType for self::FaultDefinition {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -3907,6 +4027,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::RemoveFaultArg {}
+    unsafe impl ::std::marker::Sync for self::RemoveFaultArg {}
+
     impl ::fbthrift::GetTType for self::RemoveFaultArg {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -3965,6 +4088,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::UnblockFaultArg {}
+    unsafe impl ::std::marker::Sync for self::UnblockFaultArg {}
 
     impl ::fbthrift::GetTType for self::UnblockFaultArg {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
@@ -4043,6 +4169,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::GetScmStatusResult {}
+    unsafe impl ::std::marker::Sync for self::GetScmStatusResult {}
+
     impl ::fbthrift::GetTType for self::GetScmStatusResult {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -4100,6 +4229,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::GetScmStatusParams {}
+    unsafe impl ::std::marker::Sync for self::GetScmStatusParams {}
 
     impl ::fbthrift::GetTType for self::GetScmStatusParams {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;

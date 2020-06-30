@@ -14,6 +14,7 @@ eden_config = { path = "eden_config" }
 eden = { path = "eden" }
 fb303_core = { path = "fb303_core" }
 fb303 = { path = "fb303" }
+hgclient_conf = { path = "hgclient_conf" }
 
 
 [build-dependencies]

@@ -9,12 +9,16 @@
 #[cfg(fbcode_build)]
 pub use config_thrift as eden_config;
 #[cfg(fbcode_build)]
+pub use hgclient_config as hgclient_conf;
+#[cfg(fbcode_build)]
 pub use thrift as eden;
 
 pub use eden as edenfs;
 pub use eden_config as edenfs_config;
 pub use fb303;
 pub use fb303_core;
+#[cfg(not(fbcode_build))]
+pub use hgclient_conf;
 
 // Re-export
 pub use anyhow;

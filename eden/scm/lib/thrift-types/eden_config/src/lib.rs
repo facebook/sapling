@@ -217,6 +217,9 @@ pub mod types {
         }
     }
 
+    unsafe impl ::std::marker::Send for self::ConfigValue {}
+    unsafe impl ::std::marker::Sync for self::ConfigValue {}
+
     impl ::fbthrift::GetTType for self::ConfigValue {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
     }
@@ -272,6 +275,9 @@ pub mod types {
             }
         }
     }
+
+    unsafe impl ::std::marker::Send for self::EdenConfigData {}
+    unsafe impl ::std::marker::Sync for self::EdenConfigData {}
 
     impl ::fbthrift::GetTType for self::EdenConfigData {
         const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
