@@ -4696,4 +4696,4 @@ def gcdir(path, mtimethreshold):
             continue
 
         if stat.st_mtime < deadline:
-            unlink(path)
+            tryunlink(path)
