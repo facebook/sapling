@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::{TryFrom, TryInto};
 use std::path::Path;
 
 use curl::{
@@ -147,15 +148,16 @@ impl<'a> Request<'a> {
     /// concurrent requests or large requests that require
     /// progress reporting.
     pub fn send(self) -> Result<Response, HttpClientError> {
-        let easy = self.into_handle()?;
+        let easy: Easy2<Buffered> = self.try_into()?;
         easy.perform()?;
         Ok(Response::from_handle(easy)?)
     }
 
-    /// Turn this Request into a `curl::Easy2` handle.
-    pub(crate) fn into_handle(self) -> Result<Easy2<Buffered>, HttpClientError> {
+    /// Turn this `Request` into a `curl::Easy2` handle using
+    /// the given `Handler` to process the response.
+    pub(crate) fn into_handle<H: Configure>(self, handler: H) -> Result<Easy2<H>, HttpClientError> {
         let body_size = self.body.as_ref().map(|body| body.len() as u64);
-        let handler = Buffered::new().with_payload(self.body);
+        let handler = handler.with_payload(self.body);
 
         let mut easy = Easy2::new(handler);
         easy.url(self.url.as_str())?;
@@ -205,6 +207,14 @@ impl<'a> Request<'a> {
         easy.progress(true)?;
 
         Ok(easy)
+    }
+}
+
+impl<'a> TryFrom<Request<'a>> for Easy2<Buffered> {
+    type Error = HttpClientError;
+
+    fn try_from(req: Request<'a>) -> Result<Self, Self::Error> {
+        req.into_handle(Buffered::new())
     }
 }
 

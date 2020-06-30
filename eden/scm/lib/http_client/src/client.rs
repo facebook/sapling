@@ -5,11 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use curl::multi::Multi;
+use std::convert::TryInto;
+
+use curl::{easy::Easy2, multi::Multi};
 
 use crate::{
     driver::MultiDriver,
     errors::{Abort, HttpClientError},
+    handler::Buffered,
     progress::Progress,
     request::Request,
     response::Response,
@@ -70,7 +73,7 @@ impl HttpClient {
         let driver = MultiDriver::new(&self.multi, progress_cb);
 
         for request in requests {
-            let handle = request.into_handle()?;
+            let handle: Easy2<Buffered> = request.try_into()?;
             driver.add(handle)?;
         }
 
