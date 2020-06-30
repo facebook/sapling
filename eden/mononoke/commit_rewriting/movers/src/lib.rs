@@ -70,7 +70,7 @@ enum PathAction {
 
 /// Default action to apply to a path when syncing between two repos
 #[derive(Debug, Clone)]
-enum DefaultAction {
+pub enum DefaultAction {
     /// Prepend path with this prefix
     PrependPrefix(MPath),
     /// Keep the path as is
@@ -167,7 +167,7 @@ where
 }
 
 /// Create a `Mover`, given a path prefix map and a default action
-fn mover_factory(
+pub fn mover_factory(
     prefix_map: HashMap<MPath, PrefixAction>,
     default_action: DefaultAction,
 ) -> Result<Mover> {
