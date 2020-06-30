@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
-use futures::stream::{Stream, StreamExt, TryStreamExt};
+use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use mononoke_api::{ChangesetContext, MononokeError};
 use source_control as thrift;
 
@@ -31,16 +31,18 @@ pub(crate) async fn collect_history(
         history_stream
             .map(move |changeset| async move {
                 let changeset = changeset?;
-                let date = changeset.author_date().await?;
+                if after_timestamp.is_some() || before_timestamp.is_some() {
+                    let date = changeset.author_date().await?;
 
-                if let Some(after) = after_timestamp {
-                    if after > date.timestamp() {
-                        return Ok(None);
+                    if let Some(after) = after_timestamp {
+                        if after > date.timestamp() {
+                            return Ok(None);
+                        }
                     }
-                }
-                if let Some(before) = before_timestamp {
-                    if before < date.timestamp() {
-                        return Ok(None);
+                    if let Some(before) = before_timestamp {
+                        if before < date.timestamp() {
+                            return Ok(None);
+                        }
                     }
                 }
 
@@ -71,6 +73,30 @@ pub(crate) async fn collect_history(
                 .try_collect()
                 .await?;
             Ok(thrift::History::commit_infos(commit_infos))
+        }
+        thrift::HistoryFormat::COMMIT_ID => {
+            let identity_schemes = identity_schemes.clone();
+            let commit_ids: Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>> = history
+                .chunks(100)
+                // TryStreamExt doesn't have the try_chunks method yet so we have to do it by mapping
+                .map(|chunk| chunk.into_iter().collect::<Result<Vec<_>, _>>())
+                .and_then(move |changesets: Vec<ChangesetContext>| {
+                    let identity_schemes = identity_schemes.clone();
+                    async move {
+                        Ok(stream::iter(
+                            (changesets, &identity_schemes)
+                                .into_response()
+                                .await?
+                                .into_iter()
+                                .map(Ok::<_, errors::ServiceError>)
+                                .collect::<Vec<_>>(),
+                        ))
+                    }
+                })
+                .try_flatten()
+                .try_collect()
+                .await?;
+            Ok(thrift::History::commit_ids(commit_ids))
         }
         other_format => Err(errors::invalid_request(format!(
             "unsupported history format {}",

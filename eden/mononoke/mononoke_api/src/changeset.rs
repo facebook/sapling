@@ -132,6 +132,7 @@ impl ChangesetContext {
         self.id
     }
 
+    /// Deconstruct the changeset into RepoContext and ChangesetId.
     pub fn into_repo_and_id(self) -> (RepoContext, ChangesetId) {
         let Self { repo, id, .. } = self;
         (repo, id)
