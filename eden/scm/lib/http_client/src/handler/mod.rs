@@ -6,5 +6,6 @@
  */
 
 mod buffered;
+mod util;
 
 pub use buffered::Buffered;

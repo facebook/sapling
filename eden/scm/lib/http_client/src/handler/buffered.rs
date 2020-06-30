@@ -5,15 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    io::Read,
-    str::{self, Utf8Error},
-};
+use std::io::Read;
 
 use curl::easy::{Handler, ReadError, WriteError};
 use once_cell::unsync::OnceCell;
 
 use crate::progress::{MonitorProgress, Progress, ProgressUpdater};
+
+use super::util;
 
 /// Initial buffer capacity to allocate if we don't get a Content-Length header.
 /// Usually, the lack of a Content-Length header indicates a streaming response,
@@ -81,31 +80,15 @@ impl Handler for Buffered {
     }
 
     fn header(&mut self, data: &[u8]) -> bool {
-        let (name, value) = match split_header(data) {
-            Ok((name, value)) => {
-                log::trace!("Received header: {}: {}", name, value);
-                (name, value)
+        if let Some((name, value)) = util::split_or_drop_header(data) {
+            // Record content-length to set initial buffer size.
+            // Use case-insensitive comparison since HTTP/2
+            // requires headers to be lowercase.
+            if name.eq_ignore_ascii_case("content-length") {
+                self.capacity = value.parse().ok();
             }
-            Err(e) => {
-                // Drop invalid headers.
-                let i = e.valid_up_to();
-                log::trace!(
-                    "Dropping non-UTF-8 header: Valid prefix: {:?}; Invalid bytes: {:x?}",
-                    str::from_utf8(&data[..i]).unwrap(),
-                    &data[i..],
-                );
-                return true;
-            }
-        };
-
-        // Record content-length to set initial buffer size.
-        // Use case-insensitive comparison since HTTP/2
-        // requires headers to be lowercase.
-        if name.eq_ignore_ascii_case("content-length") {
-            self.capacity = value.parse().ok();
+            self.headers.push((name.into(), value.into()));
         }
-
-        self.headers.push((name.into(), value.into()));
         true
     }
 
@@ -121,15 +104,6 @@ impl MonitorProgress for Buffered {
     fn monitor_progress(&mut self, updater: ProgressUpdater) {
         self.updater = Some(updater);
     }
-}
-
-fn split_header(header: &[u8]) -> Result<(&str, &str), Utf8Error> {
-    let header = str::from_utf8(header)?.splitn(2, ':').collect::<Vec<_>>();
-    Ok(if header.len() > 1 {
-        (header[0], header[1].trim())
-    } else {
-        (header[0].trim(), "")
-    })
 }
 
 #[cfg(test)]
