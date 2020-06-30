@@ -8,8 +8,12 @@
 use curl::multi::Multi;
 
 use crate::{
-    driver::MultiDriver, errors::HttpClientError, progress::Progress, request::Request,
-    response::Response, stats::Stats,
+    driver::MultiDriver,
+    errors::{Abort, HttpClientError},
+    progress::Progress,
+    request::Request,
+    response::Response,
+    stats::Stats,
 };
 
 /// A simple callback-oriented HTTP client.
@@ -43,7 +47,7 @@ impl HttpClient {
     pub fn send<'a, I, F>(&self, requests: I, response_cb: F) -> Result<Stats, HttpClientError>
     where
         I: IntoIterator<Item = Request<'a>>,
-        F: FnMut(Result<Response, HttpClientError>) -> bool,
+        F: FnMut(Result<Response, HttpClientError>) -> Result<(), Abort>,
     {
         self.send_with_progress(requests, response_cb, |_| ())
     }
@@ -60,7 +64,7 @@ impl HttpClient {
     ) -> Result<Stats, HttpClientError>
     where
         I: IntoIterator<Item = Request<'a>>,
-        F: FnMut(Result<Response, HttpClientError>) -> bool,
+        F: FnMut(Result<Response, HttpClientError>) -> Result<(), Abort>,
         P: FnMut(Progress),
     {
         let driver = MultiDriver::new(&self.multi, progress_cb);
@@ -71,7 +75,9 @@ impl HttpClient {
         }
 
         driver.perform(|res| {
-            let res = res.map_err(Into::into).and_then(Response::from_handle);
+            let res = res
+                .map_err(|(_, e)| e.into())
+                .and_then(Response::from_handle);
             response_cb(res)
         })
     }
@@ -146,13 +152,11 @@ mod tests {
         not_received.insert(body2.to_vec());
         not_received.insert(body3.to_vec());
 
-        let handle_response = |res: Result<Response, HttpClientError>| -> bool {
-            assert!(not_received.remove(&*res.unwrap().body));
-            true
-        };
-
         let client = HttpClient::new();
-        let stats = client.send(vec![req1, req2, req3], handle_response)?;
+        let stats = client.send(vec![req1, req2, req3], |res| {
+            assert!(not_received.remove(&*res.unwrap().body));
+            Ok(())
+        })?;
 
         mock1.assert();
         mock2.assert();

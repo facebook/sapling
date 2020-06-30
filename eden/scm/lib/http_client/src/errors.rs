@@ -11,8 +11,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum HttpClientError {
-    #[error("Operation was aborted by user callback")]
-    CallbackAborted,
+    #[error(transparent)]
+    CallbackAborted(#[from] Abort),
     #[error("Received invalid status code: {0}")]
     InvalidStatusCode(u32),
     #[error(transparent)]
@@ -31,3 +31,21 @@ pub enum HttpClientError {
 #[derive(Error, Debug)]
 #[error("TLS certificate or key not found: {0:?}")]
 pub struct CertOrKeyMissing(pub PathBuf);
+
+/// Error type for user-provided callbacks. Indicates
+/// that the client should abort the operation and
+/// return early. The user may optionally provide a
+/// reason for aborting.
+#[derive(Error, Debug)]
+pub enum Abort {
+    #[error("Operation aborted by user callback: {0}")]
+    WithReason(#[source] anyhow::Error),
+    #[error("Operation aborted by user callback")]
+    Unspecified,
+}
+
+impl Abort {
+    pub fn abort<E: Into<anyhow::Error>>(reason: E) -> Self {
+        Abort::WithReason(reason.into())
+    }
+}

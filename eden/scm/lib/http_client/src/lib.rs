@@ -19,7 +19,7 @@ mod response;
 mod stats;
 
 pub use client::HttpClient;
-pub use errors::{CertOrKeyMissing, HttpClientError};
+pub use errors::{Abort, CertOrKeyMissing, HttpClientError};
 pub use progress::Progress;
 pub use request::Request;
 pub use response::Response;

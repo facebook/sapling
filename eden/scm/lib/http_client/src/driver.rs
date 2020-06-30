@@ -16,7 +16,7 @@ use curl::{
 };
 
 use crate::{
-    errors::HttpClientError,
+    errors::{Abort, HttpClientError},
     progress::{MonitorProgress, Progress, ProgressReporter},
     stats::Stats,
 };
@@ -34,9 +34,15 @@ struct Complete<H> {
 }
 
 impl<H> Complete<H> {
-    fn into_result(self) -> Result<Easy2<H>, curl::Error> {
+    /// If we encountered an error, we should still return the
+    /// handle, as the callback may want to access the Handler
+    /// inside.
+    fn into_result(self) -> Result<Easy2<H>, (Easy2<H>, curl::Error)> {
         let Self { handle, result, .. } = self;
-        result.map(|()| handle)
+        match result {
+            Ok(()) => Ok(handle),
+            Err(e) => Err((handle, e)),
+        }
     }
 }
 
@@ -95,7 +101,7 @@ where
     /// method to return early (aborting all other active transfers).
     pub(crate) fn perform<F>(&self, mut callback: F) -> Result<Stats, HttpClientError>
     where
-        F: FnMut(Result<Easy2<H>, curl::Error>) -> bool,
+        F: FnMut(Result<Easy2<H>, (Easy2<H>, curl::Error)>) -> Result<(), Abort>,
     {
         let total = self.num_transfers();
         let mut in_progress = total;
@@ -123,12 +129,8 @@ where
             // error (signalling that we should return early) abort all remaining transfers.
             for c in completed {
                 let token = c.token;
-                if callback(c.into_result()) {
-                    log::trace!("Callback successful for transfer: {}", token);
-                } else {
-                    log::trace!("Callback signaled to abort; dropping remaining transfers");
-                    return Err(HttpClientError::CallbackAborted);
-                }
+                callback(c.into_result())?;
+                log::trace!("Successfully handled transfer: {}", token);
             }
 
             // If any tranfers reported progress, notify the user.
