@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::fs;
 use std::hash::{Hash, Hasher};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 #[cfg(not(feature = "fb"))]
@@ -86,6 +86,7 @@ pub enum Domain {
 }
 
 pub struct Generator {
+    repo_path: PathBuf,
     tiers: HashSet<String>,
     repo: Repo,
     group: HgGroup,
@@ -96,7 +97,7 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new(repo_name: String) -> Result<Self> {
+    pub fn new(repo_name: String, repo_path: PathBuf) -> Result<Self> {
         let repo = Repo::from_str(&repo_name)?;
 
         let tiers: HashSet<String> = if Path::new("/etc/smc.tiers").exists() {
@@ -131,6 +132,7 @@ impl Generator {
         };
 
         Ok(Generator {
+            repo_path,
             tiers,
             repo,
             group,
@@ -139,6 +141,10 @@ impl Generator {
             platform,
             domain,
         })
+    }
+
+    pub(crate) fn repo_path(&self) -> &Path {
+        self.repo_path.as_ref()
     }
 
     pub(crate) fn group(&self) -> HgGroup {
@@ -305,7 +311,7 @@ pub(crate) mod tests {
     #[test]
     fn test_basic() {
         let repo_name = "test_repo";
-        let mut generator = Generator::new(repo_name.to_string()).unwrap();
+        let mut generator = Generator::new(repo_name.to_string(), PathBuf::new()).unwrap();
 
         let tiers = HashSet::from_iter(["in_tier1", "in_tier2"].iter().map(|s| s.to_string()));
         let group = HgGroup::Alpha;

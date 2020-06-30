@@ -10,6 +10,11 @@ hgtime = { path = "../hgtime" }
 hostname = "0.3"
 minibytes = { path = "../minibytes" }
 os_info = "2.0.1"
+reqwest = { version = "0.10", features=["blocking"] }
+serde_json = "1.0"
+sha2 = "0.8"
+thrift-types = { path = "../thrift-types" }
+types = { path = "../types" }
 
 [dev-dependencies]
 tempdir = "0.3.7"

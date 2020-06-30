@@ -21,7 +21,10 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(
         py,
         "applydynamicconfig",
-        py_fn!(py, applydynamicconfig(config: config, repo_name: String)),
+        py_fn!(
+            py,
+            applydynamicconfig(config: config, repo_name: String, shared_path: PyPathBuf)
+        ),
     )?;
     m.add(
         py,
@@ -34,8 +37,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-fn applydynamicconfig(py: Python, config: config, repo_name: String) -> PyResult<PyNone> {
-    let dyn_cfg = Generator::new(repo_name)
+fn applydynamicconfig(
+    py: Python,
+    config: config,
+    repo_name: String,
+    shared_path: PyPathBuf,
+) -> PyResult<PyNone> {
+    let dyn_cfg = Generator::new(repo_name, shared_path.to_path_buf())
         .map_pyerr(py)?
         .execute()
         .map_pyerr(py)?;
@@ -61,7 +69,7 @@ fn generatedynamicconfig(
     repo_name: String,
     shared_path: PyPathBuf,
 ) -> PyResult<PyNone> {
-    let config = Generator::new(repo_name)
+    let config = Generator::new(repo_name, shared_path.to_path_buf())
         .map_pyerr(py)?
         .execute()
         .map_pyerr(py)?;

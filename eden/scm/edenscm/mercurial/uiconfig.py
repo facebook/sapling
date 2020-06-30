@@ -679,9 +679,9 @@ def validatedynamicconfig(ui):
             )
 
 
-def applydynamicconfig(ui, reponame):
+def applydynamicconfig(ui, reponame, sharedpath):
     if ui.configbool("configs", "loaddynamicconfig"):
-        dynamicconfig.applydynamicconfig(ui._uiconfig._rcfg._rcfg, reponame)
+        dynamicconfig.applydynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
 
         validatedynamicconfig(ui)
 

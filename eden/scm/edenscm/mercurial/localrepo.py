@@ -452,7 +452,7 @@ class localrepository(object):
             # If the repo does not already exists, load the dynamic configs in
             # memory only. They will be written to disk later once the localvfs
             # is created.
-            uiconfig.applydynamicconfig(self.ui, reponame)
+            uiconfig.applydynamicconfig(self.ui, reponame, self.path)
 
         self._loadextensions()
 
