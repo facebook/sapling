@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![allow(dead_code)]
-
 use std::{
     cell::RefCell,
     fmt,

@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Instant;
+
 use curl::multi::Multi;
 
 use crate::{
     driver::MultiDriver, errors::HttpClientError, progress::Progress, request::Request,
-    response::Response,
+    response::Response, stats::Stats,
 };
 
 /// A simple callback-oriented HTTP client.
@@ -40,7 +42,7 @@ impl HttpClient {
     ///
     /// The closure returns a boolean. If false, this function will
     /// return early and all other pending transfers will be aborted.
-    pub fn send<'a, I, F>(&self, requests: I, response_cb: F) -> Result<(), HttpClientError>
+    pub fn send<'a, I, F>(&self, requests: I, response_cb: F) -> Result<Stats, HttpClientError>
     where
         I: IntoIterator<Item = Request<'a>>,
         F: FnMut(Result<Response, HttpClientError>) -> bool,
@@ -57,7 +59,7 @@ impl HttpClient {
         requests: I,
         mut response_cb: F,
         progress_cb: P,
-    ) -> Result<(), HttpClientError>
+    ) -> Result<Stats, HttpClientError>
     where
         I: IntoIterator<Item = Request<'a>>,
         F: FnMut(Result<Response, HttpClientError>) -> bool,
@@ -70,12 +72,31 @@ impl HttpClient {
             driver.add(handle)?;
         }
 
+        let start = Instant::now();
+
         driver.perform(|res| {
             let res = res.map_err(Into::into).and_then(Response::from_handle);
             response_cb(res)
         })?;
 
-        Ok(())
+        let elapsed = start.elapsed();
+
+        let progress = driver.progress().aggregate();
+        let latency = driver
+            .progress()
+            .first_byte_received()
+            .unwrap_or(start)
+            .duration_since(start);
+
+        let stats = Stats {
+            downloaded: progress.downloaded,
+            uploaded: progress.uploaded,
+            requests: driver.num_transfers(),
+            time: elapsed,
+            latency,
+        };
+
+        Ok(stats)
     }
 }
 
@@ -132,13 +153,14 @@ mod tests {
         };
 
         let client = HttpClient::new();
-        client.send(vec![req1, req2, req3], handle_response)?;
+        let stats = client.send(vec![req1, req2, req3], handle_response)?;
 
         mock1.assert();
         mock2.assert();
         mock3.assert();
 
         assert!(not_received.is_empty());
+        assert_eq!(stats.requests, 3);
 
         Ok(())
     }

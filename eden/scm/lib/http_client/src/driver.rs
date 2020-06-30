@@ -63,6 +63,10 @@ where
         }
     }
 
+    pub(crate) fn progress(&self) -> &ProgressReporter<P> {
+        &self.progress
+    }
+
     pub(crate) fn num_transfers(&self) -> usize {
         (&*self.handles.borrow()).len()
     }
