@@ -8,8 +8,8 @@ name = "bindings"
 
 [features]
 default = []
-python2 = ["pytracing/python2", "pyindexes/python2", "pydirs/python2"]
-python3 = ["pytracing/python3", "pyindexes/python3", "pydirs/python3"]
+python2 = ["pybytes/python2", "pytracing/python2", "pyindexes/python2", "pydirs/python2"]
+python3 = ["pybytes/python3", "pytracing/python3", "pyindexes/python3", "pydirs/python3"]
 
 [profile.release]
 debug = true
@@ -20,6 +20,7 @@ lto = false
 cpython = { version = "0.5", default-features = false }
 cpython-ext = { path = "../../lib/cpython-ext", default-features = false }
 pyblackbox = { path = "modules/pyblackbox" }
+pybytes = { path = "modules/pybytes" }
 pybookmarkstore = { path = "modules/pybookmarkstore" }
 pycliparser = { path = "modules/pycliparser" }
 pyconfigparser = { path = "modules/pyconfigparser" }
