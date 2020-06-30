@@ -6,6 +6,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.19"
 configparser = { path = "../configparser" }
+filetime = "0.2.9"
 hgtime = { path = "../hgtime" }
 hostname = "0.3"
 minibytes = { path = "../minibytes" }
