@@ -321,7 +321,12 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitHistoryParams,
     ) -> Result<thrift::CommitHistoryResponse, errors::ServiceError> {
-        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let descendants_of = if let Some(descendants_of) = params.descendants_of {
+            Some(self.changeset_id(&repo, &descendants_of).await?)
+        } else {
+            None
+        };
 
         let limit: usize = check_range_and_convert("limit", params.limit, 0..)?;
         let skip: usize = check_range_and_convert("skip", params.skip, 0..)?;
@@ -348,7 +353,7 @@ impl SourceControlServiceImpl {
             .into());
         }
 
-        let history_stream = changeset.history(after_timestamp).await;
+        let history_stream = changeset.history(after_timestamp, descendants_of).await;
         let history = collect_history(
             history_stream,
             skip,

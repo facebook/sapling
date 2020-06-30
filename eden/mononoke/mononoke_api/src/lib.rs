@@ -6,6 +6,7 @@
  */
 
 #![feature(backtrace)]
+#![feature(bool_to_option)]
 #![deny(warnings)]
 
 use std::collections::HashMap;

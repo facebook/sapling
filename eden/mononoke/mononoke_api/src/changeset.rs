@@ -21,7 +21,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::future::{self, try_join, FutureExt, Shared};
+use futures::future::{self, try_join, try_join_all, FutureExt, Shared};
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
 use maplit::hashset;
@@ -312,7 +312,8 @@ impl ChangesetContext {
         Ok(bonsai.file_changes)
     }
 
-    /// Returns `true` if this commit is an ancestor of `other_commit`.
+    /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
+    /// own ancestor for the purpose of this call.
     pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
         let is_ancestor_of = self
             .repo()
@@ -607,9 +608,21 @@ impl ChangesetContext {
     pub async fn history(
         &self,
         until_timestamp: Option<i64>,
+        descendants_of: Option<ChangesetId>,
     ) -> impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_ {
+        let descendants_of = descendants_of.map(|id| Self::new(self.repo().clone(), id));
+        if let Some(ancestor) = descendants_of.as_ref() {
+            // If the the start commit is not descendant of the argument exit early.
+            match ancestor.is_ancestor_of(self.id()).await {
+                Ok(false) => return stream::empty().boxed(),
+                Err(e) => return stream::once(async { Err(e) }).boxed(),
+                _ => (),
+            }
+        }
+
         let cs_info_enabled = self.repo.derive_changeset_info_enabled();
 
+        // Helper allowing us to terminate walk when we reach `until_timestamp`.
         let terminate = until_timestamp.map(move |until_timestamp| {
             move |changeset_id| async move {
                 let info = if cs_info_enabled {
@@ -635,23 +648,51 @@ impl ChangesetContext {
             // starting state
             (hashset! { self.id() }, VecDeque::from(vec![self.id()])),
             // unfold
-            move |(mut visited, mut queue)| async move {
-                if let Some(changeset_id) = queue.pop_front() {
-                    if let Some(terminate) = terminate {
-                        if terminate(changeset_id).await? {
-                            return Ok(Some((None, (visited, queue))));
+            move |(mut visited, mut queue)| {
+                cloned!(descendants_of);
+                async move {
+                    if let Some(changeset_id) = queue.pop_front() {
+                        // Terminate in two cases:
+                        // 1. When `until_timestamp` is reached
+                        if let Some(terminate) = terminate {
+                            if terminate(changeset_id).await? {
+                                return Ok(Some((None, (visited, queue))));
+                            }
                         }
+                        // 2. When we reach the `descendants_of` ancestor
+                        if let Some(ancestor) = descendants_of.as_ref() {
+                            if changeset_id == ancestor.id() {
+                                return Ok(Some((Some(changeset_id), (visited, queue))));
+                            }
+                        }
+                        let mut parents = self
+                            .repo()
+                            .blob_repo()
+                            .get_changeset_parents_by_bonsai(self.ctx().clone(), changeset_id)
+                            .compat()
+                            .await?;
+                        if parents.len() > 1 {
+                            if let Some(ancestor) = descendants_of.as_ref() {
+                                // In case of merge, find out which branches are worth traversing by
+                                // doing ancestry check.
+                                parents =
+                                    try_join_all(parents.into_iter().map(|parent| async move {
+                                        Ok::<_, MononokeError>((
+                                            parent,
+                                            ancestor.is_ancestor_of(parent).await?,
+                                        ))
+                                    }))
+                                    .await?
+                                    .into_iter()
+                                    .filter_map(|(parent, ancestry)| ancestry.then_some(parent))
+                                    .collect();
+                            }
+                        }
+                        queue.extend(parents.into_iter().filter(|parent| visited.insert(*parent)));
+                        Ok(Some((Some(changeset_id), (visited, queue))))
+                    } else {
+                        Ok::<_, MononokeError>(None)
                     }
-                    let parents = self
-                        .repo()
-                        .blob_repo()
-                        .get_changeset_parents_by_bonsai(self.ctx().clone(), changeset_id)
-                        .compat()
-                        .await?;
-                    queue.extend(parents.into_iter().filter(|parent| visited.insert(*parent)));
-                    Ok(Some((Some(changeset_id), (visited, queue))))
-                } else {
-                    Ok::<_, MononokeError>(None)
                 }
             },
         )

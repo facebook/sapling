@@ -14,8 +14,8 @@ use fbinit::FacebookInit;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
 use mononoke_api::{
-    ChangesetContext, ChangesetSpecifier, CoreContext, FileContext, FileId, Mononoke, RepoContext,
-    SessionContainer, TreeContext, TreeId,
+    ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileContext, FileId, Mononoke,
+    RepoContext, SessionContainer, TreeContext, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
@@ -28,6 +28,7 @@ use srserver::RequestContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
 
+use crate::commit_id::CommitIdExt;
 use crate::errors;
 use crate::from_request::FromRequest;
 use crate::params::AddScubaParams;
@@ -173,6 +174,21 @@ impl SourceControlServiceImpl {
             .await?
             .ok_or_else(|| errors::commit_not_found(commit.description()))?;
         Ok((repo, changeset))
+    }
+
+    /// Get the changeset id specified by a `thrift::CommitId`.
+    pub(crate) async fn changeset_id(
+        &self,
+        repo: &RepoContext,
+        id: &thrift::CommitId,
+    ) -> Result<ChangesetId, errors::ServiceError> {
+        let changeset_specifier = ChangesetSpecifier::from_request(&id)?;
+        Ok(repo
+            .resolve_specifier(changeset_specifier)
+            .await?
+            .ok_or_else(|| {
+                errors::commit_not_found(format!("repo={} commit={}", repo.name(), id.to_string()))
+            })?)
     }
 
     /// Get the repo and tree specified by a `thrift::TreeSpecifier`.
