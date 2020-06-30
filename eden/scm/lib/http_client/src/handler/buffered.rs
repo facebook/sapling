@@ -22,7 +22,7 @@ const DEFAULT_CAPACITY: usize = 1000;
 
 /// A simple curl Handler that buffers all received data.
 #[derive(Default)]
-pub(crate) struct Buffered {
+pub struct Buffered {
     received: OnceCell<Vec<u8>>,
     capacity: Option<usize>,
     headers: Vec<(String, String)>,
