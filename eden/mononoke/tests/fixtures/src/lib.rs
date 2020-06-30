@@ -144,7 +144,7 @@ pub async fn set_bookmark(
         },
     )
     .unwrap();
-    txn.commit().compat().await.unwrap();
+    txn.commit().await.unwrap();
 }
 
 pub mod linear {
@@ -1652,7 +1652,7 @@ pub mod many_diamonds {
             },
         )
         .unwrap();
-        txn.commit().compat().await.unwrap();
+        txn.commit().await.unwrap();
 
         repo
     }

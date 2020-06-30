@@ -336,7 +336,7 @@ async fn update_large_repo_bookmarks(
         }
     }
 
-    book_txn.commit().compat().await?;
+    book_txn.commit().await?;
     Ok(())
 }
 

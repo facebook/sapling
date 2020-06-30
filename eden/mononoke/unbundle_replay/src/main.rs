@@ -24,7 +24,7 @@ use cmdlib::{args, monitoring::ReadyFlagService};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future,
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
@@ -201,7 +201,6 @@ async fn get_replay_stream<'a>(
                     1,
                     Freshness::MostRecent,
                 )
-                .compat()
                 .next()
                 .await
                 .ok_or_else(|| format_err!("Entry with id {} does not exist", id))??;

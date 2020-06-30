@@ -10,7 +10,8 @@
 
 use anyhow::{bail, Error, Result};
 use context::CoreContext;
-use futures_ext::{BoxFuture, BoxStream};
+use futures::future::BoxFuture;
+use futures::stream::BoxStream;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RawBundle2Id, RepositoryId, Timestamp};
 use sql::mysql_async::{
@@ -73,7 +74,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         ctx: CoreContext,
         name: &BookmarkName,
         repoid: RepositoryId,
-    ) -> BoxFuture<Option<ChangesetId>, Error>;
+    ) -> BoxFuture<'static, Result<Option<ChangesetId>>>;
 
     // TODO(stash): do we need to have a separate methods list_all() to avoid accidentally
     // listing all the bookmarks?
@@ -86,7 +87,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
         freshness: Freshness,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error>;
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>;
 
     /// List pull default bookmarks that match a given prefix. There should normally be few, it's
     /// reasonable to pass an empty prefix here.
@@ -96,7 +97,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
         freshness: Freshness,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error>;
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>;
 
     /// List all bookmarks that match the prefix. You should not normally call this with an empty
     /// prefix. Provide a max, which is an (exclusive!) limit representing how many bookmarks
@@ -109,7 +110,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         repoid: RepositoryId,
         freshness: Freshness,
         max: u64,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error>;
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>;
 
     /// Creates a transaction that will be used for write operations.
     fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<dyn Transaction>;
@@ -124,7 +125,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         repoid: RepositoryId,
         limit: u64,
         freshness: Freshness,
-    ) -> BoxStream<BookmarkUpdateLogEntry, Error>;
+    ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;
 
     /// Same as `read_next_bookmark_log_entries`, but limits the stream of returned entries
     /// to all have the same reason and bookmark
@@ -134,7 +135,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         id: u64,
         repoid: RepositoryId,
         limit: u64,
-    ) -> BoxStream<BookmarkUpdateLogEntry, Error>;
+    ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;
 
     /// Read the log entry for specific bookmark with specified to changeset id.
     fn list_bookmark_log_entries(
@@ -145,7 +146,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
-    ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error>;
+    ) -> BoxStream<'static, Result<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>>;
 
     /// Count the number of BookmarkUpdateLog entries with id greater than the given value,
     /// possibly excluding a given reason.
@@ -155,7 +156,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         id: u64,
         repoid: RepositoryId,
         exclude_reason: Option<BookmarkUpdateReason>,
-    ) -> BoxFuture<u64, Error>;
+    ) -> BoxFuture<'static, Result<u64>>;
 
     /// Count the number of BookmarkUpdateLog entries with id greater than the given value
     fn count_further_bookmark_log_entries_by_reason(
@@ -163,7 +164,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         _ctx: CoreContext,
         id: u64,
         repoid: RepositoryId,
-    ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error>;
+    ) -> BoxFuture<'static, Result<Vec<(BookmarkUpdateReason, u64)>>>;
 
     /// Find the last contiguous BookmarkUpdateLog entry matching the reason provided.
     fn skip_over_bookmark_log_entries_with_reason(
@@ -172,7 +173,7 @@ pub trait Bookmarks: Send + Sync + 'static {
         id: u64,
         repoid: RepositoryId,
         reason: BookmarkUpdateReason,
-    ) -> BoxFuture<Option<u64>, Error>;
+    ) -> BoxFuture<'static, Result<Option<u64>>>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -338,7 +339,10 @@ impl From<BookmarkUpdateReason> for Value {
 }
 
 pub type TransactionHook = Arc<
-    dyn Fn(CoreContext, SqlTransaction) -> BoxFuture<SqlTransaction, BookmarkTransactionError>
+    dyn Fn(
+            CoreContext,
+            SqlTransaction,
+        ) -> BoxFuture<'static, Result<SqlTransaction, BookmarkTransactionError>>
         + Sync
         + Send,
 >;
@@ -404,10 +408,13 @@ pub trait Transaction: Send + Sync + 'static {
     /// Commits the transaction. Future succeeds if transaction has been
     /// successful, or errors if transaction has failed. Logical failure is indicated by
     /// returning a successful `false` value; infrastructure failure is reported via an Error.
-    fn commit(self: Box<Self>) -> BoxFuture<bool, Error>;
+    fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>>;
 
     /// Commits the bookmarks update along with any changes injected by the TransactionHook. The
     /// future returns true if the bookmarks has moved, and false otherwise. Infrastructure errors
     /// are reported via the Error.
-    fn commit_with_hook(self: Box<Self>, txn_hook: TransactionHook) -> BoxFuture<bool, Error>;
+    fn commit_with_hook(
+        self: Box<Self>,
+        txn_hook: TransactionHook,
+    ) -> BoxFuture<'static, Result<bool>>;
 }

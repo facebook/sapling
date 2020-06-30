@@ -9,6 +9,7 @@ use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, Future, Stream};
 
@@ -44,7 +45,7 @@ fn delete_all_publishing_bookmarks(rt: &mut Runtime, ctx: CoreContext, repo: Blo
         .unwrap();
     }
 
-    assert!(rt.block_on(txn.commit()).unwrap());
+    assert!(rt.block_on(txn.commit().compat()).unwrap());
 }
 
 fn set_bookmark(
@@ -68,7 +69,7 @@ fn set_bookmark(
     )
     .unwrap();
 
-    assert!(rt.block_on(txn.commit()).unwrap());
+    assert!(rt.block_on(txn.commit().compat()).unwrap());
 }
 
 fn is_public(

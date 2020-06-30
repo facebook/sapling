@@ -12,8 +12,7 @@ use anyhow::Result;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures_old::Stream;
+use futures::stream::TryStreamExt;
 use mononoke_types::{ChangesetId, RepositoryId};
 use tests_utils::drawdag::create_from_dag;
 
@@ -39,7 +38,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
             bundle_replay_data: None,
         },
     )?;
-    txn.commit().compat().await?;
+    txn.commit().await?;
 
     let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
     let repo_ctx = RepoContext::new(ctx.clone(), Arc::new(repo)).await?;
@@ -92,9 +91,8 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
             None,
             Freshness::MostRecent,
         )
-        .map(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
-        .collect()
-        .compat()
+        .map_ok(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
+        .try_collect::<Vec<_>>()
         .await?;
     // TODO(mbthomas): These should have their own BookmarkUpdateReason.
     assert_eq!(

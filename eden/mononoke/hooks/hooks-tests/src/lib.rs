@@ -14,11 +14,8 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future,
-    stream::{futures_unordered, TryStreamExt},
-};
+use futures::future;
+use futures::stream::{futures_unordered, TryStreamExt};
 use hooks::{
     hook_loader::load_hooks, ChangesetHook, ErrorKind, FileHook, HookExecution, HookManager,
     HookRejectionInfo,
@@ -887,7 +884,7 @@ fn test_file_hooks_with_blob_store(fb: FacebookInit) {
                 },
             )
             .unwrap();
-            txn.commit().compat().await.unwrap();
+            txn.commit().await.unwrap();
             (repo, bcs_id)
         };
 

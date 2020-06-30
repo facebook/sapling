@@ -20,11 +20,10 @@ mononoke_types = { path = "../../mononoke_types" }
 sql_construct = { path = "../../common/sql_construct" }
 sql_ext = { path = "../../common/rust/sql_ext" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-futures-old = { package = "futures", version = "0.1" }
+futures = { version = "0.3", features = ["async-await", "compat"] }
 serde_json = "1.0"
 
 [dev-dependencies]
@@ -32,7 +31,7 @@ mercurial_types-mocks = { path = "../../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
 maplit = "1.0"
 quickcheck = "0.9"
 tokio-compat = "0.1"

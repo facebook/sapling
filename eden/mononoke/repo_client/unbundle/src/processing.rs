@@ -27,7 +27,6 @@ use futures::{
     stream::{FuturesOrdered, FuturesUnordered, TryStreamExt},
     FutureExt, StreamExt, TryFutureExt,
 };
-use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
 use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
@@ -351,7 +350,10 @@ fn upload_git_mapping_bookmark_txn_hook(
             .iter()
             .chain(ancestors_no_git_mapping.iter())
         {
-            let maybe_git_sha1 = try_boxfuture!(extract_git_sha1_from_bonsai_extra(bonsai.extra()));
+            let maybe_git_sha1 = match extract_git_sha1_from_bonsai_extra(bonsai.extra()) {
+                Ok(r) => r,
+                Err(e) => return async move { Err(e.into()) }.boxed(),
+            };
             if let Some(git_sha1) = maybe_git_sha1 {
                 let entry = BonsaiGitMappingEntry {
                     git_sha1,
@@ -383,8 +385,6 @@ fn upload_git_mapping_bookmark_txn_hook(
             Ok(sql_txn)
         }
         .boxed()
-        .compat()
-        .boxify()
     })
 }
 
@@ -822,9 +822,9 @@ async fn save_bookmark_pushes_to_db<'a>(
     }
 
     let ok = if let Some(txn_hook) = txn_hook {
-        txn.commit_with_hook(txn_hook).compat().await?
+        txn.commit_with_hook(txn_hook).await?
     } else {
-        txn.commit().compat().await?
+        txn.commit().await?
     };
 
     if ok {

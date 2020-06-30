@@ -33,7 +33,7 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_ext::FutureExt as OldFutureExt;
-use futures_old::{Future as OldFuture, Stream as OldStream};
+use futures_old::Future as OldFuture;
 use futures_stats::Timed;
 use futures_stats::TimedFutureExt;
 use lock_ext::LockExt;
@@ -458,9 +458,8 @@ async fn tail_one_iteration(
             repo.get_repoid(),
             Freshness::MostRecent,
         )
-        .map(|(_name, csid)| csid)
-        .collect()
-        .compat()
+        .map_ok(|(_name, csid)| csid)
+        .try_collect::<Vec<_>>()
         .await?;
 
     // Find heads that needs derivation and find their oldest underived ancestor

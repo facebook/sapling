@@ -11,11 +11,10 @@ bookmarks_types = { path = "bookmarks_types" }
 context = { path = "../server/context" }
 mercurial_types = { path = "../mercurial/types" }
 mononoke_types = { path = "../mononoke_types" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-futures = "0.1"
+futures = { version = "0.3", features = ["async-await", "compat"] }
 thiserror = "1.0"
 
 [dev-dependencies]
@@ -23,4 +22,5 @@ mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
 quickcheck = "0.9"
-tokio = "0.1"
+tokio = { version = "=0.2.13", features = ["full"] }
+tokio-compat = "0.1"

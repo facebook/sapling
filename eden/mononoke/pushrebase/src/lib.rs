@@ -1242,14 +1242,9 @@ async fn try_move_bookmark(
             Ok(sql_txn)
         }
         .boxed()
-        .compat()
-        .boxify()
     };
 
-    let success = txn
-        .commit_with_hook(Arc::new(sql_txn_hook))
-        .compat()
-        .await?;
+    let success = txn.commit_with_hook(Arc::new(sql_txn_hook)).await?;
 
     let ret = if success {
         Some((new_value, rebased_changesets_into_pairs(rebased_changesets)))
@@ -1400,7 +1395,7 @@ mod tests {
                 bundle_replay_data: None,
             },
         )?;
-        txn.commit().compat().await?;
+        txn.commit().await?;
         Ok(())
     }
 

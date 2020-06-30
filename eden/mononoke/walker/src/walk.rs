@@ -23,9 +23,9 @@ use fsnodes::RootFsnodeId;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, Future, FutureExt, TryFutureExt},
-    stream::{BoxStream, StreamExt},
+    stream::{BoxStream, StreamExt, TryStreamExt},
 };
-use futures_ext::{FutureExt as Future01Ext, StreamExt as Stream01Ext};
+use futures_ext::FutureExt as Future01Ext;
 use futures_old::{future as old_future, Future as Future01, Stream as Stream01};
 use itertools::{Either, Itertools};
 use mercurial_types::{
@@ -677,9 +677,8 @@ where
             repoid,
             Freshness::MostRecent,
         )
-        .map(|(book, csid)| (book.name, csid))
-        .collect_to::<HashMap<BookmarkName, ChangesetId>>()
-        .compat();
+        .map_ok(|(book, csid)| (book.name, csid))
+        .try_collect::<HashMap<_, _>>();
 
     // Roots were not stepped to from elsewhere, so their Option<Route> is None.
     let walk_roots: Vec<(Option<Route>, OutgoingEdge)> =

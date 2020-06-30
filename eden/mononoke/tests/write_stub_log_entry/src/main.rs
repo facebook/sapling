@@ -14,7 +14,8 @@ use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use fbinit::FacebookInit;
-use futures::future::Future;
+use futures::future::TryFutureExt;
+use futures_old::future::Future;
 use mononoke_types::ChangesetId;
 
 const CREATE: &'static str = "create";
@@ -98,7 +99,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
         }
 
-        txn.commit()
+        txn.commit().compat()
     });
 
     tokio::run(fut.map(|_| ()).map_err(move |err| {

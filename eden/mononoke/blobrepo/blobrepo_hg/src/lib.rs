@@ -34,6 +34,7 @@ use context::CoreContext;
 use failure_ext::FutureFailureExt;
 use filenodes::{FilenodeInfo, FilenodeResult, Filenodes};
 use futures::future::TryFutureExt;
+use futures::stream::TryStreamExt;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::{
     future,
@@ -327,6 +328,7 @@ impl BlobRepoHg for BlobRepo {
         STATS::get_bookmark.add_value(1);
         self.get_bookmarks_object()
             .get(ctx.clone(), name, self.get_repoid())
+            .compat()
             .and_then({
                 let repo = self.clone();
                 move |cs_opt| match cs_opt {
@@ -347,12 +349,16 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         STATS::get_pull_default_bookmarks_maybe_stale.add_value(1);
-        let stream = self.get_bookmarks_object().list_pull_default_by_prefix(
-            ctx.clone(),
-            &BookmarkPrefix::empty(),
-            self.get_repoid(),
-            Freshness::MaybeStale,
-        );
+        let stream = self
+            .get_bookmarks_object()
+            .list_pull_default_by_prefix(
+                ctx.clone(),
+                &BookmarkPrefix::empty(),
+                self.get_repoid(),
+                Freshness::MaybeStale,
+            )
+            .compat()
+            .boxify();
         to_hg_bookmark_stream(&self, &ctx, stream)
     }
 
@@ -363,12 +369,16 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         STATS::get_publishing_bookmarks_maybe_stale.add_value(1);
-        let stream = self.get_bookmarks_object().list_publishing_by_prefix(
-            ctx.clone(),
-            &BookmarkPrefix::empty(),
-            self.get_repoid(),
-            Freshness::MaybeStale,
-        );
+        let stream = self
+            .get_bookmarks_object()
+            .list_publishing_by_prefix(
+                ctx.clone(),
+                &BookmarkPrefix::empty(),
+                self.get_repoid(),
+                Freshness::MaybeStale,
+            )
+            .compat()
+            .boxify();
         to_hg_bookmark_stream(&self, &ctx, stream)
     }
 
@@ -380,13 +390,17 @@ impl BlobRepoHg for BlobRepo {
         max: u64,
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
-        let stream = self.get_bookmarks_object().list_all_by_prefix(
-            ctx.clone(),
-            prefix,
-            self.get_repoid(),
-            Freshness::MaybeStale,
-            max,
-        );
+        let stream = self
+            .get_bookmarks_object()
+            .list_all_by_prefix(
+                ctx.clone(),
+                prefix,
+                self.get_repoid(),
+                Freshness::MaybeStale,
+                max,
+            )
+            .compat()
+            .boxify();
         to_hg_bookmark_stream(&self, &ctx, stream)
     }
 

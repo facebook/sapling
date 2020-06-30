@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::{format_err, Error};
 use ascii::AsciiString;
 use cloned::cloned;
+use futures::future::TryFutureExt;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::{prelude::*, stream};
 use slog::{info, Logger};
@@ -142,6 +143,7 @@ pub fn upload_bookmarks(
 
                 if count > 0 {
                     transaction.commit()
+                        .compat()
                         .and_then(move |ok| {
                             if ok {
                                 Ok(count)

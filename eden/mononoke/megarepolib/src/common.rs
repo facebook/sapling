@@ -101,7 +101,7 @@ async fn create_bookmark(
     let mut transaction = repo.update_bookmark_transaction(ctx.clone());
     transaction.force_set(&bookmark, bcs_id, BookmarkUpdateReason::ManualMove)?;
 
-    let commit_result = transaction.commit().compat().await?;
+    let commit_result = transaction.commit().await?;
 
     if !commit_result {
         Err(format_err!("Logical failure while setting {:?}", bookmark))

@@ -38,7 +38,6 @@ use futures::{
     compat::Future01CompatExt,
     future::{FutureExt, TryFutureExt},
 };
-use futures_ext::FutureExt as OldFutureExt;
 use futures_old::future::Future;
 use futures_old::stream::Stream as OldStream;
 use metaconfig_types::MetadataDatabaseConfig;
@@ -285,8 +284,6 @@ where
                 }
             }
             .boxed()
-            .compat()
-            .boxify()
         }
     });
 
@@ -339,7 +336,7 @@ where
                 }
             };
 
-            return bookmark_txn.commit_with_hook(txn_hook).compat().await;
+            return bookmark_txn.commit_with_hook(txn_hook).await;
         } else {
             debug!(
                 ctx.logger(),

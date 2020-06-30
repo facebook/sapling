@@ -12,6 +12,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
+use futures::future::TryFutureExt;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::{future, Future, IntoFuture, Stream};
 use mercurial_types::HgChangesetId;
@@ -351,7 +352,12 @@ fn handle_set<'a>(
                             ));
                         }
                     }
-                    transaction.commit().map(|_| ()).from_err().boxify()
+                    transaction
+                        .commit()
+                        .compat()
+                        .map(|_| ())
+                        .from_err()
+                        .boxify()
                 }
             })
     })
@@ -382,7 +388,12 @@ fn handle_delete<'a>(
                                 bcs_id,
                                 BookmarkUpdateReason::ManualMove
                             ));
-                            transaction.commit().map(|_| ()).from_err().boxify()
+                            transaction
+                                .commit()
+                                .compat()
+                                .map(|_| ())
+                                .from_err()
+                                .boxify()
                         }
                         None => future::err(format_err!("Cannot delete missing bookmark")).boxify(),
                     }

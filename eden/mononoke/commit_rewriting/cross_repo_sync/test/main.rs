@@ -91,7 +91,7 @@ async fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId
         },
     )
     .unwrap();
-    txn.commit().compat().await.unwrap();
+    txn.commit().await.unwrap();
     bcs_id
 }
 
@@ -132,7 +132,7 @@ async fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         },
     )
     .unwrap();
-    txn.commit().compat().await.unwrap();
+    txn.commit().await.unwrap();
     bcs_id
 }
 
@@ -340,7 +340,7 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         },
     )
     .unwrap();
-    txn.commit().compat().await.unwrap();
+    txn.commit().await.unwrap();
     bcs_id
 }
 
@@ -549,7 +549,7 @@ async fn megarepo_copy_file(
         },
     )
     .unwrap();
-    txn.commit().compat().await.unwrap();
+    txn.commit().await.unwrap();
     bcs_id
 }
 
@@ -918,7 +918,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
         },
     )
     .unwrap();
-    txn.commit().compat().await.unwrap();
+    txn.commit().await.unwrap();
 
     bcs_id
 }

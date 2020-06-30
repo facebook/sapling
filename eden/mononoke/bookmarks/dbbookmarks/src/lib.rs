@@ -15,11 +15,9 @@ use bookmarks::{
 };
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_old::{
-    future::{self, loop_fn, Loop},
-    stream, Future, IntoFuture, Stream,
-};
+use futures::compat::Future01CompatExt;
+use futures::future::{self, BoxFuture, Future, FutureExt, TryFutureExt};
+use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::{queries, Connection, Transaction as SqlTransaction};
@@ -265,13 +263,11 @@ impl SqlConstruct for SqlBookmarks {
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlBookmarks {}
 
-fn query_to_stream<F>(v: F, max: u64) -> BoxStream<(Bookmark, ChangesetId), Error>
+fn query_to_stream<F>(v: F, max: u64) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>
 where
-    F: Future<Item = Vec<(BookmarkName, BookmarkHgKind, ChangesetId)>, Error = Error>
-        + Send
-        + 'static,
+    F: Future<Output = Result<Vec<(BookmarkName, BookmarkHgKind, ChangesetId)>>> + Send + 'static,
 {
-    v.map(move |rows| {
+    v.map_ok(move |rows| {
         if rows.len() as u64 >= max {
             let message = format_err!(
                 "Bookmark query was truncated after {} results, use a more specific prefix search.",
@@ -279,15 +275,15 @@ where
             );
             future::err(message).into_stream().left_stream()
         } else {
-            stream::iter_ok(rows).right_stream()
+            stream::iter(rows.into_iter().map(Ok)).right_stream()
         }
     })
-    .flatten_stream()
-    .map(|row| {
+    .try_flatten_stream()
+    .map_ok(|row| {
         let (name, hg_kind, changeset_id) = row;
         (Bookmark::new(name, hg_kind), changeset_id)
     })
-    .boxify()
+    .boxed()
 }
 
 impl SqlBookmarks {
@@ -299,16 +295,20 @@ impl SqlBookmarks {
         kinds: &[BookmarkHgKind],
         freshness: Freshness,
         max: u64,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         let conn = match freshness {
             Freshness::MostRecent => &self.read_master_connection,
             Freshness::MaybeStale => &self.read_connection,
         };
 
         let query = if prefix.is_empty() {
-            SelectAll::query(&conn, &repo_id, &max, kinds).left_future()
+            SelectAll::query(&conn, &repo_id, &max, kinds)
+                .compat()
+                .left_future()
         } else {
-            SelectByPrefix::query(&conn, &repo_id, &prefix, &max, kinds).right_future()
+            SelectByPrefix::query(&conn, &repo_id, &prefix, &max, kinds)
+                .compat()
+                .right_future()
         };
 
         query_to_stream(query, max)
@@ -322,7 +322,7 @@ impl Bookmarks for SqlBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
         freshness: Freshness,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         match freshness {
             Freshness::MaybeStale => {
                 STATS::list_publishing_by_prefix_maybe_stale.add_value(1);
@@ -347,7 +347,7 @@ impl Bookmarks for SqlBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
         freshness: Freshness,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         match freshness {
             Freshness::MaybeStale => {
                 STATS::list_pull_default_by_prefix_maybe_stale.add_value(1);
@@ -373,7 +373,7 @@ impl Bookmarks for SqlBookmarks {
         repo_id: RepositoryId,
         freshness: Freshness,
         max: u64,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         match freshness {
             Freshness::MaybeStale => {
                 STATS::list_all_by_prefix_maybe_stale.add_value(1);
@@ -397,13 +397,14 @@ impl Bookmarks for SqlBookmarks {
         ctx: CoreContext,
         name: &BookmarkName,
         repo_id: RepositoryId,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
+    ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
         STATS::get_bookmark.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
         SelectBookmark::query(&self.read_master_connection, &repo_id, &name)
-            .map(|rows| rows.into_iter().next().map(|row| row.0))
-            .boxify()
+            .compat()
+            .map_ok(|rows| rows.into_iter().next().map(|row| row.0))
+            .boxed()
     }
 
     fn list_bookmark_log_entries(
@@ -414,7 +415,7 @@ impl Bookmarks for SqlBookmarks {
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
-    ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
+    ) -> BoxStream<'static, Result<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>> {
         let connection = if freshness == Freshness::MostRecent {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
@@ -428,14 +429,16 @@ impl Bookmarks for SqlBookmarks {
         match offset {
             Some(offset) => {
                 SelectBookmarkLogsWithOffset::query(&connection, &repo_id, &name, &max_rec, &offset)
-                    .map(|rows| stream::iter_ok(rows))
-                    .flatten_stream()
-                    .boxify()
+                    .compat()
+                    .map_ok(|rows| stream::iter(rows.into_iter().map(Ok)))
+                    .try_flatten_stream()
+                    .boxed()
             }
             None => SelectBookmarkLogs::query(&connection, &repo_id, &name, &max_rec)
-                .map(|rows| stream::iter_ok(rows))
-                .flatten_stream()
-                .boxify(),
+                .compat()
+                .map_ok(|rows| stream::iter(rows.into_iter().map(Ok)))
+                .try_flatten_stream()
+                .boxed(),
         }
     }
 
@@ -453,7 +456,7 @@ impl Bookmarks for SqlBookmarks {
         id: u64,
         repoid: RepositoryId,
         maybe_exclude_reason: Option<BookmarkUpdateReason>,
-    ) -> BoxFuture<u64, Error> {
+    ) -> BoxFuture<'static, Result<u64>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let query = match maybe_exclude_reason {
@@ -463,10 +466,11 @@ impl Bookmarks for SqlBookmarks {
                 &repoid,
                 &r,
             )
-            .boxify(),
-            None => {
-                CountFurtherBookmarkLogEntries::query(&self.read_connection, &id, &repoid).boxify()
-            }
+            .compat()
+            .boxed(),
+            None => CountFurtherBookmarkLogEntries::query(&self.read_connection, &id, &repoid)
+                .compat()
+                .boxed(),
         };
 
         query
@@ -484,7 +488,7 @@ impl Bookmarks for SqlBookmarks {
                     }
                 }
             })
-            .boxify()
+            .boxed()
     }
 
     fn count_further_bookmark_log_entries_by_reason(
@@ -492,12 +496,13 @@ impl Bookmarks for SqlBookmarks {
         ctx: CoreContext,
         id: u64,
         repoid: RepositoryId,
-    ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error> {
+    ) -> BoxFuture<'static, Result<Vec<(BookmarkUpdateReason, u64)>>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         CountFurtherBookmarkLogEntriesByReason::query(&self.read_connection, &id, &repoid)
-            .map(|entries| entries.into_iter().collect())
-            .boxify()
+            .compat()
+            .map_ok(|entries| entries.into_iter().collect())
+            .boxed()
     }
 
     fn skip_over_bookmark_log_entries_with_reason(
@@ -506,12 +511,13 @@ impl Bookmarks for SqlBookmarks {
         id: u64,
         repoid: RepositoryId,
         reason: BookmarkUpdateReason,
-    ) -> BoxFuture<Option<u64>, Error> {
+    ) -> BoxFuture<'static, Result<Option<u64>>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         SkipOverBookmarkLogEntriesWithReason::query(&self.read_connection, &id, &repoid, &reason)
-            .map(|entries| entries.first().map(|entry| entry.0))
-            .boxify()
+            .compat()
+            .map_ok(|entries| entries.first().map(|entry| entry.0))
+            .boxed()
     }
 
     fn read_next_bookmark_log_entries_same_bookmark_and_reason(
@@ -520,11 +526,12 @@ impl Bookmarks for SqlBookmarks {
         id: u64,
         repoid: RepositoryId,
         limit: u64,
-    ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+    ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         ReadNextBookmarkLogEntries::query(&self.read_connection, &id, &repoid, &limit)
-            .map(|entries| {
+            .compat()
+            .map_ok(|entries| {
                 let homogenous_entries: Vec<_> = match entries.iter().nth(0).cloned() {
                     Some(first_entry) => {
                         // Note: types are explicit here to protect us from query behavior change
@@ -543,7 +550,7 @@ impl Bookmarks for SqlBookmarks {
                     }
                     None => entries.into_iter().collect(),
                 };
-                stream::iter_ok(homogenous_entries).and_then(|entry| {
+                stream::iter(homogenous_entries.into_iter().map(Ok)).and_then(|entry| async move {
                     let (
                         id,
                         repo_id,
@@ -570,8 +577,8 @@ impl Bookmarks for SqlBookmarks {
                     )
                 })
             })
-            .flatten_stream()
-            .boxify()
+            .try_flatten_stream()
+            .boxed()
     }
 
     fn read_next_bookmark_log_entries(
@@ -581,7 +588,7 @@ impl Bookmarks for SqlBookmarks {
         repoid: RepositoryId,
         limit: u64,
         freshness: Freshness,
-    ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+    ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
         let connection = if freshness == Freshness::MostRecent {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
@@ -593,8 +600,9 @@ impl Bookmarks for SqlBookmarks {
         };
 
         ReadNextBookmarkLogEntries::query(&connection, &id, &repoid, &limit)
-            .map(|entries| {
-                stream::iter_ok(entries.into_iter()).and_then(|entry| {
+            .compat()
+            .map_ok(|entries| {
+                stream::iter(entries.into_iter().map(Ok)).and_then(|entry| async move {
                     let (
                         id,
                         repo_id,
@@ -621,13 +629,13 @@ impl Bookmarks for SqlBookmarks {
                     )
                 })
             })
-            .flatten_stream()
-            .boxify()
+            .try_flatten_stream()
+            .boxed()
     }
 }
 
 impl SqlBookmarks {
-    pub fn write_to_txn(
+    pub async fn write_to_txn(
         &self,
         ctx: CoreContext,
         repoid: RepositoryId,
@@ -636,56 +644,54 @@ impl SqlBookmarks {
         from_changeset_id: Option<ChangesetId>,
         to_changeset_id: Option<ChangesetId>,
         reason: BookmarkUpdateReason,
-    ) -> BoxFuture<TransactionResult, Error> {
+    ) -> Result<TransactionResult> {
         let mut book_txn =
             SqlBookmarksTransaction::new(ctx, self.write_connection.clone(), repoid.clone());
 
         match (from_changeset_id, to_changeset_id) {
             (Some(from_cs_id), Some(to_cs_id)) => {
-                try_boxfuture!(book_txn.update(&bookmark, to_cs_id, from_cs_id, reason));
+                book_txn.update(&bookmark, to_cs_id, from_cs_id, reason)?;
             }
             (Some(from_cs_id), None) => {
-                try_boxfuture!(book_txn.delete(&bookmark, from_cs_id, reason));
+                book_txn.delete(&bookmark, from_cs_id, reason)?;
             }
             (None, Some(to_cs_id)) => {
                 // Unfortunately we can't tell if a bookmark was created or force set.
                 // Because of that we have to always do force set.
-                try_boxfuture!(book_txn.force_set(&bookmark, to_cs_id, reason));
+                book_txn.force_set(&bookmark, to_cs_id, reason)?;
             }
-            (None, None) => return future::err(Error::msg("unsupported bookmark move")).boxify(),
+            (None, None) => {
+                return Err(Error::msg("unsupported bookmark move"));
+            }
         };
 
-        book_txn.update_transaction(sql_txn)
+        book_txn.update_transaction(sql_txn).await
     }
 }
 
 type RetryAttempt = usize;
 
-fn conditional_retry_without_delay<V, Fut, RetryableFunc, DecisionFunc>(
+async fn conditional_retry_without_delay<V, Fut, RetryableFunc, DecisionFunc>(
     func: RetryableFunc,
     should_retry: DecisionFunc,
-) -> impl Future<Item = (V, RetryAttempt), Error = (BookmarkTransactionError, RetryAttempt)>
+) -> Result<(V, RetryAttempt), (BookmarkTransactionError, RetryAttempt)>
 where
     V: Send + 'static,
-    Fut: Future<Item = V, Error = BookmarkTransactionError>,
+    Fut: Future<Output = Result<V, BookmarkTransactionError>>,
     RetryableFunc: Fn(RetryAttempt) -> Fut + Send + 'static,
-    DecisionFunc: Fn(&BookmarkTransactionError, RetryAttempt) -> bool + Send + 'static + Clone,
+    DecisionFunc: Fn(&BookmarkTransactionError, RetryAttempt) -> bool + Send + 'static,
 {
-    loop_fn(1, move |attempt| {
-        func(attempt)
-            .and_then(move |res| Ok(Loop::Break(Ok((res, attempt)))))
-            .or_else({
-                cloned!(should_retry);
-                move |err| {
-                    if should_retry(&err, attempt) {
-                        Ok(Loop::Continue(attempt + 1)).into_future()
-                    } else {
-                        Ok(Loop::Break(Err((err, attempt)))).into_future()
-                    }
+    for attempt in 1.. {
+        match func(attempt).await {
+            Ok(res) => return Ok((res, attempt)),
+            Err(err) => {
+                if !should_retry(&err, attempt) {
+                    return Err((err, attempt));
                 }
-            })
-    })
-    .flatten()
+            }
+        }
+    }
+    unreachable!()
 }
 
 #[derive(Clone, Default)]
@@ -772,13 +778,13 @@ impl SqlBookmarksTransaction {
         }
     }
 
-    fn log_bundle_replay_data(
+    async fn log_bundle_replay_data(
         id: u64,
         reason: BookmarkUpdateReason,
         sql_transaction: SqlTransaction,
-    ) -> impl Future<Item = SqlTransaction, Error = Error> {
+    ) -> Result<SqlTransaction> {
         use BookmarkUpdateReason::*;
-        match reason {
+        let sql_transaction = match reason {
             Pushrebase {
                 bundle_replay_data: Some(bundle_replay_data),
             }
@@ -795,14 +801,15 @@ impl SqlBookmarksTransaction {
                     bundle_handle,
                     commit_timestamps,
                 } = bundle_replay_data;
-                let commit_timestamps = try_boxfuture!(serde_json::to_string(&commit_timestamps));
+                let commit_timestamps = serde_json::to_string(&commit_timestamps)?;
 
                 AddBundleReplayData::query_with_transaction(
                     sql_transaction,
                     &[(&id, &bundle_handle, &commit_timestamps)],
                 )
-                .map(move |(sql_transaction, _)| sql_transaction)
-                .boxify()
+                .compat()
+                .await?
+                .0
             }
             Pushrebase {
                 bundle_replay_data: None,
@@ -818,32 +825,33 @@ impl SqlBookmarksTransaction {
             }
             | ManualMove
             | Blobimport
-            | XRepoSync => future::ok(sql_transaction).boxify(),
-        }
+            | XRepoSync => sql_transaction,
+        };
+        Ok(sql_transaction)
     }
 
-    fn find_next_update_log_id(
+    async fn find_next_update_log_id(
         sql_transaction: SqlTransaction,
-    ) -> impl Future<Item = (SqlTransaction, u64), Error = Error> {
-        return FindMaxBookmarkLogId::query_with_transaction(sql_transaction).and_then(
-            |(sql_transaction, max_id_entries)| {
-                let next_id = 1 + match &max_id_entries[..] {
-                    [(None,)] => 0,
-                    [(Some(max_existing),)] => *max_existing,
-                    // TODO (ikostia): consider panicking here
-                    _ => {
-                        return future::err(format_err!(
-                            "Should be impossible. FindMaxBookmarkLogId returned not a single entry: {:?}",
-                            max_id_entries
-                        ))
-                    }
-                };
-                future::ok((sql_transaction, next_id))
-            },
-        );
+    ) -> Result<(SqlTransaction, u64)> {
+        let (sql_transaction, max_id_entries) =
+            FindMaxBookmarkLogId::query_with_transaction(sql_transaction)
+                .compat()
+                .await?;
+
+        let next_id = 1 + match &max_id_entries[..] {
+            [(None,)] => 0,
+            [(Some(max_existing),)] => *max_existing,
+            _ => {
+                return Err(format_err!(
+                    "Should be impossible. FindMaxBookmarkLogId returned not a single entry: {:?}",
+                    max_id_entries
+                ))
+            }
+        };
+        Ok((sql_transaction, next_id))
     }
 
-    fn log_bookmark_moves(
+    async fn log_bookmark_moves(
         repo_id: RepositoryId,
         timestamp: Timestamp,
         moves: HashMap<
@@ -855,45 +863,37 @@ impl SqlBookmarksTransaction {
             ),
         >,
         sql_transaction: SqlTransaction,
-    ) -> impl Future<Item = SqlTransaction, Error = Error> {
-        Self::find_next_update_log_id(sql_transaction).and_then(
-            move |(sql_transaction, next_id)| {
-                loop_fn(
-                    (moves.into_iter(), next_id, sql_transaction),
-                    move |(mut moves, next_id, sql_transaction)| match moves.next() {
-                        Some((bookmark, (from_changeset_id, to_changeset_id, reason))) => {
-                            let row = vec![(
-                                &next_id,
-                                &repo_id,
-                                &bookmark,
-                                &from_changeset_id,
-                                &to_changeset_id,
-                                &reason,
-                                &timestamp,
-                            )];
-                            let reason = reason.clone();
-                            AddBookmarkLog::query_with_transaction(sql_transaction, &row[..])
-                                .and_then(move |(sql_transaction, _query_result)| {
-                                    Self::log_bundle_replay_data(next_id, reason, sql_transaction)
-                                        .map(move |sql_transaction| {
-                                            (moves, next_id + 1, sql_transaction)
-                                        })
-                                })
-                                .map(Loop::Continue)
-                                .left_future()
-                        }
-                        None => future::ok(Loop::Break(sql_transaction)).right_future(),
-                    },
-                )
-            },
-        )
+    ) -> Result<SqlTransaction> {
+        let (mut sql_transaction, mut next_id) =
+            Self::find_next_update_log_id(sql_transaction).await?;
+        for (bookmark, (from_changeset_id, to_changeset_id, reason)) in moves {
+            let row = vec![(
+                &next_id,
+                &repo_id,
+                &bookmark,
+                &from_changeset_id,
+                &to_changeset_id,
+                &reason,
+                &timestamp,
+            )];
+            let reason = reason.clone();
+            sql_transaction =
+                AddBookmarkLog::query_with_transaction(sql_transaction, row.as_slice())
+                    .compat()
+                    .await?
+                    .0;
+            sql_transaction =
+                Self::log_bundle_replay_data(next_id, reason, sql_transaction).await?;
+            next_id += 1;
+        }
+        Ok(sql_transaction)
     }
 
-    fn attempt_write(
+    async fn attempt_write(
         transaction: SqlTransaction,
         repo_id: RepositoryId,
         payload: SqlBookmarksTransactionPayload,
-    ) -> BoxFuture<SqlTransaction, BookmarkTransactionError> {
+    ) -> Result<SqlTransaction, BookmarkTransactionError> {
         // NOTE: Infinitepush updates do *not* go into log_rows. This is because the
         // BookmarkUpdateLog is currently used for replays to Mercurial, and those updates should
         // not be replayed (for Infinitepush, those updates are actually dispatched by the client
@@ -917,161 +917,109 @@ impl SqlBookmarksTransaction {
             ref_rows.push((&repo_id, &force_set[idx].0, to_changeset_id));
         }
 
-        ReplaceBookmarks::query_with_transaction(transaction, &ref_rows[..])
-            .map_err(BookmarkTransactionError::Other)
-            .and_then(move |(transaction, _)| {
-                let mut ref_rows = Vec::new();
+        let (txn, _) = ReplaceBookmarks::query_with_transaction(transaction, &ref_rows[..])
+            .compat()
+            .await?;
 
-                let creates_vec: Vec<_> = creates.clone().into_iter().collect();
-                for idx in 0..creates_vec.len() {
-                    let (ref to_changeset_id, _) = creates_vec[idx].1;
-                    ref_rows.push((
-                        &repo_id,
-                        &creates_vec[idx].0,
-                        to_changeset_id,
-                        &BookmarkHgKind::PullDefault,
-                    ))
+        let mut ref_rows = Vec::new();
+
+        let creates_vec: Vec<_> = creates.clone().into_iter().collect();
+        for idx in 0..creates_vec.len() {
+            let (ref to_changeset_id, _) = creates_vec[idx].1;
+            ref_rows.push((
+                &repo_id,
+                &creates_vec[idx].0,
+                to_changeset_id,
+                &BookmarkHgKind::PullDefault,
+            ))
+        }
+
+        for (name, cs_id) in infinitepush_creates.iter() {
+            ref_rows.push((&repo_id, &name, cs_id, &BookmarkHgKind::Scratch));
+        }
+
+        let rows_to_insert = ref_rows.len() as u64;
+        let (mut txn, result) = InsertBookmarks::query_with_transaction(txn, &ref_rows[..])
+            .compat()
+            .await?;
+
+        if result.affected_rows() != rows_to_insert {
+            return Err(BookmarkTransactionError::LogicError);
+        }
+
+        // Iterate over (BookmarkName, BookmarkSetData, *Allowed Kinds to update from)
+        // We allow up to 2 kinds to update from.
+        use BookmarkHgKind::*;
+
+        let sets_iter = sets.into_iter().map(|(name, (data, _reason))| {
+            (name, data, vec![PullDefault, PublishingNotPullDefault])
+        });
+
+        let infinitepush_sets_iter = infinitepush_sets
+            .into_iter()
+            .map(|(name, data)| (name, data, vec![Scratch]));
+
+        let updates_iter = sets_iter.chain(infinitepush_sets_iter);
+
+        for (
+            ref name,
+            BookmarkSetData {
+                ref new_cs,
+                ref old_cs,
+            },
+            ref kinds,
+        ) in updates_iter
+        {
+            if new_cs == old_cs {
+                // no-op update. If bookmark points to a correct update then
+                // let's continue the transaction, otherwise revert it
+                let (txn_, result) = SelectBookmark::query_with_transaction(txn, &repo_id, &name)
+                    .compat()
+                    .await?;
+                txn = txn_;
+                let new_cs = new_cs.clone();
+                if result.get(0).map(|b| b.0) != Some(new_cs) {
+                    return Err(BookmarkTransactionError::LogicError);
                 }
-
-                for (name, cs_id) in infinitepush_creates.iter() {
-                    ref_rows.push((&repo_id, &name, cs_id, &BookmarkHgKind::Scratch));
+            } else {
+                let (txn_, result) = UpdateBookmark::query_with_transaction(
+                    txn,
+                    &repo_id,
+                    &name,
+                    &old_cs,
+                    &new_cs,
+                    &kinds[..],
+                )
+                .compat()
+                .await?;
+                txn = txn_;
+                if result.affected_rows() != 1 {
+                    return Err(BookmarkTransactionError::LogicError);
                 }
+            }
+        }
 
-                let rows_to_insert = ref_rows.len() as u64;
-                InsertBookmarks::query_with_transaction(transaction, &ref_rows[..]).then(
-                    move |res| match res {
-                        Err(err) => Err(BookmarkTransactionError::Other(err)),
-                        Ok((transaction, result)) => {
-                            if result.affected_rows() == rows_to_insert {
-                                Ok(transaction)
-                            } else {
-                                Err(BookmarkTransactionError::LogicError)
-                            }
-                        }
-                    },
-                )
-            })
-            .and_then(move |transaction| {
-                // Iterate over (BookmarkName, BookmarkSetData, *Allowed Kinds to update from)
-                // We allow up to 2 kinds to update from.
-                use BookmarkHgKind::*;
+        for (name, _reason) in force_deletes {
+            let (txn_, _) = DeleteBookmark::query_with_transaction(txn, &repo_id, &name)
+                .compat()
+                .await?;
+            txn = txn_;
+        }
+        for (name, (old_cs, _reason)) in deletes {
+            let (txn_, result) =
+                DeleteBookmarkIf::query_with_transaction(txn, &repo_id, &name, &old_cs)
+                    .compat()
+                    .await?;
+            txn = txn_;
 
-                let sets_iter = sets.into_iter().map(|(name, (data, _reason))| {
-                    (name, data, vec![PullDefault, PublishingNotPullDefault])
-                });
+            if result.affected_rows() != 1 {
+                return Err(BookmarkTransactionError::LogicError);
+            }
+        }
 
-                let infinitepush_sets_iter = infinitepush_sets
-                    .into_iter()
-                    .map(|(name, data)| (name, data, vec![Scratch]));
-
-                let updates_iter = sets_iter.chain(infinitepush_sets_iter);
-
-                loop_fn(
-                    (transaction, updates_iter),
-                    move |(transaction, mut updates)| match updates.next() {
-                        Some((
-                            ref name,
-                            BookmarkSetData {
-                                ref new_cs,
-                                ref old_cs,
-                            },
-                            ref _kinds,
-                        )) if new_cs == old_cs => {
-                            // no-op update. If bookmark points to a correct update then
-                            // let's continue the transaction, otherwise revert it
-                            SelectBookmark::query_with_transaction(transaction, &repo_id, &name)
-                                .then({
-                                    let new_cs = new_cs.clone();
-                                    move |res| match res {
-                                        Err(err) => Err(BookmarkTransactionError::Other(err)),
-                                        Ok((transaction, result)) => {
-                                            if result.get(0).map(|b| b.0) == Some(new_cs) {
-                                                Ok((transaction, updates))
-                                            } else {
-                                                Err(BookmarkTransactionError::LogicError)
-                                            }
-                                        }
-                                    }
-                                })
-                                .map(Loop::Continue)
-                                .boxify()
-                        }
-                        Some((name, BookmarkSetData { new_cs, old_cs }, kinds)) => {
-                            UpdateBookmark::query_with_transaction(
-                                transaction,
-                                &repo_id,
-                                &name,
-                                &old_cs,
-                                &new_cs,
-                                &kinds[..],
-                            )
-                            .then(move |res| match res {
-                                Err(err) => Err(BookmarkTransactionError::Other(err)),
-                                Ok((transaction, result)) => {
-                                    if result.affected_rows() == 1 {
-                                        Ok((transaction, updates))
-                                    } else {
-                                        Err(BookmarkTransactionError::LogicError)
-                                    }
-                                }
-                            })
-                            .map(Loop::Continue)
-                            .boxify()
-                        }
-                        None => Ok(Loop::Break(transaction)).into_future().boxify(),
-                    },
-                )
-            })
-            .and_then(move |transaction| {
-                loop_fn(
-                    (transaction, force_deletes.into_iter()),
-                    move |(transaction, mut deletes)| match deletes.next() {
-                        Some((name, _reason)) => {
-                            DeleteBookmark::query_with_transaction(transaction, &repo_id, &name)
-                                .then(move |res| match res {
-                                    Err(err) => Err(BookmarkTransactionError::Other(err)),
-                                    Ok((transaction, _)) => Ok((transaction, deletes)),
-                                })
-                                .map(Loop::Continue)
-                                .left_future()
-                        }
-                        None => Ok(Loop::Break(transaction)).into_future().right_future(),
-                    },
-                )
-            })
-            .and_then(move |transaction| {
-                loop_fn(
-                    (transaction, deletes.into_iter()),
-                    move |(transaction, mut deletes)| match deletes.next() {
-                        Some((name, (old_cs, _reason))) => {
-                            DeleteBookmarkIf::query_with_transaction(
-                                transaction,
-                                &repo_id,
-                                &name,
-                                &old_cs,
-                            )
-                            .then(move |res| match res {
-                                Err(err) => Err(BookmarkTransactionError::Other(err)),
-                                Ok((transaction, result)) => {
-                                    if result.affected_rows() == 1 {
-                                        Ok((transaction, deletes))
-                                    } else {
-                                        Err(BookmarkTransactionError::LogicError)
-                                    }
-                                }
-                            })
-                            .map(Loop::Continue)
-                            .left_future()
-                        }
-                        None => Ok(Loop::Break(transaction)).into_future().right_future(),
-                    },
-                )
-            })
-            .and_then(move |transaction| {
-                Self::log_bookmark_moves(repo_id, Timestamp::now(), log_rows, transaction)
-                    .map_err(BookmarkTransactionError::RetryableError)
-            })
-            .boxify()
+        Self::log_bookmark_moves(repo_id, Timestamp::now(), log_rows, txn)
+            .await
+            .map_err(BookmarkTransactionError::RetryableError)
     }
 }
 
@@ -1152,13 +1100,16 @@ impl Transaction for SqlBookmarksTransaction {
         Ok(())
     }
 
-    fn commit(self: Box<Self>) -> BoxFuture<bool, Error> {
-        self.commit_with_hook(Arc::new(|_ctx, txn| future::ok(txn).boxify()))
+    fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
+        self.commit_with_hook(Arc::new(|_ctx, txn| future::ok(txn).boxed()))
     }
 
     /// commit_with_hook() can be used to have the same transaction to update two different database
     /// tables. `txn_hook()` should apply changes to the transaction.
-    fn commit_with_hook(self: Box<Self>, txn_hook: TransactionHook) -> BoxFuture<bool, Error> {
+    fn commit_with_hook(
+        self: Box<Self>,
+        txn_hook: TransactionHook,
+    ) -> BoxFuture<'static, Result<bool>> {
         let Self {
             repo_id,
             ctx,
@@ -1174,6 +1125,7 @@ impl Transaction for SqlBookmarksTransaction {
             move |_attempt| {
                 write_connection
                     .start_transaction()
+                    .compat()
                     .map_err(BookmarkTransactionError::Other)
                     .and_then({
                         cloned!(ctx, txn_hook);
@@ -1198,7 +1150,11 @@ impl Transaction for SqlBookmarksTransaction {
                     STATS::bookmarks_update_log_insert_success.add_value(1);
                     STATS::bookmarks_update_log_insert_success_attempt_count
                         .add_value(attempts as i64);
-                    transaction.commit().and_then(|()| Ok(true)).left_future()
+                    transaction
+                        .commit()
+                        .compat()
+                        .and_then(|()| future::ok(true))
+                        .left_future()
                 }
                 Err((BookmarkTransactionError::LogicError, attempts)) => {
                     // Logic error signifies that the transaction was rolled
@@ -1208,7 +1164,7 @@ impl Transaction for SqlBookmarksTransaction {
                     // we hit before seeing this.
                     STATS::bookmarks_insert_logic_error.add_value(1);
                     STATS::bookmarks_insert_logic_error_attempt_count.add_value(attempts as i64);
-                    Ok(false).into_future().right_future()
+                    future::ok(false).right_future()
                 }
                 Err((BookmarkTransactionError::RetryableError(err), attempts)) => {
                     // Attempt count for `RetryableError` should always be equal
@@ -1218,7 +1174,7 @@ impl Transaction for SqlBookmarksTransaction {
                     STATS::bookmarks_insert_retryable_error.add_value(1);
                     STATS::bookmarks_insert_retryable_error_attempt_count
                         .add_value(attempts as i64);
-                    Err(err).into_future().right_future()
+                    future::err(err).right_future()
                 }
                 Err((BookmarkTransactionError::Other(err), attempts)) => {
                     // `Other` error captures what we consider an "infrastructure"
@@ -1227,30 +1183,28 @@ impl Transaction for SqlBookmarksTransaction {
                     // we hit `RetryableError` a attempt count - 1 times.
                     STATS::bookmarks_insert_other_error.add_value(1);
                     STATS::bookmarks_insert_other_error_attempt_count.add_value(attempts as i64);
-                    Err(err).into_future().right_future()
+                    future::err(err).right_future()
                 }
             })
-            .boxify()
+            .boxed()
     }
 }
 
 impl SqlBookmarksTransaction {
-    pub fn update_transaction(
+    pub async fn update_transaction(
         self,
         transaction: SqlTransaction,
-    ) -> BoxFuture<TransactionResult, Error> {
+    ) -> Result<TransactionResult> {
         self.ctx
             .perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        Self::attempt_write(transaction, self.repo_id, self.payload)
-            .map(TransactionResult::Succeeded)
-            .or_else(|err| match err {
-                BookmarkTransactionError::LogicError => Ok(TransactionResult::Failed),
-                BookmarkTransactionError::RetryableError(err) => Err(err),
-                BookmarkTransactionError::Other(err) => Err(err),
-            })
-            .boxify()
+        match Self::attempt_write(transaction, self.repo_id, self.payload).await {
+            Ok(r) => Ok(TransactionResult::Succeeded(r)),
+            Err(BookmarkTransactionError::LogicError) => Ok(TransactionResult::Failed),
+            Err(BookmarkTransactionError::RetryableError(err)) => Err(err),
+            Err(BookmarkTransactionError::Other(err)) => Err(err),
+        }
     }
 }
 
@@ -1290,10 +1244,8 @@ mod test {
     use std::iter::FromIterator;
     use tokio_compat::runtime::Runtime;
 
-    #[test]
-    fn test_conditional_retry_without_delay() {
-        let mut rt = Runtime::new().unwrap();
-
+    #[fbinit::compat_test]
+    async fn test_conditional_retry_without_delay(_fb: FacebookInit) -> Result<()> {
         let fn_to_retry = move |attempt| {
             if attempt < 3 {
                 future::err(BookmarkTransactionError::RetryableError(Error::msg(
@@ -1304,28 +1256,27 @@ mod test {
             }
         };
 
-        let should_succeed =
-            conditional_retry_without_delay(fn_to_retry, |_err, attempt| attempt < 4);
-        let (_res, attempts) = rt
-            .block_on(should_succeed)
-            .expect("retries failed, but should've succeeded");
+        let (_res, attempts) =
+            conditional_retry_without_delay(fn_to_retry, |_err, attempt| attempt < 4)
+                .await
+                .expect("should succeed after 3 attempts");
         assert_eq!(attempts, 3);
 
-        let should_fail = conditional_retry_without_delay(fn_to_retry, |_err, attempt| attempt < 1);
-        let (_err, attempts) = rt
-            .block_on(should_fail)
-            .expect_err("retries shouldn't have been performed");
+        let (_err, attempts) =
+            conditional_retry_without_delay(fn_to_retry, |_err, attempt| attempt < 1)
+                .await
+                .expect_err("retries shouldn't have been performed");
         assert_eq!(attempts, 1);
+
+        Ok(())
     }
 
     fn create_bookmark_name(book: &str) -> BookmarkName {
         BookmarkName::new(book.to_string()).unwrap()
     }
 
-    #[fbinit::test]
-    fn test_update_kind_compatibility(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
-
+    #[fbinit::compat_test]
+    async fn test_update_kind_compatibility(fb: FacebookInit) -> Result<()> {
         let data = BookmarkUpdateReason::TestMove {
             bundle_replay_data: None,
         };
@@ -1359,55 +1310,49 @@ mod test {
             ),
         ];
 
-        rt.block_on(InsertBookmarks::query(&conn, &rows[..]))
-            .expect("insert failed");
+        InsertBookmarks::query(&conn, &rows[..]).compat().await?;
 
         // Create normal over scratch should fail
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.create_infinitepush(&publishing_name, ONES_CSID)
-            .unwrap();
-        assert!(!txn.commit().wait().unwrap());
+        txn.create_infinitepush(&publishing_name, ONES_CSID)?;
+        assert!(!txn.commit().await?);
 
         // Create scratch over normal should fail
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.create(&scratch_name, ONES_CSID, data.clone()).unwrap();
-        assert!(!txn.commit().wait().unwrap());
+        txn.create(&scratch_name, ONES_CSID, data.clone())?;
+        assert!(!txn.commit().await?);
 
         // Updating publishing with infinite push should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update_infinitepush(&publishing_name, TWOS_CSID, ONES_CSID)
-            .unwrap();
-        assert!(!txn.commit().wait().unwrap());
+        txn.update_infinitepush(&publishing_name, TWOS_CSID, ONES_CSID)?;
+        assert!(!txn.commit().await?);
 
         // Updating pull default with infinite push should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update_infinitepush(&pull_default_name, TWOS_CSID, ONES_CSID)
-            .unwrap();
-        assert!(!txn.commit().wait().unwrap());
+        txn.update_infinitepush(&pull_default_name, TWOS_CSID, ONES_CSID)?;
+        assert!(!txn.commit().await?);
 
         // Updating publishing with normal should succeed
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update(&publishing_name, TWOS_CSID, ONES_CSID, data.clone())
-            .unwrap();
-        assert!(txn.commit().wait().unwrap());
+        txn.update(&publishing_name, TWOS_CSID, ONES_CSID, data.clone())?;
+        assert!(txn.commit().await?);
 
         // Updating pull default with normal should succeed
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update(&pull_default_name, TWOS_CSID, ONES_CSID, data.clone())
-            .unwrap();
-        assert!(txn.commit().wait().unwrap());
+        txn.update(&pull_default_name, TWOS_CSID, ONES_CSID, data.clone())?;
+        assert!(txn.commit().await?);
 
         // Updating scratch with normal should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update(&scratch_name, TWOS_CSID, ONES_CSID, data.clone())
-            .unwrap();
-        assert!(!txn.commit().wait().unwrap());
+        txn.update(&scratch_name, TWOS_CSID, ONES_CSID, data.clone())?;
+        assert!(!txn.commit().await?);
 
         // Updating scratch with infinite push should succeed.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update_infinitepush(&scratch_name, TWOS_CSID, ONES_CSID)
-            .unwrap();
-        assert!(txn.commit().wait().unwrap());
+        txn.update_infinitepush(&scratch_name, TWOS_CSID, ONES_CSID)?;
+        assert!(txn.commit().await?);
+
+        Ok(())
     }
 
     fn insert_then_query(
@@ -1419,7 +1364,7 @@ mod test {
             &BookmarkPrefix,
             RepositoryId,
             Freshness,
-        ) -> BoxStream<(Bookmark, ChangesetId), Error>,
+        ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>,
         freshness: Freshness,
     ) -> HashSet<(Bookmark, ChangesetId)> {
         let mut rt = Runtime::new().unwrap();
@@ -1440,7 +1385,9 @@ mod test {
         rt.block_on(InsertBookmarks::query(&conn, &rows[..]))
             .expect("insert failed");
 
-        let stream = query(store, ctx, &BookmarkPrefix::empty(), repo_id, freshness).collect();
+        let stream = query(store, ctx, &BookmarkPrefix::empty(), repo_id, freshness)
+            .try_collect::<Vec<_>>()
+            .compat();
 
         let res = rt.block_on(stream).expect("query failed");
         HashSet::from_iter(res)
@@ -1449,7 +1396,7 @@ mod test {
     quickcheck! {
         fn filter_publishing(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
 
-            fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
+            fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
                 bookmarks.list_publishing_by_prefix(ctx, prefix, repo_id, freshness)
             }
 
@@ -1460,7 +1407,7 @@ mod test {
 
         fn filter_pull_default(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
 
-            fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
+            fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
                 bookmarks.list_pull_default_by_prefix(ctx, prefix, repo_id, freshness)
             }
 
@@ -1471,7 +1418,7 @@ mod test {
 
         fn filter_all(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
 
-            fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
+            fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
                 bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness, DEFAULT_MAX)
             }
 

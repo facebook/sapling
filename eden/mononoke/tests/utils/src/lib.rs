@@ -308,7 +308,7 @@ impl UpdateBookmarkContext {
                 bundle_replay_data: None,
             },
         )?;
-        book_txn.commit().compat().await?;
+        book_txn.commit().await?;
         Ok(bookmark)
     }
 
@@ -326,7 +326,7 @@ impl UpdateBookmarkContext {
                 bundle_replay_data: None,
             },
         )?;
-        book_txn.commit().compat().await?;
+        book_txn.commit().await?;
         Ok(())
     }
 }

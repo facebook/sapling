@@ -15,11 +15,8 @@ use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use fbinit::FacebookInit;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future,
-    stream::StreamExt,
-};
+use futures::stream::StreamExt;
+use futures::{compat::Future01CompatExt, future};
 use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
@@ -212,7 +209,6 @@ async fn last_processed(
                             repo_id,
                             BookmarkUpdateReason::Blobimport,
                         )
-                        .compat()
                         .await?;
 
                     match (maybe_new_counter, dry_run) {
@@ -282,7 +278,6 @@ async fn remains(
 
     let remaining = bookmarks
         .count_further_bookmark_log_entries(ctx.clone(), counter, repo_id, exclude_reason)
-        .compat()
         .await
         .with_context(|| {
             format!(
@@ -327,15 +322,13 @@ async fn show(
         .await?
         .unwrap_or(0);
 
-    let mut entries = bookmarks
-        .read_next_bookmark_log_entries(
-            ctx.clone(),
-            counter.try_into()?,
-            repo.get_repoid(),
-            limit,
-            Freshness::MostRecent,
-        )
-        .compat();
+    let mut entries = bookmarks.read_next_bookmark_log_entries(
+        ctx.clone(),
+        counter.try_into()?,
+        repo.get_repoid(),
+        limit,
+        Freshness::MostRecent,
+    );
 
     while let Some(entry) = entries.next().await {
         let entry = entry?;
@@ -415,7 +408,6 @@ async fn verify(
 
     let counts = bookmarks
         .count_further_bookmark_log_entries_by_reason(ctx.clone(), counter, repo_id)
-        .compat()
         .await?;
 
     let (blobimports, others): (
@@ -534,7 +526,6 @@ async fn get_entry_by_id(
             1,
             Freshness::MostRecent,
         )
-        .compat()
         .next()
         .await
         .ok_or_else(|| Error::msg("no log entries found"))??;

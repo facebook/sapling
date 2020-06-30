@@ -11,8 +11,8 @@ use crate::{
 };
 use anyhow::{Error, Result};
 use context::CoreContext;
-use futures::{future, stream, Future, Stream};
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures::future::{self, BoxFuture, FutureExt, TryFutureExt};
+use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
 use stats::prelude::*;
 use std::{
@@ -33,7 +33,7 @@ type CacheData = BTreeMap<BookmarkName, (BookmarkHgKind, ChangesetId)>;
 struct Cache {
     expires: Instant,
     maybe_stale: bool,
-    current: future::Shared<BoxFuture<CacheData, Error>>,
+    current: future::Shared<BoxFuture<'static, Arc<Result<CacheData>>>>,
 }
 
 impl Cache {
@@ -51,19 +51,22 @@ impl Cache {
             Freshness::MostRecent
         };
 
-        let current = future::lazy(move || {
-            bookmarks
-                .list_publishing_by_prefix(ctx, &BookmarkPrefix::empty(), repoid, freshness)
-                .fold(
-                    BTreeMap::new(),
-                    |mut map, (bookmark, changeset_id)| -> Result<CacheData> {
-                        let Bookmark { name, hg_kind } = bookmark;
-                        map.insert(name, (hg_kind, changeset_id));
-                        Ok(map)
-                    },
-                )
-        })
-        .boxify()
+        let current = async move {
+            Arc::new(
+                bookmarks
+                    .list_publishing_by_prefix(ctx, &BookmarkPrefix::empty(), repoid, freshness)
+                    .try_fold(
+                        BTreeMap::new(),
+                        |mut map, (bookmark, changeset_id)| async move {
+                            let Bookmark { name, hg_kind } = bookmark;
+                            map.insert(name, (hg_kind, changeset_id));
+                            Ok(map)
+                        },
+                    )
+                    .await,
+            )
+        }
+        .boxed()
         .shared();
 
         Cache {
@@ -162,33 +165,35 @@ impl CachedBookmarks {
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
         filter: fn(&BookmarkHgKind) -> bool,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         let range = prefix.to_range();
         let cache = self.get_cache(ctx, repoid);
         cache
             .current
             .clone()
-            .map_err(Error::msg) // unlift shared error
-            .map(move |bookmarks| {
-                let result: Vec<_> = bookmarks
-                    .range(range)
-                    .filter_map(
-                        move |(name, (hg_kind, changeset_id))| match filter(hg_kind) {
-                            true => {
-                                let bookmark = Bookmark {
-                                    name: name.clone(),
-                                    hg_kind: *hg_kind,
-                                };
-                                Some((bookmark, *changeset_id))
-                            }
-                            false => None,
-                        },
-                    )
-                    .collect();
-                stream::iter_ok(result)
+            .map(move |cache_result| match &*cache_result {
+                Ok(bookmarks) => {
+                    let result: Vec<_> = bookmarks
+                        .range(range)
+                        .filter_map(
+                            move |(name, (hg_kind, changeset_id))| match filter(hg_kind) {
+                                true => {
+                                    let bookmark = Bookmark {
+                                        name: name.clone(),
+                                        hg_kind: *hg_kind,
+                                    };
+                                    Some(Ok((bookmark, *changeset_id)))
+                                }
+                                false => None,
+                            },
+                        )
+                        .collect();
+                    Ok(stream::iter(result))
+                }
+                Err(err) => Err(Error::msg(err.to_string())),
             })
-            .flatten_stream()
-            .boxify()
+            .try_flatten_stream()
+            .boxed()
     }
 }
 
@@ -224,7 +229,7 @@ impl Bookmarks for CachedBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
         freshness: Freshness,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         // Our cache only contains Publishing entries, so they all pass our filter.
         fn filter(_hg_kind: &BookmarkHgKind) -> bool {
             true
@@ -244,7 +249,7 @@ impl Bookmarks for CachedBookmarks {
         prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
         freshness: Freshness,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         // Our cache contains Publishing entries, but not all of their are PullDefault as well
         // (which is a subset of Publishing). So, we filter our those that aren't acceptable here.
         fn filter(hg_kind: &BookmarkHgKind) -> bool {
@@ -271,7 +276,7 @@ impl Bookmarks for CachedBookmarks {
         repo_id: RepositoryId,
         freshness: Freshness,
         max: u64,
-    ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         // We don't cache queries that hit all bookmarks.
         return self
             .bookmarks
@@ -292,7 +297,7 @@ impl Bookmarks for CachedBookmarks {
         ctx: CoreContext,
         bookmark: &BookmarkName,
         repoid: RepositoryId,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
+    ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
         // NOTE: If you to implement a Freshness notion here and try to fetch from cache, be
         // mindful that not all bookmarks are cached, so a cache miss here does not necessarily
         // mean that the Bookmark does not exist.
@@ -306,7 +311,7 @@ impl Bookmarks for CachedBookmarks {
         repoid: RepositoryId,
         limit: u64,
         freshness: Freshness,
-    ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+    ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
         self.bookmarks
             .read_next_bookmark_log_entries(ctx, id, repoid, limit, freshness)
     }
@@ -317,7 +322,7 @@ impl Bookmarks for CachedBookmarks {
         id: u64,
         repoid: RepositoryId,
         limit: u64,
-    ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+    ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
         self.bookmarks
             .read_next_bookmark_log_entries_same_bookmark_and_reason(ctx, id, repoid, limit)
     }
@@ -330,7 +335,7 @@ impl Bookmarks for CachedBookmarks {
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
-    ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
+    ) -> BoxStream<'static, Result<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>> {
         self.bookmarks
             .list_bookmark_log_entries(ctx, name, repoid, max_rec, offset, freshness)
     }
@@ -341,7 +346,7 @@ impl Bookmarks for CachedBookmarks {
         id: u64,
         repoid: RepositoryId,
         exclude_reason: Option<BookmarkUpdateReason>,
-    ) -> BoxFuture<u64, Error> {
+    ) -> BoxFuture<'static, Result<u64>> {
         self.bookmarks
             .count_further_bookmark_log_entries(ctx, id, repoid, exclude_reason)
     }
@@ -351,7 +356,7 @@ impl Bookmarks for CachedBookmarks {
         ctx: CoreContext,
         id: u64,
         repoid: RepositoryId,
-    ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error> {
+    ) -> BoxFuture<'static, Result<Vec<(BookmarkUpdateReason, u64)>>> {
         self.bookmarks
             .count_further_bookmark_log_entries_by_reason(ctx, id, repoid)
     }
@@ -362,7 +367,7 @@ impl Bookmarks for CachedBookmarks {
         id: u64,
         repoid: RepositoryId,
         reason: BookmarkUpdateReason,
-    ) -> BoxFuture<Option<u64>, Error> {
+    ) -> BoxFuture<'static, Result<Option<u64>>> {
         self.bookmarks
             .skip_over_bookmark_log_entries_with_reason(ctx, id, repoid, reason)
     }
@@ -435,7 +440,7 @@ impl Transaction for CachedBookmarksTransaction {
         self.transaction.create_infinitepush(bookmark, new_cs)
     }
 
-    fn commit(self: Box<Self>) -> BoxFuture<bool, Error> {
+    fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
         let CachedBookmarksTransaction {
             transaction,
             caches,
@@ -446,16 +451,19 @@ impl Transaction for CachedBookmarksTransaction {
 
         transaction
             .commit()
-            .map(move |success| {
+            .map_ok(move |success| {
                 if success && dirty {
                     caches.purge_cache(ctx, repoid);
                 }
                 success
             })
-            .boxify()
+            .boxed()
     }
 
-    fn commit_with_hook(self: Box<Self>, txn_hook: TransactionHook) -> BoxFuture<bool, Error> {
+    fn commit_with_hook(
+        self: Box<Self>,
+        txn_hook: TransactionHook,
+    ) -> BoxFuture<'static, Result<bool>> {
         let CachedBookmarksTransaction {
             transaction,
             caches,
@@ -466,13 +474,13 @@ impl Transaction for CachedBookmarksTransaction {
 
         transaction
             .commit_with_hook(txn_hook)
-            .map(move |success| {
+            .map_ok(move |success| {
                 if success && dirty {
                     caches.purge_cache(ctx, repoid);
                 }
                 success
             })
-            .boxify()
+            .boxed()
     }
 }
 
@@ -481,9 +489,9 @@ mod tests {
     use super::*;
     use fbinit::FacebookInit;
     use futures::{
-        future::Either,
-        stream::StreamFuture,
-        sync::{mpsc, oneshot},
+        channel::{mpsc, oneshot},
+        future::{Either, Future},
+        stream::{Stream, StreamFuture},
     };
     use maplit::hashmap;
     use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
@@ -491,7 +499,7 @@ mod tests {
     use std::collections::HashSet;
     use std::fmt::Debug;
     use std::iter::FromIterator;
-    use tokio::{runtime::Runtime, timer::Delay};
+    use tokio_compat::runtime::Runtime;
 
     fn bookmark<B: AsRef<str>>(name: B) -> Bookmark {
         Bookmark::new(
@@ -527,7 +535,7 @@ mod tests {
             &self,
             freshness: Freshness,
             request: Request,
-        ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
             let (send, recv) = oneshot::channel();
 
             self.sender
@@ -535,10 +543,10 @@ mod tests {
                 .unwrap();
 
             recv.map_err(Error::from)
-                .and_then(|result| result)
-                .map(|bm| stream::iter_ok(bm))
-                .flatten_stream()
-                .boxify()
+                .and_then(|result| async move { result })
+                .map_ok(|bm| stream::iter(bm.into_iter().map(Ok)))
+                .try_flatten_stream()
+                .boxed()
         }
     }
 
@@ -568,7 +576,7 @@ mod tests {
             _ctx: CoreContext,
             _name: &BookmarkName,
             _repoid: RepositoryId,
-        ) -> BoxFuture<Option<ChangesetId>, Error> {
+        ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
             unimplemented!()
         }
 
@@ -578,7 +586,7 @@ mod tests {
             _prefix: &BookmarkPrefix,
             _repo_id: RepositoryId,
             freshness: Freshness,
-        ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
             self.list_impl(freshness, Request::Publishing)
         }
 
@@ -588,7 +596,7 @@ mod tests {
             _prefix: &BookmarkPrefix,
             _repo_id: RepositoryId,
             freshness: Freshness,
-        ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
             self.list_impl(freshness, Request::PullDefault)
         }
 
@@ -599,7 +607,7 @@ mod tests {
             _repo_id: RepositoryId,
             freshness: Freshness,
             _max: u64,
-        ) -> BoxStream<(Bookmark, ChangesetId), Error> {
+        ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
             self.list_impl(freshness, Request::All)
         }
 
@@ -618,7 +626,7 @@ mod tests {
             _repoid: RepositoryId,
             _limit: u64,
             _freshness: Freshness,
-        ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+        ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
             unimplemented!()
         }
 
@@ -628,7 +636,7 @@ mod tests {
             _id: u64,
             _repoid: RepositoryId,
             _limit: u64,
-        ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
+        ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
             unimplemented!()
         }
 
@@ -640,7 +648,8 @@ mod tests {
             _max_rec: u32,
             _offset: Option<u32>,
             _freshness: Freshness,
-        ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
+        ) -> BoxStream<'static, Result<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>>
+        {
             unimplemented!()
         }
 
@@ -650,7 +659,7 @@ mod tests {
             _id: u64,
             _repoid: RepositoryId,
             _exclude_reason: Option<BookmarkUpdateReason>,
-        ) -> BoxFuture<u64, Error> {
+        ) -> BoxFuture<'static, Result<u64>> {
             unimplemented!()
         }
 
@@ -659,7 +668,7 @@ mod tests {
             _ctx: CoreContext,
             _id: u64,
             _repoid: RepositoryId,
-        ) -> BoxFuture<Vec<(BookmarkUpdateReason, u64)>, Error> {
+        ) -> BoxFuture<'static, Result<Vec<(BookmarkUpdateReason, u64)>>> {
             unimplemented!()
         }
 
@@ -669,7 +678,7 @@ mod tests {
             _id: u64,
             _repoid: RepositoryId,
             _reason: BookmarkUpdateReason,
-        ) -> BoxFuture<Option<u64>, Error> {
+        ) -> BoxFuture<'static, Result<Option<u64>>> {
             unimplemented!()
         }
     }
@@ -739,11 +748,14 @@ mod tests {
             Ok(())
         }
 
-        fn commit(self: Box<Self>) -> BoxFuture<bool, Error> {
-            future::ok(true).boxify()
+        fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
+            future::ok(true).boxed()
         }
 
-        fn commit_with_hook(self: Box<Self>, _txn_hook: TransactionHook) -> BoxFuture<bool, Error> {
+        fn commit_with_hook(
+            self: Box<Self>,
+            _txn_hook: TransactionHook,
+        ) -> BoxFuture<'static, Result<bool>> {
             unimplemented!()
         }
     }
@@ -753,44 +765,40 @@ mod tests {
     /// be passed to next_request again to get the next one (and so on). This something happens to
     /// be a future that resolves to the next element and the rest of the stream. This also has an
     /// in-build timeout to report hung tests.
-    fn next_request<T, E, S, F>(
-        requests: F,
-        rt: &mut Runtime,
-        timeout_ms: u64,
-    ) -> (T, StreamFuture<S>)
+    fn next_request<T, S, F>(requests: F, rt: &mut Runtime, timeout_ms: u64) -> (T, StreamFuture<S>)
     where
         T: Send + 'static,
-        E: Send + 'static,
-        S: Stream<Item = T, Error = E> + Send + 'static,
-        F: Future<Item = (Option<T>, S), Error = (E, S)> + Send + 'static,
+        S: Stream<Item = T> + Send + Unpin + 'static,
+        F: Future<Output = (Option<T>, S)> + Send + Unpin + 'static,
     {
-        let timeout = Duration::from_millis(timeout_ms);
-        let delay = Delay::new(Instant::now() + timeout);
+        rt.block_on_std(async move {
+            let timeout = Duration::from_millis(timeout_ms);
+            let delay = tokio::time::delay_for(timeout);
 
-        match rt.block_on(delay.select2(requests)) {
-            Ok(Either::A((_, _))) => panic!("no request came through!"),
-            Ok(Either::B((r, _))) => {
-                let (request, stream) = r;
-                (request.unwrap(), stream.into_future())
+            match future::select(delay, requests).await {
+                Either::Left((_, _)) => panic!("no request came through!"),
+                Either::Right((r, _)) => {
+                    let (request, stream) = r;
+                    (request.unwrap(), stream.into_future())
+                }
             }
-            _ => panic!("future errored"),
-        }
+        })
     }
 
-    fn assert_no_pending_requests<T, E, F>(fut: F, rt: &mut Runtime, timeout_ms: u64) -> F
+    fn assert_no_pending_requests<T, F>(fut: F, rt: &mut Runtime, timeout_ms: u64) -> F
     where
         T: Debug + Send + 'static,
-        E: Send + 'static,
-        F: Future<Item = T, Error = E> + Send + 'static,
+        F: Future<Output = T> + Send + Unpin + 'static,
     {
-        let timeout = Duration::from_millis(timeout_ms);
-        let delay = Delay::new(Instant::now() + timeout);
+        rt.block_on_std(async move {
+            let timeout = Duration::from_millis(timeout_ms);
+            let delay = tokio::time::delay_for(timeout);
 
-        match rt.block_on(delay.select2(fut)) {
-            Ok(Either::A((_, b))) => b,
-            Ok(Either::B((r, _))) => panic!("pending request was found: {:?}", r),
-            _ => panic!("future errored"),
-        }
+            match future::select(delay, fut).await {
+                Either::Left((_, b)) => b,
+                Either::Right((r, _)) => panic!("pending request was found: {:?}", r),
+            }
+        })
     }
 
     #[fbinit::test]
@@ -814,11 +822,11 @@ mod tests {
                     repoid,
                     Freshness::MaybeStale,
                 )
-                .collect()
-                .map(move |r| sender.send(r).unwrap())
-                .discard();
+                .try_collect()
+                .map_ok(move |r: Vec<_>| sender.send(r).unwrap())
+                .map(|_| Ok(()));
 
-            rt.spawn(fut);
+            rt.spawn(fut.compat());
 
             receiver
         };
@@ -843,12 +851,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            rt.block_on(res0).unwrap(),
+            rt.block_on(res0.compat()).unwrap(),
             vec![(bookmark("a0"), ONES_CSID)]
         );
 
         assert_eq!(
-            rt.block_on(res1).unwrap(),
+            rt.block_on(res1.compat()).unwrap(),
             vec![(bookmark("b0"), TWOS_CSID), (bookmark("b1"), THREES_CSID)]
         );
 
@@ -857,14 +865,14 @@ mod tests {
 
         // Create a non dirty transaction and make sure that no requests go to master.
         let transaction = bookmarks.create_transaction(ctx.clone(), repoid);
-        rt.block_on(transaction.commit()).unwrap();
+        rt.block_on(transaction.commit().compat()).unwrap();
 
         let _ = spawn_query("c", &mut rt);
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
 
         // successfull transaction should redirect further requests to master
         let transaction = create_dirty_transaction(&bookmarks, ctx.clone(), repoid);
-        rt.block_on(transaction.commit()).unwrap();
+        rt.block_on(transaction.commit().compat()).unwrap();
 
         let res = spawn_query("a", &mut rt);
 
@@ -875,7 +883,8 @@ mod tests {
             .send(Err(Error::msg("request to master failed")))
             .unwrap();
 
-        rt.block_on(res).expect_err("cache did not bubble up error");
+        rt.block_on(res.compat())
+            .expect_err("cache did not bubble up error");
 
         // If request to master failed, next request should go to master too
         let res = spawn_query("a", &mut rt);
@@ -890,7 +899,10 @@ mod tests {
             }))
             .unwrap();
 
-        assert_eq!(rt.block_on(res).unwrap(), vec![(bookmark("a"), ONES_CSID)]);
+        assert_eq!(
+            rt.block_on(res.compat()).unwrap(),
+            vec![(bookmark("a"), ONES_CSID)]
+        );
 
         // No further requests should be made.
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
@@ -898,7 +910,10 @@ mod tests {
         // request should be resolved with cache
         let res = spawn_query("b", &mut rt);
 
-        assert_eq!(rt.block_on(res).unwrap(), vec![(bookmark("b"), TWOS_CSID)]);
+        assert_eq!(
+            rt.block_on(res.compat()).unwrap(),
+            vec![(bookmark("b"), TWOS_CSID)]
+        );
 
         // No requests should have been made.
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
@@ -918,7 +933,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            rt.block_on(res).unwrap(),
+            rt.block_on(res.compat()).unwrap(),
             vec![(bookmark("b"), THREES_CSID)]
         );
 
@@ -935,7 +950,7 @@ mod tests {
             &BookmarkPrefix,
             RepositoryId,
             Freshness,
-        ) -> BoxStream<(Bookmark, ChangesetId), Error>,
+        ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>,
         query_freshness: Freshness,
         expected_downstream_request: Request,
     ) -> HashSet<(Bookmark, ChangesetId)> {
@@ -958,10 +973,10 @@ mod tests {
             repo_id,
             query_freshness,
         )
-        .collect()
-        .map(|r| sender.send(r).unwrap())
-        .discard();
-        rt.spawn(fut);
+        .try_collect()
+        .map_ok(|r: Vec<_>| sender.send(r).unwrap())
+        .map(|_| Ok(()));
+        rt.spawn(fut.compat());
 
         // Wait for the underlying MockBookmarks to receive the request. We expect it to have a
         // freshness consistent with the one we send.
@@ -984,13 +999,13 @@ mod tests {
         };
         responder.send(Ok(res)).unwrap();
 
-        let out = rt.block_on(receiver).expect("query failed");
+        let out = rt.block_on(receiver.compat()).expect("query failed");
         HashSet::from_iter(out)
     }
 
     quickcheck! {
         fn filter_publishing(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
-            fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
+            fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
                 bookmarks.list_publishing_by_prefix(ctx, prefix, repo_id, freshness)
             }
 
@@ -1001,7 +1016,7 @@ mod tests {
 
         fn filter_pull_default(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
 
-            fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
+            fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
                 bookmarks.list_pull_default_by_prefix(ctx, prefix, repo_id, freshness)
             }
 
@@ -1021,7 +1036,7 @@ mod tests {
 
         fn filter_all(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
 
-            fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<(Bookmark, ChangesetId), Error> {
+            fn query(bookmarks: CachedBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
                 bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness, std::u64::MAX)
             }
 

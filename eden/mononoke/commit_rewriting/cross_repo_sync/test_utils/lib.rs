@@ -114,7 +114,7 @@ where
         },
     )
     .unwrap();
-    txn.commit().compat().await.unwrap();
+    txn.commit().await.unwrap();
 
     let entry = SyncedCommitMappingEntry::new(
         target_repo.get_repoid(),

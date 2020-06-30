@@ -1479,7 +1479,7 @@ async fn move_bookmark(
         }
     }
 
-    assert!(txn.commit().compat().await?);
+    assert!(txn.commit().await?);
     Ok(())
 }
 

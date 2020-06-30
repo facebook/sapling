@@ -19,10 +19,9 @@ use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfig;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt as NewFutureExt, TryFutureExt},
-};
+use futures::compat::Future01CompatExt;
+use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
+use futures::stream::TryStreamExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{loop_fn, ok, Future, Loop};
 use futures_old::stream::{self, FuturesUnordered, Stream};
@@ -148,7 +147,8 @@ impl BlobRepo {
                 self.get_repoid(),
                 Freshness::MaybeStale,
             )
-            .map(|(_, cs_id)| cs_id)
+            .map_ok(|(_, cs_id)| cs_id)
+            .compat()
     }
 
     /// List all publishing Bonsai bookmarks.
@@ -157,12 +157,15 @@ impl BlobRepo {
         ctx: CoreContext,
     ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
         STATS::get_bonsai_publishing_bookmarks_maybe_stale.add_value(1);
-        self.inner.bookmarks.list_publishing_by_prefix(
-            ctx,
-            &BookmarkPrefix::empty(),
-            self.get_repoid(),
-            Freshness::MaybeStale,
-        )
+        self.inner
+            .bookmarks
+            .list_publishing_by_prefix(
+                ctx,
+                &BookmarkPrefix::empty(),
+                self.get_repoid(),
+                Freshness::MaybeStale,
+            )
+            .compat()
     }
 
     /// Get bookmarks by prefix, they will be read from replica, so they might be stale.
@@ -173,13 +176,16 @@ impl BlobRepo {
         max: u64,
     ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
-        self.inner.bookmarks.list_all_by_prefix(
-            ctx.clone(),
-            prefix,
-            self.get_repoid(),
-            Freshness::MaybeStale,
-            max,
-        )
+        self.inner
+            .bookmarks
+            .list_all_by_prefix(
+                ctx.clone(),
+                prefix,
+                self.get_repoid(),
+                Freshness::MaybeStale,
+                max,
+            )
+            .compat()
     }
 
     pub fn changeset_exists_by_bonsai(
@@ -217,7 +223,11 @@ impl BlobRepo {
         name: &BookmarkName,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
-        self.inner.bookmarks.get(ctx, name, self.get_repoid())
+        self.inner
+            .bookmarks
+            .get(ctx, name, self.get_repoid())
+            .compat()
+            .boxify()
     }
 
     pub fn bonsai_git_mapping(&self) -> &Arc<dyn BonsaiGitMapping> {
@@ -271,14 +281,17 @@ impl BlobRepo {
         freshness: Freshness,
     ) -> impl Stream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
     {
-        self.inner.bookmarks.list_bookmark_log_entries(
-            ctx.clone(),
-            name,
-            self.get_repoid(),
-            max_rec,
-            offset,
-            freshness,
-        )
+        self.inner
+            .bookmarks
+            .list_bookmark_log_entries(
+                ctx.clone(),
+                name,
+                self.get_repoid(),
+                max_rec,
+                offset,
+                freshness,
+            )
+            .compat()
     }
 
     pub fn read_next_bookmark_log_entries(
@@ -288,13 +301,10 @@ impl BlobRepo {
         limit: u64,
         freshness: Freshness,
     ) -> impl Stream<Item = BookmarkUpdateLogEntry, Error = Error> {
-        self.inner.bookmarks.read_next_bookmark_log_entries(
-            ctx,
-            id,
-            self.get_repoid(),
-            limit,
-            freshness,
-        )
+        self.inner
+            .bookmarks
+            .read_next_bookmark_log_entries(ctx, id, self.get_repoid(), limit, freshness)
+            .compat()
     }
 
     pub fn count_further_bookmark_log_entries(
@@ -303,12 +313,10 @@ impl BlobRepo {
         id: u64,
         exclude_reason: Option<BookmarkUpdateReason>,
     ) -> impl Future<Item = u64, Error = Error> {
-        self.inner.bookmarks.count_further_bookmark_log_entries(
-            ctx,
-            id,
-            self.get_repoid(),
-            exclude_reason,
-        )
+        self.inner
+            .bookmarks
+            .count_further_bookmark_log_entries(ctx, id, self.get_repoid(), exclude_reason)
+            .compat()
     }
 
     pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn bookmarks::Transaction> {
