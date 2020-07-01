@@ -661,20 +661,31 @@ class changelog(revlog.revlog):
 
 def readfiles(text):
     # type: (bytes) -> List[str]
+    """
+    >>> from .pycompat import bytechr as chr
+    >>> d = {'nl': chr(10)}
+    >>> withfiles = b'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)sfile1%(nl)sfile2%(nl)sfile3%(nl)s%(nl)s' % d
+    >>> readfiles(withfiles)
+    ['file1', 'file2', 'file3']
+    >>> withoutfiles = b'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)s%(nl)sCommit summary%(nl)s%(nl)sCommit description%(nl)s' % d
+    >>> readfiles(withoutfiles)
+    []
+    """
     if not text:
         return []
 
+    first = 0
     last = text.index(b"\n\n")
 
-    def findfiles(text):
-        start = 0
-        n = 3
-        while n != 0:
-            first = text.index(b"\n", start, last)
-            n -= 1
-        return text[first:last]
+    n = 3
+    while n != 0:
+        try:
+            first = text.index(b"\n", first, last) + 1
+        except ValueError:
+            return []
+        n -= 1
 
-    return decodeutf8(findfiles(text)).split("\n")
+    return decodeutf8(text[first:last]).split("\n")
 
 
 def hgcommittext(manifest, files, desc, user, date, extra):
