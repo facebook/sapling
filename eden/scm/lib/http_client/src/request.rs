@@ -17,7 +17,8 @@ use url::Url;
 
 use crate::{
     errors::{CertOrKeyMissing, HttpClientError},
-    handler::{Buffered, Configure},
+    handler::{Buffered, Configure, Streaming},
+    receiver::Receiver,
     response::Response,
 };
 
@@ -153,6 +154,16 @@ impl<'a> Request<'a> {
         Ok(Response::from_handle(easy)?)
     }
 
+    /// Turn this `Request` into a streaming request. The
+    /// received data for this request will be passed as
+    /// it arrives to the given `Receiver`.
+    pub fn into_streaming<R>(self, receiver: R) -> StreamRequest<'a, R> {
+        StreamRequest {
+            request: self,
+            receiver,
+        }
+    }
+
     /// Turn this `Request` into a `curl::Easy2` handle using
     /// the given `Handler` to process the response.
     pub(crate) fn into_handle<H: Configure>(self, handler: H) -> Result<Easy2<H>, HttpClientError> {
@@ -215,6 +226,20 @@ impl<'a> TryFrom<Request<'a>> for Easy2<Buffered> {
 
     fn try_from(req: Request<'a>) -> Result<Self, Self::Error> {
         req.into_handle(Buffered::new())
+    }
+}
+
+pub struct StreamRequest<'a, R> {
+    pub(crate) request: Request<'a>,
+    pub(crate) receiver: R,
+}
+
+impl<'a, R: Receiver> TryFrom<StreamRequest<'a, R>> for Easy2<Streaming<R>> {
+    type Error = HttpClientError;
+
+    fn try_from(req: StreamRequest<'a, R>) -> Result<Self, Self::Error> {
+        let StreamRequest { request, receiver } = req;
+        request.into_handle(Streaming::with_receiver(receiver))
     }
 }
 

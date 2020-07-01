@@ -10,9 +10,11 @@ use curl::easy::Handler;
 use crate::progress::ProgressUpdater;
 
 mod buffered;
+mod streaming;
 mod util;
 
 pub use buffered::Buffered;
+pub use streaming::Streaming;
 
 /// Trait allowing a `curl::Handler` to be configured in a generic way.
 /// All of the handlers used by the HTTP client need to implement this

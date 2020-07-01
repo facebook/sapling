@@ -24,9 +24,7 @@ pub struct Response {
 
 impl Response {
     pub(crate) fn from_handle(mut easy: Easy2<Buffered>) -> Result<Self, HttpClientError> {
-        let code = easy.response_code()?;
-        let status = StatusCode::from_u16(code as u16)
-            .map_err(|_| HttpClientError::InvalidStatusCode(code))?;
+        let status = get_status_code(&mut easy)?;
 
         let handler = easy.get_mut();
         let headers = handler
@@ -56,4 +54,9 @@ impl Response {
     pub fn cbor<T: DeserializeOwned>(&self) -> Result<T, serde_cbor::Error> {
         serde_cbor::from_slice(&self.body)
     }
+}
+
+pub(crate) fn get_status_code<H>(easy: &mut Easy2<H>) -> Result<StatusCode, HttpClientError> {
+    let code = easy.response_code()?;
+    StatusCode::from_u16(code as u16).map_err(|_| HttpClientError::InvalidStatusCode(code))
 }

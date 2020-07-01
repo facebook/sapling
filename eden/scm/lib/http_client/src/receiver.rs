@@ -1,0 +1,114 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use http::{
+    header::{HeaderName, HeaderValue},
+    status::StatusCode,
+};
+
+use crate::errors::{Abort, HttpClientError};
+use crate::progress::Progress;
+
+/// Interface for streaming HTTP response handlers.
+pub trait Receiver: Sized {
+    /// Handle received chunk of the response body.
+    fn chunk(&mut self, chunk: Vec<u8>);
+
+    /// Handle a received header.
+    fn header(&mut self, _name: HeaderName, _value: HeaderValue) {}
+
+    /// Get progress updates for this transfer.
+    /// This function will be called whenever the underlying
+    /// transfer makes progress.
+    fn progress(&mut self, _progress: Progress) {}
+
+    /// Called when the transfer has completed (successfully or not).
+    ///
+    /// If a fatal error occured while performing the transfer, the error
+    /// will be passed to this method so that the `Receiver` can decide how
+    /// to proceed. If the `Receiver` returns an `Abort`, all other ongoing
+    /// transfers will be aborted and the operation will return early.
+    fn done(self, _status: Result<StatusCode, HttpClientError>) -> Result<(), Abort> {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod testutil {
+    #![allow(dead_code)]
+
+    use super::*;
+
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    /// Simple receiver for use in tests.
+    #[derive(Clone, Debug)]
+    pub struct TestReceiver {
+        inner: Rc<RefCell<TestReceiverInner>>,
+    }
+
+    impl TestReceiver {
+        pub fn new() -> Self {
+            Self {
+                inner: Rc::new(RefCell::new(Default::default())),
+            }
+        }
+
+        pub fn status(&self) -> Option<StatusCode> {
+            self.inner.borrow().status
+        }
+
+        pub fn headers(&self) -> Vec<(HeaderName, HeaderValue)> {
+            self.inner.borrow().headers.clone()
+        }
+
+        pub fn chunks(&self) -> Vec<Vec<u8>> {
+            self.inner.borrow().chunks.clone()
+        }
+
+        pub fn progress(&self) -> Option<Progress> {
+            self.inner.borrow().progress
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct TestReceiverInner {
+        status: Option<StatusCode>,
+        headers: Vec<(HeaderName, HeaderValue)>,
+        chunks: Vec<Vec<u8>>,
+        progress: Option<Progress>,
+    }
+
+    impl Receiver for TestReceiver {
+        fn chunk(&mut self, chunk: Vec<u8>) {
+            self.inner.borrow_mut().chunks.push(chunk);
+        }
+
+        fn header(&mut self, name: HeaderName, value: HeaderValue) {
+            self.inner.borrow_mut().headers.push((name, value));
+        }
+
+        fn progress(&mut self, progress: Progress) {
+            self.inner.borrow_mut().progress = Some(progress);
+        }
+
+        fn done(self, status: Result<StatusCode, HttpClientError>) -> Result<(), Abort> {
+            self.inner.borrow_mut().status = Some(status.unwrap());
+            Ok(())
+        }
+    }
+
+    /// No-op receiver for use in tests.
+    #[derive(Copy, Clone, Debug)]
+    pub struct NullReceiver;
+
+    impl Receiver for NullReceiver {
+        fn chunk(&mut self, _chunk: Vec<u8>) {}
+        fn header(&mut self, _name: HeaderName, _value: HeaderValue) {}
+    }
+}
