@@ -76,14 +76,13 @@ HRESULT EdenDispatcher::startEnumeration(
   }
 }
 
-void EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
+HRESULT EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
   try {
     auto erasedCount = enumSessions_.wlock()->erase(enumerationId);
     DCHECK(erasedCount == 1);
+    return S_OK;
   } catch (const std::exception&) {
-    // Don't need to return result here - exceptionToHResult() will log the
-    // error.
-    (void)exceptionToHResult();
+    return exceptionToHResult();
   }
 }
 
@@ -355,7 +354,7 @@ EdenDispatcher::readMultipleFileChunks(
   return S_OK;
 }
 
-void EdenDispatcher::notification(
+HRESULT EdenDispatcher::notification(
     const PRJ_CALLBACK_DATA& callbackData,
     bool isDirectory,
     PRJ_NOTIFICATION notificationType,
@@ -398,8 +397,9 @@ void EdenDispatcher::notification(
         getMount().removeFile(relPath, isDirectory);
         break;
     }
-  } catch (const std::exception& ex) {
-    (void)exceptionToHResult();
+    return S_OK;
+  } catch (const std::exception&) {
+    return exceptionToHResult();
   }
 }
 

@@ -39,7 +39,7 @@ class EdenDispatcher {
       PCWSTR searchExpression,
       PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept;
 
-  void endEnumeration(const GUID& enumerationId) noexcept;
+  HRESULT endEnumeration(const GUID& enumerationId) noexcept;
 
   HRESULT
   getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept;
@@ -53,7 +53,7 @@ class EdenDispatcher {
       uint64_t byteOffset,
       uint32_t length) noexcept;
 
-  void notification(
+  HRESULT notification(
       const PRJ_CALLBACK_DATA& callbackData,
       bool isDirectory,
       PRJ_NOTIFICATION notificationType,

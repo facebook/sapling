@@ -38,8 +38,7 @@ static HRESULT startEnumeration(
 static HRESULT endEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
-  getDispatcher(callbackData)->endEnumeration(*enumerationId);
-  return S_OK;
+  return getDispatcher(callbackData)->endEnumeration(*enumerationId);
 }
 
 static HRESULT getEnumerationData(
@@ -78,14 +77,13 @@ static HRESULT notification(
     PRJ_NOTIFICATION notificationType,
     PCWSTR destinationFileName,
     PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept {
-  getDispatcher(callbackData)
+  return getDispatcher(callbackData)
       ->notification(
           *callbackData,
           isDirectory,
           notificationType,
           destinationFileName,
           *notificationParameters);
-  return S_OK;
 }
 } // namespace
 
