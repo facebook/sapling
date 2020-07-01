@@ -22,6 +22,8 @@ pub enum HttpClientError {
     BadResponse,
     #[error("The request was dropped before it could complete")]
     RequestDropped(#[from] oneshot::Canceled),
+    #[error("The I/O task terminated unexpectedly: {}", .0)]
+    IoTaskFailed(#[from] tokio::task::JoinError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
