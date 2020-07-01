@@ -15,6 +15,10 @@ fn sqlite_setup_connection(con: &SqliteConnection) {
     // This means that tests will fail in cases when production setup (e.g. one with MySQL)
     // would not. To change that, let's make sqlite wait for some time, before erroring out
     let _ = con.busy_timeout(Duration::from_secs(10));
+
+    // By default, the `LIKE` operator is case-insensitive.  This doesn't
+    // match MySQL, so change it to case-sensitive.
+    let _ = con.pragma_update(None, "case_sensitive_like", &true);
 }
 
 // Open a single sqlite connection to a new in memory database
