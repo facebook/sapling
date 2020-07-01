@@ -11,7 +11,7 @@ use anyhow::{Error, Result};
 use bytes::Bytes;
 
 use configparser::config::ConfigSet;
-use edenapi::{ApiResult, DownloadStats, EdenApi, ProgressFn};
+use edenapi_old::{ApiResult, DownloadStats, EdenApi, ProgressFn};
 use edenapi_types::HistoryEntry;
 use types::{HgId, Key, NodeInfo, RepoPathBuf};
 

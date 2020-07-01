@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-use edenapi::EdenApi;
+use edenapi_old::EdenApi;
 use types::Key;
 
 use crate::{

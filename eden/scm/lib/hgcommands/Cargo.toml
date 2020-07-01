@@ -18,7 +18,7 @@ cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
 dynamicconfig = { path = "../dynamicconfig" }
-edenapi = { path = "../edenapi" }
+edenapi-old = { path = "../edenapi/old" }
 edenfs-client = { path = "../edenfs-client"}
 encoding = { path = "../encoding" }
 env_logger = "0.7"

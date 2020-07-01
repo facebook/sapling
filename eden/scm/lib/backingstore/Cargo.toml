@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 configparser = { path = "../configparser" }
-edenapi = { path = "../edenapi" }
+edenapi-old = { path = "../edenapi/old" }
 log = "0.4"
 manifest = { path = "../manifest" }
 manifest-tree = { path = "../manifest-tree" }

@@ -18,7 +18,7 @@ use tempfile::tempfile_in;
 
 use blackbox::{event::Event, json, SessionId};
 use dynamicconfig::Generator;
-use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
+use edenapi_old::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
 use revisionstore::{
     CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, UnionHgIdDataStore,
 };

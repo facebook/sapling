@@ -11,7 +11,7 @@ use crate::utils::key_from_path_node_slice;
 use anyhow::Result;
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
-use edenapi::{EdenApi, EdenApiCurlClient};
+use edenapi_old::{EdenApi, EdenApiCurlClient};
 use log::warn;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
@@ -51,7 +51,7 @@ impl BackingStore {
         }
 
         let (blobstore, treestore) = if use_edenapi {
-            let edenapi_config = edenapi::Config::from_hg_config(&config)?;
+            let edenapi_config = edenapi_old::Config::from_hg_config(&config)?;
             let edenapi = EdenApiCurlClient::new(edenapi_config)?;
             let edenapi: Arc<dyn EdenApi> = Arc::new(edenapi);
             let fileremotestore = Arc::new(EdenApiHgIdRemoteStore::filestore(edenapi.clone()));

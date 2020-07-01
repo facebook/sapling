@@ -7,7 +7,7 @@ edition = "2018"
 bytes = "0.5"
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
-edenapi = { path = "../../../../lib/edenapi" }
+edenapi-old = { path = "../../../../lib/edenapi/old" }
 pyrevisionstore = { path = "../pyrevisionstore" }
 revisionstore = { path = "../../../../lib/revisionstore" }
 types = { path = "../../../../lib/types" }

@@ -14,7 +14,7 @@ anyhow = "1.0.20"
 bytes = { version = "0.5", features = ["serde"] }
 byteorder = "1.2.7"
 configparser = { path = "../configparser" }
-edenapi = { path = "../edenapi" }
+edenapi-old = { path = "../edenapi/old" }
 edenapi_types = { path = "../edenapi/types" }
 futures = "0.3"
 hex = "0.4"

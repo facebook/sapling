@@ -15,7 +15,7 @@ use bytes::Bytes;
 use cpython::*;
 
 use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
-use edenapi::{
+use edenapi_old::{
     ApiError, ApiErrorKind, Config, DownloadStats, EdenApi, EdenApiCurlClient, ProgressFn,
     ProgressStats,
 };
