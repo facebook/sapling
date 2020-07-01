@@ -166,7 +166,7 @@ impl<'a> Blobimport<'a> {
         });
 
         // Blobimport does not see scratch bookmarks in Mercurial, so we use
-        // PublishingOrPullDefault here, which is the non-scratch set in Mononoke.
+        // PublishingOrPullDefaultPublishing here, which is the non-scratch set in Mononoke.
         let mononoke_bookmarks_fut = blobrepo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
             .map(|(bookmark, changeset_id)| (bookmark.into_name(), changeset_id))

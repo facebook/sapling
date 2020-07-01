@@ -9,7 +9,7 @@
 
 use anyhow::{bail, format_err, Error, Result};
 use bookmarks::{
-    Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkTransactionError,
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkTransactionError,
     BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
     Transaction, TransactionHook,
 };
@@ -65,7 +65,7 @@ queries! {
     }
 
     write InsertBookmarks(
-        values: (repo_id: RepositoryId, name: BookmarkName, changeset_id: ChangesetId, hg_kind: BookmarkHgKind)
+        values: (repo_id: RepositoryId, name: BookmarkName, changeset_id: ChangesetId, kind: BookmarkKind)
     ) {
         insert_or_ignore,
         "{insert_or_ignore} INTO bookmarks (repo_id, name, changeset_id, hg_kind) VALUES {values}"
@@ -76,7 +76,7 @@ queries! {
         name: BookmarkName,
         old_id: ChangesetId,
         new_id: ChangesetId,
-        >list kinds: BookmarkHgKind
+        >list kinds: BookmarkKind
     ) {
         none,
         "UPDATE bookmarks
@@ -219,21 +219,21 @@ queries! {
          OFFSET {offset}"
       }
 
-    read SelectAll(repo_id: RepositoryId, limit: u64, >list hg_kind: BookmarkHgKind) ->  (BookmarkName, BookmarkHgKind, ChangesetId) {
+    read SelectAll(repo_id: RepositoryId, limit: u64, >list kinds: BookmarkKind) ->  (BookmarkName, BookmarkKind, ChangesetId) {
         "SELECT name, hg_kind, changeset_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
-           AND hg_kind IN {hg_kind}
+           AND hg_kind IN {kinds}
          LIMIT {limit}"
     }
 
-    read SelectByPrefix(repo_id: RepositoryId, prefix: BookmarkPrefix, limit: u64, >list hg_kind: BookmarkHgKind) ->  (BookmarkName, BookmarkHgKind, ChangesetId) {
+    read SelectByPrefix(repo_id: RepositoryId, prefix: BookmarkPrefix, limit: u64, >list kinds: BookmarkKind) ->  (BookmarkName, BookmarkKind, ChangesetId) {
         mysql(
             "SELECT name, hg_kind, changeset_id
              FROM bookmarks
              WHERE repo_id = {repo_id}
                AND name LIKE CONCAT({prefix}, '%')
-               AND hg_kind IN {hg_kind}
+               AND hg_kind IN {kinds}
               LIMIT {limit}"
         )
         sqlite(
@@ -241,7 +241,7 @@ queries! {
              FROM bookmarks
              WHERE repo_id = {repo_id}
                AND name LIKE {prefix} || '%'
-               AND hg_kind IN {hg_kind}
+               AND hg_kind IN {kinds}
              LIMIT {limit}"
         )
     }
@@ -265,7 +265,7 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlBookmarks {}
 
 fn query_to_stream<F>(v: F, max: u64) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>
 where
-    F: Future<Output = Result<Vec<(BookmarkName, BookmarkHgKind, ChangesetId)>>> + Send + 'static,
+    F: Future<Output = Result<Vec<(BookmarkName, BookmarkKind, ChangesetId)>>> + Send + 'static,
 {
     v.map_ok(move |rows| {
         if rows.len() as u64 >= max {
@@ -280,8 +280,8 @@ where
     })
     .try_flatten_stream()
     .map_ok(|row| {
-        let (name, hg_kind, changeset_id) = row;
-        (Bookmark::new(name, hg_kind), changeset_id)
+        let (name, kind, changeset_id) = row;
+        (Bookmark::new(name, kind), changeset_id)
     })
     .boxed()
 }
@@ -292,7 +292,7 @@ impl SqlBookmarks {
         _ctx: CoreContext,
         repo_id: RepositoryId,
         prefix: &BookmarkPrefix,
-        kinds: &[BookmarkHgKind],
+        kinds: &[BookmarkKind],
         freshness: Freshness,
         max: u64,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
@@ -336,8 +336,8 @@ impl Bookmarks for SqlBookmarks {
             }
         };
 
-        use BookmarkHgKind::*;
-        let kinds = vec![PublishingNotPullDefault, PullDefault];
+        use BookmarkKind::*;
+        let kinds = vec![Publishing, PullDefaultPublishing];
         self.list_impl(ctx, repo_id, prefix, &kinds, freshness, DEFAULT_MAX)
     }
 
@@ -361,8 +361,8 @@ impl Bookmarks for SqlBookmarks {
             }
         };
 
-        use BookmarkHgKind::*;
-        let kinds = vec![PullDefault];
+        use BookmarkKind::*;
+        let kinds = vec![PullDefaultPublishing];
         self.list_impl(ctx, repo_id, prefix, &kinds, freshness, DEFAULT_MAX)
     }
 
@@ -387,8 +387,8 @@ impl Bookmarks for SqlBookmarks {
             }
         };
 
-        use BookmarkHgKind::*;
-        let kinds = vec![Scratch, PublishingNotPullDefault, PullDefault];
+        use BookmarkKind::*;
+        let kinds = vec![Scratch, Publishing, PullDefaultPublishing];
         self.list_impl(ctx, repo_id, prefix, &kinds, freshness, max)
     }
 
@@ -930,12 +930,12 @@ impl SqlBookmarksTransaction {
                 &repo_id,
                 &creates_vec[idx].0,
                 to_changeset_id,
-                &BookmarkHgKind::PullDefault,
+                &BookmarkKind::PullDefaultPublishing,
             ))
         }
 
         for (name, cs_id) in infinitepush_creates.iter() {
-            ref_rows.push((&repo_id, &name, cs_id, &BookmarkHgKind::Scratch));
+            ref_rows.push((&repo_id, &name, cs_id, &BookmarkKind::Scratch));
         }
 
         let rows_to_insert = ref_rows.len() as u64;
@@ -949,11 +949,11 @@ impl SqlBookmarksTransaction {
 
         // Iterate over (BookmarkName, BookmarkSetData, *Allowed Kinds to update from)
         // We allow up to 2 kinds to update from.
-        use BookmarkHgKind::*;
+        use BookmarkKind::*;
 
-        let sets_iter = sets.into_iter().map(|(name, (data, _reason))| {
-            (name, data, vec![PullDefault, PublishingNotPullDefault])
-        });
+        let sets_iter = sets
+            .into_iter()
+            .map(|(name, (data, _reason))| (name, data, vec![PullDefaultPublishing, Publishing]));
 
         let infinitepush_sets_iter = infinitepush_sets
             .into_iter()
@@ -1294,19 +1294,19 @@ mod test {
                 &REPO_ZERO,
                 &scratch_name,
                 &ONES_CSID,
-                &BookmarkHgKind::Scratch,
+                &BookmarkKind::Scratch,
             ),
             (
                 &REPO_ZERO,
                 &publishing_name,
                 &ONES_CSID,
-                &BookmarkHgKind::PublishingNotPullDefault,
+                &BookmarkKind::Publishing,
             ),
             (
                 &REPO_ZERO,
                 &pull_default_name,
                 &ONES_CSID,
-                &BookmarkHgKind::PullDefault,
+                &BookmarkKind::PullDefaultPublishing,
             ),
         ];
 
@@ -1378,7 +1378,7 @@ mod test {
         let rows: Vec<_> = bookmarks
             .iter()
             .map(|(bookmark, changeset_id)| {
-                (&repo_id, bookmark.name(), changeset_id, bookmark.hg_kind())
+                (&repo_id, bookmark.name(), changeset_id, bookmark.kind())
             })
             .collect();
 

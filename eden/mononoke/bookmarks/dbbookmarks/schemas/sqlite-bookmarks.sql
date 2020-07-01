@@ -9,6 +9,7 @@ CREATE TABLE bookmarks (
   repo_id INT UNSIGNED NOT NULL,
   name VARCHAR(512) NOT NULL,
   changeset_id VARBINARY(32) NOT NULL,
+  -- this column is named 'hg_kind' for historical reasons, but applies for non-Mercurial uses (e.g. phase calculations)
   hg_kind VARCHAR(32) NOT NULL DEFAULT (CAST('pull_default' AS BLOB)), -- enum is used in mysql
   PRIMARY KEY (repo_id, name)
 );

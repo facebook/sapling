@@ -6,7 +6,7 @@
  */
 
 use crate::{
-    Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
     BookmarkUpdateReason, Bookmarks, Freshness, Transaction, TransactionHook,
 };
 use anyhow::{Error, Result};
@@ -27,7 +27,7 @@ define_stats! {
     cached_bookmarks_misses: dynamic_timeseries("{}.miss", (repo: String); Rate, Sum),
 }
 
-type CacheData = BTreeMap<BookmarkName, (BookmarkHgKind, ChangesetId)>;
+type CacheData = BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>;
 
 #[derive(Clone)]
 struct Cache {
@@ -58,8 +58,8 @@ impl Cache {
                     .try_fold(
                         BTreeMap::new(),
                         |mut map, (bookmark, changeset_id)| async move {
-                            let Bookmark { name, hg_kind } = bookmark;
-                            map.insert(name, (hg_kind, changeset_id));
+                            let Bookmark { name, kind } = bookmark;
+                            map.insert(name, (kind, changeset_id));
                             Ok(map)
                         },
                     )
@@ -164,7 +164,7 @@ impl CachedBookmarks {
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         repoid: RepositoryId,
-        filter: fn(&BookmarkHgKind) -> bool,
+        filter: fn(&BookmarkKind) -> bool,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         let range = prefix.to_range();
         let cache = self.get_cache(ctx, repoid);
@@ -175,18 +175,16 @@ impl CachedBookmarks {
                 Ok(bookmarks) => {
                     let result: Vec<_> = bookmarks
                         .range(range)
-                        .filter_map(
-                            move |(name, (hg_kind, changeset_id))| match filter(hg_kind) {
-                                true => {
-                                    let bookmark = Bookmark {
-                                        name: name.clone(),
-                                        hg_kind: *hg_kind,
-                                    };
-                                    Some(Ok((bookmark, *changeset_id)))
-                                }
-                                false => None,
-                            },
-                        )
+                        .filter_map(move |(name, (kind, changeset_id))| match filter(kind) {
+                            true => {
+                                let bookmark = Bookmark {
+                                    name: name.clone(),
+                                    kind: *kind,
+                                };
+                                Some(Ok((bookmark, *changeset_id)))
+                            }
+                            false => None,
+                        })
                         .collect();
                     Ok(stream::iter(result))
                 }
@@ -231,7 +229,7 @@ impl Bookmarks for CachedBookmarks {
         freshness: Freshness,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         // Our cache only contains Publishing entries, so they all pass our filter.
-        fn filter(_hg_kind: &BookmarkHgKind) -> bool {
+        fn filter(_kind: &BookmarkKind) -> bool {
             true
         }
 
@@ -250,14 +248,14 @@ impl Bookmarks for CachedBookmarks {
         repo_id: RepositoryId,
         freshness: Freshness,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-        // Our cache contains Publishing entries, but not all of their are PullDefault as well
+        // Our cache contains Publishing entries, but not all of their are PullDefaultPublishing as well
         // (which is a subset of Publishing). So, we filter our those that aren't acceptable here.
-        fn filter(hg_kind: &BookmarkHgKind) -> bool {
-            use BookmarkHgKind::*;
-            match hg_kind {
+        fn filter(kind: &BookmarkKind) -> bool {
+            use BookmarkKind::*;
+            match kind {
                 Scratch => false,
-                PublishingNotPullDefault => false,
-                PullDefault => true,
+                Publishing => false,
+                PullDefaultPublishing => true,
             }
         }
 
@@ -504,13 +502,13 @@ mod tests {
     fn bookmark<B: AsRef<str>>(name: B) -> Bookmark {
         Bookmark::new(
             BookmarkName::new(name).unwrap(),
-            BookmarkHgKind::PullDefault,
+            BookmarkKind::PullDefaultPublishing,
         )
     }
 
     #[derive(Debug, Eq, PartialEq)]
     enum Request {
-        PullDefault,
+        PullDefaultPublishing,
         Publishing,
         All,
     }
@@ -597,7 +595,7 @@ mod tests {
             _repo_id: RepositoryId,
             freshness: Freshness,
         ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-            self.list_impl(freshness, Request::PullDefault)
+            self.list_impl(freshness, Request::PullDefaultPublishing)
         }
 
         fn list_all_by_prefix(
@@ -993,7 +991,7 @@ mod tests {
             Request::Publishing => {
                 HashMap::from_iter(bookmarks.into_iter().filter(|(b, _)| b.publishing()))
             }
-            Request::PullDefault => {
+            Request::PullDefaultPublishing => {
                 HashMap::from_iter(bookmarks.into_iter().filter(|(b, _)| b.pull_default()))
             }
         };
@@ -1026,7 +1024,7 @@ mod tests {
                 Freshness::MaybeStale => Request::Publishing,
                 // If we want fresh results, we expect CachedBookmarks to pass this request
                 // through as-is.
-                Freshness::MostRecent => Request::PullDefault,
+                Freshness::MostRecent => Request::PullDefaultPublishing,
             };
 
             let have = mock_then_query(fb, &bookmarks, query, freshness, downstream_set);

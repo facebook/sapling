@@ -11,7 +11,7 @@
 
 use anyhow::Error;
 use bookmarks::{
-    Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
     BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
 };
 use context::CoreContext;
@@ -849,8 +849,8 @@ fn test_list_by_prefix(fb: FacebookInit) {
                 .await
                 .unwrap(),
             hashmap! {
-                Bookmark::new(name_1.clone(), BookmarkHgKind::PullDefault) => ONES_CSID,
-                Bookmark::new(name_2.clone(), BookmarkHgKind::PullDefault) => TWOS_CSID
+                Bookmark::new(name_1.clone(), BookmarkKind::PullDefaultPublishing) => ONES_CSID,
+                Bookmark::new(name_2.clone(), BookmarkKind::PullDefaultPublishing) => TWOS_CSID
             }
         );
 
@@ -867,7 +867,7 @@ fn test_list_by_prefix(fb: FacebookInit) {
                 .await
                 .unwrap(),
             vec![(
-                Bookmark::new(name_1.clone(), BookmarkHgKind::PullDefault),
+                Bookmark::new(name_1.clone(), BookmarkKind::PullDefaultPublishing),
                 ONES_CSID
             )]
         );
@@ -885,7 +885,7 @@ fn test_list_by_prefix(fb: FacebookInit) {
                 .await
                 .unwrap(),
             vec![(
-                Bookmark::new(name_2.clone(), BookmarkHgKind::PullDefault),
+                Bookmark::new(name_2.clone(), BookmarkKind::PullDefaultPublishing),
                 TWOS_CSID
             )]
         );

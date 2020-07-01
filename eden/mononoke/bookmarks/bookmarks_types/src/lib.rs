@@ -45,7 +45,7 @@ impl Arbitrary for Freshness {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Bookmark {
     pub name: BookmarkName,
-    pub hg_kind: BookmarkHgKind,
+    pub kind: BookmarkKind,
 }
 
 impl Arbitrary for Bookmark {
@@ -53,14 +53,14 @@ impl Arbitrary for Bookmark {
         let name = BookmarkName::arbitrary(g);
         Self {
             name,
-            hg_kind: Arbitrary::arbitrary(g),
+            kind: Arbitrary::arbitrary(g),
         }
     }
 }
 
 impl Bookmark {
-    pub fn new(name: BookmarkName, hg_kind: BookmarkHgKind) -> Self {
-        Bookmark { name, hg_kind }
+    pub fn new(name: BookmarkName, kind: BookmarkKind) -> Self {
+        Bookmark { name, kind }
     }
 
     pub fn into_name(self) -> BookmarkName {
@@ -71,27 +71,27 @@ impl Bookmark {
         &self.name
     }
 
-    pub fn hg_kind(&self) -> &BookmarkHgKind {
-        &self.hg_kind
+    pub fn kind(&self) -> &BookmarkKind {
+        &self.kind
     }
 
     pub fn publishing(&self) -> bool {
-        use BookmarkHgKind::*;
+        use BookmarkKind::*;
 
-        match self.hg_kind {
+        match self.kind {
             Scratch => false,
-            PublishingNotPullDefault => true,
-            PullDefault => true,
+            Publishing => true,
+            PullDefaultPublishing => true,
         }
     }
 
     pub fn pull_default(&self) -> bool {
-        use BookmarkHgKind::*;
+        use BookmarkKind::*;
 
-        match self.hg_kind {
+        match self.kind {
             Scratch => false,
-            PublishingNotPullDefault => false,
-            PullDefault => true,
+            Publishing => false,
+            PullDefaultPublishing => true,
         }
     }
 }
@@ -198,44 +198,43 @@ impl From<BookmarkPrefix> for Value {
 
 /// Describes the behavior of a Bookmark in Mercurial operations.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Copy)]
-pub enum BookmarkHgKind {
+pub enum BookmarkKind {
     Scratch,
-    PublishingNotPullDefault,
-    /// NOTE: PullDefault implies Publishing.
-    PullDefault,
+    Publishing,
+    PullDefaultPublishing,
 }
 
-impl std::fmt::Display for BookmarkHgKind {
+impl std::fmt::Display for BookmarkKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use BookmarkHgKind::*;
+        use BookmarkKind::*;
 
         let s = match self {
             Scratch => "scratch",
-            PublishingNotPullDefault => "publishing",
-            PullDefault => "pull_default",
+            Publishing => "publishing",
+            PullDefaultPublishing => "pull_default",
         };
 
         write!(f, "{}", s)
     }
 }
 
-const SCRATCH_HG_KIND: &[u8] = b"scratch";
-const PUBLISHING_HG_KIND: &[u8] = b"publishing";
-const PULL_DEFAULT_HG_KIND: &[u8] = b"pull_default";
+const SCRATCH_KIND: &[u8] = b"scratch";
+const PUBLISHING_KIND: &[u8] = b"publishing";
+const PULL_DEFAULT_KIND: &[u8] = b"pull_default";
 
-impl ConvIr<BookmarkHgKind> for BookmarkHgKind {
+impl ConvIr<BookmarkKind> for BookmarkKind {
     fn new(v: Value) -> Result<Self, FromValueError> {
-        use BookmarkHgKind::*;
+        use BookmarkKind::*;
 
         match v {
-            Value::Bytes(ref b) if b == &SCRATCH_HG_KIND => Ok(Scratch),
-            Value::Bytes(ref b) if b == &PUBLISHING_HG_KIND => Ok(PublishingNotPullDefault),
-            Value::Bytes(ref b) if b == &PULL_DEFAULT_HG_KIND => Ok(PullDefault),
+            Value::Bytes(ref b) if b == &SCRATCH_KIND => Ok(Scratch),
+            Value::Bytes(ref b) if b == &PUBLISHING_KIND => Ok(Publishing),
+            Value::Bytes(ref b) if b == &PULL_DEFAULT_KIND => Ok(PullDefaultPublishing),
             v => Err(FromValueError(v)),
         }
     }
 
-    fn commit(self) -> BookmarkHgKind {
+    fn commit(self) -> BookmarkKind {
         self
     }
 
@@ -244,30 +243,30 @@ impl ConvIr<BookmarkHgKind> for BookmarkHgKind {
     }
 }
 
-impl FromValue for BookmarkHgKind {
-    type Intermediate = BookmarkHgKind;
+impl FromValue for BookmarkKind {
+    type Intermediate = BookmarkKind;
 }
 
-impl From<BookmarkHgKind> for Value {
-    fn from(bookmark_update_reason: BookmarkHgKind) -> Self {
-        use BookmarkHgKind::*;
+impl From<BookmarkKind> for Value {
+    fn from(bookmark_update_reason: BookmarkKind) -> Self {
+        use BookmarkKind::*;
 
         match bookmark_update_reason {
-            Scratch => Value::Bytes(SCRATCH_HG_KIND.to_vec()),
-            PublishingNotPullDefault => Value::Bytes(PUBLISHING_HG_KIND.to_vec()),
-            PullDefault => Value::Bytes(PULL_DEFAULT_HG_KIND.to_vec()),
+            Scratch => Value::Bytes(SCRATCH_KIND.to_vec()),
+            Publishing => Value::Bytes(PUBLISHING_KIND.to_vec()),
+            PullDefaultPublishing => Value::Bytes(PULL_DEFAULT_KIND.to_vec()),
         }
     }
 }
 
-impl Arbitrary for BookmarkHgKind {
+impl Arbitrary for BookmarkKind {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        use BookmarkHgKind::*;
+        use BookmarkKind::*;
 
         match g.gen_range(0, 3) {
             0 => Scratch,
-            1 => PublishingNotPullDefault,
-            2 => PullDefault,
+            1 => Publishing,
+            2 => PullDefaultPublishing,
             _ => unreachable!(),
         }
     }

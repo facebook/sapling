@@ -26,7 +26,7 @@ use thiserror::Error;
 
 mod cache;
 pub use bookmarks_types::{
-    Bookmark, BookmarkHgKind, BookmarkName, BookmarkPrefix, BookmarkPrefixRange, Freshness,
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkPrefixRange, Freshness,
 };
 pub use cache::CachedBookmarks;
 
