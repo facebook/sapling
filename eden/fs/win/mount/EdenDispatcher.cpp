@@ -396,6 +396,10 @@ HRESULT EdenDispatcher::notification(
         XLOGF(DBG6, "DELETED {}", relPath);
         getMount().removeFile(relPath, isDirectory);
         break;
+
+      case PRJ_NOTIFICATION_PRE_SET_HARDLINK:
+        XLOGF(DBG6, "HARDLINK {}", relPath);
+        return E_NOTIMPL;
     }
     return S_OK;
   } catch (const std::exception&) {
