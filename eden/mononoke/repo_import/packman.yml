@@ -1,0 +1,11 @@
+packages:
+  fb-repo_import:
+    summary: A tool to automate repo imports
+    packager: source_control
+    rules:
+      buck:eden/mononoke/repo_import:repo_import:
+        eden/mononoke/repo_import/repo_import#binary:
+          owner: 'root'
+          group: 'root'
+          mode: '0755'
+          path: 'bin/repo_import'
