@@ -1567,9 +1567,9 @@ void EdenMount::removeFile(const RelativePathPiece path, bool isDirectory) {
   auto treeInode = inode.asTreePtr();
 
   if (isDirectory) {
-    treeInode->rmdir(path.basename());
+    treeInode->rmdir(path.basename()).get();
   } else {
-    treeInode->unlink(path.basename());
+    treeInode->unlink(path.basename()).get();
   }
 }
 
@@ -1582,7 +1582,8 @@ void EdenMount::renameFile(
   auto newInode = getInode(newpath.dirname()).get();
   auto newTreeInode = newInode.asTreePtr();
 
-  oldTreeInode->rename(oldpath.basename(), newTreeInode, newpath.basename());
+  oldTreeInode->rename(oldpath.basename(), newTreeInode, newpath.basename())
+      .get();
 }
 
 DirList EdenMount::enumerateDirectory(const RelativePathPiece path) {
