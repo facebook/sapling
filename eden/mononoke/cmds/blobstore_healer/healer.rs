@@ -92,6 +92,31 @@ impl Healer {
                     .add("entries", entries)
                     .log_with_msg("Received Entries", None);
 
+                info!(
+                    ctx.logger(),
+                    "Fetched {} queue entires (before building healing futures)",
+                    queue_entries.len()
+                );
+
+                let unique_blobstore_keys = queue_entries
+                    .iter()
+                    .unique_by(|entry| entry.blobstore_key.clone())
+                    .into_iter()
+                    .count();
+
+                let unique_operation_keys = queue_entries
+                    .iter()
+                    .unique_by(|entry| entry.operation_key.clone())
+                    .into_iter()
+                    .count();
+
+                info!(
+                    ctx.logger(),
+                    "Out of them {} distinct blobstore keys, {} distinct operation keys",
+                    unique_blobstore_keys,
+                    unique_operation_keys
+                );
+
                 let healing_futures: Vec<_> = queue_entries
                     .into_iter()
                     .sorted_by_key(|entry| entry.blobstore_key.clone())
@@ -161,7 +186,7 @@ impl Healer {
                             cleanup_after_healing(ctx, sync_queue, entries_to_remove).and_then(
                                 move |()| {
                                     return futures_old::future::ok(
-                                        last_batch_size == max_batch_size,
+                                        unique_operation_keys == max_batch_size,
                                     );
                                 },
                             )
@@ -1256,6 +1281,68 @@ mod tests {
         assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
         assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
 
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_healer_heal_complete_batch(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (bids, _underlying_stores, stores) = make_empty_stores(2);
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
+        put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+        put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
+
+        let op0 = OperationKey::gen();
+        let op1 = OperationKey::gen();
+        let entries = vec![
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op1.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op1),
+        ];
+
+        let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
+        sync_queue
+            .add_many(ctx.clone(), Box::new(entries.into_iter()))
+            .compat()
+            .await?;
+
+        let healer = Healer::new(2, 10, sync_queue.clone(), stores, mp, None, false);
+        let complete_batch = healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+        assert!(complete_batch);
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_healer_heal_incomplete_batch(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (bids, _underlying_stores, stores) = make_empty_stores(2);
+        let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
+        let mp = MultiplexId::new(1);
+
+        put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+        put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
+
+        let op0 = OperationKey::gen();
+        let op1 = OperationKey::gen();
+        let entries = vec![
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op1.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op1),
+        ];
+
+        let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
+        sync_queue
+            .add_many(ctx.clone(), Box::new(entries.into_iter()))
+            .compat()
+            .await?;
+
+        let healer = Healer::new(20, 10, sync_queue.clone(), stores, mp, None, false);
+        let complete_batch = healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+        assert!(!complete_batch);
         Ok(())
     }
 }
