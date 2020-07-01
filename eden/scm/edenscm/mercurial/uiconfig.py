@@ -592,6 +592,7 @@ def loaddynamicconfig(ui, path):
                 )
 
         ui.readconfig(hgrcdyn, path)
+        mtime = logages(ui, hgrcdyn, os.path.join(path, "hgrc.remote_cache"))
 
         generationtime = ui.configint("configs", "generationtime")
         if (
@@ -599,7 +600,7 @@ def loaddynamicconfig(ui, path):
             and encoding.environ.get("HG_DEBUGDYNAMICCONFIG", "") != "1"
         ):
             mtimelimit = time.time() - generationtime
-            if not os.path.exists(hgrcdyn) or os.lstat(hgrcdyn).st_mtime < mtimelimit:
+            if mtime < mtimelimit:
                 # TODO: some how prevent kicking off the background process if
                 # the file is read-only or if the previous kick offs failed.
                 ui.debug("background generating dynamic config\n")
@@ -609,6 +610,29 @@ def loaddynamicconfig(ui, path):
                 # commands spawned from the telemetry wrapper.
                 env["HG_DEBUGDYNAMICCONFIG"] = "1"
                 runbgcommand(["hg", "--cwd", path, "debugdynamicconfig"], env)
+
+
+def logages(ui, configpath, cachepath):
+    kwargs = dict()
+    for path, name in [
+        (cachepath, "dynamicconfig_remote_age"),
+        # We do the config age last, so we can return the mtime
+        (configpath, "dynamicconfig_age"),
+    ]:
+        # Default to the unix epoch as the mtime
+        mtime = 0
+        if os.path.exists(path):
+            mtime = os.lstat(path).st_mtime
+
+        age = time.time() - mtime
+        # Round it so we get better compression upstream.
+        age = age - (age % 10)
+
+        kwargs[name] = age
+
+    ui.log("dynamicconfig_age", **kwargs)
+
+    return mtime
 
 
 def validatedynamicconfig(ui):
