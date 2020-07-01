@@ -149,9 +149,9 @@ impl<'a> Request<'a> {
     /// concurrent requests or large requests that require
     /// progress reporting.
     pub fn send(self) -> Result<Response, HttpClientError> {
-        let easy: Easy2<Buffered> = self.try_into()?;
+        let mut easy: Easy2<Buffered> = self.try_into()?;
         easy.perform()?;
-        Ok(Response::from_handle(easy)?)
+        Response::try_from(easy.get_mut())
     }
 
     /// Turn this `Request` into a streaming request. The

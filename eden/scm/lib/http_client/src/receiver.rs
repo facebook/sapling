@@ -5,12 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use http::{
-    header::{HeaderName, HeaderValue},
-    status::StatusCode,
-};
-
 use crate::errors::{Abort, HttpClientError};
+use crate::header::Header;
 use crate::progress::Progress;
 
 /// Interface for streaming HTTP response handlers.
@@ -19,7 +15,7 @@ pub trait Receiver: Sized {
     fn chunk(&mut self, chunk: Vec<u8>);
 
     /// Handle a received header.
-    fn header(&mut self, _name: HeaderName, _value: HeaderValue) {}
+    fn header(&mut self, header: Header);
 
     /// Get progress updates for this transfer.
     /// This function will be called whenever the underlying
@@ -32,7 +28,7 @@ pub trait Receiver: Sized {
     /// will be passed to this method so that the `Receiver` can decide how
     /// to proceed. If the `Receiver` returns an `Abort`, all other ongoing
     /// transfers will be aborted and the operation will return early.
-    fn done(self, _status: Result<StatusCode, HttpClientError>) -> Result<(), Abort> {
+    fn done(self, _res: Result<(), HttpClientError>) -> Result<(), Abort> {
         Ok(())
     }
 }
@@ -45,6 +41,11 @@ pub(crate) mod testutil {
 
     use std::cell::RefCell;
     use std::rc::Rc;
+
+    use http::{
+        header::{HeaderName, HeaderValue},
+        StatusCode,
+    };
 
     /// Simple receiver for use in tests.
     #[derive(Clone, Debug)]
@@ -89,17 +90,20 @@ pub(crate) mod testutil {
             self.inner.borrow_mut().chunks.push(chunk);
         }
 
-        fn header(&mut self, name: HeaderName, value: HeaderValue) {
-            self.inner.borrow_mut().headers.push((name, value));
+        fn header(&mut self, header: Header) {
+            match header {
+                Header::Status(_, status) => {
+                    self.inner.borrow_mut().status = Some(status);
+                }
+                Header::Header(name, value) => {
+                    self.inner.borrow_mut().headers.push((name, value));
+                }
+                Header::EndOfHeaders => {}
+            }
         }
 
         fn progress(&mut self, progress: Progress) {
             self.inner.borrow_mut().progress = Some(progress);
-        }
-
-        fn done(self, status: Result<StatusCode, HttpClientError>) -> Result<(), Abort> {
-            self.inner.borrow_mut().status = Some(status.unwrap());
-            Ok(())
         }
     }
 
@@ -109,6 +113,6 @@ pub(crate) mod testutil {
 
     impl Receiver for NullReceiver {
         fn chunk(&mut self, _chunk: Vec<u8>) {}
-        fn header(&mut self, _name: HeaderName, _value: HeaderValue) {}
+        fn header(&mut self, _header: Header) {}
     }
 }

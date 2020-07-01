@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 
 use curl::{easy::Easy2, multi::Multi};
 
@@ -16,7 +16,7 @@ use crate::{
     progress::Progress,
     receiver::Receiver,
     request::{Request, StreamRequest},
-    response::{get_status_code, Response},
+    response::Response,
     stats::Stats,
 };
 
@@ -81,7 +81,7 @@ impl HttpClient {
         driver.perform(|res| {
             let res = res
                 .map_err(|(_, e)| e.into())
-                .and_then(Response::from_handle);
+                .and_then(|mut easy| Response::try_from(easy.get_mut()));
             response_cb(res)
         })
     }
@@ -122,7 +122,7 @@ impl HttpClient {
             driver.add(handle)?;
         }
 
-        driver.perform(report_status_and_drop_receiver)
+        driver.perform(report_result_and_drop_receiver)
     }
 }
 
@@ -149,9 +149,9 @@ impl HttpClient {
 unsafe impl Send for HttpClient {}
 
 /// Callback for `MultiDriver::perform` when working with
-/// a `Streaming` handler. Reports the status code of the
+/// a `Streaming` handler. Reports the result of the
 /// completed request to the handler's `Receiver`.
-fn report_status_and_drop_receiver<R: Receiver>(
+fn report_result_and_drop_receiver<R: Receiver>(
     res: Result<Easy2<Streaming<R>>, (Easy2<Streaming<R>>, curl::Error)>,
 ) -> Result<(), Abort> {
     // We need to get the `Easy2` handle in both the
@@ -159,10 +159,7 @@ fn report_status_and_drop_receiver<R: Receiver>(
     // need to pass the result to the handler contained
     // therein.
     let (mut easy, res) = match res {
-        Ok(mut easy) => {
-            let status = get_status_code(&mut easy);
-            (easy, status)
-        }
+        Ok(easy) => (easy, Ok(())),
         Err((easy, e)) => (easy, Err(e.into())),
     };
 

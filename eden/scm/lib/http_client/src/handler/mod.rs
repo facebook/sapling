@@ -11,7 +11,6 @@ use crate::progress::ProgressUpdater;
 
 mod buffered;
 mod streaming;
-mod util;
 
 pub use buffered::Buffered;
 pub use streaming::Streaming;

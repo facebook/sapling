@@ -6,13 +6,16 @@
  */
 
 use std::io::Read;
+use std::mem;
 
 use curl::easy::{Handler, ReadError, WriteError};
+use http::{header, HeaderMap, StatusCode, Version};
 use once_cell::unsync::OnceCell;
 
+use crate::header::Header;
 use crate::progress::{Progress, ProgressUpdater};
 
-use super::{util, Configure};
+use super::Configure;
 
 /// Initial buffer capacity to allocate if we don't get a Content-Length header.
 /// Usually, the lack of a Content-Length header indicates a streaming response,
@@ -24,7 +27,9 @@ const DEFAULT_CAPACITY: usize = 1000;
 pub struct Buffered {
     received: OnceCell<Vec<u8>>,
     capacity: Option<usize>,
-    headers: Vec<(String, String)>,
+    version: Option<Version>,
+    status: Option<StatusCode>,
+    headers: HeaderMap,
     payload: Option<Vec<u8>>,
     bytes_sent: usize,
     updater: Option<ProgressUpdater>,
@@ -35,13 +40,21 @@ impl Buffered {
         Default::default()
     }
 
-    /// Access the received headers.
-    pub(crate) fn headers(&mut self) -> &[(String, String)] {
-        &self.headers
+    pub(crate) fn version(&self) -> Option<Version> {
+        self.version
+    }
+
+    pub(crate) fn status(&self) -> Option<StatusCode> {
+        self.status
+    }
+
+    /// Extract the received headers.
+    pub(crate) fn take_headers(&mut self) -> HeaderMap {
+        mem::take(&mut self.headers)
     }
 
     /// Extract the received data.
-    pub(crate) fn take_data(&mut self) -> Vec<u8> {
+    pub(crate) fn take_body(&mut self) -> Vec<u8> {
         self.received.take().unwrap_or_default()
     }
 }
@@ -72,14 +85,30 @@ impl Handler for Buffered {
     }
 
     fn header(&mut self, data: &[u8]) -> bool {
-        if let Some((name, value)) = util::split_or_drop_header(data) {
-            // Record content-length to set initial buffer size.
-            // Use case-insensitive comparison since HTTP/2
-            // requires headers to be lowercase.
-            if name.eq_ignore_ascii_case("content-length") {
-                self.capacity = value.parse().ok();
+        match Header::parse(data) {
+            Ok(Header::Header(name, value)) => {
+                // XXX: This line triggers a lint error because `http::HeaderName`
+                // is implemented using `bytes::Bytes` for custom headers, which has
+                // interior mutability. There isn't anything we can really do here
+                // since the problem is that the `http` crate declared this as `const`
+                // instead of `static`. In this case, the lint error isn't actually
+                // applicable since for standard headers like Content-Length, the
+                // underlying representation is a simple enum, so there is actually
+                // no interior mutability in use, so this line will not result in
+                // any initialization code unintentionally running.
+                #[allow(clippy::borrow_interior_mutable_const)]
+                if name == header::CONTENT_LENGTH {
+                    // Set the initial buffer capacity using the Content-Length header.
+                    self.capacity = value.to_str().ok().and_then(|v| v.parse().ok());
+                }
+                self.headers.insert(name, value);
             }
-            self.headers.push((name.into(), value.into()));
+            Ok(Header::Status(version, code)) => {
+                self.version = Some(version);
+                self.status = Some(code);
+            }
+            Ok(Header::EndOfHeaders) => {}
+            Err(e) => log::trace!("{}", e),
         }
         true
     }
@@ -105,6 +134,8 @@ impl Configure for Buffered {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use http::HeaderValue;
 
     use crate::progress::ProgressReporter;
 
@@ -136,10 +167,10 @@ mod tests {
         assert_eq!(handler.write(&expected[..4]).unwrap(), 4);
         assert_eq!(handler.write(&expected[4..]).unwrap(), 6);
 
-        let data = handler.take_data();
-        assert_eq!(&expected[..], &*data);
+        let body = handler.take_body();
+        assert_eq!(&expected[..], &*body);
 
-        assert!(handler.take_data().is_empty());
+        assert!(handler.take_body().is_empty());
     }
 
     #[test]
@@ -147,21 +178,19 @@ mod tests {
         let mut handler = Buffered::new();
 
         assert!(handler.header(&b"Content-Length: 1234\r\n"[..]));
-        assert!(handler.header(&[1, 2, 58, 3, 4][..])); // Byte 58 is ASCII colon.
         assert!(handler.header(&[0xFF, 0xFF][..])); // Invalid UTF-8 sequence.
         assert!(handler.header(&b"X-No-Value\r\n"[..]));
 
-        let headers = handler.headers();
-        let expected = [
-            ("Content-Length".into(), "1234".into()),
-            (
-                String::from_utf8(vec![1, 2]).unwrap(),
-                String::from_utf8(vec![3, 4]).unwrap(),
-            ),
-            ("X-No-Value".into(), "".into()),
-        ];
+        let headers = handler.take_headers();
 
-        assert_eq!(expected, headers);
+        assert_eq!(
+            headers.get("Content-Length").unwrap(),
+            HeaderValue::from_static("1234")
+        );
+        assert_eq!(
+            headers.get("X-No-Value").unwrap(),
+            HeaderValue::from_static("")
+        );
     }
 
     #[test]

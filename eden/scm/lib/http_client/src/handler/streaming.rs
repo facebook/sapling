@@ -8,12 +8,12 @@
 use std::io::Read;
 
 use curl::easy::{Handler, ReadError, WriteError};
-use http::header::{HeaderName, HeaderValue};
 
+use crate::header::Header;
 use crate::progress::{Progress, ProgressUpdater};
 use crate::receiver::Receiver;
 
-use super::{util, Configure};
+use super::Configure;
 
 pub struct Streaming<R> {
     receiver: Option<R>,
@@ -58,18 +58,16 @@ impl<R: Receiver> Handler for Streaming<R> {
     }
 
     fn header(&mut self, data: &[u8]) -> bool {
-        let header = util::split_or_drop_header(data).and_then(|(name, value)| {
-            let name = HeaderName::from_bytes(name.as_ref()).ok()?;
-            let value = HeaderValue::from_bytes(value.as_ref()).ok()?;
-            Some((name, value))
-        });
-
-        if let Some((name, value)) = header {
-            if let Some(ref mut receiver) = self.receiver {
-                receiver.header(name, value);
+        match Header::parse(data) {
+            Ok(header) => {
+                if let Some(ref mut receiver) = self.receiver {
+                    receiver.header(header);
+                }
+            }
+            Err(e) => {
+                log::trace!("{}", e);
             }
         }
-
         true
     }
 
@@ -102,7 +100,7 @@ impl<R: Receiver> Configure for Streaming<R> {
 mod tests {
     use super::*;
 
-    use http::header;
+    use http::header::{self, HeaderName, HeaderValue};
 
     use crate::progress::ProgressReporter;
     use crate::receiver::testutil::{NullReceiver, TestReceiver};
