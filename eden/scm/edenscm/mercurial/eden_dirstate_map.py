@@ -49,7 +49,7 @@ class eden_dirstate_map(dirstate.dirstatemap):
         # Filter out all "clean" entries when writing. (It's possible we should
         # never allow these to be inserted into self._map in the first place.)
         m = {
-            pycompat.encodeutf8(k): (v[0], v[1], v[2])
+            k: (v[0], v[1], v[2])
             # pyre-fixme[16]: Callable `_map` has no attribute `items`.
             for k, v in self._map.items()
             if not (v[0] == "n" and v[2] == MERGE_STATE_NOT_APPLICABLE)
