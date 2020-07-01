@@ -10,7 +10,6 @@ use std::mem;
 
 use curl::easy::{Handler, ReadError, WriteError};
 use http::{header, HeaderMap, StatusCode, Version};
-use once_cell::unsync::OnceCell;
 
 use crate::header::Header;
 use crate::progress::{Progress, ProgressUpdater};
@@ -25,7 +24,7 @@ const DEFAULT_CAPACITY: usize = 1000;
 /// A simple curl Handler that buffers all received data.
 #[derive(Default)]
 pub struct Buffered {
-    received: OnceCell<Vec<u8>>,
+    received: Vec<u8>,
     capacity: Option<usize>,
     version: Option<Version>,
     status: Option<StatusCode>,
@@ -55,20 +54,17 @@ impl Buffered {
 
     /// Extract the received data.
     pub(crate) fn take_body(&mut self) -> Vec<u8> {
-        self.received.take().unwrap_or_default()
+        mem::take(&mut self.received)
     }
 }
 
 impl Handler for Buffered {
     fn write(&mut self, data: &[u8]) -> Result<usize, WriteError> {
-        let _ = self
-            .received
-            .get_or_init(|| Vec::with_capacity(self.capacity.unwrap_or(DEFAULT_CAPACITY)));
-
-        // XXX: There is no method that both initializes the cell and returns
-        // a mutable reference, so we ignore the initial reference and call
-        // `get_mut()`, which can't panic because we've already initialized.
-        self.received.get_mut().unwrap().extend_from_slice(data);
+        // Set the buffer size based on the received Content-Length
+        // header, or a default if we didn't get a Content-Length.
+        self.received
+            .reserve(self.capacity.unwrap_or(DEFAULT_CAPACITY));
+        self.received.extend_from_slice(data);
         Ok(data.len())
     }
 
@@ -197,7 +193,7 @@ mod tests {
     fn test_capacity() {
         let mut handler = Buffered::new();
         let _ = handler.write(&[1, 2, 3][..]).unwrap();
-        assert_eq!(handler.received.get().unwrap().capacity(), DEFAULT_CAPACITY);
+        assert_eq!(handler.received.capacity(), DEFAULT_CAPACITY);
 
         let mut handler = Buffered::new();
 
@@ -205,7 +201,7 @@ mod tests {
         assert_eq!(handler.capacity, Some(42));
 
         let _ = handler.write(&[1, 2, 3][..]).unwrap();
-        assert_eq!(handler.received.get().unwrap().capacity(), 42);
+        assert_eq!(handler.received.capacity(), 42);
     }
 
     #[test]
