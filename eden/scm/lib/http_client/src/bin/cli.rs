@@ -9,10 +9,11 @@ use std::env;
 use std::io::{prelude::*, stdin, stdout};
 
 use anyhow::Result;
+use futures::prelude::*;
 use structopt::StructOpt;
 use url::Url;
 
-use http_client::{Request, Response};
+use http_client::{AsyncResponse, Request};
 
 const CERT_ENV_VAR: &str = "CERT";
 const KEY_ENV_VAR: &str = "KEY";
@@ -49,17 +50,23 @@ impl Args {
     }
 }
 
-fn main() -> Result<()> {
+/// Note that we technically don't need to use async here;
+/// `Request::send()` would have sufficed. However, the
+/// purpose of this binary is primarily for testing and
+/// debugging the library itself, so by using async we
+/// can maximize the surface area exercised.
+#[tokio::main]
+async fn main() -> Result<()> {
     env_logger::init();
     match Method::from_args() {
-        Method::Get(args) => cmd_get(args),
-        Method::Head(args) => cmd_head(args),
-        Method::Post(args) => cmd_post(args),
-        Method::Put(args) => cmd_put(args),
+        Method::Get(args) => cmd_get(args).await,
+        Method::Head(args) => cmd_head(args).await,
+        Method::Post(args) => cmd_post(args).await,
+        Method::Put(args) => cmd_put(args).await,
     }
 }
 
-fn cmd_get(args: Args) -> Result<()> {
+async fn cmd_get(args: Args) -> Result<()> {
     let req = Request::get(args.url()?);
     let req = add_headers(req, &args.headers);
 
@@ -67,10 +74,11 @@ fn cmd_get(args: Args) -> Result<()> {
     let ca = get_ca();
     let req = configure_tls(req, &creds, &ca)?;
 
-    write_response(req.send()?)
+    let res = req.send_async().await?;
+    write_response(res).await
 }
 
-fn cmd_head(args: Args) -> Result<()> {
+async fn cmd_head(args: Args) -> Result<()> {
     let req = Request::head(args.url()?);
     let req = add_headers(req, &args.headers);
 
@@ -78,10 +86,11 @@ fn cmd_head(args: Args) -> Result<()> {
     let ca = get_ca();
     let req = configure_tls(req, &creds, &ca)?;
 
-    write_response(req.send()?)
+    let res = req.send_async().await?;
+    write_response(res).await
 }
 
-fn cmd_post(args: Args) -> Result<()> {
+async fn cmd_post(args: Args) -> Result<()> {
     eprintln!("Reading payload from stdin");
     let body = read_input()?;
 
@@ -92,10 +101,11 @@ fn cmd_post(args: Args) -> Result<()> {
     let ca = get_ca();
     let req = configure_tls(req, &creds, &ca)?;
 
-    write_response(req.send()?)
+    let res = req.send_async().await?;
+    write_response(res).await
 }
 
-fn cmd_put(args: Args) -> Result<()> {
+async fn cmd_put(args: Args) -> Result<()> {
     eprintln!("Reading payload from stdin");
     let body = read_input()?;
 
@@ -106,7 +116,8 @@ fn cmd_put(args: Args) -> Result<()> {
     let ca = get_ca();
     let req = configure_tls(req, &creds, &ca)?;
 
-    write_response(req.send()?)
+    let res = req.send_async().await?;
+    write_response(res).await
 }
 
 fn read_input() -> Result<Vec<u8>> {
@@ -115,14 +126,16 @@ fn read_input() -> Result<Vec<u8>> {
     Ok(buf)
 }
 
-fn write_response(res: Response) -> Result<()> {
-    eprintln!("Status: {}", res.status);
+async fn write_response(res: AsyncResponse) -> Result<()> {
+    eprintln!("Status: {:?} {}", res.version, res.status);
     eprintln!("{:?}", &res.headers);
 
+    let body = res.body.try_concat().await?;
+
     if atty::is(atty::Stream::Stdout) {
-        println!("{}", String::from_utf8_lossy(&res.body).escape_default())
+        println!("{}", String::from_utf8_lossy(&body).escape_default())
     } else {
-        stdout().write_all(&res.body)?;
+        stdout().write_all(&body)?;
     };
 
     Ok(())
