@@ -13,6 +13,7 @@ mod client;
 mod driver;
 mod errors;
 mod handler;
+mod header;
 mod progress;
 mod receiver;
 mod request;
@@ -21,6 +22,7 @@ mod stats;
 
 pub use client::HttpClient;
 pub use errors::{Abort, CertOrKeyMissing, HttpClientError};
+pub use header::Header;
 pub use progress::Progress;
 pub use receiver::Receiver;
 pub use request::{Request, StreamRequest};
