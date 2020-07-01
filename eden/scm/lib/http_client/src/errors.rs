@@ -25,6 +25,8 @@ pub enum HttpClientError {
     #[error("The I/O task terminated unexpectedly: {}", .0)]
     IoTaskFailed(#[from] tokio::task::JoinError),
     #[error(transparent)]
+    CborError(#[from] serde_cbor::Error),
+    #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
 

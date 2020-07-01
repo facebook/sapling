@@ -12,6 +12,7 @@ use futures::prelude::*;
 use http::{header::HeaderMap, status::StatusCode, version::Version};
 use serde::de::DeserializeOwned;
 
+use crate::cbor::CborStream;
 use crate::errors::HttpClientError;
 use crate::handler::Buffered;
 use crate::header::Header;
@@ -57,7 +58,8 @@ impl TryFrom<&mut Buffered> for Response {
     }
 }
 
-type AsyncBody = Pin<Box<dyn Stream<Item = Result<Vec<u8>, HttpClientError>> + Send + 'static>>;
+pub type AsyncBody = Pin<Box<dyn Stream<Item = Result<Vec<u8>, HttpClientError>> + Send + 'static>>;
+pub type CborStreamBody<T> = CborStream<T, AsyncBody, Vec<u8>, HttpClientError>;
 
 pub struct AsyncResponse {
     pub version: Version,
@@ -125,5 +127,11 @@ impl AsyncResponse {
             headers,
             body,
         })
+    }
+
+    /// Consume the response and attempt to deserialize the
+    /// incoming data as a stream of CBOR-serialized values.
+    pub fn into_cbor_stream<T: DeserializeOwned>(self) -> CborStreamBody<T> {
+        CborStream::new(self.body)
     }
 }
