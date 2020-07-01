@@ -380,31 +380,22 @@ void EdenDispatcher::notification(
         auto destFile = wideCharToEdenRelativePath(destinationFileName);
         XLOGF(DBG6, "RENAMED {} -> {}", relPath, destFile);
 
-        if (!destFile.empty()) {
+        // When files are moved in and out of the repo, the rename paths are
+        // empty, handle these like creation/removal of files.
+        if (relPath.empty()) {
+          getMount().createFile(destFile, isDirectory);
+        } else if (destFile.empty()) {
+          getMount().removeFile(relPath, isDirectory);
+        } else {
           getMount().renameFile(relPath, destFile);
         }
 
-        // The Prjfs could create a Tombstones for the original file. If the
-        // Tombstone will be created or not depends on the origin of the file.
-        // We do not have that info here, so we try to remove the Tombstone and
-        // not worry about the failures.
-
-        if (!relPath.empty()) {
-          // TODO(puneetk): We could add the file origin information in the
-          // DirEntry and refer to that before calling removeDeletedFile.
-          getMount().getFsChannel()->removeDeletedFile(relPath);
-        }
         break;
       }
 
       case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED:
         XLOGF(DBG6, "DELETED {}", relPath);
         getMount().removeFile(relPath, isDirectory);
-
-        // TODO(puneetk): (same as above) We could add the file origin
-        // information in the DirEntry and refer to that before calling
-        // removeDeletedFile.
-        getMount().getFsChannel()->removeDeletedFile(relPath);
         break;
     }
   } catch (const std::exception& ex) {
