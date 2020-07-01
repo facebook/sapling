@@ -26,5 +26,5 @@ pub use header::Header;
 pub use progress::Progress;
 pub use receiver::Receiver;
 pub use request::{Request, StreamRequest};
-pub use response::Response;
+pub use response::{AsyncResponse, Response};
 pub use stats::Stats;

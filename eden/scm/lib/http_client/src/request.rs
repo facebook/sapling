@@ -6,7 +6,7 @@
  */
 
 use std::convert::{TryFrom, TryInto};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use curl::{
     self,
@@ -18,8 +18,8 @@ use url::Url;
 use crate::{
     errors::{CertOrKeyMissing, HttpClientError},
     handler::{Buffered, Configure, Streaming},
-    receiver::Receiver,
-    response::Response,
+    receiver::{ChannelReceiver, Receiver},
+    response::{AsyncResponse, Response},
 };
 
 #[derive(Copy, Clone, Debug)]
@@ -33,17 +33,17 @@ enum Method {
 /// A builder struct for HTTP requests, designed to be
 /// a more egonomic API for setting up a curl handle.
 #[derive(Debug)]
-pub struct Request<'a> {
-    url: &'a Url,
+pub struct Request {
+    url: Url,
     method: Method,
-    headers: Vec<(&'a str, &'a str)>,
+    headers: Vec<(String, String)>,
     body: Option<Vec<u8>>,
-    creds: Option<(&'a Path, &'a Path)>,
-    cainfo: Option<&'a Path>,
+    creds: Option<(PathBuf, PathBuf)>,
+    cainfo: Option<PathBuf>,
 }
 
-impl<'a> Request<'a> {
-    fn new(url: &'a Url, method: Method) -> Self {
+impl Request {
+    fn new(url: Url, method: Method) -> Self {
         Self {
             url,
             method,
@@ -55,22 +55,22 @@ impl<'a> Request<'a> {
     }
 
     /// Create a GET request.
-    pub fn get(url: &'a Url) -> Self {
+    pub fn get(url: Url) -> Self {
         Self::new(url, Method::Get)
     }
 
     /// Create a HEAD request.
-    pub fn head(url: &'a Url) -> Self {
+    pub fn head(url: Url) -> Self {
         Self::new(url, Method::Head)
     }
 
     /// Create a POST request.
-    pub fn post(url: &'a Url) -> Self {
+    pub fn post(url: Url) -> Self {
         Self::new(url, Method::Post)
     }
 
     /// Create a PUT request.
-    pub fn put(url: &'a Url) -> Self {
+    pub fn put(url: Url) -> Self {
         Self::new(url, Method::Put)
     }
 
@@ -97,8 +97,8 @@ impl<'a> Request<'a> {
     }
 
     /// Set a request header.
-    pub fn header(mut self, name: &'a str, value: &'a str) -> Self {
-        self.headers.push((name, value));
+    pub fn header(mut self, name: impl ToString, value: impl ToString) -> Self {
+        self.headers.push((name.to_string(), value.to_string()));
         self
     }
 
@@ -106,11 +106,11 @@ impl<'a> Request<'a> {
     /// paths to a PEM-encoded X.509 client certificate chain and the
     /// corresponding private key. (It is possible for the certificate
     /// and private key to be in the same file.)
-    pub fn creds<C, K>(self, cert: &'a C, key: &'a K) -> Result<Self, CertOrKeyMissing>
-    where
-        C: AsRef<Path>,
-        K: AsRef<Path>,
-    {
+    pub fn creds(
+        self,
+        cert: impl AsRef<Path>,
+        key: impl AsRef<Path>,
+    ) -> Result<Self, CertOrKeyMissing> {
         let cert = cert.as_ref();
         if !cert.is_file() {
             return Err(CertOrKeyMissing(cert.into()));
@@ -121,7 +121,7 @@ impl<'a> Request<'a> {
         }
 
         Ok(Self {
-            creds: Some((cert, key)),
+            creds: Some((cert.into(), key.into())),
             ..self
         })
     }
@@ -129,14 +129,14 @@ impl<'a> Request<'a> {
     /// Specify a CA certificate bundle to be used to verify the
     /// server's certificate. If not specified, the client will
     /// use the system default CA certificate bundle.
-    pub fn cainfo<C: AsRef<Path>>(self, cainfo: &'a C) -> Result<Self, CertOrKeyMissing> {
+    pub fn cainfo(self, cainfo: impl AsRef<Path>) -> Result<Self, CertOrKeyMissing> {
         let cainfo = cainfo.as_ref();
         if !cainfo.is_file() {
             return Err(CertOrKeyMissing(cainfo.into()));
         }
 
         Ok(Self {
-            cainfo: Some(cainfo),
+            cainfo: Some(cainfo.into()),
             ..self
         })
     }
@@ -154,10 +154,22 @@ impl<'a> Request<'a> {
         Response::try_from(easy.get_mut())
     }
 
+    /// Execute this request asynchronously.
+    pub async fn send_async(self) -> Result<AsyncResponse, HttpClientError> {
+        let (receiver, streams) = ChannelReceiver::new();
+        let request = self.into_streaming(receiver);
+
+        // Spawn the request as another task, which will block
+        // the worker it is scheduled on until completion.
+        let _ = tokio::task::spawn_blocking(move || request.send());
+
+        AsyncResponse::new(streams).await
+    }
+
     /// Turn this `Request` into a streaming request. The
     /// received data for this request will be passed as
     /// it arrives to the given `Receiver`.
-    pub fn into_streaming<R>(self, receiver: R) -> StreamRequest<'a, R> {
+    pub fn into_streaming<R>(self, receiver: R) -> StreamRequest<R> {
         StreamRequest {
             request: self,
             receiver,
@@ -221,23 +233,36 @@ impl<'a> Request<'a> {
     }
 }
 
-impl<'a> TryFrom<Request<'a>> for Easy2<Buffered> {
+impl TryFrom<Request> for Easy2<Buffered> {
     type Error = HttpClientError;
 
-    fn try_from(req: Request<'a>) -> Result<Self, Self::Error> {
+    fn try_from(req: Request) -> Result<Self, Self::Error> {
         req.into_handle(Buffered::new())
     }
 }
 
-pub struct StreamRequest<'a, R> {
-    pub(crate) request: Request<'a>,
+pub struct StreamRequest<R> {
+    pub(crate) request: Request,
     pub(crate) receiver: R,
 }
 
-impl<'a, R: Receiver> TryFrom<StreamRequest<'a, R>> for Easy2<Streaming<R>> {
+impl<R: Receiver> StreamRequest<R> {
+    pub fn send(self) -> Result<(), HttpClientError> {
+        let mut easy: Easy2<Streaming<R>> = self.try_into()?;
+        let res = easy.perform().map_err(Into::into);
+        let _ = easy
+            .get_mut()
+            .take_receiver()
+            .expect("Receiver is gone; this should never happen")
+            .done(res);
+        Ok(())
+    }
+}
+
+impl<R: Receiver> TryFrom<StreamRequest<R>> for Easy2<Streaming<R>> {
     type Error = HttpClientError;
 
-    fn try_from(req: StreamRequest<'a, R>) -> Result<Self, Self::Error> {
+    fn try_from(req: StreamRequest<R>) -> Result<Self, Self::Error> {
         let StreamRequest { request, receiver } = req;
         request.into_handle(Streaming::with_receiver(receiver))
     }
@@ -250,6 +275,7 @@ mod tests {
     use std::fs::File;
 
     use anyhow::Result;
+    use futures::TryStreamExt;
     use http::{
         header::{self, HeaderName, HeaderValue},
         StatusCode,
@@ -269,7 +295,7 @@ mod tests {
             .create();
 
         let url = Url::parse(&mockito::server_url())?.join("test")?;
-        let res = Request::get(&url).header("X-Api-Key", "1234").send()?;
+        let res = Request::get(url).header("X-Api-Key", "1234").send()?;
 
         mock.assert();
 
@@ -289,6 +315,42 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_async_get() -> Result<()> {
+        let mock = mock("GET", "/test")
+            .with_status(200)
+            .match_header("X-Api-Key", "1234")
+            .with_header("Content-Type", "text/plain")
+            .with_header("X-Served-By", "mock")
+            .with_body("Hello, world!")
+            .create();
+
+        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let res = Request::get(url)
+            .header("X-Api-Key", "1234")
+            .send_async()
+            .await?;
+
+        mock.assert();
+
+        assert_eq!(res.status, StatusCode::OK);
+        assert_eq!(
+            res.headers.get(header::CONTENT_TYPE).unwrap(),
+            HeaderValue::from_static("text/plain")
+        );
+        assert_eq!(
+            res.headers
+                .get(HeaderName::from_bytes(b"X-Served-By")?)
+                .unwrap(),
+            HeaderValue::from_static("mock")
+        );
+
+        let body = res.body.try_concat().await?;
+        assert_eq!(&*body, &b"Hello, world!"[..]);
+
+        Ok(())
+    }
+
     #[test]
     fn test_head() -> Result<()> {
         let mock = mock("HEAD", "/test")
@@ -299,7 +361,7 @@ mod tests {
             .create();
 
         let url = Url::parse(&mockito::server_url())?.join("test")?;
-        let res = Request::head(&url).header("X-Api-Key", "1234").send()?;
+        let res = Request::head(url).header("X-Api-Key", "1234").send()?;
 
         mock.assert();
 
@@ -330,7 +392,7 @@ mod tests {
             .create();
 
         let url = Url::parse(&mockito::server_url())?.join("test")?;
-        let res = Request::post(&url).body(body.as_bytes()).send()?;
+        let res = Request::post(url).body(body.as_bytes()).send()?;
 
         mock.assert();
         assert_eq!(res.status, StatusCode::CREATED);
@@ -349,7 +411,7 @@ mod tests {
             .create();
 
         let url = Url::parse(&mockito::server_url())?.join("test")?;
-        let res = Request::put(&url)
+        let res = Request::put(url)
             .header("Content-Type", "text/plain")
             .body(body.as_bytes())
             .send()?;
@@ -374,7 +436,7 @@ mod tests {
             .create();
 
         let url = Url::parse(&mockito::server_url())?.join("test")?;
-        let res = Request::post(&url).json(&body)?.send()?;
+        let res = Request::post(url).json(&body)?.send()?;
 
         mock.assert();
         assert_eq!(res.status, StatusCode::CREATED);
@@ -403,7 +465,7 @@ mod tests {
             .create();
 
         let url = Url::parse(&mockito::server_url())?.join("test")?;
-        let res = Request::post(&url).cbor(&body)?.send()?;
+        let res = Request::post(url).cbor(&body)?.send()?;
 
         mock.assert();
         assert_eq!(res.status, StatusCode::CREATED);
@@ -420,22 +482,22 @@ mod tests {
         let url = Url::parse("https://example.com")?;
 
         // Cert and key missing.
-        assert!(Request::get(&url).creds(&cert, &key).is_err());
+        assert!(Request::get(url.clone()).creds(&cert, &key).is_err());
 
         // Just key missing.
         let _ = File::create(&cert)?;
-        assert!(Request::get(&url).creds(&cert, &key).is_err());
+        assert!(Request::get(url.clone()).creds(&cert, &key).is_err());
 
         // Both present.
         let _ = File::create(&key)?;
-        let _ = Request::get(&url).creds(&cert, &key)?;
+        let _ = Request::get(url.clone()).creds(&cert, &key)?;
 
         // CA cert bundle missing.
-        assert!(Request::get(&url).cainfo(&cainfo).is_err());
+        assert!(Request::get(url.clone()).cainfo(&cainfo).is_err());
 
         // CA cert bundle present.
         let _ = File::create(&cainfo)?;
-        let _ = Request::get(&url).cainfo(&cainfo)?;
+        let _ = Request::get(url).cainfo(&cainfo)?;
 
         Ok(())
     }

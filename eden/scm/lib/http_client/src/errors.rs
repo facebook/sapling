@@ -7,6 +7,7 @@
 
 use std::path::PathBuf;
 
+use futures::channel::oneshot;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -19,6 +20,8 @@ pub enum HttpClientError {
     CallbackAborted(#[from] Abort),
     #[error("Received invalid or malformed HTTP response")]
     BadResponse,
+    #[error("The request was dropped before it could complete")]
+    RequestDropped(#[from] oneshot::Canceled),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

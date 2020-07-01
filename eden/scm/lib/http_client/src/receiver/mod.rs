@@ -9,6 +9,10 @@ use crate::errors::{Abort, HttpClientError};
 use crate::header::Header;
 use crate::progress::Progress;
 
+pub mod channel;
+
+pub use channel::{ChannelReceiver, ResponseStreams};
+
 /// Interface for streaming HTTP response handlers.
 pub trait Receiver: Sized {
     /// Handle received chunk of the response body.

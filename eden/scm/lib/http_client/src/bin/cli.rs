@@ -60,9 +60,7 @@ fn main() -> Result<()> {
 }
 
 fn cmd_get(args: Args) -> Result<()> {
-    let url = args.url()?;
-
-    let req = Request::get(&url);
+    let req = Request::get(args.url()?);
     let req = add_headers(req, &args.headers);
 
     let creds = get_creds();
@@ -73,9 +71,7 @@ fn cmd_get(args: Args) -> Result<()> {
 }
 
 fn cmd_head(args: Args) -> Result<()> {
-    let url = args.url()?;
-
-    let req = Request::head(&url);
+    let req = Request::head(args.url()?);
     let req = add_headers(req, &args.headers);
 
     let creds = get_creds();
@@ -86,12 +82,10 @@ fn cmd_head(args: Args) -> Result<()> {
 }
 
 fn cmd_post(args: Args) -> Result<()> {
-    let url = args.url()?;
-
     eprintln!("Reading payload from stdin");
     let body = read_input()?;
 
-    let req = Request::post(&url).body(body);
+    let req = Request::post(args.url()?).body(body);
     let req = add_headers(req, &args.headers);
 
     let creds = get_creds();
@@ -102,12 +96,10 @@ fn cmd_post(args: Args) -> Result<()> {
 }
 
 fn cmd_put(args: Args) -> Result<()> {
-    let url = args.url()?;
-
     eprintln!("Reading payload from stdin");
     let body = read_input()?;
 
-    let req = Request::put(&url).body(body);
+    let req = Request::put(args.url()?).body(body);
     let req = add_headers(req, &args.headers);
 
     let creds = get_creds();
@@ -136,11 +128,11 @@ fn write_response(res: Response) -> Result<()> {
     Ok(())
 }
 
-fn configure_tls<'a>(
-    mut req: Request<'a>,
-    creds: &'a Option<(String, String)>,
-    ca: &'a Option<String>,
-) -> Result<Request<'a>> {
+fn configure_tls(
+    mut req: Request,
+    creds: &Option<(String, String)>,
+    ca: &Option<String>,
+) -> Result<Request> {
     if let Some((cert, key)) = creds {
         req = req.creds(cert, key)?;
     }
@@ -160,7 +152,7 @@ fn get_ca() -> Option<String> {
     env::var(CA_ENV_VAR).ok()
 }
 
-fn add_headers<'a>(mut req: Request<'a>, headers: &'a [String]) -> Request<'a> {
+fn add_headers(mut req: Request, headers: &[String]) -> Request {
     for header in headers {
         let (name, value) = split_header(header);
         req = req.header(name, value);

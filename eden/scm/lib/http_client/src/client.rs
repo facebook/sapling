@@ -48,9 +48,9 @@ impl HttpClient {
     ///
     /// The closure returns a boolean. If false, this function will
     /// return early and all other pending transfers will be aborted.
-    pub fn send<'a, I, F>(&self, requests: I, response_cb: F) -> Result<Stats, HttpClientError>
+    pub fn send<I, F>(&self, requests: I, response_cb: F) -> Result<Stats, HttpClientError>
     where
-        I: IntoIterator<Item = Request<'a>>,
+        I: IntoIterator<Item = Request>,
         F: FnMut(Result<Response, HttpClientError>) -> Result<(), Abort>,
     {
         self.send_with_progress(requests, response_cb, |_| ())
@@ -60,14 +60,14 @@ impl HttpClient {
     /// monitoring the collective progress of all of the transfers.
     /// The closure will be called whenever any of the underlying
     /// transfers make progress.
-    pub fn send_with_progress<'a, I, F, P>(
+    pub fn send_with_progress<I, F, P>(
         &self,
         requests: I,
         mut response_cb: F,
         progress_cb: P,
     ) -> Result<Stats, HttpClientError>
     where
-        I: IntoIterator<Item = Request<'a>>,
+        I: IntoIterator<Item = Request>,
         F: FnMut(Result<Response, HttpClientError>) -> Result<(), Abort>,
         P: FnMut(Progress),
     {
@@ -93,9 +93,9 @@ impl HttpClient {
     /// Note that this function is not asynchronous; it WILL BLOCK
     /// until all of the transfers are complete, and will return
     /// the total stats across all transfers when complete.
-    pub fn stream<'a, I, R>(&self, requests: I) -> Result<Stats, HttpClientError>
+    pub fn stream<I, R>(&self, requests: I) -> Result<Stats, HttpClientError>
     where
-        I: IntoIterator<Item = StreamRequest<'a, R>>,
+        I: IntoIterator<Item = StreamRequest<R>>,
         R: Receiver,
     {
         self.stream_with_progress(requests, |_| ())
@@ -105,13 +105,13 @@ impl HttpClient {
     /// monitoring the collective progress of all of the transfers.
     /// The closure will be called whenever any of the underlying
     /// transfers make progress.
-    pub fn stream_with_progress<'a, I, R, P>(
+    pub fn stream_with_progress<I, R, P>(
         &self,
         requests: I,
         progress_cb: P,
     ) -> Result<Stats, HttpClientError>
     where
-        I: IntoIterator<Item = StreamRequest<'a, R>>,
+        I: IntoIterator<Item = StreamRequest<R>>,
         R: Receiver,
         P: FnMut(Progress),
     {
@@ -211,13 +211,13 @@ mod tests {
         let server_url = Url::parse(&mockito::server_url())?;
 
         let url1 = server_url.join("test1")?;
-        let req1 = Request::get(&url1);
+        let req1 = Request::get(url1);
 
         let url2 = server_url.join("test2")?;
-        let req2 = Request::get(&url2);
+        let req2 = Request::get(url2);
 
         let url3 = server_url.join("test3")?;
-        let req3 = Request::get(&url3);
+        let req3 = Request::get(url3);
 
         let mut not_received = HashSet::new();
         not_received.insert(body1.to_vec());
@@ -267,15 +267,15 @@ mod tests {
 
         let url1 = server_url.join("test1")?;
         let rcv1 = TestReceiver::new();
-        let req1 = Request::get(&url1).into_streaming(rcv1.clone());
+        let req1 = Request::get(url1).into_streaming(rcv1.clone());
 
         let url2 = server_url.join("test2")?;
         let rcv2 = TestReceiver::new();
-        let req2 = Request::get(&url2).into_streaming(rcv2.clone());
+        let req2 = Request::get(url2).into_streaming(rcv2.clone());
 
         let url3 = server_url.join("test3")?;
         let rcv3 = TestReceiver::new();
-        let req3 = Request::get(&url3).into_streaming(rcv3.clone());
+        let req3 = Request::get(url3).into_streaming(rcv3.clone());
 
         let client = HttpClient::new();
         let stats = client.stream(vec![req1, req2, req3])?;
