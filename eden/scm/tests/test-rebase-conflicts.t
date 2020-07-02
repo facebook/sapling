@@ -1,11 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: configure mutation
-  $ configure noevolution
   $ enable undo rebase
-  $ setconfig phases.publish=false format.usegeneraldelta=yes
-  $ setconfig experimental.mmapindexthreshold=1000G
 
   $ hg init a
   $ cd a
@@ -34,12 +30,10 @@ TODO: configure mutation
   $ hg ci -m L3
   $ hg bookmark mybook
 
-  $ hg phase --force --secret 4
-
   $ tglogp
-  @  5: 8029388f38dc secret 'L3' mybook
+  @  5: 8029388f38dc draft 'L3' mybook
   |
-  o  4: 46f0b057b5c0 secret 'L2'
+  o  4: 46f0b057b5c0 draft 'L2'
   |
   o  3: 3163e20567cc draft 'L1'
   |
@@ -57,7 +51,7 @@ Try to call --continue:
 
 Conflicting rebase:
 
-  $ hg rebase -s 3 -d 2
+  $ hg rebase -s 'desc(L1)' -d 'desc(C3)'
   rebasing 3163e20567cc "L1"
   rebasing 46f0b057b5c0 "L2"
   merging common
@@ -98,11 +92,11 @@ Conclude rebase:
   rebasing 8029388f38dc "L3" (mybook)
 
   $ tglogp
-  @  5: d67b21408fc0 secret 'L3' mybook
+  @  8: d67b21408fc0 draft 'L3' mybook
   |
-  o  4: 5e5bd08c7e60 secret 'L2'
+  o  7: 5e5bd08c7e60 draft 'L2'
   |
-  o  3: 3e046f2ecedb draft 'L1'
+  o  6: 3e046f2ecedb draft 'L1'
   |
   o  2: a9ce13b75fb5 draft 'C3'
   |
@@ -112,32 +106,32 @@ Conclude rebase:
   
 Check correctness:
 
-  $ hg cat -r 0 common
+  $ hg cat -r 'desc(C1)' common
   c1
 
-  $ hg cat -r 1 common
-  c1
-  c2
-
-  $ hg cat -r 2 common
+  $ hg cat -r 'desc(C2)' common
   c1
   c2
-  c3
 
-  $ hg cat -r 3 common
+  $ hg cat -r 'desc(C3)' common
   c1
   c2
   c3
 
-  $ hg cat -r 4 common
+  $ hg cat -r 'desc(L1)' common
+  c1
+  c2
+  c3
+
+  $ hg cat -r 'desc(L2)' common
   resolved merge
 
-  $ hg cat -r 5 common
+  $ hg cat -r 'desc(L3)' common
   resolved merge
 
 Bookmark stays active after --continue
   $ hg bookmarks
-   * mybook                    5:d67b21408fc0
+   * mybook                    8:d67b21408fc0
 
   $ cd ..
 
@@ -225,7 +219,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
      date:        Tue Sep 03 13:55:08 2013 -0400
      summary:     added default.txt
   
-  $ hg rebase -s9 -d2 --debug # use debug to really check merge base used
+  $ hg rebase -s 'desc("more changes to f1")' -d 'desc("added f1.tx")' --debug # use debug to really check merge base used
   rebase onto 4bc80088dc6b starting from e31216eec445
   rebasing on disk
   rebase status stored
@@ -283,36 +277,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   removing f1.txt
    f2.txt: remote created -> g
   getting f2.txt
-  2 changesets found
-  list of changesets:
-  e31216eec445e44352c5f01588856059466a24c9
-  2f2496ddf49d69b5ef23ad8cf9fb2e0e4faf0ac2
-  bundle2-output-bundle: "HG20", (1 params) 2 parts total
-  bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
-  bundle2-output-part: "phase-heads" 24 bytes payload
-  3 changesets found
-  list of changesets:
-  4c9fbe56a16f30c0d5dcc40ec1a97bbe3325209c
-  19c888675e133ab5dff84516926a65672eaf04d9
-  2a7f09cac94c7f4b73ebd5cd1a62d3b2e8e336bf
-  bundle2-output-bundle: "HG20", 2 parts total
-  bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
-  bundle2-output-part: "phase-heads" 24 bytes payload
-  adding branch
-  bundle2-input-bundle: with-transaction
-  bundle2-input-part: "changegroup" (params: 1 mandatory 1 advisory) supported
-  adding changesets
-  add changeset 4c9fbe56a16f
-  add changeset 19c888675e13
-  add changeset 2a7f09cac94c
-  adding manifests
-  adding file changes
-  adding f1.txt revisions
-  added 2 changesets with 2 changes to 1 files
-  bundle2-input-part: total payload size 1686
-  bundle2-input-part: "phase-heads" supported
-  bundle2-input-part: total payload size 24
-  bundle2-input-bundle: 1 parts total
   rebase completed
 
 Test minimization of merge conflicts
@@ -399,18 +363,17 @@ Test rebase with obsstore turned on and off (issue5606)
   $ hg rebase --continue --config experimental.evolution=none
   rebasing 112478962961 "B" (B)
   rebasing f585351a92f8 "D" (D)
-  warning: orphaned descendants detected, not stripping 112478962961
 
   $ tglogp
-  o  5: c5f6f5f52dbd draft 'D' D
+  o  7: c5f6f5f52dbd draft 'D' D
   |
-  o  4: a8990ee99807 draft 'B' B
+  o  6: a8990ee99807 draft 'B' B
   |
-  @  3: b2867df0c236 draft 'E' E
+  @  5: b2867df0c236 draft 'E' E
   |
-  | o  2: 26805aba1e60 draft 'C' C
+  | o  3: 26805aba1e60 draft 'C' C
   | |
-  | o  1: 112478962961 draft 'B'
+  | x  1: 112478962961 draft 'B'
   |/
   o  0: 426bada5c675 draft 'A' A
   
