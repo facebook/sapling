@@ -1,8 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
-
 Test for the full copytracing algorithm
 =======================================
 
@@ -126,9 +123,9 @@ Verify disabling copy tracing still keeps copies from rebase source
   
   $ hg rebase -d . -b 2 --config extensions.rebase= --config experimental.copytrace=off
   rebasing 6adcf8c12e7d "copy b->x"
-  $ hg up -q 3
+  $ hg up -q 4
   $ hg log -f x -T '{rev} {desc}\n'
-  3 copy b->x
+  4 copy b->x
   1 add b, c
 
   $ cd ../
@@ -160,7 +157,8 @@ Verify we duplicate existing copies, instead of detecting them
   rebasing 47e1a9e6273b "copy a->b (2)"
 
   $ hg log -G -f b
-  @  changeset:   3:76024fb4b05b
+  @  changeset:   4:76024fb4b05b
+  :  parent:      2:235d81efe3d3
   :  user:        test
   :  date:        Thu Jan 01 00:00:00 1970 +0000
   :  summary:     copy a->b (2)
