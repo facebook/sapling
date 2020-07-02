@@ -477,3 +477,23 @@ class HttpsCommitCloudService(baseservice.BaseService):
             raise ccerror.ServiceError(self.ui, response["error"])
 
         self.ui.debug("'update_checkout_locations' successful", component="commitcloud")
+
+    @perftrace.tracefunc("Get Commit Cloud Workspaces")
+    def getworkspaces(self, reponame, prefix):
+        self.ui.debug("sending 'get_workspaces' request\n", component="commitcloud")
+
+        # send request
+        path = "/commit_cloud/get_workspaces"
+        data = {"repo_name": reponame, "prefix": prefix}
+        start = util.timer()
+        response = self._send(path, data)
+        elapsed = util.timer() - start
+        self.ui.debug(
+            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
+        )
+
+        if "error" in response:
+            raise ccerror.ServiceError(self.ui, response["error"])
+
+        workspaces = response["workspaces_data"]
+        return self._makeworkspacesinfo(workspaces)

@@ -83,6 +83,14 @@ def defaultworkspace(ui, user=None):
     return "user/%s/default" % user
 
 
+def userworkspaceprefix(ui, user=None):
+    """Returns the workspace prefix for the given user or current user"""
+    if user is None:
+        domain = ui.config("commitcloud", "email_domain")
+        user = util.emaildomainuser(ui.username(), domain)
+    return "user/%s/" % user
+
+
 filename = "commitcloudrc"
 
 

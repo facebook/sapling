@@ -174,27 +174,25 @@ class LocalService(baseservice.BaseService):
     def getsmartlog(self, reponame, workspace, repo, limit):
         filename = os.path.join(self.path, "usersmartlogdata")
         if not os.path.exists(filename):
-            nodes = {}
-        else:
+            return None
+        try:
             with open(filename, "rb") as f:
                 data = json.load(f)
-        try:
-            return self._makesmartloginfo(data["smartlog"])
+                return self._makesmartloginfo(data["smartlog"])
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
 
     def getsmartlogbyversion(self, reponame, workspace, repo, date, version, limit):
         filename = os.path.join(self.path, "usersmartlogbyversiondata")
         if not os.path.exists(filename):
-            nodes = {}
-        else:
+            return None
+        try:
             with open(filename, "rb") as f:
                 data = json.load(f)
-        try:
-            data = data["smartlog"]
-            data["version"] = 42
-            data["timestamp"] = 1562690787
-            return self._makesmartloginfo(data)
+                data = data["smartlog"]
+                data["version"] = 42
+                data["timestamp"] = 1562690787
+                return self._makesmartloginfo(data)
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
 
@@ -213,3 +211,14 @@ class LocalService(baseservice.BaseService):
         filename = os.path.join(self.path, "checkoutlocations")
         with open(filename, "w+") as f:
             json.dump(data, f)
+
+    def getworkspaces(self, reponame, prefix):
+        filename = os.path.join(self.path, "userworkspacesdata")
+        if not os.path.exists(filename):
+            return None
+        try:
+            with open(filename, "rb") as f:
+                data = json.load(f)
+                return self._makeworkspacesinfo(data["workspaces_data"])
+        except Exception as e:
+            raise ccerror.UnexpectedError(self._ui, e)

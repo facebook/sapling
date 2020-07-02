@@ -560,6 +560,39 @@ def cloudbackup(ui, repo, *revs, **opts):
 
 
 @subcmd(
+    "listworkspaces|list",
+    [
+        ("", "user", "", _("username, defaults to current user")),
+        ("a", "all", None, _("list all workspaces, including archived")),
+    ],
+)
+def cloudlistworspaces(ui, repo, **opts):
+    """list Commit Cloud workspaces that are available on the server for the user"""
+
+    user = opts.get("user")
+    workspacenameprefix = workspace.userworkspaceprefix(ui, user if user else None)
+    reponame = ccutil.getreponame(repo)
+    serv = service.get(ui, tokenmod.TokenLocator(ui).token)
+    winfos = serv.getworkspaces(reponame, workspacenameprefix)
+    if not winfos:
+        ui.write(
+            _("no active workspaces found with the prefix %s\n") % workspacenameprefix
+        )
+    else:
+        ui.write(_("workspaces:\n"))
+        for winfo in winfos:
+            if winfo.archived:
+                if opts.get("all"):
+                    ui.write(
+                        _("        %s (archived)\n")
+                        % winfo.name[len(workspacenameprefix) :]
+                    )
+            else:
+                ui.write(_("        %s\n") % winfo.name[len(workspacenameprefix) :])
+        ui.status(_("run `hg cloud sl -w <workspace name>` to view the commits\n"))
+
+
+@subcmd(
     "listbackups",
     [
         ("a", "all", None, _("list all backups, not just the most recent")),

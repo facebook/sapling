@@ -37,6 +37,7 @@ NodeInfo = collections.namedtuple(
 SmartlogInfo = collections.namedtuple(
     "SmartlogInfo", "dag public draft version timestamp nodeinfos"
 )
+WorkspaceInfo = collections.namedtuple("WorkspaceInfo", "name archived")
 
 PUBLICPHASE = "public"
 
@@ -249,6 +250,11 @@ class BaseService(pycompat.ABC):
         """Gets the workspace smartlog
         """
 
+    @abstractmethod
+    def getworkspaces(self, reponame, prefix):
+        """Gets the list of workspaces for the given prefix
+        """
+
     @staticmethod
     def _makesmartloginfo(data):
         """Returns a SmartlogInfo that supports DAG operations like heads, parents,
@@ -285,6 +291,16 @@ class BaseService(pycompat.ABC):
             version=version,
             timestamp=timestamp,
         )
+
+    @staticmethod
+    def _makeworkspacesinfo(workspacesinfos):
+        return [
+            WorkspaceInfo(
+                name=ensurestr(workspacesinfo["name"]),
+                archived=bool(workspacesinfo["archived"]),
+            )
+            for workspacesinfo in workspacesinfos["workspaces"]
+        ]
 
     @staticmethod
     def makedagwalker(smartloginfo, repo):
