@@ -117,6 +117,16 @@ Stack of non-conflicting commits should be accepted
   remote:     0e3997dc0733  b => baz
   remote: 3 new changesets from the server will be downloaded
 
+  $ log -R ../server
+  o  b => baz [public:4cfedb0dc25f]
+  |
+  o  b => xxx [public:6a6d9484552c]
+  |
+  @  a => bar [public:add0c792bfce]
+  |
+  o  initial [public:2bb9d20e471c]
+  
+
 Check that we did not generate any check:heads parts
 
   $ grep check:heads stuff
@@ -163,6 +173,16 @@ Push using changegroup2
   remote:     46a2df24e272  b => xxx
   remote:     0e3997dc0733  b => baz
   remote: 3 new changesets from the server will be downloaded
+
+  $ log -R ../server
+  o  b => baz [public:4cfedb0dc25f]
+  |
+  o  b => xxx [public:6a6d9484552c]
+  |
+  @  a => bar [public:add0c792bfce]
+  |
+  o  initial [public:2bb9d20e471c]
+  
 
   $ cd ../client
   $ hg debugstrip 46a2df24e27273bb06dbf28b085fcc2e911bf986
@@ -314,6 +334,7 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg commit -qm "on top of merge"
   $ hg book master -r tip
   moving bookmark 'master' forward from e6b7549904cd
+  $ hg debugmakepublic 741fd2094512
   $ log
   @  on top of merge [draft:9007d6a204f8] master
   |
@@ -329,6 +350,19 @@ Pushing a merge should rebase only the latest side of the merge
   | |
   o |  b => baz [public:4cfedb0dc25f]
   |/
+  o  b => xxx [public:6a6d9484552c]
+  |
+  o  a => bar [public:add0c792bfce]
+  |
+  o  initial [public:2bb9d20e471c]
+  
+  $ log -R ../server
+  @  a => baz [draft:fb983dc509b6] master
+  |
+  o  b => quux [public:741fd2094512]
+  |
+  o  b => baz [public:4cfedb0dc25f]
+  |
   o  b => xxx [public:6a6d9484552c]
   |
   o  a => bar [public:add0c792bfce]
