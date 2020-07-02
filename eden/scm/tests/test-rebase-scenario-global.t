@@ -1,10 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
-  $ enable rebase
-  $ setconfig phases.publish=false
-
+  $ enable rebase amend
 
   $ hg init a
   $ cd a
@@ -64,15 +60,15 @@ can abort or warn for colliding untracked files)
   $ rm D.orig
 
   $ tglog
-  o  7: 1619f02ff7dd 'D'
+  o  8: 1619f02ff7dd 'D'
   |
-  @  6: 02de42196ebe 'H'
+  @  7: 02de42196ebe 'H'
   |
-  | o  5: eea13746799a 'G'
+  | o  6: eea13746799a 'G'
   |/|
-  o |  4: 24b6387c8c8c 'F'
+  o |  5: 24b6387c8c8c 'F'
   | |
-  | o  3: 9520eea781bc 'E'
+  | o  4: 9520eea781bc 'E'
   |/
   | o  2: 5fddd98957c8 'C'
   | |
@@ -98,15 +94,15 @@ that we can ignore for colliding untracked files)
   $ rm D.orig
 
   $ tglog
-  o  7: 2107530e74ab 'D'
+  o  8: 2107530e74ab 'D'
   |
-  | @  6: 02de42196ebe 'H'
+  | @  7: 02de42196ebe 'H'
   |/
-  | o  5: eea13746799a 'G'
+  | o  6: eea13746799a 'G'
   |/|
-  o |  4: 24b6387c8c8c 'F'
+  o |  5: 24b6387c8c8c 'F'
   | |
-  | o  3: 9520eea781bc 'E'
+  | o  4: 9520eea781bc 'E'
   |/
   | o  2: 5fddd98957c8 'C'
   | |
@@ -134,11 +130,11 @@ if they have the same contents)
   E.orig: file not found
 
   $ tglog
-  o  6: 9f8b8ec77260 'E'
+  o  8: 9f8b8ec77260 'E'
   |
-  @  5: 02de42196ebe 'H'
+  @  7: 02de42196ebe 'H'
   |
-  o  4: 24b6387c8c8c 'F'
+  o  5: 24b6387c8c8c 'F'
   |
   | o  3: 32af7686d403 'D'
   | |
@@ -163,9 +159,9 @@ F onto E - rebase of a branching point (skip G):
   rebasing 02de42196ebe "H"
 
   $ tglog
-  @  6: e9240aeaa6ad 'H'
+  @  9: e9240aeaa6ad 'H'
   |
-  o  5: 5d0ccadb6e3e 'F'
+  o  8: 5d0ccadb6e3e 'F'
   |
   o  4: 9520eea781bc 'E'
   |
@@ -189,9 +185,9 @@ G onto H - merged revision having a parent in ancestors of target:
   rebasing eea13746799a "G"
 
   $ tglog
-  o    7: 397834907a90 'G'
+  o    8: 397834907a90 'G'
   |\
-  | @  6: 02de42196ebe 'H'
+  | @  7: 02de42196ebe 'H'
   | |
   | o  5: 24b6387c8c8c 'F'
   | |
@@ -219,11 +215,11 @@ F onto B - G maintains E as parent:
   rebasing 02de42196ebe "H"
 
   $ tglog
-  @  7: c87be72f9641 'H'
+  @  10: c87be72f9641 'H'
   |
-  | o  6: 17badd73d4f1 'G'
+  | o  9: 17badd73d4f1 'G'
   |/|
-  o |  5: 74fb9ed646c4 'F'
+  o |  8: 74fb9ed646c4 'F'
   | |
   | o  4: 9520eea781bc 'E'
   | |
@@ -286,17 +282,17 @@ C onto A - rebase onto an ancestor:
   rebasing 5fddd98957c8 "C"
   rebasing 32af7686d403 "D"
   $ tglog
-  o  7: c9659aac0000 'D'
+  o  9: c9659aac0000 'D'
   |
-  o  6: e1c4361dd923 'C'
+  o  8: e1c4361dd923 'C'
   |
-  | @  5: 02de42196ebe 'H'
+  | @  7: 02de42196ebe 'H'
   | |
-  | | o  4: eea13746799a 'G'
+  | | o  6: eea13746799a 'G'
   | |/|
-  | o |  3: 24b6387c8c8c 'F'
+  | o |  5: 24b6387c8c8c 'F'
   |/ /
-  | o  2: 9520eea781bc 'E'
+  | o  4: 9520eea781bc 'E'
   |/
   | o  1: 42ccdea3bb16 'B'
   |/
@@ -308,6 +304,7 @@ Check rebasing public changeset
   $ hg pull --config phases.publish=True -q -r 6 . # update phase of 6
   $ hg rebase -d 'desc(A)' -b 'desc(C)'
   nothing to rebase
+  $ hg debugmakepublic e1c4361dd923
   $ hg rebase -d 'desc(H)' -b 'desc(C)'
   abort: can't rebase public changeset e1c4361dd923
   (see 'hg help phases' for details)
@@ -318,37 +315,33 @@ Check rebasing public changeset
   [255]
 
   $ hg rebase -d 'desc(H)' -b 'desc(C)' --keep
-  rebasing e1c4361dd923 "C"
+  rebasing 42ccdea3bb16 "B"
+  rebasing e1c4361dd923 "C" (public/e1c4361dd923d224beba950dfa5e53c861201386)
   rebasing c9659aac0000 "D"
 
 Check rebasing mutable changeset
 Source phase greater or equal to destination phase: new changeset get the phase of source:
-  $ hg id -n
-  5
   $ hg rebase -s'max(desc(D))' -d'desc(A)'
   rebasing 2b23e52411f4 "D"
-  $ hg id -n # check we updated back to parent
-  5
   $ hg log --template "{phase}\n" -r 'max(desc(D))'
   draft
   $ hg rebase -s'max(desc(D))' -d'desc(B)'
   rebasing 2cb10d0cfc6c "D"
   $ hg log --template "{phase}\n" -r 'max(desc(D))'
   draft
-  $ hg phase --force --secret 'max(desc(D))'
   $ hg rebase -s'max(desc(D))' -d'desc(A)'
-  rebasing c5b12b67163a "D"
+  rebasing 3fc1b42ad852 "D"
   $ hg log --template "{phase}\n" -r 'max(desc(D))'
-  secret
+  draft
   $ hg rebase -s'max(desc(D))' -d'desc(B)'
-  rebasing 2a0524f868ac "D"
+  rebasing 3838f70ff033 "D"
   $ hg log --template "{phase}\n" -r 'max(desc(D))'
-  secret
+  draft
 Source phase lower than destination phase: new changeset get the phase of destination:
   $ hg rebase -s'max(desc(C))' -d'max(desc(D))'
   rebasing 6d4f22462821 "C"
   $ hg log --template "{phase}\n" -r 'rev(9)'
-  secret
+  draft
 
   $ cd ..
 
@@ -376,9 +369,9 @@ Check that temporary bundle doesn't lose phase when not using generaldelta
   $ hg rebase -s 'desc(b)' -d 'desc(c)'
   rebasing d2ae7f538514 "b"
   $ hg log -G -T '{rev}:{node|shortest} {phase} {desc}\n'
-  o  2:c882 draft b
+  o  3:c882 draft b
   |
-  @  1:d36c public c
+  @  2:d36c public c
   |
   o  0:cb9a public a
   
@@ -424,11 +417,7 @@ Source on have two descendant heads but ask for one
 
   $ hg clone -q -u . ah ah1
   $ cd ah1
-  $ hg rebase -r 'desc(C)::desc(I)' -d 'desc(B)'
-  abort: can't remove original changesets with unrebased descendants
-  (use --keep to keep original changesets)
-  [255]
-  $ hg rebase -r 'desc(C)::desc(I)' -d 'desc(B)' -k
+  $ hg rebase -r 'max(desc(C))::desc(I)' -d 'desc(B)' -k
   rebasing c9e50f6cdc55 "C"
   rebasing ffd453c31098 "D"
   rebasing 3d8a618087a7 "G"
@@ -470,10 +459,6 @@ Base on have one descendant heads we ask for but common ancestor have two
 
   $ hg clone -q -u . ah ah2
   $ cd ah2
-  $ hg rebase -r 'desc(D)::desc(I)' -d 'desc(B)'
-  abort: can't remove original changesets with unrebased descendants
-  (use --keep to keep original changesets)
-  [255]
   $ hg rebase -r 'desc(D)::desc(I)' -d 'desc(B)' --keep
   rebasing ffd453c31098 "D"
   rebasing 3d8a618087a7 "G"
@@ -513,10 +498,6 @@ rebase subset
 
   $ hg clone -q -u . ah ah3
   $ cd ah3
-  $ hg rebase -r 'desc(D)::desc(H)' -d 'desc(B)'
-  abort: can't remove original changesets with unrebased descendants
-  (use --keep to keep original changesets)
-  [255]
   $ hg rebase -r 'desc(D)::desc(H)' -d 'desc(B)' --keep
   rebasing ffd453c31098 "D"
   rebasing 3d8a618087a7 "G"
@@ -553,10 +534,6 @@ rebase subset with multiple head
 
   $ hg clone -q -u . ah ah4
   $ cd ah4
-  $ hg rebase -r 'desc(D)::(7+5)' -d 'desc(B)'
-  abort: can't remove original changesets with unrebased descendants
-  (use --keep to keep original changesets)
-  [255]
   $ hg rebase -r 'desc(D)::(7+desc(F))' -d 'desc(B)' --keep
   rebasing ffd453c31098 "D"
   rebasing c01897464e7f "E"
@@ -606,11 +583,11 @@ rebase on ancestor with revset
   rebasing 72434a4e60b0 "H"
   rebasing 479ddb54a924 "I"
   $ tglog
-  o  8: fcb52e68a694 'I'
+  o  11: fcb52e68a694 'I'
   |
-  o  7: 77bd65cd7600 'H'
+  o  10: 77bd65cd7600 'H'
   |
-  o  6: 12d0e738fb18 'G'
+  o  9: 12d0e738fb18 'G'
   |
   | o  5: 41bfcc75ed73 'F'
   | |
@@ -640,15 +617,15 @@ We would expect heads are I, F if it was supported
   rebasing 72434a4e60b0 "H"
   rebasing 479ddb54a924 "I"
   $ tglog
-  o  8: 9136df9a87cf 'I'
+  o  13: 9136df9a87cf 'I'
   |
-  o  7: 23e8f30da832 'H'
+  o  12: 23e8f30da832 'H'
   |
-  o  6: b0efe8534e8b 'G'
+  o  11: b0efe8534e8b 'G'
   |
-  | o  5: 6eb5b496ab79 'F'
+  | o  10: 6eb5b496ab79 'F'
   | |
-  | o  4: d15eade9b0b1 'E'
+  | o  9: d15eade9b0b1 'E'
   |/
   | o  3: ffd453c31098 'D'
   | |
@@ -707,24 +684,24 @@ each root have a different common ancestor with the destination and this is a de
   rebasing e7ec4e813ba6 "I"
   rebasing 23a4ace37988 "K"
   $ hg log --rev 'children(desc(G))'
-  changeset:   9:adb617877056
+  changeset:   11:adb617877056
   parent:      6:eea13746799a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     I
   
-  changeset:   10:882431a34a0e
+  changeset:   12:882431a34a0e
   parent:      6:eea13746799a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     K
   
   $ tglog
-  @  10: 882431a34a0e 'K'
+  @  12: 882431a34a0e 'K'
   |
-  | o  9: adb617877056 'I'
+  | o  11: adb617877056 'I'
   |/
-  | o  8: 1301922eeb0c 'J'
+  | o  9: 1301922eeb0c 'J'
   | |
   | | o  7: 02de42196ebe 'H'
   | | |
@@ -820,17 +797,17 @@ Test that rebase is done in topo order (issue5370)
   rebasing 412b391de760 "F"
 
   $ tglog
-  o  6: 31884cfb735e 'F'
+  o  11: 31884cfb735e 'F'
   |
-  o  5: 6d89fa5b0909 'D'
+  o  10: 6d89fa5b0909 'D'
   |
-  | o  4: de64d97c697b 'E'
+  | o  9: de64d97c697b 'E'
   | |
-  | o  3: b18e4d2d0aa1 'C'
+  | o  8: b18e4d2d0aa1 'C'
   |/
-  o  2: 0983daf9ff6a 'B'
+  o  7: 0983daf9ff6a 'B'
   |
-  @  1: 124bb27b6f28 'G'
+  @  6: 124bb27b6f28 'G'
   |
   o  0: 216878401574 'A'
   
@@ -848,19 +825,20 @@ Make the repo a bit more interesting
   $ hg add aaa
   $ hg commit -m aaa
   $ hg log -G
-  @  changeset:   4:5f7bc9025ed2
+  @  changeset:   6:5f7bc9025ed2
   |  parent:      1:58d79cc1cf43
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     aaa
   |
-  | o  changeset:   3:1910d5ff34ea
+  | o  changeset:   5:1910d5ff34ea
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     second source with subdir
   | |
-  | o  changeset:   2:82901330b6ef
-  |/   user:        test
+  | o  changeset:   4:82901330b6ef
+  |/   parent:      1:58d79cc1cf43
+  |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     first source commit
   |
@@ -880,7 +858,7 @@ Testing from lower head
   $ hg up 'desc(second)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -r '_destrebase()'
-  changeset:   4:5f7bc9025ed2
+  changeset:   6:5f7bc9025ed2
   parent:      1:58d79cc1cf43
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -890,7 +868,7 @@ Testing from lower head
 Testing from upper head
 
   $ hg log -r '_destrebase(desc(aaa))'
-  changeset:   3:1910d5ff34ea
+  changeset:   5:1910d5ff34ea
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second source with subdir
@@ -898,7 +876,7 @@ Testing from upper head
   $ hg up 'desc(aaa)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -r '_destrebase()'
-  changeset:   3:1910d5ff34ea
+  changeset:   5:1910d5ff34ea
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second source with subdir
