@@ -20,6 +20,12 @@
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
+#ifndef _WIN32
+#include "eden/fs/utils/ProcessNameCache.h"
+#else
+#include "eden/fs/win/utils/Stub.h" // @manual
+#endif
 
 namespace facebook {
 namespace eden {
@@ -32,9 +38,10 @@ class Tree;
 struct PidFetchCounts {
   folly::Synchronized<std::unordered_map<pid_t, uint64_t>> map_;
 
-  void recordProcessFetch(pid_t pid) {
+  uint64_t recordProcessFetch(pid_t pid) {
     auto map_lock = map_.wlock();
-    (*map_lock)[pid]++;
+    auto fetch_count = (*map_lock)[pid]++;
+    return fetch_count;
   }
 };
 
@@ -55,8 +62,16 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<EdenStats> stats,
-      folly::Executor::KeepAlive<folly::Executor> executor);
+      folly::Executor::KeepAlive<folly::Executor> executor,
+      std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<StructuredLogger> structuredLogger);
   ~ObjectStore() override;
+
+  /**
+   * send a FetchHeavy log event to Scuba. If either processNameCache_
+   * or structuredLogger_ is nullptr, this function does nothing.
+   */
+  void sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const;
 
   /**
    * Get a Tree by ID.
@@ -138,7 +153,9 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore,
       std::shared_ptr<EdenStats> stats,
-      folly::Executor::KeepAlive<folly::Executor> executor);
+      folly::Executor::KeepAlive<folly::Executor> executor,
+      std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<StructuredLogger> structuredLogger);
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
@@ -194,6 +211,16 @@ class ObjectStore : public IObjectStore,
   /* number of fetches for each process collected
    * from the beginning of the eden daemon progress */
   std::unique_ptr<PidFetchCounts> pidFetchCounts_;
+
+  /* process name cache and structured logger used for
+   * sending fetch heavy events, set to nullptr if not
+   * initialized by create()
+   */
+
+  uint32_t fetchThreshold_;
+
+  std::shared_ptr<ProcessNameCache> processNameCache_;
+  std::shared_ptr<StructuredLogger> structuredLogger_;
 
   void updateBlobStats(bool local, bool backing) const;
   void updateBlobMetadataStats(bool memory, bool local, bool backing) const;

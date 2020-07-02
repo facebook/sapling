@@ -58,6 +58,20 @@ class DynamicEvent {
   DoubleMap doubles_;
 };
 
+struct FetchHeavy {
+  static constexpr const char* type = "fetch_heavy";
+
+  std::string client_cmdline;
+  pid_t pid;
+  uint64_t fetch_count;
+
+  void populate(DynamicEvent& event) const {
+    event.addString("client_cmdline", client_cmdline);
+    event.addInt("client_pid", pid);
+    event.addInt("fetch_count", fetch_count);
+  }
+};
+
 struct ParentMismatch {
   static constexpr const char* type = "parent_mismatch";
 

@@ -11,6 +11,7 @@
 
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/LoggingFetchContext.h"
 #include "eden/fs/testharness/StoredObject.h"
@@ -27,8 +28,13 @@ struct ObjectStoreTest : ::testing::Test {
     backingStore = std::make_shared<FakeBackingStore>(localStore);
     stats = std::make_shared<EdenStats>();
     executor = &folly::QueuedImmediateExecutor::instance();
-    objectStore =
-        ObjectStore::create(localStore, backingStore, stats, executor);
+    objectStore = ObjectStore::create(
+        localStore,
+        backingStore,
+        stats,
+        executor,
+        std::make_shared<ProcessNameCache>(),
+        std::make_shared<NullStructuredLogger>());
 
     readyBlobId = putReadyBlob("readyblob");
     readyTreeId = putReadyTree();
@@ -123,7 +129,13 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   // Get blob size from backing store, caches in local store
   objectStore->getBlobSize(id, context);
   // Clear backing store
-  objectStore = ObjectStore::create(localStore, nullptr, stats, executor);
+  objectStore = ObjectStore::create(
+      localStore,
+      nullptr,
+      stats,
+      executor,
+      std::make_shared<ProcessNameCache>(),
+      std::make_shared<NullStructuredLogger>());
 
   size_t expectedSize = data.size();
   size_t size = objectStore->getBlobSize(id, context).get();

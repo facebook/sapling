@@ -35,26 +35,46 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore,
     shared_ptr<EdenStats> stats,
-    folly::Executor::KeepAlive<folly::Executor> executor) {
+    folly::Executor::KeepAlive<folly::Executor> executor,
+    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<StructuredLogger> structuredLogger) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{std::move(localStore),
                                                       std::move(backingStore),
                                                       std::move(stats),
-                                                      executor}};
+                                                      executor,
+                                                      processNameCache,
+                                                      structuredLogger}};
 }
 
 ObjectStore::ObjectStore(
     shared_ptr<LocalStore> localStore,
     shared_ptr<BackingStore> backingStore,
     shared_ptr<EdenStats> stats,
-    folly::Executor::KeepAlive<folly::Executor> executor)
+    folly::Executor::KeepAlive<folly::Executor> executor,
+    std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<StructuredLogger> structuredLogger)
     : metadataCache_{folly::in_place, kCacheSize},
       localStore_{std::move(localStore)},
       backingStore_{std::move(backingStore)},
       stats_{std::move(stats)},
       executor_{executor},
-      pidFetchCounts_{std::make_unique<PidFetchCounts>()} {}
+      pidFetchCounts_{std::make_unique<PidFetchCounts>()},
+      processNameCache_(processNameCache),
+      structuredLogger_(structuredLogger) {
+  fetchThreshold_ = 2000;
+}
 
 ObjectStore::~ObjectStore() {}
+
+void ObjectStore::sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const {
+#ifndef _WIN32
+  auto processName = processNameCache_->getProcessName(pid);
+  if (processName.has_value()) {
+    structuredLogger_->logEvent(
+        FetchHeavy{processName.value(), pid, fetch_count});
+  }
+#endif
+}
 
 Future<shared_ptr<const Tree>> ObjectStore::getTree(
     const Hash& id,
@@ -70,7 +90,11 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
           ObjectFetchContext::Tree, id, ObjectFetchContext::FromDiskCache);
 
       if (auto pid = fetchContext.getClientPid()) {
-        self->pidFetchCounts_->recordProcessFetch(pid.value());
+        auto fetch_count =
+            self->pidFetchCounts_->recordProcessFetch(pid.value());
+        if (fetch_count == self->fetchThreshold_) {
+          self->sendFetchHeavyEvent(pid.value(), fetch_count);
+        }
       }
 
       return makeFuture(std::move(tree));
@@ -107,7 +131,11 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
               ObjectFetchContext::FromBackingStore);
 
           if (auto pid = fetchContext.getClientPid()) {
-            self->pidFetchCounts_->recordProcessFetch(pid.value());
+            auto fetch_count =
+                self->pidFetchCounts_->recordProcessFetch(pid.value());
+            if (fetch_count == self->fetchThreshold_) {
+              self->sendFetchHeavyEvent(pid.value(), fetch_count);
+            }
           }
           return shared_ptr<const Tree>(std::move(loadedTree));
         });
@@ -190,7 +218,11 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
       fetchContext.didFetch(
           ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
       if (auto pid = fetchContext.getClientPid()) {
-        self->pidFetchCounts_->recordProcessFetch(pid.value());
+        auto fetch_count =
+            self->pidFetchCounts_->recordProcessFetch(pid.value());
+        if (fetch_count == self->fetchThreshold_) {
+          self->sendFetchHeavyEvent(pid.value(), fetch_count);
+        }
       }
       return makeFuture(shared_ptr<const Blob>(std::move(blob)));
     }
@@ -209,7 +241,11 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
                 ObjectFetchContext::FromBackingStore);
 
             if (auto pid = fetchContext.getClientPid()) {
-              self->pidFetchCounts_->recordProcessFetch(pid.value());
+              auto fetch_count =
+                  self->pidFetchCounts_->recordProcessFetch(pid.value());
+              if (fetch_count == self->fetchThreshold_) {
+                self->sendFetchHeavyEvent(pid.value(), fetch_count);
+              }
             }
 
             auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
@@ -246,7 +282,10 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
           id,
           ObjectFetchContext::FromMemoryCache);
       if (auto pid = context.getClientPid()) {
-        pidFetchCounts_->recordProcessFetch(pid.value());
+        auto fetch_count = pidFetchCounts_->recordProcessFetch(pid.value());
+        if (fetch_count == fetchThreshold_) {
+          sendFetchHeavyEvent(pid.value(), fetch_count);
+        }
       }
       return cacheIter->second;
     }
@@ -265,7 +304,11 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
               id,
               ObjectFetchContext::FromDiskCache);
           if (auto pid = context.getClientPid()) {
-            self->pidFetchCounts_->recordProcessFetch(pid.value());
+            auto fetch_count =
+                self->pidFetchCounts_->recordProcessFetch(pid.value());
+            if (fetch_count == self->fetchThreshold_) {
+              self->sendFetchHeavyEvent(pid.value(), fetch_count);
+            }
           }
 
           return makeFuture(*metadata);
@@ -297,7 +340,11 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
                     ObjectFetchContext::FromBackingStore);
 
                 if (auto pid = context.getClientPid()) {
-                  self->pidFetchCounts_->recordProcessFetch(pid.value());
+                  auto fetch_count =
+                      self->pidFetchCounts_->recordProcessFetch(pid.value());
+                  if (fetch_count == self->fetchThreshold_) {
+                    self->sendFetchHeavyEvent(pid.value(), fetch_count);
+                  }
                 }
                 return makeFuture(metadata);
               }

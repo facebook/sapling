@@ -20,6 +20,13 @@
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/PathFuncs.h"
+#ifndef _WIN32
+#include "eden/fs/utils/ProcessNameCache.h"
+#else
+#include "eden/fs/win/utils/Stub.h" // @manual
+#endif
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -60,7 +67,9 @@ class DiffTest : public ::testing::Test {
         localStore_,
         backingStore_,
         std::make_shared<EdenStats>(),
-        &folly::QueuedImmediateExecutor::instance());
+        &folly::QueuedImmediateExecutor::instance(),
+        std::make_shared<ProcessNameCache>(),
+        std::make_shared<NullStructuredLogger>());
   }
 
   Future<std::unique_ptr<ScmStatus>> diffCommits(

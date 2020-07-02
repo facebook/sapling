@@ -14,6 +14,12 @@
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/LoggingFetchContext.h"
+#ifndef _WIN32
+#include "eden/fs/utils/ProcessNameCache.h"
+#else
+#include "eden/fs/win/utils/Stub.h" // @manual
+#endif
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace folly::literals;
 using namespace std::chrono_literals;
@@ -71,7 +77,9 @@ struct BlobAccessTest : ::testing::Test {
             localStore,
             backingStore,
             std::make_shared<EdenStats>(),
-            &folly::QueuedImmediateExecutor::instance())},
+            &folly::QueuedImmediateExecutor::instance(),
+            std::make_shared<ProcessNameCache>(),
+            std::make_shared<NullStructuredLogger>())},
         blobCache{BlobCache::create(10, 0)},
         blobAccess{objectStore, blobCache} {
     backingStore->putBlob(hash3, "333"_sp)->setReady();

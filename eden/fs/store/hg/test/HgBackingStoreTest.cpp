@@ -18,6 +18,12 @@
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/HgRepo.h"
+#ifndef _WIN32
+#include "eden/fs/utils/ProcessNameCache.h"
+#else
+#include "eden/fs/win/utils/Stub.h" // @manual
+#endif
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -59,7 +65,9 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       localStore,
       backingStore,
       stats,
-      &folly::QueuedImmediateExecutor::instance())};
+      &folly::QueuedImmediateExecutor::instance(),
+      std::make_shared<ProcessNameCache>(),
+      std::make_shared<NullStructuredLogger>())};
 };
 
 TEST_F(
