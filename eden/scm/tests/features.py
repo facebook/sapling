@@ -11,7 +11,6 @@ mutationblacklist = """
     test-fb-hgext-treemanifest-infinitepush.t
     test-fb-hgext-treemanifest-treeonly-linknodes.t
     test-hggit-incoming.t
-    test-infinitepush-bundlestore.t
     test-infinitepush-forwardfillerqueue.t
     test-infinitepush-replaybookmarksqueue-ignore-backup.t
     test-infinitepush-replaybookmarksqueue-multiple-updates.t
@@ -30,7 +29,6 @@ narrowheadsincompatiblelist = """
     test-directaccess-revset.t
     test-eol-clone.t
     test-hgext-perfsuite.t
-    test-infinitepush-bundlestore.t
     test-lfs.t
     test-push.t
     test-revset2.t
