@@ -13,7 +13,6 @@ mutationblacklist = """
     test-commitcloud-sync.t
     test-debugstrip.t
     test-fb-hgext-hiddenerror.t
-    test-fb-hgext-pushrebase.t
     test-fb-hgext-snapshot-show.t
     test-fb-hgext-treemanifest-infinitepush.t
     test-fb-hgext-treemanifest-treeonly-linknodes.t

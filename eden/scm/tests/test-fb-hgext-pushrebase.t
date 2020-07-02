@@ -2,7 +2,8 @@
 
   $ disable treemanifest
 TODO: configure mutation
-  $ configure noevolution dummyssh
+  $ configure dummyssh
+  $ enable remotenames
 
 Setup
 
@@ -25,6 +26,7 @@ Set up server repository
   $ commit 'initial'
   adding a
   adding b
+  $ hg bookmark main
 
 Set up client repository
 
@@ -59,7 +61,7 @@ Stack of non-conflicting commits should be accepted
   $ echo "[extensions]" >> .hg/hgrc
   $ echo "pushrebase =" >> .hg/hgrc
   $ log
-  @  a => bar [draft:add0c792bfce]
+  @  a => bar [draft:add0c792bfce] main
   |
   o  initial [draft:2bb9d20e471c]
   
@@ -72,14 +74,14 @@ Stack of non-conflicting commits should be accepted
   |
   o  initial [public:2bb9d20e471c]
   
-  $ hg push --to default --config devel.bundle2.debug=1 --debug 2>&1 | tee stuff | grep -v bundle2-
-  pushing to ssh://user@dummy/server
+  $ hg push --to main --config devel.bundle2.debug=1 --debug 2>&1 | tee stuff | grep -v bundle2-
   running * (glob)
   sending hello command
   sending between command
   remote: 415
   remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch streamreqs=generaldelta,revlogv1 stream_option bundle2=HG20%0Ab2x%253Arebase%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Alistkeys%0Aphases%3Dheads%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN
   remote: 1
+  pushing rev 0e3997dc0733 to destination ssh://user@dummy/server bookmark main
   query 1; heads
   sending batch command
   searching for changes
@@ -87,13 +89,9 @@ Stack of non-conflicting commits should be accepted
   query 2; still undecided: 2, sample size is: 2
   sending known command
   2 total queries in *s (glob)
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 58 bytes
-  checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command
-  received listkey for "bookmarks": 0 bytes
+  received listkey for "bookmarks": 45 bytes
   validated revset for rebase
   2 changesets found
   list of changesets:
@@ -109,22 +107,29 @@ Stack of non-conflicting commits should be accepted
   adding a revisions
   adding b revisions
   added 3 changesets with 1 changes to 2 files
-  preparing listkeys for "phases"
+  updating bookmark main
+  preparing listkeys for "bookmarks"
   sending listkeys command
-  received listkey for "phases": 15 bytes
+  received listkey for "bookmarks": 45 bytes
   remote: pushing 2 changesets:
   remote:     46a2df24e272  b => xxx
   remote:     0e3997dc0733  b => baz
   remote: 3 new changesets from the server will be downloaded
+  resolving manifests
+   branchmerge: False, force: False, partial: False
+   ancestor: 0e3997dc0733, local: 0e3997dc0733+, remote: 4cfedb0dc25f
+   a: remote is newer -> g
+  getting a
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ log -R ../server
-  o  b => baz [public:4cfedb0dc25f]
+  o  b => baz [draft:4cfedb0dc25f] main
   |
-  o  b => xxx [public:6a6d9484552c]
+  o  b => xxx [draft:6a6d9484552c]
   |
-  @  a => bar [public:add0c792bfce]
+  @  a => bar [draft:add0c792bfce]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
 
 Check that we did not generate any check:heads parts
@@ -134,65 +139,67 @@ Check that we did not generate any check:heads parts
   $ rm stuff
 
   $ cd ../server
-  $ hg update default
+  $ hg update main
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
-  @  b => baz [public:4cfedb0dc25f]
+  @  b => baz [draft:4cfedb0dc25f] main
   |
-  o  b => xxx [public:6a6d9484552c]
+  o  b => xxx [draft:6a6d9484552c]
   |
-  o  a => bar [public:add0c792bfce]
+  o  a => bar [draft:add0c792bfce]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
   $ hg debugstrip -r 6a6d9484552c82e5f21b4ed4fce375930812f88c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ../client
   $ hg debugstrip add0c792bfce89610d277fd5b1e32f5287994d1d
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up 0e3997dc0733
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
   @  b => baz [draft:0e3997dc0733]
   |
   o  b => xxx [draft:46a2df24e272]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
 
 Push using changegroup2
 
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
+  $ hg push --to main
+  pushing rev 0e3997dc0733 to destination ssh://user@dummy/server bookmark main
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 1 changes to 2 files
+  updating bookmark main
   remote: pushing 2 changesets:
   remote:     46a2df24e272  b => xxx
   remote:     0e3997dc0733  b => baz
   remote: 3 new changesets from the server will be downloaded
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ log -R ../server
-  o  b => baz [public:4cfedb0dc25f]
+  o  b => baz [draft:4cfedb0dc25f] main
   |
-  o  b => xxx [public:6a6d9484552c]
+  o  b => xxx [draft:6a6d9484552c]
   |
-  @  a => bar [public:add0c792bfce]
+  @  a => bar [draft:add0c792bfce]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
 
   $ cd ../client
   $ hg debugstrip 46a2df24e27273bb06dbf28b085fcc2e911bf986
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull
   pulling from ssh://user@dummy/server
   searching for changes
   no changes found
   $ hg update default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Regular commits should go through without changing hash
 
@@ -207,9 +214,10 @@ Regular commits should go through without changing hash
   |
   ~
 
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
+  $ hg push --to main
+  pushing rev 741fd2094512 to destination ssh://user@dummy/server bookmark main
   searching for changes
+  updating bookmark main
   remote: pushing 1 changeset:
   remote:     741fd2094512  b => quux
 
@@ -225,19 +233,19 @@ Regular commits should go through without changing hash
   o  initial [public:2bb9d20e471c]
   
   $ cd ../server
-  $ hg update default
+  $ hg update main
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ log
-  @  b => quux [public:741fd2094512]
+  @  b => quux [draft:741fd2094512] main
   |
-  o  b => baz [public:4cfedb0dc25f]
+  o  b => baz [draft:4cfedb0dc25f]
   |
-  o  b => xxx [public:6a6d9484552c]
+  o  b => xxx [draft:6a6d9484552c]
   |
-  o  a => bar [public:add0c792bfce]
+  o  a => bar [draft:add0c792bfce]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
 
 Stack with conflict in tail should abort
@@ -251,8 +259,8 @@ Stack with conflict in tail should abort
   $ commit 'a => quux'
   $ echo 'foofoo' > b
   $ commit 'b => foofoo'
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
+  $ hg push --to main
+  pushing rev e9ea9556a371 to destination ssh://user@dummy/server bookmark main
   searching for changes
   remote: conflicting changes in:
       a
@@ -264,17 +272,17 @@ Stack with conflict in tail should abort
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../server
   $ log
-  @  a => baz [draft:fb983dc509b6]
+  @  a => baz [draft:fb983dc509b6] main
   |
-  o  b => quux [public:741fd2094512]
+  o  b => quux [draft:741fd2094512]
   |
-  o  b => baz [public:4cfedb0dc25f]
+  o  b => baz [draft:4cfedb0dc25f]
   |
-  o  b => xxx [public:6a6d9484552c]
+  o  b => xxx [draft:6a6d9484552c]
   |
-  o  a => bar [public:add0c792bfce]
+  o  a => bar [draft:add0c792bfce]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
 
 Stack with conflict in head should abort
@@ -284,8 +292,8 @@ Stack with conflict in head should abort
   $ commit 'b => foofoo'
   $ echo 'quux' > a
   $ commit 'a => quux'
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
+  $ hg push --to main
+  pushing rev f691c6db9875 to destination ssh://user@dummy/server bookmark main
   searching for changes
   remote: conflicting changes in:
       a
@@ -298,17 +306,17 @@ Stack with conflict in head should abort
 
   $ cd ../server
   $ log
-  @  a => baz [draft:fb983dc509b6]
+  @  a => baz [draft:fb983dc509b6] main
   |
-  o  b => quux [public:741fd2094512]
+  o  b => quux [draft:741fd2094512]
   |
-  o  b => baz [public:4cfedb0dc25f]
+  o  b => baz [draft:4cfedb0dc25f]
   |
-  o  b => xxx [public:6a6d9484552c]
+  o  b => xxx [draft:6a6d9484552c]
   |
-  o  a => bar [public:add0c792bfce]
+  o  a => bar [draft:add0c792bfce]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
 Pushing a merge should rebase only the latest side of the merge
 
@@ -322,7 +330,6 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg add other
   $ hg commit -qm "branch left"
   $ hg book master -r tip
-  moving bookmark 'master' forward from 741fd2094512
   $ hg up -q 6a6d9484552c82e5f21b4ed4fce375930812f88c
   $ echo branched > c
   $ hg commit -Aqm "branch start"
@@ -357,26 +364,26 @@ Pushing a merge should rebase only the latest side of the merge
   o  initial [public:2bb9d20e471c]
   
   $ log -R ../server
-  @  a => baz [draft:fb983dc509b6] master
+  @  a => baz [draft:fb983dc509b6] main master
   |
-  o  b => quux [public:741fd2094512]
+  o  b => quux [draft:741fd2094512]
   |
-  o  b => baz [public:4cfedb0dc25f]
+  o  b => baz [draft:4cfedb0dc25f]
   |
-  o  b => xxx [public:6a6d9484552c]
+  o  b => xxx [draft:6a6d9484552c]
   |
-  o  a => bar [public:add0c792bfce]
+  o  a => bar [draft:add0c792bfce]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
-  $ hg push --to master -B master
-  pushing to ssh://user@dummy/server
+  $ hg push --to main
+  pushing rev 9007d6a204f8 to destination ssh://user@dummy/server bookmark main
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 1 changes to 3 files
-  updating bookmark master
+  updating bookmark main
   remote: pushing 5 changesets:
   remote:     e6b7549904cd  branch left
   remote:     add5ec74853d  branch start
@@ -384,34 +391,35 @@ Pushing a merge should rebase only the latest side of the merge
   remote:     2c0c699d7086  merge
   remote:     9007d6a204f8  on top of merge
   remote: 6 new changesets from the server will be downloaded
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../server
   $ log
-  o  on top of merge [public:54b35e8b58eb] master
+  o  on top of merge [draft:54b35e8b58eb] main
   |
-  o    merge [public:5a512eb2b3f8]
+  o    merge [draft:5a512eb2b3f8]
   |\
-  | o  branch middle [public:5a0cbf3df4ef]
+  | o  branch middle [draft:5a0cbf3df4ef]
   | |
-  | o  branch start [public:add5ec74853d]
+  | o  branch start [draft:add5ec74853d]
   | |
-  o |  branch left [public:cf07bdf4226e]
+  o |  branch left [draft:cf07bdf4226e]
   | |
-  @ |  a => baz [public:fb983dc509b6]
+  @ |  a => baz [draft:fb983dc509b6] master
   | |
-  o |  b => quux [public:741fd2094512]
+  o |  b => quux [draft:741fd2094512]
   | |
-  o |  b => baz [public:4cfedb0dc25f]
+  o |  b => baz [draft:4cfedb0dc25f]
   |/
-  o  b => xxx [public:6a6d9484552c]
+  o  b => xxx [draft:6a6d9484552c]
   |
-  o  a => bar [public:add0c792bfce]
+  o  a => bar [draft:add0c792bfce]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
 - Verify the content of the merge files is correct
-  $ hg cat -r "master^" c
+  $ hg cat -r "main^" c
   branched2
-  $ hg cat -r "master^" other
+  $ hg cat -r "main^" other
   tux
 
   $ hg debugstrip -r add5ec74853d -q
@@ -454,13 +462,14 @@ With evolution enabled, should set obsolescence markers
   |
   o  initial [public:2bb9d20e471c]
   
-  $ hg push --to default
-  pushing to ssh://user@dummy/server
+  $ hg push --to main
+  pushing rev e73acfaeee82 to destination ssh://user@dummy/server bookmark main
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 2 changes to 4 files
+  updating bookmark main
   remote: pushing 2 changesets:
   remote:     9467a8ee5d0d  b => k
   remote:     e73acfaeee82  b => foobar
@@ -471,7 +480,6 @@ With evolution enabled, should set obsolescence markers
   pulling from ssh://user@dummy/server
   searching for changes
   no changes found
-  $ hg debugobsolete | sort
   $ hg up d53a62ed14be
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
@@ -498,23 +506,23 @@ With evolution enabled, should set obsolescence markers
   $ hg log -r 0d76868c25e6 -T '{file_copies}\n'
   k (b)
   $ log
-  o  b => foobar [public:d53a62ed14be]
+  o  b => foobar [draft:d53a62ed14be] main
   |
-  o  b => k [public:0d76868c25e6]
+  o  b => k [draft:0d76868c25e6]
   |
-  o  branch left [public:cf07bdf4226e]
+  o  branch left [draft:cf07bdf4226e]
   |
-  @  a => baz [public:fb983dc509b6]
+  @  a => baz [draft:fb983dc509b6]
   |
-  o  b => quux [public:741fd2094512]
+  o  b => quux [draft:741fd2094512]
   |
-  o  b => baz [public:4cfedb0dc25f]
+  o  b => baz [draft:4cfedb0dc25f]
   |
-  o  b => xxx [public:6a6d9484552c]
+  o  b => xxx [draft:6a6d9484552c]
   |
-  o  a => bar [public:add0c792bfce]
+  o  a => bar [draft:add0c792bfce]
   |
-  o  initial [public:2bb9d20e471c]
+  o  initial [draft:2bb9d20e471c]
   
 Test pushing master bookmark, fast forward
 
@@ -526,7 +534,7 @@ Test pushing master bookmark, fast forward
   $ hg log -r master -T"{node}\n"
   56b2e094996609874ae1c9aae1626bfba61d07d8
   $ hg push --to master
-  pushing to ssh://user@dummy/server
+  pushing rev 56b2e0949966 to destination ssh://user@dummy/server bookmark master
   searching for changes
   updating bookmark master
   remote: pushing 1 changeset:
@@ -539,7 +547,7 @@ Test pushing bookmark with no new commit
   $ hg book stable -r fb983dc509b6
   $ hg book stable -r "fb983dc509b6^" -R ../server
   $ hg push -r stable --to stable
-  pushing to ssh://user@dummy/server
+  pushing rev fb983dc509b6 to destination ssh://user@dummy/server bookmark stable
   searching for changes
   no changes found
   updating bookmark stable
@@ -591,7 +599,7 @@ Test that the prepushrebase hook can run against the bundle repo
   > EOF
   $ touch b && hg add b && hg commit -qm b
   $ hg push --to master
-  pushing to ssh://user@dummy/prepushrebaseserver
+  pushing rev 0e067c57feba to destination ssh://user@dummy/prepushrebaseserver bookmark master
   searching for changes
   remote: prepushrebase hook exited with status * (glob)
   abort: push failed on remote
@@ -625,8 +633,8 @@ Test that hooks are fired with the correct variables
   > pushrebase=
   > EOF
   $ touch file && hg ci -Aqm initial
-  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
+  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/hookserver HG_SHAREDPENDING=$TESTTMP/hookserver HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
+  txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   $ hg bookmark master
   pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/hookserver HG_SHAREDPENDING=$TESTTMP/hookserver HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
@@ -644,12 +652,11 @@ Test that hooks are fired with the correct variables
   > EOF
   $ hg update master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master)
   $ echo >> file && hg ci -Aqm first
   $ echo >> file && hg ci -Aqm second
   $ echo >> file && hg ci -Aqm last
-  $ hg push --to master -B master
-  pushing to $TESTTMP/hookserver (glob)
+  $ hg push --to master
+  pushing rev a5e72ac0df88 to destination $TESTTMP/hookserver bookmark master
   searching for changes
   prepushrebase hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushrebase HG_HOOKTYPE=prepushrebase HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_ONTO=e95be919ac60f0c114075e32a0a4301afabadb60 HG_ONTO=master HG_SOURCE=push (glob)
   pushing 3 changesets:
@@ -658,9 +665,9 @@ Test that hooks are fired with the correct variables
       a5e72ac0df88  last
   prechangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=prechangegroup HG_HOOKTYPE=prechangegroup HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   pretxnchangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_PENDING=$TESTTMP/hookserver HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
-  prepushkey hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushkey HG_HOOKTYPE=prepushkey HG_KEY=master HG_NAMESPACE=bookmarks HG_NEW=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
-  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=file:$TESTTMP/hookserver (glob)
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=file:$TESTTMP/hookserver (glob)
+  prepushkey hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushkey HG_HOOKTYPE=prepushkey HG_KEY=master HG_NAMESPACE=bookmarks HG_NEW=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PENDING=$TESTTMP/hookserver HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/hookserver
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_TXNNAME=push HG_URL=file:$TESTTMP/hookserver
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_TXNNAME=push HG_URL=file:$TESTTMP/hookserver
   changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   updating bookmark master
 
@@ -691,12 +698,11 @@ Test that failing prechangegroup hooks block the push
   > EOF
   $ hg update master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master)
   $ echo >> file && hg ci -Aqm first
   $ echo >> file && hg ci -Aqm second
   $ echo >> file && hg ci -Aqm last
-  $ hg push --to master -B master
-  pushing to $TESTTMP/hookserver2
+  $ hg push --to master
+  pushing rev a5e72ac0df88 to destination $TESTTMP/hookserver2 bookmark master
   searching for changes
   pushing 3 changesets:
       4fcee35c508c  first
@@ -747,7 +753,7 @@ Test date rewriting
   > daterewrite=$TESTTMP/daterewrite.py
   > EOF
   $ hg push --to master
-  pushing to $TESTTMP/rewritedate (glob)
+  pushing rev d5e255ef74f8 to destination $TESTTMP/rewritedate bookmark master
   searching for changes
   pushing 1 changeset:
       d5e255ef74f8  c
@@ -756,6 +762,7 @@ Test date rewriting
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files
+  updating bookmark master
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{desc} {date|isodate}'
   @  c 2001-09-09 01:46 +0000
@@ -775,7 +782,7 @@ Test date rewriting with a merge commit
   $ hg merge -q 'desc(x)'
   $ hg commit -qm merge
   $ hg push --to master
-  pushing to $TESTTMP/rewritedate (glob)
+  pushing rev 4514adb1f536 to destination $TESTTMP/rewritedate bookmark master
   searching for changes
   pushing 3 changesets:
       a5f9a9a43049  x
@@ -786,6 +793,7 @@ Test date rewriting with a merge commit
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 2 files
+  updating bookmark master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ..
@@ -815,7 +823,7 @@ Test pushrebase on merge commit where master is on the p2 side
   $ hg merge -q cde40f86152f76163041ff50d68d2e8fddc1b46b
   $ hg commit -m 'merge b and c'
   $ hg push --to master
-  pushing to $TESTTMP/p2mergeserver (glob)
+  pushing rev 4ae459502279 to destination $TESTTMP/p2mergeserver bookmark master
   searching for changes
   pushing 3 changesets:
       cde40f86152f  add b
@@ -826,6 +834,7 @@ Test pushrebase on merge commit where master is on the p2 side
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 2 files
+  updating bookmark master
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R ../p2mergeserver log -G -T '{rev}: {desc}'
   o    3: merge b and c
@@ -852,6 +861,7 @@ Test force pushes
   > [extensions]
   > pushrebase=
   > EOF
+  $ hg bookmark master
   $ echo a > a && hg commit -Aqm a
   $ cd ..
 
@@ -869,13 +879,12 @@ Test force pushes
   $ hg up 'desc(a)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b >> a && hg commit -Aqm b
-  $ hg book master
-  $ hg push -f --to master -B master
-  pushing to $TESTTMP/forcepushserver (glob)
+  $ hg push -f --to master
+  pushing rev 1846eede8b68 to destination $TESTTMP/forcepushserver bookmark master
   searching for changes
   pushing 1 changeset:
       1846eede8b68  b
-  exporting bookmark master
+  updating bookmark master
   $ hg pull
   pulling from $TESTTMP/forcepushserver (glob)
   searching for changes
@@ -886,7 +895,7 @@ Test force pushes
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o  2 aa
   |
-  | @  1 b master
+  | @  1 b
   |/
   o  0 a
   
@@ -913,6 +922,7 @@ phase is updated correctly with the marker information.
   > EOF
   $ echo a > a
   $ hg commit -m a -A a -q
+  $ hg bookmark main
   $ cd ..
 
   $ cp -R server1 client1
@@ -931,8 +941,8 @@ phase is updated correctly with the marker information.
   > EOF
 
   $ hg book -i BOOK
-  $ hg push -r . --to default
-  pushing to $TESTTMP/server1 (glob)
+  $ hg push -r . --to main
+  pushing rev 045279cde9f0 to destination $TESTTMP/server1 bookmark main
   searching for changes
   pushing 1 changeset:
       045279cde9f0  a2
@@ -941,10 +951,11 @@ phase is updated correctly with the marker information.
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files
+  updating bookmark main
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up tip -q
   $ log --hidden
-  @  a2 [public:722505d780e3] BOOK
+  @  a2 [public:722505d780e3] BOOK main
   |
   o  b [public:d2ae7f538514]
   |
@@ -953,7 +964,7 @@ phase is updated correctly with the marker information.
   o  a [public:cb9a9f314b8b]
   
   $ log
-  @  a2 [public:722505d780e3] BOOK
+  @  a2 [public:722505d780e3] BOOK main
   |
   o  b [public:d2ae7f538514]
   |
@@ -972,6 +983,7 @@ Push a file-copy changeset and the copy source gets modified by others:
 
   $ echo 1 > A
   $ hg commit -m A -A A
+  $ hg bookmark main
 
   $ cd ..
   $ cp -R server2 client2
@@ -992,8 +1004,8 @@ Push a file-copy changeset and the copy source gets modified by others:
   > default = ../server2
   > EOF
 
-  $ hg push -r . --to default
-  pushing to $TESTTMP/server2 (glob)
+  $ hg push -r . --to main
+  pushing rev 40d149b24655 to destination $TESTTMP/server2 bookmark main
   searching for changes
   abort: conflicting changes in:
       A
@@ -1006,8 +1018,8 @@ Push an already-public changeset and confirm it is rejected
   $ echo 2 > C
   $ hg commit -m C -A C
   $ hg debugmakepublic -r.
-  $ hg push -r . --to default
-  pushing to $TESTTMP/server2 (glob)
+  $ hg push -r . --to main
+  pushing rev 3850a85c4706 to destination $TESTTMP/server2 bookmark main
   searching for changes
   abort: cannot rebase public changesets: 3850a85c4706
   [255]
@@ -1019,8 +1031,8 @@ Push an already-public changeset and confirm it is rejected
   $ echo 5 >> C
   $ hg commit -m C4
   $ hg debugmakepublic -r.
-  $ hg push -r . --to default
-  pushing to $TESTTMP/server2 (glob)
+  $ hg push -r . --to main
+  pushing rev 5d92bb0ab776 to destination $TESTTMP/server2 bookmark main
   searching for changes
   abort: cannot rebase public changesets: 3850a85c4706, 50b1220b7c4e, de211a1843b7, ...
   [255]
