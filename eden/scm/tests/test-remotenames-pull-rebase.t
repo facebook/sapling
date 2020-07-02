@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ enable remotenames
 
   $ mkcommit()
@@ -70,13 +68,15 @@ Pull remote changes and rebase local changes with tracked bookmark onto them
   o  root |  |
   
 Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour when using non-tracking bookmark
-  $ hg debugstrip -q -r 'desc(localcommit)' -r 2 -r 7a820e70c81fe1bccfa7c7e3b9a863b4426402b0
+  $ hg debugstrip -q -r 'desc(localcommit)' -r 7a820e70c81fe1bccfa7c7e3b9a863b4426402b0
   $ hg book -d bmtrackingremote
   $ hg book bmnottracking
   $ mkcommit localcommit
   $ printdag
   @  localcommit | bmnottracking |
   |
+  | o  untrackedremotecommit |  |
+  |/
   o  root |  |
   
   $ hg pull --rebase
@@ -85,7 +85,7 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
+  added 1 changesets with 1 changes to 1 files
   updating to active bookmark bmnottracking
   nothing to rebase
   $ hg rebase -d 'desc(untrackedremotecommit)'
@@ -93,9 +93,9 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   $ printdag
   @  localcommit | bmnottracking |
   |
-  o  untrackedremotecommit |  |
-  |
   | o  trackedremotecommit |  | default/bookmarkonremote
+  | |
+  o |  untrackedremotecommit |  |
   |/
   o  root |  |
   
@@ -114,6 +114,7 @@ Tests the behavior of a pull followed by a pull --rebase
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  $ hg debugmakepublic 4557926d2166
   $ hg pull --rebase
   pulling from $TESTTMP/remoterepo (glob)
   searching for changes
@@ -173,9 +174,9 @@ Test pull with --rebase and --tool
   |
   | o  localcommit | bmnottracking tracking |
   | |
-  | o  untrackedremotecommit |  |
-  | |
   o |  trackedremotecommit |  |
+  | |
+  | o  untrackedremotecommit |  | public/4557926d216642d06949776e29c30bb2a54e7b6d
   |/
   o  root |  |
   
@@ -199,9 +200,9 @@ Test pull with --rebase and --tool
   |
   | o  localcommit | bmnottracking tracking |
   | |
-  | o  untrackedremotecommit |  |
-  | |
   o |  trackedremotecommit |  |
+  | |
+  | o  untrackedremotecommit |  | public/4557926d216642d06949776e29c30bb2a54e7b6d
   |/
   o  root |  |
   
