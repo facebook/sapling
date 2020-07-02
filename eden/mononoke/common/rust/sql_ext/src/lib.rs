@@ -43,7 +43,9 @@ pub mod facebook {
     mod r#impl;
 
     #[cfg(fbcode_build)]
-    pub use r#impl::{create_myrouter_connections, create_raw_xdb_connections, myrouter_ready};
+    pub use r#impl::{
+        create_myrouter_connections, create_raw_xdb_connections, myadmin, myrouter_ready,
+    };
 
     #[cfg(not(fbcode_build))]
     pub use crate::oss::{create_myrouter_connections, create_raw_xdb_connections, myrouter_ready};
