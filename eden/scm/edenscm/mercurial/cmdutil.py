@@ -1874,10 +1874,6 @@ def _changesetlabels(ctx):
     labels = ["log.changeset", "changeset.%s" % ctx.phasestr()]
     if ctx.obsolete():
         labels.append("changeset.obsolete")
-    if ctx.isunstable():
-        labels.append("changeset.unstable")
-        for instability in ctx.instabilities():
-            labels.append("instability.%s" % instability)
     return " ".join(labels)
 
 
@@ -1972,16 +1968,6 @@ class changeset_printer(object):
         self.ui.write(columns["user"] % ctx.user(), label="log.user")
         self.ui.write(columns["date"] % util.datestr(ctx.date()), label="log.date")
 
-        if ctx.isunstable():
-            instabilities = ctx.instabilities()
-            self.ui.write(
-                columns["instability"] % ", ".join(instabilities),
-                label="log.instability",
-            )
-
-        elif ctx.obsolete():
-            self._showobsfate(ctx)
-
         self._exthook(ctx)
 
         if self.ui.debugflag:
@@ -2023,15 +2009,6 @@ class changeset_printer(object):
         self.ui.write("\n")
 
         self.showpatch(ctx, matchfn, hunksfilterfn=hunksfilterfn)
-
-    def _showobsfate(self, ctx):
-        obsfate = templatekw.showobsfate(repo=self.repo, ctx=ctx, ui=self.ui)
-
-        if obsfate:
-            for obsfateline in obsfate:
-                self.ui.write(
-                    self._columns["obsolete"] % obsfateline, label="log.obsfate"
-                )
 
     def _exthook(self, ctx):
         """empty method used by extension as a hook point

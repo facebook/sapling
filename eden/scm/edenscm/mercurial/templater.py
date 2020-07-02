@@ -1072,78 +1072,6 @@ def mod(context, mapping, args):
     return runarithmetic(context, mapping, (func, args[0], args[1]))
 
 
-@templatefunc("obsfateoperations(markers)")
-def obsfateoperations(context, mapping, args):
-    """Compute obsfate related information based on markers (EXPERIMENTAL)"""
-    if len(args) != 1:
-        # i18n: "obsfateoperations" is a keyword
-        raise error.ParseError(_("obsfateoperations expects one argument"))
-
-    markers = evalfuncarg(context, mapping, args[0])
-
-    try:
-        data = obsutil.markersoperations(markers)
-        return templatekw.hybridlist(data, name="operation")
-    except (TypeError, KeyError):
-        # i18n: "obsfateoperations" is a keyword
-        errmsg = _("obsfateoperations first argument should be an iterable")
-        raise error.ParseError(errmsg)
-
-
-@templatefunc("obsfatedate(markers)")
-def obsfatedate(context, mapping, args):
-    """Compute obsfate related information based on markers (EXPERIMENTAL)"""
-    if len(args) != 1:
-        # i18n: "obsfatedate" is a keyword
-        raise error.ParseError(_("obsfatedate expects one argument"))
-
-    markers = evalfuncarg(context, mapping, args[0])
-
-    try:
-        data = obsutil.markersdates(markers)
-        return templatekw.hybridlist(data, name="date", fmt="%d %d")
-    except (TypeError, KeyError):
-        # i18n: "obsfatedate" is a keyword
-        errmsg = _("obsfatedate first argument should be an iterable")
-        raise error.ParseError(errmsg)
-
-
-@templatefunc("obsfateusers(markers)")
-def obsfateusers(context, mapping, args):
-    """Compute obsfate related information based on markers (EXPERIMENTAL)"""
-    if len(args) != 1:
-        # i18n: "obsfateusers" is a keyword
-        raise error.ParseError(_("obsfateusers expects one argument"))
-
-    markers = evalfuncarg(context, mapping, args[0])
-
-    try:
-        data = obsutil.markersusers(markers)
-        return templatekw.hybridlist(data, name="user")
-    except (TypeError, KeyError, ValueError):
-        # i18n: "obsfateusers" is a keyword
-        msg = _("obsfateusers first argument should be an iterable of " "obsmakers")
-        raise error.ParseError(msg)
-
-
-@templatefunc("obsfateverb(successors, markers)")
-def obsfateverb(context, mapping, args):
-    """Compute obsfate related information based on successors (EXPERIMENTAL)"""
-    if len(args) != 2:
-        # i18n: "obsfateverb" is a keyword
-        raise error.ParseError(_("obsfateverb expects two arguments"))
-
-    successors = evalfuncarg(context, mapping, args[0])
-    markers = evalfuncarg(context, mapping, args[1])
-
-    try:
-        return obsutil.obsfateverb(successors, markers)
-    except TypeError:
-        # i18n: "obsfateverb" is a keyword
-        errmsg = _("obsfateverb first argument should be countable")
-        raise error.ParseError(errmsg)
-
-
 @templatefunc("smallcommitmeta(category)")
 def showsmallcommitmeta(context, mapping, args):
     """String. The small commit metadata in the provided category associated with the changeset."""
@@ -1611,9 +1539,7 @@ _builtinmapfiles = {
             "ldate": '{label("log.date",\n"date:        {date|date}")}\\n',
             "lfiles": '{if(files,\nlabel("ui.note log.files",\n"files:       {files}\\n"))}',
             "lfile_adds": '{if(file_adds,\nlabel("ui.debug log.files",\n"files+:      {file_adds}\\n"))}',
-            "lobsfate": "{if(obsfate, \"{label('log.obsfate', '{obsfate % \"obsolete:    {fate}\\n\"}')}\")}",
             "manifest": '{label("ui.debug log.manifest",\n"manifest:    {node}")}\\n',
-            "ltroubles": "{if(instabilities, \"{label('log.instability',\n'instability: {join(instabilities, \", \")}')}\\n\")}",
             "bookmark": '{label("log.bookmark",\n"bookmark:    {bookmark}")}\\n',
             "extra": '{label("ui.debug log.extra",\n"extra:       {key}={value|stringescape}")}\\n',
             "cset": '{labelcset("changeset:   {rev}:{node|short}")}\\n',
@@ -1640,7 +1566,7 @@ _builtinmapfiles = {
         [
             (
                 "labelcset(expr)",
-                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete"),\nif(instabilities, "changeset.unstable"),\njoin(instabilities\n% "instability.{instability}", " ")),\nexpr)',
+                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete")),\nexpr)',
             )
         ],
     ),
@@ -1688,13 +1614,11 @@ _builtinmapfiles = {
     ),
     "default": (
         {
-            "changeset": "{cset}{branches}{bookmarks}{parents}{user}{ldate}{ltroubles}{lobsfate}{summary}\\n",
+            "changeset": "{cset}{branches}{bookmarks}{parents}{user}{ldate}{summary}\\n",
             "ldate": '{label("log.date",\n"date:        {date|date}")}\\n',
             "lfiles": '{if(files,\nlabel("ui.note log.files",\n"files:       {files}\\n"))}',
             "lfile_adds": '{if(file_adds,\nlabel("ui.debug log.files",\n"files+:      {file_adds}\\n"))}',
-            "lobsfate": "{if(obsfate, \"{label('log.obsfate', '{obsfate % \"obsolete:    {fate}\\n\"}')}\")}",
             "manifest": '{label("ui.debug log.manifest",\n"manifest:    {node}")}\\n',
-            "ltroubles": "{if(instabilities, \"{label('log.instability',\n'instability: {join(instabilities, \", \")}')}\\n\")}",
             "bookmark": '{label("log.bookmark",\n"bookmark:    {bookmark}")}\\n',
             "extra": '{label("ui.debug log.extra",\n"extra:       {key}={value|stringescape}")}\\n',
             "cset": '{labelcset("changeset:   {rev}:{node|short}")}\\n',
@@ -1709,16 +1633,16 @@ _builtinmapfiles = {
             "lfile_dels": '{if(file_dels,\nlabel("ui.debug log.files",\n"files-:      {file_dels}\\n"))}',
             "lnode": '{label("log.node",\n"{rev}:{node|short}")}\\n',
             "summary": "{if(desc|strip, \"{label('log.summary',\n'summary:     {desc|firstline}')}\\n\")}",
-            "changeset_verbose": "{cset}{branches}{bookmarks}{parents}{user}{ldate}{ltroubles}{lobsfate}{lfiles}{lfile_copies_switch}{description}\\n",
+            "changeset_verbose": "{cset}{branches}{bookmarks}{parents}{user}{ldate}{lfiles}{lfile_copies_switch}{description}\\n",
             "lphase": '{label("log.phase",\n"phase:       {phase}")}\\n',
-            "changeset_debug": "{fullcset}{branches}{bookmarks}{lphase}{parents}{manifest}{user}{ldate}{ltroubles}{lobsfate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\\n",
+            "changeset_debug": "{fullcset}{branches}{bookmarks}{lphase}{parents}{manifest}{user}{ldate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\\n",
             "lfile_mods": '{if(file_mods,\nlabel("ui.debug log.files",\n"files:       {file_mods}\\n"))}',
         },
         {},
         [
             (
                 "labelcset(expr)",
-                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete"),\nif(instabilities, "changeset.unstable"),\njoin(instabilities\n% "instability.{instability}", " ")),\nexpr)',
+                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete")),\nexpr)',
             )
         ],
     ),
@@ -1728,9 +1652,7 @@ _builtinmapfiles = {
             "ldate": '{label("log.date",\n"date:        {date|date}")}\\n',
             "lfiles": '{if(files,\nlabel("ui.note log.files",\n"files:       {files}\\n"))}',
             "lfile_adds": '{if(file_adds,\nlabel("ui.debug log.files",\n"files+:      {file_adds}\\n"))}',
-            "lobsfate": "{if(obsfate, \"{label('log.obsfate', '{obsfate % \"obsolete:    {fate}\\n\"}')}\")}",
             "manifest": '{label("ui.debug log.manifest",\n"manifest:    {node}")}\\n',
-            "ltroubles": "{if(instabilities, \"{label('log.instability',\n'instability: {join(instabilities, \", \")}')}\\n\")}",
             "bookmark": '{label("log.bookmark",\n"bookmark:    {bookmark}")}\\n',
             "extra": '{label("ui.debug log.extra",\n"extra:       {key}={value|stringescape}")}\\n',
             "cset": '{labelcset("changeset:   {rev}:{node|short}")}\\n',
@@ -1747,29 +1669,27 @@ _builtinmapfiles = {
             "summary": "{if(desc|strip, \"{label('log.summary',\n'summary:     {desc|firstline}')}\\n\")}",
             "changeset_verbose": "{cset}{branches}{bookmarks}{lphase}{parents}{user}{ldate}{lfiles}{lfile_copies_switch}{description}\\n",
             "lphase": '{label("log.phase",\n"phase:       {phase}")}\\n',
-            "changeset_debug": "{fullcset}{branches}{bookmarks}{lphase}{parents}{manifest}{user}{ldate}{ltroubles}{lobsfate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\\n",
+            "changeset_debug": "{fullcset}{branches}{bookmarks}{lphase}{parents}{manifest}{user}{ldate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\\n",
             "lfile_mods": '{if(file_mods,\nlabel("ui.debug log.files",\n"files:       {file_mods}\\n"))}',
         },
         {},
         [
             (
                 "labelcset(expr)",
-                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete"),\nif(instabilities, "changeset.unstable"),\njoin(instabilities\n% "instability.{instability}", " ")),\nexpr)',
+                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete")),\nexpr)',
             )
         ],
     ),
     "show": (
         {
-            "changeset": "{cset}{branches}{bookmarks}{parents}{user}{ldate}{ltroubles}{lobsfate}{summary}\\n",
+            "changeset": "{cset}{branches}{bookmarks}{parents}{user}{ldate}{summary}\\n",
             "cset_namespace": '{ifeq(namespace, "branches", names_branches, names_others)}',
             "ldate": '{label("log.date",\n"date:        {date|date}")}\\n',
             "lfiles": '{if(files,\nlabel("ui.note log.files",\n"files:       {files}\\n"))}',
             "lfile_adds": '{if(file_adds,\nlabel("ui.debug log.files",\n"files+:      {file_adds}\\n"))}',
-            "lobsfate": "{if(obsfate, \"{label('log.obsfate', '{obsfate % \"obsolete:    {fate}\\n\"}')}\")}",
             "names_tags": "{if(names % \"{ifeq(name, 'tip', '', name)}\", \" ({label('log.{colorname}', join(names % \"{ifeq(name, 'tip', '', name)}\", ' '))})\")}",
             "manifest": '{label("ui.debug log.manifest",\n"manifest:    {node}")}\\n',
             "showbookmarks": '{if(active, "*", " ")} {pad(bookmark, longestbookmarklen + 4)}{shortest(node, nodelen)}\\n',
-            "ltroubles": "{if(instabilities, \"{label('log.instability',\n'instability: {join(instabilities, \", \")}')}\\n\")}",
             "bookmark": '{label("log.bookmark",\n"bookmark:    {bookmark}")}\\n',
             "extra": '{label("ui.debug log.extra",\n"extra:       {key}={value|stringescape}")}\\n',
             "cset": '{labelcset("changeset:   {rev}:{node|short}")}\\n',
@@ -1788,10 +1708,10 @@ _builtinmapfiles = {
             "lnode": '{label("log.node",\n"{rev}:{node|short}")}\\n',
             "summary": "{if(desc|strip, \"{label('log.summary',\n'summary:     {desc|firstline}')}\\n\")}",
             "names_others": "{if(names, \" ({label('log.{colorname}', join(names, ' '))})\")}",
-            "changeset_verbose": "{cset}{branches}{bookmarks}{parents}{user}{ldate}{ltroubles}{lobsfate}{lfiles}{lfile_copies_switch}{description}\\n",
+            "changeset_verbose": "{cset}{branches}{bookmarks}{parents}{user}{ldate}{lfiles}{lfile_copies_switch}{description}\\n",
             "lphase": '{label("log.phase",\n"phase:       {phase}")}\\n',
             "showstack": "{showwork}",
-            "changeset_debug": "{fullcset}{branches}{bookmarks}{lphase}{parents}{manifest}{user}{ldate}{ltroubles}{lobsfate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\\n",
+            "changeset_debug": "{fullcset}{branches}{bookmarks}{lphase}{parents}{manifest}{user}{ldate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\\n",
             "lfile_mods": '{if(file_mods,\nlabel("ui.debug log.files",\n"files:       {file_mods}\\n"))}',
             "cset_shortdesc": '{label("log.description", desc|firstline)}',
         },
@@ -1799,7 +1719,7 @@ _builtinmapfiles = {
         [
             (
                 "labelcset(expr)",
-                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete"),\nif(instabilities, "changeset.unstable"),\njoin(instabilities\n% "instability.{instability}", " ")),\nexpr)',
+                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete")),\nexpr)',
             )
         ],
     ),
@@ -1809,11 +1729,9 @@ _builtinmapfiles = {
             "ldate": '{label("log.date",\n"date:        {date|date}")}\\n',
             "lfiles": "{if(files,\nlabel('ui.note log.files',\n'files:\\n'))}{lfile_mods}{lfile_adds}{lfile_dels}",
             "lfile_adds": '{file_adds % "{lfile_add}{lfile_src}"}',
-            "lobsfate": "{if(obsfate, \"{label('log.obsfate', '{obsfate % \"obsolete:    {fate}\\n\"}')}\")}",
             "manifest": '{label("ui.debug log.manifest",\n"manifest:    {node}")}\\n',
             "lfile_mod": '{label("status.modified", "M {file}\\n")}',
             "lfile_src": '{ifcontains(file, file_copies_switch,\nlabel("status.copied", "  {get(file_copies_switch, file)}\\n"))}',
-            "ltroubles": "{if(instabilities, \"{label('log.instability',\n'instability: {join(instabilities, \", \")}')}\\n\")}",
             "bookmark": '{label("log.bookmark",\n"bookmark:    {bookmark}")}\\n',
             "extra": '{label("ui.debug log.extra",\n"extra:       {key}={value|stringescape}")}\\n',
             "lfile_add": '{label("status.added", "A {file}\\n")}',
@@ -1838,7 +1756,7 @@ _builtinmapfiles = {
         [
             (
                 "labelcset(expr)",
-                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete"),\nif(instabilities, "changeset.unstable"),\njoin(instabilities\n% "instability.{instability}", " ")),\nexpr)',
+                'label(separate(" ",\n"log.changeset",\n"changeset.{phase}",\nif(obsolete, "changeset.obsolete")),\nexpr)',
             )
         ],
     ),

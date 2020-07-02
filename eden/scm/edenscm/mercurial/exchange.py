@@ -716,10 +716,6 @@ def _pushcheckoutgoing(pushop):
                 ctx = unfi[node]
                 if ctx.obsolete():
                     raise error.Abort(mso % ctx)
-                elif ctx.isunstable():
-                    # TODO print more than one instability in the abort
-                    # message
-                    raise error.Abort(mst[ctx.instabilities()[0]] % ctx)
 
     return True
 

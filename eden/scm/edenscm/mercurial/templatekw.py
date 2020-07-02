@@ -303,7 +303,6 @@ def getlogcolumns():
         "files+:      %s\n"
         "files-:      %s\n"
         "files:       %s\n"
-        "instability: %s\n"
         "manifest:    %s\n"
         "obsolete:    %s\n"
         "parent:      %s\n"
@@ -656,27 +655,6 @@ def shownodechanges(nodereplacements, **args):
     )
 
 
-@templatekeyword("obsfate")
-def showobsfate(**args):
-    # this function returns a list containing pre-formatted obsfate strings.
-    #
-    # This function will be replaced by templates fragments when we will have
-    # the verbosity templatekw available.
-    if mutation.enabled(args["repo"]):
-        return ""
-    succsandmarkers = showsuccsandmarkers(**args)
-
-    args = args
-    ui = args["ui"]
-
-    values = []
-
-    for x in succsandmarkers:
-        values.append(obsutil.obsfateprinter(x["successors"], x["markers"], ui))
-
-    return showlist("fate", values, args)
-
-
 def shownames(namespace, **args):
     """helper method to generate a template keyword for a namespace"""
     args = args
@@ -807,52 +785,6 @@ def showsuccessorssets(repo, ctx, **args):
     return _hybrid(gen(data), data, lambda x: {"successorset": x}, pycompat.identity)
 
 
-@templatekeyword("succsandmarkers")
-def showsuccsandmarkers(repo, ctx, **args):
-    """Returns a list of dict for each final successor of ctx. The dict
-    contains successors node id in "successors" keys and the list of
-    obs-markers from ctx to the set of successors in "markers".
-    (EXPERIMENTAL)
-    """
-    if mutation.enabled(repo):
-        return ""
-
-    values = obsutil.successorsandmarkers(repo, ctx)
-
-    if values is None:
-        values = []
-
-    # Format successors and markers to avoid exposing binary to templates
-    data = []
-    for i in values:
-        # Format successors
-        successors = i["successors"]
-
-        successors = [hex(n) for n in successors]
-        successors = _hybrid(
-            None,
-            successors,
-            lambda x: {"ctx": repo[x], "revcache": {}},
-            lambda x: scmutil.formatchangeid(repo[x]),
-        )
-
-        # Format markers
-        finalmarkers = []
-        for m in i["markers"]:
-            hexprec = hex(m[0])
-            hexsucs = tuple(hex(n) for n in m[1])
-            hexparents = None
-            if m[5] is not None:
-                hexparents = tuple(hex(n) for n in m[5])
-            newmarker = (hexprec, hexsucs) + m[2:5] + (hexparents,) + m[6:]
-            finalmarkers.append(newmarker)
-
-        data.append({"successors": successors, "markers": finalmarkers})
-
-    f = _showlist("succsandmarkers", data, args, plural="succsandmarkers")
-    return _hybrid(f, data, lambda x: x, pycompat.identity)
-
-
 @templatekeyword("mutations")
 def mutations(repo, ctx, **args):
     """Returns a list of the results of mutating the commit.
@@ -974,35 +906,10 @@ def showtermwidth(repo, ctx, templ, **args):
     return repo.ui.termwidth()
 
 
-@templatekeyword("troubles")
-def showtroubles(repo, **args):
-    """List of strings. Evolution troubles affecting the changeset.
-    (DEPRECATED)
-    """
-    msg = "'troubles' is deprecated, " "use 'instabilities'"
-    repo.ui.deprecwarn(msg, "4.4")
-    repo.ui.deprecate(
-        "troubles-template", "troubles has been replaced with instabilities"
-    )
-
-    return showinstabilities(repo=repo, **args)
-
-
 @templatekeyword("username")
 def showusername(repo, *args, **kwargs):
     """String. The current user specified by configs (ex. 'ui.username')."""
     return repo.ui.username()
-
-
-@templatekeyword("instabilities")
-def showinstabilities(**args):
-    """List of strings. Evolution instabilities affecting the changeset.
-    (EXPERIMENTAL)
-    """
-    args = args
-    return showlist(
-        "instability", args["ctx"].instabilities(), args, plural="instabilities"
-    )
 
 
 @templatekeyword("verbosity")

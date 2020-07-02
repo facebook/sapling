@@ -383,7 +383,6 @@ def commonentry(repo, ctx):
         "extra": ctx.extra(),
         "phase": ctx.phasestr(),
         "obsolete": ctx.obsolete(),
-        "instabilities": [{"instability": i} for i in ctx.instabilities()],
         "branch": nodebranchnodefault(ctx),
         "inbranch": nodeinbranch(repo, ctx),
         "branches": nodebranchdict(repo, ctx),

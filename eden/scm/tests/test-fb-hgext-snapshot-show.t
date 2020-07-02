@@ -215,7 +215,6 @@
   parent:      3:ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  instability: orphan
   summary:     snapshot
   
   
@@ -232,7 +231,6 @@
   parent:      3:ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  instability: orphan
   description:
   snapshot
   
@@ -281,13 +279,11 @@
   | |  parent:      3:ffb8db6e9ac3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  instability: orphan
   | |  summary:     snapshot
   | |
   | x  changeset:   3:ffb8db6e9ac3
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsolete:    rewritten using amend as 5:d521223a2fb5
   |    summary:     draft1
   |
   @  changeset:   2:fa948fa73a59
@@ -352,7 +348,6 @@
   | x  changeset:   3:ffb8db6e9ac3
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsolete:    rewritten using amend as 5:d521223a2fb5
   |    summary:     draft1
   |
   @  changeset:   2:fa948fa73a59
@@ -407,13 +402,11 @@
   | |  parent:      3:ffb8db6e9ac3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  instability: orphan
   | |  summary:     snapshot
   | |
   | x  changeset:   3:ffb8db6e9ac3
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsolete:    rewritten using amend as 5:d521223a2fb5
   |    summary:     draft1
   |
   @  changeset:   2:fa948fa73a59
@@ -451,6 +444,5 @@
   parent:      3:ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  instability: orphan
   summary:     snapshot
   
