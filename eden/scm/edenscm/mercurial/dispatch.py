@@ -264,7 +264,6 @@ def _preimportmodules():
         "debugcommitmessage",
         "debugshell",
         "dialect",
-        "directaccess",
         "dirsync",
         "extlib",
         "extorder",

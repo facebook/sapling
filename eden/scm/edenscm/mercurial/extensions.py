@@ -40,6 +40,7 @@ _ignoreextensions = {
     "cleanobsstore",
     "color",
     "configwarn",
+    "directaccess",
     "eden",
     "factotum",
     "fastmanifest",

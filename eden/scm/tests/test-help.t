@@ -303,7 +303,6 @@ Test extension help:
                      (no help text available)
        debugnetwork  test network connections to the server
        dialect       replace terms with more widely used equivalents
-       directaccess  This extension provides direct access
        dirsync
        disablesymlinks
                      disables symlink support when enabled
