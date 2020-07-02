@@ -162,13 +162,10 @@ impl MutationStore {
         Ok(mutation_entry)
     }
 
-    /// Return a connected component that includes `nodes` and represents 1:1
+    /// Return a connected component that includes `nodes` and represents
     /// commit replacement relations.  The returned graph supports graph
     /// operations like common ancestors, heads, roots, etc. Parents in the
     /// graph are predecessors.
-    ///
-    /// Non 1:1 relations like split or fold are ignored since the returned
-    /// graph cannot express them efficiently.
     pub fn get_dag(&self, nodes: Vec<Node>) -> Result<MemNameDag> {
         // Include successors recursively.
         let mut to_visit = nodes;
@@ -179,16 +176,12 @@ impl MutationStore {
             }
             for entry in self.log.lookup(INDEX_PRED, &node)? {
                 let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
-                // Visit successors for 1:1 relationships.
-                if entry.is_one_to_one() {
-                    to_visit.push(entry.succ);
-                }
+                to_visit.push(entry.succ);
             }
             for entry in self.log.lookup(INDEX_SUCC, &node)? {
                 let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
-                // Visit predecessors for 1:1 relationships.
-                if entry.is_one_to_one() {
-                    to_visit.push(entry.preds[0]);
+                for pred in entry.preds {
+                    to_visit.push(pred);
                 }
             }
         }
@@ -196,8 +189,8 @@ impl MutationStore {
             let mut result = Vec::new();
             for entry in self.log.lookup(INDEX_SUCC, &node)? {
                 let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
-                if entry.is_one_to_one() {
-                    result.push(VertexName::copy_from(entry.preds[0].as_ref()));
+                for pred in entry.preds {
+                    result.push(VertexName::copy_from(pred.as_ref()));
                 }
             }
             Ok(result)
