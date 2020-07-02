@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
 Require a destination
   $ enable rebase
   $ setconfig commands.rebase.requiredest=true
@@ -19,29 +17,29 @@ Require a destination
   abort: you must specify a destination
   (use: hg rebase -d REV)
   [255]
-  $ hg rebase -d 1
+  $ hg rebase -d 'desc(bb)'
   rebasing 5db65b93a12b "cc"
-  $ hg rebase -d 0 -r . -q
+  $ hg rebase -d 'desc(aa)' -r . -q
   $ HGPLAIN=1 hg rebase
   rebasing 889b0bc6a730 "cc"
-  $ hg rebase -d 0 -r . -q
+  $ hg rebase -d 'desc(aa)' -r . -q
   $ hg --config commands.rebase.requiredest=False rebase
   rebasing 279de9495438 "cc"
 
 Requiring dest should not break continue or other rebase options
-  $ hg up 1 -q
+  $ hg up 'desc(bb)' -q
   $ echo d >> c
   $ hg commit -qAm dc
   $ hg log -G -T '{rev} {desc}'
-  @  3 dc
+  @  8 dc
   |
-  | o  2 cc
+  | o  7 cc
   |/
   o  1 bb
   |
   o  0 aa
   
-  $ hg rebase -d 2
+  $ hg rebase -d 'desc(cc)'
   rebasing 0537f6b50def "dc"
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
