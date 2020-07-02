@@ -14,15 +14,17 @@
 
 #![deny(warnings)]
 
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout};
 use std::path::PathBuf;
 
 use anyhow::Result;
+use serde::Serialize;
 use serde_json::Value;
 use structopt::StructOpt;
 
-use edenapi_types::json::{parse_data_req, parse_history_req, parse_tree_req};
+use edenapi_types::{json::FromJson, CompleteTreeRequest, DataRequest, HistoryRequest};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "make_req", about = "Make EdenAPI CBOR request payloads")]
@@ -40,22 +42,20 @@ struct Args {
     output: Option<PathBuf>,
 }
 
-macro_rules! convert {
-    ($args:ident, $parse_fn:ident) => {{
-        let json = read_input($args.input)?;
-        let req = $parse_fn(&json)?;
-        let bytes = serde_cbor::to_vec(&req)?;
-        eprintln!("Generated request: {:#?}", &req);
-        write_output($args.output, &bytes)
-    }};
-}
-
 fn main() -> Result<()> {
     match Command::from_args() {
-        Command::Data(args) => convert!(args, parse_data_req),
-        Command::History(args) => convert!(args, parse_history_req),
-        Command::Tree(args) => convert!(args, parse_tree_req),
+        Command::Data(args) => make_req::<DataRequest>(args),
+        Command::History(args) => make_req::<HistoryRequest>(args),
+        Command::Tree(args) => make_req::<CompleteTreeRequest>(args),
     }
+}
+
+fn make_req<R: FromJson + Serialize + Debug>(args: Args) -> Result<()> {
+    let json = read_input(args.input)?;
+    let req = R::from_json(&json)?;
+    let bytes = serde_cbor::to_vec(&req)?;
+    eprintln!("Generated request: {:#?}", &req);
+    write_output(args.output, &bytes)
 }
 
 fn read_input(path: Option<PathBuf>) -> Result<Value> {

@@ -192,3 +192,25 @@ fn make_key(path: &str, hash: &str) -> Result<Key> {
     let hgid = HgId::from_str(hash)?;
     Ok(Key::new(path, hgid))
 }
+
+pub trait FromJson: Sized {
+    fn from_json(json: &Value) -> Result<Self>;
+}
+
+impl FromJson for DataRequest {
+    fn from_json(json: &Value) -> Result<Self> {
+        parse_data_req(json)
+    }
+}
+
+impl FromJson for HistoryRequest {
+    fn from_json(json: &Value) -> Result<Self> {
+        parse_history_req(json)
+    }
+}
+
+impl FromJson for CompleteTreeRequest {
+    fn from_json(json: &Value) -> Result<Self> {
+        parse_tree_req(json)
+    }
+}
