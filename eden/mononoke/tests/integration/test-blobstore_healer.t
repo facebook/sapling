@@ -23,7 +23,7 @@ Check that healer queue has all items
 
 Run the heal
   $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | grep -E -v "^(Monitoring|Discovered) regions:.*"
-  Max replication lag is *: *s (glob)
+  Replication lag is * (glob)
   Fetched 90 queue entires (before building healing futures)
   Out of them 30 distinct blobstore keys, 30 distinct operation keys
   Found 30 blobs to be healed... Doing it
@@ -60,7 +60,7 @@ Run the heal, with write errors injected, simulating store still bad
   >  uniq -c | sed 's/^ *//'
   > }
   $ mononoke_blobstore_healer --blobstore-write-chaos-rate 1 -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
-  1 Max replication lag is *: *s (glob)
+  1 Replication lag is * (glob)
   1 Fetched 60 queue entires (before building healing futures)
   1 Out of them 30 distinct blobstore keys, 30 distinct operation keys
   1 Found 30 blobs to be healed... Doing it
@@ -75,7 +75,7 @@ Check that healer queue still has the items, should not have drained
 
 Healer run again now store recovered
   $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
-  1 Max replication lag is *: *s (glob)
+  1 Replication lag is * (glob)
   1 Fetched 60 queue entires (before building healing futures)
   1 Out of them 30 distinct blobstore keys, 30 distinct operation keys
   1 Found 30 blobs to be healed... Doing it

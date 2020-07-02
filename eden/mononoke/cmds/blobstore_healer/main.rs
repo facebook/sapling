@@ -34,7 +34,11 @@ use slog::{info, o, warn};
 use sql::Connection;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::myrouter_ready;
-use sql_ext::{facebook::MysqlOptions, open_sqlite_path, replication_lag::wait_for_replication};
+use sql_ext::{
+    facebook::MysqlOptions,
+    open_sqlite_path,
+    replication::{LaggableCollectionMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
+};
 use sql_facebook::{myrouter, raw};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -234,6 +238,8 @@ async fn schedule_healing(
     heal_min_age: ChronoDuration,
 ) -> Result<(), Error> {
     let mut count = 0;
+    let replication_monitor = LaggableCollectionMonitor::new(conns);
+    let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
 
     loop {
         count += 1;
@@ -243,7 +249,8 @@ async fn schedule_healing(
             }
         }
 
-        wait_for_replication(ctx.logger(), conns.as_ref())
+        replication_monitor
+            .wait_for_replication(&wait_config)
             .await
             .context("While waiting for replication")?;
 
