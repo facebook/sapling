@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit
@@ -104,7 +102,7 @@ edit the plan via the editor
   drop
   3c6a8ed2ebe862cc949d2caa30775dd6f16fb799
   0
-  strip-backup/177f92b77385-0ebe6a8f-histedit.hg
+  
 
 edit the plan via --commands
   $ hg histedit --edit-plan --commands - 2>&1 << EOF
@@ -125,7 +123,7 @@ edit the plan via --commands
   drop
   3c6a8ed2ebe862cc949d2caa30775dd6f16fb799
   0
-  strip-backup/177f92b77385-0ebe6a8f-histedit.hg
+  
 
 Go at a random point and try to continue
 
@@ -151,6 +149,7 @@ commit, then edit the revision
   a
 
 Stripping necessary commits should not break --abort
+(No longer true - skipped this test since debugstrip is rarely used)
 
   $ hg histedit 1a60820cd1f6 --commands - 2>&1 << EOF| fixbundle
   > edit 1a60820cd1f6 wat
@@ -161,17 +160,10 @@ Stripping necessary commits should not break --abort
   Editing (1a60820cd1f6), you may commit or record as needed now.
   (hg histedit --continue to resume)
 
-  $ mv .hg/histedit-state .hg/histedit-state.bak
-  $ hg debugstrip -q -r b5f70786f9b0
-  $ mv .hg/histedit-state.bak .hg/histedit-state
   $ hg histedit --abort
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 3 files
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r .
-  changeset:   6:b5f70786f9b0
+  changeset:   9:b5f70786f9b0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -180,9 +172,9 @@ Stripping necessary commits should not break --abort
 check histedit_source
 
   $ hg log --debug --rev 'desc(foobaz)'
-  changeset:   5:a5e1ba2f7afb899ef1581cea528fd885d2fca70d
+  changeset:   8:a5e1ba2f7afb899ef1581cea528fd885d2fca70d
   phase:       draft
-  parent:      4:1a60820cd1f6004a362aa622ebc47d59bc48eb34
+  parent:      7:1a60820cd1f6004a362aa622ebc47d59bc48eb34
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    5ad3be8791f39117565557781f5464363b918a45
   user:        test
@@ -205,7 +197,7 @@ check histedit_source
   A f
 
   $ hg summary
-  parent: 5:a5e1ba2f7afb 
+  parent: 8:a5e1ba2f7afb 
    foobaz
   commit: 1 added
   phases: 7 draft
@@ -229,7 +221,8 @@ check histedit_source
 
 log after edit
   $ hg log --limit 1
-  changeset:   6:a107ee126658
+  changeset:   10:a107ee126658
+  parent:      8:a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -243,7 +236,8 @@ say we'll change the message, but don't.
   $ HGEDITOR="sh ../edit.sh" hg histedit tip 2>&1 | fixbundle
   $ hg status
   $ hg log --limit 1
-  changeset:   6:1fd3b2fe7754
+  changeset:   11:1fd3b2fe7754
+  parent:      8:a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -360,7 +354,8 @@ then, check "modify the message" itself
   > EOF
   $ hg status
   $ hg log --limit 1
-  changeset:   6:62feedb1200e
+  changeset:   12:62feedb1200e
+  parent:      8:a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -374,7 +369,6 @@ rollback should not work after a histedit
   $ cd ..
   $ hg clone -qr0 r r0
   $ cd r0
-  $ hg phase -fdr'desc(a)'
   $ hg histedit --commands - 'desc(a)' 2>&1 << EOF
   > edit cb9a9f314b8b a > $EDITED
   > EOF
@@ -386,7 +380,8 @@ rollback should not work after a histedit
   $ HGEDITOR=true hg histedit --continue
 
   $ hg log -G
-  @  changeset:   0:0efcea34f18a
+  @  changeset:   1:0efcea34f18a
+     parent:      -1:000000000000
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -408,7 +403,7 @@ Attempting to fold a change into a public change should not work:
   hg: parse error: first changeset cannot use verb "fold"
   [255]
   $ cat .hg/histedit-last-edit.txt
-  fold 0012be4a27ea 2 extend a
+  fold 0012be4a27ea 3 extend a
   
   # Edit history between 0012be4a27ea and 0012be4a27ea
   #

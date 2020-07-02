@@ -1339,7 +1339,7 @@ def _aborthistedit(ui, repo, state):
         revs = list(unfi.revs("%ln::", leafs | tmpnodes))
         if unfi.revs("parents() and (%n  or %ld)", state.parentctxnode, revs):
             with repo.transaction("histedit.abort") as tr:
-                hg.clean(repo, state.topmost, show_stats=True, quietempty=True)
+                hg.clean(unfi, state.topmost, show_stats=True, quietempty=True)
 
         nodes = list(map(unfi.changelog.node, revs))
         scmutil.cleanupnodes(repo, nodes, "histedit")
