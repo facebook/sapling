@@ -50,9 +50,7 @@ class ObjectFetchContext {
    */
   enum Cause : unsigned { Unknown, Fuse, Thrift };
 
-  ObjectFetchContext() : priority_(ImportPriority::kNormal()) {}
-  explicit ObjectFetchContext(ImportPriority priority) : priority_(priority) {}
-
+  ObjectFetchContext() {}
   virtual ~ObjectFetchContext() = default;
 
   virtual void didFetch(ObjectType, const Hash&, Origin) {}
@@ -65,8 +63,8 @@ class ObjectFetchContext {
     return ObjectFetchContext::Cause::Unknown;
   }
 
-  const ImportPriority& getPriority() {
-    return priority_;
+  virtual ImportPriority getPriority() const {
+    return ImportPriority::kNormal();
   }
 
   /**
@@ -77,9 +75,6 @@ class ObjectFetchContext {
  private:
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;
-
-  ImportPriority priority_;
 };
-
 } // namespace eden
 } // namespace facebook

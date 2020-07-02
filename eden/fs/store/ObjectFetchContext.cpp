@@ -19,6 +19,5 @@ ObjectFetchContext& ObjectFetchContext::getNullContext() {
   static auto* p = new NullObjectFetchContext;
   return *p;
 }
-
 } // namespace eden
 } // namespace facebook

@@ -105,6 +105,11 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
     return ObjectFetchContext::Cause::Fuse;
   }
 
+  // Override of `ObjectFetchContext`
+  ImportPriority getPriority() const override {
+    return ImportPriority::kHigh();
+  }
+
   // Returns true if the current context is being called from inside
   // a FUSE request, false otherwise.
   static bool isFuseRequest();

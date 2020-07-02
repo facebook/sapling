@@ -25,11 +25,18 @@ namespace eden {
  * destroyed this will inform the EdenMount that the prefetch is complete.
  */
 class TreePrefetchLease {
+  class TreePrefetchContext : public ObjectFetchContext {
+   public:
+    ImportPriority getPriority() const override {
+      return ImportPriority::kLow();
+    }
+  };
+
  public:
   explicit TreePrefetchLease(TreeInodePtr inode)
       : inode_{std::move(inode)},
-        context_(std::make_unique<ObjectFetchContext>(ImportPriority::kLow())) {
-  }
+        context_(std::make_unique<TreePrefetchContext>()) {}
+
   ~TreePrefetchLease() {
     release();
   }
