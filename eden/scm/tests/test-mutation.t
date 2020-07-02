@@ -1126,7 +1126,6 @@ Many splits and folds:
   O 
 
 Metaedit with descendant amended commits
-FIXME: metaedit-copy records are not written
 
   $ cd ..
   $ newrepo
@@ -1148,11 +1147,11 @@ FIXME: metaedit-copy records are not written
   |
   | o  E
   | |
-  | o  C2
+  | x  C2 (Rewritten using rewrite into C4)
   |/
   | o  D
   | |
-  | o  C
+  | x  C (Rewritten using amend-copy into C4) (Rewritten using amend-copy into C2)
   |/
   o  B
   |
@@ -1194,7 +1193,7 @@ Metaedit with descendant folded commits
   |
   | o  D
   | |
-  | x  C (Rewritten using metaedit-copy into F)
+  | x  C (Rewritten using fold-copy into F)
   |/
   o  B
   |
@@ -1223,7 +1222,7 @@ Metaedit automatic rebase of amended commit
   |
   | o  D
   | |
-  | o  C
+  | x  C (Rewritten using amend-copy into C2)
   |/
   o  B1
   |

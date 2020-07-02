@@ -186,6 +186,12 @@ py_class!(class mutationstore |py| {
         Ok(PyNone)
     }
 
+    def addraw(&self, entry: &mutationentry) -> PyResult<PyNone> {
+        let mut ms = self.mut_store(py).borrow_mut();
+        ms.add_raw(entry.entry(py)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     def flush(&self) -> PyResult<PyNone> {
         let mut ms = self.mut_store(py).borrow_mut();
         ms.flush().map_pyerr(py)?;

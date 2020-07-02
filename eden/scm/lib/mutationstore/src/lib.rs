@@ -28,13 +28,17 @@
 //! be ignored.
 
 use anyhow::Result;
+use bitflags::bitflags;
 use dag::namedag::MemNameDag;
 use dag::ops::DagAddHeads;
+use dag::DagAlgorithm;
+use dag::Set;
 use dag::VertexName;
 use indexedlog::{
     log::{self as ilog, IndexDef, IndexOutput, Log},
     DefaultOpenOptions,
 };
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Cursor;
 use std::path::Path;
@@ -46,6 +50,17 @@ pub use indexedlog::Repair;
 
 pub struct MutationStore {
     log: Log,
+    pending: Vec<MutationEntry>,
+}
+
+bitflags! {
+    pub struct DagFlags: u8 {
+        /// Include successors.
+        const SUCCESSORS = 0b1;
+
+        /// Include predecessors.
+        const PREDECESSORS = 0b10;
+    }
 }
 
 const INDEX_PRED: usize = 0;
@@ -105,10 +120,20 @@ impl DefaultOpenOptions<ilog::OpenOptions> for MutationStore {
 impl MutationStore {
     pub fn open(path: impl AsRef<Path>) -> Result<MutationStore> {
         let log = Self::default_open_options().open(path.as_ref())?;
-        Ok(MutationStore { log })
+        let pending = Vec::new();
+        Ok(MutationStore { log, pending })
     }
 
+    /// Add an entry. Consider adding automatic entries based on this entry.
+    /// See `flush` for automatic entries.
     pub fn add(&mut self, entry: &MutationEntry) -> Result<()> {
+        self.add_raw(entry)?;
+        self.pending.push(entry.clone());
+        Ok(())
+    }
+
+    /// Add an entry. Do not consider adding automatic entries.
+    pub fn add_raw(&mut self, entry: &MutationEntry) -> Result<()> {
         let mut buf = Vec::with_capacity(types::mutation::DEFAULT_ENTRY_SIZE);
         entry.serialize(&mut buf)?;
         self.log.append(buf.as_slice())?;
@@ -116,7 +141,72 @@ impl MutationStore {
     }
 
     pub fn flush(&mut self) -> Result<()> {
+        // If P -> Q, X -> Y are being added, and there is an existing chain P
+        // -> ... -> X, add a Q -> Y marker automatically.
+        // Note: P must not equal to X or Y.
+        //
+        // See also D7121487.
+
+        // Prepare for calculation.
+        let mut pred_map = HashMap::with_capacity(self.pending.len()); // node -> index
+        let mut pred_nodes = Vec::with_capacity(self.pending.len());
+        for (i, entry) in self.pending.iter().enumerate() {
+            let pred = entry.preds[0];
+            pred_map.insert(pred, i);
+            pred_nodes.push(pred);
+        }
+        let pred_set =
+            Set::from_static_names(pred_nodes.iter().map(|p| VertexName::copy_from(p.as_ref())));
+        let dag = self.get_dag_advanced(pred_nodes, DagFlags::SUCCESSORS)?;
+        let mut new_entries = Vec::new();
+
+        // Scan through "X"s.
+        for entry in &self.pending {
+            let x = entry.preds[0];
+            // Find all "P"s, as in P -> ... -> X, and X -> Y.
+            let x_set = VertexName::copy_from(x.as_ref()).into();
+            let ps = dag.ancestors(x_set)? & pred_set.clone();
+            for p in ps.iter()? {
+                let p = Node::from_slice(p?.as_ref())?;
+                let y = entry.succ;
+                if p == x || p == y {
+                    continue;
+                }
+                let q = self.pending[pred_map[&p]].succ;
+                if q == x || q == y || q == p {
+                    continue;
+                }
+                // Copy P -> X to Q -> Y.
+                let copy_entry = match self.get(x)? {
+                    Some(entry) => entry,
+                    _ => continue,
+                };
+                let op = if copy_entry.op.ends_with("-copy") {
+                    copy_entry.op.clone()
+                } else {
+                    format!("{}-copy", &copy_entry.op)
+                };
+                // The new entry will be the one returned by `get(y)`.
+                // It overrides the "x -> y" entry.
+                let new_entry = MutationEntry {
+                    succ: y,
+                    preds: vec![x, q],
+                    op,
+                    ..copy_entry
+                };
+                new_entries.push(new_entry);
+            }
+        }
+
+        let mut buf = Vec::with_capacity(types::mutation::DEFAULT_ENTRY_SIZE);
+        for entry in new_entries {
+            buf.clear();
+            entry.serialize(&mut buf)?;
+            self.log.append(buf.as_slice())?;
+        }
+
         self.log.flush()?;
+        self.pending.clear();
         Ok(())
     }
 
@@ -167,6 +257,12 @@ impl MutationStore {
     /// operations like common ancestors, heads, roots, etc. Parents in the
     /// graph are predecessors.
     pub fn get_dag(&self, nodes: Vec<Node>) -> Result<MemNameDag> {
+        self.get_dag_advanced(nodes, DagFlags::SUCCESSORS | DagFlags::PREDECESSORS)
+    }
+
+    /// Advanced version of `get_dag`. Specify whether to include successors or
+    /// predecessors explicitly.
+    pub fn get_dag_advanced(&self, nodes: Vec<Node>, flags: DagFlags) -> Result<MemNameDag> {
         // Include successors recursively.
         let mut to_visit = nodes;
         let mut connected = HashSet::new();
@@ -174,23 +270,36 @@ impl MutationStore {
             if !connected.insert(node.clone()) {
                 continue;
             }
-            for entry in self.log.lookup(INDEX_PRED, &node)? {
-                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
-                to_visit.push(entry.succ);
+            if flags.contains(DagFlags::SUCCESSORS) {
+                for entry in self.log.lookup(INDEX_PRED, &node)? {
+                    let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                    to_visit.push(entry.succ);
+                }
             }
-            for entry in self.log.lookup(INDEX_SUCC, &node)? {
-                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
-                for pred in entry.preds {
-                    to_visit.push(pred);
+            if flags.contains(DagFlags::PREDECESSORS) {
+                for entry in self.log.lookup(INDEX_SUCC, &node)? {
+                    let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                    for pred in entry.preds {
+                        to_visit.push(pred);
+                    }
                 }
             }
         }
-        let parent_func = |node| -> Result<Vec<VertexName>> {
+        let mut heads = connected
+            .iter()
+            .map(|s| VertexName::copy_from(s.as_ref()))
+            .collect::<Vec<_>>();
+        let parent_func = move |node| -> Result<Vec<VertexName>> {
             let mut result = Vec::new();
             for entry in self.log.lookup(INDEX_SUCC, &node)? {
                 let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
                 for pred in entry.preds {
-                    result.push(VertexName::copy_from(pred.as_ref()));
+                    if connected.contains(&pred) {
+                        let parent_node = VertexName::copy_from(pred.as_ref());
+                        if parent_node != node && !result.contains(&parent_node) {
+                            result.push(parent_node);
+                        }
+                    }
                 }
             }
             Ok(result)
@@ -198,10 +307,6 @@ impl MutationStore {
         let parent_func = dag::utils::break_parent_func_cycle(parent_func);
 
         let mut dag = MemNameDag::new();
-        let mut heads = connected
-            .into_iter()
-            .map(|s| VertexName::copy_from(s.as_ref()))
-            .collect::<Vec<_>>();
         heads.sort();
         dag.add_heads(parent_func, &heads)?;
         Ok(dag)
@@ -401,6 +506,54 @@ mod tests {
             o  4343434343434343434343434343434343434343 (C)
             │
             o  4242424242424242424242424242424242424242 (B)"#
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_copy_entries() -> Result<()> {
+        let dir = TempDir::new("mutationstore")?;
+        let mut ms = MutationStore::open(dir.path())?;
+
+        for (pred, succ) in [("P", "E"), ("E", "X")].iter() {
+            add(&mut ms, pred, succ)?;
+        }
+        ms.flush()?;
+
+        for (pred, succ) in [("P", "Q"), ("X", "Y")].iter() {
+            add(&mut ms, pred, succ)?;
+        }
+
+        // Before flush, Q -> Y is not connected.
+        assert_eq!(
+            render(&ms, "P")?,
+            r#"
+            o  5959595959595959595959595959595959595959 (Y)
+            │
+            o  5858585858585858585858585858585858585858 (X)
+            │
+            │ o  5151515151515151515151515151515151515151 (Q)
+            │ │
+            o │  4545454545454545454545454545454545454545 (E)
+            ├─╯
+            o  5050505050505050505050505050505050505050 (P)"#
+        );
+
+        // After flush, Q -> Y is auto created.
+        ms.flush()?;
+        assert_eq!(
+            render(&ms, "P")?,
+            r#"
+            o    5959595959595959595959595959595959595959 (Y)
+            ├─╮
+            o │  5858585858585858585858585858585858585858 (X)
+            │ │
+            │ o  5151515151515151515151515151515151515151 (Q)
+            │ │
+            o │  4545454545454545454545454545454545454545 (E)
+            ├─╯
+            o  5050505050505050505050505050505050505050 (P)"#
         );
 
         Ok(())

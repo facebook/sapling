@@ -141,15 +141,19 @@ def createsyntheticentry(repo, preds, succ, op, splitting=None, user=None, date=
     )
 
 
-def recordentries(repo, entries, skipexisting=True):
+def recordentries(repo, entries, skipexisting=True, raw=False):
     count = 0
     with repo.transaction("record-mutation") as tr:
         ms = repo._mutationstore
+        if raw:
+            add = ms.addraw
+        else:
+            add = ms.add
         tr.addfinalize("mutation", lambda _tr: ms.flush())
         for entry in entries:
             if skipexisting and ms.has(entry.succ()):
                 continue
-            ms.add(entry)
+            add(entry)
             count += 1
     return count
 
@@ -656,7 +660,7 @@ def toposort(repo, items, nodefn=None):
 def unbundle(repo, bundledata):
     if enabled(repo):
         entries = mutationstore.unbundle(bundledata)
-        recordentries(repo, entries, skipexisting=True)
+        recordentries(repo, entries, skipexisting=True, raw=True)
 
 
 def entriesforbundle(repo, nodes):
@@ -811,7 +815,7 @@ def convertfromobsmarkers(repo):
         )
 
     with repo.lock():
-        count = recordentries(repo, entries, skipexisting=False)
+        count = recordentries(repo, entries, skipexisting=False, raw=True)
 
     return (len(entries), len(newmut), count)
 

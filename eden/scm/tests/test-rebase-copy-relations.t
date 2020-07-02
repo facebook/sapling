@@ -16,7 +16,7 @@
 
   $ cp -R ../repo ../repob
 
-FIXME: This does not quite work yet with singletransaction.
+C -> C2 relation is copied with singletransaction.
 
   $ hg rebase -s $B -d $Z --config rebase.singletransaction=true
   rebasing 112478962961 "B"
@@ -28,7 +28,7 @@ FIXME: This does not quite work yet with singletransaction.
   |
   | o  f7f4f5b9173a D
   | |
-  | o  e709467ba6ed C
+  | x  e709467ba6ed C
   |/
   o  d74d19e598c8 B
   |

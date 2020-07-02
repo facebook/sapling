@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.20"
+bitflags = "1"
 dag = { path = "../dag" }
 indexedlog = { path = "../indexedlog" }
 thiserror = "1.0.5"
