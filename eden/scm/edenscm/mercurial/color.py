@@ -187,7 +187,7 @@ def _modesetup(ui):
 
         if not (util.istest() or win32.enablevtmode()):
             if not ui.pageractive:
-                if havecolors:
+                if havecolors and not always:
                     ui.warn(
                         _(
                             "couldn't enable VT mode for your terminal, disabling colors\n"
