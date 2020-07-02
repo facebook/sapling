@@ -27,6 +27,7 @@
 
 pub mod data;
 pub mod history;
+pub mod json;
 pub mod tree;
 
 pub use crate::data::{DataEntry, DataRequest, DataResponse, Validity};
