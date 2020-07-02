@@ -78,7 +78,7 @@
   7917335ca0064e431e045fdebf0bd483fcc8e28d
   $ hg snapshot show --debug $OID1
   changeset:   1:7917335ca0064e431e045fdebf0bd483fcc8e28d
-  phase:       draft
+  phase:       secret
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    4e7eb8574ed56675aa89d2b5abbced12d5688cef
@@ -108,7 +108,7 @@
   5e55990d984329c0cd0395dad5fcee6d6e8cc126
   $ hg snapshot show --debug $OID2
   changeset:   1:5e55990d984329c0cd0395dad5fcee6d6e8cc126
-  phase:       draft
+  phase:       secret
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    4e7eb8574ed56675aa89d2b5abbced12d5688cef
@@ -141,10 +141,11 @@
   $ cd client1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 7917335ca006
+  backing up stack rooted at df4f53cec30a
   commitcloud: commits synchronized
   finished in 0.00 sec
-  remote: pushing 1 commit:
+  remote: pushing 2 commits:
+  remote:     df4f53cec30a  base
   remote:     7917335ca006  snapshot
   $ hg snapshot list
   7917335ca006 snapshot
@@ -159,14 +160,15 @@
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 5e55990d9843
+  backing up stack rooted at df4f53cec30a
   pulling 7917335ca006 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
-  remote: pushing 1 commit:
+  added 1 changesets with 0 changes to 1 files
+  remote: pushing 2 commits:
+  remote:     df4f53cec30a  base
   remote:     5e55990d9843  snapshot
   commitcloud: commits synchronized
   finished in 0.00 sec
@@ -175,7 +177,7 @@
   7917335ca006 snapshot
   $ hg snapshot show --debug "$OID1"
   changeset:   2:7917335ca0064e431e045fdebf0bd483fcc8e28d
-  phase:       draft
+  phase:       secret
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    4e7eb8574ed56675aa89d2b5abbced12d5688cef
@@ -232,7 +234,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
+  added 1 changesets with 0 changes to 1 files
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ hg snapshot list
@@ -240,7 +242,7 @@
 
   $ hg snapshot show --debug "$OID2"
   changeset:   2:5e55990d984329c0cd0395dad5fcee6d6e8cc126
-  phase:       draft
+  phase:       secret
   parent:      0:df4f53cec30af1e4f669102135076fd4f9673fcc
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    4e7eb8574ed56675aa89d2b5abbced12d5688cef

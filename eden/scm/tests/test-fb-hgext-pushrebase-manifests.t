@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ enable remotenames
 This test does two things:
 
 1/ Simulate a common condition of pushrebase under load. Normally pushrebase
@@ -48,6 +49,7 @@ Set up server repository
   $ echo foo > base
   $ commit "[base] (zero'th)"
   adding base
+  $ hg bookmark master
 
 Clone client1 and client2 from the server repo.
 
@@ -62,7 +64,7 @@ Make some non-conflicting commits in all three repos.
   $ commit 'srv => bar (first)'
   adding srv
   $ log
-  @  srv => bar (first) [draft:2d83594e8405]
+  @  srv => bar (first) [draft:2d83594e8405] master
   |
   o  [base] (zero'th) [draft:a9156650d8dd]
   
@@ -128,7 +130,7 @@ Add a hook to the server to make it spin until .hg/flag exists.
 Push from client1 -> server and detach. The background job will wait for
 .hg/flag.
   $ cd ../client1
-  $ hg push --to default 2>&1 | \sed "s/^/[client1 push] /" &
+  $ hg push --to master 2>&1 | \sed "s/^/[client1 push] /" &
 
 Wait for the first push to actually enter the hook before removing it.
   $ cd ../server
@@ -140,17 +142,18 @@ Remove the hook.
 Push from client2 -> server. This should go through immediately without
 blocking. There shouldn't be any "[client1 push]" output here.
   $ cd ../client2
-  $ hg push --to default 2>&1 | \sed "s/^/[client2 push] /"
+  $ hg push --to master 2>&1 | \sed "s/^/[client2 push] /"
   [client2 push] remote:  (?)
   [client2 push] remote:  (?)
-  [client2 push] pushing to ssh://user@dummy/server
+  [client2 push] pushing rev 4ab7e28729f6 to destination ssh://user@dummy/server bookmark master
+  [client2 push] remote:  (?)
+  [client2 push] remote:  (?)
   [client2 push] searching for changes
-  [client2 push] remote:  (?)
-  [client2 push] remote:  (?)
   [client2 push] adding changesets
   [client2 push] adding manifests
   [client2 push] adding file changes
   [client2 push] added 2 changesets with 1 changes to 2 files
+  [client2 push] updating bookmark master
   [client2 push] remote: read manifest outside the lock :)
   [client2 push] remote: read manifest outside the lock :)
   [client2 push] remote: read manifest outside the lock :)
@@ -169,20 +172,21 @@ blocking. There shouldn't be any "[client1 push]" output here.
 
 Check that the first push is still running/blocked...
   $ jobs
-  [1]+  Running                 hg push --to default 2>&1 | \sed "s/^/[client1 push] /" &  (wd: ~/client1)
+  [1]+  Running                 hg push --to master 2>&1 | \sed "s/^/[client1 push] /" &  (wd: ~/client1)
 ...then allow it through.
   $ cd ../server
   $ touch .hg/flag
   $ wait
-  [client1 push] pushing to ssh://user@dummy/server
+  [client1 push] pushing rev 1fe62957ca8a to destination ssh://user@dummy/server bookmark master
+  [client1 push] remote:  (?)
+  [client1 push] remote:  (?)
+  [client1 push] remote:  (?)
   [client1 push] searching for changes
-  [client1 push] remote:  (?)
-  [client1 push] remote:  (?)
-  [client1 push] remote:  (?)
   [client1 push] adding changesets
   [client1 push] adding manifests
   [client1 push] adding file changes
   [client1 push] added 4 changesets with 2 changes to 3 files
+  [client1 push] updating bookmark master
   [client1 push] remote: read manifest outside the lock :)
   [client1 push] remote: read manifest outside the lock :)
   [client1 push] remote: read manifest outside the lock :)

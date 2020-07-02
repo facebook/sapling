@@ -455,19 +455,19 @@ Test abort a stopped histedit with obsmarkers
   $ hg histedit --abort --traceback
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
-  x  2b451ea9fdb0 e
+  o  2b451ea9fdb0 e
   |
   | x  1d7ed205640e e
   |/
-  x  abce911bf7cf d
+  o  abce911bf7cf d
   |
   | @  0d9a4961b100 f
   | |
-  | o  8800a5180f91 d
+  | x  8800a5180f91 d
   | |
   | | x  883a5225844a d
   | |/
-  | o  d8249471110a e
+  | x  d8249471110a e
   |/
   | x  652413bf663e f
   | |

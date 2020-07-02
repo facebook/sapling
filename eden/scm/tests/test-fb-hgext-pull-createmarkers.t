@@ -94,8 +94,6 @@ We update to commit 1 to avoid keeping 2, 3, and 4 visible with inhibit
 Here pull should mark 2, 3, and 4 as obsolete since they landed as 6, 7, 8 on
 the remote
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
-  o  5 "add b"
-  |
   @  1 "add secondcommit"
   |
   o  0 "add initial"

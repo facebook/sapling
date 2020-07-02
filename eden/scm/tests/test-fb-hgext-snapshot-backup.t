@@ -2,7 +2,7 @@
 #chg-compatible
 
 # Initial setup
-  $ enable rebase snapshot
+  $ enable rebase snapshot remotenames
   $ setconfig visibility.enabled=true
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
@@ -14,6 +14,7 @@
   $ hg init server
   $ cd server
   $ setupserver
+  $ hg bookmark master
   $ cd ..
 
 # Setup clients
@@ -28,9 +29,10 @@
   $ echo "bar" > bar/file
   $ hg add foofile bar/file
   $ hg commit -m "add some files"
-  $ hg push
-  pushing to ssh://user@dummy/server
+  $ hg push --to master -r .
+  pushing rev 3490593cf53c to destination ssh://user@dummy/server bookmark master
   searching for changes
+  updating bookmark master
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -136,8 +138,8 @@
   $ cd ../restored
   $ hg checkout "$OID"
   pulling '751f5ef10bc73a8f549197b380773d4f680daa8c' from 'ssh://user@dummy/server'
-  abort: hidden revision '751f5ef10bc73a8f549197b380773d4f680daa8c'!
-  (use --hidden to access hidden revisions)
+  abort: 751f5ef10bc7 is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it
+  
   [255]
   $ hg snapshot checkout $OID
   will checkout on 751f5ef10bc73a8f549197b380773d4f680daa8c
@@ -146,8 +148,3 @@
 # hg status/diff are unchanged
   $ test "$BEFORESTATUS" = "$(hg status --verbose)"
   $ test "$BEFOREDIFF" = "$(hg diff)"
-# The snapshot commit is hidden
-  $ hg show "$OID"
-  abort: hidden revision '751f5ef10bc73a8f549197b380773d4f680daa8c'!
-  (use --hidden to access hidden revisions)
-  [255]

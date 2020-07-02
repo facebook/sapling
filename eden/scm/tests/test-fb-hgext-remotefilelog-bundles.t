@@ -28,17 +28,13 @@ Unbundling a shallow bundle
   $ hg debugstrip -r 66ee28d0328c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  $ hg unbundle .hg/strip-backup/66ee28d0328c-3d7aafd1-backup.hg
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 0 changes to 0 files
 
 Unbundling a full bundle
 
   $ hg -R ../master bundle -r 66ee28d0328c:: --base "66ee28d0328c^" ../fullbundle.hg
   2 changesets found
   $ hg debugstrip -r 66ee28d0328c
+  pulling '66ee28d0328c' from 'ssh://user@dummy/master'
   $ hg unbundle ../fullbundle.hg
   adding changesets
   adding manifests

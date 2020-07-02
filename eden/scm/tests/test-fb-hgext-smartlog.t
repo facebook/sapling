@@ -29,7 +29,7 @@ Continue repo setup
   $ hg book feature2
   $ touch d && hg add d && hg ci -md
 
-  $ hg phase -r master --public
+  $ hg debugmakepublic master
   $ hg log -G -T compact
   @  5[feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
   |    d
@@ -100,27 +100,20 @@ As a revset
   |
 
 With --master
-  $ hg phase -r 'all()' --draft -f
-  $ hg debugmakepublic 1
 
   $ hg smartlog -T compact --master 1
   @  6[feature2]:4   05d10250273e   1970-01-01 00:00 +0000   test
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
-  |
-  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |    c1
-  |
+  .    c2
+  .
   | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
   |
   o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
   |    a2
   |
-
-  $ hg phase -r master --public
 
 Specific revs
   $ hg smartlog -T compact -r 2 -r 4
@@ -152,7 +145,6 @@ Specific revs
   
 
 Test master ordering
-  $ hg phase -r 'all()' --draft -f
   $ hg debugmakepublic 49cdb4091aca
 
   $ hg boo -f master -r 49cdb4091aca
@@ -174,7 +166,6 @@ Test master ordering
   |
 
 Test overriding master
-  $ hg phase -r 'all()' --draft -f
   $ hg debugmakepublic 38d85b506754
 
   $ hg boo -f master -r 38d85b506754
@@ -192,7 +183,6 @@ Test overriding master
   |    a2
   |
 
-  $ hg phase -r 'all()' --draft -f
   $ hg debugmakepublic feature1
 
   $ hg smartlog -T compact --master feature1
@@ -246,7 +236,6 @@ Test overriding master
   |    a2
   |
 
-  $ hg phase -r 'all()' --draft -f
   $ hg debugmakepublic .
 
 Test with weird bookmark names
@@ -263,7 +252,6 @@ Test with weird bookmark names
   |    a2
   |
 
-  $ hg phase -r 'all()' --draft -f
   $ hg debugmakepublic foo-bar
 
   $ hg smartlog --config smartlog.master=foo-bar -T compact
@@ -286,9 +274,6 @@ Test with weird bookmark names
   abort: unknown revision 'xxxx'!
   [255]
 
-  $ hg phase -r 'all()' --draft -f
-  $ hg phase -r master --public
-
 Test with two unrelated histories
   $ hg update null
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
@@ -307,8 +292,11 @@ Test with two unrelated histories
   |    d
   |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
-  .    c2
-  .
+  |    c2
+  |
+  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |    c1
+  |
   | o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
   |

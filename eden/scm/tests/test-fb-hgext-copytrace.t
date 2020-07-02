@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ configure mutation-norecord
-  $ enable copytrace rebase shelve
+  $ enable copytrace rebase shelve remotenames
   $ setconfig experimental.copytrace=off
 
   $ initclient() {
@@ -22,6 +22,7 @@ Check filename heuristics (same dirname and same basename)
   $ hg mv a b
   $ hg mv -q dir dir2
   $ hg ci -m 'mv a b, mv dir/ dir2/'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -57,6 +58,7 @@ Make sure filename heuristics do not when they are not related
   $ echo 'completelydifferentcontext' > b
   $ hg add b
   $ hg ci -m 'rm a, add b'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -95,6 +97,7 @@ Test when lca didn't modified the file that was moved
   $ hg ci -m randomcommit
   $ hg mv a b
   $ hg ci -m 'mv a b'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -131,6 +134,7 @@ Rebase "backwards"
   $ hg ci -m randomcommit
   $ hg mv a b
   $ hg ci -m 'mv a b'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -198,6 +202,7 @@ Check a few potential move candidates
   $ echo b > dir2/a
   $ hg add dir2/a
   $ hg ci -qm 'create dir2/a'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -230,6 +235,7 @@ Move file in one branch and delete it in another
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -278,6 +284,7 @@ Too many move candidates
   $ hg add f
   $ hg add g
   $ hg ci -m 'rm a, add many files'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -313,6 +320,7 @@ Move a directory in draft branch
   $ echo a > dir/a
   $ hg add dir/a
   $ hg ci -qm initial
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -349,6 +357,7 @@ Move file twice and rebase mod on top of moves
   $ hg ci -m 'mv a b'
   $ hg mv b c
   $ hg ci -m 'mv b c'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -380,6 +389,7 @@ Move file twice and rebase moves on top of mods
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -422,6 +432,7 @@ Move one file and add another file in the same folder in one branch, modify file
   $ echo c > c
   $ hg add c
   $ hg ci -m 'add c'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -457,9 +468,11 @@ Merge test
   $ hg ci -m initial
   $ echo b > a
   $ hg ci -m 'modify a'
+  $ hg bookmark book1
   $ hg up -q 0
   $ hg mv a b
   $ hg ci -m 'mv a b'
+  $ hg bookmark book2
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -495,6 +508,7 @@ Copy and move file
   $ hg cp a c
   $ hg mv a b
   $ hg ci -m 'cp a c, mv a b'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -535,6 +549,7 @@ Do a merge commit with many consequent moves in one branch
   $ hg ci -m initial
   $ echo b > a
   $ hg ci -qm 'mod a'
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo
@@ -584,6 +599,7 @@ Test shelve/unshelve
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
+  $ hg bookmark book1
   $ cd ..
   $ hg clone -q server repo
   $ initclient repo

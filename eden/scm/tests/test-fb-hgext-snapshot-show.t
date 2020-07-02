@@ -425,7 +425,7 @@
   03d785189d28 snapshot
   be6e4139c42c snapshot
   $ hg unhide "$HOID"
-  $ hg log -r "snapshot() & hidden()" --hidden
+  $ hg log -r "snapshot()"
   changeset:   9:bcda34b7ba8a
   parent:      8:fdf2c0326bba
   parent:      7:9d3ebf4630d3

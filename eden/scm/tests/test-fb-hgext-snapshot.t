@@ -86,7 +86,7 @@
   $ hg log --hidden -r "$EMPTYOID" -T '{extras % \"{extra}\n\"}' | grep snapshotmetadataid
   snapshotmetadataid=
 # The snapshot commit is hidden
-  $ hg log --hidden -r  "hidden() & $EMPTYOID"
+  $ hg log -r  "$EMPTYOID"
   changeset:   1:bd8d77aecb3d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

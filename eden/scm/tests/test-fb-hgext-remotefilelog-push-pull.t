@@ -83,12 +83,12 @@ the server supports our custom getfiles method.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
   4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s (?)
+  added 3 changesets with 4 changes to 3 files
   { metrics : { ssh : { connections : 2,
-                        getpack : { calls : 2,  revs : 4},
-                        read : { bytes : 1516},
-                        write : { bytes : 348}}}}
+                        getpack : { calls : 3,  revs : 3},
+                        read : { bytes : 1383},
+                        write : { bytes : 337}}}}
 
 # pull from shallow to shallow (ssh)
 
@@ -99,12 +99,16 @@ the server supports our custom getfiles method.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
+  added 3 changesets with 4 changes to 3 files
+  remote: { metrics : { ssh : { connections : 1,
+  remote:                       getpack : { calls : 1,  revs : 1},
+  remote:                       read : { bytes : 615},
+  remote:                       write : { bytes : 147}}}}
   { metrics : { ssh : { connections : 2,
-                        getpack : { calls : 1,  revs : 2},
-                        read : { bytes : 2930},
-                        write : { bytes : 834}}}}
+                        getpack : { calls : 1,  revs : 1},
+                        read : { bytes : 2883},
+                        write : { bytes : 807}}}}
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -129,8 +133,8 @@ the server supports our custom getfiles method.
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 693},
-                        write : { bytes : 1087}}}}
+                        read : { bytes : 603},
+                        write : { bytes : 1033}}}}
 
   $ cd ../shallow2
   $ hg up
@@ -141,12 +145,12 @@ the server supports our custom getfiles method.
 # verify files are read-only
 
   $ ls_l .hg/store/packs
+  -r--r--r--    1295 5feb6151e62f92e71ce2df45c52b1ee4de891c40.histidx
+  -r--r--r--     350 5feb6151e62f92e71ce2df45c52b1ee4de891c40.histpack
   -r--r--r--    1117 81951d0ada20768783a3ca0ba3b2042b29cf4fd3.histidx
   -r--r--r--      90 81951d0ada20768783a3ca0ba3b2042b29cf4fd3.histpack
-  -r--r--r--    1267 da7820d2df8fa4ee2f5a0a281825e3c99bf1767f.histidx
-  -r--r--r--     268 da7820d2df8fa4ee2f5a0a281825e3c99bf1767f.histpack
-  -r--r--r--    1154 e2dde3565e426bfb44f88e531d5a5e8333ec3876.dataidx
-  -r--r--r--     191 e2dde3565e426bfb44f88e531d5a5e8333ec3876.datapack
+  -r--r--r--    1194 9b9360a408e070d43cd6a598139f56a6a358cd7c.dataidx
+  -r--r--r--     253 9b9360a408e070d43cd6a598139f56a6a358cd7c.datapack
   -r--r--r--    1074 fea0528e5e8268df06cd40c39230727aff9901eb.dataidx
   -r--r--r--      63 fea0528e5e8268df06cd40c39230727aff9901eb.datapack
   $ cd ..
@@ -162,15 +166,15 @@ the server supports our custom getfiles method.
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 2 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 659},
-                        write : { bytes : 1604}}}}
+                        read : { bytes : 580},
+                        write : { bytes : 1496}}}}
 
   $ cd ../master
-  $ hg log -l 1 --style compact
+  $ hg log -l 1 -r 3 --style compact
   3   1489bbbc46f0   1970-01-01 00:00 +0000   test
     a
   
-  $ hg up
+  $ hg up 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat a
   a
@@ -202,7 +206,7 @@ the server supports our custom getfiles method.
   $ hginit multimf-master
   $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 560},
+                        read : { bytes : 519},
                         write : { bytes : 602}}}}
   $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow2 -q
   { metrics : { ssh : { connections : 1,

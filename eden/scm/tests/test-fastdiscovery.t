@@ -13,6 +13,7 @@ Setup remotefilelog server
   $ setupserver
   $ setconfig remotefilelog.server=true
   $ mkcommit initial
+  $ hg bookmark master
   $ cd ..
 
 Make client shallow clone
@@ -70,3 +71,4 @@ Set knownserverbookmarks - fastdiscovery is used
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
+  updating bookmark master

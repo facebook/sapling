@@ -35,28 +35,8 @@ mutationblacklist = """
 narrowheadsincompatiblelist = """
     test-bookmarks.t
     test-debugstrip.t
-    test-default-push.t
     test-directaccess-revset.t
     test-eol-clone.t
-    test-eol-hook.t
-    test-fastdiscovery.t
-    test-fb-hgext-copytrace.t
-    test-fb-hgext-fbhistedit-exec.t
-    test-fb-hgext-git-getmeta.t
-    test-fb-hgext-pull-createmarkers.t
-    test-fb-hgext-pushrebase-manifests.t
-    test-fb-hgext-remotefilelog-bundles.t
-    test-fb-hgext-remotefilelog-lfs.t
-    test-fb-hgext-remotefilelog-push-pull.t
-    test-fb-hgext-remotefilelog-repack-fast.t
-    test-fb-hgext-remotefilelog-repack-rust.t
-    test-fb-hgext-remotefilelog-repack.t
-    test-fb-hgext-scm-prompt-hg.t
-    test-fb-hgext-smartlog.t
-    test-fb-hgext-snapshot-backup.t
-    test-fb-hgext-snapshot-show.t
-    test-fb-hgext-snapshot-sync.t
-    test-fb-hgext-snapshot.t
     test-fb-hgext-treemanifest-autoconvert.t
     test-fb-hgext-treemanifest-blame.t
     test-fb-hgext-treemanifest-convertflat.t

@@ -39,17 +39,19 @@
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  fetching tree '' 3520020d2e65ab2ed0078247210672353daaf331, based on a18d21674e76d6aab2edb46810b20fbdbd10fb4b, found via 5b09780a1d28
-  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 3520020d2e65ab2ed0078247210672353daaf331, found via 5b09780a1d28
+  1 trees fetched over * (glob)
 
 # Pack a mix of packfiles and loosefiles into one packfile
   $ hg prefetch -r 0
-  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 5b09780a1d28
+  1 trees fetched over * (glob)
   $ hg prefetch -r 2
-  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 615617b8ad27e7af719356339ad7447262cd80e9, found via 5b09780a1d28
+  1 trees fetched over * (glob)
   $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/1e6f0f575de6319f747ef83966a08775803fcecc.dataidx
@@ -120,9 +122,9 @@
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  fetching tree '' e5a25a89b2a6a8d14e228edc6c4bc39def0e9d2e, based on 3520020d2e65ab2ed0078247210672353daaf331, found via f1f12dec7ee8
-  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' e5a25a89b2a6a8d14e228edc6c4bc39def0e9d2e, found via f1f12dec7ee8
+  1 trees fetched over * (glob)
   $ hg repack
   $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs

@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ enable remotenames
   $ setconfig remotenames.selectivepull=1
 
   $ . "$TESTDIR/library.sh"
@@ -20,6 +21,7 @@
 
   $ hg init master
   $ hg init lfs-upload-trigger
+  $ hg bookmark master -R lfs-upload-trigger
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
@@ -35,8 +37,9 @@
   $ hg commit -m x-nonlfs
   $ echo BECOME-LFS-AGAIN >> x
   $ hg commit -m x-lfs-again
+  $ hg bookmark master
 
-  $ hg push -q ../lfs-upload-trigger
+  $ hg push -q ../lfs-upload-trigger --to master
 
   $ cd ..
 
@@ -178,13 +181,14 @@
 
 # push lfs content to server
 
-  $ hg push ../master
-  pushing to ../master
+  $ hg push ../master --to master
+  pushing rev 515a4dfd2e0c to destination ../master bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  updating bookmark master
 
   $ cd ../master
   $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
@@ -356,13 +360,14 @@
   >    hg commit -m $i a.bin
   > done
 
-  $ hg push ../master
-  pushing to ../master
+  $ hg push ../master --to master
+  pushing rev d6975ec2580a to destination ../master bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 6 changesets with 5 changes to 1 files
+  updating bookmark master
 
   $ cd ../shallow
   $ hg pull -q

@@ -178,7 +178,7 @@ Test it still fails with checkallhook
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 2 files
+  added 3 changesets with 3 changes to 5 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   transaction abort!
@@ -195,7 +195,7 @@ But we can push the clean head
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 1 changesets with 1 changes to 4 files
 
 Test multiple files/revisions output
 
