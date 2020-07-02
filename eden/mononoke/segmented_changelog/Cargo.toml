@@ -14,7 +14,6 @@ context = { path = "../server/context" }
 dag = { path = "../../scm/lib/dag" }
 mononoke_types = { path = "../mononoke_types" }
 phases = { path = "../phases" }
-sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

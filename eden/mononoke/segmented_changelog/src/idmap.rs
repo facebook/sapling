@@ -5,19 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{format_err, Result};
 use futures::{compat::Future01CompatExt, future, TryFutureExt};
 use sql::{queries, Connection};
-use sql_ext::SqlConnections;
+use sql_ext::{
+    open_sqlite_in_memory,
+    replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
+    SqlConnections,
+};
 
 use dag::Id as Vertex;
 use stats::prelude::*;
 
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::{ChangesetId, RepositoryId};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.idmap";
@@ -30,7 +33,10 @@ define_stats! {
 const INSERT_MAX: usize = 1_000;
 
 #[derive(Clone)]
-pub struct IdMap(SqlConnections);
+pub struct IdMap {
+    connections: SqlConnections,
+    replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
+}
 
 queries! {
     write InsertIdMapEntry(values: (repo_id: RepositoryId, vertex: u64, cs_id: ChangesetId)) {
@@ -78,17 +84,21 @@ queries! {
     }
 }
 
-impl SqlConstruct for IdMap {
-    const LABEL: &'static str = "segmented_changelog_idmap";
-
+impl IdMap {
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-segmented-changelog.sql");
 
-    fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self(connections)
+    pub fn with_sqlite_in_memory() -> Result<Self> {
+        let conn = open_sqlite_in_memory()?;
+        conn.execute_batch(Self::CREATION_QUERY)?;
+        let connections = SqlConnections::new_single(Connection::with_sqlite(conn));
+        let replica_lag_monitor = Arc::new(NoReplicaLagMonitor());
+        let idmap = Self {
+            connections,
+            replica_lag_monitor,
+        };
+        Ok(idmap)
     }
 }
-
-impl SqlConstructFromMetadataDatabaseConfig for IdMap {}
 
 impl IdMap {
     #[cfg(test)]
@@ -110,14 +120,25 @@ impl IdMap {
     ) -> Result<()> {
         STATS::insert.add_value(mappings.len() as i64);
         mappings.sort();
-        for chunk in mappings.chunks(INSERT_MAX) {
+        for (i, chunk) in mappings.chunks(INSERT_MAX).enumerate() {
+            if i > 0 {
+                let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
+                self.replica_lag_monitor
+                    .wait_for_replication(&wait_config)
+                    .await?;
+            }
             let mut to_insert = Vec::with_capacity(chunk.len());
             for (vertex, cs_id) in chunk {
                 to_insert.push((&repo_id, &vertex.0, cs_id));
             }
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlWrites);
-            let mut transaction = self.0.write_connection.start_transaction().compat().await?;
+            let mut transaction = self
+                .connections
+                .write_connection
+                .start_transaction()
+                .compat()
+                .await?;
             let query_result = InsertIdMapEntry::query_with_transaction(transaction, &to_insert)
                 .compat()
                 .await;
@@ -211,7 +232,7 @@ impl IdMap {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let to_query: Vec<_> = vertexes.iter().map(|v| v.0).collect();
-        let mut cs_ids = select_vertexes(&self.0.read_connection, &to_query).await?;
+        let mut cs_ids = select_vertexes(&self.connections.read_connection, &to_query).await?;
         let not_found_in_replica: Vec<_> = vertexes
             .iter()
             .filter(|x| cs_ids.contains_key(x))
@@ -220,8 +241,11 @@ impl IdMap {
         if !not_found_in_replica.is_empty() {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            let from_master =
-                select_vertexes(&self.0.read_master_connection, &not_found_in_replica).await?;
+            let from_master = select_vertexes(
+                &self.connections.read_master_connection,
+                &not_found_in_replica,
+            )
+            .await?;
             for (k, v) in from_master {
                 cs_ids.insert(k, v);
             }
@@ -255,11 +279,11 @@ impl IdMap {
         };
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        match select(&self.0.read_connection).await? {
+        match select(&self.connections.read_connection).await? {
             None => {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
-                select(&self.0.read_master_connection).await
+                select(&self.connections.read_master_connection).await
             }
             Some(v) => Ok(Some(v)),
         }
@@ -284,7 +308,7 @@ impl IdMap {
         STATS::get_last_entry.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows = SelectLastEntry::query(&self.0.read_connection, &repo_id)
+        let rows = SelectLastEntry::query(&self.connections.read_connection, &repo_id)
             .compat()
             .await?;
         Ok(rows.into_iter().next().map(|r| (Vertex(r.0), r.1)))

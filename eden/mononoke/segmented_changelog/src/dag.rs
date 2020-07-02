@@ -274,7 +274,6 @@ mod tests {
     use futures::StreamExt;
     use phases::mark_reachable_as_public;
     use revset::AncestorsNodeStream;
-    use sql_construct::SqlConstruct;
     use tests_utils::resolve_cs_id;
 
     impl Dag {
