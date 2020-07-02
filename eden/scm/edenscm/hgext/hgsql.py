@@ -1222,13 +1222,21 @@ def wraprepo(repo):
                             if oldmfctx._data is not None:
                                 mfl[oldmfnode]._data = oldmfctx._data
 
+                if len(self) - 1 != fetchend:
+                    raise CorruptionException(
+                        "tip doesn't match after sync (self: %s, fetchend: %s)"
+                        % (len(self) - 1, fetchend)
+                    )
+
                 heads = set(self.heads())
                 heads.discard(nullid)
                 if heads != sqlheads:
-                    raise CorruptionException("heads don't match after sync")
-
-                if len(self) - 1 != fetchend:
-                    raise CorruptionException("tip doesn't match after sync")
+                    selfonly = map(hex, sorted(heads - sqlheads))
+                    sqlonly = map(hex, sorted(sqlheads - heads))
+                    raise CorruptionException(
+                        "heads don't match after sync: (self: %r, sql: %r)"
+                        % (selfonly, sqlonly)
+                    )
 
                 self.disablesync = True
                 transaction = self.transaction("pullfromdb_bookmarks")

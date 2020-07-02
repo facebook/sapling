@@ -28,7 +28,7 @@ Configure master as a server backed by sql.
   $ configureserver master masterrepo
   $ cd master
   $ hg log -GT '{files}' 2>&1 | grep "CorruptionException:"
-  *CorruptionException: heads don't match after sync (glob)
+  *CorruptionException: tip doesn't match after sync (self: 2, fetchend: -1) (glob)
 
 
 Fix the server using sqlrefill.

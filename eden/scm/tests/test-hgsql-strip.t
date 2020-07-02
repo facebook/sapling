@@ -113,7 +113,7 @@ Verify master is broken
 
   $ cd ../master
   $ hg log 2>&1 | egrep 'CorruptionException:'
-  *CorruptionException: heads don't match after sync (glob)
+  *CorruptionException: tip doesn't match after sync (self: 2, fetchend: 0) (glob)
 
 Run sqlstrip on master as well
 

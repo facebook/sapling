@@ -75,8 +75,7 @@
   deleting revision data
   $ cd ../master2
   $ hg log -r tip --forcesync 2>&1 | grep CorruptionException
-      raise CorruptionException("heads don't match after sync")
-  CorruptionException: heads don't match after sync
+  CorruptionException: tip doesn't match after sync (self: 1, fetchend: 0)
   $ DB="$(hg config hgsql.database --config hgsql.initialsync=False)"
   $ hg log -r tip --syncfromreplica --config hgsql.replicadatabase="$DB"
   changeset:   1:d34c38483be9
