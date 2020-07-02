@@ -10,8 +10,9 @@ use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
 use bookmarks::{
-    self, Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkTransaction,
-    BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
+    self, Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix,
+    BookmarkTransaction, BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason,
+    Bookmarks, Freshness,
 };
 use cacheblob::LeaseOps;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
@@ -164,6 +165,7 @@ impl BlobRepo {
                 Freshness::MaybeStale,
                 &BookmarkPrefix::empty(),
                 BookmarkKind::ALL_PUBLISHING,
+                &BookmarkPagination::FromStart,
                 std::u64::MAX,
             )
             .map_ok(|(_, cs_id)| cs_id)
@@ -183,6 +185,7 @@ impl BlobRepo {
                 Freshness::MaybeStale,
                 &BookmarkPrefix::empty(),
                 BookmarkKind::ALL_PUBLISHING,
+                &BookmarkPagination::FromStart,
                 std::u64::MAX,
             )
             .compat()
@@ -203,6 +206,7 @@ impl BlobRepo {
                 Freshness::MaybeStale,
                 prefix,
                 BookmarkKind::ALL,
+                &BookmarkPagination::FromStart,
                 max,
             )
             .compat()

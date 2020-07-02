@@ -11,7 +11,7 @@
 
 use anyhow::Error;
 use bookmarks::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLog,
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkUpdateLog,
     BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
 };
 use context::CoreContext;
@@ -843,6 +843,7 @@ fn test_list_by_prefix(fb: FacebookInit) {
                     Freshness::MostRecent,
                     &prefix,
                     BookmarkKind::ALL,
+                    &BookmarkPagination::FromStart,
                     std::u64::MAX
                 )
                 .try_collect::<HashMap<_, _>>()
@@ -862,6 +863,7 @@ fn test_list_by_prefix(fb: FacebookInit) {
                     Freshness::MostRecent,
                     &name_1_prefix,
                     BookmarkKind::ALL,
+                    &BookmarkPagination::FromStart,
                     std::u64::MAX
                 )
                 .try_collect::<Vec<_>>()
@@ -881,6 +883,7 @@ fn test_list_by_prefix(fb: FacebookInit) {
                     Freshness::MostRecent,
                     &name_2_prefix,
                     BookmarkKind::ALL,
+                    &BookmarkPagination::FromStart,
                     std::u64::MAX
                 )
                 .try_collect::<Vec<_>>()

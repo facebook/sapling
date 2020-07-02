@@ -28,7 +28,9 @@ use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
 use blobstore::Loadable;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiOrHgChangesetIds};
-use bookmarks::{Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, Freshness};
+use bookmarks::{
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
+};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureExt;
@@ -357,6 +359,7 @@ impl BlobRepoHg for BlobRepo {
                 Freshness::MaybeStale,
                 &BookmarkPrefix::empty(),
                 &[BookmarkKind::PullDefaultPublishing][..],
+                &BookmarkPagination::FromStart,
                 std::u64::MAX,
             )
             .compat()
@@ -379,6 +382,7 @@ impl BlobRepoHg for BlobRepo {
                 Freshness::MaybeStale,
                 &BookmarkPrefix::empty(),
                 BookmarkKind::ALL_PUBLISHING,
+                &BookmarkPagination::FromStart,
                 std::u64::MAX,
             )
             .compat()
@@ -402,6 +406,7 @@ impl BlobRepoHg for BlobRepo {
                 Freshness::MaybeStale,
                 prefix,
                 BookmarkKind::ALL,
+                &BookmarkPagination::FromStart,
                 max,
             )
             .compat()

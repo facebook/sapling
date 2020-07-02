@@ -9,7 +9,7 @@
 
 use anyhow::{bail, format_err, Error, Result};
 use bookmarks::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkTransaction,
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkTransaction,
     BookmarkTransactionError, BookmarkTransactionHook, BookmarkUpdateLog, BookmarkUpdateLogEntry,
     BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
 };
@@ -214,7 +214,11 @@ queries! {
          OFFSET {offset}"
       }
 
-    read SelectAll(repo_id: RepositoryId, limit: u64, >list kinds: BookmarkKind) ->  (BookmarkName, BookmarkKind, ChangesetId) {
+    read SelectAll(
+        repo_id: RepositoryId,
+        limit: u64,
+        >list kinds: BookmarkKind
+    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
         "SELECT name, hg_kind, changeset_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
@@ -223,11 +227,50 @@ queries! {
          LIMIT {limit}"
     }
 
-    read SelectByPrefix(repo_id: RepositoryId, prefix_like_pattern: String, escape_character: &str, limit: u64, >list kinds: BookmarkKind) ->  (BookmarkName, BookmarkKind, ChangesetId) {
+    read SelectAllAfter(
+        repo_id: RepositoryId,
+        after: BookmarkName,
+        limit: u64,
+        >list kinds: BookmarkKind
+    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
+        "SELECT name, hg_kind, changeset_id
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND name > {after}
+           AND hg_kind IN {kinds}
+         ORDER BY name ASC
+         LIMIT {limit}"
+    }
+
+    read SelectByPrefix(
+        repo_id: RepositoryId,
+        prefix_like_pattern: String,
+        escape_character: &str,
+        limit: u64,
+        >list kinds: BookmarkKind
+    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
         "SELECT name, hg_kind, changeset_id
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND name LIKE {prefix_like_pattern} ESCAPE {escape_character}
+           AND hg_kind IN {kinds}
+         ORDER BY name ASC
+         LIMIT {limit}"
+    }
+
+    read SelectByPrefixAfter(
+        repo_id: RepositoryId,
+        prefix_like_pattern: String,
+        escape_character: &str,
+        after: BookmarkName,
+        limit: u64,
+        >list kinds: BookmarkKind
+    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
+        "SELECT name, hg_kind, changeset_id
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND name LIKE {prefix_like_pattern} ESCAPE {escape_character}
+           AND name > {after}
            AND hg_kind IN {kinds}
          ORDER BY name ASC
          LIMIT {limit}"
@@ -272,6 +315,7 @@ impl Bookmarks for SqlBookmarks {
         freshness: Freshness,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
+        pagination: &BookmarkPagination,
         limit: u64,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         let conn = match freshness {
@@ -290,13 +334,41 @@ impl Bookmarks for SqlBookmarks {
         };
 
         if prefix.is_empty() {
-            query_to_stream(SelectAll::query(&conn, &repo_id, &limit, kinds).compat())
+            match pagination {
+                BookmarkPagination::FromStart => {
+                    query_to_stream(SelectAll::query(&conn, &repo_id, &limit, kinds).compat())
+                }
+                BookmarkPagination::After(ref after) => query_to_stream(
+                    SelectAllAfter::query(&conn, &repo_id, after, &limit, kinds).compat(),
+                ),
+            }
         } else {
             let prefix_like_pattern = prefix.to_escaped_sql_like_pattern();
-            query_to_stream(
-                SelectByPrefix::query(&conn, &repo_id, &prefix_like_pattern, &"\\", &limit, kinds)
+            match pagination {
+                BookmarkPagination::FromStart => query_to_stream(
+                    SelectByPrefix::query(
+                        &conn,
+                        &repo_id,
+                        &prefix_like_pattern,
+                        &"\\",
+                        &limit,
+                        kinds,
+                    )
                     .compat(),
-            )
+                ),
+                BookmarkPagination::After(ref after) => query_to_stream(
+                    SelectByPrefixAfter::query(
+                        &conn,
+                        &repo_id,
+                        &prefix_like_pattern,
+                        &"\\",
+                        after,
+                        &limit,
+                        kinds,
+                    )
+                    .compat(),
+                ),
+            }
         }
     }
 
@@ -1273,9 +1345,10 @@ mod test {
         bookmarks: &BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
+        pagination: &BookmarkPagination,
         limit: u64,
     ) -> Vec<(Bookmark, ChangesetId)> {
-        let range = prefix.to_range();
+        let range = prefix.to_range().with_pagination(pagination.clone());
         bookmarks
             .range(range)
             .filter_map(|(bookmark, (kind, changeset_id))| {
@@ -1299,6 +1372,7 @@ mod test {
         query_freshness: Freshness,
         query_prefix: &BookmarkPrefix,
         query_kinds: &[BookmarkKind],
+        query_pagination: &BookmarkPagination,
         query_limit: u64,
     ) -> Vec<(Bookmark, ChangesetId)> {
         let mut rt = Runtime::new().unwrap();
@@ -1324,6 +1398,7 @@ mod test {
                 query_freshness,
                 query_prefix,
                 query_kinds,
+                query_pagination,
                 query_limit,
             )
             .try_collect::<Vec<_>>();
@@ -1338,6 +1413,7 @@ mod test {
             freshness: Freshness,
             kinds: HashSet<BookmarkKind>,
             prefix_char: Option<ascii_ext::AsciiChar>,
+            after: Option<BookmarkName>,
             limit: u64
         ) -> bool {
             // Test that requests return what is expected.
@@ -1346,18 +1422,24 @@ mod test {
                 Some(ch) => BookmarkPrefix::new_ascii(AsciiString::from(&[ch.0][..])),
                 None => BookmarkPrefix::empty(),
             };
+            let pagination = match after {
+                Some(name) => BookmarkPagination::After(name),
+                None => BookmarkPagination::FromStart,
+            };
             let have = insert_then_query(
                 fb,
                 &bookmarks,
                 freshness,
                 &prefix,
                 kinds.as_slice(),
+                &pagination,
                 limit,
             );
             let want = mock_bookmarks_response(
                 &bookmarks,
                 &prefix,
                 kinds.as_slice(),
+                &pagination,
                 limit,
             );
             have == want

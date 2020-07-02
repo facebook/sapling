@@ -12,7 +12,7 @@ use anyhow::{anyhow, format_err, Error};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use bookmarks::{BookmarkKind, BookmarkPrefix, Freshness};
+use bookmarks::{BookmarkKind, BookmarkPagination, BookmarkPrefix, Freshness};
 use bulkops::fetch_all_public_changesets;
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, LeaseOps};
@@ -458,6 +458,7 @@ async fn tail_one_iteration(
             Freshness::MostRecent,
             &BookmarkPrefix::empty(),
             BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
             std::u64::MAX,
         )
         .map_ok(|(_name, csid)| csid)

@@ -284,6 +284,17 @@ impl Arbitrary for BookmarkKind {
     }
 }
 
+/// Bookmark name filter for pagination.
+///
+/// If set to `BookmarkPagination::After(name)`, Filters bookmarks to those
+/// starting after the given start point (exclusive).
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum BookmarkPagination {
+    FromStart,
+    After(BookmarkName),
+}
+
+/// Bookmark name filter for prefixes.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BookmarkPrefix {
     bookmark_prefix: AsciiString,
@@ -296,9 +307,50 @@ impl fmt::Display for BookmarkPrefix {
 }
 
 pub enum BookmarkPrefixRange {
+    /// All bookmarks in the given half-open range.
     Range(Range<BookmarkName>),
+
+    /// All bookmarks in the given range from an inclusive start.
     RangeFrom(RangeFrom<BookmarkName>),
+
+    /// All bookmarks.
     RangeFull(RangeFull),
+
+    /// All bookmarks after the given name (exclusive).
+    After(BookmarkName),
+
+    /// All bookmarks between the given names (exclusive on both sides).
+    Between(BookmarkName, BookmarkName),
+
+    /// No bookmarks.
+    ///
+    /// The `RangeBounds` methods must still return a value that
+    /// includes a reference to a valid bookmark name, and must
+    /// provide a valid range.  To do this, we use an arbitrary
+    /// name owned by this `BookmarkPrefixRange`, and return
+    /// the half-open range `[name, name)`, which is empty.
+    Empty(BookmarkName),
+}
+
+impl BookmarkPrefixRange {
+    /// Modify a `BookmarkPrefixRange` to only include bookmarks
+    /// after a given bookmark page start (exclusively).
+    pub fn with_pagination(self, pagination: BookmarkPagination) -> BookmarkPrefixRange {
+        use BookmarkPrefixRange::*;
+        match pagination {
+            BookmarkPagination::FromStart => self,
+            BookmarkPagination::After(name) => match self {
+                Range(r) if name >= r.end => Empty(name),
+                Range(r) if name >= r.start => Between(name, r.end),
+                RangeFrom(r) if name >= r.start => After(name),
+                RangeFull(_) => After(name),
+                Between(_, e) if name >= e => Empty(name),
+                Between(s, e) if name >= s => Between(name, e),
+                After(a) if name >= a => After(name),
+                range => range,
+            },
+        }
+    }
 }
 
 impl RangeBounds<BookmarkName> for BookmarkPrefixRange {
@@ -308,6 +360,9 @@ impl RangeBounds<BookmarkName> for BookmarkPrefixRange {
             Range(r) => r.start_bound(),
             RangeFrom(r) => r.start_bound(),
             RangeFull(r) => r.start_bound(),
+            After(a) => Bound::Excluded(&a),
+            Between(s, _) => Bound::Excluded(&s),
+            Empty(n) => Bound::Included(&n),
         }
     }
 
@@ -317,6 +372,9 @@ impl RangeBounds<BookmarkName> for BookmarkPrefixRange {
             Range(r) => r.end_bound(),
             RangeFrom(r) => r.end_bound(),
             RangeFull(r) => r.end_bound(),
+            After(_) => Bound::Unbounded,
+            Between(_, e) => Bound::Excluded(&e),
+            Empty(n) => Bound::Excluded(&n),
         }
     }
 }
@@ -460,6 +518,15 @@ mod tests {
         fn test_empty_range_contains_any(bookmark: Bookmark) -> bool {
             let prefix = BookmarkPrefix::empty();
             prefix.to_range().contains(bookmark.name())
+        }
+
+        fn test_pagination_excludes_start(prefix_char: Option<ascii_ext::AsciiChar>, after: BookmarkName) -> bool {
+            let prefix = match prefix_char {
+                Some(ch) => BookmarkPrefix::new_ascii(AsciiString::from(&[ch.0][..])),
+                None => BookmarkPrefix::empty(),
+            };
+            let pagination = BookmarkPagination::After(after.clone());
+            !prefix.to_range().with_pagination(pagination).contains(&after)
         }
     }
 }

@@ -12,7 +12,7 @@ use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::{BookmarkKind, BookmarkName, BookmarkPrefix, Freshness};
+use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
 use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use context::CoreContext;
@@ -677,6 +677,7 @@ where
             Freshness::MostRecent,
             &BookmarkPrefix::empty(),
             BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
             std::u64::MAX,
         )
         .map_ok(|(book, csid)| (book.name, csid))

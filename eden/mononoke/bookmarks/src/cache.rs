@@ -10,7 +10,9 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::{Error, Result};
-use bookmarks_types::{Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, Freshness};
+use bookmarks_types::{
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
+};
 use context::CoreContext;
 use futures::future::{self, BoxFuture, FutureExt, TryFutureExt};
 use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
@@ -54,6 +56,7 @@ impl Cache {
                         freshness,
                         &BookmarkPrefix::empty(),
                         BookmarkKind::ALL_PUBLISHING,
+                        &BookmarkPagination::FromStart,
                         std::u64::MAX,
                     )
                     .try_fold(
@@ -177,9 +180,10 @@ impl CachedBookmarks {
         repoid: RepositoryId,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
+        pagination: &BookmarkPagination,
         limit: u64,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-        let range = prefix.to_range();
+        let range = prefix.to_range().with_pagination(pagination.clone());
         let cache = self.get_cache(ctx, repoid);
         let filter_kinds = if BookmarkKind::ALL_PUBLISHING
             .iter()
@@ -258,6 +262,7 @@ impl Bookmarks for CachedBookmarks {
         freshness: Freshness,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
+        pagination: &BookmarkPagination,
         limit: u64,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         if freshness == Freshness::MaybeStale {
@@ -266,12 +271,13 @@ impl Bookmarks for CachedBookmarks {
                 .all(|kind| BookmarkKind::ALL_PUBLISHING.iter().any(|k| k == kind))
             {
                 // All requested kinds are supported by the cache.
-                return self.list_from_publishing_cache(ctx, repoid, prefix, kinds, limit);
+                return self
+                    .list_from_publishing_cache(ctx, repoid, prefix, kinds, pagination, limit);
             }
         }
         // Bypass the cache as it cannot serve this request.
         self.bookmarks
-            .list(ctx, repoid, freshness, prefix, kinds, limit)
+            .list(ctx, repoid, freshness, prefix, kinds, pagination, limit)
     }
 
     fn create_transaction(
@@ -439,6 +445,7 @@ mod tests {
         freshness: Freshness,
         prefix: BookmarkPrefix,
         kinds: Vec<BookmarkKind>,
+        pagination: BookmarkPagination,
         limit: u64,
     }
 
@@ -490,6 +497,7 @@ mod tests {
             freshness: Freshness,
             prefix: &BookmarkPrefix,
             kinds: &[BookmarkKind],
+            pagination: &BookmarkPagination,
             limit: u64,
         ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
             let (send, recv) = oneshot::channel();
@@ -500,6 +508,7 @@ mod tests {
                     freshness,
                     prefix: prefix.clone(),
                     kinds: kinds.to_vec(),
+                    pagination: pagination.clone(),
                     limit,
                 })
                 .unwrap();
@@ -662,6 +671,7 @@ mod tests {
                     Freshness::MaybeStale,
                     &BookmarkPrefix::new(prefix).unwrap(),
                     BookmarkKind::ALL_PUBLISHING,
+                    &BookmarkPagination::FromStart,
                     std::u64::MAX,
                 )
                 .try_collect()
@@ -789,9 +799,10 @@ mod tests {
         bookmarks: &BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
+        pagination: &BookmarkPagination,
         limit: u64,
     ) -> Vec<(Bookmark, ChangesetId)> {
-        let range = prefix.to_range();
+        let range = prefix.to_range().with_pagination(pagination.clone());
         bookmarks
             .range(range)
             .filter_map(|(bookmark, (kind, changeset_id))| {
@@ -815,6 +826,7 @@ mod tests {
         query_freshness: Freshness,
         query_prefix: &BookmarkPrefix,
         query_kinds: &[BookmarkKind],
+        query_pagination: &BookmarkPagination,
         query_limit: u64,
     ) -> Vec<(Bookmark, ChangesetId)> {
         let mut rt = Runtime::new().unwrap();
@@ -836,6 +848,7 @@ mod tests {
                 query_freshness,
                 query_prefix,
                 query_kinds,
+                query_pagination,
                 query_limit,
             )
             .try_collect()
@@ -855,6 +868,7 @@ mod tests {
             bookmarks,
             &request.prefix,
             request.kinds.as_slice(),
+            &request.pagination,
             request.limit,
         );
         request.response.send(Ok(response)).unwrap();
@@ -869,6 +883,7 @@ mod tests {
             freshness: Freshness,
             kinds: HashSet<BookmarkKind>,
             prefix_char: Option<ascii_ext::AsciiChar>,
+            after: Option<BookmarkName>,
             limit: u64
         ) -> bool {
             // Test that requesting via the cache gives the same result
@@ -878,18 +893,24 @@ mod tests {
                 Some(ch) => BookmarkPrefix::new_ascii(AsciiString::from(&[ch.0][..])),
                 None => BookmarkPrefix::empty(),
             };
+            let pagination = match after {
+                Some(name) => BookmarkPagination::After(name),
+                None => BookmarkPagination::FromStart,
+            };
             let have = mock_then_query(
                 fb,
                 &bookmarks,
                 freshness,
                 &prefix,
                 kinds.as_slice(),
+                &pagination,
                 limit,
             );
             let want = mock_bookmarks_response(
                 &bookmarks,
                 &prefix,
                 kinds.as_slice(),
+                &pagination,
                 limit,
             );
             have == want
