@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ enable rebase
 
 Rebasing D onto B detaching from C (one commit):
@@ -16,13 +14,12 @@ Rebasing D onto B detaching from C (one commit):
   > |/
   > A
   > EOF
-  $ hg phase --force --secret $D
 
   $ hg rebase -s $D -d $B
   rebasing e7b3f00ed42e "D"
 
   $ hg log -G --template "{rev}:{phase} '{desc}' {branches}\n"
-  o  3:secret 'D'
+  o  4:draft 'D'
   |
   | o  2:draft 'C'
   | |
@@ -58,9 +55,9 @@ Rebasing D onto B detaching from C (two commits):
   rebasing 69a34c08022a "E"
 
   $ tglog
-  o  4: ee79e0744528 'E'
+  o  6: ee79e0744528 'E'
   |
-  o  3: 10530e1d72d9 'D'
+  o  5: 10530e1d72d9 'D'
   |
   | o  2: dc0947a82db8 'C'
   | |
@@ -94,9 +91,9 @@ Rebasing C onto B using detach (same as not using it):
   rebasing e7b3f00ed42e "D"
 
   $ tglog
-  o  3: 7375f3dbfb0f 'D'
+  o  5: 7375f3dbfb0f 'D'
   |
-  o  2: bbfdd6cb49aa 'C'
+  o  4: bbfdd6cb49aa 'C'
   |
   o  1: 112478962961 'B'
   |
@@ -125,14 +122,13 @@ Rebasing D onto B detaching from C and collapsing:
   > |/
   > A
   > EOF
-  $ hg phase --force --secret $E
 
   $ hg rebase --collapse -s $D -d $B
   rebasing e7b3f00ed42e "D"
   rebasing 69a34c08022a "E"
 
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
-  o  3:secret 'Collapsed revision
+  o  5:draft 'Collapsed revision
   |  * D
   |  * E'
   | o  2:draft 'C'
@@ -169,25 +165,25 @@ Rebasing across null as ancestor
   rebasing 69a34c08022a "E"
 
   $ tglog
-  o  4: e3d0c70d606d 'E'
+  o  7: e3d0c70d606d 'E'
   |
-  o  3: e9153d36a1af 'D'
+  o  6: e9153d36a1af 'D'
   |
-  o  2: a7ac28b870a8 'C'
+  o  5: a7ac28b870a8 'C'
   |
   o  1: fc2b737bb2e5 'B'
   
   o  0: 426bada5c675 'A'
   
-  $ hg rebase -d 1 -s 3
+  $ hg rebase -d 'desc(B)' -s 'desc(D)'
   rebasing e9153d36a1af "D"
   rebasing e3d0c70d606d "E"
   $ tglog
-  o  4: 2c24e540eccd 'E'
+  o  9: 2c24e540eccd 'E'
   |
-  o  3: 73f786ed52ff 'D'
+  o  8: 73f786ed52ff 'D'
   |
-  | o  2: a7ac28b870a8 'C'
+  | o  5: a7ac28b870a8 'C'
   |/
   o  1: fc2b737bb2e5 'B'
   
@@ -242,7 +238,7 @@ Verify that target is not selected as external rev (issue3085)
   rebasing c6aaf0d259c0 "J"
 
   $ tglog
-  @  5: 65079693dac4 'Collapsed revision
+  @  8: 65079693dac4 'Collapsed revision
   |  * I
   |  * Merge
   |  * J'
@@ -258,7 +254,8 @@ Verify that target is not selected as external rev (issue3085)
   
 
   $ hg log --rev tip
-  changeset:   5:65079693dac4
+  changeset:   8:65079693dac4
+  parent:      4:4ea5b230dea3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Collapsed revision
@@ -279,7 +276,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   $ echo 'B2' > B
   $ hg ci -A -m 'B2'
   adding B
-  $ hg phase --force --secret .
+
   $ hg rebase -s . -d $B --config ui.merge=internal:fail
   rebasing 17b4880d2402 "B2"
   merging B
