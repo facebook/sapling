@@ -1298,7 +1298,7 @@ mod tests {
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use blobrepo_override::DangerousOverride;
-    use bookmarks::{BookmarkTransactionError, Bookmarks};
+    use bookmarks::{BookmarkTransactionError, BookmarkUpdateLog, Bookmarks};
     use dbbookmarks::SqlBookmarks;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
@@ -1494,8 +1494,14 @@ mod tests {
 
     // Initializes bookmarks and mutable_counters on the "same db" i.e. on the same
     // sqlite connection
-    async fn init_bookmarks_mutable_counters(
-    ) -> Result<(Arc<dyn Bookmarks>, Arc<SqlMutableCounters>), Error> {
+    async fn init_bookmarks_mutable_counters() -> Result<
+        (
+            Arc<dyn Bookmarks>,
+            Arc<dyn BookmarkUpdateLog>,
+            Arc<SqlMutableCounters>,
+        ),
+        Error,
+    > {
         let con = SqliteConnection::open_in_memory()?;
         con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
         con.execute_batch(SqlBookmarks::CREATION_QUERY)?;
@@ -1503,12 +1509,16 @@ mod tests {
         let con = Connection::with_sqlite(con);
         let bookmarks = Arc::new(SqlBookmarks::from_sql_connections(
             SqlConnections::new_single(con.clone()),
-        )) as Arc<dyn Bookmarks>;
+        ));
         let mutable_counters = Arc::new(SqlMutableCounters::from_sql_connections(
             SqlConnections::new_single(con),
         ));
 
-        Ok((bookmarks, mutable_counters))
+        Ok((
+            bookmarks.clone() as Arc<dyn Bookmarks>,
+            bookmarks as Arc<dyn BookmarkUpdateLog>,
+            mutable_counters,
+        ))
     }
 
     #[fbinit::test]
@@ -1580,8 +1590,11 @@ mod tests {
                 .commit()
                 .await?;
 
-            let (bookmarks, mutable_counters) = init_bookmarks_mutable_counters().await?;
-            let repo = repo.dangerous_override(|_| bookmarks);
+            let (bookmarks, bookmark_update_log, mutable_counters) =
+                init_bookmarks_mutable_counters().await?;
+            let repo = repo
+                .dangerous_override(|_| bookmarks)
+                .dangerous_override(|_| bookmark_update_log);
 
             let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
 

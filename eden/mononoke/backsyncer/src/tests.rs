@@ -859,7 +859,10 @@ async fn init_repos(
     let target_repo_id = RepositoryId::new(2);
     let target_repo = new_memblob_empty_with_id(None, target_repo_id)?;
     let bookmarks = target_repo_dbs.bookmarks.clone();
-    let target_repo = target_repo.dangerous_override(|_| bookmarks);
+    let bookmark_update_log = target_repo_dbs.bookmark_update_log.clone();
+    let target_repo = target_repo
+        .dangerous_override(|_| bookmarks)
+        .dangerous_override(|_| bookmark_update_log);
 
     // Init counters
     target_repo_dbs
@@ -1132,7 +1135,10 @@ async fn init_merged_repos(
         let small_repo_dbs = init_dbs()?;
 
         let bookmarks = small_repo_dbs.bookmarks.clone();
-        let small_repo = small_repo.dangerous_override(|_| bookmarks);
+        let bookmark_update_log = small_repo_dbs.bookmark_update_log.clone();
+        let small_repo = small_repo
+            .dangerous_override(|_| bookmarks)
+            .dangerous_override(|_| bookmark_update_log);
 
         // Init counters
         small_repo_dbs
@@ -1495,6 +1501,7 @@ fn init_dbs() -> Result<TargetRepoDbs, Error> {
     Ok(TargetRepoDbs {
         connections,
         bookmarks: bookmarks.clone(),
+        bookmark_update_log: bookmarks,
         counters: counters.clone(),
     })
 }

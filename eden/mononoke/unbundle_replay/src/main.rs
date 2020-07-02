@@ -17,7 +17,7 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::BlobrepoBuilder;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::Freshness;
+use bookmarks::{BookmarkUpdateLog, Freshness};
 use bytes::Bytes;
 use clap::{Arg, ArgMatches, SubCommand};
 use cmdlib::{args, monitoring::ReadyFlagService};
@@ -193,7 +193,7 @@ async fn get_replay_stream<'a>(
             info!(ctx.logger(), "Fetching bundle from log entry: {}", id);
 
             let entry = repo
-                .get_bookmarks_object()
+                .attribute_expected::<dyn BookmarkUpdateLog>()
                 .read_next_bookmark_log_entries(
                     ctx.clone(),
                     id - 1,

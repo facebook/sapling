@@ -29,7 +29,8 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::{
-    BookmarkTransactionError, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
+    BookmarkTransactionError, BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason,
+    Bookmarks, Freshness,
 };
 use cloned::cloned;
 use context::CoreContext;
@@ -369,6 +370,7 @@ where
 pub struct TargetRepoDbs {
     pub connections: SqlConnections,
     pub bookmarks: Arc<dyn Bookmarks>,
+    pub bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
     pub counters: SqlMutableCounters,
 }
 
@@ -410,7 +412,10 @@ pub async fn open_backsyncer_dbs(
 
     Ok(TargetRepoDbs {
         connections,
-        bookmarks: blobrepo.get_bookmarks_object(),
+        bookmarks: blobrepo.bookmarks(),
+        bookmark_update_log: blobrepo
+            .attribute_expected::<dyn BookmarkUpdateLog>()
+            .clone(),
         counters,
     })
 }

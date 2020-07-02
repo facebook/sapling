@@ -14,7 +14,7 @@ use blobstore_factory::{make_blobstore, make_metadata_sql_factory, MetadataSqlFa
 use bonsai_git_mapping::{BonsaiGitMapping, SqlBonsaiGitMappingConnection};
 use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping};
 use bonsai_hg_mapping::{BonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMapping};
-use bookmarks::{Bookmarks, CachedBookmarks};
+use bookmarks::{BookmarkUpdateLog, Bookmarks, CachedBookmarks};
 use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, InProcessLease, LeaseOps, MemcacheOps,
 };
@@ -326,8 +326,11 @@ impl TestRepoBuilder {
 
         let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
 
+        let bookmarks = Arc::new(SqlBookmarks::with_sqlite_in_memory()?);
+
         Ok(blobrepo_new(
-            Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
+            bookmarks.clone(),
+            bookmarks,
             repo_blobstore_args,
             Arc::new(
                 NewFilenodesBuilder::with_sqlite_in_memory()
@@ -430,9 +433,12 @@ pub fn new_memblob_with_connection_with_id(
 
     let phases_factory = SqlPhasesFactory::from_sql_connections(sql_connections.clone());
 
+    let bookmarks = Arc::new(SqlBookmarks::from_sql_connections(sql_connections.clone()));
+
     Ok((
         blobrepo_new(
-            Arc::new(SqlBookmarks::from_sql_connections(sql_connections.clone())),
+            bookmarks.clone(),
+            bookmarks,
             repo_blobstore_args,
             // Filenodes are intentionally created on another connection
             Arc::new(
@@ -478,19 +484,21 @@ async fn new_development(
     reponame: String,
 ) -> Result<BlobRepo, Error> {
     let bookmarks = async {
-        let bookmarks = sql_factory
-            .open::<SqlBookmarks>()
-            .compat()
-            .await
-            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+        let sql_bookmarks = Arc::new(
+            sql_factory
+                .open::<SqlBookmarks>()
+                .compat()
+                .await
+                .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
+        );
 
         let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
-            Arc::new(CachedBookmarks::new(Arc::new(bookmarks), ttl))
+            Arc::new(CachedBookmarks::new(sql_bookmarks.clone(), ttl))
         } else {
-            Arc::new(bookmarks)
+            sql_bookmarks.clone()
         };
 
-        Ok(bookmarks)
+        Ok((bookmarks, sql_bookmarks))
     };
 
     let filenodes_builder = async {
@@ -554,7 +562,7 @@ async fn new_development(
     };
 
     let (
-        bookmarks,
+        (bookmarks, bookmark_update_log),
         filenodes_builder,
         changesets,
         bonsai_git_mapping,
@@ -577,6 +585,7 @@ async fn new_development(
 
     Ok(blobrepo_new(
         bookmarks,
+        bookmark_update_log,
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
         Arc::new(filenodes_builder.build()),
         Arc::new(changesets),
@@ -683,11 +692,16 @@ async fn new_production(
         &filenodes_tier,
     );
 
-    let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
-        Arc::new(CachedBookmarks::new(Arc::new(bookmarks), ttl))
-    } else {
-        Arc::new(bookmarks)
-    };
+    let bookmarks = Arc::new(bookmarks);
+    let (bookmarks, bookmark_update_log): (Arc<dyn Bookmarks>, Arc<dyn BookmarkUpdateLog>) =
+        if let Some(ttl) = bookmarks_cache_ttl {
+            (
+                Arc::new(CachedBookmarks::new(bookmarks.clone(), ttl)),
+                bookmarks,
+            )
+        } else {
+            (bookmarks.clone(), bookmarks)
+        };
 
     let changesets = Arc::new(CachingChangesets::new(
         fb,
@@ -706,6 +720,7 @@ async fn new_production(
 
     Ok(blobrepo_new(
         bookmarks,
+        bookmark_update_log,
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
         Arc::new(filenodes_builder.build()) as Arc<dyn Filenodes>,
         changesets,
@@ -733,6 +748,7 @@ fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
 
 pub fn blobrepo_new(
     bookmarks: Arc<dyn Bookmarks>,
+    bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
     blobstore_args: RepoBlobstoreArgs,
     filenodes: Arc<dyn Filenodes>,
     changesets: Arc<dyn Changesets>,
@@ -748,13 +764,14 @@ pub fn blobrepo_new(
 ) -> BlobRepo {
     let attributes = {
         let mut attributes = TypeMap::new();
+        attributes.insert::<dyn Bookmarks>(bookmarks);
+        attributes.insert::<dyn BookmarkUpdateLog>(bookmark_update_log);
         attributes.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
         attributes.insert::<dyn Filenodes>(filenodes);
         attributes.insert::<dyn HgMutationStore>(hg_mutation_store);
         Arc::new(attributes)
     };
     BlobRepo::new_dangerous(
-        bookmarks,
         blobstore_args,
         changesets,
         bonsai_git_mapping,

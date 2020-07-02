@@ -12,7 +12,7 @@ use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkPrefix, Freshness};
+use bookmarks::{BookmarkKind, BookmarkName, BookmarkPrefix, Freshness};
 use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use context::CoreContext;
@@ -670,12 +670,14 @@ where
     // Build lookups
     let repoid = *(&repo.get_repoid());
     let published_bookmarks = repo
-        .get_bookmarks_object()
-        .list_publishing_by_prefix(
+        .bookmarks()
+        .list(
             ctx.clone(),
-            &BookmarkPrefix::empty(),
             repoid,
             Freshness::MostRecent,
+            &BookmarkPrefix::empty(),
+            BookmarkKind::ALL_PUBLISHING,
+            std::u64::MAX,
         )
         .map_ok(|(book, csid)| (book.name, csid))
         .try_collect::<HashMap<_, _>>();

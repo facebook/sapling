@@ -18,7 +18,8 @@ use bonsai_git_mapping::{
     extract_git_sha1_from_bonsai_extra, BonsaiGitMapping, BonsaiGitMappingEntry,
 };
 use bookmarks::{
-    BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction, TransactionHook,
+    BookmarkName, BookmarkTransaction, BookmarkTransactionHook, BookmarkUpdateReason,
+    BundleReplayData,
 };
 use context::CoreContext;
 use futures::{
@@ -339,7 +340,7 @@ fn upload_git_mapping_bookmark_txn_hook(
     bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     uploaded_bonsais: HashMap<ChangesetId, BonsaiChangeset>,
     ancestors_no_git_mapping: HashMap<ChangesetId, BonsaiChangeset>,
-) -> TransactionHook {
+) -> BookmarkTransactionHook {
     Arc::new(move |ctx, sql_txn| {
         let uploaded_bonsais_len = uploaded_bonsais.len();
         let ancestors_no_git_mapping_len = ancestors_no_git_mapping.len();
@@ -807,7 +808,7 @@ async fn save_bookmark_pushes_to_db<'a>(
     repo: &'a BlobRepo,
     reason: BookmarkUpdateReason,
     bonsai_bookmark_pushes: Vec<Option<BookmarkPush<ChangesetId>>>,
-    txn_hook: Option<TransactionHook>,
+    txn_hook: Option<BookmarkTransactionHook>,
 ) -> Result<(), Error> {
     if bonsai_bookmark_pushes.is_empty() {
         // If we have no bookmarks, then don't create an empty transaction. This is a
@@ -942,7 +943,7 @@ fn check_plain_bookmark_move_preconditions(
 }
 
 fn add_bookmark_to_transaction(
-    txn: &mut Box<dyn Transaction>,
+    txn: &mut Box<dyn BookmarkTransaction>,
     bookmark_push: BookmarkPush<ChangesetId>,
     reason: BookmarkUpdateReason,
 ) -> Result<()> {
@@ -955,8 +956,8 @@ fn add_bookmark_to_transaction(
         },
         BookmarkPush::Infinitepush(InfiniteBookmarkPush { name, new, old, .. }) => match (new, old)
         {
-            (new, Some(old)) => txn.update_infinitepush(&name, new, old),
-            (new, None) => txn.create_infinitepush(&name, new),
+            (new, Some(old)) => txn.update_scratch(&name, new, old),
+            (new, None) => txn.create_scratch(&name, new),
         },
     }
 }

@@ -1454,6 +1454,16 @@ impl HgCommands for RepoClient {
                                 (bookmark.into_name().to_string(), cs_id)
                             })
                             .collect()
+                            .and_then(move |bookmarks| {
+                                if bookmarks.len() < max as usize {
+                                    Ok(bookmarks)
+                                } else {
+                                    Err(format_err!(
+                                        "Bookmark query was truncated after {} results, use a more specific prefix search.",
+                                        max,
+                                    ))
+                                }
+                            })
                             .boxify()
                     } else {
                         // literal match

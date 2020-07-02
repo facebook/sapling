@@ -204,6 +204,18 @@ pub enum BookmarkKind {
     PullDefaultPublishing,
 }
 
+impl BookmarkKind {
+    pub const ALL: &'static [BookmarkKind] = &[
+        BookmarkKind::Scratch,
+        BookmarkKind::Publishing,
+        BookmarkKind::PullDefaultPublishing,
+    ];
+    pub const ALL_PUBLISHING: &'static [BookmarkKind] = &[
+        BookmarkKind::Publishing,
+        BookmarkKind::PullDefaultPublishing,
+    ];
+}
+
 impl std::fmt::Display for BookmarkKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use BookmarkKind::*;
@@ -407,6 +419,22 @@ fn prefix_to_range_end(mut prefix: AsciiString) -> Option<AsciiString> {
 mod tests {
     use super::*;
     use quickcheck::quickcheck;
+
+    #[test]
+    fn bookmark_kind_all_contains_all_kinds() {
+        // Test that `BookmarkKind::ALL` does indeed contain all bookmark
+        // kinds.  If you need to add a variant here, make sure you add it
+        // to `BookmarkKind::ALL` or this test will fail.
+        let mut count = 0;
+        for kind in BookmarkKind::ALL.iter() {
+            match kind {
+                BookmarkKind::Scratch
+                | BookmarkKind::Publishing
+                | BookmarkKind::PullDefaultPublishing => count += 1,
+            }
+        }
+        assert_eq!(count, BookmarkKind::ALL.len());
+    }
 
     quickcheck! {
         fn test_prefix_range_contains_self(bookmark: Bookmark) -> bool {

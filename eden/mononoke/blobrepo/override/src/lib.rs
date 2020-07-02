@@ -10,7 +10,7 @@
 use blobrepo::{BlobRepo, BlobRepoInner};
 use blobstore::Blobstore;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use bookmarks::Bookmarks;
+use bookmarks::{BookmarkUpdateLog, Bookmarks};
 use cacheblob::LeaseOps;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::Changesets;
@@ -80,9 +80,26 @@ impl DangerousOverride<Arc<dyn Bookmarks>> for BlobRepoInner {
     where
         F: FnOnce(Arc<dyn Bookmarks>) -> Arc<dyn Bookmarks>,
     {
-        let bookmarks = modify(self.bookmarks.clone());
+        let bookmarks = modify(self.attribute_expected::<dyn Bookmarks>().clone());
+        let mut attributes = self.attributes.as_ref().clone();
+        attributes.insert::<dyn Bookmarks>(bookmarks);
         Self {
-            bookmarks,
+            attributes: Arc::new(attributes),
+            ..self.clone()
+        }
+    }
+}
+
+impl DangerousOverride<Arc<dyn BookmarkUpdateLog>> for BlobRepoInner {
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(Arc<dyn BookmarkUpdateLog>) -> Arc<dyn BookmarkUpdateLog>,
+    {
+        let bookmarks = modify(self.attribute_expected::<dyn BookmarkUpdateLog>().clone());
+        let mut attributes = self.attributes.as_ref().clone();
+        attributes.insert::<dyn BookmarkUpdateLog>(bookmarks);
+        Self {
+            attributes: Arc::new(attributes),
             ..self.clone()
         }
     }

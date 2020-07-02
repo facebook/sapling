@@ -144,6 +144,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
     let blobstore =
         RepoBlobstoreArgs::new(blobstore, None, repoid, ScubaSampleBuilder::with_discard());
     Ok(blobrepo_factory::blobrepo_new(
+        bookmarks.clone(),
         bookmarks,
         blobstore,
         filenodes,

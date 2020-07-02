@@ -9,9 +9,9 @@
 
 use anyhow::{bail, format_err, Error, Result};
 use bookmarks::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkTransactionError,
-    BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
-    Transaction, TransactionHook,
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkTransaction,
+    BookmarkTransactionError, BookmarkTransactionHook, BookmarkUpdateLog, BookmarkUpdateLogEntry,
+    BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
 };
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
@@ -27,17 +27,12 @@ use stats::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-const DEFAULT_MAX: u64 = std::u64::MAX;
 const MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT: usize = 5;
 
 define_stats! {
     prefix = "mononoke.dbbookmarks";
-    list_all_by_prefix: timeseries(Rate, Sum),
-    list_all_by_prefix_maybe_stale: timeseries(Rate, Sum),
-    list_pull_default_by_prefix: timeseries(Rate, Sum),
-    list_pull_default_by_prefix_maybe_stale: timeseries(Rate, Sum),
-    list_publishing_by_prefix: timeseries(Rate, Sum),
-    list_publishing_by_prefix_maybe_stale: timeseries(Rate, Sum),
+    list: timeseries(Rate, Sum),
+    list_maybe_stale: timeseries(Rate, Sum),
     get_bookmark: timeseries(Rate, Sum),
     bookmarks_update_log_insert_success: timeseries(Rate, Sum),
     bookmarks_update_log_insert_success_attempt_count: timeseries(Rate, Average, Sum),
@@ -224,6 +219,7 @@ queries! {
          FROM bookmarks
          WHERE repo_id = {repo_id}
            AND hg_kind IN {kinds}
+         ORDER BY name ASC
          LIMIT {limit}"
     }
 
@@ -233,7 +229,8 @@ queries! {
          WHERE repo_id = {repo_id}
            AND name LIKE {prefix_like_pattern} ESCAPE {escape_character}
            AND hg_kind IN {kinds}
-          LIMIT {limit}"
+         ORDER BY name ASC
+         LIMIT {limit}"
     }
 }
 
@@ -253,134 +250,54 @@ impl SqlConstruct for SqlBookmarks {
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlBookmarks {}
 
-fn query_to_stream<F>(v: F, max: u64) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>
+fn query_to_stream<F>(query: F) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>
 where
     F: Future<Output = Result<Vec<(BookmarkName, BookmarkKind, ChangesetId)>>> + Send + 'static,
 {
-    v.map_ok(move |rows| {
-        if rows.len() as u64 >= max {
-            let message = format_err!(
-                "Bookmark query was truncated after {} results, use a more specific prefix search.",
-                max
-            );
-            future::err(message).into_stream().left_stream()
-        } else {
-            stream::iter(rows.into_iter().map(Ok)).right_stream()
-        }
-    })
-    .try_flatten_stream()
-    .map_ok(|row| {
-        let (name, kind, changeset_id) = row;
-        (Bookmark::new(name, kind), changeset_id)
-    })
-    .boxed()
-}
-
-impl SqlBookmarks {
-    fn list_impl(
-        &self,
-        _ctx: CoreContext,
-        repo_id: RepositoryId,
-        prefix: &BookmarkPrefix,
-        kinds: &[BookmarkKind],
-        freshness: Freshness,
-        max: u64,
-    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-        let conn = match freshness {
-            Freshness::MostRecent => &self.read_master_connection,
-            Freshness::MaybeStale => &self.read_connection,
-        };
-
-        let query = if prefix.is_empty() {
-            SelectAll::query(&conn, &repo_id, &max, kinds)
-                .compat()
-                .left_future()
-        } else {
-            let prefix_like_pattern = prefix.to_escaped_sql_like_pattern();
-            SelectByPrefix::query(&conn, &repo_id, &prefix_like_pattern, &"\\", &max, kinds)
-                .compat()
-                .right_future()
-        };
-
-        query_to_stream(query, max)
-    }
+    query
+        .map_ok(move |rows| stream::iter(rows.into_iter().map(Ok)))
+        .try_flatten_stream()
+        .map_ok(|row| {
+            let (name, kind, changeset_id) = row;
+            (Bookmark::new(name, kind), changeset_id)
+        })
+        .boxed()
 }
 
 impl Bookmarks for SqlBookmarks {
-    fn list_publishing_by_prefix(
+    fn list(
         &self,
         ctx: CoreContext,
-        prefix: &BookmarkPrefix,
         repo_id: RepositoryId,
         freshness: Freshness,
+        prefix: &BookmarkPrefix,
+        kinds: &[BookmarkKind],
+        limit: u64,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-        match freshness {
+        let conn = match freshness {
             Freshness::MaybeStale => {
-                STATS::list_publishing_by_prefix_maybe_stale.add_value(1);
+                STATS::list_maybe_stale.add_value(1);
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsReplica);
+                &self.read_connection
             }
             Freshness::MostRecent => {
-                STATS::list_publishing_by_prefix.add_value(1);
+                STATS::list.add_value(1);
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
+                &self.read_master_connection
             }
         };
 
-        use BookmarkKind::*;
-        let kinds = vec![Publishing, PullDefaultPublishing];
-        self.list_impl(ctx, repo_id, prefix, &kinds, freshness, DEFAULT_MAX)
-    }
-
-    fn list_pull_default_by_prefix(
-        &self,
-        ctx: CoreContext,
-        prefix: &BookmarkPrefix,
-        repo_id: RepositoryId,
-        freshness: Freshness,
-    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-        match freshness {
-            Freshness::MaybeStale => {
-                STATS::list_pull_default_by_prefix_maybe_stale.add_value(1);
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlReadsReplica);
-            }
-            Freshness::MostRecent => {
-                STATS::list_pull_default_by_prefix.add_value(1);
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlReadsMaster);
-            }
-        };
-
-        use BookmarkKind::*;
-        let kinds = vec![PullDefaultPublishing];
-        self.list_impl(ctx, repo_id, prefix, &kinds, freshness, DEFAULT_MAX)
-    }
-
-    fn list_all_by_prefix(
-        &self,
-        ctx: CoreContext,
-        prefix: &BookmarkPrefix,
-        repo_id: RepositoryId,
-        freshness: Freshness,
-        max: u64,
-    ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-        match freshness {
-            Freshness::MaybeStale => {
-                STATS::list_all_by_prefix_maybe_stale.add_value(1);
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlReadsReplica);
-            }
-            Freshness::MostRecent => {
-                STATS::list_all_by_prefix.add_value(1);
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlReadsMaster);
-            }
-        };
-
-        use BookmarkKind::*;
-        let kinds = vec![Scratch, Publishing, PullDefaultPublishing];
-        self.list_impl(ctx, repo_id, prefix, &kinds, freshness, max)
+        if prefix.is_empty() {
+            query_to_stream(SelectAll::query(&conn, &repo_id, &limit, kinds).compat())
+        } else {
+            let prefix_like_pattern = prefix.to_escaped_sql_like_pattern();
+            query_to_stream(
+                SelectByPrefix::query(&conn, &repo_id, &prefix_like_pattern, &"\\", &limit, kinds)
+                    .compat(),
+            )
+        }
     }
 
     fn get(
@@ -398,6 +315,20 @@ impl Bookmarks for SqlBookmarks {
             .boxed()
     }
 
+    fn create_transaction(
+        &self,
+        ctx: CoreContext,
+        repo_id: RepositoryId,
+    ) -> Box<dyn BookmarkTransaction> {
+        Box::new(SqlBookmarksTransaction::new(
+            ctx,
+            self.write_connection.clone(),
+            repo_id.clone(),
+        ))
+    }
+}
+
+impl BookmarkUpdateLog for SqlBookmarks {
     fn list_bookmark_log_entries(
         &self,
         ctx: CoreContext,
@@ -431,14 +362,6 @@ impl Bookmarks for SqlBookmarks {
                 .try_flatten_stream()
                 .boxed(),
         }
-    }
-
-    fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<dyn Transaction> {
-        Box::new(SqlBookmarksTransaction::new(
-            ctx,
-            self.write_connection.clone(),
-            repoid.clone(),
-        ))
     }
 
     fn count_further_bookmark_log_entries(
@@ -1014,7 +937,7 @@ impl SqlBookmarksTransaction {
     }
 }
 
-impl Transaction for SqlBookmarksTransaction {
+impl BookmarkTransaction for SqlBookmarksTransaction {
     fn update(
         &mut self,
         key: &BookmarkName,
@@ -1070,7 +993,7 @@ impl Transaction for SqlBookmarksTransaction {
         Ok(())
     }
 
-    fn update_infinitepush(
+    fn update_scratch(
         &mut self,
         key: &BookmarkName,
         new_cs: ChangesetId,
@@ -1083,7 +1006,7 @@ impl Transaction for SqlBookmarksTransaction {
         Ok(())
     }
 
-    fn create_infinitepush(&mut self, key: &BookmarkName, new_cs: ChangesetId) -> Result<()> {
+    fn create_scratch(&mut self, key: &BookmarkName, new_cs: ChangesetId) -> Result<()> {
         self.payload.check_if_bookmark_already_used(key)?;
         self.payload
             .infinitepush_creates
@@ -1099,7 +1022,7 @@ impl Transaction for SqlBookmarksTransaction {
     /// tables. `txn_hook()` should apply changes to the transaction.
     fn commit_with_hook(
         self: Box<Self>,
-        txn_hook: TransactionHook,
+        txn_hook: BookmarkTransactionHook,
     ) -> BoxFuture<'static, Result<bool>> {
         let Self {
             repo_id,
@@ -1225,14 +1148,14 @@ fn get_bundle_replay_data(
 #[cfg(test)]
 mod test {
     use super::*;
+    use ascii::AsciiString;
     use fbinit::FacebookInit;
     use mononoke_types_mocks::{
         changesetid::{ONES_CSID, TWOS_CSID},
         repo::REPO_ZERO,
     };
     use quickcheck::quickcheck;
-    use std::collections::HashSet;
-    use std::iter::FromIterator;
+    use std::collections::{BTreeMap, HashSet};
     use tokio_compat::runtime::Runtime;
 
     #[fbinit::compat_test]
@@ -1303,61 +1226,81 @@ mod test {
 
         InsertBookmarks::query(&conn, &rows[..]).compat().await?;
 
-        // Create normal over scratch should fail
+        // Using 'create_scratch' to replace a non-scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.create_infinitepush(&publishing_name, ONES_CSID)?;
+        txn.create_scratch(&publishing_name, ONES_CSID)?;
         assert!(!txn.commit().await?);
 
-        // Create scratch over normal should fail
+        // Using 'create' to replace a scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
         txn.create(&scratch_name, ONES_CSID, data.clone())?;
         assert!(!txn.commit().await?);
 
-        // Updating publishing with infinite push should fail.
+        // Using 'update_scratch' to update a publishing bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update_infinitepush(&publishing_name, TWOS_CSID, ONES_CSID)?;
+        txn.update_scratch(&publishing_name, TWOS_CSID, ONES_CSID)?;
         assert!(!txn.commit().await?);
 
-        // Updating pull default with infinite push should fail.
+        // Using 'update_scratch' to update a pull-default bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update_infinitepush(&pull_default_name, TWOS_CSID, ONES_CSID)?;
+        txn.update_scratch(&pull_default_name, TWOS_CSID, ONES_CSID)?;
         assert!(!txn.commit().await?);
 
-        // Updating publishing with normal should succeed
+        // Using 'update' to update a publishing bookmark should succeed.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
         txn.update(&publishing_name, TWOS_CSID, ONES_CSID, data.clone())?;
         assert!(txn.commit().await?);
 
-        // Updating pull default with normal should succeed
+        // Using 'update' to update a pull-default bookmark should succeed.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
         txn.update(&pull_default_name, TWOS_CSID, ONES_CSID, data.clone())?;
         assert!(txn.commit().await?);
 
-        // Updating scratch with normal should fail.
+        // Using 'update' to update a scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
         txn.update(&scratch_name, TWOS_CSID, ONES_CSID, data.clone())?;
         assert!(!txn.commit().await?);
 
-        // Updating scratch with infinite push should succeed.
+        // Using 'update_scratch' to update a scratch bookmark should succeed.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update_infinitepush(&scratch_name, TWOS_CSID, ONES_CSID)?;
+        txn.update_scratch(&scratch_name, TWOS_CSID, ONES_CSID)?;
         assert!(txn.commit().await?);
 
         Ok(())
     }
 
+    fn mock_bookmarks_response(
+        bookmarks: &BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
+        prefix: &BookmarkPrefix,
+        kinds: &[BookmarkKind],
+        limit: u64,
+    ) -> Vec<(Bookmark, ChangesetId)> {
+        let range = prefix.to_range();
+        bookmarks
+            .range(range)
+            .filter_map(|(bookmark, (kind, changeset_id))| {
+                if kinds.iter().any(|k| kind == k) {
+                    let bookmark = Bookmark {
+                        name: bookmark.clone(),
+                        kind: *kind,
+                    };
+                    Some((bookmark, *changeset_id))
+                } else {
+                    None
+                }
+            })
+            .take(limit as usize)
+            .collect()
+    }
+
     fn insert_then_query(
         fb: FacebookInit,
-        bookmarks: &Vec<(Bookmark, ChangesetId)>,
-        query: fn(
-            SqlBookmarks,
-            ctx: CoreContext,
-            &BookmarkPrefix,
-            RepositoryId,
-            Freshness,
-        ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>,
-        freshness: Freshness,
-    ) -> HashSet<(Bookmark, ChangesetId)> {
+        bookmarks: &BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
+        query_freshness: Freshness,
+        query_prefix: &BookmarkPrefix,
+        query_kinds: &[BookmarkKind],
+        query_limit: u64,
+    ) -> Vec<(Bookmark, ChangesetId)> {
         let mut rt = Runtime::new().unwrap();
 
         let ctx = CoreContext::test_mock(fb);
@@ -1368,54 +1311,56 @@ mod test {
 
         let rows: Vec<_> = bookmarks
             .iter()
-            .map(|(bookmark, changeset_id)| {
-                (&repo_id, bookmark.name(), changeset_id, bookmark.kind())
-            })
+            .map(|(bookmark, (kind, changeset_id))| (&repo_id, bookmark, changeset_id, kind))
             .collect();
 
-        rt.block_on(InsertBookmarks::query(&conn, &rows[..]))
+        rt.block_on(InsertBookmarks::query(&conn, rows.as_slice()))
             .expect("insert failed");
 
-        let stream = query(store, ctx, &BookmarkPrefix::empty(), repo_id, freshness)
-            .try_collect::<Vec<_>>()
-            .compat();
+        let response = store
+            .list(
+                ctx,
+                repo_id,
+                query_freshness,
+                query_prefix,
+                query_kinds,
+                query_limit,
+            )
+            .try_collect::<Vec<_>>();
 
-        let res = rt.block_on(stream).expect("query failed");
-        HashSet::from_iter(res)
+        rt.block_on_std(response).expect("query failed")
     }
 
     quickcheck! {
-        fn filter_publishing(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
-
-            fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-                bookmarks.list_publishing_by_prefix(ctx, prefix, repo_id, freshness)
-            }
-
-            let have = insert_then_query(fb, &bookmarks, query, freshness);
-            let want = HashSet::from_iter(bookmarks.into_iter().filter(|(b, _)| b.publishing()));
-            want == have
-        }
-
-        fn filter_pull_default(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
-
-            fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-                bookmarks.list_pull_default_by_prefix(ctx, prefix, repo_id, freshness)
-            }
-
-            let have = insert_then_query(fb, &bookmarks, query, freshness);
-            let want = HashSet::from_iter(bookmarks.into_iter().filter(|(b, _)| b.pull_default()));
-            want == have
-        }
-
-        fn filter_all(fb: FacebookInit, bookmarks: Vec<(Bookmark, ChangesetId)>, freshness: Freshness) -> bool {
-
-            fn query(bookmarks: SqlBookmarks, ctx: CoreContext, prefix: &BookmarkPrefix, repo_id: RepositoryId, freshness: Freshness) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
-                bookmarks.list_all_by_prefix(ctx, prefix, repo_id, freshness, DEFAULT_MAX)
-            }
-
-            let have = insert_then_query(fb, &bookmarks, query, freshness);
-            let want = HashSet::from_iter(bookmarks);
-            want == have
+        fn responses_match(
+            fb: FacebookInit,
+            bookmarks: BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>,
+            freshness: Freshness,
+            kinds: HashSet<BookmarkKind>,
+            prefix_char: Option<ascii_ext::AsciiChar>,
+            limit: u64
+        ) -> bool {
+            // Test that requests return what is expected.
+            let kinds: Vec<_> = kinds.into_iter().collect();
+            let prefix = match prefix_char {
+                Some(ch) => BookmarkPrefix::new_ascii(AsciiString::from(&[ch.0][..])),
+                None => BookmarkPrefix::empty(),
+            };
+            let have = insert_then_query(
+                fb,
+                &bookmarks,
+                freshness,
+                &prefix,
+                kinds.as_slice(),
+                limit,
+            );
+            let want = mock_bookmarks_response(
+                &bookmarks,
+                &prefix,
+                kinds.as_slice(),
+                limit,
+            );
+            have == want
         }
     }
 }

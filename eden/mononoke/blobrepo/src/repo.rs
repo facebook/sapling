@@ -10,8 +10,8 @@ use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
 use bookmarks::{
-    self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason,
-    Bookmarks, Freshness,
+    self, Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkTransaction,
+    BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
 };
 use cacheblob::LeaseOps;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
@@ -56,7 +56,6 @@ define_stats! {
 #[derive(Clone)]
 pub struct BlobRepoInner {
     pub blobstore: RepoBlobstore,
-    pub bookmarks: Arc<dyn Bookmarks>,
     pub changesets: Arc<dyn Changesets>,
     pub bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     pub bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
@@ -78,13 +77,27 @@ pub struct BlobRepo {
     inner: Arc<BlobRepoInner>,
 }
 
+impl BlobRepoInner {
+    pub fn attribute<T: ?Sized + Send + Sync + 'static>(&self) -> Option<&Arc<T>> {
+        self.attributes.get::<T>()
+    }
+
+    pub fn attribute_expected<T: ?Sized + Send + Sync + 'static>(&self) -> &Arc<T> {
+        self.attributes.get::<T>().unwrap_or_else(|| {
+            panic!(
+                "BlobRepo initialized incorrectly and does not have {} attribute",
+                std::any::type_name::<T>()
+            )
+        })
+    }
+}
+
 impl BlobRepo {
     /// Create new `BlobRepo` object.
     ///
     /// Avoid using this constructor directly as it requires properly initialized `attributes`
     /// argument. Instead use `blobrepo_factory::*` functions.
     pub fn new_dangerous(
-        bookmarks: Arc<dyn Bookmarks>,
         blobstore_args: RepoBlobstoreArgs,
         changesets: Arc<dyn Changesets>,
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
@@ -109,7 +122,6 @@ impl BlobRepo {
         };
 
         let inner = BlobRepoInner {
-            bookmarks,
             blobstore,
             changesets,
             bonsai_git_mapping,
@@ -128,8 +140,14 @@ impl BlobRepo {
         }
     }
 
-    pub fn get_attribute<T: ?Sized + Send + Sync + 'static>(&self) -> Option<&Arc<T>> {
-        self.inner.attributes.get::<T>()
+    #[inline]
+    pub fn attribute<T: ?Sized + Send + Sync + 'static>(&self) -> Option<&Arc<T>> {
+        self.inner.attribute::<T>()
+    }
+
+    #[inline]
+    pub fn attribute_expected<T: ?Sized + Send + Sync + 'static>(&self) -> &Arc<T> {
+        self.inner.attribute_expected::<T>()
     }
 
     /// Get Bonsai changesets for Mercurial heads, which we approximate as Publishing Bonsai
@@ -139,13 +157,14 @@ impl BlobRepo {
         ctx: CoreContext,
     ) -> impl Stream<Item = ChangesetId, Error = Error> {
         STATS::get_bonsai_heads_maybe_stale.add_value(1);
-        self.inner
-            .bookmarks
-            .list_publishing_by_prefix(
+        self.attribute_expected::<dyn Bookmarks>()
+            .list(
                 ctx,
-                &BookmarkPrefix::empty(),
                 self.get_repoid(),
                 Freshness::MaybeStale,
+                &BookmarkPrefix::empty(),
+                BookmarkKind::ALL_PUBLISHING,
+                std::u64::MAX,
             )
             .map_ok(|(_, cs_id)| cs_id)
             .compat()
@@ -157,13 +176,14 @@ impl BlobRepo {
         ctx: CoreContext,
     ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
         STATS::get_bonsai_publishing_bookmarks_maybe_stale.add_value(1);
-        self.inner
-            .bookmarks
-            .list_publishing_by_prefix(
+        self.attribute_expected::<dyn Bookmarks>()
+            .list(
                 ctx,
-                &BookmarkPrefix::empty(),
                 self.get_repoid(),
                 Freshness::MaybeStale,
+                &BookmarkPrefix::empty(),
+                BookmarkKind::ALL_PUBLISHING,
+                std::u64::MAX,
             )
             .compat()
     }
@@ -176,13 +196,13 @@ impl BlobRepo {
         max: u64,
     ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
-        self.inner
-            .bookmarks
-            .list_all_by_prefix(
-                ctx.clone(),
-                prefix,
+        self.attribute_expected::<dyn Bookmarks>()
+            .list(
+                ctx,
                 self.get_repoid(),
                 Freshness::MaybeStale,
+                prefix,
+                BookmarkKind::ALL,
                 max,
             )
             .compat()
@@ -223,8 +243,7 @@ impl BlobRepo {
         name: &BookmarkName,
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
-        self.inner
-            .bookmarks
+        self.attribute_expected::<dyn Bookmarks>()
             .get(ctx, name, self.get_repoid())
             .compat()
             .boxify()
@@ -281,8 +300,7 @@ impl BlobRepo {
         freshness: Freshness,
     ) -> impl Stream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
     {
-        self.inner
-            .bookmarks
+        self.attribute_expected::<dyn BookmarkUpdateLog>()
             .list_bookmark_log_entries(
                 ctx.clone(),
                 name,
@@ -301,8 +319,7 @@ impl BlobRepo {
         limit: u64,
         freshness: Freshness,
     ) -> impl Stream<Item = BookmarkUpdateLogEntry, Error = Error> {
-        self.inner
-            .bookmarks
+        self.attribute_expected::<dyn BookmarkUpdateLog>()
             .read_next_bookmark_log_entries(ctx, id, self.get_repoid(), limit, freshness)
             .compat()
     }
@@ -313,16 +330,14 @@ impl BlobRepo {
         id: u64,
         exclude_reason: Option<BookmarkUpdateReason>,
     ) -> impl Future<Item = u64, Error = Error> {
-        self.inner
-            .bookmarks
+        self.attribute_expected::<dyn BookmarkUpdateLog>()
             .count_further_bookmark_log_entries(ctx, id, self.get_repoid(), exclude_reason)
             .compat()
     }
 
-    pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn bookmarks::Transaction> {
+    pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
         STATS::update_bookmark_transaction.add_value(1);
-        self.inner
-            .bookmarks
+        self.attribute_expected::<dyn Bookmarks>()
             .create_transaction(ctx, self.get_repoid())
     }
 
@@ -382,8 +397,8 @@ impl BlobRepo {
         })
     }
 
-    pub fn get_bookmarks_object(&self) -> Arc<dyn Bookmarks> {
-        self.inner.bookmarks.clone()
+    pub fn bookmarks(&self) -> Arc<dyn Bookmarks> {
+        self.attribute_expected::<dyn Bookmarks>().clone()
     }
 
     pub fn get_phases_factory(&self) -> &SqlPhasesFactory {

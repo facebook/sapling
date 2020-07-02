@@ -11,8 +11,8 @@
 
 use anyhow::Error;
 use bookmarks::{
-    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry,
-    BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
+    Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, BookmarkUpdateLog,
+    BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
 };
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
@@ -536,19 +536,18 @@ fn test_noop_update(fb: FacebookInit) {
 }
 
 #[fbinit::test]
-fn test_infinitepush_update_bookmark(fb: FacebookInit) {
+fn test_scratch_update_bookmark(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
         let bookmarks = SqlBookmarks::with_sqlite_in_memory().unwrap();
         let name_1 = create_bookmark_name("book");
 
         let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.create_infinitepush(&name_1, ONES_CSID).unwrap();
+        txn.create_scratch(&name_1, ONES_CSID).unwrap();
         assert!(txn.commit().await.unwrap());
 
         let mut txn = bookmarks.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update_infinitepush(&name_1, TWOS_CSID, ONES_CSID)
-            .unwrap();
+        txn.update_scratch(&name_1, TWOS_CSID, ONES_CSID).unwrap();
         assert!(txn.commit().await.unwrap());
 
         assert_eq!(
@@ -838,11 +837,12 @@ fn test_list_by_prefix(fb: FacebookInit) {
 
         assert_eq!(
             bookmarks
-                .list_all_by_prefix(
+                .list(
                     ctx.clone(),
-                    &prefix,
                     REPO_ZERO,
                     Freshness::MostRecent,
+                    &prefix,
+                    BookmarkKind::ALL,
                     std::u64::MAX
                 )
                 .try_collect::<HashMap<_, _>>()
@@ -856,12 +856,13 @@ fn test_list_by_prefix(fb: FacebookInit) {
 
         assert_eq!(
             bookmarks
-                .list_all_by_prefix(
+                .list(
                     ctx.clone(),
-                    &name_1_prefix,
                     REPO_ZERO,
                     Freshness::MostRecent,
-                    std::u64::MAX,
+                    &name_1_prefix,
+                    BookmarkKind::ALL,
+                    std::u64::MAX
                 )
                 .try_collect::<Vec<_>>()
                 .await
@@ -874,12 +875,13 @@ fn test_list_by_prefix(fb: FacebookInit) {
 
         assert_eq!(
             bookmarks
-                .list_all_by_prefix(
+                .list(
                     ctx.clone(),
-                    &name_2_prefix,
                     REPO_ZERO,
                     Freshness::MostRecent,
-                    std::u64::MAX,
+                    &name_2_prefix,
+                    BookmarkKind::ALL,
+                    std::u64::MAX
                 )
                 .try_collect::<Vec<_>>()
                 .await

@@ -12,7 +12,7 @@ use anyhow::{anyhow, format_err, Error};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use bookmarks::{BookmarkPrefix, Freshness};
+use bookmarks::{BookmarkKind, BookmarkPrefix, Freshness};
 use bulkops::fetch_all_public_changesets;
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, LeaseOps};
@@ -451,12 +451,14 @@ async fn tail_one_iteration(
     derive_utils: &[Arc<dyn DerivedUtils>],
 ) -> Result<(), Error> {
     let heads = repo
-        .get_bookmarks_object()
-        .list_publishing_by_prefix(
+        .bookmarks()
+        .list(
             ctx.clone(),
-            &BookmarkPrefix::empty(),
             repo.get_repoid(),
             Freshness::MostRecent,
+            &BookmarkPrefix::empty(),
+            BookmarkKind::ALL_PUBLISHING,
+            std::u64::MAX,
         )
         .map_ok(|(_name, csid)| csid)
         .try_collect::<Vec<_>>()

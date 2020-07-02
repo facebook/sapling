@@ -28,7 +28,7 @@ use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
 use blobstore::Loadable;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiOrHgChangesetIds};
-use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix, Freshness};
+use bookmarks::{Bookmark, BookmarkKind, BookmarkName, BookmarkPrefix, Freshness};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureExt;
@@ -159,15 +159,15 @@ define_stats! {
 
 impl BlobRepoHg for BlobRepo {
     fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping> {
-        get_attribute_expected::<dyn BonsaiHgMapping>(self)
+        self.attribute_expected::<dyn BonsaiHgMapping>()
     }
 
     fn get_filenodes(&self) -> &Arc<dyn Filenodes> {
-        get_attribute_expected::<dyn Filenodes>(self)
+        self.attribute_expected::<dyn Filenodes>()
     }
 
     fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore> {
-        get_attribute_expected::<dyn HgMutationStore>(self)
+        self.attribute_expected::<dyn HgMutationStore>()
     }
 
     fn get_bonsai_from_hg(
@@ -326,7 +326,7 @@ impl BlobRepoHg for BlobRepo {
         name: &BookmarkName,
     ) -> BoxFuture<Option<HgChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
-        self.get_bookmarks_object()
+        self.bookmarks()
             .get(ctx.clone(), name, self.get_repoid())
             .compat()
             .and_then({
@@ -350,12 +350,14 @@ impl BlobRepoHg for BlobRepo {
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         STATS::get_pull_default_bookmarks_maybe_stale.add_value(1);
         let stream = self
-            .get_bookmarks_object()
-            .list_pull_default_by_prefix(
+            .bookmarks()
+            .list(
                 ctx.clone(),
-                &BookmarkPrefix::empty(),
                 self.get_repoid(),
                 Freshness::MaybeStale,
+                &BookmarkPrefix::empty(),
+                &[BookmarkKind::PullDefaultPublishing][..],
+                std::u64::MAX,
             )
             .compat()
             .boxify();
@@ -370,12 +372,14 @@ impl BlobRepoHg for BlobRepo {
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         STATS::get_publishing_bookmarks_maybe_stale.add_value(1);
         let stream = self
-            .get_bookmarks_object()
-            .list_publishing_by_prefix(
+            .bookmarks()
+            .list(
                 ctx.clone(),
-                &BookmarkPrefix::empty(),
                 self.get_repoid(),
                 Freshness::MaybeStale,
+                &BookmarkPrefix::empty(),
+                BookmarkKind::ALL_PUBLISHING,
+                std::u64::MAX,
             )
             .compat()
             .boxify();
@@ -391,12 +395,13 @@ impl BlobRepoHg for BlobRepo {
     ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
         let stream = self
-            .get_bookmarks_object()
-            .list_all_by_prefix(
+            .bookmarks()
+            .list(
                 ctx.clone(),
-                prefix,
                 self.get_repoid(),
                 Freshness::MaybeStale,
+                prefix,
+                BookmarkKind::ALL,
                 max,
             )
             .compat()
@@ -532,13 +537,4 @@ fn to_hg_bookmark_stream(
         })
         .flatten()
         .boxify()
-}
-
-fn get_attribute_expected<T: ?Sized + Send + Sync + 'static>(repo: &BlobRepo) -> &Arc<T> {
-    repo.get_attribute::<T>().unwrap_or_else(|| {
-        panic!(
-            "BlobRepo initialized incorrectly and does not have {} attribute",
-            std::any::type_name::<T>()
-        )
-    })
 }
