@@ -23,6 +23,7 @@ pub mod ops;
 pub mod protocol;
 mod segment;
 pub mod spanset;
+pub mod utils;
 
 pub use id::{Group, Id, VertexName};
 pub use iddag::IdDag;
