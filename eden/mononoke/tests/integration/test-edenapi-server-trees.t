@@ -33,10 +33,12 @@ Start up EdenAPI server.
 
 Create and send tree request.
   $ edenapi_make_req data > req.cbor <<EOF
-  > [
-  >    ["", "$ROOT_MFID_1"],
-  >    ["", "$ROOT_MFID_2"]
-  > ]
+  > {
+  >   "keys": [
+  >     ["", "$ROOT_MFID_1"],
+  >     ["", "$ROOT_MFID_2"]
+  >   ]
+  > }
   > EOF
   Reading from stdin
   Generated request: DataRequest {

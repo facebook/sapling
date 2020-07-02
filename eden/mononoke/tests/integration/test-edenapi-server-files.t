@@ -33,10 +33,12 @@ Start up EdenAPI server.
 
 Create and send file data request.
   $ edenapi_make_req data > req.cbor <<EOF
-  > [
-  >    ["test.txt", "$TEST_FILENODE"],
-  >    ["copy.txt", "$COPY_FILENODE"]
-  > ]
+  > {
+  >   "keys": [
+  >     ["test.txt", "$TEST_FILENODE"],
+  >     ["copy.txt", "$COPY_FILENODE"]
+  >   ]
+  > }
   > EOF
   Reading from stdin
   Generated request: DataRequest {

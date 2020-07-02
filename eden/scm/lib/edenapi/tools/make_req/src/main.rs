@@ -68,16 +68,25 @@ fn main() -> Result<()> {
 /// Example request:
 ///
 ///     ```json
-///     [
-///       ["path/to/file_1", "48f43af456d770b6a78e1ace628319847e05cc24"],
-///       ["path/to/file_2", "7dcd6ede35eaaa5b1b16a341b19993e59f9b0dbf"],
-///       ["path/to/file_3", "218d708a9f8c3e37cfd7ab916c537449ac5419cd"],
-///     ]
+///     {
+///       "keys": [
+///         ["path/to/file_1", "48f43af456d770b6a78e1ace628319847e05cc24"],
+///         ["path/to/file_2", "7dcd6ede35eaaa5b1b16a341b19993e59f9b0dbf"],
+///         ["path/to/file_3", "218d708a9f8c3e37cfd7ab916c537449ac5419cd"],
+///       ]
+///     }
 ///     ```
 ///
 fn parse_data_req(json: &Value) -> Result<DataRequest> {
+    let json = json
+        .as_object()
+        .ok_or_else(|| anyhow!("input must be a JSON object"))?;
+    let keys = json
+        .get("keys")
+        .ok_or_else(|| anyhow!("missing field: keys"))?;
+
     Ok(DataRequest {
-        keys: parse_keys(json)?,
+        keys: parse_keys(keys)?,
     })
 }
 
