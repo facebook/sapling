@@ -1,8 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
-
 Test histedit extension: Fold commands
 ======================================
 
@@ -68,11 +65,11 @@ log before edit
 
 log after edit
   $ hg logt --graph
-  @  4:c4d7f3def76d d
+  @  10:c4d7f3def76d d
   |
-  o  3:575228819b7e f
+  o  9:575228819b7e f
   |
-  o  2:505a591af19e e
+  o  6:505a591af19e e
   |
   o  1:97d72e5f12c7 b
   |
@@ -91,10 +88,10 @@ post-fold manifest
 
 check histedit_source, including that it uses the later date, from the first changeset
 
-  $ hg log --debug --rev 'desc(f)'
-  changeset:   3:575228819b7e6ed69e8c0a6a383ee59a80db7358
+  $ hg log --debug --rev 'max(desc(f))'
+  changeset:   9:575228819b7e6ed69e8c0a6a383ee59a80db7358
   phase:       draft
-  parent:      2:505a591af19eed18f560af827b9e03d2076773dc
+  parent:      6:505a591af19eed18f560af827b9e03d2076773dc
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    81eede616954057198ead0b2c73b41d1f392829a
   user:        test
@@ -124,19 +121,19 @@ rollup will fold without preserving the folded commit's message or date
 
 log after edit
   $ hg logt --graph
-  @  3:bab801520cec d
+  @  14:bab801520cec d
   |
-  o  2:58c8f2bfc151 f
+  o  13:58c8f2bfc151 f
   |
-  o  1:5d939c56c72e b
+  o  12:5d939c56c72e b
   |
   o  0:8580ff50825a a
   
 
 description is taken from rollup target commit
 
-  $ hg log --debug --rev 'desc(b)'
-  changeset:   1:5d939c56c72e77e29f5167696218e2131a40f5cf
+  $ hg log --debug --rev 'max(desc(b))'
+  changeset:   12:5d939c56c72e77e29f5167696218e2131a40f5cf
   phase:       draft
   parent:      0:8580ff50825a50c8f716709acdf8de0deddcd6ab
   parent:      -1:0000000000000000000000000000000000000000
@@ -229,7 +226,8 @@ folding preserves initial author but uses later date
 
 tip before edit
   $ hg log --rev .
-  changeset:   5:10c36dd37515
+  changeset:   6:10c36dd37515
+  parent:      4:1ddb6c90f2ee
   user:        someone else
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     f
@@ -242,12 +240,13 @@ tip before edit
   > fold 10c36dd37515 f
   > EOF
   progress: editing: pick 1ddb6c90f2ee 4 e 1/2 changes (50.00%)
-  progress: editing: fold 10c36dd37515 5 f 2/2 changes (100.00%)
+  progress: editing: fold 10c36dd37515 6 f 2/2 changes (100.00%)
   progress: editing (end)
 
 tip after edit, which should use the later date, from the second changeset
   $ hg log --rev .
-  changeset:   4:e4f3ec5d0b40
+  changeset:   8:e4f3ec5d0b40
+  parent:      3:532247a8969b
   user:        test
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     e
@@ -395,7 +394,7 @@ dropped revision.
   HG: branch 'default'
   HG: changed file
   $ hg logt -G
-  @  1:10c647b2cdd5 +4
+  @  6:10c647b2cdd5 +4
   |
   o  0:0189ba417d34 1+2+3
   
@@ -449,7 +448,7 @@ Folding with initial rename (issue3729)
   > EOF
 
   $ hg logt --follow b.txt
-  1:cf858d235c76 rename
+  4:cf858d235c76 rename
   0:6c795aa153cb a
 
   $ cd ..
@@ -489,11 +488,13 @@ into the hook command.
   > fold a1a953ffb4b0 c
   > pick 6c795aa153cb a
   > EOF
+  commit 16b87e97178dde2af2f3c6f6ddda882292f21d13
+  commit 973e98d91193dacddd35dd67b9aee2d392393b9e
   commit 9599899f62c05f4377548c32bf1c9f1a39634b0c
 
   $ hg logt
-  1:9599899f62c0 a
-  0:79b99e9c8e49 b
+  6:9599899f62c0 a
+  5:79b99e9c8e49 b
 
   $ echo "foo" > amended.txt
   $ hg add amended.txt
@@ -510,27 +511,27 @@ editors.
   $ echo foo >> foo
   $ hg ci -m foo3
   $ hg logt
-  4:21679ff7675c foo3
-  3:b7389cc4d66e foo2
-  2:0e01aeef5fa8 foo1
-  1:578c7455730c a
-  0:79b99e9c8e49 b
+  10:21679ff7675c foo3
+  9:b7389cc4d66e foo2
+  8:0e01aeef5fa8 foo1
+  7:578c7455730c a
+  5:79b99e9c8e49 b
   $ cat > "$TESTTMP/editor.sh" <<EOF
   > echo ran editor >> "$TESTTMP/editorlog.txt"
   > cat \$1 >> "$TESTTMP/editorlog.txt"
   > echo END >> "$TESTTMP/editorlog.txt"
   > echo merged foos > \$1
   > EOF
-  $ HGEDITOR="sh \"$TESTTMP/editor.sh\"" hg histedit 'desc(a)' --commands - 2>&1 <<EOF | fixbundle
+  $ HGEDITOR="sh \"$TESTTMP/editor.sh\"" hg histedit 'max(desc(a))' --commands - 2>&1 <<EOF | fixbundle
   > pick 578c7455730c 1 a
   > pick 0e01aeef5fa8 2 foo1
   > fold b7389cc4d66e 3 foo2
   > fold 21679ff7675c 4 foo3
   > EOF
   $ hg logt
-  2:e8bedbda72c1 merged foos
-  1:578c7455730c a
-  0:79b99e9c8e49 b
+  14:e8bedbda72c1 merged foos
+  7:578c7455730c a
+  5:79b99e9c8e49 b
 Editor should have run only once
   $ cat $TESTTMP/editorlog.txt
   ran editor
