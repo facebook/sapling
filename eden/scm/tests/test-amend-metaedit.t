@@ -357,6 +357,7 @@ metaedit noncontinuous set of commits in the stack:
 Test copying obsmarkers
 
   $ hg init $TESTTMP/autorel
+  $ setconfig mutation.proxy-obsstore=off experimental.evolution=obsolete
   $ cd $TESTTMP/autorel
   $ drawdag<<'EOS'
   > D
@@ -386,20 +387,74 @@ Test copying obsmarkers
   $ hg log -r 'precursors(19437442f9e4)-19437442f9e4' -T '{desc} {node}\n' --hidden
   C 26805aba1e600a82e93661149f2313866a221a7b
 
+  $ hg debugmutation -r 'desc(C1)'
+   *  5577c14fa08d51a4644b9b4b6e001835594cadd2 amend by test at 1970-01-01T00:00:00 from:
+      26805aba1e600a82e93661149f2313866a221a7b
+  
+   *  1be7301b35ae8ac3543a07a5d0ce5ca615be709f metaedit-copy by test at 1970-01-01T00:00:00 from:
+      |-  5577c14fa08d51a4644b9b4b6e001835594cadd2 amend by test at 1970-01-01T00:00:00 from:
+      |   26805aba1e600a82e93661149f2313866a221a7b
+      '-  19437442f9e42aa92f504afb1a352caa3e6040f5 metaedit by test at 1970-01-01T00:00:00 from:
+          26805aba1e600a82e93661149f2313866a221a7b
+  
+Slightly more complex: with double amends
+FIXME: This does not work yet.
+
+  $ newrepo autorel1
+  $ setconfig mutation.proxy-obsstore=off experimental.evolution=obsolete
+  $ drawdag<<'EOS'
+  > D
+  > |
+  > C C0 # amend: C -> C0 -> C1
+  >  \| C1
+  >   |/
+  >   B
+  >   |
+  >   A
+  > EOS
+  $ hg metaedit -r $B -m B1
+  $ glog -r 'all()'
+  o  9:1be7301b35ae@default(draft) C1
+  |
+  | o  8:52bc6136aa97@default(draft) D
+  | |
+  | o  7:19437442f9e4@default(draft) C
+  |/
+  o  6:888bb4818188@default(draft) B1
+  |
+  o  0:426bada5c675@default(draft) A
+  
+
+  $ hg log -r 'successors(19437442f9e4)-19437442f9e4' -T '{node}\n'
+
+  $ hg log -r 'precursors(19437442f9e4)-19437442f9e4' -T '{desc} {node}\n' --hidden
+  C 26805aba1e600a82e93661149f2313866a221a7b
+
+  $ hg debugmutation -r 'desc(C1)'
+   *  5577c14fa08d51a4644b9b4b6e001835594cadd2 amend by test at 1970-01-01T00:00:00 from:
+      bf080f2103efc214ac3a4638254d4c5370a9294b amend by test at 1970-01-01T00:00:00 from:
+      26805aba1e600a82e93661149f2313866a221a7b
+  
+   *  1be7301b35ae8ac3543a07a5d0ce5ca615be709f metaedit by test at 1970-01-01T00:00:00 from:
+      5577c14fa08d51a4644b9b4b6e001835594cadd2 amend by test at 1970-01-01T00:00:00 from:
+      bf080f2103efc214ac3a4638254d4c5370a9294b amend by test at 1970-01-01T00:00:00 from:
+      26805aba1e600a82e93661149f2313866a221a7b
+  
+
 Test empty commit
   $ hg co -q 1be7301b35ae
   $ hg commit --config ui.allowemptycommit=true -m empty
   $ hg metaedit -r ".^" -m "parent of empty commit"
   $ glog -r 'all()'
-  @  11:e582f22eefc0@default(draft) empty
+  @  12:e582f22eefc0@default(draft) empty
   |
-  o  10:539393debc47@default(draft) parent of empty commit
+  o  11:539393debc47@default(draft) parent of empty commit
   |
   | o  8:52bc6136aa97@default(draft) D
   | |
-  | x  6:19437442f9e4@default(draft) C
+  | o  7:19437442f9e4@default(draft) C
   |/
-  o  5:888bb4818188@default(draft) B1
+  o  6:888bb4818188@default(draft) B1
   |
   o  0:426bada5c675@default(draft) A
   
