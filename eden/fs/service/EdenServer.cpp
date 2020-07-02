@@ -1213,7 +1213,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       getSharedStats(),
       serverState_->getThreadPool().get(),
       serverState_->getProcessNameCache(),
-      serverState_->getStructuredLogger());
+      serverState_->getStructuredLogger(),
+      serverState_->getReloadableConfig().getEdenConfig());
   auto journal = std::make_unique<Journal>(getSharedStats());
 
   // Create the EdenMount object and insert the mount into the mountPoints_ map.

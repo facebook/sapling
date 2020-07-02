@@ -286,6 +286,14 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * If the number of fetching requests of a process reaches this number,
+   * a FetchHeavy event will be sent to Scuba.
+   */
+  ConfigSetting<uint32_t> fetchHeavyThreshold{"store:fetch-heavy-threshold",
+                                              2000,
+                                              this};
+
+  /**
    * The maximum time duration that the kernel should allow for a fuse request.
    * If a request exceeds this amount of time, it may take aggressive
    * measures to shut down the fuse channel.

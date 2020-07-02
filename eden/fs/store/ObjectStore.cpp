@@ -37,13 +37,15 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<EdenStats> stats,
     folly::Executor::KeepAlive<folly::Executor> executor,
     std::shared_ptr<ProcessNameCache> processNameCache,
-    std::shared_ptr<StructuredLogger> structuredLogger) {
+    std::shared_ptr<StructuredLogger> structuredLogger,
+    std::shared_ptr<const EdenConfig> edenConfig) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{std::move(localStore),
                                                       std::move(backingStore),
                                                       std::move(stats),
                                                       executor,
                                                       processNameCache,
-                                                      structuredLogger}};
+                                                      structuredLogger,
+                                                      edenConfig}};
 }
 
 ObjectStore::ObjectStore(
@@ -52,7 +54,8 @@ ObjectStore::ObjectStore(
     shared_ptr<EdenStats> stats,
     folly::Executor::KeepAlive<folly::Executor> executor,
     std::shared_ptr<ProcessNameCache> processNameCache,
-    std::shared_ptr<StructuredLogger> structuredLogger)
+    std::shared_ptr<StructuredLogger> structuredLogger,
+    std::shared_ptr<const EdenConfig> edenConfig)
     : metadataCache_{folly::in_place, kCacheSize},
       localStore_{std::move(localStore)},
       backingStore_{std::move(backingStore)},
@@ -60,8 +63,9 @@ ObjectStore::ObjectStore(
       executor_{executor},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processNameCache_(processNameCache),
-      structuredLogger_(structuredLogger) {
-  fetchThreshold_ = 2000;
+      structuredLogger_(structuredLogger),
+      edenConfig_(edenConfig) {
+  fetchThreshold_ = edenConfig->fetchHeavyThreshold.getValue();
 }
 
 ObjectStore::~ObjectStore() {}

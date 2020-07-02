@@ -201,7 +201,8 @@ void TestMount::createMount() {
       stats_,
       &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      EdenConfig::createTestEdenConfig());
   auto journal = std::make_unique<Journal>(stats_);
   edenMount_ = EdenMount::create(
       std::move(config_),
@@ -282,7 +283,8 @@ void TestMount::remount() {
       stats_,
       &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      EdenConfig::createTestEdenConfig());
 
   auto journal = std::make_unique<Journal>(stats_);
 
@@ -318,7 +320,8 @@ void TestMount::remountGracefully() {
       stats_,
       &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
-      std::make_shared<NullStructuredLogger>());
+      std::make_shared<NullStructuredLogger>(),
+      EdenConfig::createTestEdenConfig());
 
   auto journal = std::make_unique<Journal>(stats_);
 

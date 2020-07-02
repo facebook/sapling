@@ -26,6 +26,7 @@
 #else
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace facebook::eden;
@@ -69,7 +70,8 @@ class DiffTest : public ::testing::Test {
         std::make_shared<EdenStats>(),
         &folly::QueuedImmediateExecutor::instance(),
         std::make_shared<ProcessNameCache>(),
-        std::make_shared<NullStructuredLogger>());
+        std::make_shared<NullStructuredLogger>(),
+        EdenConfig::createTestEdenConfig());
   }
 
   Future<std::unique_ptr<ScmStatus>> diffCommits(

@@ -14,6 +14,7 @@
 #include <unordered_map>
 
 #include <folly/logging/xlog.h>
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/IObjectStore.h"
@@ -64,7 +65,8 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<EdenStats> stats,
       folly::Executor::KeepAlive<folly::Executor> executor,
       std::shared_ptr<ProcessNameCache> processNameCache,
-      std::shared_ptr<StructuredLogger> structuredLogger);
+      std::shared_ptr<StructuredLogger> structuredLogger,
+      std::shared_ptr<const EdenConfig> edenConfig);
   ~ObjectStore() override;
 
   /**
@@ -155,7 +157,8 @@ class ObjectStore : public IObjectStore,
       std::shared_ptr<EdenStats> stats,
       folly::Executor::KeepAlive<folly::Executor> executor,
       std::shared_ptr<ProcessNameCache> processNameCache,
-      std::shared_ptr<StructuredLogger> structuredLogger);
+      std::shared_ptr<StructuredLogger> structuredLogger,
+      std::shared_ptr<const EdenConfig> edenConfig);
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
@@ -221,6 +224,7 @@ class ObjectStore : public IObjectStore,
 
   std::shared_ptr<ProcessNameCache> processNameCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<const EdenConfig> edenConfig_;
 
   void updateBlobStats(bool local, bool backing) const;
   void updateBlobMetadataStats(bool memory, bool local, bool backing) const;

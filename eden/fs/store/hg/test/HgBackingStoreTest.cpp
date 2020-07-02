@@ -23,6 +23,7 @@
 #else
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace facebook::eden;
@@ -67,7 +68,8 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       stats,
       &folly::QueuedImmediateExecutor::instance(),
       std::make_shared<ProcessNameCache>(),
-      std::make_shared<NullStructuredLogger>())};
+      std::make_shared<NullStructuredLogger>(),
+      EdenConfig::createTestEdenConfig())};
 };
 
 TEST_F(
