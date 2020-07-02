@@ -1317,6 +1317,12 @@ class localrepository(object):
         return self
 
     def publishing(self):
+        # narrow-heads repos are NOT publishing. This ensures pushing to a
+        # narrow-heads repo would cause visible heads changes to make the
+        # pushed commits visible. Otherwise the pushed commits are invisible
+        # during discovery if the push does not update bookmarks on the commit.
+        if "narrowheads" in self.storerequirements:
+            return False
         # it's safe (and desirable) to trust the publish flag unconditionally
         # so that we don't finalize changes shared between users via ssh or nfs
         return self.ui.configbool("phases", "publish", untrusted=True)
