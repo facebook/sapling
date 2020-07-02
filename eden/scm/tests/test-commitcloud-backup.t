@@ -524,11 +524,11 @@ Create logs directory and set correct permissions
   |
   o  B 1ef11233b74dfa8b57e8285fd6f546096af8f4c2
   |
-  | o  C 26805aba1e600a82e93661149f2313866a221a7b
+  | x  C 26805aba1e600a82e93661149f2313866a221a7b
   | |
   o |  D b18e25de2cf5fc4699a029ed635882849e53ef73
   | |
-  | o  B 112478962961147124edd43549aedd1a335e44bf
+  | x  B 112478962961147124edd43549aedd1a335e44bf
   |/
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   

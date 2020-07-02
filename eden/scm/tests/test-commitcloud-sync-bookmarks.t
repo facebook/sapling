@@ -93,7 +93,7 @@ Fake land the commit
   $ cd ../client2
   $ hg cloud sync -q
   $ tglogp
-  x  1: 00422fad0026 draft 'draft-commit
+  o  1: 00422fad0026 draft 'draft-commit
   |  Differential Revision: https://phabricator.fb.com/D1234' foo
   @  0: df4f53cec30a public 'base'
   

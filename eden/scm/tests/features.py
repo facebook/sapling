@@ -5,12 +5,7 @@
 
 mutationblacklist = """
     test-commitcloud-backup-all.t
-    test-commitcloud-backup-compression.t
-    test-commitcloud-backup-logging.t
-    test-commitcloud-backup.t
-    test-commitcloud-sync-bookmarks.t
     test-commitcloud-sync-oscillation.t
-    test-commitcloud-sync.t
     test-debugstrip.t
     test-fb-hgext-hiddenerror.t
     test-fb-hgext-snapshot-show.t
