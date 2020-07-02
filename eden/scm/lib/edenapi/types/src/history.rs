@@ -236,20 +236,20 @@ impl Arbitrary for WireHistoryEntry {
 mod tests {
     use super::*;
 
-    use quickcheck::quickcheck;
+    use quickcheck_macros::quickcheck;
 
-    quickcheck! {
-        fn history_entry_roundtrip(entry: HistoryEntry) -> bool {
-            let path = entry.key.path.clone();
-            let wire = WireHistoryEntry::from(entry.clone());
-            let roundtrip = HistoryEntry::from_wire(wire, path);
-            entry == roundtrip
-        }
+    #[quickcheck]
+    fn history_entry_roundtrip(entry: HistoryEntry) -> bool {
+        let path = entry.key.path.clone();
+        let wire = WireHistoryEntry::from(entry.clone());
+        let roundtrip = HistoryEntry::from_wire(wire, path);
+        entry == roundtrip
+    }
 
-        fn wire_entry_roundtrip(wire: WireHistoryEntry, path: RepoPathBuf) -> bool {
-            let entry = HistoryEntry::from_wire(wire.clone(), path);
-            let roundtrip = WireHistoryEntry::from(entry);
-            wire == roundtrip
-        }
+    #[quickcheck]
+    fn wire_entry_roundtrip(wire: WireHistoryEntry, path: RepoPathBuf) -> bool {
+        let entry = HistoryEntry::from_wire(wire.clone(), path);
+        let roundtrip = WireHistoryEntry::from(entry);
+        wire == roundtrip
     }
 }
