@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ setconfig treemanifest.flatcompat=False
   $ . "$TESTDIR/library.sh"
 
@@ -142,44 +140,8 @@ Tree-only amend
   (use 'hg debugindex -h' to get help)
   [255]
 
-# Delete the original commits packs
-  $ cd .hg/store/packs/manifests
-  $ rm -rf `comm -3 $TESTTMP/origpacks $TESTTMP/aftercommit1packs`
-  $ cd ../../../..
-  $ ls_l .hg/store/packs/manifests | wc -l
-  \s*8 (re)
-
-Test looking at the tree from inside the bundle
-  $ hg log -r tip -vp -R $TESTTMP/client/.hg/strip-backup/43903a6bf43f-712cb952-amend.hg --pager=off
-  changeset:   4:43903a6bf43f
-  parent:      0:d618f764f9a1
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  files:       subdir/x
-  description:
-  tree only commit
-  
-  
-  diff -r d618f764f9a1 -r 43903a6bf43f subdir/x
-  --- a/subdir/x	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/subdir/x	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,1 +1,2 @@
-   x
-  +t
-  
-
-Test unbundling the original commit
-# Bring the original commit back from the bundle
-  $ hg unbundle $TESTTMP/client/.hg/strip-backup/43903a6bf43f-712cb952-amend.hg
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
-# Verify the packs were brought back and the data is accessible
-  $ ls_l .hg/store/packs/manifests | wc -l
-  \s*12 (re)
-  $ hg log -r tip --stat
-  changeset:   4:43903a6bf43f
+  $ hg log -r 'predecessors(tip)-tip' --stat
+  changeset:   3:43903a6bf43f
   parent:      0:d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -188,6 +150,13 @@ Test unbundling the original commit
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
+# Delete the original commits packs
+  $ cd .hg/store/packs/manifests
+  $ rm -rf `comm -3 $TESTTMP/origpacks $TESTTMP/aftercommit1packs`
+  $ cd ../../../..
+  $ ls_l .hg/store/packs/manifests | wc -l
+  \s*8 (re)
+
 Test pulling new commits from a hybrid server
   $ cd ../master
   $ echo x >> subdir/x
@@ -209,7 +178,8 @@ Test pulling new commits from a hybrid server
   (use 'hg debugindex -h' to get help)
   [255]
   $ hg log -r tip --stat --pager=off
-  fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, based on 5fbe397e5ac6cb7ee263c5c67613c4665306d143* (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, found via 098a163f13ea
   2 trees fetched over * (glob)
   changeset:   5:098a163f13ea
   parent:      0:d618f764f9a1
@@ -220,10 +190,9 @@ Test pulling new commits from a hybrid server
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 Test rebasing treeonly commits
-  $ hg rebase -d 'desc(modify)' -b 'desc(hybrid)'
+  $ hg rebase -d 'max(desc(modify))' -b 'max(desc(hybrid))'
   rebasing abc828a8166c "hybrid flat+tree commit"
   merging subdir/x
   warning: 1 conflicts while merging subdir/x! (edit, then use 'hg resolve --mark')
@@ -241,7 +210,7 @@ Test histedit treeonly commits
   $ hg purge
   $ echo y > y
   $ hg commit -Aqm 'add y'
-  $ hg histedit --config extensions.histedit= --commands - <<EOF
+  $ hg histedit bb62fe710976 --config extensions.histedit= --commands - <<EOF
   > pick 3d62f4200ab6 add y
   > pick bb62fe710976 hybrid flat+tree commit
   > EOF
@@ -297,11 +266,9 @@ Test peer-to-peer push/pull of tree only commits
   running python "*" 'user@dummy' 'hg -R client serve --stdio' (glob)
   running python "*" 'user@dummy' 'hg -R master serve --stdio' (glob)
   bundle2-input-part: total payload size 831
-  bundle2-input-part: total payload size 48
+  bundle2-input-part: total payload size 24
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size 663
-  bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
-  bundle2-input-part: total payload size 388
   $ hg up tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -l 3 -T '{desc}\n' --stat
@@ -313,13 +280,13 @@ Test peer-to-peer push/pull of tree only commits
   |   y |  1 +
   |   1 files changed, 1 insertions(+), 0 deletions(-)
   |
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, based on 7e265a5dc5229c2b237874c6bd19f6ef4120f949
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   2 trees fetched over * (glob)
   o  modify subdir/x
   |   subdir/x |  1 +
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
   
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 # Test pushing to a treeonly peer
   $ echo y >> y
@@ -427,8 +394,9 @@ Test prefetch
   $ cd ../client
   $ clearcache
   $ hg prefetch -r d618f764f9a11819b57268f02604ec1d311afc4c
-  2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via 06f5aa20a0d4
+  2 trees fetched over * (glob)
   $ clearcache
 
   $ hg pull
@@ -477,13 +445,13 @@ Test pulling to a treeonly client from a treeonly server
   $ hg log -r tip -T '{desc}\n' --stat
   fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b, found via dad1be784127
   2 trees fetched over * (glob)
-  fetching tree '' e249b5cd4abe985a0e7ecd0af4d66d60e560ef4c, based on 9bd1ef658bef2ded12bd295198d1abbe1cf4115b, found via 7253109af085
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' e249b5cd4abe985a0e7ecd0af4d66d60e560ef4c, found via 7253109af085
   2 trees fetched over * (glob)
   modify subdir/x again
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
 Test pushing from a treeonly client to a treeonly server
   $ hg config treemanifest
@@ -497,7 +465,7 @@ Test pushing from a treeonly client to a treeonly server
 
 Test pushing from a treeonly client to a treeonly server *without* pushrebase
 
-  $ hg log -Gf -l 4 -T '{shortest(node)} {manifest|short}\n'
+  $ hg log -Gf -l 4 -T '{shortest(node)} {manifest|short} {remotenames} {bookmarks}\n'
   @  5f0b c760d8ba4646
   |
   o  06f5 13c9facfa409
@@ -541,14 +509,32 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
    1 files changed, 1 insertions(+), 0 deletions(-)
   
   $ hg -R ../master debugstrip -q -r tip~3
-  $ hg phase -dfr tip~3
 
 Test pushing from a public treeonly client to a treeonly server *with* pushrebase
 (it should send tree data, versus p2p pushes which wouldnt)
-  $ hg debugmakepublic -r tip~2
+  $ hg log -T '{desc} {remotenames} {bookmarks}\n' -G
+  @  pushable treeonly commit
+  |
+  | o  modify subdir/x again
+  | |
+  | o  extra head commit
+  | |
+  o |  modify y
+  | |
+  o |  hybrid flat+tree commit
+  | |
+  o |  add y
+  | |
+  o |  modify subdir/x
+  |/
+  o  add subdir/x
+  
+  $ hg debugmakepublic -r .~2
   $ hg push -r . --config extensions.pushrebase=! -f
   pushing to ssh://user@dummy/master
   searching for changes
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, based on 5f15f80c2b54c16d75780bd0344a0487d4e6ff3b, found via 5f0bc1aaff22
+  2 trees fetched over 0.00s
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -562,15 +548,33 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
+  $ hg debugmakepublic -d -r 'desc(pushable)~2'
   $ hg -R ../master debugstrip -r tip~3
-  $ hg phase -dfr tip~3
 
 Test pushing from a treeonly client to a treeonly server *with* pushrebase
 
+  $ hg log -T '{desc} {remotenames} {bookmarks}\n' -G
+  @  pushable treeonly commit
+  |
+  | o  modify subdir/x again
+  | |
+  | o  extra head commit
+  | |
+  o |  modify y
+  | |
+  o |  hybrid flat+tree commit
+  | |
+  o |  add y
+  | |
+  o |  modify subdir/x
+  |/
+  o  add subdir/x
+  
   $ hg push --to master
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: pushing 4 changesets:
+  remote: pushing 5 changesets:
+  remote:     098a163f13ea  modify subdir/x
   remote:     41bd8aa2aeb7  add y
   remote:     77ec7ac93315  hybrid flat+tree commit
   remote:     06f5aa20a0d4  modify y
@@ -596,9 +600,6 @@ Strip the pushed commits + the recently made commit from the server
   $ hg -R ../master debugstrip -r '.:'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-Reset the phase of the local commits to draft
-  $ hg phase -fd 'max(desc(add))'::
-
 Test histedit with changing commits in the middle
   $ cat >> $TESTTMP/commands <<EOF
   > pick 06f5aa20a0d4 4
@@ -607,7 +608,6 @@ Test histedit with changing commits in the middle
   > EOF
   $ hg histedit '.^' --commands $TESTTMP/commands --config extensions.histedit= --config extensions.fbhistedit=
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  warning: orphaned descendants detected, not stripping 06f5aa20a0d4
 
 Reset the server back to hybrid mode
   $ cd ../master
@@ -730,16 +730,17 @@ old repository into another repo.
   > treemanifest=
   > EOF
 
-  $ hg push --config extensions.pushrebase=! ssh://user@dummy/master -f --allow-anon
-  pushing to ssh://user@dummy/master
+  $ hg push --config extensions.pushrebase=! ssh://user@dummy/master -f --to main --create
+  pushing rev 0a0cac7a2bb2 to destination ssh://user@dummy/master bookmark main
   searching for changes
   warning: repository is unrelated
+  fetching tree '' 99dd81527cb1abd011deb06b629366bfc7c76e3a
   2 trees fetched over * (glob)
+  exporting bookmark main
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 1 files
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
   $ hg log -G -T '{node}'
   @  0a0cac7a2bb2ff6613da8280f7f356863cee022b
