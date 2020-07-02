@@ -1,6 +1,4 @@
 #require py2
-TODO: configure mutation
-  $ configure noevolution
 Test that extra metadata (renames, copies, and other extra metadata) roundtrips
 across from hg to git
   $ . "$TESTDIR/hggit/testutil"
@@ -38,13 +36,13 @@ Add a commit with multiple extra fields
   $ hg add d
   $ fn_hg_commitextra --field zzzzzzz=datazzz --field aaaaaaa=dataaaa
   $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
-  @  3 f85ec44c632713d6fa812de1bf18a530e1dd6551
+  @  4 f85ec44c632713d6fa812de1bf18a530e1dd6551
   |  aaaaaaa=dataaaa branch=default zzzzzzz=datazzz
   |
-  o  2 f3c80cf66a137d4862c82e4df65a7c952aad36af b
+  o  3 f3c80cf66a137d4862c82e4df65a7c952aad36af b
   |  branch=default rebase_source=26b80d272c9a2d4455e269005f4f250adc4c05b8
   |
-  o  1 907635da058b4bd98a9594843a3bb7c61baed082 c
+  o  2 907635da058b4bd98a9594843a3bb7c61baed082 c
   |  branch=default
   |
   o  0 5b699970cd13b5f95f6af5f32781d80cfa2e813b a
@@ -72,13 +70,13 @@ Test some nutty filenames
   warning: filename contains '>', which is reserved on Windows: 'c3 => c4'
   $ fn_hg_commit -m 'test filename with arrow 2'
   $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n" -l 3 --config "experimental.graphstyle.missing=|"
-  @  6 decbc0c79131e24c0f01a480f068af7f0957872e test filename with arrow 2
+  @  7 decbc0c79131e24c0f01a480f068af7f0957872e test filename with arrow 2
   |  branch=default
   |
-  o  5 30e7f0dfaf1aa9bc81fe995415900b76021df952 test filename with arrow
+  o  6 30e7f0dfaf1aa9bc81fe995415900b76021df952 test filename with arrow
   |  branch=default
   |
-  o  4 256d56838c39ba60599eb69373038b88403ba2e4
+  o  5 256d56838c39ba60599eb69373038b88403ba2e4
   |  bbbbbbb=databbb branch=default yyyyyyy=datayyy
   |
   $ hg push -r b2 -r b3
@@ -166,6 +164,7 @@ lets you do that, though.
   $ cd ..
   $ hg clone -q gitrepo hgrepo2
   $ cd hgrepo2
+  $ hg up -q 'desc("arrow 2")'
   $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
   @  7 193fc708cfa16eb942a0dde3017d52c6743a43ae test filename with arrow 2
   |  branch=default convert_revision=fb079f663e17f780a63855d7116b0b4f867b2371
