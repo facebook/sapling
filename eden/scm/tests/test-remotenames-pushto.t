@@ -1,9 +1,5 @@
 #chg-compatible
 
-#chg-compatible
-
-TODO: configure mutation
-  $ configure noevolution
 Set up extension and repos
 
   $ enable remotenames
@@ -239,9 +235,9 @@ Test that rebasing and pushing works as expected
   $ hg --config extensions.rebase= rebase --continue
   rebasing cc61aa6be3dc "c" (headc)
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  o  2 c headc
+  o  3 c headc
   |
-  o  1 b  default/@
+  o  2 b  default/@
   |
   @  0 a
   
@@ -257,9 +253,9 @@ Test that rebasing and pushing works as expected
   added 1 changesets with 1 changes to 1 files
   updating bookmark @
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  2 c headc default/@
+  @  3 c headc default/@
   |
-  o  1 b
+  o  2 b
   |
   o  0 a
   

@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
 Set up extension and repos
 
   $ enable remotenames
@@ -53,7 +51,7 @@ Create a tracking bookmark
   $ hg rebase --continue
   rebasing dea4e1d2ca0e "b" (b)
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}'
-  @  2 b b
+  @  3 b b
   |
   o  1 a2 a
   |
@@ -61,7 +59,7 @@ Create a tracking bookmark
   
   $ hg book -v
      a                         1:fdceb0e57656
-   * b                         2:2623fce7de21            [a: 1 ahead, 0 behind]
+   * b                         3:2623fce7de21            [a: 1 ahead, 0 behind]
 
 Test push tracking
 
@@ -71,7 +69,7 @@ Test push tracking
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo2
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  2 b  default/b
+  @  3 b  default/b
   |
   o  1 a2  default/a
   |
@@ -83,9 +81,9 @@ Test push tracking
   $ hg add c
   $ hg commit -m c
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  3 c c
+  @  4 c c
   |
-  o  2 b  default/b
+  o  3 b  default/b
   |
   o  1 a2  default/a
   |
@@ -100,9 +98,9 @@ Test push tracking
   added 1 changesets with 1 changes to 1 files
   updating bookmark b
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  3 c c default/b
+  @  4 c c default/b
   |
-  o  2 b
+  o  3 b
   |
   o  1 a2  default/a
   |
@@ -136,9 +134,9 @@ Test renaming a remote and tracking
   no changes found
   $ hg book c -t remote/a
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  3 c c remote/b
+  @  4 c c remote/b
   |
-  o  2 b
+  o  3 b
   |
   o  1 a2  remote/a
   |
@@ -151,9 +149,9 @@ Test renaming a remote and tracking
   updating bookmark a
   [1]
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  3 c c remote/a remote/b
+  @  4 c c remote/a remote/b
   |
-  o  2 b
+  o  3 b
   |
   o  1 a2
   |
@@ -163,10 +161,10 @@ Test renaming a remote and tracking
 Test untracking
 
   $ hg book -v
-   * c                         3:e305ab9fea99            [remote/a]
+   * c                         4:e305ab9fea99            [remote/a]
   $ hg book -u c
   $ hg book -v
-   * c                         3:e305ab9fea99
+   * c                         4:e305ab9fea99
 
 Test that tracking isn't over-eager on rebase
 
@@ -182,32 +180,32 @@ Test that tracking isn't over-eager on rebase
   $ touch d
   $ hg commit -qAm d
   $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  5 ff58066d17c3 c
+  @  6 ff58066d17c3 c
   |
-  | o  4 364e447d28f4
+  | o  5 364e447d28f4
   |/
-  | o  3 e305ab9fea99  remote/a remote/b
+  | o  4 e305ab9fea99  remote/a remote/b
   | |
-  | o  2 2623fce7de21
+  | o  3 2623fce7de21
   |/
   o  1 fdceb0e57656
   |
   o  0 07199ae38cd5
   
   $ hg bookmarks -v
-   * c                         5:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
+   * c                         6:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
   $ hg rebase -s .
   abort: no matching bookmark to rebase - please rebase to an explicit rev or bookmark
   (run 'hg heads' to see all heads)
   [255]
   $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  5 ff58066d17c3 c
+  @  6 ff58066d17c3 c
   |
-  | o  4 364e447d28f4
+  | o  5 364e447d28f4
   |/
-  | o  3 e305ab9fea99  remote/a remote/b
+  | o  4 e305ab9fea99  remote/a remote/b
   | |
-  | o  2 2623fce7de21
+  | o  3 2623fce7de21
   |/
   o  1 fdceb0e57656
   |
@@ -216,30 +214,30 @@ Test that tracking isn't over-eager on rebase
 Test implicit rebase destination
 
   $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  5 ff58066d17c3 c
+  @  6 ff58066d17c3 c
   |
-  | o  4 364e447d28f4
+  | o  5 364e447d28f4
   |/
-  | o  3 e305ab9fea99  remote/a remote/b
+  | o  4 e305ab9fea99  remote/a remote/b
   | |
-  | o  2 2623fce7de21
+  | o  3 2623fce7de21
   |/
   o  1 fdceb0e57656
   |
   o  0 07199ae38cd5
   
   $ hg bookmarks -v
-   * c                         5:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
+   * c                         6:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
   $ hg rebase
   rebasing ff58066d17c3 "d" (c)
   $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  5 8d13dc14fef1 c
+  @  7 8d13dc14fef1 c
   |
-  | o  4 364e447d28f4
+  | o  5 364e447d28f4
   | |
-  o |  3 e305ab9fea99  remote/a remote/b
+  o |  4 e305ab9fea99  remote/a remote/b
   | |
-  o |  2 2623fce7de21
+  o |  3 2623fce7de21
   |/
   o  1 fdceb0e57656
   |
@@ -270,29 +268,29 @@ Test distance to tip calculation
 Test when a local bookmark that was tracking goes missing
 
   $ hg book -v
-   * c                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+   * c                         7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
   $ hg book -d c
   $ hg book d
   $ hg book -v
-   * d                         5:8d13dc14fef1
+   * d                         7:8d13dc14fef1
 
 Test renaming a bookmark with tracking
 
   $ hg book d -t remote/a
   $ hg book -v
-   * d                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+   * d                         7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
   $ hg book -m d x
   $ hg book -v
-   * x                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+   * x                         7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
 
 Test renaming a bookmark without tracking
 
   $ hg book -u x
   $ hg book -v
-   * x                         5:8d13dc14fef1
+   * x                         7:8d13dc14fef1
   $ hg book -m x d
   $ hg book -v
-   * d                         5:8d13dc14fef1
+   * d                         7:8d13dc14fef1
   $ hg book -d d
 
 Test bookmarks with difficult characters
@@ -301,12 +299,12 @@ Test bookmarks with difficult characters
   $ hg book -t remote/b "with	tab too"
   $ hg book -t remote/a "bookmark/with/slashes"
   $ hg book -v
-     bookmark with spaces      5:8d13dc14fef1
-   * bookmark/with/slashes     5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
-     with	tab too              5:8d13dc14fef1
+     bookmark with spaces      7:8d13dc14fef1
+   * bookmark/with/slashes     7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+     with	tab too              7:8d13dc14fef1
   $ hg update bookmark/with/slashes
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book -v
-     bookmark with spaces      5:8d13dc14fef1
-   * bookmark/with/slashes     5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
-     with	tab too              5:8d13dc14fef1
+     bookmark with spaces      7:8d13dc14fef1
+   * bookmark/with/slashes     7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+     with	tab too              7:8d13dc14fef1
