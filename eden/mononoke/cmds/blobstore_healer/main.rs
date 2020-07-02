@@ -28,7 +28,7 @@ use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future};
 use healer::Healer;
 use lazy_static::lazy_static;
-use metaconfig_types::{BlobConfig, LocalDatabaseConfig, MetadataDatabaseConfig, StorageConfig};
+use metaconfig_types::{BlobConfig, DatabaseConfig, LocalDatabaseConfig, StorageConfig};
 use mononoke_types::DateTime;
 use slog::{info, o, warn};
 use sql::Connection;
@@ -176,13 +176,13 @@ async fn maybe_schedule_healer_for_storage(
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-    let regional_conns = match storage_config.metadata {
-        MetadataDatabaseConfig::Local(LocalDatabaseConfig { path }) => {
+    let regional_conns = match queue_db {
+        DatabaseConfig::Local(LocalDatabaseConfig { path }) => {
             let c = open_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)?;
             vec![("sqlite_region".to_string(), Connection::with_sqlite(c))]
         }
-        MetadataDatabaseConfig::Remote(remote) => {
-            let db_address = remote.primary.db_address;
+        DatabaseConfig::Remote(remote) => {
+            let db_address = remote.db_address;
             let regions = ConfigStore::configerator(fb, None, None, Duration::from_secs(5))?
                 .get_config_handle::<Vec<String>>(CONFIGERATOR_REGIONS_CONFIG.to_owned())?
                 .get();
