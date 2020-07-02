@@ -25,6 +25,9 @@ to the user.
 
     # Default parameter for master
     master = remote/master
+
+    # Collapse obsoleted commits
+    collapse-obsolete = True
 """
 
 from __future__ import absolute_import
@@ -387,7 +390,16 @@ def smartlogrevset(repo, subset, x):
     # number of commits to calculate. This is sound because the above logic
     # includes p1 of draft commits, and assume master is public. Practically,
     # this optimization can make a 3x difference.
-    revs = repo.revs("ancestor(%ld & public()) + %ld", revs, revs)
+    revs = smartset.baseset(repo.revs("ancestor(%ld & public()) + %ld", revs, revs))
+
+    # Collapse long obsoleted stack - only keep their heads and roots.
+    # This is incompatible with automation (namely, nuclide-core) yet.
+    if repo.ui.configbool("smartlog", "collapse-obsolete") and not repo.ui.plain():
+        obsrevs = smartset.baseset(repo.revs("%ld & obsolete()", revs))
+        hiderevs = smartset.baseset(
+            repo.revs("%ld - (heads(%ld) + roots(%ld))", obsrevs, obsrevs, obsrevs)
+        )
+        revs = repo.revs("%ld - %ld", revs, hiderevs)
 
     return subset & revs
 
