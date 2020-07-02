@@ -1,9 +1,6 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: configure mutation
-  $ configure noevolution
-
 
 # Tests for the complicated linknode logic in remotefilelog.py::ancestormap()
 
@@ -64,13 +61,15 @@ TODO: configure mutation
 
 # Rebase back, log -f still works
 
-  $ hg rebase -d b292c1e3311fd0f13ae83b409caae4a6d1fb348c -r 'desc(xx)'
+  $ hg rebase -d b292c1e3311fd0f13ae83b409caae4a6d1fb348c -r 'max(desc(xx))'
   rebasing 81deab2073bc "xx"
   $ hg log -f x --template "{node|short}\n"
   b3fca10fb42d
   b292c1e3311f
 
   $ hg rebase -d 'desc(y)' -r 'desc(xx)'
+  note: not rebasing 0632994590a8 "xx" and its descendants as this would cause divergence
+  already rebased 81deab2073bc "xx"
   rebasing b3fca10fb42d "xx"
 
   $ cd ..
@@ -126,7 +125,7 @@ TODO: configure mutation
   $ echo x >> x
   $ hg commit -Aqm xx_local
   $ hg log -f x --template '{rev}:{node|short}\n'
-  1:21847713771d
+  3:21847713771d
   0:b292c1e3311f
 
   $ cd ..
@@ -163,17 +162,17 @@ TODO: configure mutation
   $ hg log -G -T '{node|short} {desc} {phase} {files}\n'
   @  a5957b6bf0bd xx3 draft x
   |
-  o  7200df4e0aca yy3 public y
+  o  7200df4e0aca yy3 draft y
   |
-  o  32e6611f6149 xx2-fake-rebased public x
+  o  32e6611f6149 xx2-fake-rebased draft x
   |
-  o  01979f9404f8 yy2 public y
+  o  01979f9404f8 yy2 draft y
   |
   | o  c1254e70bad1 xx2 draft x
   |/
-  o  0632994590a8 xx public x
+  o  0632994590a8 xx draft x
   |
-  o  b292c1e3311f x public x
+  o  b292c1e3311f x draft x
   
 
 # Check the contents of the local blob for incorrect linknode
@@ -186,25 +185,33 @@ TODO: configure mutation
 # Verify that we do a fetch on the first log (remote blob fetch for linkrev fix)
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  32e6611f6149 xx2-fake-rebased public x
-  0632994590a8 xx public x
-  b292c1e3311f x public x
+  32e6611f6149 xx2-fake-rebased draft x
+  0632994590a8 xx draft x
+  b292c1e3311f x draft x
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # But not after that
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  32e6611f6149 xx2-fake-rebased public x
-  0632994590a8 xx public x
-  b292c1e3311f x public x
+  32e6611f6149 xx2-fake-rebased draft x
+  0632994590a8 xx draft x
+  b292c1e3311f x draft x
 
 # Check the contents of the remote blob for correct linknode
-  $ hg debughistorypack $CACHEDIR/master/packs/861804d685584478f9eaa52741800152484b3566.histpack
+  $ hg debughistorypack $CACHEDIR/master/packs/*.histpack
   
   x
   Node          P1 Node       P2 Node       Link Node     Copy From
-  d4a3ed9310e5  aee31534993a  000000000000  32e6611f6149  
   aee31534993a  1406e7411862  000000000000  0632994590a8  
+  1406e7411862  000000000000  000000000000  b292c1e3311f  
+  
+  y
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  d04f7aab46ef  076f5e2225b3  000000000000  7200df4e0aca  
+  076f5e2225b3  000000000000  000000000000  01979f9404f8  
+  
+  x
+  Node          P1 Node       P2 Node       Link Node     Copy From
   1406e7411862  000000000000  000000000000  b292c1e3311f  
 
 Test the same scenario as above but with fastlog enabled
@@ -269,10 +276,10 @@ Case 1: fastlog service calls fails or times out
   > EOF
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  32e6611f6149 xx2-fake-rebased public x
-  0632994590a8 xx public x
-  b292c1e3311f x public x
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
+  32e6611f6149 xx2-fake-rebased draft x
+  0632994590a8 xx draft x
+  b292c1e3311f x draft x
 
 Case 2: fastlog returns empty results
 
@@ -284,10 +291,9 @@ Case 2: fastlog returns empty results
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  32e6611f6149 xx2-fake-rebased public x
-  0632994590a8 xx public x
-  b292c1e3311f x public x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
+  32e6611f6149 xx2-fake-rebased draft x
+  0632994590a8 xx draft x
+  b292c1e3311f x draft x
 
 Case 3: fastlog returns a bad hash
 
@@ -295,10 +301,9 @@ Case 3: fastlog returns a bad hash
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/123456
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  32e6611f6149 xx2-fake-rebased public x
-  0632994590a8 xx public x
-  b292c1e3311f x public x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
+  32e6611f6149 xx2-fake-rebased draft x
+  0632994590a8 xx draft x
+  b292c1e3311f x draft x
 
 Fastlog succeeds and returns the correct results
 
@@ -306,10 +311,9 @@ Fastlog succeeds and returns the correct results
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/32e6611f6149e85f58def77ee0c22549bb6953a2
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
   a5957b6bf0bd xx3 draft x
-  32e6611f6149 xx2-fake-rebased public x
-  0632994590a8 xx public x
-  b292c1e3311f x public x
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
+  32e6611f6149 xx2-fake-rebased draft x
+  0632994590a8 xx draft x
+  b292c1e3311f x draft x
 
 Fastlog should never get called on draft commits
 
@@ -345,13 +349,10 @@ Setup extension that logs ui.log linkrevfixup output on the stderr
 Silencing stdout because we are interested only in ui.log output
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n' > /dev/null
   linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
-  linkrevfixup: fastlog succeded (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
 
 Fastlog fails
   $ curl -s -X PUT http://localhost:$CONDUIT_PORT/set_log_response/7200df4e0acad9339167ac526b0054b1bab32dee/crash
   $ hg log -f x -T '{node|short} {desc} {phase} {files}\n' > /dev/null
   linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
-  linkrevfixup: fastlog failed (*) (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
-  linkrevfixup: remotefilelog prefetching succeeded (elapsed=*, filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test) (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s (?)
