@@ -98,7 +98,7 @@ ssh=python "$TESTDIR/dummyssh"
 
 
 def initclient(name):
-    shlib.hg("init", name)
+    shlib.hg("init", "--config=extensions.hgsql=!", "--config=format.usehgsql=false", name)
     configureclient(name)
 
 

@@ -97,7 +97,7 @@ EOF
 }
 
 function initclient() {
-  hg init $1
+  hg init --config extensions.hgsql=! --config format.usehgsql=false $1
   configureclient $1
 }
 

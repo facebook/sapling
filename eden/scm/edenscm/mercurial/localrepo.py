@@ -571,6 +571,16 @@ class localrepository(object):
         if create:
             self._writerequirements()
             self._writestorerequirements()
+        if "hgsql" in self.requirements:
+            # hgsql wants raw access to revlog. Disable modern features
+            # unconditionally for hgsql.
+            self.ui.setconfig("experimental", "evolution", "obsolete", "hgsql")
+            self.ui.setconfig("experimental", "narrow-heads", "false", "hgsql")
+            self.ui.setconfig(
+                "experimental", "rust-commits-changelog", "false", "hgsql"
+            )
+            self.ui.setconfig("format", "use-zstore-commit-data", "false", "hgsql")
+            self.ui.setconfig("visibility", "enabled", "false", "hgsql")
 
         self._dirstatevalidatewarned = False
 
@@ -2915,6 +2925,12 @@ def newreporequirements(repo):
 def newrepostorerequirements(repo):
     ui = repo.ui
     requirements = set()
+
+    # hgsql wants stable legacy revlog access, bypassing visibleheads,
+    # narrow-heads, and zstore-commit-data.
+    if "hgsql" in repo.requirements:
+        return requirements
+
     if ui.configbool("visibility", "enabled"):
         requirements.add("visibleheads")
 
