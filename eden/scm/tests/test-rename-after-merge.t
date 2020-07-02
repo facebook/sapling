@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ setconfig visibility.enabled=False
+  $ enable amend
 
 Issue746: renaming files brought by the second parent of a merge was
 broken.
@@ -95,16 +95,12 @@ Merge heads:
 Commit issue 1476:
 
   $ hg ci -m merge
-
   $ hg log -r tip -C -v | grep copies
   copies:      c2 (c1)
 
-  $ hg rollback
-  repository tip rolled back to revision 2 (undo commit)
-  working directory now based on revisions 2 and 1
+  $ hg hide . -q
 
-  $ hg up -C .
-  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg up -C 'desc(addcandd)' -q
 
 Merge heads again:
 
