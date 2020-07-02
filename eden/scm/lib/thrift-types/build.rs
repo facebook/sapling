@@ -90,7 +90,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
-fbthrift = {{ path = "../../../../../thrift/lib/rust" }}
+fbthrift = {{ path = "../../third-party/rust/fbthrift" }}
 futures = "0.3"
 serde = {{ version = "1", features = ["derive"] }}
 serde_derive = "1.0"
