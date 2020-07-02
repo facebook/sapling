@@ -299,17 +299,17 @@
   >   hg commit -m a-$i -A a
   > done
 
-  $ hg update 2 -q
+  $ hg update 5b495c34b2630950b01ace9083c5260430bd2d52 -q
   $ echo 'THIS-IS-LFS-2-CHILD' > a
   $ hg commit -m branching -q
 
-  $ hg bundle --base 1 bundle.hg -v
+  $ hg bundle --base 045a1dfffcffc2f7f47eadef15b658a8402082b9 bundle.hg -v
   4 changesets found
   uncompressed size of bundle content:
        * (changelog) (glob)
        * (manifests) (glob)
       * a (glob)
-  $ hg debugstrip -r 2 --no-backup --force -q
+  $ hg debugstrip -r 5b495c34b2630950b01ace9083c5260430bd2d52 --no-backup --force -q
   $ hg -R bundle.hg debugfilerev -r 'bundle()'
   5b495c34b263: a-two
    a: bin=0 lnk=0 flag=2000 size=16 copied='' chain=000000000000,4b09ab2030a1
@@ -368,7 +368,7 @@
   @@ -0,0 +1,1 @@
   +THIS-IS-LFS-0
   
-  $ hg bundle -R bundle.hg --base 1 bundle-again.hg -q
+  $ hg bundle -R bundle.hg --base 045a1dfffcffc2f7f47eadef15b658a8402082b9 bundle-again.hg -q
   $ hg -R bundle-again.hg log -p -T '{rev} {desc}\n' a
   5 branching
   diff --git a/a b/a

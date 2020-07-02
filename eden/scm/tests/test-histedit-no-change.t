@@ -173,7 +173,7 @@ abort editing session, after first forcibly updating away
   (use 'hg histedit --continue' or 'hg histedit --abort')
   [255]
   $ mv .hg/histedit-state .hg/histedit-state-ignore
-  $ hg up 0
+  $ hg up 'desc(a)'
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ mv .hg/histedit-state-ignore .hg/histedit-state
   $ hg sum

@@ -32,7 +32,7 @@
   $ echo blah >> bar
   $ hg ci -Amc
 
-  $ hg up 1
+  $ hg up 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo blah >> bar
   $ hg ci -Amd
@@ -175,7 +175,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
-  $ hg up -C 4
+  $ hg up -C 'desc(c)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   4:264128213d29
@@ -185,7 +185,7 @@
   summary:     c
   
 
-  $ hg --traceback debugstrip 4
+  $ hg --traceback debugstrip 'desc(c)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   1:ef3a871183d7
@@ -234,9 +234,9 @@
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
-  $ hg up -C 2
+  $ hg up -C 'desc(d)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg merge 4
+  $ hg merge 'desc(c)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -254,7 +254,7 @@ before strip of merge parent
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
   
-  $ hg debugstrip 4
+  $ hg debugstrip 'desc(c)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 after strip of merge parent
@@ -301,7 +301,7 @@ after strip of merge parent
 
 2 is parent of 3, only one strip should happen
 
-  $ hg debugstrip "roots(2)" 3
+  $ hg debugstrip "roots(desc(d))" 'desc(e)'
   $ hg log -G
   @  changeset:   2:264128213d29
   |  user:        test
@@ -348,7 +348,7 @@ after strip of merge parent
   
 Failed hook while applying "saveheads" bundle.
 
-  $ hg debugstrip 2 --config hooks.pretxnchangegroup.bad=false
+  $ hg debugstrip 'desc(c)' --config hooks.pretxnchangegroup.bad=false
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   transaction abort!
   rollback completed
@@ -409,7 +409,7 @@ Failed hook while applying "saveheads" bundle.
 
 2 different branches and a common ancestor: 1 strip
 
-  $ hg debugstrip 1 "2|4"
+  $ hg debugstrip 'desc(b)' "2|4"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ restore
 
@@ -427,7 +427,7 @@ verify fncache is kept up-to-date
 
 stripping an empty revset
 
-  $ hg debugstrip "1 and not 1"
+  $ hg debugstrip "desc(b) and not desc(b)"
   abort: empty revision set
   [255]
 
@@ -542,7 +542,7 @@ test hg debugstrip -B bookmark
   [255]
   $ hg debugstrip -B delete
   bookmark 'delete' deleted
-  $ hg id -ir 6:2702dd0c91e7
+  $ hg id -ir 'desc(r10)':2702dd0c91e7
   abort: unknown revision '2702dd0c91e7'!
   [255]
   $ hg update B
@@ -573,12 +573,12 @@ Verify bundles don't get overwritten:
   $ hg commit -Aqm a
   $ touch b
   $ hg commit -Aqm b
-  $ hg debugstrip -r 0
+  $ hg debugstrip -r 'desc(a)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ ls .hg/strip-backup
   3903775176ed-e68910bd-backup.hg
   $ hg pull -q -r 3903775176ed .hg/strip-backup/3903775176ed-e68910bd-backup.hg
-  $ hg debugstrip -r 0
+  $ hg debugstrip -r 'desc(a)'
   $ ls .hg/strip-backup
   3903775176ed-54390173-backup.hg
   3903775176ed-e68910bd-backup.hg
@@ -733,7 +733,7 @@ Check that the phase cache is properly invalidated after a strip with bookmark.
   >     extensions.wrapfunction(localrepo.localrepository, "transaction",
   >                             transactioncallback)
   > EOF
-  $ hg up -C 2
+  $ hg up -C 'desc(commitC)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo k > k
   $ hg add k
@@ -744,7 +744,7 @@ Check that the phase cache is properly invalidated after a strip with bookmark.
   $ hg book -r tip blah
   $ hg debugstrip ".^" --config extensions.crash=$TESTTMP/stripstalephasecache.py
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg up -C 1
+  $ hg up -C 'desc(commitB)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Error during post-close callback of the strip transaction

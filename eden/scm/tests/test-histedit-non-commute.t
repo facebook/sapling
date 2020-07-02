@@ -30,11 +30,11 @@ TODO: configure mutation
 Initial generation of the command files
 
   $ EDITED="$TESTTMP/editedhistory"
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 3 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 4 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 7 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 5 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 6 >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 65a9a84f33fdeb1ad5679b3941ec885d2b24027b >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 00f1c53839651fa5c76d423606811ea5455a79d0 >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(does)' >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 7b4e2f4b7bcd98ffe5ea672d73b0a7bf7233f9f7 >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(f)' >> $EDITED
   $ cat $EDITED
   pick 65a9a84f33fd 3 c
   pick 00f1c5383965 4 d
@@ -86,7 +86,7 @@ log before edit
   
 
 edit the history
-  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
+  $ hg histedit 65a9a84f33fdeb1ad5679b3941ec885d2b24027b --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
@@ -143,7 +143,7 @@ second edit set
   
 
 edit the history
-  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
+  $ hg histedit 65a9a84f33fdeb1ad5679b3941ec885d2b24027b --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
@@ -222,11 +222,11 @@ start over
   $ initrepo r2
   $ cd r2
   $ rm $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 3 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 4 >> $EDITED
-  $ hg log --template 'mess {node|short} {rev} {desc}\n' -r 7 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 5 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 6 >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 65a9a84f33fdeb1ad5679b3941ec885d2b24027b >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 00f1c53839651fa5c76d423606811ea5455a79d0 >> $EDITED
+  $ hg log --template 'mess {node|short} {rev} {desc}\n' -r 'desc(does)' >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 7b4e2f4b7bcd98ffe5ea672d73b0a7bf7233f9f7 >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(f)' >> $EDITED
   $ cat $EDITED
   pick 65a9a84f33fd 3 c
   pick 00f1c5383965 4 d
@@ -235,7 +235,7 @@ start over
   pick 500cac37a696 6 f
 
 edit the history, this time with a fold action
-  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
+  $ hg histedit 65a9a84f33fdeb1ad5679b3941ec885d2b24027b --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')

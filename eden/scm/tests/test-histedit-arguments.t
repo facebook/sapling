@@ -79,9 +79,9 @@ Run a dummy edit to make sure we get tip^^ correctly via revsingle.
 Run on a revision not ancestors of the current working directory.
 --------------------------------------------------------------------
 
-  $ hg up 2
+  $ hg up 'desc(three)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg histedit -r 4
+  $ hg histedit -r 'desc(five)'
   abort: 08d98a8350f3 is not an ancestor of working directory
   [255]
   $ hg up --quiet
@@ -90,14 +90,14 @@ Run on a revision not ancestors of the current working directory.
 Test that we pick the minimum of a revrange
 ---------------------------------------
 
-  $ HGEDITOR=cat hg histedit '2::' --commands - << EOF
+  $ HGEDITOR=cat hg histedit 'desc(three)::' --commands - << EOF
   > pick eb57da33312f 2 three
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
   $ hg up --quiet
 
-  $ HGEDITOR=cat hg histedit 'tip:2' --commands - << EOF
+  $ HGEDITOR=cat hg histedit 'tip:desc(three)' --commands - << EOF
   > pick eb57da33312f 2 three
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
@@ -120,7 +120,7 @@ created (and forgotten) by Mercurial earlier than 2.7. This emulates
 Mercurial earlier than 2.7 by renaming ".hg/histedit-state"
 temporarily.
 
-  $ hg log -G -T '{rev} {shortest(node)} {desc}\n' -r 2::
+  $ hg log -G -T '{rev} {shortest(node)} {desc}\n' -r 'desc(three)'::
   @  4 08d9 five
   |
   o  3 c8e6 four
@@ -128,7 +128,7 @@ temporarily.
   o  2 eb57 three
   |
   ~
-  $ HGEDITOR=cat hg histedit -r 4 --commands - << EOF
+  $ HGEDITOR=cat hg histedit -r 'desc(five)' --commands - << EOF
   > edit 08d98a8350f3 4 five
   > EOF
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -143,12 +143,12 @@ temporarily.
   [255]
 
   $ mv .hg/histedit-state .hg/histedit-state.back
-  $ hg update --quiet --clean 2
+  $ hg update --quiet --clean 'desc(three)'
   $ echo alpha >> alpha
   $ mv .hg/histedit-state.back .hg/histedit-state
 
   $ hg histedit --continue
-  $ hg log -G -T '{rev} {shortest(node)} {desc}\n' -r 2::
+  $ hg log -G -T '{rev} {shortest(node)} {desc}\n' -r 'desc(three)'::
   @  4 f5ed five
   |
   | o  3 c8e6 four
@@ -265,7 +265,7 @@ short hash. This tests issue3893.
   HG: branch 'default'
   HG: changed alpha
 
-  $ hg update -q 2
+  $ hg update -q 'desc(three)'
   $ echo x > x
   $ hg add x
   $ hg commit -m'x' x
@@ -372,7 +372,7 @@ Set up default base revision tests
   $ hg debugmakepublic -r .
   $ echo 2 > foo
   $ hg commit -m 'draft after public'
-  $ hg -q up -r 1
+  $ hg -q up -r 4426d359ea5987d8bcbece7ca93bb09083b857cd
   $ echo 3 > foo
   $ hg commit -m 'head 1 public'
   $ hg debugmakepublic -r .
@@ -380,18 +380,18 @@ Set up default base revision tests
   $ hg commit -m 'head 1 draft 1'
   $ echo 5 > foo
   $ hg commit -m 'head 1 draft 2'
-  $ hg -q up -r 2
+  $ hg -q up -r 4117331c3abbf74a1c68983ceac01dfa82cfe085
   $ echo 6 > foo
   $ hg commit -m 'head 2 commit 1'
   $ echo 7 > foo
   $ hg commit -m 'head 2 commit 2'
-  $ hg -q up -r 2
+  $ hg -q up -r 4117331c3abbf74a1c68983ceac01dfa82cfe085
   $ echo 8 > foo
   $ hg commit -m 'head 3'
-  $ hg -q up -r 2
+  $ hg -q up -r 4117331c3abbf74a1c68983ceac01dfa82cfe085
   $ echo 9 > foo
   $ hg commit -m 'head 4'
-  $ hg merge --tool :local -r 8
+  $ hg merge --tool :local -r 0da92be051485df39d1feb5bbb7cad588040a23e
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m 'merge head 3 into head 4'
@@ -522,7 +522,7 @@ Test autoverb feature
 
 Check that 'roll' is selected by default
 
-  $ HGEDITOR=cat hg histedit 0 --config experimental.histedit.autoverb=True
+  $ HGEDITOR=cat hg histedit 6058cbb6cfd78cfdef42aa56faa272ee45d4b7dc --config experimental.histedit.autoverb=True
   pick 6058cbb6cfd7 0 one
   roll 4f34d0f8b5fa 2 roll! one
   pick 579e40513370 1 two

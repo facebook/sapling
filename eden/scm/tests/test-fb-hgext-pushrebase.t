@@ -135,11 +135,11 @@ Check that we did not generate any check:heads parts
   |
   o  initial [public:2bb9d20e471c]
   
-  $ hg debugstrip -r 2
+  $ hg debugstrip -r 6a6d9484552c82e5f21b4ed4fce375930812f88c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ../client
-  $ hg debugstrip 3
+  $ hg debugstrip add0c792bfce89610d277fd5b1e32f5287994d1d
   $ hg up 0e3997dc0733
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
@@ -165,7 +165,7 @@ Push using changegroup2
   remote: 3 new changesets from the server will be downloaded
 
   $ cd ../client
-  $ hg debugstrip 1
+  $ hg debugstrip 46a2df24e27273bb06dbf28b085fcc2e911bf986
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull
   pulling from ssh://user@dummy/server
@@ -240,7 +240,7 @@ Stack with conflict in tail should abort
   abort: push failed on remote
   [255]
 
-  $ hg debugstrip 5
+  $ hg debugstrip 'max(desc(a))'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../server
   $ log
@@ -273,7 +273,7 @@ Stack with conflict in head should abort
   abort: push failed on remote
   [255]
 
-  $ hg debugstrip 5
+  $ hg debugstrip 'max(desc(b))'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ../server
@@ -303,7 +303,7 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg commit -qm "branch left"
   $ hg book master -r tip
   moving bookmark 'master' forward from 741fd2094512
-  $ hg up -q 2
+  $ hg up -q 6a6d9484552c82e5f21b4ed4fce375930812f88c
   $ echo branched > c
   $ hg commit -Aqm "branch start"
   $ echo branched2 > c
@@ -696,7 +696,7 @@ Test date rewriting
   > [extensions]
   > pushrebase=
   > EOF
-  $ hg up 0
+  $ hg up 'desc(a)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ touch c && hg commit -Aqm c
 
@@ -732,13 +732,13 @@ Test date rewriting
   
 Test date rewriting with a merge commit
 
-  $ hg up -q 0
+  $ hg up -q 'desc(a)'
   $ echo x >> x
   $ hg commit -qAm x
-  $ hg up -q 3
+  $ hg up -q 'max(desc(c))'
   $ echo y >> y
   $ hg commit -qAm y
-  $ hg merge -q 4
+  $ hg merge -q 'desc(x)'
   $ hg commit -qm merge
   $ hg push --to master
   pushing to $TESTTMP/rewritedate (glob)
@@ -778,7 +778,7 @@ Test pushrebase on merge commit where master is on the p2 side
   $ echo b >> b && hg commit -Aqm 'add b'
   $ hg up -q null
   $ echo c >> c && hg commit -Aqm 'add c'
-  $ hg merge -q 1
+  $ hg merge -q cde40f86152f76163041ff50d68d2e8fddc1b46b
   $ hg commit -m 'merge b and c'
   $ hg push --to master
   pushing to $TESTTMP/p2mergeserver (glob)
@@ -802,10 +802,10 @@ Test pushrebase on merge commit where master is on the p2 side
   |
   @  0: add a
   
-  $ hg -R ../p2mergeserver manifest -r 1
+  $ hg -R ../p2mergeserver manifest -r 7c3bad9141dcb46ff89abf5f61856facd56e476c
   a
   b
-  $ hg -R ../p2mergeserver manifest -r 3
+  $ hg -R ../p2mergeserver manifest -r 'desc(merge)'
   a
   b
   c
@@ -832,7 +832,7 @@ Test force pushes
   > [extensions]
   > pushrebase=
   > EOF
-  $ hg up 0
+  $ hg up 'desc(a)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b >> a && hg commit -Aqm b
   $ hg book master

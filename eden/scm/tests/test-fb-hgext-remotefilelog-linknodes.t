@@ -47,7 +47,7 @@ TODO: configure mutation
   $ cd shallow
   $ echo y > y
   $ hg commit -qAm y
-  $ hg up 0
+  $ hg up 'desc(x)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo x >> x
   $ hg commit -qAm xx
@@ -55,7 +55,7 @@ TODO: configure mutation
   0632994590a8
   b292c1e3311f
 
-  $ hg rebase -d 1
+  $ hg rebase -d 'desc(y)'
   rebasing 0632994590a8 "xx"
   $ hg log -f x --template "{node|short}\n"
   81deab2073bc
@@ -64,13 +64,13 @@ TODO: configure mutation
 
 # Rebase back, log -f still works
 
-  $ hg rebase -d 0 -r 2
+  $ hg rebase -d b292c1e3311fd0f13ae83b409caae4a6d1fb348c -r 'desc(xx)'
   rebasing 81deab2073bc "xx"
   $ hg log -f x --template "{node|short}\n"
   b3fca10fb42d
   b292c1e3311f
 
-  $ hg rebase -d 1 -r 2
+  $ hg rebase -d 'desc(y)' -r 'desc(xx)'
   rebasing b3fca10fb42d "xx"
 
   $ cd ..
@@ -121,7 +121,7 @@ TODO: configure mutation
 # system cache has invalid linknode, but .hg/store/data has valid
 
   $ cd shallow
-  $ hg debugstrip -r 1 -q
+  $ hg debugstrip -r 0632994590a85631ac9ce1a256862a1683a3ce56 -q
   $ rm -rf .hg/store/data/*
   $ echo x >> x
   $ hg commit -Aqm xx_local

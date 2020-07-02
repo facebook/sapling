@@ -18,7 +18,7 @@ across from hg to git
   $ cd hgrepo
   $ hg mv a b
   $ fn_hg_commit -mb
-  $ hg up 0 | egrep -v '^\(leaving bookmark'
+  $ hg up 'desc(a)' | egrep -v '^\(leaving bookmark'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ touch c
   $ hg add c
@@ -27,9 +27,9 @@ across from hg to git
 Rebase will add a rebase_source
 (The 'rebasing' is extra output in Mercurial 3.3+)
 
-  $ hg --config extensions.rebase= rebase -s 1 -d 2 | grep -v '^rebasing '
+  $ hg --config extensions.rebase= rebase -s 'desc(b)' -d 'desc(c)' | grep -v '^rebasing '
   [1]
-  $ hg up 2
+  $ hg up 'desc(b)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Add a commit with multiple extra fields

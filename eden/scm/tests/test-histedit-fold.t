@@ -91,7 +91,7 @@ post-fold manifest
 
 check histedit_source, including that it uses the later date, from the first changeset
 
-  $ hg log --debug --rev 3
+  $ hg log --debug --rev 'desc(f)'
   changeset:   3:575228819b7e6ed69e8c0a6a383ee59a80db7358
   phase:       draft
   parent:      2:505a591af19eed18f560af827b9e03d2076773dc
@@ -135,7 +135,7 @@ log after edit
 
 description is taken from rollup target commit
 
-  $ hg log --debug --rev 1
+  $ hg log --debug --rev 'desc(b)'
   changeset:   1:5d939c56c72e77e29f5167696218e2131a40f5cf
   phase:       draft
   parent:      0:8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -283,7 +283,7 @@ folded content is dropped during a merge. The folded commit should properly disa
   o  0:0189ba417d34 1+2+3
   
 
-  $ hg histedit 1 --commands - << EOF
+  $ hg histedit 617f94f13c0faff2ff307641901637b91cbd7c7b --commands - << EOF
   > pick 617f94f13c0f 1 +4
   > drop 888f9082bf99 2 +5
   > fold 251d831eeec5 3 +6
@@ -356,7 +356,7 @@ dropped revision.
   |
   o  0:0189ba417d34 1+2+3
   
-  $ hg histedit 1 --commands -  << EOF
+  $ hg histedit 617f94f13c0faff2ff307641901637b91cbd7c7b --commands -  << EOF
   > pick 617f94f13c0f 1 +4
   > drop 888f9082bf99 2 +5
   > fold 251d831eeec5 3 +6
@@ -521,7 +521,7 @@ editors.
   > echo END >> "$TESTTMP/editorlog.txt"
   > echo merged foos > \$1
   > EOF
-  $ HGEDITOR="sh \"$TESTTMP/editor.sh\"" hg histedit 1 --commands - 2>&1 <<EOF | fixbundle
+  $ HGEDITOR="sh \"$TESTTMP/editor.sh\"" hg histedit 'desc(a)' --commands - 2>&1 <<EOF | fixbundle
   > pick 578c7455730c 1 a
   > pick 0e01aeef5fa8 2 foo1
   > fold b7389cc4d66e 3 foo2

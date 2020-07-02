@@ -88,7 +88,7 @@ Create obsoleted commit
   hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
 
 Make obsoleted commit non-extinct by committing on top of it
-  $ hg --hidden up 2
+  $ hg --hidden up 'desc(obsoletedcommit)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit ontopofobsoleted
 
@@ -104,7 +104,7 @@ Backup both of them
   infinitepush/backups/test/testhost$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc
 
 Create one more head and run `hg cloud backup`. Make sure that only new head is pushed
-  $ hg up 0
+  $ hg up 7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ mkcommit newhead
   $ hg cloud backup
@@ -114,10 +114,10 @@ Create one more head and run `hg cloud backup`. Make sure that only new head is 
   remote:     3a30e220fe42  newhead
 
 Create two more heads and backup them
-  $ hg up 0
+  $ hg up 7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit newhead1
-  $ hg up 0
+  $ hg up 7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit newhead2
   $ hg cloud backup
@@ -382,9 +382,9 @@ Make sure it was backed up.
   infinitepush/backups/test/testhost$TESTTMP/client/heads/dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3 dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
 
 Create two heads, set maxheadstobackup to 1, make sure only latest head was backed up
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ mkcommit headone
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ mkcommit headtwo
   $ hg cloud backup --config infinitepushbackup.maxheadstobackup=1
   backing up only the most recent 1 head

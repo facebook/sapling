@@ -72,7 +72,7 @@ TODO: configure mutation
 # local commit where the dirstate is clean -- ensure that we do just one fetch
 # (update to a commit on the server first)
 
-  $ hg --config debug.dirstate.delaywrite=1 up 0
+  $ hg --config debug.dirstate.delaywrite=1 up 'desc(xy)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ clearcache
   $ hg debugdirstate
@@ -149,7 +149,7 @@ TODO: configure mutation
 
 # explicit bundle should produce full bundle file
 
-  $ hg bundle -r 2 --base 1 ../local.bundle
+  $ hg bundle -r 'desc(a)' --base 'desc(w)' ../local.bundle
   1 changesets found
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ cd ..
@@ -163,7 +163,7 @@ TODO: configure mutation
   adding file changes
   added 1 changesets with 3 changes to 3 files
 
-  $ hg log -r 2 --stat
+  $ hg log -r 'desc(a)' --stat
   changeset:   2:19edf50f4de7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -178,7 +178,7 @@ TODO: configure mutation
 
   $ echo merge >> w
   $ hg commit -m w
-  $ hg merge 2
+  $ hg merge 'desc(a)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m merge

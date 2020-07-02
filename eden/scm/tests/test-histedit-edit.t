@@ -179,7 +179,7 @@ Stripping necessary commits should not break --abort
 
 check histedit_source
 
-  $ hg log --debug --rev 5
+  $ hg log --debug --rev 'desc(foobaz)'
   changeset:   5:a5e1ba2f7afb899ef1581cea528fd885d2fca70d
   phase:       draft
   parent:      4:1a60820cd1f6004a362aa622ebc47d59bc48eb34
@@ -374,8 +374,8 @@ rollback should not work after a histedit
   $ cd ..
   $ hg clone -qr0 r r0
   $ cd r0
-  $ hg phase -fdr0
-  $ hg histedit --commands - 0 2>&1 << EOF
+  $ hg phase -fdr'desc(a)'
+  $ hg histedit --commands - 'desc(a)' 2>&1 << EOF
   > edit cb9a9f314b8b a > $EDITED
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -397,13 +397,13 @@ rollback should not work after a histedit
   $ hg ci -m 'add b'
   $ echo foo >> a
   $ hg ci -m 'extend a'
-  $ hg debugmakepublic 1
+  $ hg debugmakepublic 'desc(add)'
 Attempting to fold a change into a public change should not work:
   $ cat > ../edit.sh <<EOF
   > cat "\$1" | sed s/pick/fold/ > tmp
   > mv tmp "\$1"
   > EOF
-  $ HGEDITOR="sh ../edit.sh" hg histedit 2
+  $ HGEDITOR="sh ../edit.sh" hg histedit 'desc(extend)'
   warning: histedit rules saved to: .hg/histedit-last-edit.txt
   hg: parse error: first changeset cannot use verb "fold"
   [255]

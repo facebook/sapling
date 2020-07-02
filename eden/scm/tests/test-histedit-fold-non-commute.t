@@ -37,11 +37,11 @@ TODO: configure mutation
 Initial generation of the command files
 
   $ EDITED="$TESTTMP/editedhistory"
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 3 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 4 >> $EDITED
-  $ hg log --template 'fold {node|short} {rev} {desc}\n' -r 7 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 5 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 6 >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 092e4ce14829f4974399ce4316d59f64ef0b6725 >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r ae78f4c9d74ffa4b6cb5045001c303fe9204e890 >> $EDITED
+  $ hg log --template 'fold {node|short} {rev} {desc}\n' -r 'desc(does)' >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 7f3755409b009372829d4180bfecef5c5bb3a10e >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(f)' >> $EDITED
   $ cat $EDITED
   pick 092e4ce14829 3 c
   pick ae78f4c9d74f 4 d
@@ -93,7 +93,7 @@ log before edit
   
 
 edit the history
-  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
+  $ hg histedit 092e4ce14829f4974399ce4316d59f64ef0b6725 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
@@ -190,11 +190,11 @@ Repeat test using "roll", not "fold". "roll" folds in changes but drops message 
 Initial generation of the command files
 
   $ EDITED="$TESTTMP/editedhistory.2"
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 3 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 4 >> $EDITED
-  $ hg log --template 'roll {node|short} {rev} {desc}\n' -r 7 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 5 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 6 >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 092e4ce14829f4974399ce4316d59f64ef0b6725 >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r ae78f4c9d74ffa4b6cb5045001c303fe9204e890 >> $EDITED
+  $ hg log --template 'roll {node|short} {rev} {desc}\n' -r 'desc(does)' >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 7f3755409b009372829d4180bfecef5c5bb3a10e >> $EDITED
+  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(f)' >> $EDITED
   $ cat $EDITED
   pick 092e4ce14829 3 c
   pick ae78f4c9d74f 4 d
@@ -246,7 +246,7 @@ log before edit
   
 
 edit the history
-  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
+  $ hg histedit 092e4ce14829f4974399ce4316d59f64ef0b6725 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
@@ -320,7 +320,7 @@ manifest
 
 description is taken from rollup target commit
 
-  $ hg log --debug --rev 4
+  $ hg log --debug --rev 'desc(d)'
   changeset:   4:317e37cb6d66c1c84628c00e5bf4c8c292831951
   phase:       draft
   parent:      3:092e4ce14829f4974399ce4316d59f64ef0b6725

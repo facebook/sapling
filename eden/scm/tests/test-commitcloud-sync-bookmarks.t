@@ -101,7 +101,7 @@ Fake land the commit
 Rebasing the bookmark will make the draft commit disappear.
 
   $ cd ../client1
-  $ hg rebase -b foo -d 4
+  $ hg rebase -b foo -d 67d363c9001e1d7227625f0fa5004aca4572d214
   note: not rebasing 00422fad0026 "draft-commit" (foo), already in destination as 441f69264760 "landed-commit"
   $ tglogp
   o  4: 67d363c9001e public 'public-commit-2' foo

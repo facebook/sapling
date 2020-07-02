@@ -125,8 +125,8 @@ Test that --non-forward-move is required to move bookmarks to odd locations
 
 Test that --non-forward-move allows moving bookmark around arbitrarily
 
-  $ hg book -r 1 headb
-  $ hg book -r 2 headc
+  $ hg book -r 'desc(b)' headb
+  $ hg book -r 'desc(c)' headc
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
   @  2 c headc
   |
@@ -160,13 +160,13 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark @
-  $ hg push --to @ -r 0
+  $ hg push --to @ -r 'desc(a)'
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
   (use --non-forward-move flag to complete arbitrary moves)
   [255]
-  $ hg push --to @ -r 0 --non-forward-move
+  $ hg push --to @ -r 'desc(a)' --non-forward-move
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
   no changes found
@@ -181,7 +181,7 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
 
 Test that local must have rev of remote to push --to without --non-forward-move
 
-  $ hg up -r 0
+  $ hg up -r 'desc(a)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugstrip -r headb
   $ hg book -d headb
@@ -202,7 +202,7 @@ Clean up repo1
   |/
   o  0 a
   
-  $ hg debugstrip 2
+  $ hg debugstrip 'desc(c)'
   $ cd ../repo2
 
 Test that rebasing and pushing works as expected

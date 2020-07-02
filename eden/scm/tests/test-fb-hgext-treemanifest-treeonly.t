@@ -95,7 +95,7 @@ Enable sendtrees and verify flat is converted to tree on demand
   > [treemanifest]
   > sendtrees=True
   > EOF
-  $ hg log -r 1 --stat
+  $ hg log -r f3216a7f98b5a80b45db6bd600d958cbffa49d9e --stat
   changeset:   1:f3216a7f98b5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -223,7 +223,7 @@ Test pulling new commits from a hybrid server
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 Test rebasing treeonly commits
-  $ hg rebase -d 5 -b 2
+  $ hg rebase -d 'desc(modify)' -b 'desc(hybrid)'
   rebasing abc828a8166c "hybrid flat+tree commit"
   merging subdir/x
   warning: 1 conflicts while merging subdir/x! (edit, then use 'hg resolve --mark')
@@ -367,7 +367,7 @@ Test pushing to a hybrid server w/ pushrebase w/ hooks
   > [hooks]
   > prepushrebase.fail=$TESTTMP/filehook.sh
   > EOF
-  $ hg push -r 2 --to master
+  $ hg push -r 'max(desc(add))' --to master
   pushing to ssh://user@dummy/master
   searching for changes
   remote: prepushrebase.fail hook exited with status 1
@@ -383,13 +383,13 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
 - Add an extra head to the master repo so we trigger the slowpath
 - shallowbundle.generatemanifests() codepath, so we can verify it doesnt try to
 - process all the manifests either.
-  $ hg up -q 0
+  $ hg up -q 'desc(add)'
   $ echo >> extrahead
   $ hg commit -Aqm 'extra head commit'
-  $ hg up -q 1
+  $ hg up -q 'desc(modify)'
   $ cd ../client3
 
-  $ hg push -r 2 --to master --debug 2>&1 | egrep '(remote:|add|converting)'
+  $ hg push -r 'max(desc(add))' --to master --debug 2>&1 | egrep '(remote:|add|converting)'
   remote: * (glob)
   remote: * (glob)
   remote: 1
@@ -398,7 +398,7 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
 
   $ cd ../master
 - Delete the temporary commit we made earlier
-  $ hg debugstrip -qr 3
+  $ hg debugstrip -qr 'max(desc(add))'
 
 - Verify the received tree was written down as a flat
   $ hg debugindex -m
@@ -426,7 +426,7 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
 Test prefetch
   $ cd ../client
   $ clearcache
-  $ hg prefetch -r 0
+  $ hg prefetch -r d618f764f9a11819b57268f02604ec1d311afc4c
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ clearcache
@@ -597,7 +597,7 @@ Strip the pushed commits + the recently made commit from the server
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Reset the phase of the local commits to draft
-  $ hg phase -fd 2::
+  $ hg phase -fd 'max(desc(add))'::
 
 Test histedit with changing commits in the middle
   $ cat >> $TESTTMP/commands <<EOF

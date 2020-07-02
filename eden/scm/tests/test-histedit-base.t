@@ -41,13 +41,13 @@ Verify that implicit base command and help are listed
   #  b, base = checkout changeset and apply further changesets from there
 
 Go to D
-  $ hg update 3
+  $ hg update 'desc(D)'
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
 edit the history to rebase B onto H
 
 
 Rebase B onto H
-  $ hg histedit 1 --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 'desc(B)' --commands - 2>&1 << EOF | fixbundle
   > base 02de42196ebe
   > pick 42ccdea3bb16 B
   > pick 5fddd98957c8 C
@@ -72,7 +72,7 @@ Rebase B onto H
   o  0: cd010b8cd998 draft 'A'
   
 Rebase back and drop something
-  $ hg histedit 5 --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 'desc(B)' --commands - 2>&1 << EOF | fixbundle
   > base cd010b8cd998
   > pick 3d41b7cc7085 B
   > drop f778d1cbddac C
@@ -95,7 +95,7 @@ Rebase back and drop something
   o  0: cd010b8cd998 draft 'A'
   
 Split stack
-  $ hg histedit 5 --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 'desc(B)' --commands - 2>&1 << EOF | fixbundle
   > base cd010b8cd998
   > pick d273e35dcdf2 B
   > base cd010b8cd998
@@ -138,7 +138,7 @@ Abort
   |/
   o  0: cd010b8cd998 draft 'A'
   
-  $ hg histedit 6 --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 'desc(D)' --commands - 2>&1 << EOF | fixbundle
   > base d273e35dcdf2 B
   > drop d7a6f907a822 D
   > pick 591369deedfd X
@@ -167,7 +167,7 @@ Abort
   o  0: cd010b8cd998 draft 'A'
   
 Continue
-  $ hg histedit 6 --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 'desc(D)' --commands - 2>&1 << EOF | fixbundle
   > base d273e35dcdf2 B
   > drop d7a6f907a822 D
   > pick 591369deedfd X
@@ -223,7 +223,7 @@ base on a previously picked changeset
   |/
   o  0: cd010b8cd998 draft 'A'
   
-  $ hg histedit 5 --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 'desc(B)' --commands - 2>&1 << EOF | fixbundle
   > pick d273e35dcdf2 B
   > pick 03772da75548 X
   > base d273e35dcdf2 B

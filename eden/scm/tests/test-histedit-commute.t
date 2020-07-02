@@ -376,7 +376,7 @@ should also work if a commit message is missing
      date:        Mon Nov 28 16:35:28 2011 +0000
      summary:     Checked in text file
   
-  $ hg histedit 0
+  $ hg histedit 'desc(Checked)'
   $ cd ..
 
   $ cd ..
@@ -411,9 +411,9 @@ Now, let's try to fold the second commit into the first:
   > ENDOF
   > EOF
 
-  $ HGEDITOR="sh ./editor.sh" hg histedit 0
+  $ HGEDITOR="sh ./editor.sh" hg histedit 'desc(initial)'
 
-  $ hg --config diff.git=yes export 0
+  $ hg --config diff.git=yes export 'desc(pick)'
   # HG changeset patch
   # User test
   # Date 0 0
@@ -431,7 +431,7 @@ Now, let's try to fold the second commit into the first:
   @@ -0,0 +1,1 @@
   +changed
 
-  $ hg --config diff.git=yes export 1
+  $ hg --config diff.git=yes export 'max(desc(renamed))'
   # HG changeset patch
   # User test
   # Date 0 0

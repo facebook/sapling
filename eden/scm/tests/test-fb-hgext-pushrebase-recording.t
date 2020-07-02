@@ -136,7 +136,7 @@ unbundle method to make sure that bundle is valid
 
 Push conflicting changes
   $ cd ../client
-  $ hg up -q 1 && echo 'baz' > a && hg commit -Am 'conflict commit'
+  $ hg up -q 46a2df24e27273bb06dbf28b085fcc2e911bf986 && echo 'baz' > a && hg commit -Am 'conflict commit'
   $ hg push -r . --to default
   pushing to ssh://user@dummy/server
   searching for changes
@@ -161,7 +161,7 @@ Push conflicting changes
 
 Create two commits and push them
   $ cd ../client
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ echo stack1 > stack1 && hg add stack1 && hg ci -m stack1
   $ echo stack2 > stack2 && hg add stack2 && hg ci -m stack2
   $ log -r '.^::.'
@@ -180,7 +180,7 @@ Make sure that we don't record anything on non-pushrebase push
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select count(*) from pushrebaserecording'
   count(*)
   3
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ echo stack1 > stack1 && hg add stack1 && hg ci -m stack1
   $ hg push --force
   pushing to ssh://user@dummy/server

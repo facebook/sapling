@@ -39,7 +39,7 @@ Tests 'hg pull --rebase' rebases from the active tracking bookmark onto the appr
 
 Create remote changes
   $ mkcommit trackedremotecommit
-  $ hg up -q -r 0
+  $ hg up -q -r 'desc(root)'
   $ mkcommit untrackedremotecommit
   $ printdag
   @  untrackedremotecommit |  |
@@ -70,7 +70,7 @@ Pull remote changes and rebase local changes with tracked bookmark onto them
   o  root |  |
   
 Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour when using non-tracking bookmark
-  $ hg debugstrip -q -r 3 -r 2 -r 1
+  $ hg debugstrip -q -r 'desc(localcommit)' -r 2 -r 7a820e70c81fe1bccfa7c7e3b9a863b4426402b0
   $ hg book -d bmtrackingremote
   $ hg book bmnottracking
   $ mkcommit localcommit
@@ -88,7 +88,7 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   added 2 changesets with 2 changes to 2 files
   updating to active bookmark bmnottracking
   nothing to rebase
-  $ hg rebase -d 3
+  $ hg rebase -d 'desc(untrackedremotecommit)'
   rebasing 6a7c7fb59c1e "localcommit" (bmnottracking)
   $ printdag
   @  localcommit | bmnottracking |

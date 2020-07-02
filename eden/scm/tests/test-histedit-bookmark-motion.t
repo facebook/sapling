@@ -15,11 +15,11 @@ TODO: configure mutation
   >     hg ci -m $x
   > done
 
-  $ hg book -r 1 will-move-backwards
-  $ hg book -r 2 two
-  $ hg book -r 2 also-two
-  $ hg book -r 3 three
-  $ hg book -r 4 four
+  $ hg book -r 'desc(b)' will-move-backwards
+  $ hg book -r 'desc(c)' two
+  $ hg book -r 'desc(c)' also-two
+  $ hg book -r 'desc(d)' three
+  $ hg book -r 'desc(e)' four
   $ hg book -r tip five
   $ hg log --graph
   @  changeset:   5:652413bf663e
@@ -58,7 +58,7 @@ TODO: configure mutation
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
-  $ HGEDITOR=cat hg histedit 1
+  $ HGEDITOR=cat hg histedit 'desc(b)'
   pick d2ae7f538514 1 b
   pick 177f92b77385 2 c
   pick 055a42cdd887 3 d
@@ -81,7 +81,7 @@ TODO: configure mutation
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
   #
-  $ hg histedit 1 --commands - --verbose << EOF | grep histedit
+  $ hg histedit 'desc(b)' --commands - --verbose << EOF | grep histedit
   > pick 177f92b77385 2 c
   > drop d2ae7f538514 1 b
   > pick 055a42cdd887 3 d
@@ -116,7 +116,7 @@ TODO: configure mutation
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
-  $ HGEDITOR=cat hg histedit 1
+  $ HGEDITOR=cat hg histedit 'desc(c)'
   pick b346ab9a313d 1 c
   pick 59d9f330561f 2 d
   pick cacdfd884a93 3 f
@@ -137,7 +137,7 @@ TODO: configure mutation
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
   #
-  $ hg histedit 1 --commands - --verbose << EOF | grep histedit
+  $ hg histedit 'desc(c)' --commands - --verbose << EOF | grep histedit
   > pick b346ab9a313d 1 c
   > pick cacdfd884a93 3 f
   > pick 59d9f330561f 2 d

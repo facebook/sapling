@@ -108,7 +108,7 @@
   be6e4139c42cceba29fed898fb0b9168b3e83e5a
 
 # And another one, on the top of a hidden commit
-  $ hg checkout --hidden 3
+  $ hg checkout --hidden ffb8db6e9ac33b93bddbf245aee28972a97ce243
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo 'a' > a
   $ HOID="$(hg snapshot create --clean | head -n 1 | cut -f2 -d' ')"

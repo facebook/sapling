@@ -170,12 +170,12 @@ Test untracking
 
 Test that tracking isn't over-eager on rebase
 
-  $ hg up 1
+  $ hg up 'desc(a2)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (leaving bookmark c)
   $ touch e
   $ hg commit -qAm e
-  $ hg book c -r 1 -t remote/a -f
+  $ hg book c -r 'desc(a2)' -t remote/a -f
   $ hg up c
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark c)
@@ -250,16 +250,16 @@ Test distance to tip calculation
 
   $ test -f .hg/cache/distance.current
   [1]
-  $ hg up 3
+  $ hg up 'desc(c)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark c)
   $ cat .hg/cache/distance.current
   c 1 (no-eol)
-  $ hg up 2
+  $ hg up 'desc(b)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cat .hg/cache/distance.current
   c 2 (no-eol)
-  $ hg up 4
+  $ hg up 'desc(e)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ test -f .hg/cache/distance.current
   [1]

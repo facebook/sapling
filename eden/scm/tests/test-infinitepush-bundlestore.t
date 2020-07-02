@@ -100,7 +100,7 @@ From another client we can get the scratchbranch if we ask for it explicitely
 Push to non-scratch bookmark
 
   $ cd client
-  $ hg up 0
+  $ hg up 'desc(initialcommit)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit newcommit
   $ hg push -r .
@@ -546,7 +546,7 @@ multihead push works.
   searching for changes
   remote: pushing 1 commit:
   remote:     ee4802bf6864  multihead2
-  $ hg push -r '1:2' --bundle-store
+  $ hg push -r 'desc(multihead1):desc(multihead2)' --bundle-store
   pushing to ssh://user@dummy/repo
   searching for changes
   remote: pushing 2 commits:
@@ -557,7 +557,7 @@ multihead push works.
   ee4802bf6864326a6b3dcfff5a03abc2a0a69b8f ab1bc557aa090a9e4145512c734b6e8a828393a5
 
 Create two new scratch bookmarks
-  $ hg up 0
+  $ hg up 'desc(initialcommit)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit scratchfirstpart
   $ hg push -r . --to scratch/firstpart --create
@@ -565,7 +565,7 @@ Create two new scratch bookmarks
   searching for changes
   remote: pushing 1 commit:
   remote:     176993b87e39  scratchfirstpart
-  $ hg up 0
+  $ hg up 'desc(initialcommit)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit scratchsecondpart
   $ hg push -r . --to scratch/secondpart --create
