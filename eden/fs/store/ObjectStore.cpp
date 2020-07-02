@@ -205,11 +205,10 @@ folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
 
 Future<shared_ptr<const Blob>> ObjectStore::getBlob(
     const Hash& id,
-    ObjectFetchContext& fetchContext,
-    ImportPriority priority) const {
+    ObjectFetchContext& fetchContext) const {
   auto self = shared_from_this();
 
-  return localStore_->getBlob(id).thenValue([id, &fetchContext, self, priority](
+  return localStore_->getBlob(id).thenValue([id, &fetchContext, self](
                                                 shared_ptr<const Blob> blob) {
     if (blob) {
       // Not computing the BlobMetadata here because if the blob was found
@@ -232,7 +231,8 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
     }
 
     // Look in the BackingStore
-    return self->backingStore_->getBlob(id, fetchContext, priority)
+    return self->backingStore_
+        ->getBlob(id, fetchContext, fetchContext.getPriority())
         .via(self->executor_)
         .thenValue([self, &fetchContext, id](
                        unique_ptr<const Blob> loadedBlob) {

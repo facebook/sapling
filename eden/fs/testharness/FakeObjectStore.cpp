@@ -57,8 +57,7 @@ Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
 
 Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
     const Hash& id,
-    ObjectFetchContext&,
-    ImportPriority) const {
+    ObjectFetchContext&) const {
   ++accessCounts_[id];
   auto iter = blobs_.find(id);
   if (iter == blobs_.end()) {

@@ -273,7 +273,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       LockedState state,
       BlobCache::Interest interest,
       ObjectFetchContext& fetchContext,
-      ImportPriority priority,
       std::shared_ptr<const Blob> blob,
       Fn&& fn);
 
@@ -321,8 +320,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   FOLLY_NODISCARD folly::Future<std::shared_ptr<const Blob>> startLoadingData(
       LockedState state,
       BlobCache::Interest interest,
-      ObjectFetchContext& fetchContext,
-      ImportPriority priority);
+      ObjectFetchContext& fetchContext);
 
 #ifndef _WIN32
   /**

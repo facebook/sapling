@@ -169,7 +169,6 @@ ReturnType FileInode::runWhileDataLoaded(
     LockedState state,
     BlobCache::Interest interest,
     ObjectFetchContext& fetchContext,
-    ImportPriority priority,
     std::shared_ptr<const Blob> blob,
     Fn&& fn) {
   auto future = Future<std::shared_ptr<const Blob>>::makeEmpty();
@@ -185,8 +184,7 @@ ReturnType FileInode::runWhileDataLoaded(
           return std::forward<Fn>(fn)(std::move(state), std::move(blob));
         });
       } else {
-        future = startLoadingData(
-            std::move(state), interest, fetchContext, priority);
+        future = startLoadingData(std::move(state), interest, fetchContext);
       }
       break;
     case State::BLOB_LOADING:
@@ -203,8 +201,7 @@ ReturnType FileInode::runWhileDataLoaded(
       [self = inodePtrFromThis(),
        fn = std::forward<Fn>(fn),
        interest,
-       &fetchContext,
-       priority](std::shared_ptr<const Blob> blob) mutable {
+       &fetchContext](std::shared_ptr<const Blob> blob) mutable {
         // Simply call runWhileDataLoaded() again when we we finish loading the
         // blob data.  The state should be BLOB_NOT_LOADING or
         // MATERIALIZED_IN_OVERLAY this time around.
@@ -217,7 +214,6 @@ ReturnType FileInode::runWhileDataLoaded(
             std::move(stateLock),
             interest,
             fetchContext,
-            priority,
             std::move(blob),
             std::forward<Fn>(fn));
       });
@@ -270,8 +266,7 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
       future = startLoadingData(
           std::move(state),
           BlobCache::Interest::UnlikelyNeededAgain,
-          ObjectFetchContext::getNullContext(),
-          ImportPriority::kNormal());
+          ObjectFetchContext::getNullContext());
       break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
@@ -746,7 +741,6 @@ Future<string> FileInode::readAll(
       LockedState{this},
       interest,
       fetchContext,
-      ImportPriority::kNormal(),
       nullptr,
       [self = inodePtrFromThis()](
           LockedState&& state, std::shared_ptr<const Blob> blob) -> string {
@@ -806,7 +800,6 @@ FileInode::read(size_t size, off_t off, ObjectFetchContext& context) {
       BlobCache::Interest::WantHandle,
       // This function is only called by FUSE.
       context,
-      ImportPriority::kHigh(),
       nullptr,
       [size, off, self = inodePtrFromThis()](
           LockedState&& state, std::shared_ptr<const Blob> blob) -> BufVec {
@@ -909,15 +902,14 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
 Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
     LockedState state,
     BlobCache::Interest interest,
-    ObjectFetchContext& fetchContext,
-    ImportPriority priority) {
+    ObjectFetchContext& fetchContext) {
   DCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
   // Start the blob load first in case this throws an exception.
   // Ideally the state transition is no-except in tandem with the
   // Future's .then call.
   auto getBlobFuture = getMount()->getBlobAccess()->getBlob(
-      state->hash.value(), fetchContext, interest, priority);
+      state->hash.value(), fetchContext, interest);
 
   // Everything from here through blobFuture.then should be noexcept.
   state->blobLoadingPromise.emplace();

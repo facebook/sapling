@@ -115,8 +115,7 @@ class ObjectStore : public IObjectStore,
    */
   folly::Future<std::shared_ptr<const Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context,
-      ImportPriority priority = ImportPriority::kNormal()) const override;
+      ObjectFetchContext& context) const override;
 
   /**
    * Returns the size of the contents of the blob with the given ID.
