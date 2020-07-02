@@ -36,7 +36,6 @@ narrowheadsincompatiblelist = """
     test-lfs.t
     test-push.t
     test-revset2.t
-    test-visibility.t
 
     test-globalrevs-t.py
     test-hgsql-local-commands-t.py

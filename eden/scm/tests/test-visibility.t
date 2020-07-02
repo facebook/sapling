@@ -65,7 +65,7 @@ Simple creation and amending of draft commits
   bc066ca12b451d14668c7a3e38757449b7d6a104 draft1 amend1
 
   $ mkcommit draft2a
-  $ hg rebase -s ".^" -d 1
+  $ hg rebase -s ".^" -d 'desc(public1)'
   rebasing bc066ca12b45 "draft1 amend1"
   rebasing 2ccd7cddaa94 "draft2a"
   $ tglogp
@@ -81,7 +81,7 @@ Simple creation and amending of draft commits
   
   $ hg debugvisibleheads
   ecfc0c412bb878c3e7b1b3468cae773b473fd3ec draft2a
-  $ hg rebase -s . -d 2
+  $ hg rebase -s . -d 'desc(public2)'
   rebasing ecfc0c412bb8 "draft2a"
   $ tglogp
   @  8: af54c09bb37d draft 'draft2a'
@@ -98,110 +98,17 @@ Simple creation and amending of draft commits
   af54c09bb37da36975b8d482f660f62f95697a35 draft2a
   96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
 
-Simple phase adjustments
-
-  $ hg debugmakepublic 6
-  $ hg debugvisibleheads
-  af54c09bb37da36975b8d482f660f62f95697a35 draft2a
-  $ hg phase -df 6
-  $ hg debugvisibleheads
-  af54c09bb37da36975b8d482f660f62f95697a35 draft2a
-  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
+Add more commits
 
   $ mkcommit draft3
   $ mkcommit draft4
-  $ tglogp
-  @  10: f3f5679a1c9c draft 'draft4'
-  |
-  o  9: 5dabc7b08ef9 draft 'draft3'
-  |
-  o  8: af54c09bb37d draft 'draft2a'
-  |
-  | o  6: 96b7359a7ee5 draft 'draft1 amend1'
-  | |
-  o |  2: 4f416a252ac8 public 'public2'
-  |/
-  o  1: 175dbab47dcc public 'public1'
-  |
-  o  0: 1e4be0697311 public 'root'
-  
-  $ hg debugvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
-  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
-  $ hg debugmakepublic 9
-  $ hg debugvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
-  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
-  $ hg debugmakepublic 10
-  $ hg debugvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
-  $ hg phase -sf 9
-  $ hg debugvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
-  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
-  $ hg phase -df 8
-  $ hg debugvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
-  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
-  $ tglogp
-  @  10: f3f5679a1c9c secret 'draft4'
-  |
-  o  9: 5dabc7b08ef9 secret 'draft3'
-  |
-  o  8: af54c09bb37d draft 'draft2a'
-  |
-  | o  6: 96b7359a7ee5 draft 'draft1 amend1'
-  | |
-  o |  2: 4f416a252ac8 public 'public2'
-  |/
-  o  1: 175dbab47dcc public 'public1'
-  |
-  o  0: 1e4be0697311 public 'root'
-  
-  $ hg merge -q 6
+  $ hg merge -q 'max(desc(draft1))'
   $ hg commit -m "merge1"
-  $ hg up -q 6
-  $ hg merge -q 10
+  $ hg up -q 'max(desc(draft1))'
+  $ hg merge -q 'desc(draft4)'
   $ hg commit -m "merge2"
-  $ tglogp
-  @    12: 8a541e4b5b52 secret 'merge2'
-  |\
-  +---o  11: 00c8b0f0741e secret 'merge1'
-  | |/
-  | o  10: f3f5679a1c9c secret 'draft4'
-  | |
-  | o  9: 5dabc7b08ef9 secret 'draft3'
-  | |
-  | o  8: af54c09bb37d draft 'draft2a'
-  | |
-  o |  6: 96b7359a7ee5 draft 'draft1 amend1'
-  | |
-  | o  2: 4f416a252ac8 public 'public2'
-  |/
-  o  1: 175dbab47dcc public 'public1'
-  |
-  o  0: 1e4be0697311 public 'root'
-  
-  $ hg debugvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
+  $ hg debugmakepublic 'desc(root)'
 
-  $ hg debugmakepublic 11
-  $ hg debugvisibleheads
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
-  $ hg debugmakepublic 12
-  $ hg debugvisibleheads
-  $ hg phase -df 11
-  $ hg debugvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
-  $ hg phase -df 10
-  $ hg debugvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
-  $ hg phase -df 1
-  $ hg debugvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
   $ tglogp
   @    12: 8a541e4b5b52 draft 'merge2'
   |\
@@ -223,13 +130,13 @@ Simple phase adjustments
   
 Hide and unhide
 
-  $ hg up -q 0
-  $ hg hide 11
+  $ hg up -q 'desc(root)'
+  $ hg hide 'desc(merge1)'
   hiding commit 00c8b0f0741e "merge1"
   1 changeset hidden
   $ hg debugvisibleheads
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
-  $ hg hide 8
+  $ hg hide 'max(desc(draft2a))'
   hiding commit af54c09bb37d "draft2a"
   hiding commit 5dabc7b08ef9 "draft3"
   hiding commit f3f5679a1c9c "draft4"
@@ -238,7 +145,7 @@ Hide and unhide
   $ hg debugvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
   4f416a252ac81004d9b35542cb1dc8892b6879eb public2
-  $ hg unhide 9
+  $ hg unhide 'desc(draft3)'
   $ hg debugvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
   5dabc7b08ef934b9e6720285205b2c17695f6491 draft3
@@ -250,18 +157,18 @@ Hide and unhide
   4 changesets hidden
   $ hg debugvisibleheads
   175dbab47dccefd3ece5916c4f92a6c69f65fcf0 public1
-  $ hg unhide 6
+  $ hg unhide 'max(desc(draft1))'
   $ hg debugvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
-  $ hg hide 1
+  $ hg hide 'desc(public1)'
   hiding commit 175dbab47dcc "public1"
   hiding commit 96b7359a7ee5 "draft1 amend1"
   2 changesets hidden
   $ hg debugvisibleheads
-  $ hg unhide 11
+  $ hg unhide 'desc(merge1)'
   $ hg debugvisibleheads
   00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
-  $ hg unhide 12
+  $ hg unhide 'desc(merge2)'
   $ hg debugvisibleheads
   00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
   8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
@@ -407,33 +314,18 @@ Undo
   |/
   o  0: 426bada5c675 'A'
   
-Viewing the log graph with filtering disabled shows the commits that have been undone
-from as invisible commits.
-  $ tglogm --hidden
-  x  8: ec992ff1fd78 'E'
-  |
-  x  7: 1d30cc995ea7 'D'
-  |
-  x  6: 23910a6fe564 'C'
-  |
-  @  5: e60094faeb72 'B amended'
-  |
-  | o  4: 9bc730a19041 'E'
-  | |
-  | o  3: f585351a92f8 'D'
-  | |
-  | o  2: 26805aba1e60 'C'
-  | |
-  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
-  |/
-  o  0: 426bada5c675 'A'
-  
 Also check the obsolete revset is consistent.
   $ tglogm -r "obsolete()"
   x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |
   ~
   $ tglogm --hidden -r "obsolete()"
+  x  4: 9bc730a19041 'E'  (Rewritten using rebase into ec992ff1fd78)
+  |
+  x  3: f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
+  |
+  x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
+  |
   x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |
   ~
@@ -646,9 +538,9 @@ Unamend and Uncommit
   o  0: df4f53cec30a 'base'
   
   $ tglogm --hidden
-  x  2: 8e8ec65c0bb7 'commit2'
+  o  2: 8e8ec65c0bb7 'commit2'
   |
-  | @  1: 4c5b9b3e14b9 'commit1'
+  | @  1: 4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
   |/
   o  0: df4f53cec30a 'base'
   
@@ -658,9 +550,9 @@ Unamend and Uncommit
   @  0: df4f53cec30a 'base'
   
   $ tglogm --hidden
-  x  2: 8e8ec65c0bb7 'commit2'
+  o  2: 8e8ec65c0bb7 'commit2'
   |
-  | x  1: 4c5b9b3e14b9 'commit1'
+  | x  1: 4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
   |/
   @  0: df4f53cec30a 'base'
   
