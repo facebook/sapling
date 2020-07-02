@@ -5,14 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 
 use context::CoreContext;
-use futures_util::{future, stream, try_join, StreamExt, TryStreamExt};
+use futures::compat::Stream01CompatExt;
+use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::{future, try_join};
 use mononoke_api::{unified_diff, ChangesetSpecifier, CopyInfo, MononokePath, UnifiedDiffMode};
 use source_control as thrift;
 
-use crate::commit_id::{map_commit_identity, CommitIdExt};
+use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
 use crate::errors;
 use crate::from_request::{check_range_and_convert, validate_timestamp, FromRequest};
 use crate::history::collect_history;
@@ -366,6 +369,74 @@ impl SourceControlServiceImpl {
         .await?;
 
         Ok(thrift::CommitHistoryResponse { history })
+    }
+
+    pub(crate) async fn commit_list_descendant_bookmarks(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitListDescendantBookmarksParams,
+    ) -> Result<thrift::CommitListDescendantBookmarksResponse, errors::ServiceError> {
+        let limit = match check_range_and_convert(
+            "limit",
+            params.limit,
+            0..=source_control::COMMIT_LIST_DESCENDANT_BOOKMARKS_MAX_LIMIT,
+        )? {
+            0 => None,
+            limit => Some(limit),
+        };
+        let prefix = if !params.bookmark_prefix.is_empty() {
+            Some(params.bookmark_prefix)
+        } else {
+            None
+        };
+        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let bookmarks = repo
+            .list_bookmarks(
+                params.include_scratch,
+                prefix.as_deref(),
+                params.after.as_deref(),
+                limit,
+            )?
+            .compat()
+            .try_collect::<Vec<_>>()
+            .await?;
+        let continue_after = match limit {
+            Some(limit) if bookmarks.len() as u64 >= limit => {
+                bookmarks.last().map(|bookmark| bookmark.0.clone())
+            }
+            _ => None,
+        };
+        let ids = bookmarks.iter().map(|(_name, cs_id)| *cs_id).collect();
+        let id_mapping = map_commit_identities(&repo, ids, &params.identity_schemes).await?;
+        let bookmarks = stream::iter(bookmarks)
+            .map({
+                let changeset = &changeset;
+                move |(name, cs_id)| async move {
+                    Ok::<_, errors::ServiceError>(
+                        changeset
+                            .is_ancestor_of(cs_id)
+                            .await?
+                            .then_some((name, cs_id)),
+                    )
+                }
+            })
+            .buffered(100)
+            .try_filter_map({
+                let id_mapping = &id_mapping;
+                move |bookmark| async move {
+                    Ok(bookmark.map(|(name, cs_id)| match id_mapping.get(&cs_id) {
+                        Some(ids) => (name, ids.clone()),
+                        None => (name, BTreeMap::new()),
+                    }))
+                }
+            })
+            .try_collect()
+            .await?;
+        Ok(thrift::CommitListDescendantBookmarksResponse {
+            bookmarks,
+            continue_after,
+        })
     }
 
     /// Do a cross-repo lookup to see if a commit exists under a different hash in another repo

@@ -52,6 +52,9 @@ impl AddScubaParams for thrift::RepoListBookmarksParams {
         scuba.add("param_include_scratch", self.include_scratch as i32);
         scuba.add("param_bookmark_prefix", self.bookmark_prefix.as_str());
         scuba.add("param_limit", self.limit);
+        if let Some(after) = &self.after {
+            scuba.add("param_after", after.as_str());
+        }
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
@@ -140,6 +143,18 @@ impl AddScubaParams for thrift::CommitHistoryParams {
         }
         if let Some(after) = self.after_timestamp {
             scuba.add("param_after_timestamp", after);
+        }
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
+
+impl AddScubaParams for thrift::CommitListDescendantBookmarksParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add("param_include_scratch", self.include_scratch as i32);
+        scuba.add("param_bookmark_prefix", self.bookmark_prefix.as_str());
+        scuba.add("param_limit", self.limit);
+        if let Some(after) = &self.after {
+            scuba.add("param_after", after.as_str());
         }
         self.identity_schemes.add_scuba_params(scuba);
     }

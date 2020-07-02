@@ -433,6 +433,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitHistoryParams,
         ) -> Result<thrift::CommitHistoryResponse, service::CommitHistoryExn>;
 
+        async fn commit_list_descendant_bookmarks(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitListDescendantBookmarksParams,
+        ) -> Result<thrift::CommitListDescendantBookmarksResponse, service::CommitListDescendantBookmarksExn>;
+
         async fn commit_lookup_xrepo(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitLookupXRepoParams,
