@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ setconfig visibility.enabled=false
+
 test stripping of filelogs where the linkrev doesn't always increase
 
   $ hg init orig
@@ -90,7 +90,7 @@ test stripping of filelogs where the linkrev doesn't always increase
        1         3       3  .....       4 5d9299349fc0 000000000000 000000000000 (re)
   
   $ cd ..
-  $ for i in 0 1 2 3 4; do
+  $ for i in 1 2 3 4; do
   >     hg clone -q -U --pull crossed $i
   >     echo "% Trying to strip revision $i"
   >     hg --cwd $i debugstrip $i
@@ -98,14 +98,6 @@ test stripping of filelogs where the linkrev doesn't always increase
   >     hg --cwd $i verify
   >     echo
   > done
-  % Trying to strip revision 0
-  % Verifying
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  7 files, 4 changesets, 15 total revisions
-  
   % Trying to strip revision 1
   % Verifying
   checking changesets
