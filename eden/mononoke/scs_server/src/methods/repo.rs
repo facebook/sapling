@@ -429,17 +429,8 @@ impl SourceControlServiceImpl {
             .ok_or_else(|| errors::commit_not_found(target.to_string()))?;
 
         // TODO(mbthomas): provide a way for the client to optionally specify the old value
-        let old_changeset = repo.resolve_bookmark(bookmark).await?.ok_or_else(|| {
-            errors::invalid_request(format!("bookmark {} does not exist", bookmark))
-        })?;
-
-        repo.move_bookmark(
-            bookmark,
-            changeset.id(),
-            old_changeset.id(),
-            params.allow_non_fast_forward_move,
-        )
-        .await?;
+        repo.move_bookmark(bookmark, changeset.id(), params.allow_non_fast_forward_move)
+            .await?;
         Ok(thrift::RepoMoveBookmarkResponse {})
     }
 }

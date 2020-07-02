@@ -51,14 +51,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     let (repo, changesets) = init_repo(&ctx).await?;
     let repo = repo.write().await?;
 
-    // Attempt to move from the wrong old target should fail.
-    assert!(repo
-        .move_bookmark("trunk", changesets["E"], changesets["A"], false)
-        .await
-        .is_err());
-
-    repo.move_bookmark("trunk", changesets["E"], changesets["C"], false)
-        .await?;
+    repo.move_bookmark("trunk", changesets["E"], false).await?;
     let trunk = repo
         .resolve_bookmark("trunk")
         .await?
@@ -68,11 +61,10 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     // Attempt to move to a non-descendant commit without allowing
     // non-fast-forward moves should fail.
     assert!(repo
-        .move_bookmark("trunk", changesets["G"], changesets["E"], false)
+        .move_bookmark("trunk", changesets["G"], false)
         .await
         .is_err());
-    repo.move_bookmark("trunk", changesets["G"], changesets["E"], true)
-        .await?;
+    repo.move_bookmark("trunk", changesets["G"], true).await?;
     let trunk = repo
         .resolve_bookmark("trunk")
         .await?

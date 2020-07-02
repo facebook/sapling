@@ -24,7 +24,6 @@ impl RepoWriteContext {
         &self,
         bookmark: impl AsRef<str>,
         target: ChangesetId,
-        old_target: ChangesetId,
         allow_non_fast_forward: bool,
     ) -> Result<(), MononokeError> {
         let bookmark = bookmark.as_ref();
@@ -55,12 +54,20 @@ impl RepoWriteContext {
             false
         };
 
+        // We need to find out where the bookmark currently points to in order
+        // to move it.  Make sure to bypass any out-of-date caches.
+        let old_target = self
+            .blob_repo()
+            .bookmarks()
+            .get(self.ctx().clone(), &bookmark, self.blob_repo().get_repoid())
+            .await?;
+
         let action = if is_scratch_bookmark {
             let bookmark_push = InfiniteBookmarkPush {
                 name: bookmark,
                 create: false,
                 force: allow_non_fast_forward,
-                old: Some(old_target),
+                old: old_target,
                 new: target,
             };
 
@@ -77,7 +84,7 @@ impl RepoWriteContext {
             let bookmark_push = PlainBookmarkPush {
                 part_id: 0u32, // Just make something up.
                 name: bookmark,
-                old: Some(old_target),
+                old: old_target,
                 new: Some(target),
             };
 
