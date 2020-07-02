@@ -612,7 +612,6 @@ class rebaseruntime(object):
         p1, p2, base = defineparents(
             repo, rev, self.destmap, self.state, self.skipped, self.obsoletenotrebased
         )
-        copypreds = [repo[p] for p in self.predmap[rev]]
         self.storestatus(tr=tr)
         storecollapsemsg(repo, self.collapsemsg)
         if len(repo[None].parents()) == 2:
@@ -664,7 +663,6 @@ class rebaseruntime(object):
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
                     date=self.date,
-                    copypreds=copypreds,
                 )
                 mergemod.mergestate.clean(repo)
             else:
@@ -677,7 +675,6 @@ class rebaseruntime(object):
                     extrafn=_makeextrafn(self.extrafns),
                     editor=editor,
                     date=self.date,
-                    copypreds=copypreds,
                 )
 
             if newnode is None:
@@ -1346,7 +1343,6 @@ def concludememorynode(
     extrafn=None,
     date=None,
     preds=None,
-    copypreds=None,
 ):
     """Commit the memory changes with parents p1 and p2. Reuse commit info from
     rev but also store useful information in extra.
@@ -1360,9 +1356,6 @@ def concludememorynode(
         mutop = "rebase"
         if preds is None:
             preds = [ctx]
-        if copypreds:
-            preds.extend(copypreds)
-            mutop = "rebase-copy"
         preds = [p.node() for p in preds]
         mutinfo = mutation.record(repo, extra, preds, mutop)
     if extrafn:
@@ -1412,7 +1405,6 @@ def concludenode(
     extrafn=None,
     date=None,
     preds=None,
-    copypreds=None,
 ):
     """Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
@@ -1431,9 +1423,6 @@ def concludenode(
             mutop = "rebase"
             if preds is None:
                 preds = [ctx]
-            if copypreds:
-                preds.extend(copypreds)
-                mutop = "rebase-copy"
             preds = [p.node() for p in preds]
             mutinfo = mutation.record(repo, extra, preds, mutop)
         if extrafn:

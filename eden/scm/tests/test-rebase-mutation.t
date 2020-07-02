@@ -1013,7 +1013,7 @@ consequence f (descendant of d) is left behind.
   |
   | o  6:1143e9adc121 f
   | |
-  | x  4:76be324c128b d (rewritten using rebase-copy as 10:885d062b1232)
+  | x  4:76be324c128b d (rewritten using rewrite as 10:885d062b1232)
   | |
   | x  3:a82ac2b38757 c (rewritten using rebase as 9:d008e6b4d3fd)
   | |
@@ -1022,6 +1022,12 @@ consequence f (descendant of d) is left behind.
   | x  1:488e1b7e7341 b (rewritten using rebase as 8:67e8f4a16c49)
   |/
   o  0:b173517d0057 a
+  
+
+  $ hg debugmutation -r "desc(d2) & $a::"
+   *  885d062b12325adcee99e6cffe64beab3e3fa72d rebase by test at 1970-01-01T00:00:00 from:
+      447acf26a46a3399a7d18e2bd63f0762b7198405 replace by test at 1970-01-01T00:00:00 from:
+      76be324c128b88631d4bff1b65a6cfe23096d1f6
   
   $ hg debugstrip --no-backup -q -r 8:
 
@@ -1124,7 +1130,7 @@ FIXME: 121d9e3bc4c6 and 87682c149ad7 should be hidden.
   | | |
   | o |  6:87682c149ad7 e2
   | | |
-  | | x  5:e36fae928aec e (rewritten using rebase-copy as 12:2963fc7a5743)
+  | | x  5:e36fae928aec e (rewritten using rewrite as 12:2963fc7a5743)
   | | |
   | | x  4:76be324c128b d (rewritten using rebase as 11:a1707a5b7c2c)
   | |/

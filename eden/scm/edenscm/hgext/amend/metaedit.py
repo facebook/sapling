@@ -219,19 +219,8 @@ def metaedit(ui, repo, templ, *revs, **opts):
                         replacemap.get(c.p1().node(), c.p1().node()),
                         replacemap.get(c.p2().node(), c.p2().node()),
                     ]
-                    if mutation.enabled(repo):
-                        preds = [
-                            replacemap[p]
-                            for p in mutation.predecessorsset(
-                                repo, c.node(), closest=True
-                            )
-                            if p in replacemap
-                        ]
-                    else:
-                        preds = []
-
                     newid, created = common.metarewrite(
-                        repo, c, bases, commitopts=_commitopts, copypreds=preds
+                        repo, c, bases, commitopts=_commitopts
                     )
                     if created:
                         replacemap[c.node()] = newid
