@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ . "$TESTDIR/library.sh"
 
 
@@ -102,30 +100,13 @@ Test rebasing a stack of commits results in a pack with all the trees
   $ hg commit -Am 'modify subdir/y again'
   $ hg rebase -d 085784c01c08984ae3b6f4e4a6e553035d58380b -s '.^'
   rebasing 6a2476258ba5 "modify subdir/y"
-  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, based on 70f2c6726cec346b70b4f2ea65d0e2b9e1092a66
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
   rebasing f096b21e165f "modify subdir/y again"
   $ hg log -r '.^::.' -T '{manifest}\n'
   0d05c20bb7eb53dbfe91f834ed3f0c26ca6ca655
   8289b85c6a307a5a64ffe3bd80bd7998775c787a
   $ hg debugdatapack .hg/store/packs/manifests/*.datapack
-  .hg/store/packs/manifests/20c4a2261c2e7b9985385ca10219670dc10a6aef:
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  a4e2f032ee0f  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  0d05c20bb7eb  000000000000  92            (missing)
-  
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ad0a48a2ec1e  000000000000  43            (missing)
-  
-  (empty name):
-  Node          Delta Base    Delta Length  Blob Size
-  8289b85c6a30  000000000000  92            (missing)
-  
   .hg/store/packs/manifests/3f3f675f03d1d5c32ce32a7ca749309fb59f4c9e:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
@@ -198,7 +179,7 @@ Test rebase two commits with same changes
   $ echo >> noop
   $ hg add noop
   $ hg commit -Am 'rebase destination'
-  $ hg rebase -d 'desc(rebase)' -s '6052526a0d67147c183add1ffc511db8ff334d07 + 5' --config rebase.singletransaction=True
+  $ hg rebase -d 'desc(rebase)' -r 6052526a0d67 -r 79a69a1547d7 --config rebase.singletransaction=True
   rebasing 6052526a0d67 "modify subdir/y #1"
   rebasing 79a69a1547d7 "modify subdir/y #2"
   $ hg debughistorypack .hg/store/packs/manifests/387394c1cfba657cf7ac620d361317dd969a5c70.histidx .hg/store/packs/manifests/3b9ccdeefd4d12bf729e949ffdd58c25525a53e2.histidx
