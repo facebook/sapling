@@ -124,7 +124,7 @@ impl DataEntry {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct DataRequest {
     pub keys: Vec<Key>,
 }
@@ -154,5 +154,17 @@ impl IntoIterator for DataResponse {
 
     fn into_iter(self) -> Self::IntoIter {
         self.entries.into_iter()
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for DataRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            keys: Arbitrary::arbitrary(g),
+        }
     }
 }

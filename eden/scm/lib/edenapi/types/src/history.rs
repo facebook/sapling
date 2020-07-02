@@ -112,7 +112,7 @@ impl From<HistoryEntry> for WireHistoryEntry {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct HistoryRequest {
     pub keys: Vec<Key>,
     pub length: Option<u32>,
@@ -228,6 +228,16 @@ impl Arbitrary for WireHistoryEntry {
             parents,
             linknode: HgId::arbitrary(g),
             copyfrom,
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for HistoryRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            keys: Arbitrary::arbitrary(g),
+            length: Arbitrary::arbitrary(g),
         }
     }
 }

@@ -19,7 +19,7 @@ use types::{hgid::HgId, path::RepoPathBuf};
 /// containing the keys of the desired tree nodes.
 ///
 /// In all cases, trees will be returned in a `DataResponse`.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct CompleteTreeRequest {
     pub rootdir: RepoPathBuf,
     pub mfnodes: Vec<HgId>,
@@ -39,6 +39,21 @@ impl CompleteTreeRequest {
             mfnodes,
             basemfnodes,
             depth,
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CompleteTreeRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            rootdir: Arbitrary::arbitrary(g),
+            mfnodes: Arbitrary::arbitrary(g),
+            basemfnodes: Arbitrary::arbitrary(g),
+            depth: Arbitrary::arbitrary(g),
         }
     }
 }
