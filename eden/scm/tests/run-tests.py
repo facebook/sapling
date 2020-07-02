@@ -1488,6 +1488,7 @@ class Test(unittest.TestCase):
                 env["PYTHONUSERBASE"] = sysconfig.get_config_var("userbase")
         env["HGEMITWARNINGS"] = "1"
         env["TESTTMP"] = self._testtmp
+        env["TESTFILE"] = self.path
         env["HOME"] = self._testtmp
         if self._usechg:
             env["CHGDISABLE"] = "0"
@@ -2044,6 +2045,7 @@ class TTest(Test):
                 cmd = l[4:].split()
                 if len(cmd) == 2 and cmd[0] == b"cd":
                     l = b"  $ cd %s || exit 1\n" % cmd[1]
+                script.append(b"export TESTLINE=%d\n" % n)
                 script.append(l[4:])
             elif l.startswith(b"  > "):  # continuations
                 after.setdefault(prepos, []).append(l)

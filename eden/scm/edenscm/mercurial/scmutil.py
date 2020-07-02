@@ -1384,3 +1384,58 @@ def contextnodesupportingwdir(ctx):
         )
 
     return ctx.node()
+
+
+def trackrevnumfortests(repo, specs):
+    """Attempt to collect information to replace revision number with revset
+    expressions in tests.
+
+    This works with the TESTFILE and TESTLINE environment variable set by
+    run-tests.py.
+
+    Information will be written to $TESTDIR/.testrevnum.
+    """
+    if not util.istest():
+        return
+
+    trackrevnum = encoding.environ.get("TRACKREVNUM")
+    testline = encoding.environ.get("TESTLINE")
+    testfile = encoding.environ.get("TESTFILE")
+    testdir = encoding.environ.get("TESTDIR")
+    if not trackrevnum or not testline or not testfile or not testdir:
+        return
+
+    for spec in specs:
+        # 'spec' should be in sys.argv
+        if not any(spec in a for a in pycompat.sysargv):
+            continue
+        # Consider 'spec' as a revision number.
+        rev = int(spec)
+        if rev < -1:
+            continue
+        ctx = repo[rev]
+        if not ctx:
+            return
+
+        # Check candidate revset expressions.
+        candidates = []
+        if rev == -1:
+            candidates.append("null")
+        desc = ctx.description()
+        if desc:
+            candidates.append("desc(%s)" % desc.split()[0])
+            candidates.append("max(desc(%s))" % desc.split()[0])
+        candidates.append("%s" % ctx.hex())
+
+        repo = repo.unfiltered()
+        for candidate in candidates:
+            try:
+                nodes = list(repo.nodes(candidate))
+            except Exception:
+                continue
+            if nodes == [ctx.node()]:
+                with open(testdir + "/.testrevnum", "ab") as f:
+                    f.write(
+                        "fix(%r, %s, %r, %r)\n" % (testfile, testline, spec, candidate)
+                    )
+                break

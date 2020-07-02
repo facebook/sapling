@@ -197,6 +197,7 @@ def stringset(repo, subset, x, order):
     if x.startswith("-") or x == str(i):
         # 'x' was used as a revision number. Maybe warn and log it.
         _warnrevnum(repo.ui, x)
+        scmutil.trackrevnumfortests(repo, [x])
 
     x = i
     if x in subset or x == node.nullrev and isinstance(subset, fullreposet):
