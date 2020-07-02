@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable fbhistedit histedit rebase
@@ -63,9 +61,9 @@ Simple rebase with -s and -d
   $ HGEDITOR=true hg rebase -i -s 8 -d 5
 
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
-  @  9:bb8affa27bd8 i
+  @  10:bb8affa27bd8 i
   |
-  | o  8:8d0611d6e5f2 conflict f
+  | o  9:8d0611d6e5f2 conflict f
   | |
   | | o  7:7523912c6e49 h
   | | |
@@ -85,10 +83,10 @@ Simple rebase with -s and -d
   
 
 Try to rebase with conflict (also check -d without -s)
-  $ hg update 8
+  $ hg update 'desc("conflict f")'
   1 files updated, 0 files merged, 4 files removed, 0 files unresolved
 
-  $ HGEDITOR=true hg rebase -i -d 9
+  $ HGEDITOR=true hg rebase -i -d 'desc(i)'
   merging f
   warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 8d0611d6e5f2)
@@ -102,9 +100,9 @@ Try to rebase with conflict (also check -d without -s)
   $ hg histedit --continue
 
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
-  @  9:b6ca70f8129d conflict f
+  @  11:b6ca70f8129d conflict f
   |
-  o  8:bb8affa27bd8 i
+  o  10:bb8affa27bd8 i
   |
   | o  7:7523912c6e49 h
   | |
@@ -124,17 +122,17 @@ Try to rebase with conflict (also check -d without -s)
   
 
 Rebase with base
-  $ hg update 7
+  $ hg update 'desc(h)'
   2 files updated, 0 files merged, 5 files removed, 0 files unresolved
-  $ HGEDITOR=true hg rebase -i -b . -d 9
+  $ HGEDITOR=true hg rebase -i -b . -d 'desc(conflict)'
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
-  @  9:50cf975d06ef h
+  @  13:50cf975d06ef h
   |
-  o  8:ba6932766227 g
+  o  12:ba6932766227 g
   |
-  o  7:b6ca70f8129d conflict f
+  o  11:b6ca70f8129d conflict f
   |
-  o  6:bb8affa27bd8 i
+  o  10:bb8affa27bd8 i
   |
   o  5:652413bf663e f
   |
@@ -153,25 +151,25 @@ either the source or destination.  This unfortunately is rejected since the
 histedit code currently requires all edited commits to be ancestors of the
 current working directory parent.
 
-  $ hg update 6
+  $ hg update 'desc(i) - desc(conflict)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ addcommits x y z
-  $ hg update 5
+  $ hg update 'desc(f) - desc(conflict)'
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
-  o  12:70ff95fe5c79 z
+  o  16:70ff95fe5c79 z
   |
-  o  11:9843e524084d y
+  o  15:9843e524084d y
   |
-  o  10:a5ae87083656 x
+  o  14:a5ae87083656 x
   |
-  | o  9:50cf975d06ef h
+  | o  13:50cf975d06ef h
   | |
-  | o  8:ba6932766227 g
+  | o  12:ba6932766227 g
   | |
-  | o  7:b6ca70f8129d conflict f
+  | o  11:b6ca70f8129d conflict f
   |/
-  o  6:bb8affa27bd8 i
+  o  10:bb8affa27bd8 i
   |
   @  5:652413bf663e f
   |
@@ -185,6 +183,6 @@ current working directory parent.
   |
   o  0:cb9a9f314b8b a
   
-  $ HGEDITOR=true hg rebase -i -s 11 -d 8
+  $ HGEDITOR=true hg rebase -i -s 'desc(y)' -d 'desc(g)'
   abort: source revision (-s) must be an ancestor of the working directory for interactive rebase
   [255]
