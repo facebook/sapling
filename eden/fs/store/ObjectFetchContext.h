@@ -10,6 +10,7 @@
 #include <optional>
 
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/store/ImportPriority.h"
 
 namespace facebook {
 namespace eden {
@@ -49,13 +50,24 @@ class ObjectFetchContext {
    */
   enum Cause : unsigned { Unknown, Fuse, Thrift };
 
-  ObjectFetchContext() = default;
+  ObjectFetchContext() : priority_(ImportPriority::kNormal()) {}
+  explicit ObjectFetchContext(ImportPriority priority) : priority_(priority) {}
+
   virtual ~ObjectFetchContext() = default;
+
   virtual void didFetch(ObjectType, const Hash&, Origin) {}
 
-  virtual std::optional<pid_t> getClientPid() const = 0;
+  virtual std::optional<pid_t> getClientPid() const {
+    return std::nullopt;
+  }
 
-  virtual Cause getCause() const = 0;
+  virtual Cause getCause() const {
+    return ObjectFetchContext::Cause::Unknown;
+  }
+
+  const ImportPriority& getPriority() {
+    return priority_;
+  }
 
   /**
    * Return a no-op fetch context suitable when no tracking is desired.
@@ -65,6 +77,8 @@ class ObjectFetchContext {
  private:
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;
+
+  ImportPriority priority_;
 };
 
 } // namespace eden
