@@ -1,9 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
-  $ enable rebase
-  $ setconfig phases.publish=false
+  $ enable rebase remotenames
 
   $ hg init a
   $ cd a
@@ -65,12 +62,8 @@ Force a commit on C during the interruption:
   $ hg add Extra
   $ hg ci -m 'Extra' --config 'extensions.rebase=!'
 
-Force this commit onto secret phase
-
-  $ hg phase --force --secret 6
-
   $ tglogp
-  @  6: deb5d2f93d8b secret 'Extra'
+  @  6: deb5d2f93d8b draft 'Extra'
   |
   | o  5: 45396c49d53b draft 'B'
   | |
@@ -80,7 +73,7 @@ Force this commit onto secret phase
   | |
   o |  2: 965c486023db draft 'C'
   | |
-  o |  1: 27547f69f254 draft 'B'
+  x |  1: 27547f69f254 draft 'B'
   |/
   o  0: 4a2df7238c3b draft 'A'
   
@@ -105,12 +98,11 @@ Solve the conflict and go on:
   $ hg rebase --continue
   already rebased 27547f69f254 "B" as 45396c49d53b
   rebasing 965c486023db "C"
-  warning: orphaned descendants detected, not stripping 27547f69f254, 965c486023db
 
   $ tglogp
   o  7: d2d25e26288e draft 'C'
   |
-  | o  6: deb5d2f93d8b secret 'Extra'
+  | o  6: deb5d2f93d8b draft 'Extra'
   | |
   o |  5: 45396c49d53b draft 'B'
   | |
@@ -118,9 +110,9 @@ Solve the conflict and go on:
   | |
   o |  3: 46b37eabc604 draft 'D'
   | |
-  | o  2: 965c486023db draft 'C'
+  | x  2: 965c486023db draft 'C'
   | |
-  | o  1: 27547f69f254 draft 'B'
+  | x  1: 27547f69f254 draft 'B'
   |/
   o  0: 4a2df7238c3b draft 'A'
   
@@ -172,7 +164,7 @@ Force a commit on B' during the interruption:
   |
   | o  2: 965c486023db 'C'
   | |
-  | o  1: 27547f69f254 'B'
+  | x  1: 27547f69f254 'B'
   |/
   o  0: 4a2df7238c3b 'A'
   
@@ -193,7 +185,7 @@ Abort the rebasing:
   |
   | o  2: 965c486023db 'C'
   | |
-  | o  1: 27547f69f254 'B'
+  | x  1: 27547f69f254 'B'
   |/
   o  0: 4a2df7238c3b 'A'
   
@@ -228,9 +220,7 @@ Rebasing B onto E:
 Change phase on B and B'
 
   $ hg up -q -C 5 --config 'extensions.rebase=!'
-  $ hg debugmakepublic 1
-  $ hg debugmakepublic 5
-  $ hg phase --secret -f 2
+  $ hg debugmakepublic 'desc(B)'
 
   $ tglogp
   @  5: 45396c49d53b public 'B'
@@ -239,7 +229,7 @@ Change phase on B and B'
   |
   o  3: 46b37eabc604 public 'D'
   |
-  | o  2: 965c486023db secret 'C'
+  | o  2: 965c486023db draft 'C'
   | |
   | o  1: 27547f69f254 public 'B'
   |/
@@ -258,7 +248,7 @@ Abort the rebasing:
   |
   o  3: 46b37eabc604 public 'D'
   |
-  | o  2: 965c486023db secret 'C'
+  | o  2: 965c486023db draft 'C'
   | |
   | o  1: 27547f69f254 public 'B'
   |/
@@ -285,9 +275,9 @@ Test rebase interrupted by hooks
   abort: precommit hook exited with status 1
   [255]
   $ tglogp
-  @  7: 401ccec5e39f secret 'C'
+  @  7: 401ccec5e39f draft 'C'
   |
-  | @  6: a0b2430ebfb8 secret 'F'
+  | @  6: a0b2430ebfb8 draft 'F'
   | |
   o |  5: 45396c49d53b public 'B'
   | |
@@ -295,7 +285,7 @@ Test rebase interrupted by hooks
   | |
   o |  3: 46b37eabc604 public 'D'
   | |
-  | o  2: 965c486023db secret 'C'
+  | x  2: 965c486023db draft 'C'
   | |
   | o  1: 27547f69f254 public 'B'
   |/
@@ -305,15 +295,15 @@ Test rebase interrupted by hooks
   already rebased 965c486023db "C" as 401ccec5e39f
   rebasing a0b2430ebfb8 "F"
   $ tglogp
-  @  6: 6e92a149ac6b secret 'F'
+  @  8: 6e92a149ac6b draft 'F'
   |
-  o  5: 401ccec5e39f secret 'C'
+  o  7: 401ccec5e39f draft 'C'
   |
-  o  4: 45396c49d53b public 'B'
+  o  5: 45396c49d53b public 'B'
   |
-  o  3: ae36e8e3dfd7 public 'E'
+  o  4: ae36e8e3dfd7 public 'E'
   |
-  o  2: 46b37eabc604 public 'D'
+  o  3: 46b37eabc604 public 'D'
   |
   | o  1: 27547f69f254 public 'B'
   |/
@@ -339,9 +329,9 @@ Test rebase interrupted by hooks
   abort: pretxncommit hook exited with status 1
   [255]
   $ tglogp
-  @  7: 401ccec5e39f secret 'C'
+  @  7: 401ccec5e39f draft 'C'
   |
-  | @  6: a0b2430ebfb8 secret 'F'
+  | @  6: a0b2430ebfb8 draft 'F'
   | |
   o |  5: 45396c49d53b public 'B'
   | |
@@ -349,7 +339,7 @@ Test rebase interrupted by hooks
   | |
   o |  3: 46b37eabc604 public 'D'
   | |
-  | o  2: 965c486023db secret 'C'
+  | x  2: 965c486023db draft 'C'
   | |
   | o  1: 27547f69f254 public 'B'
   |/
@@ -359,15 +349,15 @@ Test rebase interrupted by hooks
   already rebased 965c486023db "C" as 401ccec5e39f
   rebasing a0b2430ebfb8 "F"
   $ tglogp
-  @  6: 6e92a149ac6b secret 'F'
+  @  8: 6e92a149ac6b draft 'F'
   |
-  o  5: 401ccec5e39f secret 'C'
+  o  7: 401ccec5e39f draft 'C'
   |
-  o  4: 45396c49d53b public 'B'
+  o  5: 45396c49d53b public 'B'
   |
-  o  3: ae36e8e3dfd7 public 'E'
+  o  4: ae36e8e3dfd7 public 'E'
   |
-  o  2: 46b37eabc604 public 'D'
+  o  3: 46b37eabc604 public 'D'
   |
   | o  1: 27547f69f254 public 'B'
   |/
@@ -388,9 +378,9 @@ Test rebase interrupted by hooks
   abort: pretxnclose hook exited with status 1
   [255]
   $ tglogp
-  @  7: 401ccec5e39f secret 'C'
+  @  7: 401ccec5e39f draft 'C'
   |
-  | @  6: a0b2430ebfb8 secret 'F'
+  | @  6: a0b2430ebfb8 draft 'F'
   | |
   o |  5: 45396c49d53b public 'B'
   | |
@@ -398,7 +388,7 @@ Test rebase interrupted by hooks
   | |
   o |  3: 46b37eabc604 public 'D'
   | |
-  | o  2: 965c486023db secret 'C'
+  | x  2: 965c486023db draft 'C'
   | |
   | o  1: 27547f69f254 public 'B'
   |/
@@ -408,15 +398,15 @@ Test rebase interrupted by hooks
   already rebased 965c486023db "C" as 401ccec5e39f
   rebasing a0b2430ebfb8 "F"
   $ tglogp
-  @  6: 6e92a149ac6b secret 'F'
+  @  8: 6e92a149ac6b draft 'F'
   |
-  o  5: 401ccec5e39f secret 'C'
+  o  7: 401ccec5e39f draft 'C'
   |
-  o  4: 45396c49d53b public 'B'
+  o  5: 45396c49d53b public 'B'
   |
-  o  3: ae36e8e3dfd7 public 'E'
+  o  4: ae36e8e3dfd7 public 'E'
   |
-  o  2: 46b37eabc604 public 'D'
+  o  3: 46b37eabc604 public 'D'
   |
   | o  1: 27547f69f254 public 'B'
   |/
