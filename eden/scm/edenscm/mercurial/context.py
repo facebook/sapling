@@ -91,7 +91,11 @@ class basectx(object):
         return encodeutf8(str(self))
 
     def __str__(self):
-        return short(self.node())
+        node = self.node()
+        if node is not None:
+            return short(self.node())
+        else:
+            return "none"
 
     def __int__(self):
         return self.rev()
