@@ -153,7 +153,10 @@ impl SourceControlServiceImpl {
                 None => (name, BTreeMap::new()),
             })
             .collect();
-        Ok(thrift::RepoListBookmarksResponse { bookmarks })
+        Ok(thrift::RepoListBookmarksResponse {
+            bookmarks,
+            continue_after: None,
+        })
     }
 
     /// Create a new commit.
