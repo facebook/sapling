@@ -37,35 +37,11 @@ narrowheadsincompatiblelist = """
     test-debugstrip.t
     test-directaccess-revset.t
     test-eol-clone.t
-    test-generaldelta.t
-    test-globalopts.t
     test-hgext-perfsuite.t
-    test-hggit-bookmark-workflow.t
-    test-hggit-push-r.t
-    test-histedit-mutation.t
-    test-hook.t
-    test-incoming-outgoing.t
     test-infinitepush-bundlestore.t
-    test-infinitepush-remotefilelog.t
-    test-inherit-mode.t
     test-lfs.t
-    test-log-wireproto-requests.t
-    test-mutation.t
-    test-pull-r.t
     test-push.t
-    test-pushrebase-merge-changed-file-list.t
-    test-rebase-abort.t
-    test-rebase-missing-cwd.t
-    test-rebase-mutation.t
-    test-remotenames-fastheaddiscovery-hidden-commits.t
-    test-remotenames-push.t
-    test-revset-outgoing.t
     test-revset2.t
-    test-setdiscovery.t
-    test-share.t
-    test-ssh.t
-    test-uncommit.t
-    test-url-rev.t
     test-visibility.t
 
     test-absorb-phase-t.py

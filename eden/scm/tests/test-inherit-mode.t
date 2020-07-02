@@ -104,7 +104,6 @@ new directories are setgid
   00664 ./.hg/store/metalog/roots/index2-reverse
   00664 ./.hg/store/metalog/roots/log
   00664 ./.hg/store/metalog/roots/meta
-  00660 ./.hg/store/phaseroots
   00600 ./.hg/store/requires
   00660 ./.hg/store/undo
   00660 ./.hg/store/undo.backupfiles
@@ -180,6 +179,7 @@ XXX: treestate and allheads do not really respect this rule
   00660 ../push/.hg/store/undo.bookmarks
   00660 ../push/.hg/store/undo.phaseroots
   00660 ../push/.hg/store/undo.visibleheads
+  006?? ../push/.hg/store/visibleheads (glob)
   00700 ../push/.hg/treestate/
   00600 ../push/.hg/treestate/* (glob)
   00660 ../push/.hg/undo.branch

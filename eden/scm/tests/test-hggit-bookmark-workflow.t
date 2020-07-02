@@ -86,9 +86,9 @@ Cloning transfers all bookmarks from remote to local
     1 3bb02b6794dd 9497a4ee62e1 "add beta" bookmarks: [b1]
     0 69982ec78c6d 7eeab2ea75ec "add alpha" bookmarks: []
 
-Make sure that master is public
+TODO: Write remotenames instead of local bookmarks to fix phase handling.
   $ hg phase -r master
-  3783f3cdb535321db1dbf622958d68d051c73218: public
+  3783f3cdb535321db1dbf622958d68d051c73218: draft
   $ cd ..
 
 No changes

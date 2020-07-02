@@ -42,7 +42,7 @@ Load the commit in repo3, hide it, check that we can still pull.
 
   $ hg update -q default/book
   $ hg log -r tip -T '{desc}\n'
-  commitA
+  commitB
 
   $ hg pull -q
   $ hg log -r "reverse(::book)" -T '{desc}\n'

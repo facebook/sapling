@@ -404,16 +404,6 @@ test outgoing-disabled
   abort: outgoing is not supported for this repository
   [255]
 
-test outgoing with secret changesets
-
-  $ hg -R test-dev phase --force --secret 9
-  $ hg -R test-dev outgoing test
-  comparing with test
-  searching for changes
-  no changes found (ignored 5 secret changesets)
-  [1]
-  $ hg -R test-dev phase --draft -r 'head()'
-
 limit to 3 changesets
 
   $ hg -R test-dev outgoing -l 3 test

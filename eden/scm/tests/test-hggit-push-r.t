@@ -2,6 +2,7 @@
 Load commonly used test logic
   $ . "$TESTDIR/hggit/testutil"
 
+  $ enable remotenames
   $ hg init test
   $ cd test
   $ cat >>afile <<EOF
@@ -49,105 +50,114 @@ Load commonly used test logic
   $ for i in 0 1 2 3 4 5 6 7 8; do
   >    mkdir test-"$i"
   >    hg --cwd test-"$i" init
-  >    hg -R test push -r "$i" test-"$i"
+  >    hg -R test push -r "$i" test-"$i" --to master --force --create
   >    cd test-"$i"
   >    hg verify
   >    cd ..
   > done
-  pushing to test-0
+  pushing rev f9ee2f85a263 to destination test-0 bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  exporting bookmark master
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   1 files, 1 changesets, 1 total revisions
-  pushing to test-1
+  pushing rev 34c2bf6b0626 to destination test-1 bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  exporting bookmark master
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  pushing to test-2
+  pushing rev e38ba6f5b7e0 to destination test-2 bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  exporting bookmark master
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  pushing to test-3
+  pushing rev eebf5a27f8ca to destination test-3 bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
+  exporting bookmark master
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   1 files, 4 changesets, 4 total revisions
-  pushing to test-4
+  pushing rev 095197eb4973 to destination test-4 bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  exporting bookmark master
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  pushing to test-5
+  pushing rev 1bb50a9436a7 to destination test-5 bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  exporting bookmark master
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  pushing to test-6
+  pushing rev 7373c1169842 to destination test-6 bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 5 changes to 2 files
+  exporting bookmark master
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   2 files, 4 changesets, 5 total revisions
-  pushing to test-7
+  pushing rev a6a34bfa0076 to destination test-7 bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 5 changesets with 6 changes to 3 files
+  exporting bookmark master
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   3 files, 5 changesets, 6 total revisions
-  pushing to test-8
+  pushing rev aa35859c02ea to destination test-8 bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 2 files
+  exporting bookmark master
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests

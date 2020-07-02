@@ -35,8 +35,8 @@ FIXME: hg tip should not require '--hidden' to see pending commits in hooks
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
   0:cb9a9f314b8b
-  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
+  pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
+  txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
   commit.b hook: HG_HOOKNAME=commit.b HG_HOOKTYPE=commit HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
 
@@ -168,7 +168,6 @@ more there after
   journal.visibleheads
   metalog
   mutation
-  phaseroots
   requires
   undo
   undo.backup.fncache
@@ -257,7 +256,6 @@ test that prepushkey can prevent incoming keys
   $ hg push -B baz ../a
   pushing to ../a
   searching for changes
-  listkeys hook: HG_HOOKNAME=listkeys HG_HOOKTYPE=listkeys HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
   listkeys hook: HG_HOOKNAME=listkeys HG_HOOKTYPE=listkeys HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   no changes found
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=push

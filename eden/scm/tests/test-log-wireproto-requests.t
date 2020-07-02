@@ -42,10 +42,8 @@ Looks like `ui.warn()` after getfiles might not make it's way to client hg. Let'
   remote: wireproto_requests:  (args=[], command=hello, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], command=batch, duration=*, reponame=unknown, responselen=*) (glob)
-  remote: wireproto_requests:  (args=['phases'], command=listkeys, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=['bookmarks'], command=listkeys, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=['666f726365'], command=unbundle, duration=*, reponame=unknown, responselen=*) (glob)
-  remote: wireproto_requests:  (args=['phases'], command=listkeys, duration=*, reponame=unknown, responselen=*) (glob)
   $ hg pull -r ololo 2>&1 | grep wireproto_requests
   remote: wireproto_requests:  (args=[], command=hello, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, reponame=unknown, responselen=*) (glob)

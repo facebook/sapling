@@ -104,6 +104,7 @@ Changing original repo:
    change a
   bookmarks: foo
   commit: (clean)
+  phases: 2 draft
   remote: 1 or more incoming
 
   $ hg -q push '../clone#foo'
@@ -120,6 +121,7 @@ Changing original repo:
   parent: 1:17d330177ee9 
    change a
   commit: (clean)
+  phases: 3 draft
   remote: (synced)
 
   $ cd ..
@@ -127,6 +129,7 @@ Changing original repo:
   $ cd clone
   $ hg rollback
   repository tip rolled back to revision 1 (undo push)
+  unknown reference in .hg/bookmarks: foo 7d4251d04d20dbc31ba80930dc39d0db4550506b
 
   $ hg -q incoming
   unknown reference in .hg/bookmarks: foo 7d4251d04d20dbc31ba80930dc39d0db4550506b
@@ -222,6 +225,7 @@ Test handling common incoming revisions between "default" and
   $ hg -R clone rollback
   repository tip rolled back to revision 1 (undo pull)
   working directory now based on revision 0
+  unknown reference in .hg/bookmarks: foo 7d4251d04d20dbc31ba80930dc39d0db4550506b
 
   $ cd repo
 
@@ -238,14 +242,14 @@ Test handling common incoming revisions between "default" and
   parent: 4:44b4e0c07491 
    new head to push current default head
   commit: (clean)
-  phases: 1 draft
+  phases: 5 draft
   remote: 1 outgoing
 
   $ hg summary --remote --config paths.default='../clone' --config paths.default-push='../clone#foo'
   parent: 4:44b4e0c07491 
    new head to push current default head
   commit: (clean)
-  phases: 1 draft
+  phases: 5 draft
   remote: (synced)
 
   $ cd ..

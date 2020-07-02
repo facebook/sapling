@@ -208,7 +208,7 @@ Testing --debug:
 
   $ hg --cwd c log --debug
   changeset:   1:b6c483daf2907ce5825c0bb50f5716226281cc1a
-  phase:       public
+  phase:       draft
   parent:      -1:0000000000000000000000000000000000000000
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    23226e7a252cacdc2d99e4fbdc3653441056de49
@@ -221,7 +221,7 @@ Testing --debug:
   
   
   changeset:   0:8580ff50825a50c8f716709acdf8de0deddcd6ab
-  phase:       public
+  phase:       draft
   parent:      -1:0000000000000000000000000000000000000000
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    a0c8bcbbb45c63b90b70ad007bf38961f64f2af0

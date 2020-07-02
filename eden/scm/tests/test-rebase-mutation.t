@@ -2,8 +2,8 @@
 
 
   $ configure mutation-norecord
-  $ enable rebase
-  $ setconfig phases.publish=false
+  $ enable rebase amend
+  $ setconfig 'hint.ack=amend-restack'
   $ readconfig <<EOF
   > [ui]
   > logtemplate= {rev}:{node|short} {desc|firstline}{if(obsolete,' {mutation_nodes}')}
@@ -169,11 +169,11 @@ set.
   | |
   o |  4:9520eea781bc E
   |/
-  | x  3:32af7686d403 D
+  | o  3:32af7686d403 D
   | |
   | x  2:5fddd98957c8 C (rewritten using rebase as 10:5ae4c968c6ac)
   | |
-  | x  1:42ccdea3bb16 B
+  | o  1:42ccdea3bb16 B
   |/
   o  0:cd010b8cd998 A
   
@@ -184,7 +184,7 @@ set.
 
 More complex case where part of the rebase set were already rebased
 
-  $ hg rebase --rev 'desc(D)' --dest 'desc(H)'
+  $ hg rebase --rev 'desc(D) & ::.' --dest 'desc(H)'
   rebasing 08483444fef9 "D"
   $ hg debugmutation -r 11
    *  4596109a6a4328c398bde3a4a3b6737cfade3003 rebase by test at 1970-01-01T00:00:00 from:
@@ -284,7 +284,7 @@ Start rebase from a commit that is obsolete but not hidden only because it's
 a working copy parent. We should be moved back to the starting commit as usual
 even though it is hidden (until we're moved there).
 
-  $ hg --hidden up -qr 'first(hidden())'
+  $ hg up 1 -q
   $ hg rebase --rev 13 --dest 15
   rebasing 98f6af4ee953 "C"
   $ hg log -G
@@ -314,10 +314,9 @@ even though it is hidden (until we're moved there).
 collapse rebase
 ---------------------------------
 
-  $ hg clone base collapse
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone base collapse -q
   $ cd collapse
+  $ hg up 'desc(H)' -q
   $ hg rebase  -s 42ccdea3bb16 -d eea13746799a --collapse
   rebasing 42ccdea3bb16 "B"
   rebasing 5fddd98957c8 "C"
@@ -375,6 +374,7 @@ be rebased.
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hidden
+  $ hg up -q 'desc(H)'
   $ hg log -G
   @  7:02de42196ebe H
   |
@@ -1105,7 +1105,9 @@ Similar test on a more complex graph
   note: not rebasing e36fae928aec "e" and its descendants as this would cause divergence
   rebasing 87682c149ad7 "e2"
   rebasing 12df856f4e8e "f"
-  $ hg log -G -r $a:
+
+FIXME: 121d9e3bc4c6 and 87682c149ad7 should be hidden.
+  $ hg log -G -r "$a::(not obsolete())"
   o  13:aa3f1f628d29 f
   |
   o  12:2963fc7a5743 e2
@@ -1116,12 +1118,16 @@ Similar test on a more complex graph
   |
   o  9:67e8f4a16c49 b
   |
-  | o  7:2876ce66c6eb g
+  | o  8:12df856f4e8e f
   | |
-  | x  5:e36fae928aec e (rewritten using rebase-copy as 12:2963fc7a5743)
-  | |
-  | x  4:76be324c128b d (rewritten using rebase as 11:a1707a5b7c2c)
-  | |
+  | | o  7:2876ce66c6eb g
+  | | |
+  | o |  6:87682c149ad7 e2
+  | | |
+  | | x  5:e36fae928aec e (rewritten using rebase-copy as 12:2963fc7a5743)
+  | | |
+  | | x  4:76be324c128b d (rewritten using rebase as 11:a1707a5b7c2c)
+  | |/
   | x  3:a82ac2b38757 c (rewritten using rebase as 10:d008e6b4d3fd)
   | |
   o |  2:630d7c95eff7 x

@@ -577,7 +577,9 @@ def _runcatch(req):
             # Uncontionally turn off narrow-heads. The hg servers use
             # full, revlog-based repos. Keep them using old revlog-based
             # algorithms and do not risk switching to new algorithms.
-            if "SSH_CLIENT" in encoding.environ:
+            if "SSH_CLIENT" in encoding.environ and req.ui.configbool(
+                "experimental", "disable-narrow-heads-ssh-server"
+            ):
                 req.ui.setconfig("experimental", "narrow-heads", "false", "serve")
 
             # We want to constrain 'hg serve --stdio' instances pretty

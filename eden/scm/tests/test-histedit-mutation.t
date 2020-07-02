@@ -182,7 +182,7 @@ Base setup for the rest of the testing
   |
   o  9:e80cad0096a5 d
   |
-  | x  8:7641852d682f fold-temp-revision e860deea161a
+  | o  8:7641852d682f fold-temp-revision e860deea161a
   | |
   | x  7:c04b72554bfd d
   |/
@@ -196,7 +196,7 @@ Base setup for the rest of the testing
   | |
   | x  2:177f92b77385 c
   | |
-  | x  1:d2ae7f538514 b
+  | o  1:d2ae7f538514 b
   |/
   o  0:cb9a9f314b8b a
   
@@ -339,7 +339,7 @@ Check that histedit respect immutability
   > logtemplate= {rev}:{node|short} ({phase}) {desc|firstline}\n
   > EOF
 
-  $ hg ph -pv '.^'
+  $ hg debugmakepublic '.^'
   $ hg log -G
   @  13:c3accca457aa (draft) f
   |
@@ -362,13 +362,12 @@ Prepare further testing
   >     hg add $x
   >     hg ci -m $x
   > done
-  $ hg phase --force --secret .~2
   $ hg log -G
-  @  18:4f4f997369d1 (secret) k
+  @  18:4f4f997369d1 (draft) k
   |
-  o  17:94556afb7287 (secret) j
+  o  17:94556afb7287 (draft) j
   |
-  o  16:af5689bd30fd (secret) i
+  o  16:af5689bd30fd (draft) i
   |
   o  15:49605d76b1f7 (draft) h
   |
@@ -409,55 +408,11 @@ New-commit as draft (default)
   $ echo f >> f
   $ hg histedit --continue
   $ hg log -G
-  @  24:1313fc35db52 (secret) k
+  @  24:1313fc35db52 (draft) k
   |
-  o  23:b361034ee87c (secret) j
+  o  23:b361034ee87c (draft) j
   |
-  o  22:c17eeb2f6c3d (secret) i
-  |
-  o  21:5af825d0adbb (draft) h
-  |
-  o  20:152765193a02 (draft) g
-  |
-  o  19:6263e4f96392 (draft) f
-  |
-  o  12:05d885d5bf7b (public) c
-  |
-  o  0:cb9a9f314b8b (public) a
-  
-
-  $ cd ..
-
-
-New-commit as secret (config)
-
-  $ cp -R base simple-secret
-  $ cd simple-secret
-  $ cat >> .hg/hgrc << EOF
-  > [phases]
-  > new-commit=secret
-  > EOF
-  $ hg histedit -r 'c3accca457aa' --commands - << EOF
-  > edit c3accca457aa 13 f
-  > pick bd6d43595d7e 14 g
-  > pick 49605d76b1f7 15 h
-  > pick af5689bd30fd 16 i
-  > pick 94556afb7287 17 j
-  > pick 4f4f997369d1 18 k
-  > EOF
-  0 files updated, 0 files merged, 6 files removed, 0 files unresolved
-  adding f
-  Editing (c3accca457aa), you may commit or record as needed now.
-  (hg histedit --continue to resume)
-  [1]
-  $ echo f >> f
-  $ hg histedit --continue
-  $ hg log -G
-  @  24:1313fc35db52 (secret) k
-  |
-  o  23:b361034ee87c (secret) j
-  |
-  o  22:c17eeb2f6c3d (secret) i
+  o  22:c17eeb2f6c3d (draft) i
   |
   o  21:5af825d0adbb (draft) h
   |
@@ -472,92 +427,6 @@ New-commit as secret (config)
 
   $ cd ..
 
-
-Changeset reordering
--------------------------------------------
-
-If a secret changeset is put before a draft one, all descendant should be secret.
-It seems more important to present the secret phase.
-
-  $ cp -R base reorder
-  $ cd reorder
-  $ hg histedit -r 'c3accca457aa' --commands - << EOF
-  > pick c3accca457aa 13 f
-  > pick 94556afb7287 17 j
-  > pick bd6d43595d7e 14 g
-  > pick af5689bd30fd 16 i
-  > pick 49605d76b1f7 15 h
-  > pick 4f4f997369d1 18 k
-  > EOF
-  $ hg log -G
-  @  23:95954b6703e4 (secret) k
-  |
-  o  22:6e5aa76b47ae (secret) h
-  |
-  o  21:1860071fdf5a (secret) i
-  |
-  o  20:a99e43195f40 (secret) g
-  |
-  o  19:532ea2540383 (secret) j
-  |
-  o  13:c3accca457aa (draft) f
-  |
-  o  12:05d885d5bf7b (public) c
-  |
-  o  0:cb9a9f314b8b (public) a
-  
-
-  $ cd ..
-
-Changeset folding
--------------------------------------------
-
-Folding a secret changeset with a draft one turn the result secret (again,
-better safe than sorry). Folding between same phase changeset still works
-
-Note that there is a few reordering in this series for more extensive test
-
-  $ cp -R base folding
-  $ cd folding
-  $ cat >> .hg/hgrc << EOF
-  > [phases]
-  > new-commit=secret
-  > EOF
-  $ hg histedit -r 'c3accca457aa' --commands - << EOF
-  > pick 49605d76b1f7 15 h
-  > fold c3accca457aa 13 f
-  > pick bd6d43595d7e 14 g
-  > fold 94556afb7287 17 j
-  > pick af5689bd30fd 16 i
-  > fold 4f4f997369d1 18 k
-  > EOF
-  $ hg log -G
-  @  27:9132403f8032 (secret) i
-  |
-  o  24:ed9973fd7393 (secret) g
-  |
-  o  21:81d8ddd48bb3 (draft) h
-  |
-  o  12:05d885d5bf7b (public) c
-  |
-  o  0:cb9a9f314b8b (public) a
-  
-
-  $ hg co ed9973fd7393
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ echo wat >> wat
-  $ hg add wat
-  $ hg ci -m 'add wat'
-  $ hg merge 9132403f8032
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-  $ hg ci -m 'merge'
-  $ echo not wat > wat
-  $ hg ci -m 'modify wat'
-  $ hg histedit 81d8ddd48bb3
-  abort: cannot edit history that contains merges
-  [255]
-  $ cd ..
 
 Check abort behavior
 -------------------------------------------
@@ -583,11 +452,11 @@ attempted later.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log -G
-  @  18:4f4f997369d1 (secret) k
+  @  18:4f4f997369d1 (draft) k
   |
-  o  17:94556afb7287 (secret) j
+  o  17:94556afb7287 (draft) j
   |
-  o  16:af5689bd30fd (secret) i
+  o  16:af5689bd30fd (draft) i
   |
   o  15:49605d76b1f7 (draft) h
   |
@@ -614,11 +483,11 @@ attempted later.
   [1]
   $ hg histedit --continue --config experimental.evolution.track-operation=1
   $ hg log -G
-  @  25:dd9cf9176a2d (secret) k
+  @  25:dd9cf9176a2d (draft) k
   |
-  o  24:1380d026a7bb (secret) j
+  o  24:1380d026a7bb (draft) j
   |
-  o  21:9f336d5d47c2 (secret) i
+  o  21:9f336d5d47c2 (draft) i
   |
   o  20:55f4840bfff6 (draft) g
   |

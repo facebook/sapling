@@ -5,6 +5,11 @@ This test tries to exercise the ssh functionality with a dummy script
   $ setconfig format.usegeneraldelta=yes
   $ configure dummyssh
 
+Enable narrow-heads on server repos. This test accesses those repos using both
+`ssh` and `hg -R`. Enable narrow-heads to get a consistent state.
+
+  $ setconfig experimental.disable-narrow-heads-ssh-server=false
+
 creating 'remote' repo
 
   $ hg init remote

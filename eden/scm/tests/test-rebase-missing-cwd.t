@@ -29,7 +29,7 @@ Ensure that dirsync does not cause an abort when cwd goes missing
   $TESTTMP/repo1
   $ hg status
 
-  $ hg log -Gr ":" -T "{node|short} {desc}"
+  $ hg log -Gr "all()" -T "{node|short} {desc}"
   @  74e7da63e173 change
   |
   o  5f45087392e8 delete

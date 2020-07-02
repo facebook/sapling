@@ -6,10 +6,11 @@
 Setup
 
   $ configure dummyssh
+  $ enable remotenames
   $ setconfig ui.username="nobody <no.reply@fb.com>"
 
   $ log() {
-  >   hg log -G -T "{desc} [{phase}:{node|short}] {bookmarks}" "$@"
+  >   hg log -G -T "{desc} [{phase}:{node|short}] {remotenames}" "$@"
   > }
 
 Set up server repository
@@ -41,7 +42,7 @@ Create a merge commit that merges executable file in
   $ cd ../client
   $ hg up -q tip
   $ log -r .
-  @  initial [public:2bb9d20e471c] master_bookmark
+  @  initial [public:2bb9d20e471c] default/master_bookmark
   
   $ hg up -q null
   $ echo ex > ex

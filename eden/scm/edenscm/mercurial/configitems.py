@@ -255,6 +255,7 @@ coreconfigitem("experimental", "copytrace", default="on")
 coreconfigitem("experimental", "copytrace.movecandidateslimit", default=100)
 coreconfigitem("experimental", "copytrace.sourcecommitlimit", default=100)
 coreconfigitem("experimental", "crecordtest", default=None)
+coreconfigitem("experimental", "disable-narrow-heads-ssh-server", default=True)
 coreconfigitem(
     "experimental", "evolution", default="createmarkers allowunstable allowdivergence"
 )

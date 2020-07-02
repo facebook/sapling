@@ -463,9 +463,7 @@ The graph looks like:
 >  |
 >  :  (many other default commits)
 
-  $ hg clone . a
-  updating to branch b
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone . a -q
   $ hg -R a up -q 'ancestor(head())'
   $ hg clone -r tip . b
   adding changesets

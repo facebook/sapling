@@ -35,14 +35,12 @@
   $ mv common.new common
   $ hg ci -m L2
 
-  $ hg phase --force --secret 2
-
   $ tglogp
   @  4: 46f0b057b5c0 draft 'L2'
   |
   o  3: 3163e20567cc draft 'L1'
   |
-  | o  2: a9ce13b75fb5 secret 'C3'
+  | o  2: a9ce13b75fb5 draft 'C3'
   |/
   o  1: 11eb9c356adf draft 'C2'
   |
@@ -115,7 +113,7 @@ Abort (should clear out unsupported merge state):
   |
   o  3: 3163e20567cc draft 'L1'
   |
-  | o  2: a9ce13b75fb5 secret 'C3'
+  | o  2: a9ce13b75fb5 draft 'C3'
   |/
   o  1: 11eb9c356adf draft 'C2'
   |
@@ -177,7 +175,6 @@ Construct new repo:
   $ hg ci -Am C1
   adding c
 
-  $ hg phase --force --secret 1
   $ hg debugmakepublic 1
 
 Rebase and abort without generating new changesets:
@@ -187,7 +184,7 @@ Rebase and abort without generating new changesets:
   |
   o  3: a6484957d6b9 draft 'B bis'
   |
-  | o  2: 49cb3485fa0c secret 'C'
+  | o  2: 49cb3485fa0c draft 'C'
   | |
   | o  1: 6c81ed0049f8 public 'B'
   |/
@@ -207,7 +204,7 @@ Rebase and abort without generating new changesets:
   |
   o  3: a6484957d6b9 draft 'B bis'
   |
-  | @  2: 49cb3485fa0c secret 'C'
+  | @  2: 49cb3485fa0c draft 'C'
   | |
   | o  1: 6c81ed0049f8 public 'B'
   |/
@@ -221,7 +218,7 @@ Rebase and abort without generating new changesets:
   |
   o  3: a6484957d6b9 draft 'B bis'
   |
-  | o  2: 49cb3485fa0c secret 'C'
+  | o  2: 49cb3485fa0c draft 'C'
   | |
   | o  1: 6c81ed0049f8 public 'B'
   |/
