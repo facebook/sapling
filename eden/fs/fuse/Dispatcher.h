@@ -354,8 +354,12 @@ class Dispatcher {
    *
    * The fh parameter contains opendir's result.
    */
-  virtual folly::Future<DirList>
-  readdir(InodeNumber ino, DirList&& dirList, off_t offset, uint64_t fh);
+  virtual folly::Future<DirList> readdir(
+      InodeNumber ino,
+      DirList&& dirList,
+      off_t offset,
+      uint64_t fh,
+      ObjectFetchContext& context);
 
   /**
    * Get file system statistics

@@ -145,7 +145,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece newName);
 
 #ifndef _WIN32
-  DirList readdir(DirList&& list, off_t off);
+  DirList readdir(DirList&& list, off_t off, ObjectFetchContext& context);
 #else
   /**
    * The following readdir() is similar to the one in the POSIX code and is

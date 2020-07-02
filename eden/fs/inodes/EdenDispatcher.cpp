@@ -298,11 +298,13 @@ folly::Future<DirList> EdenDispatcher::readdir(
     InodeNumber ino,
     DirList&& dirList,
     off_t offset,
-    uint64_t /*fh*/) {
+    uint64_t /*fh*/,
+    ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "readdir({}, {})", ino, offset);
   return inodeMap_->lookupTreeInode(ino).thenValue(
-      [dirList = std::move(dirList), offset](TreeInodePtr inode) mutable {
-        return inode->readdir(std::move(dirList), offset);
+      [dirList = std::move(dirList), offset, &context](
+          TreeInodePtr inode) mutable {
+        return inode->readdir(std::move(dirList), offset, context);
       });
 }
 

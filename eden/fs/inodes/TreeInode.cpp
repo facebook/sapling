@@ -1745,7 +1745,8 @@ void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
 }
 
 #ifndef _WIN32
-DirList TreeInode::readdir(DirList&& list, off_t off) {
+DirList
+TreeInode::readdir(DirList&& list, off_t off, ObjectFetchContext& /*context*/) {
   /*
    * Implementing readdir correctly in the presence of concurrent modifications
    * to the directory is nontrivial. This function will be called multiple

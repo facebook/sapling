@@ -178,8 +178,12 @@ folly::Future<folly::Unit> Dispatcher::fsyncdir(InodeNumber, bool) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<DirList>
-Dispatcher::readdir(InodeNumber, DirList&&, off_t, uint64_t) {
+folly::Future<DirList> Dispatcher::readdir(
+    InodeNumber,
+    DirList&&,
+    off_t,
+    uint64_t,
+    ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 

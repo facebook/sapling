@@ -96,7 +96,8 @@ class EdenDispatcher : public Dispatcher {
       InodeNumber ino,
       DirList&& dirList,
       off_t offset,
-      uint64_t fh) override;
+      uint64_t fh,
+      ObjectFetchContext& context) override;
 
   folly::Future<std::string> getxattr(InodeNumber ino, folly::StringPiece name)
       override;

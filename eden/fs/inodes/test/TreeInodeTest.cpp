@@ -21,6 +21,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -141,7 +142,9 @@ TEST(TreeInode, readdirReturnsSelfAndParentBeforeEntries) {
   TestMount mount{builder};
 
   auto root = mount.getEdenMount()->getRootInode();
-  auto result = root->readdir(DirList{4096}, 0).extract();
+  auto result =
+      root->readdir(DirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
 
   ASSERT_EQ(4, result.size());
   EXPECT_EQ(".", result[0].name);
@@ -159,7 +162,9 @@ TEST(TreeInode, readdirOffsetsAreNonzero) {
   TestMount mount{builder};
 
   auto root = mount.getEdenMount()->getRootInode();
-  auto result = root->readdir(DirList{4096}, 0).extract();
+  auto result =
+      root->readdir(DirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
   ASSERT_EQ(4, result.size());
   for (auto& entry : result) {
     EXPECT_NE(0, entry.offset);
@@ -173,33 +178,47 @@ TEST(TreeInode, readdirRespectsOffset) {
 
   auto root = mount.getEdenMount()->getRootInode();
 
-  const auto resultA = root->readdir(DirList{4096}, 0).extract();
+  const auto resultA =
+      root->readdir(DirList{4096}, 0, ObjectFetchContext::getNullContext())
+          .extract();
   ASSERT_EQ(4, resultA.size());
   EXPECT_EQ(".", resultA[0].name);
   EXPECT_EQ("..", resultA[1].name);
   EXPECT_EQ("file", resultA[2].name);
   EXPECT_EQ(".eden", resultA[3].name);
 
-  const auto resultB =
-      root->readdir(DirList{4096}, resultA[0].offset).extract();
+  const auto resultB = root->readdir(
+                               DirList{4096},
+                               resultA[0].offset,
+                               ObjectFetchContext::getNullContext())
+                           .extract();
   ASSERT_EQ(3, resultB.size());
   EXPECT_EQ("..", resultB[0].name);
   EXPECT_EQ("file", resultB[1].name);
   EXPECT_EQ(".eden", resultB[2].name);
 
-  const auto resultC =
-      root->readdir(DirList{4096}, resultB[0].offset).extract();
+  const auto resultC = root->readdir(
+                               DirList{4096},
+                               resultB[0].offset,
+                               ObjectFetchContext::getNullContext())
+                           .extract();
   ASSERT_EQ(2, resultC.size());
   EXPECT_EQ("file", resultC[0].name);
   EXPECT_EQ(".eden", resultC[1].name);
 
-  const auto resultD =
-      root->readdir(DirList{4096}, resultC[0].offset).extract();
+  const auto resultD = root->readdir(
+                               DirList{4096},
+                               resultC[0].offset,
+                               ObjectFetchContext::getNullContext())
+                           .extract();
   ASSERT_EQ(1, resultD.size());
   EXPECT_EQ(".eden", resultD[0].name);
 
-  const auto resultE =
-      root->readdir(DirList{4096}, resultD[0].offset).extract();
+  const auto resultE = root->readdir(
+                               DirList{4096},
+                               resultD[0].offset,
+                               ObjectFetchContext::getNullContext())
+                           .extract();
   EXPECT_EQ(0, resultE.size());
 }
 
@@ -208,7 +227,10 @@ TEST(TreeInode, readdirIgnoresWildOffsets) {
 
   auto root = mount.getEdenMount()->getRootInode();
 
-  auto result = root->readdir(DirList{4096}, 0xfaceb00c).extract();
+  auto result =
+      root->readdir(
+              DirList{4096}, 0xfaceb00c, ObjectFetchContext::getNullContext())
+          .extract();
   EXPECT_EQ(0, result.size());
 }
 
@@ -259,8 +281,11 @@ void runConcurrentModificationAndReaddirIteration(
   std::unordered_map<std::string, unsigned> seen;
 
   for (;;) {
-    auto result =
-        root->readdir(DirList{kDirListBufferSize}, lastOffset).extract();
+    auto result = root->readdir(
+                          DirList{kDirListBufferSize},
+                          lastOffset,
+                          ObjectFetchContext::getNullContext())
+                      .extract();
     if (result.empty()) {
       break;
     }
