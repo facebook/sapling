@@ -24,7 +24,7 @@ use std::convert::TryFrom;
 use std::str::FromStr;
 
 use anyhow::{ensure, Context, Result};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use types::{HgId, Key, RepoPathBuf};
 
@@ -72,18 +72,17 @@ pub fn parse_data_req(json: &Value) -> Result<DataRequest> {
 ///     ["path/to/file_2", "7dcd6ede35eaaa5b1b16a341b19993e59f9b0dbf"],
 ///     ["path/to/file_3", "218d708a9f8c3e37cfd7ab916c537449ac5419cd"],
 ///   ],
-///   "length": 1
+///   "length": 1,
 /// }
 /// ```
-///
-pub fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
-    let json = json.as_object().context("input must be a JSON object")?;
-    let length = json
+pub fn parse_history_req(value: &Value) -> Result<HistoryRequest> {
+    let value = value.as_object().context("input must be a JSON object")?;
+    let length = value
         .get("length")
         .and_then(|d| d.as_u64())
         .map(|d| d as u32);
     let keys = {
-        let json_keys = json.get("keys").context("missing field: keys")?;
+        let json_keys = value.get("keys").context("missing field: keys")?;
         parse_keys(json_keys)?
     };
 
@@ -115,8 +114,8 @@ pub fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
 /// }
 ///     ```
 ///
-pub fn parse_tree_req(json: &Value) -> Result<CompleteTreeRequest> {
-    let obj = json.as_object().context("input must be a JSON object")?;
+pub fn parse_tree_req(value: &Value) -> Result<CompleteTreeRequest> {
+    let obj = value.as_object().context("input must be a JSON object")?;
 
     let rootdir = obj.get("rootdir").context("missing field: rootdir")?;
     let rootdir = rootdir.as_str().context("rootdir field must be a string")?;
@@ -143,8 +142,8 @@ pub fn parse_tree_req(json: &Value) -> Result<CompleteTreeRequest> {
     })
 }
 
-fn parse_keys(json: &Value) -> Result<Vec<Key>> {
-    let arr = json.as_array().context("input must be a JSON array")?;
+fn parse_keys(value: &Value) -> Result<Vec<Key>> {
+    let arr = value.as_array().context("input must be a JSON array")?;
 
     let mut keys = Vec::new();
     for i in arr.iter() {
@@ -170,8 +169,8 @@ fn parse_keys(json: &Value) -> Result<Vec<Key>> {
     Ok(keys)
 }
 
-fn parse_hashes(json: &Value) -> Result<Vec<HgId>> {
-    let array = json
+fn parse_hashes(value: &Value) -> Result<Vec<HgId>> {
+    let array = value
         .as_array()
         .context("node hashes must be a passed as an array")?;
     let mut hashes = Vec::new();
@@ -212,5 +211,75 @@ impl FromJson for HistoryRequest {
 impl FromJson for CompleteTreeRequest {
     fn from_json(json: &Value) -> Result<Self> {
         parse_tree_req(json)
+    }
+}
+
+pub trait ToJson {
+    fn to_json(&self) -> Value;
+}
+
+impl ToJson for HgId {
+    fn to_json(&self) -> Value {
+        json!(self.to_hex())
+    }
+}
+
+impl ToJson for Key {
+    fn to_json(&self) -> Value {
+        json!([&self.path, self.hgid.to_json()])
+    }
+}
+
+impl<T: ToJson> ToJson for Vec<T> {
+    fn to_json(&self) -> Value {
+        self.iter().map(ToJson::to_json).collect::<Vec<_>>().into()
+    }
+}
+
+impl ToJson for DataRequest {
+    fn to_json(&self) -> Value {
+        json!({ "keys": self.keys.to_json() })
+    }
+}
+
+impl ToJson for HistoryRequest {
+    fn to_json(&self) -> Value {
+        json!({ "keys": self.keys.to_json(), "length": self.length })
+    }
+}
+
+impl ToJson for CompleteTreeRequest {
+    fn to_json(&self) -> Value {
+        json!({
+            "rootdir": self.rootdir,
+            "mfnodes": self.mfnodes.to_json(),
+            "basemfnodes": self.basemfnodes.to_json(),
+            "depth": self.depth,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use quickcheck_macros::quickcheck;
+
+    #[quickcheck]
+    fn test_data_req_roundtrip(req: DataRequest) -> bool {
+        let json = req.to_json();
+        req == DataRequest::from_json(&json).unwrap()
+    }
+
+    #[quickcheck]
+    fn test_history_req_roundtrip(req: HistoryRequest) -> bool {
+        let json = req.to_json();
+        req == HistoryRequest::from_json(&json).unwrap()
+    }
+
+    #[quickcheck]
+    fn test_tree_req_roundtrip(req: CompleteTreeRequest) -> bool {
+        let json = req.to_json();
+        req == CompleteTreeRequest::from_json(&json).unwrap()
     }
 }
