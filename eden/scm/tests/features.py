@@ -19,7 +19,6 @@ mutationblacklist = """
     test-mutation-fromobsmarkers.t
     test-rebase-dest.t
     test-revset2.t
-    test-globalrevs-t.py
     test-obsmarker-template-t.py
 """.split()
 
@@ -32,7 +31,6 @@ narrowheadsincompatiblelist = """
     test-push.t
     test-revset2.t
 
-    test-globalrevs-t.py
     test-hgsql-local-commands-t.py
     test-revset-t.py
 """

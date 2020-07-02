@@ -10,17 +10,16 @@ from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 feature.require(["py2"])
 
-# FIXME: This test is broken.
-feature.require(["false"])
-
+sh.enable("remotenames")
 sh % ". '$TESTDIR/hgsql/library.sh'"
 sh % "initdb"
 sh % "setconfig 'extensions.treemanifest=!' 'format.use-zstore-commit-data=0'"
 
 # Test operations on server repository with bad configuration fail in expected
 # ways.
+# (use initserver instead of hg init to set the right repo requirements)
 
-sh % "hg init master"
+sh % "initserver master master"
 sh % "cd master"
 sh % "cat" << r"""
 [extensions]
@@ -35,18 +34,6 @@ sh % "cat" << r"""
 [globalrevs]
 reponame = customname
 """ >> ".hg/hgrc"
-
-# - Expectation is to fail because hgsql extension is not enabled.
-
-# sh % "hg log -r tip -T '{node}'" == r"""
-#   abort: hgsql extension is not enabled
-#   [255]"""
-
-
-# - Properly configure the server with respect to hgsql extension.
-
-sh % "configureserver . master"
-
 
 # - Expectation is to fail because pushrebase extension is not enabled.
 
@@ -145,8 +132,6 @@ sh % "cat" << r"""
 [extensions]
 globalrevs=
 pushrebase=
-[experimental]
-evolution = all
 """ >> ".hg/hgrc"
 
 
@@ -162,7 +147,7 @@ sh % "hg ci -Aqm c"
 
 # - Finally, push the commits to the server.
 
-sh % "hg push -q 'ssh://user@dummy/master' --to master"
+sh % "hg push -qr. 'ssh://user@dummy/master' --to master"
 
 
 # - Check that the `globalrev` template on the client and server shows strictly
@@ -218,7 +203,7 @@ sh % "hg ci -Aqm e"
 # - Try pushing the commits to the server. Push should fail because of the
 # incorrect configuration on the server.
 
-sh % "hg push -q 'ssh://user@dummy/master' --to master" == r"""
+sh % "hg push -qr. 'ssh://user@dummy/master' --to master" == r"""
     abort: push failed on remote
     [255]"""
 
@@ -230,7 +215,7 @@ sh % "cd ../master"
 sh % "mv .hg/hgrc.bak .hg/hgrc"
 
 sh % "cd ../client"
-sh % "hg push -q 'ssh://user@dummy/master' --to master"
+sh % "hg push -qr. 'ssh://user@dummy/master' --to master"
 
 
 # - Check that both the client and server have the expected strictly increasing
@@ -258,6 +243,8 @@ sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     o  5000 b
     |
     @   a"""
+sh % "hg bookmark -fr master oldmaster"
+sh % "hg bookmark -fr 'desc(d)' master"
 
 
 # Test pushing to a different head on the server.
@@ -266,7 +253,7 @@ sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
 # tip).
 
 sh % "cd ../client"
-sh % "hg up -q 'tip^'"
+sh % "hg up -q 'desc(d)'"
 sh % "touch f"
 sh % "hg ci -Aqm f"
 sh % "touch g"
@@ -275,7 +262,7 @@ sh % "hg ci -Aqm g"
 
 # - Push the commits to the server.
 
-sh % "hg push -q 'ssh://user@dummy/master' --to master"
+sh % "hg push -qr. 'ssh://user@dummy/master' --to master"
 
 
 # - Check that both the client and server have the expected strictly increasing
@@ -311,6 +298,8 @@ sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     o  5000 b
     |
     @   a"""
+sh % "hg bookmark -r master oldmaster2"
+sh % "hg bookmark -fr 'desc(e)' master"
 
 
 # Test cherry picking commits from a branch and pushing to another branch.
@@ -320,7 +309,7 @@ sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
 # top of commit with description `e`.
 
 sh % "cd ../client"
-sh % "hg rebase -qk -d 'desc(\"e\")' -r tip --collapse -m g1 --config 'extensions.rebase='"
+sh % "hg rebase -qk -d 'max(desc(\"e\"))' -r 'max(desc(g))' --collapse -m g1 --config 'extensions.rebase='"
 
 # - Check that the rebase did not add `globalrev` to the commit since the commit
 # did not reach the server yet.
@@ -344,7 +333,7 @@ sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
 
 # - Push the commits to the server.
 
-sh % "hg push -q 'ssh://user@dummy/master' --to master"
+sh % "hg push -qr. 'ssh://user@dummy/master' --to master"
 
 
 # - Check that both the client and server have the expected strictly increasing
@@ -426,8 +415,6 @@ sh % "cat" << r"""
 [extensions]
 globalrevs=
 pushrebase=
-[experimental]
-evolution = all
 """ >> ".hg/hgrc"
 
 
@@ -452,8 +439,8 @@ sh % "hg ci -Aqm h2"
 # - Push the commits from both the clients.
 
 sh % "cd .."
-sh % "hg push -R client -q 'ssh://user@dummy/master' --to master"
-sh % "hg push -R client2 -q -f 'ssh://user@dummy/master2' --to master"
+sh % "hg push -R client -qr. 'ssh://user@dummy/master' --to master"
+sh % "hg push -R client2 -qr. -f 'ssh://user@dummy/master2' --to master"
 
 
 # - Introduce some bash functions to help with testing
@@ -465,6 +452,7 @@ def getglobalrev(commit):
 
 
 def getglobalrevstr(commit):
+    commit = "(%s)-obsolete()" % commit
     return shlib.hg("log", "--hidden", "-r", commit, "-T", "{globalrev}")
 
 
