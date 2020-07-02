@@ -1372,7 +1372,7 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
     """Resolves false conflicts where the nodeid changed but the content
        remained the same."""
 
-    for f, (m, args, msg) in actions.items():
+    for f, (m, args, msg) in pycompat.listitems(actions):
         if m == "cd" and f in ancestor and not wctx[f].cmp(ancestor[f]):
             # local did change but ended up with same content
             actions[f] = "r", None, "prompt same"

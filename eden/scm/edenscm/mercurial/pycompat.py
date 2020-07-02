@@ -126,6 +126,9 @@ if sys.version_info[0] >= 3:
     def iteritems(s):
         return s.items()
 
+    def listitems(s):
+        return list(s.items())
+
     def iterkeys(s):
         return s.keys()
 
@@ -205,6 +208,9 @@ else:
 
     def iteritems(s):
         return s.iteritems()
+
+    def listitems(s):
+        return s.items()
 
     def iterkeys(s):
         return s.iterkeys()
