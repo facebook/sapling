@@ -140,10 +140,21 @@ impl SourceControlServiceImpl {
         };
         let repo = self.repo(ctx, &repo).await?;
         let bookmarks = repo
-            .list_bookmarks(params.include_scratch, prefix, limit)
+            .list_bookmarks(
+                params.include_scratch,
+                prefix.as_deref(),
+                params.after.as_deref(),
+                limit,
+            )?
             .collect()
             .compat()
             .await?;
+        let continue_after = match limit {
+            Some(limit) if bookmarks.len() as u64 >= limit => {
+                bookmarks.last().map(|bookmark| bookmark.0.clone())
+            }
+            _ => None,
+        };
         let ids = bookmarks.iter().map(|(_name, cs_id)| *cs_id).collect();
         let id_mapping = map_commit_identities(&repo, ids, &params.identity_schemes).await?;
         let bookmarks = bookmarks
@@ -155,7 +166,7 @@ impl SourceControlServiceImpl {
             .collect();
         Ok(thrift::RepoListBookmarksResponse {
             bookmarks,
-            continue_after: None,
+            continue_after,
         })
     }
 

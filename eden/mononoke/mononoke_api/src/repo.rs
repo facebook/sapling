@@ -18,7 +18,9 @@ use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStora
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobstore_factory::make_metadata_sql_factory;
-use bookmarks::{BookmarkName, BookmarkPrefix};
+use bookmarks::{
+    BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks, Freshness,
+};
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
@@ -27,10 +29,9 @@ use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::future::try_join_all;
-use futures::stream::StreamExt as NewStreamExt;
+use futures::stream::{StreamExt, TryStreamExt};
 use futures::try_join;
-use futures_ext::StreamExt;
-use futures_old::stream::{self, Stream};
+use futures_old::stream::Stream;
 use itertools::Itertools;
 use mercurial_types::Globalrev;
 #[cfg(test)]
@@ -786,56 +787,68 @@ impl RepoContext {
     pub fn list_bookmarks(
         &self,
         include_scratch: bool,
-        prefix: Option<String>,
+        prefix: Option<&str>,
+        after: Option<&str>,
         limit: Option<u64>,
-    ) -> impl Stream<Item = (String, ChangesetId), Error = MononokeError> {
-        if include_scratch {
-            let prefix = match prefix.map(BookmarkPrefix::new) {
-                Some(Ok(prefix)) => prefix,
-                Some(Err(e)) => {
-                    return stream::once(Err(MononokeError::InvalidRequest(format!(
-                        "invalid bookmark prefix: {}",
-                        e
-                    ))))
-                    .boxify()
-                }
-                None => {
-                    return stream::once(Err(MononokeError::InvalidRequest(
-                        "prefix required to list scratch bookmarks".to_string(),
-                    )))
-                    .boxify()
-                }
-            };
-            let limit = match limit {
-                Some(limit) => limit,
-                None => {
-                    return stream::once(Err(MononokeError::InvalidRequest(
-                        "limit required to list scratch bookmarks".to_string(),
-                    )))
-                    .boxify()
-                }
-            };
-            self.blob_repo()
-                .get_bonsai_bookmarks_by_prefix_maybe_stale(self.ctx.clone(), &prefix, limit)
-                .map(|(bookmark, cs_id)| (bookmark.into_name().into_string(), cs_id))
-                .map_err(MononokeError::from)
-                .boxify()
+    ) -> Result<impl Stream<Item = (String, ChangesetId), Error = MononokeError>, MononokeError>
+    {
+        let kinds = if include_scratch {
+            if prefix.is_none() {
+                return Err(MononokeError::InvalidRequest(
+                    "prefix required to list scratch bookmarks".to_string(),
+                ));
+            }
+            if limit.is_none() {
+                return Err(MononokeError::InvalidRequest(
+                    "limit required to list scratch bookmarks".to_string(),
+                ));
+            }
+
+            BookmarkKind::ALL
         } else {
-            // TODO(mbthomas): honour `limit` for publishing bookmarks
-            let prefix = prefix.unwrap_or_else(|| "".to_string());
-            self.blob_repo()
-                .get_bonsai_publishing_bookmarks_maybe_stale(self.ctx.clone())
-                .filter_map(move |(bookmark, cs_id)| {
-                    let name = bookmark.into_name().into_string();
-                    if name.starts_with(&prefix) {
-                        Some((name, cs_id))
-                    } else {
-                        None
-                    }
-                })
-                .map_err(MononokeError::from)
-                .boxify()
-        }
+            BookmarkKind::ALL_PUBLISHING
+        };
+
+        let prefix = match prefix {
+            Some(prefix) => BookmarkPrefix::new(prefix).map_err(|e| {
+                MononokeError::InvalidRequest(format!(
+                    "invalid bookmark prefix '{}': {}",
+                    prefix, e
+                ))
+            })?,
+            None => BookmarkPrefix::empty(),
+        };
+
+        let pagination = match after {
+            Some(after) => {
+                let name = BookmarkName::new(after).map_err(|e| {
+                    MononokeError::InvalidRequest(format!(
+                        "invalid bookmark name '{}': {}",
+                        after, e
+                    ))
+                })?;
+                BookmarkPagination::After(name)
+            }
+            None => BookmarkPagination::FromStart,
+        };
+
+        let blob_repo = self.blob_repo();
+        let bookmarks = blob_repo
+            .attribute_expected::<dyn Bookmarks>()
+            .list(
+                self.ctx.clone(),
+                blob_repo.get_repoid(),
+                Freshness::MaybeStale,
+                &prefix,
+                kinds,
+                &pagination,
+                limit.unwrap_or(std::u64::MAX),
+            )
+            .map_ok(|(bookmark, cs_id)| (bookmark.into_name().into_string(), cs_id))
+            .map_err(MononokeError::from)
+            .boxed()
+            .compat();
+        Ok(bookmarks)
     }
 
     /// Get a stack for the list of heads (up to the first public commit).
