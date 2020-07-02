@@ -1,8 +1,6 @@
 #require py2
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable amend histedit rebase tweakdefaults
@@ -95,7 +93,7 @@ Rebase fast forwards bookmark
   $ hg book -r 'desc(a2)' mybook
   $ hg up -q mybook
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  @  1 a2 mybook
+  @  2 a2 mybook
   |
   o  0 a
   
@@ -103,9 +101,9 @@ Rebase fast forwards bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  @  2 b mybook
+  @  3 b mybook
   |
-  o  1 a2
+  o  2 a2
   |
   o  0 a
   
@@ -115,9 +113,9 @@ Rebase works with hyphens
   $ hg book -r 'desc(b)' hyphen-dest
   $ hg up -q hyphen-book
   $ hg log --all -G -T '{rev} {desc} {bookmarks}\n'
-  o  2 b hyphen-dest mybook
+  o  3 b hyphen-dest mybook
   |
-  @  1 a2 hyphen-book
+  @  2 a2 hyphen-book
   |
   o  0 a
   
@@ -125,9 +123,9 @@ Rebase works with hyphens
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --all -G -T '{rev} {desc} {bookmarks}\n'
-  @  2 b hyphen-book hyphen-dest mybook
+  @  3 b hyphen-book hyphen-dest mybook
   |
-  o  1 a2
+  o  2 a2
   |
   o  0 a
   
@@ -266,21 +264,21 @@ This tag is kept to keep the rest of the test consistent:
 Test graft date when tweakdefaults.graftkeepdate is not set
   $ hg revert -a -q
   $ hg up -q 'desc(a2)'
-  $ hg graft -q 'desc(b)'
+  $ hg graft -q 'desc(b) & mybook'
   $ hg log -T "{rev}\n" -d "yesterday to today"
-  4
+  5
 
 Test graft date when tweakdefaults.graftkeepdate is not set and --date is provided
   $ hg up -q 'desc(a2)'
   $ hg graft -q 'desc(b) & mybook' --date "1 1"
   $ hg log -l 1 -T "{date} {rev}\n"
-  1.01 5
+  1.01 6
 
 Test graft date when tweakdefaults.graftkeepdate is set
   $ hg up -q 'desc(a2)'
   $ hg graft -q 'max(desc(b))' --config tweakdefaults.graftkeepdate=True
   $ hg log -l 1 -T "{date} {rev}\n"
-  1.01 6
+  1.01 7
 
 Test amend date when tweakdefaults.amendkeepdate is not set
   $ hg up -q 'desc(a2)'
@@ -289,7 +287,7 @@ Test amend date when tweakdefaults.amendkeepdate is not set
   $ echo x > a
   $ hg amend -q -m "amended message"
   $ hg log -T "{rev}\n" -d "yesterday to today"
-  7
+  9
 
 Test amend date when tweakdefaults.amendkeepdate is set
   $ touch new_file
@@ -297,15 +295,12 @@ Test amend date when tweakdefaults.amendkeepdate is set
   $ echo x > new_file
   $ hg amend -q -m "amended message" --config tweakdefaults.amendkeepdate=True
   $ hg log -l 1 -T "{date} {rev}\n"
-  0.00 8
+  0.00 11
 
 Test amend --to doesn't give a flag error when tweakdefaults.amendkeepdate is set
   $ echo q > new_file
-  $ hg amend --to 'max(desc(amended))' --config tweakdefaults.amendkeepdate=False
-  abort: can only histedit a changeset together with all its descendants
-  [255]
   $ hg log -l 1 -T "{date} {rev}\n"
-  0.00 9
+  0.00 11
 
 Test commit --amend date when tweakdefaults.amendkeepdate is set
   $ echo a >> new_file
@@ -313,7 +308,7 @@ Test commit --amend date when tweakdefaults.amendkeepdate is set
   $ echo x > new_file
   $ hg commit -q --amend -m "amended message" --config tweakdefaults.amendkeepdate=True
   $ hg log -l 1 -T "{date} {rev}\n"
-  0.00 10
+  0.00 13
 
 Test commit --amend date when tweakdefaults.amendkeepdate is not set and --date is provided
   $ echo xxx > a
@@ -321,7 +316,7 @@ Test commit --amend date when tweakdefaults.amendkeepdate is not set and --date 
   $ echo x > a
   $ hg commit -q --amend -m "amended message" --date "1 1"
   $ hg log -l 1 -T "{date} {rev}\n"
-  1.01 11
+  1.01 15
 
 Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ echo test_1 > rebase_dest
@@ -335,7 +330,7 @@ Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ hg bookmark rebase_source_test_1
   $ hg rebase -q -s rebase_source_test_1 -d rebase_dest_test_1
   $ hg log -l 1 -T "{rev}\n" -d "yesterday to today"
-  13
+  18
 
 Test rebase date when tweakdefaults.rebasekeepdate is set
   $ echo test_2 > rebase_dest
@@ -349,8 +344,8 @@ Test rebase date when tweakdefaults.rebasekeepdate is set
   $ hg bookmark rebase_source_test_2
   $ hg rebase -q -s rebase_source_test_2 -d rebase_dest_test_2 --config tweakdefaults.rebasekeepdate=True
   $ hg log -l 2 -T "{date} {rev}\n"
-  0.00 15
-  0.00 14
+  0.00 21
+  0.00 19
 
 Test histedit date when tweakdefaults.histeditkeepdate is set
   $ hg bookmark histedit_test
@@ -361,122 +356,32 @@ Test histedit date when tweakdefaults.histeditkeepdate is set
   $ echo test_3 > histedit_3
   $ hg commit -Aqm "commit 3 for histedit"
   $ hg histedit "desc('commit 1 for histedit')" --commands - --config tweakdefaults.histeditkeepdate=True 2>&1 <<EOF| fixbundle
-  > pick 16
-  > pick 18
-  > pick 17
+  > pick 22
+  > pick 24
+  > pick 23
   > EOF
   $ hg log -l 3 -T "{date} {rev} {desc}\n"
-  0.00 18 commit 2 for histedit
-  0.00 17 commit 3 for histedit
-  0.00 16 commit 1 for histedit
+  0.00 26 commit 2 for histedit
+  0.00 25 commit 3 for histedit
+  0.00 22 commit 1 for histedit
 
 Test histedit date when tweakdefaults.histeditkeepdate is not set
   $ hg histedit "desc('commit 1 for histedit')" --commands - 2>&1 <<EOF| fixbundle
-  > pick 16
-  > pick 18
-  > pick 17
+  > pick 22
+  > pick 26
+  > pick 25
   > EOF
   $ hg log -l 2 -T "{rev} {desc}\n" -d "yesterday to today"
-  18 commit 3 for histedit
-  17 commit 2 for histedit
-
-Test non-remotenames use of pull --rebase and --update requires --dest
-  $ cd $TESTTMP
-  $ hg clone repo clone
-  updating to branch default
-  8 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd clone
-  $ hg pull --rebase
-  abort: you must use a bookmark with tracking or manually specify a destination for the rebase
-  (set up tracking with `hg book <name> -t <destination>` or manually supply --dest / -d)
-  [255]
-  $ hg pull --update
-  abort: you must specify a destination for the update
-  (use `hg pull --update --dest <destination>`)
-  [255]
-  $ echo foo > foo
-  $ hg commit -Am 'foo'
-  adding foo
-  $ hg pull --rebase -d default
-  pulling from $TESTTMP/repo (glob)
-  searching for changes
-  no changes found
-  nothing to rebase - working directory parent is also destination
-  $ hg pull --update -d default
-  pulling from $TESTTMP/repo (glob)
-  searching for changes
-  no changes found
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg pull --rebase --config tweakdefaults.defaultdest=default
-  pulling from $TESTTMP/repo (glob)
-  searching for changes
-  no changes found
-  nothing to rebase - working directory parent is also destination
-  $ hg pull --update --config tweakdefaults.defaultdest=default
-  pulling from $TESTTMP/repo (glob)
-  searching for changes
-  no changes found
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd $TESTTMP
-
-Prepare a repo for testing divergence warnings with respect to inhibit
-and allowance of prune rebases
-  $ hg init repodiv && cd repodiv
-  $ cat >> .hg/hgrc << EOF
-  > [experimental]
-  > evolution=createmarkers
-  > evolution.allowdivergence=off
-  > [extensions]
-  > amend=
-  > EOF
-  $ echo root > root && hg ci -Am root  # rev 0
-  adding root
-  $ echo a > a && hg ci -Am a  # rev 1
-  adding a
-  $ hg up 'desc(root)' && echo b > b && hg ci -Am b  # rev 2
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  adding b
-  $ hg up 'desc(root)' && echo c > c && hg ci -Am c  # rev 3
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  adding c
-  $ hg up 'desc(root)' && echo d > d && hg ci -Am d  # rev 4
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  adding d
-  $ hg rebase -r 'desc(a)' -d 'desc(b)'
-  rebasing 09d39afb522a "a"
-
-Test that we do not show divergence warning
-  $ hg rebase -r 09d39afb522a08bdb03dc231608f7a3488ab4edc -d 'desc(c)' --hidden
-  rebasing 09d39afb522a "a"
-
-Test that we allow pure prune rebases
-  $ hg prune 'desc(d)'
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  working directory now at 1e4be0697311
-  1 changesets pruned
-  hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
-  hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
-  $ hg rebase -r 'desc(d)' -d 'desc(c)' --hidden
-  rebasing 31aefaa21905 "d"
+  28 commit 3 for histedit
+  27 commit 2 for histedit
 
 Test diff --per-file-stat
   $ echo a >> a
   $ echo b > b
-  $ hg add a b
+  $ hg add b
   $ hg ci -m A
-  $ hg diff -r ".^" -r .
-  diff -r 1e4be0697311 -r d17770b7624d a
-  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
-  @@ -0,0 +1,1 @@
-  +a
-  diff -r 1e4be0697311 -r d17770b7624d b
-  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/b	Thu Jan 01 00:00:00 1970 +0000
-  @@ -0,0 +1,1 @@
-  +b
   $ hg diff -r ".^" -r . --per-file-stat-json
-  {"a": {"adds": 1, "isbinary": false, "removes": 0}, "b": {"adds": 1, "isbinary": false, "removes": 0}}
+  {"dir1/foo/a": {"adds": 1, "isbinary": false, "removes": 0}, "dir1/foo/b": {"adds": 1, "isbinary": false, "removes": 0}}
 
 Test rebase with showupdated=True
   $ cd $TESTTMP
@@ -503,66 +408,78 @@ Test rebase with showupdated=True
   0e067c57feba -> a602e0d56f83 "b"
 
 Test rebase with showupdate=True and a lot of source revisions
-  $ hg up -q 'desc(a)'
-  $ for i in `$TESTDIR/seq.py 11`; do touch "$i" && hg commit -Aqm "$i" && hg up -q 0; done
-  $ hg log -G -T '{node} {rev} {bookmarks}' -r 'all()'
-  o  6e3ddf6f49efd0a836a470a2d45e953db915c262 13
-  |
-  | o  e02ec9861284762c93b8a4c9e0bac0abfbb59ac7 12
-  |/
-  | o  14218977adef919e86466c688defa3fb893a5638 11
-  |/
-  | o  6a01a2bb0a9f7a6f01c6f49ce90e60bf85de79d0 10
-  |/
-  | o  e5ec40f709911f69eafada5746d3f5b969005738 9
-  |/
-  | o  73800d52e8ddab37a1f9177299d1fdfb563c061a 8
-  |/
-  | o  657f1516f142d51ba06b98413ce35a884f7f8af0 7
-  |/
-  | o  4e6ba707bdb81e60d96b84099c2d1c56530ee6f1 6
-  |/
-  | o  7ab24e484dafd1d2ebf51a4fa4523431b81b99aa 5
-  |/
-  | o  ee71024c6e8c4a45ee1d3e462431bfec85ac215a 4
-  |/
-  | o  46a418a0abd225d8ad876102f495d209907b79d9 3
-  |/
-  | o  a602e0d56f83e5816ebcbb78095e259ffbce94aa 2
-  | |
-  | o  d5e255ef74f8ec83b3a2a3f3254c699451c89e29 1
-  |/
-  @  3903775176ed42b1458a6281db4a0ccf4d9f287a 0
-  
-  $ hg rebase -r 'all() - desc(a) - desc(10)' -d 'desc(10)'
-  rebasing d5e255ef74f8 "c"
-  rebasing a602e0d56f83 "b"
-  rebasing 46a418a0abd2 "1"
-  rebasing ee71024c6e8c "2"
-  rebasing 7ab24e484daf "3"
-  rebasing 4e6ba707bdb8 "4"
-  rebasing 657f1516f142 "5"
-  rebasing 73800d52e8dd "6"
-  rebasing e5ec40f70991 "7"
-  rebasing 6a01a2bb0a9f "8"
-  rebasing 14218977adef "9"
-  rebasing 6e3ddf6f49ef "11"
-  14218977adef -> 2d12dd93bf8b "9"
-  46a418a0abd2 -> 645dc4557ba8 "1"
-  4e6ba707bdb8 -> b9598afdff23 "4"
-  657f1516f142 -> 906a55b270d4 "5"
-  6a01a2bb0a9f -> f5a7b375c4a9 "8"
-  6e3ddf6f49ef -> ad74bbdbdb75 "11"
-  73800d52e8dd -> 3145d47a5692 "6"
-  7ab24e484daf -> 03a9e0e4badc "3"
-  a602e0d56f83 -> e7a99f1fea2a "b"
-  d5e255ef74f8 -> 72d850a207d5 "c"
+
+  $ newrepo
+  $ setconfig tweakdefaults.showupdated=1 tweakdefaults.rebasekeepdate=1
+  $ drawdag << 'EOS'
+  > B C
+  > |/
+  > | D
+  > |/
+  > | E
+  > |/
+  > | F
+  > |/
+  > | G
+  > |/
+  > | H
+  > |/
+  > | I
+  > |/
+  > | J
+  > |/
+  > | K
+  > |/
+  > | L
+  > |/
+  > | M
+  > |/
+  > | N
+  > |/
+  > | O
+  > |/
+  > | P
+  > |/
+  > | Q
+  > |/
+  > A Z
+  > EOS
+  $ hg up -q 'desc(A)'
+  $ hg rebase -r 'all() - roots(all())' -d 'desc(Z)'
+  rebasing 112478962961 "B"
+  rebasing dc0947a82db8 "C"
+  rebasing b18e25de2cf5 "D"
+  rebasing 7fb047a69f22 "E"
+  rebasing 8908a377a434 "F"
+  rebasing 6fa3874a3b67 "G"
+  rebasing 575c4b5ec114 "H"
+  rebasing 08ebfeb61bac "I"
+  rebasing a0a5005cec67 "J"
+  rebasing 83780307a7e8 "K"
+  rebasing e131637a1cb6 "L"
+  rebasing 699bc4b6fa22 "M"
+  rebasing d19785b612fc "N"
+  rebasing f8b24e0bba16 "O"
+  rebasing febec53a8012 "P"
+  rebasing b768a41fb64f "Q"
+  08ebfeb61bac -> 677e16fc90a1 "I"
+  112478962961 -> d1a90b33c3e4 "B"
+  575c4b5ec114 -> 662a28166552 "H"
+  699bc4b6fa22 -> 1c202a43a316 "M"
+  6fa3874a3b67 -> 1f222ffda182 "G"
+  7fb047a69f22 -> 84c88622d1aa "E"
+  83780307a7e8 -> 3ad2160089ee "K"
+  8908a377a434 -> ac569f2619af "F"
+  a0a5005cec67 -> 47e966978ada "J"
+  b18e25de2cf5 -> bb5b4c942ce7 "D"
   ...
-  ee71024c6e8c -> 0c42bb4bf23f "2"
+  febec53a8012 -> 55884f5f9fd3 "P"
 
 Test rebase with showupdate=True and a long commit message
-  $ touch longfile && hg add -q
-  $ hg commit -qm "This is a long commit message which will be truncated."
-  $ hg rebase -d 'desc(10)'
-  rebasing e915a57d67db "This is a long commit message which will be truncated."
-  e915a57d67db -> 5444f740ff6c "This is a long commit message which will be tru..."
+
+  $ hg up -q 'desc(A)'
+  $ echo 1 > longfile
+  $ hg commit -qm "This is a long commit message which will be truncated." -A longfile
+  $ hg rebase -r . -d 'desc(Z)'
+  rebasing f5bef8190a99 "This is a long commit message which will be truncated."
+  f5bef8190a99 -> 8df4b79a5414 "This is a long commit message which will be tru..."
