@@ -195,6 +195,7 @@ impl MutationStore {
             }
             Ok(result)
         };
+        let parent_func = dag::utils::break_parent_func_cycle(parent_func);
 
         let mut dag = MemNameDag::new();
         let mut heads = connected
@@ -362,5 +363,71 @@ mod tests {
             o  4141414141414141414141414141414141414141 (A)"#
         );
         Ok(())
+    }
+
+    #[test]
+    fn test_dag_cycle() -> Result<()> {
+        let dir = TempDir::new("mutationstore")?;
+        let mut ms = MutationStore::open(dir.path())?;
+
+        for (pred, succ) in [("A", "B"), ("B", "C"), ("C", "A")].iter() {
+            add(&mut ms, pred, succ)?;
+        }
+        ms.flush()?;
+
+        assert_eq!(
+            render(&ms, "A")?,
+            r#"
+            o  4141414141414141414141414141414141414141 (A)
+            │
+            o  4343434343434343434343434343434343434343 (C)
+            │
+            o  4242424242424242424242424242424242424242 (B)"#
+        );
+        assert_eq!(
+            render(&ms, "B")?,
+            r#"
+            o  4141414141414141414141414141414141414141 (A)
+            │
+            o  4343434343434343434343434343434343434343 (C)
+            │
+            o  4242424242424242424242424242424242424242 (B)"#
+        );
+        assert_eq!(
+            render(&ms, "C")?,
+            r#"
+            o  4141414141414141414141414141414141414141 (A)
+            │
+            o  4343434343434343434343434343434343434343 (C)
+            │
+            o  4242424242424242424242424242424242424242 (B)"#
+        );
+
+        Ok(())
+    }
+
+    /// Create a node from a single-char string.
+    fn n(s: impl ToString) -> Node {
+        Node::from_slice(s.to_string().repeat(Node::len()).as_bytes()).unwrap()
+    }
+
+    /// Add (test) edges to the mutation store.
+    fn add(ms: &mut MutationStore, pred: &str, succ: &str) -> Result<()> {
+        ms.add(&MutationEntry {
+            preds: vec![n(pred)],
+            succ: n(succ),
+            split: vec![],
+            op: "rewrite".into(),
+            user: "test".into(),
+            time: 1,
+            tz: -7200,
+            extra: vec![],
+        })
+    }
+
+    /// Render the mutation store for the given nodes.
+    fn render(ms: &MutationStore, s: &str) -> Result<String> {
+        let dag = ms.get_dag(s.chars().map(n).collect::<Vec<Node>>())?;
+        renderdag::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))
     }
 }
