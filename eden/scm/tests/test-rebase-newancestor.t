@@ -1,10 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: configure mutation
-  $ configure noevolution
   $ enable rebase
-  $ setconfig format.usegeneraldelta=yes
   $ readconfig <<EOF
   > [revsetalias]
   > dev=desc("dev")
@@ -48,11 +45,11 @@ TODO: configure mutation
   merging a
 
   $ tglog
-  o  3: 25773bc4b4b0 'C'
+  o  5: 25773bc4b4b0 'C'
   |
-  o  2: c09015405f75 'B'
+  o  4: c09015405f75 'B'
   |
-  @  1: 3878212183bd 'AD'
+  @  3: 3878212183bd 'AD'
   |
   o  0: 1e635d440a73 'A'
   
@@ -112,13 +109,13 @@ Full rebase all the way back from branching point:
   rebasing bea5bcfda5f9 "devmerge2"
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
   $ tglog
-  o  5: f66b059fae0f 'dev2'
+  o  9: f66b059fae0f 'dev2'
   |
-  o  4: 1073bfc4c1ed 'dev1'
+  o  8: 1073bfc4c1ed 'dev1'
   |
-  o  3: 22e5a3eb70f1 'default4'
+  o  5: 22e5a3eb70f1 'default4'
   |
-  o  2: a51061c4b2cb 'default3'
+  o  3: a51061c4b2cb 'default3'
   |
   o  1: dfbdae6572c4 'default2'
   |
@@ -128,7 +125,6 @@ Grafty cherry picking rebasing:
 
   $ cd ../ancestor-merge-2
 
-  $ hg phase -fdr0:
   $ hg rebase -r 'children(only(dev,def))' -d $default4 --config ui.interactive=True << EOF
   > c
   > EOF
@@ -138,9 +134,9 @@ Grafty cherry picking rebasing:
   rebasing bea5bcfda5f9 "devmerge2"
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
   $ tglog
-  o  5: 9cdc50ee9a9d 'dev2'
+  o  8: 9cdc50ee9a9d 'dev2'
   |
-  o  4: 22e5a3eb70f1 'default4'
+  o  5: 22e5a3eb70f1 'default4'
   |
   o  3: a51061c4b2cb 'default3'
   |
@@ -200,20 +196,20 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   |/
   o  0: 02f0f58d5300 'common'
   
-  $ hg rebase -r 4 -d 2
+  $ hg rebase -r 'desc("p1 3=outside")' -d 'desc(target)'
   rebasing 6990226659be "merge p1 3=outside p2 1=ancestor"
   $ hg tip
-  changeset:   5:cca50676b1c5
+  changeset:   6:cca50676b1c5
   parent:      2:a60552eb93fb
   parent:      3:f59da8fc0fcf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge p1 3=outside p2 1=ancestor
   
-  $ hg rebase -r 4 -d 2
+  $ hg rebase -r 'desc("p1 1=ancestor")' -d 'desc(target)'
   rebasing a57575f79074 "merge p1 1=ancestor p2 3=outside"
   $ hg tip
-  changeset:   5:f9daf77ffe76
+  changeset:   7:f9daf77ffe76
   parent:      2:a60552eb93fb
   parent:      3:f59da8fc0fcf
   user:        test
@@ -221,9 +217,9 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   summary:     merge p1 1=ancestor p2 3=outside
   
   $ tglog
-  @    5: f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
+  @    7: f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
   |\
-  +---o  4: cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
+  +---o  6: cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
   | |/
   | o  3: f59da8fc0fcf 'outside'
   | |
@@ -235,11 +231,11 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   
 rebase of merge of ancestors
 
-  $ hg up -qr 2
-  $ hg merge -qr 3
+  $ hg up -qr 'desc(target)'
+  $ hg merge -qr 'desc(outside)-desc(merge)'
   $ echo 'other change while merging future "rebase ancestors"' > other
   $ hg ci -Aqm 'merge rebase ancestors'
-  $ hg rebase -d 5 -v
+  $ hg rebase -d 'desc("merge p1 1")' -v
   rebasing 4c5f12f25ebe "merge rebase ancestors"
   resolving manifests
   removing other
@@ -261,28 +257,13 @@ rebase of merge of ancestors
   committing manifest
   committing changelog
   rebase merging completed
-  1 changesets found
-  uncompressed size of bundle content:
-       199 (changelog)
-       216 (manifests)
-       182  other
-  1 changesets found
-  uncompressed size of bundle content:
-       254 (changelog)
-       167 (manifests)
-       182  other
-  adding branch
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
   rebase completed
   $ tglog
-  @  6: 113755df812b 'merge rebase ancestors'
+  @  9: 113755df812b 'merge rebase ancestors'
   |
-  o    5: f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
+  o    7: f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
   |\
-  +---o  4: cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
+  +---o  6: cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
   | |/
   | o  3: f59da8fc0fcf 'outside'
   | |
@@ -357,7 +338,7 @@ The merge base could be different from old p1 (changed parent becomes new p1):
   D
   E
   Z
-  $ hg log -r `hg log -r 'desc(F)' -T '{p1node}'` -T '{desc}\n'
+  $ hg log -r 'max(desc(F))^' -T '{desc}\n'
   D
 
   $ hg init $TESTTMP/chosen-merge-base2
@@ -377,5 +358,5 @@ The merge base could be different from old p1 (changed parent becomes new p1):
   D
   E
   Z
-  $ hg log -r `hg log -r 'desc(F)' -T '{p1node}'` -T '{desc}\n'
+  $ hg log -r 'max(desc(F))^' -T '{desc}\n'
   E
