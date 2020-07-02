@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit
@@ -62,17 +60,18 @@ edit the history
 
 log after edit
   $ hg log --graph
-  @  changeset:   4:f518305ce889
+  @  changeset:   8:f518305ce889
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:a4f7421b80f7
+  o  changeset:   7:a4f7421b80f7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   2:ee283cb5f2d5
+  o  changeset:   6:ee283cb5f2d5
+  |  parent:      1:d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -91,9 +90,9 @@ log after edit
 Check histedit_source
 
   $ hg log --debug --rev f518305ce889
-  changeset:   4:f518305ce889c07cb5bd05522176d75590ef3324
+  changeset:   8:f518305ce889c07cb5bd05522176d75590ef3324
   phase:       draft
-  parent:      3:a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3
+  parent:      7:a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    d3d4f51c157ff242c32ff745d4799aaa26ccda44
   user:        test
@@ -122,12 +121,13 @@ Drop the last changeset
   > drop f518305ce889 d
   > EOF
   $ hg log --graph
-  @  changeset:   3:a4f7421b80f7
+  @  changeset:   7:a4f7421b80f7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   2:ee283cb5f2d5
+  o  changeset:   6:ee283cb5f2d5
+  |  parent:      1:d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -158,7 +158,8 @@ Drop the last changeset
   > pick ee283cb5f2d5 e
   > EOF
   $ hg log --graph
-  @  changeset:   1:e99c679bf03e
+  @  changeset:   9:e99c679bf03e
+  |  parent:      0:cb9a9f314b8b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e

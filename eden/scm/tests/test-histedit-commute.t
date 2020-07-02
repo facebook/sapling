@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit
@@ -110,17 +108,18 @@ rules should end up in .hg/histedit-last-edit.txt:
 
 log after edit
   $ hg log --graph
-  @  changeset:   5:07114f51870f
+  @  changeset:   8:07114f51870f
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   4:8ade9693061e
+  o  changeset:   7:8ade9693061e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   3:d8249471110a
+  o  changeset:   6:d8249471110a
+  |  parent:      2:177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -151,17 +150,18 @@ put things back
   > EOF
 
   $ hg log --graph
-  @  changeset:   5:7eca9b5b1148
+  @  changeset:   11:7eca9b5b1148
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:915da888f2de
+  o  changeset:   10:915da888f2de
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   3:10517e47bbbb
+  o  changeset:   9:10517e47bbbb
+  |  parent:      2:177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -191,22 +191,23 @@ slightly different this time
   > pick 177f92b77385 c
   > EOF
   $ hg log --graph
-  @  changeset:   5:38b92f448761
+  @  changeset:   15:38b92f448761
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   4:de71b079d9ce
+  o  changeset:   14:de71b079d9ce
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   3:be9ae3a309c6
+  o  changeset:   13:be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   2:799205341b6b
+  o  changeset:   12:799205341b6b
+  |  parent:      1:d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -230,33 +231,34 @@ keep prevents stripping dead revs
   > pick de71b079d9ce e
   > EOF
   $ hg log --graph
-  @  changeset:   7:803ef1c6fcfd
+  @  changeset:   17:803ef1c6fcfd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   6:ece0b8d93dda
-  |  parent:      3:be9ae3a309c6
+  o  changeset:   16:ece0b8d93dda
+  |  parent:      13:be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  | o  changeset:   5:38b92f448761
+  | x  changeset:   15:38b92f448761
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     c
   | |
-  | o  changeset:   4:de71b079d9ce
+  | x  changeset:   14:de71b079d9ce
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     e
   |
-  o  changeset:   3:be9ae3a309c6
+  o  changeset:   13:be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   2:799205341b6b
+  o  changeset:   12:799205341b6b
+  |  parent:      1:d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -280,33 +282,34 @@ try with --rev
   hg: parse error: pick "de71b079d9ce" changeset was not a candidate
   (only use listed changesets)
   $ hg log --graph
-  @  changeset:   7:803ef1c6fcfd
+  @  changeset:   17:803ef1c6fcfd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   6:ece0b8d93dda
-  |  parent:      3:be9ae3a309c6
+  o  changeset:   16:ece0b8d93dda
+  |  parent:      13:be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  | o  changeset:   5:38b92f448761
+  | x  changeset:   15:38b92f448761
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     c
   | |
-  | o  changeset:   4:de71b079d9ce
+  | x  changeset:   14:de71b079d9ce
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     e
   |
-  o  changeset:   3:be9ae3a309c6
+  o  changeset:   13:be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   2:799205341b6b
+  o  changeset:   12:799205341b6b
+  |  parent:      1:d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -329,9 +332,9 @@ Verify that revsetalias entries work with histedit:
   $ echo extra commit >> c
   $ hg ci -m 'extra commit to c'
   $ HGEDITOR=cat hg histedit 'grandparent(.)'
-  pick ece0b8d93dda 6 c
-  pick 803ef1c6fcfd 7 e
-  pick 9c863c565126 8 extra commit to c
+  pick ece0b8d93dda 16 c
+  pick 803ef1c6fcfd 17 e
+  pick 9c863c565126 18 extra commit to c
   
   # Edit history between ece0b8d93dda and 9c863c565126
   #

@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit
@@ -58,7 +56,7 @@ TODO: configure mutation
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
-  $ HGEDITOR=cat hg histedit 'desc(b)'
+  $ HGEDITOR=cat hg histedit 'max(desc(b))'
   pick d2ae7f538514 1 b
   pick 177f92b77385 2 c
   pick 055a42cdd887 3 d
@@ -81,7 +79,7 @@ TODO: configure mutation
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
   #
-  $ hg histedit 'desc(b)' --commands - --verbose << EOF | grep histedit
+  $ hg histedit 'max(desc(b))' --commands - --verbose << EOF | grep histedit
   > pick 177f92b77385 2 c
   > drop d2ae7f538514 1 b
   > pick 055a42cdd887 3 d
@@ -90,22 +88,24 @@ TODO: configure mutation
   > EOF
   [1]
   $ hg log --graph
-  @  changeset:   3:cacdfd884a93
+  @  changeset:   10:cacdfd884a93
   |  bookmark:    five
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   2:59d9f330561f
+  o  changeset:   9:59d9f330561f
   |  bookmark:    four
   |  bookmark:    three
+  |  parent:      6:b346ab9a313d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   1:b346ab9a313d
+  o  changeset:   6:b346ab9a313d
   |  bookmark:    also-two
   |  bookmark:    two
+  |  parent:      0:cb9a9f314b8b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
@@ -116,10 +116,10 @@ TODO: configure mutation
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
-  $ HGEDITOR=cat hg histedit 'desc(c)'
-  pick b346ab9a313d 1 c
-  pick 59d9f330561f 2 d
-  pick cacdfd884a93 3 f
+  $ HGEDITOR=cat hg histedit 'max(desc(c))'
+  pick b346ab9a313d 6 c
+  pick 59d9f330561f 9 d
+  pick cacdfd884a93 10 f
   
   # Edit history between b346ab9a313d and cacdfd884a93
   #
@@ -137,7 +137,7 @@ TODO: configure mutation
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
   #
-  $ hg histedit 'desc(c)' --commands - --verbose << EOF | grep histedit
+  $ hg histedit 'max(desc(c))' --commands - --verbose << EOF | grep histedit
   > pick b346ab9a313d 1 c
   > pick cacdfd884a93 3 f
   > pick 59d9f330561f 2 d
@@ -148,7 +148,7 @@ We expect 'five' to stay at tip, since the tipmost bookmark is most
 likely the useful signal.
 
   $ hg log --graph
-  @  changeset:   3:c04e50810e4b
+  @  changeset:   12:c04e50810e4b
   |  bookmark:    five
   |  bookmark:    four
   |  bookmark:    three
@@ -156,14 +156,16 @@ likely the useful signal.
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   2:c13eb81022ca
+  o  changeset:   11:c13eb81022ca
+  |  parent:      6:b346ab9a313d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   1:b346ab9a313d
+  o  changeset:   6:b346ab9a313d
   |  bookmark:    also-two
   |  bookmark:    two
+  |  parent:      0:cb9a9f314b8b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c

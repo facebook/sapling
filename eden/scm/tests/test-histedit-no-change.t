@@ -1,8 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
-
 test for old histedit issue #6:
 editing a changeset without any actual change would corrupt the repository
 
@@ -105,9 +102,9 @@ check state of working copy
 
   $ graphlog "log after history editing"
   % log after history editing
-  @  5 794fe033d0a030f8df77c5de945fca35c9181c30 "f"
+  @  7 794fe033d0a030f8df77c5de945fca35c9181c30 "f"
   |
-  o  4 04d2fab980779f332dec458cc944f28de8b43435 "e"
+  o  6 04d2fab980779f332dec458cc944f28de8b43435 "e"
   |
   o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
   |
@@ -158,7 +155,7 @@ check state of working copy
   | |
   | o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
   | |
-  | o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+  | x  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
   |/
   o  2 177f92b773850b59254aa5e923436f921b55483b "c"
   |
@@ -210,7 +207,7 @@ aborting and not changing files can skip mentioning updating (no) files
   $ hg commit -m 'closebranch' --config ui.allowemptycommit=1
   $ startediting 1 1 "(not changing anything)" # edit the 3rd of 3 changesets
   % start editing the history (not changing anything)
-  | edit 663c31f74acc 6 closebranch
+  | edit 663c31f74acc 7 closebranch
   Editing (663c31f74acc), you may commit or record as needed now.
   (hg histedit --continue to resume)
   $ hg histedit --abort

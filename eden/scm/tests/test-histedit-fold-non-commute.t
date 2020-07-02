@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit
@@ -136,12 +134,13 @@ keep the non-commuting change, and thus the pending change will be dropped
 
 log after edit
   $ hg log --graph
-  @  changeset:   5:1300355b1a54
+  @  changeset:   10:1300355b1a54
   |  user:        test
   |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:e2ac33269083
+  o  changeset:   9:e2ac33269083
+  |  parent:      3:092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     d
@@ -274,12 +273,13 @@ just continue this time
 
 log after edit
   $ hg log --graph
-  @  changeset:   5:b538bcb461be
+  @  changeset:   10:b538bcb461be
   |  user:        test
   |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:317e37cb6d66
+  o  changeset:   9:317e37cb6d66
+  |  parent:      3:092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:04 1970 +0000
   |  summary:     d
@@ -320,8 +320,8 @@ manifest
 
 description is taken from rollup target commit
 
-  $ hg log --debug --rev 'desc(d)'
-  changeset:   4:317e37cb6d66c1c84628c00e5bf4c8c292831951
+  $ hg log --debug --rev 'max(desc(d))'
+  changeset:   9:317e37cb6d66c1c84628c00e5bf4c8c292831951
   phase:       draft
   parent:      3:092e4ce14829f4974399ce4316d59f64ef0b6725
   parent:      -1:0000000000000000000000000000000000000000

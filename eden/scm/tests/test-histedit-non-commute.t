@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ enable histedit
@@ -179,12 +177,13 @@ make sure the to-be-empty commit doesn't screw up the state (issue5545)
 
 log after edit
   $ hg log --graph
-  @  changeset:   6:7efe1373e4bc
+  @  changeset:   9:7efe1373e4bc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:e334d87a1e55
+  o  changeset:   8:e334d87a1e55
+  |  parent:      4:00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
@@ -261,12 +260,13 @@ second edit also fails, but just continue
 
 post message fix
   $ hg log --graph
-  @  changeset:   6:7efe1373e4bc
+  @  changeset:   9:7efe1373e4bc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:e334d87a1e55
+  o  changeset:   8:e334d87a1e55
+  |  parent:      4:00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
