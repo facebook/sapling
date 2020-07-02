@@ -1,8 +1,6 @@
 #require py2
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
 Test argument handling and various data parsing
 ==================================================
 
@@ -149,7 +147,7 @@ temporarily.
 
   $ hg histedit --continue
   $ hg log -G -T '{rev} {shortest(node)} {desc}\n' -r 'desc(three)'::
-  @  4 f5ed five
+  @  5 f5ed five
   |
   | o  3 c8e6 four
   |/
@@ -157,7 +155,6 @@ temporarily.
   |
   ~
 
-  $ hg unbundle -q $TESTTMP/foo/.hg/strip-backup/08d98a8350f3-02594089-histedit.hg
   $ hg debugstrip -q -r f5ed
   $ hg up -q 08d98a8350f3
 
@@ -290,7 +287,7 @@ Test that trimming description using multi-byte characters
   $ hg --encoding utf-8 commit --logfile logfile
 
   $ HGEDITOR=cat hg --encoding utf-8 histedit tip
-  pick 3d3ea1f3a10b 5 1234567890123456789012345678901234567890123456789012345\xe3\x81\x82... (esc)
+  pick 3d3ea1f3a10b 8 1234567890123456789012345678901234567890123456789012345\xe3\x81\x82... (esc)
   
   # Edit history between 3d3ea1f3a10b and 3d3ea1f3a10b
   #
@@ -322,16 +319,16 @@ Test --continue with --keep
   $ echo edit >> alpha
   $ hg histedit -q --continue
   $ hg log -G -T '{rev}:{node|short} {desc}'
-  @  6:8fda0c726bf2 x
+  @  9:8fda0c726bf2 x
   |
-  o  5:63379946892c three
+  o  8:63379946892c three
   |
-  | o  4:f3cfcca30c44 x
+  | x  7:f3cfcca30c44 x
   | |
-  | | o  3:2a30f3cfee78 four
+  | | o  6:2a30f3cfee78 four
   | |/   ***
   | |    five
-  | o  2:eb57da33312f three
+  | x  2:eb57da33312f three
   |/
   o  1:579e40513370 two
   |
@@ -351,12 +348,11 @@ Corrupt histedit state file
   $ mv ../corrupt-histedit .hg/histedit-state
   $ hg histedit --abort
   warning: encountered an exception during histedit --abort; the repository may not have been completely cleaned up
-  abort: $TESTTMP/foo/.hg/strip-backup/*-histedit.hg: $ENOENT$ (glob) (windows !)
-  abort: $ENOENT$: $TESTTMP/foo/.hg/strip-backup/*-histedit.hg (glob) (no-windows !)
+  abort: * (glob)
   [255]
 Histedit state has been exited
   $ hg summary -q
-  parent: 5:63379946892c 
+  parent: 8:63379946892c 
   commit: 1 added, 1 unknown
 
   $ cd ..
@@ -452,10 +448,7 @@ Default base revision should stop at merge commit
   > pick 8cde254db839
   > EOF
 
-commit --amend should abort if histedit is in progress
-(issue4800) and markers are not being created.
-Eventually, histedit could perhaps look at `source` extra,
-in which case this test should be revisited.
+commit --amend during histedit is okay.
 
   $ hg -q up 8cde254db839
   $ hg histedit 6f2f0241f119 --commands - <<EOF
@@ -480,19 +473,7 @@ in which case this test should be revisited.
   $ hg resolve -m --all
   (no more unresolved files)
   continue: hg histedit --continue
-  $ hg commit --amend -m 'reject this fold'
-  abort: histedit in progress
-  (use 'hg histedit --continue' or 'hg histedit --abort')
-  [255]
 
-With markers enabled, histedit does not get confused, and
-amend should not be blocked by the ongoing histedit.
-
-  $ cat >>$HGRCPATH <<EOF
-  > [experimental]
-  > evolution.createmarkers=True
-  > evolution.allowunstable=True
-  > EOF
   $ hg commit --amend -m 'allow this fold'
   $ hg histedit --continue
 
