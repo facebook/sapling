@@ -6,7 +6,6 @@
 mutationblacklist = """
     test-commitcloud-backup-all.t
     test-commitcloud-sync-oscillation.t
-    test-debugstrip.t
     test-fb-hgext-hiddenerror.t
     test-fb-hgext-snapshot-show.t
     test-fb-hgext-treemanifest-infinitepush.t
@@ -28,7 +27,6 @@ mutationblacklist = """
 
 narrowheadsincompatiblelist = """
     test-bookmarks.t
-    test-debugstrip.t
     test-directaccess-revset.t
     test-eol-clone.t
     test-hgext-perfsuite.t

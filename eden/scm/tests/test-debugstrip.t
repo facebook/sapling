@@ -928,7 +928,7 @@ we have reusable code here
   | | |
   | | o  3:112478962961 B
   | |/
-  o |  1:1fc8102cda62 G
+  x |  1:1fc8102cda62 G
    /
   o  0:426bada5c675 A A B C I b-B b-C b-I
   
