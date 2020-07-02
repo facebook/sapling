@@ -61,6 +61,8 @@ BLACKBOX_PATTERN = """
 def shcmd(cmd, input=None, check=True, keeperr=True):
     _, _, _, p = util.popen4(cmd)
     out, err = p.communicate(input)
+    out = pycompat.decodeutf8(out, errors="replace")
+    err = pycompat.decodeutf8(err, errors="replace")
     if check and p.returncode:
         raise error.Abort(cmd + " error: " + err)
     elif keeperr:
@@ -516,7 +518,7 @@ def rage(ui, repo, *pats, **opts):
 
     if opts.get("preview"):
         ui.pager("rage")
-        ui.write("%s\n" % encoding.unitolocal(msg.decode("utf-8")))
+        ui.write("%s\n" % msg)
         return
 
     with progress.spinner(ui, "saving paste"):
@@ -528,7 +530,7 @@ def rage(ui, repo, *pats, **opts):
                 stderr=subprocess.PIPE,
                 shell=pycompat.iswindows,
             )
-            out, err = p.communicate(input=msg + "\n")
+            out, err = p.communicate(input=pycompat.encodeutf8(msg + "\n"))
             ret = p.returncode
         except OSError:
             ui.write(_("Failed calling pastry. (is it in your PATH?)\n"))
