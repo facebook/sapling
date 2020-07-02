@@ -202,6 +202,8 @@ def _checkdelayedexception(_delayedexception=_delayedexception):
         _delayedexception[:] = [(None, None, None)]
         if excvalue is not None:
             traceback.print_exception(exctype, excvalue, tb)
+            sys.stderr.write("Before executing:\n")
+            traceback.print_stack()
             if isinstance(excvalue, SystemExit):
                 raise excvalue
             sys.exit(1)
