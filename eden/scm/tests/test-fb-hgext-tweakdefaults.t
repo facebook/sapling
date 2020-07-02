@@ -18,10 +18,10 @@ Setup repo
   $ mkdir dir
   $ touch dir/b
   $ hg commit -Aqm b
-  $ hg up -q 0
+  $ hg up -q 'desc(a)'
   $ echo x >> a
   $ hg commit -Aqm a2
-  $ hg up -q 1
+  $ hg up -q 'desc(b)'
 
 Updating to a specific date isn't blocked by our extensions'
 
@@ -66,7 +66,7 @@ Dirty update allowed to same rev, with no conflicts, and --clean
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   hint[update-prev]: use 'hg prev' to move to the parent changeset
   hint[hint-ack]: use 'hg hint --ack update-prev' to silence these hints
-  $ hg update --clean 1
+  $ hg update --clean 'desc(b)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Log on dir's works
@@ -82,7 +82,7 @@ Empty rebase fails
   $ hg rebase
   abort: you must specify a destination (-d) for the rebase
   [255]
-  $ hg rebase -d 2
+  $ hg rebase -d 'desc(a2)'
   rebasing 7b4cb4e1674c "b"
 
 Empty rebase returns exit code 0:
@@ -92,14 +92,14 @@ Empty rebase returns exit code 0:
 
 Rebase fast forwards bookmark
 
-  $ hg book -r 1 mybook
+  $ hg book -r 'desc(a2)' mybook
   $ hg up -q mybook
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
   @  1 a2 mybook
   |
   o  0 a
   
-  $ hg rebase -d 2
+  $ hg rebase -d 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
@@ -111,8 +111,8 @@ Rebase fast forwards bookmark
   
 Rebase works with hyphens
 
-  $ hg book -r 1 hyphen-book
-  $ hg book -r 2 hyphen-dest
+  $ hg book -r 'desc(a2)' hyphen-book
+  $ hg book -r 'desc(b)' hyphen-dest
   $ hg up -q hyphen-book
   $ hg log --all -G -T '{rev} {desc} {bookmarks}\n'
   o  2 b hyphen-dest mybook
@@ -133,7 +133,7 @@ Rebase works with hyphens
   
 Rebase is blocked if you have conflicting changes
 
-  $ hg up -q 0
+  $ hg up -q 3903775176ed42b1458a6281db4a0ccf4d9f287a
   $ echo y > a
   $ hg rebase -d tip
   abort: 1 conflicting file changes:
@@ -265,25 +265,25 @@ This tag is kept to keep the rest of the test consistent:
 
 Test graft date when tweakdefaults.graftkeepdate is not set
   $ hg revert -a -q
-  $ hg up -q 1
-  $ hg graft -q 2
+  $ hg up -q 'desc(a2)'
+  $ hg graft -q 'desc(b)'
   $ hg log -T "{rev}\n" -d "yesterday to today"
   4
 
 Test graft date when tweakdefaults.graftkeepdate is not set and --date is provided
-  $ hg up -q 1
-  $ hg graft -q 2 --date "1 1"
+  $ hg up -q 'desc(a2)'
+  $ hg graft -q 'desc(b) & mybook' --date "1 1"
   $ hg log -l 1 -T "{date} {rev}\n"
   1.01 5
 
 Test graft date when tweakdefaults.graftkeepdate is set
-  $ hg up -q 1
-  $ hg graft -q 5 --config tweakdefaults.graftkeepdate=True
+  $ hg up -q 'desc(a2)'
+  $ hg graft -q 'max(desc(b))' --config tweakdefaults.graftkeepdate=True
   $ hg log -l 1 -T "{date} {rev}\n"
   1.01 6
 
 Test amend date when tweakdefaults.amendkeepdate is not set
-  $ hg up -q 1
+  $ hg up -q 'desc(a2)'
   $ echo x > a
   $ hg commit -Aqm "commit for amend"
   $ echo x > a
@@ -301,7 +301,7 @@ Test amend date when tweakdefaults.amendkeepdate is set
 
 Test amend --to doesn't give a flag error when tweakdefaults.amendkeepdate is set
   $ echo q > new_file
-  $ hg amend --to 8 --config tweakdefaults.amendkeepdate=False
+  $ hg amend --to 'max(desc(amended))' --config tweakdefaults.amendkeepdate=False
   abort: can only histedit a changeset together with all its descendants
   [255]
   $ hg log -l 1 -T "{date} {rev}\n"
@@ -360,7 +360,7 @@ Test histedit date when tweakdefaults.histeditkeepdate is set
   $ hg commit -Aqm "commit 2 for histedit"
   $ echo test_3 > histedit_3
   $ hg commit -Aqm "commit 3 for histedit"
-  $ hg histedit 16 --commands - --config tweakdefaults.histeditkeepdate=True 2>&1 <<EOF| fixbundle
+  $ hg histedit "desc('commit 1 for histedit')" --commands - --config tweakdefaults.histeditkeepdate=True 2>&1 <<EOF| fixbundle
   > pick 16
   > pick 18
   > pick 17
@@ -371,7 +371,7 @@ Test histedit date when tweakdefaults.histeditkeepdate is set
   0.00 16 commit 1 for histedit
 
 Test histedit date when tweakdefaults.histeditkeepdate is not set
-  $ hg histedit 16 --commands - 2>&1 <<EOF| fixbundle
+  $ hg histedit "desc('commit 1 for histedit')" --commands - 2>&1 <<EOF| fixbundle
   > pick 16
   > pick 18
   > pick 17
@@ -433,30 +433,30 @@ and allowance of prune rebases
   adding root
   $ echo a > a && hg ci -Am a  # rev 1
   adding a
-  $ hg up 0 && echo b > b && hg ci -Am b  # rev 2
+  $ hg up 'desc(root)' && echo b > b && hg ci -Am b  # rev 2
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding b
-  $ hg up 0 && echo c > c && hg ci -Am c  # rev 3
+  $ hg up 'desc(root)' && echo c > c && hg ci -Am c  # rev 3
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding c
-  $ hg up 0 && echo d > d && hg ci -Am d  # rev 4
+  $ hg up 'desc(root)' && echo d > d && hg ci -Am d  # rev 4
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding d
-  $ hg rebase -r 1 -d 2
+  $ hg rebase -r 'desc(a)' -d 'desc(b)'
   rebasing 09d39afb522a "a"
 
 Test that we do not show divergence warning
-  $ hg rebase -r 1 -d 3 --hidden
+  $ hg rebase -r 09d39afb522a08bdb03dc231608f7a3488ab4edc -d 'desc(c)' --hidden
   rebasing 09d39afb522a "a"
 
 Test that we allow pure prune rebases
-  $ hg prune 4
+  $ hg prune 'desc(d)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 1e4be0697311
   1 changesets pruned
   hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
   hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
-  $ hg rebase -r 4 -d 3 --hidden
+  $ hg rebase -r 'desc(d)' -d 'desc(c)' --hidden
   rebasing 31aefaa21905 "d"
 
 Test diff --per-file-stat
@@ -489,7 +489,7 @@ Test rebase with showupdated=True
   > EOF
   $ touch a && hg commit -Aqm a
   $ touch b && hg commit -Aqm b
-  $ hg up -q 0
+  $ hg up -q 'desc(a)'
   $ touch c && hg commit -Aqm c
   $ hg log -G -T '{node} {rev} {bookmarks}' -r 'all()'
   @  d5e255ef74f8ec83b3a2a3f3254c699451c89e29 2
@@ -498,12 +498,12 @@ Test rebase with showupdated=True
   |/
   o  3903775176ed42b1458a6281db4a0ccf4d9f287a 0
   
-  $ hg rebase -r 1 -d 2
+  $ hg rebase -r 'desc(b)' -d 'desc(c)'
   rebasing 0e067c57feba "b"
   0e067c57feba -> a602e0d56f83 "b"
 
 Test rebase with showupdate=True and a lot of source revisions
-  $ hg up -q 0
+  $ hg up -q 'desc(a)'
   $ for i in `$TESTDIR/seq.py 11`; do touch "$i" && hg commit -Aqm "$i" && hg up -q 0; done
   $ hg log -G -T '{node} {rev} {bookmarks}' -r 'all()'
   o  6e3ddf6f49efd0a836a470a2d45e953db915c262 13
@@ -534,7 +534,7 @@ Test rebase with showupdate=True and a lot of source revisions
   |/
   @  3903775176ed42b1458a6281db4a0ccf4d9f287a 0
   
-  $ hg rebase -r 'all() - 0 - 12' -d 12
+  $ hg rebase -r 'all() - desc(a) - desc(10)' -d 'desc(10)'
   rebasing d5e255ef74f8 "c"
   rebasing a602e0d56f83 "b"
   rebasing 46a418a0abd2 "1"
@@ -563,6 +563,6 @@ Test rebase with showupdate=True and a lot of source revisions
 Test rebase with showupdate=True and a long commit message
   $ touch longfile && hg add -q
   $ hg commit -qm "This is a long commit message which will be truncated."
-  $ hg rebase -d 1
+  $ hg rebase -d 'desc(10)'
   rebasing e915a57d67db "This is a long commit message which will be truncated."
   e915a57d67db -> 5444f740ff6c "This is a long commit message which will be tru..."
