@@ -2,7 +2,6 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ setconfig visibility.enabled=false
 
   $ enable convert
   $ setconfig convert.hg.saverev=False
@@ -33,7 +32,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo and bar
   
-  $ hg debugmakepublic -r tip
+  $ hg bookmark main -r tip
   $ cd ..
   $ hg convert orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
   initializing destination new repository
@@ -43,13 +42,14 @@
   2 add foo and bar
   1 remove foo
   0 add foo/file
+  updating bookmarks
   $ cd new
   $ hg log -G --template '{rev} {node|short} ({phase}) "{desc}"\n'
-  o  2 ad681a868e44 (public) "add foo/file"
+  o  2 ad681a868e44 (draft) "add foo/file"
   |
-  o  1 cbba8ecc03b7 (public) "remove foo"
+  o  1 cbba8ecc03b7 (draft) "remove foo"
   |
-  o  0 327daa9251fa (public) "add foo and bar"
+  o  0 327daa9251fa (draft) "add foo and bar"
   
 
   $ hg out ../orig
@@ -84,6 +84,7 @@ add a new revision in the original repo
   sorting...
   converting...
   0 add baz
+  updating bookmarks
   $ cd new
   $ hg out ../orig
   comparing with ../orig
@@ -149,21 +150,21 @@ Create a tricky source repo
   dir/c
   dir/d
   e
-  $ hg debugmakepublic -r tip
+  $ hg bookmark main -r tip
   $ glog
-  @  6 0613c8e59a3d (public) "6: change a" files: a
+  @  6 0613c8e59a3d (draft) "6: change a" files: a
   |
-  o    5 717e9b37cdb7 (public) "5: merge 2 and 3, copy b to dir/d" files: dir/d e
+  o    5 717e9b37cdb7 (draft) "5: merge 2 and 3, copy b to dir/d" files: dir/d e
   |\
-  | o  4 86a55cb968d5 (public) "4: change a" files: a
+  | o  4 86a55cb968d5 (draft) "4: change a" files: a
   | |
-  o |  3 0e6e235919dd (public) "3: copy a to e, change b" files: b e
+  o |  3 0e6e235919dd (draft) "3: copy a to e, change b" files: b e
   | |
-  o |  2 0394b0d5e4f7 (public) "2: add dir/c" files: dir/c
+  o |  2 0394b0d5e4f7 (draft) "2: add dir/c" files: dir/c
   |/
-  o  1 333546584845 (public) "1: add a and dir/b" files: a dir/b
+  o  1 333546584845 (draft) "1: add a and dir/b" files: a dir/b
   |
-  o  0 d1a24e2ebd23 (public) "0: add 0" files: 0
+  o  0 d1a24e2ebd23 (draft) "0: add 0" files: 0
   
   $ cd ..
 
@@ -184,6 +185,7 @@ Convert excluding rev 0 and dir/ (and thus rev2):
   2 4: change a
   1 5: merge 2 and 3, copy b to dir/d
   0 6: change a
+  updating bookmarks
 
 Verify that conversion skipped rev 2:
 
@@ -270,6 +272,7 @@ exclude merges.)
   sorting...
   converting...
   0 change in dest
+  updating bookmarks
 
 Verify the conversion back:
 
@@ -333,7 +336,7 @@ More source changes
   | |
   | o  7 e6d364a69ff1 (draft) "change in dest" files: dest
   |/
-  o  6 0613c8e59a3d (public) "6: change a" files: a
+  o  6 0613c8e59a3d (draft) "6: change a" files: a
   |
   ~
   $ cd ..
@@ -346,6 +349,7 @@ More source changes
   2 9: source second branch
   1 10: source merge
   0 11: source change
+  updating bookmarks
 
   $ glog -R dest
   o  9 8432d597b263 (draft) "11: source change" files: a
