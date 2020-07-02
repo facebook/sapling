@@ -1,8 +1,6 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: configure mutation
-  $ configure noevolution
 
   $ . "$TESTDIR/library.sh"
 
@@ -150,8 +148,7 @@ TODO: configure mutation
 # explicit bundle should produce full bundle file
 
   $ hg bundle -r 'desc(a)' --base 'desc(w)' ../local.bundle
-  1 changesets found
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
+  2 changesets found
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
@@ -161,10 +158,11 @@ TODO: configure mutation
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 3 changes to 3 files
+  added 2 changesets with 3 changes to 3 files
 
-  $ hg log -r 'desc(a)' --stat
-  changeset:   2:19edf50f4de7
+  $ hg log -r 'max(desc(a))' --stat
+  changeset:   3:19edf50f4de7
+  parent:      1:fed61014d323
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
