@@ -39,6 +39,8 @@ create bookmarks
   $ hg bookmark test/one -r C
   $ hg bookmark test/two -r E
   $ hg bookmark test/three -r G
+  $ hg bookmark special/__test__ -r B
+  $ hg bookmark special/xxtestxx -r D
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
@@ -48,7 +50,7 @@ start mononoke
   $ mononoke
   $ wait_for_mononoke
 
-switch to client and enable inifitepush extension
+switch to client and enable infinitepush extension
   $ cd repo-client
   $ setconfig extensions.infinitepush=
 
@@ -70,3 +72,10 @@ match multiple patterns
   $ hgmn book --list-remote test/one --list-remote test/th*
      test/one                  26805aba1e600a82e93661149f2313866a221a7b
      test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
+
+match with SQL wildcards doesn't match arbitrary things (should match nothing)
+  $ hgmn book --list-remote t__t/*
+
+match with SQL wildcards does match things with those characters
+  $ hgmn book --list-remote special/__test*
+     special/__test__          112478962961147124edd43549aedd1a335e44bf

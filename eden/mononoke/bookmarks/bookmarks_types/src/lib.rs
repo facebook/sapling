@@ -355,6 +355,22 @@ impl BookmarkPrefix {
             },
         }
     }
+
+    /// Convert the bookmark prefix to an escaped SQL pattern suitable for use
+    /// in a LIKE expression.
+    ///
+    /// For example, `my_prefix` is converted to `my\_prefix%`.
+    pub fn to_escaped_sql_like_pattern(&self) -> String {
+        let mut like_pattern = String::with_capacity(self.bookmark_prefix.len());
+        for ch in self.bookmark_prefix.chars() {
+            if ch == '\\' || ch == '%' || ch == '_' {
+                like_pattern.push('\\');
+            }
+            like_pattern.push(ch.into());
+        }
+        like_pattern.push('%');
+        like_pattern
+    }
 }
 
 fn prefix_to_range_end(mut prefix: AsciiString) -> Option<AsciiString> {
@@ -373,7 +389,7 @@ fn prefix_to_range_end(mut prefix: AsciiString) -> Option<AsciiString> {
                 Err(_) => {
                     // The last character doesn't fit in ASCII (i.e. it's DEL). This means we have
                     // something like foobaA[DEL]. In this case, we need to set the bound to be the
-                    // character after the one before the DEL, so we want foobaB[DEL]
+                    // character after the one before the DEL, so we want foobaB
                     continue;
                 }
             },

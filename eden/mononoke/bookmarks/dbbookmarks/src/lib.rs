@@ -227,23 +227,13 @@ queries! {
          LIMIT {limit}"
     }
 
-    read SelectByPrefix(repo_id: RepositoryId, prefix: BookmarkPrefix, limit: u64, >list kinds: BookmarkKind) ->  (BookmarkName, BookmarkKind, ChangesetId) {
-        mysql(
-            "SELECT name, hg_kind, changeset_id
-             FROM bookmarks
-             WHERE repo_id = {repo_id}
-               AND name LIKE CONCAT({prefix}, '%')
-               AND hg_kind IN {kinds}
-              LIMIT {limit}"
-        )
-        sqlite(
-            "SELECT name, hg_kind, changeset_id
-             FROM bookmarks
-             WHERE repo_id = {repo_id}
-               AND name LIKE {prefix} || '%'
-               AND hg_kind IN {kinds}
-             LIMIT {limit}"
-        )
+    read SelectByPrefix(repo_id: RepositoryId, prefix_like_pattern: String, escape_character: &str, limit: u64, >list kinds: BookmarkKind) ->  (BookmarkName, BookmarkKind, ChangesetId) {
+        "SELECT name, hg_kind, changeset_id
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND name LIKE {prefix_like_pattern} ESCAPE {escape_character}
+           AND hg_kind IN {kinds}
+          LIMIT {limit}"
     }
 }
 
@@ -306,7 +296,8 @@ impl SqlBookmarks {
                 .compat()
                 .left_future()
         } else {
-            SelectByPrefix::query(&conn, &repo_id, &prefix, &max, kinds)
+            let prefix_like_pattern = prefix.to_escaped_sql_like_pattern();
+            SelectByPrefix::query(&conn, &repo_id, &prefix_like_pattern, &"\\", &max, kinds)
                 .compat()
                 .right_future()
         };
