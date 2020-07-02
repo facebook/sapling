@@ -8,6 +8,8 @@
 #pragma once
 
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 
 namespace facebook {
 namespace eden {
@@ -24,22 +26,30 @@ namespace eden {
  */
 class TreePrefetchLease {
  public:
-  explicit TreePrefetchLease(TreeInodePtr inode) : inode_{std::move(inode)} {}
+  explicit TreePrefetchLease(TreeInodePtr inode)
+      : inode_{std::move(inode)},
+        context_(std::make_unique<ObjectFetchContext>(ImportPriority::kLow())) {
+  }
   ~TreePrefetchLease() {
     release();
   }
   TreePrefetchLease(TreePrefetchLease&& lease) noexcept
-      : inode_{std::move(lease.inode_)} {}
+      : inode_{std::move(lease.inode_)}, context_(std::move(lease.context_)) {}
   TreePrefetchLease& operator=(TreePrefetchLease&& lease) noexcept {
     if (&lease != this) {
       release();
       inode_ = std::move(lease.inode_);
+      context_ = std::move(lease.context_);
     }
     return *this;
   }
 
   const TreeInodePtr& getTreeInode() const {
     return inode_;
+  }
+
+  ObjectFetchContext& getContext() const {
+    return *context_;
   }
 
  private:
@@ -49,6 +59,8 @@ class TreePrefetchLease {
   void release() noexcept;
 
   TreeInodePtr inode_;
+
+  std::unique_ptr<ObjectFetchContext> context_;
 };
 
 } // namespace eden

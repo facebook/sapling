@@ -3547,6 +3547,9 @@ void TreeInode::prefetch() {
 
         std::vector<IncompleteInodeLoad> pendingLoads;
         std::vector<Future<Unit>> inodeFutures;
+        // The aliveness of this context is guaranteed by the `.thenTry`
+        // capture at the end of this lambda
+        auto& context = lease.getContext();
 
         {
           auto contents = lease.getTreeInode()->contents_.wlock();
@@ -3566,13 +3569,9 @@ void TreeInode::prefetch() {
             inodeFutures.emplace_back(
                 lease.getTreeInode()
                     ->loadChildLocked(
-                        contents->entries,
-                        name,
-                        entry,
-                        pendingLoads,
-                        ObjectFetchContext::getNullContext())
-                    .thenValue([](InodePtr inode) {
-                      return inode->stat(ObjectFetchContext::getNullContext());
+                        contents->entries, name, entry, pendingLoads, context)
+                    .thenValue([&context](InodePtr inode) {
+                      return inode->stat(context);
                     })
                     .unit());
           }
