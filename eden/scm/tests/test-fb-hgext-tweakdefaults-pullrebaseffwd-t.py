@@ -9,8 +9,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "setconfig 'extensions.treemanifest=!'"
-# TODO: Make this test compatibile with obsstore enabled.
-sh % "setconfig 'experimental.evolution='"
+sh.enable("remotenames")
 # Set up without remotenames
 sh % "cat" << r"""
 [extensions]
@@ -21,13 +20,14 @@ tweakdefaults=
 sh % "hg init repo"
 sh % "echo a" > "repo/a"
 sh % "hg -R repo commit -qAm a"
+sh % "hg -R repo bookmark master"
 sh % "hg clone -q repo clone"
 sh % "cd clone"
 
 # Pull --rebase with no local changes
 sh % "echo b" > "../repo/b"
 sh % "hg -R ../repo commit -qAm b"
-sh % "hg pull --rebase -d default" == r"""
+sh % "hg pull --rebase -d master" == r"""
     pulling from $TESTTMP/repo
     searching for changes
     adding changesets
@@ -35,7 +35,7 @@ sh % "hg pull --rebase -d default" == r"""
     adding file changes
     added 1 changesets with 1 changes to 1 files
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-    nothing to rebase - fast-forwarded to default"""
+    nothing to rebase - fast-forwarded to master"""
 sh % "hg log -G -T '{rev} {desc}'" == r"""
     @  1 b
     |
@@ -45,7 +45,7 @@ sh % "echo x" > "x"
 sh % "hg commit -qAm x"
 sh % "echo c" > "../repo/c"
 sh % "hg -R ../repo commit -qAm c"
-sh % "hg pull --rebase -d default" == r'''
+sh % "hg pull --rebase -d master" == r'''
     pulling from $TESTTMP/repo
     searching for changes
     adding changesets

@@ -44,22 +44,9 @@ narrowheadsincompatiblelist = """
     test-revset2.t
     test-visibility.t
 
-    test-absorb-phase-t.py
-    test-bookmark-strip-t.py
-    test-command-template-t.py
-    test-fb-hgext-remotefilelog-commit-repack-t.py
-    test-fb-hgext-reset-t.py
-    test-fb-hgext-smartlog-remotenames-t.py
-    test-fb-hgext-tweakdefaults-pullrebaseffwd-t.py
-    test-graft-t.py
-    test-log-t.py
-    test-pull-update-t.py
-    test-rebase-check-restore-t.py
-    test-remotenames-strip-t.py
     test-globalrevs-t.py
     test-hgsql-local-commands-t.py
     test-revset-t.py
-    test-shelve-t.py
 """
 
 

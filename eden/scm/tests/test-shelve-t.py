@@ -12,10 +12,6 @@ from edenscm.mercurial import extensions, hg, obsolete
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-# TODO: Make this test compatibile with obsstore enabled.
-sh % "setconfig 'experimental.evolution='"
-
-
 sh % "cat" << r"""
 [extensions]
 strip =
@@ -426,16 +422,18 @@ sh % "'HGMERGE=true' hg unshelve" == r"""
     merging a/a
     note: rebase of 18:056f8c92b111 created no changes to commit"""
 sh % "hg shelve -l"
-sh % "hg status" == "A foo/foo"
+sh % "hg status" == r"""
+    M a/a
+    A foo/foo"""
 sh % "cat a/a" == r"""
     a
     c
-    x"""
+    a"""
 
 # Test keep and cleanup
 sh % "hg shelve" == r"""
     shelved as default
-    0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
+    1 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
 sh % "hg shelve --list" == "default * shelve changes to: create conflict (glob)"
 sh % "hg unshelve -k" == "unshelving change 'default'"
 sh % "hg shelve --list" == "default * shelve changes to: create conflict (glob)"
@@ -447,7 +445,7 @@ sh % "hg bookmark test"
 sh % "hg bookmark" == " * test                      * (glob)"
 sh % "hg shelve" == r"""
     shelved as test
-    0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
+    1 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
 sh % "hg bookmark" == " * test                      * (glob)"
 sh % "hg unshelve" == "unshelving change 'test'"
 sh % "hg bookmark" == " * test                      * (glob)"
@@ -455,7 +453,7 @@ sh % "hg bookmark" == " * test                      * (glob)"
 # Shelve should still work even if mq is disabled
 sh % "hg --config 'extensions.mq=!' shelve" == r"""
     shelved as test
-    0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
+    1 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
 sh % "hg --config 'extensions.mq=!' shelve --list" == "test * shelve changes to: create conflict (glob)"
 sh % "hg bookmark" == " * test                      * (glob)"
 sh % "hg --config 'extensions.mq=!' unshelve" == "unshelving change 'test'"
@@ -585,7 +583,21 @@ sh % "hg shelve" == r"""
 sh % "hg log -G --template '{rev}  {desc|firstline}  {author}'" == r"""
     @  9  commit stuff  test
     |
-    | o  2  c  test
+    | o  8  shelve changes to: a  test
+    |/
+    | o  7  shelve changes to: a  test
+    |/
+    | o  6  shelve changes to: b  test
+    |/
+    | o  5  shelve changes to: b  test
+    | |
+    | | o  4  shelve changes to: c  test
+    | |/
+    | | o  3  shelve changes to: c  test
+    | | |
+    +---o  2  c  test
+    | |
+    | o  1  b  test
     |/
     o  0  a  test"""
 sh % "mv f.orig f"
@@ -1048,20 +1060,20 @@ sh % "cd obsshare"
 sh % "hg bookmarks" == "   test                      19:a72d63c69876"
 sh % "hg bookmarks foo"
 sh % "hg bookmarks" == r"""
-     * foo                       29:47f190a8b2e0
-       test                      19:a72d63c69876"""
+    * foo                       29:47f190a8b2e0
+      test                      19:a72d63c69876"""
 sh % "echo x" >> "x"
 sh % "hg shelve" == r"""
     shelved as foo
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bookmarks" == r"""
-     * foo                       29:47f190a8b2e0
-       test                      19:a72d63c69876"""
+    * foo                       29:47f190a8b2e0
+      test                      19:a72d63c69876"""
 
 sh % "hg unshelve" == "unshelving change 'foo'"
 sh % "hg bookmarks" == r"""
-     * foo                       29:47f190a8b2e0
-       test                      19:a72d63c69876"""
+    * foo                       29:47f190a8b2e0
+      test                      19:a72d63c69876"""
 
 sh % "cd .."
 

@@ -1142,12 +1142,11 @@ sh % "cat" << r"""
 changeset_debug = '{rev} ({phase}):{parents}\n'
 parent = ' {rev} ({phase})'
 """ > "parentphase"
-sh % "hg phase -r 5 --public"
-sh % "hg phase -r 7 --secret --force"
+sh % "hg debugmakepublic 5"
 sh % "hg log --debug -G --style ./parentphase" == r"""
-    @  8 (secret): 7 (secret) -1 (public)
+    @  8 (draft): 7 (draft) -1 (public)
     |
-    o  7 (secret): -1 (public) -1 (public)
+    o  7 (draft): -1 (public) -1 (public)
 
     o    6 (draft): 5 (public) 4 (draft)
     |\
@@ -2113,7 +2112,7 @@ sh % "hg log -T status -C -r 10 -v" == r"""
     R fourth"""
 sh % "hg log -T status -C -r 10 --debug" == r"""
     changeset:   10:0f9759ec227a4859c2014a345cd8a859022b7c6c
-    phase:       secret
+    phase:       draft
     parent:      9:bf9dfba36635106d6a73ccc01e28b762da60e066
     parent:      -1:0000000000000000000000000000000000000000
     manifest:    89dd546f2de0a9d6d664f58d86097eb97baba567
@@ -2132,7 +2131,7 @@ sh % "hg log -T status -C -r 10 --debug" == r"""
     R fourth"""
 sh % "hg log -T status -C -r 10 --quiet" == "10:0f9759ec227a"
 sh % "hg '--color=debug' log -T status -r 10" == r"""
-    [log.changeset changeset.secret|changeset:   10:0f9759ec227a]
+    [log.changeset changeset.draft|changeset:   10:0f9759ec227a]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [log.summary|summary:     Modify, add, remove, rename]
@@ -2143,7 +2142,7 @@ sh % "hg '--color=debug' log -T status -r 10" == r"""
     [status.removed|R a]
     [status.removed|R fourth]"""
 sh % "hg '--color=debug' log -T status -C -r 10" == r"""
-    [log.changeset changeset.secret|changeset:   10:0f9759ec227a]
+    [log.changeset changeset.draft|changeset:   10:0f9759ec227a]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [log.summary|summary:     Modify, add, remove, rename]
@@ -2155,7 +2154,7 @@ sh % "hg '--color=debug' log -T status -C -r 10" == r"""
     [status.removed|R a]
     [status.removed|R fourth]"""
 sh % "hg '--color=debug' log -T status -C -r 10 -v" == r"""
-    [log.changeset changeset.secret|changeset:   10:0f9759ec227a]
+    [log.changeset changeset.draft|changeset:   10:0f9759ec227a]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [ui.note log.description|description:]
@@ -2169,9 +2168,9 @@ sh % "hg '--color=debug' log -T status -C -r 10 -v" == r"""
     [status.removed|R a]
     [status.removed|R fourth]"""
 sh % "hg '--color=debug' log -T status -C -r 10 --debug" == r"""
-    [log.changeset changeset.secret|changeset:   10:0f9759ec227a4859c2014a345cd8a859022b7c6c]
-    [log.phase|phase:       secret]
-    [log.parent changeset.secret|parent:      9:bf9dfba36635106d6a73ccc01e28b762da60e066]
+    [log.changeset changeset.draft|changeset:   10:0f9759ec227a4859c2014a345cd8a859022b7c6c]
+    [log.phase|phase:       draft]
+    [log.parent changeset.draft|parent:      9:bf9dfba36635106d6a73ccc01e28b762da60e066]
     [log.parent changeset.public|parent:      -1:0000000000000000000000000000000000000000]
     [ui.debug log.manifest|manifest:    89dd546f2de0a9d6d664f58d86097eb97baba567]
     [log.user|user:        test]

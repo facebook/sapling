@@ -45,7 +45,10 @@ sh % "hg push --non-forward-move -q --to master"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     @  2  default/master
     |
-    o  0 mybook"""
+    o  0 mybook
+
+    note: hiding 1 old heads without bookmarks
+    (use --all to see them)"""
 
 # Test configuration of "interesting" bookmarks
 
@@ -58,13 +61,19 @@ sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     |
     | @  3  default/project/bookmark
     |/
-    o  0 mybook"""
+    o  0 mybook
+
+    note: hiding 1 old heads without bookmarks
+    (use --all to see them)"""
 
 sh % "hg up '.^'" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  2  default/master
     |
-    @  0 mybook"""
+    @  0 mybook
+
+    note: hiding 1 old heads without bookmarks
+    (use --all to see them)"""
 sh % "cat" << r"""
 [smartlog]
 repos=default/
@@ -73,7 +82,10 @@ names=project/bookmark
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  3  default/project/bookmark
     |
-    @  0 mybook"""
+    @  0 mybook
+
+    note: hiding 1 old heads without bookmarks
+    (use --all to see them)"""
 sh % "cat" << r"""
 [smartlog]
 names=master project/bookmark
@@ -83,4 +95,7 @@ sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     |
     | o  3  default/project/bookmark
     |/
-    @  0 mybook"""
+    @  0 mybook
+
+    note: hiding 1 old heads without bookmarks
+    (use --all to see them)"""

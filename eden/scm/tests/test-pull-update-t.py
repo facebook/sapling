@@ -124,7 +124,7 @@ sh % "hg bookmarks" == r"""
 # (discard pulled changes)
 
 sh % "hg update -q 483b76ad4309"
-sh % "hg rollback -q"
+sh % "hg rollback -q" == "unknown reference in .hg/bookmarks: active-after-pull f815b3da61635081d9570544593e2ad30a0d9655"
 
 # (2) activating by URL#BOOKMARK
 
@@ -150,7 +150,7 @@ sh % "hg bookmarks" == r"""
 # (discard pulled changes)
 
 sh % "hg update -q 483b76ad4309"
-sh % "hg rollback -q"
+sh % "hg rollback -q" == "unknown reference in .hg/bookmarks: active-after-pull f815b3da61635081d9570544593e2ad30a0d9655"
 
 # Test that updating deactivates current active bookmark, if the
 # destination of the update is explicitly specified, and it doesn't

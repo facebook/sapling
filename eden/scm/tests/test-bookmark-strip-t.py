@@ -8,8 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-
-
 # Test bookmark -D
 sh % "hg init book-D"
 sh % "cd book-D"
@@ -46,11 +44,11 @@ sh % "hg bookmark -D feature1" == r"""
 sh % "hg log -G -T '{rev} {bookmarks}' -r 'all()' --hidden" == r"""
     o  6 feature2
     |
-    | x  5
+    | o  5
     | |
     o |  4
     | |
-    | x  3
+    | o  3
     |/
     o  2
     |

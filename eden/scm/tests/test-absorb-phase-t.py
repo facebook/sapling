@@ -22,8 +22,7 @@ B
 A
 """
 
-sh % "hg phase -r A --public -q"
-sh % "hg phase -r C --secret --force -q"
+sh % "hg debugmakepublic -r A"
 
 sh % "hg update C -q"
 sh % "printf B1" > "B"
@@ -31,7 +30,7 @@ sh % "printf B1" > "B"
 sh % "hg absorb -aq"
 
 sh % "hg log -G -T '{desc} {phase}'" == r"""
-    @  C secret
+    @  C draft
     |
     o  B draft
     |

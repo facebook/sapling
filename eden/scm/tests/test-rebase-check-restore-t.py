@@ -56,7 +56,6 @@ sh % "cd .."
 
 sh % "hg clone -q -u . a a1"
 sh % "cd a1"
-sh % "hg phase --force --secret 2"
 
 sh % "tglogp" == r"""
     @  5: 3225f3ea730a draft 'F'
@@ -65,7 +64,7 @@ sh % "tglogp" == r"""
     | |
     | o  3: 46b37eabc604 draft 'D'
     |/
-    | o  2: 965c486023db secret 'C'
+    | o  2: 965c486023db draft 'C'
     | |
     | o  1: 27547f69f254 draft 'B'
     |/
@@ -90,7 +89,7 @@ sh % "hg rebase --continue" == r'''
     rebasing 965c486023db "C"'''
 
 sh % "tglogp" == r"""
-    o  7: d2d25e26288e secret 'C'
+    o  7: d2d25e26288e draft 'C'
     |
     o  6: 45396c49d53b draft 'B'
     |
@@ -100,7 +99,7 @@ sh % "tglogp" == r"""
     | |
     o |  3: 46b37eabc604 draft 'D'
     |/
-    | o  2: 965c486023db secret 'C'
+    | o  2: 965c486023db draft 'C'
     | |
     | o  1: 27547f69f254 draft 'B'
     |/
@@ -112,7 +111,6 @@ sh % "cd .."
 
 sh % "hg clone -q -u . a a2"
 sh % "cd a2"
-sh % "hg phase --force --secret 2"
 
 sh % "tglogp" == r"""
     @  5: 3225f3ea730a draft 'F'
@@ -121,7 +119,7 @@ sh % "tglogp" == r"""
     | |
     | o  3: 46b37eabc604 draft 'D'
     |/
-    | o  2: 965c486023db secret 'C'
+    | o  2: 965c486023db draft 'C'
     | |
     | o  1: 27547f69f254 draft 'B'
     |/
@@ -149,7 +147,7 @@ sh % "tglogp" == r"""
     |
     o  3: 46b37eabc604 draft 'D'
     |
-    | o  2: 965c486023db secret 'C'
+    | o  2: 965c486023db draft 'C'
     | |
     | o  1: 27547f69f254 draft 'B'
     |/

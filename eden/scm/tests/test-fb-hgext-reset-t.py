@@ -60,7 +60,6 @@ sh % "hg log -G -T '{node|short} {bookmarks} {phase}\\n'" == r"""
     @  66ee28d0328c foo draft
     |
     o  b292c1e3311f  public"""
-sh % "hg phase -f -d b292c1e3311f"
 
 # Reset should not strip reachable commits
 
@@ -154,9 +153,10 @@ sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""
 
 sh % "hg reset -C '66ee28d0328c^'" == "2 changesets hidden"
 sh % "hg log -r 66ee28d0328c" == r"""
-    abort: hidden revision '66ee28d0328c'!
-    (use --hidden to access hidden revisions)
-    [255]"""
+    changeset:   1:66ee28d0328c
+    user:        test
+    date:        Thu Jan 01 00:00:00 1970 +0000
+    summary:     y"""
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == "@  b292c1e3311f foo"
 sh % "hg reset -C 7f3a02b3e388"
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""

@@ -48,10 +48,9 @@ sh % "hg ci -m6"
 sh % "hg up -qC null"
 sh % "hg up -qC tip"
 sh % "hg debugmakepublic 3"
-sh % "hg phase --force --secret 6"
 
 sh % "hg log -G --template '{author}@{rev}.{phase}: {desc}\\n'" == r"""
-    @    test@6.secret: 6
+    @    test@6.draft: 6
     |\
     | o  test@5.draft: 5
     | |
@@ -243,7 +242,7 @@ sh % "hg summary" == r"""
     parent: 9:9436191a062e 
      5
     commit: 2 modified, 2 unknown, 1 unresolved (graft in progress)
-    phases: 5 draft, 1 secret"""
+    phases: 6 draft"""
 
 # Using status to get more context
 
@@ -360,7 +359,7 @@ sh % "hg log -G --template '{author}@{rev}.{phase}: {desc}\\n'" == r"""
     |
     o  foo@7.draft: 2
     |
-    | o    test@6.secret: 6
+    | o    test@6.draft: 6
     | |\
     | | o  test@5.draft: 5
     | | |

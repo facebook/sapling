@@ -25,11 +25,11 @@ sh % "hg commit -Aqm bb"
 sh % "hg book foo"
 sh % "hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\\n'" == r"""
     bb (foo) ()
-    aa () (default/master)
+    aa () (default/master public/a6e72781733c178cd290a07022bb6c8460749e7b)
     a () ()"""
 sh % "hg debugstrip -qB foo" == "bookmark 'foo' deleted"
 sh % "hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\\n'" == r"""
-    aa () (default/master)
+    aa () (default/master public/a6e72781733c178cd290a07022bb6c8460749e7b)
     a () ()"""
 
 # Test that hg debugstrip -B deletes bookmark even if there is a remote bookmark,
@@ -42,9 +42,9 @@ sh % "hg commit -Aqm a"
 sh % "hg debugmakepublic"
 sh % "hg push -q --to master --create"
 sh % "hg book foo"
-sh % "hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\\n'" == "a (foo) (default/master)"
+sh % "hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\\n'" == "a (foo) (default/master public/770eb8fce608e2c55f853a8a5ea328b659d70616)"
 sh % "hg debugstrip -qB foo" == r"""
     bookmark 'foo' deleted
     abort: empty revision set
     [255]"""
-sh % "hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\\n'" == "a () (default/master)"
+sh % "hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\\n'" == "a () (default/master public/770eb8fce608e2c55f853a8a5ea328b659d70616)"

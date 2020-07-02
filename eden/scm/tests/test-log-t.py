@@ -1535,9 +1535,10 @@ sh % "hg log '--template={rev}:{node}\\n' --hidden" == r"""
     1:a765632148dc55d38c35c4f247c618701886cb2f
     0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05"""
 sh % "hg log -r a" == r"""
-    abort: hidden revision 'a'!
-    (use --hidden to access hidden revisions)
-    [255]"""
+    changeset:   1:a765632148dc
+    user:        test
+    date:        Thu Jan 01 00:00:01 1970 +0000
+    summary:     a bis"""
 
 # test that parent prevent a changeset to be hidden
 
@@ -1584,15 +1585,16 @@ sh % "hg log '-T{rev}:{node}\\n'" == r"""
     2:94375ec45bddd2a824535fc04855bd058c926ec0"""
 
 sh % "hg log '-T{rev}:{node}\\n' '-r:'" == r"""
+    0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
+    1:a765632148dc55d38c35c4f247c618701886cb2f
     2:94375ec45bddd2a824535fc04855bd058c926ec0
     3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e"""
 sh % "hg log '-T{rev}:{node}\\n' '-r:tip'" == r"""
+    0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
+    1:a765632148dc55d38c35c4f247c618701886cb2f
     2:94375ec45bddd2a824535fc04855bd058c926ec0
     3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e"""
-sh % "hg log '-T{rev}:{node}\\n' '-r:0'" == r"""
-    abort: hidden revision '0'!
-    (use --hidden to access hidden revisions)
-    [255]"""
+sh % "hg log '-T{rev}:{node}\\n' '-r:0'" == "0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05"
 sh % "hg log '-T{rev}:{node}\\n' -f" == r"""
     3:d7d28b288a6b83d5d2cf49f10c5974deed3a1d2e
     2:94375ec45bddd2a824535fc04855bd058c926ec0"""
@@ -1984,14 +1986,9 @@ sh % "hg log -G" == r"""
 
 sh % "hg log -G a" == r"""
     o  changeset:   4:50b9b36e9c5d
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     content3
-    |
-    @  changeset:   3:15b2327059e5
     :  user:        test
     :  date:        Thu Jan 01 00:00:00 1970 +0000
-    :  summary:     content2
+    :  summary:     content3
     :
     o  changeset:   0:ae0a3c9f9e95
        user:        test
@@ -2003,11 +2000,6 @@ sh % "hg log -G a" == r"""
 sh % "hg log -T '{node}\\n' -r 4" == "50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2"
 sh % "hg debugobsolete 50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2" == ""
 sh % "hg log -G a" == r"""
-    @  changeset:   3:15b2327059e5
-    :  user:        test
-    :  date:        Thu Jan 01 00:00:00 1970 +0000
-    :  summary:     content2
-    :
     o  changeset:   0:ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
