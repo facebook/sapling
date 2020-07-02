@@ -17,7 +17,6 @@ mutationblacklist = """
     test-infinitepush-replaybookmarksqueue-one-bookmark.t
     test-inherit-mode.t
     test-mutation-fromobsmarkers.t
-    test-rebase-copy-relations.t
     test-rebase-dest.t
     test-revset2.t
     test-globalrevs-t.py
