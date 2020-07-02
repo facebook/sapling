@@ -1,7 +1,5 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
 #require symlink execbit
 
   $ enable amend morestatus rebase
@@ -31,25 +29,25 @@ Rebase a simple DAG:
   |
   @  0: b173517d0057 'a'
   
-  $ hg cat -r 3 c
+  $ hg cat -r $c c
   c (no-eol)
-  $ hg cat -r 2 b
+  $ hg cat -r $b b
   b (no-eol)
   $ hg rebase --debug -r $b -d $c | grep rebasing
   rebasing in-memory
   rebasing db0e82a16a62 "b"
   $ tglog
-  o  3: ca58782ad1e4 'b'
+  o  4: ca58782ad1e4 'b'
   |
-  o  2: 814f6bd05178 'c'
+  o  3: 814f6bd05178 'c'
   |
   o  1: 02952614a83d 'd'
   |
   @  0: b173517d0057 'a'
   
-  $ hg cat -r 3 b
+  $ hg cat -r $b b
   b (no-eol)
-  $ hg cat -r 2 c
+  $ hg cat -r $c c
   c (no-eol)
 
 Case 2:
@@ -80,7 +78,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   $ echo "jkl" > d
   $ echo "mno" > e
   $ tglog
-  o  3: f56b71190a8f 'c'
+  o  4: f56b71190a8f 'c'
   |
   | o  2: db0e82a16a62 'b'
   |/
@@ -88,38 +86,38 @@ Write files to the working copy, and ensure they're still there after the rebase
   |
   @  0: b173517d0057 'a'
   
-  $ hg cat -r 3 c
+  $ hg cat -r 'desc(c)' c
   c (no-eol)
-  $ hg cat -r 2 b
+  $ hg cat -r 'desc(b)' b
   b (no-eol)
-  $ hg cat -r 3 e
+  $ hg cat -r 'desc(c)' e
   somefile (no-eol)
   $ hg rebase --debug -s $b -d $a | grep rebasing
   rebasing in-memory
   rebasing db0e82a16a62 "b"
   $ tglog
-  o  3: fc055c3b4d33 'b'
+  o  5: fc055c3b4d33 'b'
   |
-  | o  2: f56b71190a8f 'c'
+  | o  4: f56b71190a8f 'c'
   | |
   | o  1: 02952614a83d 'd'
   |/
   @  0: b173517d0057 'a'
   
-  $ hg cat -r 2 c
+  $ hg cat -r 'desc(c)' c
   c (no-eol)
-  $ hg cat -r 3 b
+  $ hg cat -r 'desc(b)' b
   b (no-eol)
-  $ hg rebase --debug -s 1 -d 3 | grep rebasing
+  $ hg rebase --debug -s 'desc(d)' -d 'desc(b)' | grep rebasing
   rebasing in-memory
   rebasing 02952614a83d "d"
   rebasing f56b71190a8f "c"
   $ tglog
-  o  3: 753feb6fd12a 'c'
+  o  7: 753feb6fd12a 'c'
   |
-  o  2: 09c044d2cb43 'd'
+  o  6: 09c044d2cb43 'd'
   |
-  o  1: fc055c3b4d33 'b'
+  o  5: fc055c3b4d33 'b'
   |
   @  0: b173517d0057 'a'
   
@@ -132,7 +130,7 @@ Ensure working copy files are still there:
   mno
 
 Ensure symlink and executable files were rebased properly:
-  $ hg up -Cq 3
+  $ hg up -Cq 'desc(c)'
   $ readlink.py e
   e -> somefile
   $ ls -l f | cut -c -10
@@ -146,19 +144,19 @@ cleanly.
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo3
   $ tglog
-  @  3: 753feb6fd12a 'c'
+  @  7: 753feb6fd12a 'c'
   |
-  o  2: 09c044d2cb43 'd'
+  o  6: 09c044d2cb43 'd'
   |
-  o  1: fc055c3b4d33 'b'
+  o  5: fc055c3b4d33 'b'
   |
   o  0: b173517d0057 'a'
   
   $ chmod +x a
   $ hg commit -m "change a's flags"
-  $ hg up 0
+  $ hg up 'desc(a)-desc(change)'
   1 files updated, 0 files merged, 5 files removed, 0 files unresolved
-  $ hg rebase -r 4 -d .
+  $ hg rebase -r 'desc(change)' -d .
   rebasing 0666f6a71f74 "change a's flags"
   $ hg up -q tip
   $ ls -l a | cut -c -10
@@ -167,41 +165,41 @@ cleanly.
 
 Rebase the working copy parent:
   $ cd repo2
-  $ hg up -C 3
+  $ hg up -C 'desc(c)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg rebase -r 3 -d 0 --debug | egrep 'rebasing|disabling'
+  $ hg rebase -r '753feb6fd12a' -d 'desc(a)' --debug | egrep 'rebasing|disabling'
   rebasing in-memory
   rebasing 753feb6fd12a "c"
   $ tglog
-  @  3: 844a7de3e617 'c'
+  @  8: 844a7de3e617 'c'
   |
-  | o  2: 09c044d2cb43 'd'
+  | o  6: 09c044d2cb43 'd'
   | |
-  | o  1: fc055c3b4d33 'b'
+  | o  5: fc055c3b4d33 'b'
   |/
   o  0: b173517d0057 'a'
   
 Rerun with merge conflicts, demonstrating switching to on-disk merge:
-  $ hg up 2
+  $ hg up 'desc(d)'
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ echo 'e' > c
   $ hg add
   adding c
   $ hg com -m 'e -> c'
-  $ hg up 1
+  $ hg up 'desc(b)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ tglog
-  o  4: 6af061510c70 'e -> c'
+  o  9: 6af061510c70 'e -> c'
   |
-  | o  3: 844a7de3e617 'c'
+  | o  8: 844a7de3e617 'c'
   | |
-  o |  2: 09c044d2cb43 'd'
+  o |  6: 09c044d2cb43 'd'
   | |
-  @ |  1: fc055c3b4d33 'b'
+  @ |  5: fc055c3b4d33 'b'
   |/
   o  0: b173517d0057 'a'
   
-  $ hg rebase -r 3 -d 4
+  $ hg rebase -r 844a7de3e617 -d 'desc(e)'
   rebasing 844a7de3e617 "c"
   merging c
   hit merge conflicts (in c); switching to on-disk merge
@@ -215,18 +213,18 @@ Rerun with merge conflicts, demonstrating switching to on-disk merge:
 
 Allow the working copy parent to be rebased with IMM:
   $ setconfig rebase.experimental.inmemorywarning='rebasing in-memory!'
-  $ hg up -qC 3
-  $ hg rebase -r . -d 2
+  $ hg up -qC 'desc(c)-desc(e)'
+  $ hg rebase -r . -d 'desc(d)'
   rebasing in-memory!
   rebasing 844a7de3e617 "c"
   $ tglog
-  @  4: 6f55b7035492 'c'
+  @  10: 6f55b7035492 'c'
   |
-  | o  3: 6af061510c70 'e -> c'
+  | o  9: 6af061510c70 'e -> c'
   |/
-  o  2: 09c044d2cb43 'd'
+  o  6: 09c044d2cb43 'd'
   |
-  o  1: fc055c3b4d33 'b'
+  o  5: fc055c3b4d33 'b'
   |
   o  0: b173517d0057 'a'
   
