@@ -63,7 +63,7 @@ Test that we can repack packs into indexedlog
 
 # Verify stuff normally goes to packs
   $ ls $CACHEDIR/master/packs | grep datapack
-  102e9c722b8edc89ad9e5a488ad8e5347bc7e213.datapack
+  *.datapack (glob)
   $ cd shallow2
   $ setconfig remotefilelog.useruststore=True remotefilelog.localdatarepack=True
 
