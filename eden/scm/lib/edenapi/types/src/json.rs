@@ -23,7 +23,7 @@
 use std::convert::TryFrom;
 use std::str::FromStr;
 
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{ensure, Context, Result};
 use serde_json::Value;
 
 use types::{HgId, Key, RepoPathBuf};
@@ -48,16 +48,9 @@ use crate::tree::CompleteTreeRequest;
 /// }
 /// ```
 ///
-/// Note that the "kind" field is optional and is not actually read during
-/// parsing. It is there to make it obvious to the reader what kind of
-/// request this is, but it has no effect whatsoever on the parsed request.
 pub fn parse_data_req(json: &Value) -> Result<DataRequest> {
-    let json = json
-        .as_object()
-        .ok_or_else(|| anyhow!("input must be a JSON object"))?;
-    let keys = json
-        .get("keys")
-        .ok_or_else(|| anyhow!("missing field: keys"))?;
+    let json = json.as_object().context("input must be a JSON object")?;
+    let keys = json.get("keys").context("missing field: keys")?;
 
     Ok(DataRequest {
         keys: parse_keys(keys)?,
@@ -84,17 +77,13 @@ pub fn parse_data_req(json: &Value) -> Result<DataRequest> {
 /// ```
 ///
 pub fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
-    let json = json
-        .as_object()
-        .ok_or_else(|| anyhow!("input must be a JSON object"))?;
+    let json = json.as_object().context("input must be a JSON object")?;
     let length = json
         .get("length")
         .and_then(|d| d.as_u64())
         .map(|d| d as u32);
     let keys = {
-        let json_keys = json
-            .get("keys")
-            .ok_or_else(|| anyhow!("missing field: keys"))?;
+        let json_keys = json.get("keys").context("missing field: keys")?;
         parse_keys(json_keys)?
     };
 
@@ -127,26 +116,18 @@ pub fn parse_history_req(json: &Value) -> Result<HistoryRequest> {
 ///     ```
 ///
 pub fn parse_tree_req(json: &Value) -> Result<CompleteTreeRequest> {
-    let obj = json
-        .as_object()
-        .ok_or_else(|| anyhow!("input must be a JSON object"))?;
+    let obj = json.as_object().context("input must be a JSON object")?;
 
-    let rootdir = obj
-        .get("rootdir")
-        .ok_or_else(|| anyhow!("missing field: rootdir"))?;
-    let rootdir = rootdir
-        .as_str()
-        .ok_or_else(|| anyhow!("rootdir field must be a string"))?;
+    let rootdir = obj.get("rootdir").context("missing field: rootdir")?;
+    let rootdir = rootdir.as_str().context("rootdir field must be a string")?;
     let rootdir = RepoPathBuf::from_string(rootdir.to_string())?;
 
-    let mfnodes = obj
-        .get("mfnodes")
-        .ok_or_else(|| anyhow!("missing field: mfnodes"))?;
+    let mfnodes = obj.get("mfnodes").context("missing field: mfnodes")?;
     let mfnodes = parse_hashes(mfnodes)?;
 
     let basemfnodes = obj
         .get("basemfnodes")
-        .ok_or_else(|| anyhow!("missing field: basemfnodes"))?;
+        .context("missing field: basemfnodes")?;
     let basemfnodes = parse_hashes(basemfnodes)?;
 
     let depth = obj
@@ -163,15 +144,13 @@ pub fn parse_tree_req(json: &Value) -> Result<CompleteTreeRequest> {
 }
 
 fn parse_keys(json: &Value) -> Result<Vec<Key>> {
-    let arr = json
-        .as_array()
-        .ok_or_else(|| anyhow!("input must be a JSON array"))?;
+    let arr = json.as_array().context("input must be a JSON array")?;
 
     let mut keys = Vec::new();
     for i in arr.iter() {
         let json_key = i
             .as_array()
-            .ok_or_else(|| anyhow!("array items must be [path, hash] arrays"))?;
+            .context("array items must be [path, hash] arrays")?;
 
         ensure!(
             json_key.len() == 2,
@@ -181,12 +160,8 @@ fn parse_keys(json: &Value) -> Result<Vec<Key>> {
         // Cast slice into 2-element array reference so we can destructure it.
         let [path, hash] = <&[_; 2]>::try_from(&json_key[..2])?;
 
-        let path = path
-            .as_str()
-            .ok_or_else(|| anyhow!("path must be a string"))?;
-        let hash = hash
-            .as_str()
-            .ok_or_else(|| anyhow!("hash must be a string"))?;
+        let path = path.as_str().context("path must be a string")?;
+        let hash = hash.as_str().context("hash must be a string")?;
 
         let key = make_key(&path, hash)?;
         keys.push(key);
@@ -198,12 +173,10 @@ fn parse_keys(json: &Value) -> Result<Vec<Key>> {
 fn parse_hashes(json: &Value) -> Result<Vec<HgId>> {
     let array = json
         .as_array()
-        .ok_or_else(|| anyhow!("node hashes must be a passed as an array"))?;
+        .context("node hashes must be a passed as an array")?;
     let mut hashes = Vec::new();
     for hex in array {
-        let hex = hex
-            .as_str()
-            .ok_or_else(|| anyhow!("node hashes must be strings"))?;
+        let hex = hex.as_str().context("node hashes must be strings")?;
         let hash = HgId::from_str(hex)?;
         hashes.push(hash);
     }
