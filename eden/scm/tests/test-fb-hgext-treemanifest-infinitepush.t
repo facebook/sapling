@@ -6,6 +6,7 @@
 
   $ setupcommon
 
+  $ enable remotenames
   $ hginit master
   $ cd master
   $ setupserver
@@ -20,6 +21,7 @@
   > EOF
   $ echo x > x
   $ hg commit -qAm 'add x'
+  $ hg bookmark master
   $ cd ..
 
 Push a non-tree scratch branch from one client
@@ -84,7 +86,8 @@ Pull a non-tree scratch branch into a normal client
   added 2 changesets with 2 changes to 1 files
   $ hg log -r tip -vp
   changeset:   2:ebde88dba372
-  bookmark:    scratch/nontree
+  bookmark:    default/scratch/nontree
+  hoistedname: scratch/nontree
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/car
@@ -151,7 +154,8 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   added 1 changesets with 2 changes to 1 files
   $ hg log -G
   o  changeset:   2:5a7a7de8a420
-  |  bookmark:    scratch/foo
+  |  bookmark:    default/scratch/foo
+  |  hoistedname: scratch/foo
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     edit subdir/a
@@ -162,6 +166,8 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   |  summary:     add subdir/a
   |
   @  changeset:   0:085784c01c08
+     bookmark:    default/master
+     hoistedname: master
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add x
@@ -225,6 +231,7 @@ Verify its not on the server
   $ cd master
   $ hg log -G
   @  changeset:   0:085784c01c08
+     bookmark:    master
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add x

@@ -52,16 +52,16 @@ Test auto creating trees for merge commit
                         read : { bytes : 1126},
                         write : { bytes : 709}}}}
   $ hg manifest -r tip
-  fetching tree '' 13532a59874531175abc845749c0491b36effb18, based on bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 92f4ca0e667c
+  fetching tree '' 13532a59874531175abc845749c0491b36effb18, found via 92f4ca0e667c
   1 trees fetched over 0.00s
   x
   z
   { metrics : { ssh : { connections : 1,
-                        gettreepack : { basemfnodes : 1,
+                        gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
                         read : { bytes : 872},
-                        write : { bytes : 263}}}}
+                        write : { bytes : 222}}}}
   $ hg debughistorypack $TESTTMP/hgcache/master/packs/manifests/*.histidx
   
   

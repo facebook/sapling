@@ -37,17 +37,6 @@ narrowheadsincompatiblelist = """
     test-debugstrip.t
     test-directaccess-revset.t
     test-eol-clone.t
-    test-fb-hgext-treemanifest-autoconvert.t
-    test-fb-hgext-treemanifest-blame.t
-    test-fb-hgext-treemanifest-convertflat.t
-    test-fb-hgext-treemanifest-infinitepush.t
-    test-fb-hgext-treemanifest-noflat.t
-    test-fb-hgext-treemanifest-peertopeer.t
-    test-fb-hgext-treemanifest-prefetch.t
-    test-fb-hgext-treemanifest-repack.t
-    test-fb-hgext-treemanifest-server.t
-    test-fb-hgext-treemanifest-treeonly-fetching.t
-    test-fb-hgext-treemanifest-treeonly-linknodes.t
     test-generaldelta.t
     test-globalopts.t
     test-hgext-perfsuite.t

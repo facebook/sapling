@@ -4,6 +4,7 @@
 
   $ . "$TESTDIR/library.sh"
 
+  $ enable remotenames
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF
@@ -20,6 +21,7 @@
   $ hg commit -qAm 'add subdir/z'
   $ echo x >> dir/x
   $ hg commit -Am 'modify x'
+  $ hg bookmark master
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > server=True
@@ -208,7 +210,7 @@ Test prefetching when a draft commit is marked public
 - missing manifest from the server.
   $ clearcache
   $ hg status --change 2 --config extensions.remotenames=
-  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via f15c65c6e9bd
+  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 5cf0d3bd4f40594eff7f0c945bec8baa8d115d01, found via f15c65c6e9bd
   3 trees fetched over * (glob)
   fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, based on 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
   2 trees fetched over * (glob)
@@ -231,6 +233,9 @@ Test auto prefetch during normal access
   fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, based on 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
   2 trees fetched over * (glob)
   changeset:   2:bd6f9b289c01
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  bookmark:    default/master
+  hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify x
@@ -238,7 +243,6 @@ Test auto prefetch during normal access
    dir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls $CACHEDIR/master/packs/manifests
   0ac61f8fd04a6623ecbde9812036089c557f07fa.histidx
   0ac61f8fd04a6623ecbde9812036089c557f07fa.histpack

@@ -124,6 +124,7 @@ Test pushing only flat manifests without pushrebase creates trees
        1        50      62      0       1 22c7050fc6d1 5fbe397e5ac6 000000000000
   $ hg -R ../master debugstrip -r tip
   $ hg phase -dfr .
+  (phases are now managed by remotenames and heads; manully editing phases is a no-op)
 
 Test pushing only flat fails if forcetreereceive is on
   $ cat >> ../master/.hg/hgrc <<EOF
@@ -276,18 +277,18 @@ Test fetching from the server populates the cache
   $ hg status --change tip > /dev/null
   fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   2 trees fetched over * (glob)
-  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, based on 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via 4d563be8759a
-  2 trees fetched over * (glob)
+  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
+  3 trees fetched over 0.00s
 #if simplecachestore
   $ find ../master/.hg/hgsimplecache/trees/v2/get -type f | wc -l
   \s*6 (re)
   $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | wc -l
-  \s*4 (re)
+  *5 (glob)
 #else
   $ find ../master/.hg/cache/trees/v2/get -type f | wc -l
   \s*6 (re)
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
-  \s*4 (re)
+  *5 (glob)
 #endif
 
 - Move the revlogs away to show that the cache is answering prefetches
@@ -296,8 +297,8 @@ Test fetching from the server populates the cache
   $ hg status --change tip > /dev/null
   fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   2 trees fetched over * (glob)
-  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, based on 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via 4d563be8759a
-  2 trees fetched over * (glob)
+  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
+  3 trees fetched over 0.00s
 
 - Corrupt the cache with the wrong value for a key and verify it notices
 - (by going past the cache and failing to access the revlog)
@@ -311,7 +312,7 @@ The server sometimes throws spurious errors, see: D14446457
   $ hg status --change tip 2>&1 > /dev/null | grep -v '^remote:'
   fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   2 trees fetched over * (glob)
-  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, based on 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via 4d563be8759a
+  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
   abort: "unable to find the following nodes locally or on the server: ('', fc64d44480b1e632a2561bf8a8500b004eaa8d9a)"
   (commit: 4d563be8759aa4359dd5aa22a8fb5b91bad99412)
 
@@ -322,8 +323,8 @@ The server sometimes throws spurious errors, see: D14446457
   $ hg status --change tip > /dev/null
   fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   2 trees fetched over * (glob)
-  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, based on 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via 4d563be8759a
-  2 trees fetched over * (glob)
+  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
+  3 trees fetched over 0.00s
 
 - Ensure the server evicts the cache
   $ cat >> ../master/.hg/hgrc <<EOF
@@ -336,28 +337,28 @@ The server sometimes throws spurious errors, see: D14446457
   $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} cp {} {}3
   $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} mv {} {}4
   $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | wc -l
-  \s*16 (re)
+  *20 (glob)
 #else
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} cp {} {}2
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} cp {} {}3
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | xargs -n 1 -I{} mv {} {}4
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
-  \s*16 (re)
+  *20 (glob)
 #endif
   $ clearcache
   $ hg status --change tip
   fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
   2 trees fetched over * (glob)
-  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, based on 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via 4d563be8759a
-  2 trees fetched over * (glob)
+  fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
+  3 trees fetched over 0.00s
   A subdir2/z
 simplecachestore doesn't have eviction policy
 #if simplecachestore
   $ find ../master/.hg/hgsimplecache/trees/v2/nodeinfo -type f | wc -l
-  \s*20 (re)
+  *24 (glob)
 #else
   $ find ../master/.hg/cache/trees/v2/nodeinfo -type f | wc -l
-  \s*8 (re)
+  *12 (glob)
 #endif
 
 Try pulling while treemanifest.blocksendflat is True

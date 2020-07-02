@@ -55,8 +55,11 @@ Run blame on client
   > EOF
   $ clearcache
   $ hg prefetch -r 'tip^::tip'
-  4 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338, found via 70b8370240f6
+  2 trees fetched over 0.00s
+  fetching tree '' 11a84bc431b8c59b792f10ed427e7a01fc1a6b75, found via 70b8370240f6
+  2 trees fetched over 0.00s
 
 - Verify no trees are downloaded
   $ hg blame -r tip -u subdir/x --pager=off

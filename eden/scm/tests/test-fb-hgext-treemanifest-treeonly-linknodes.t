@@ -59,7 +59,7 @@ Repack - this discards the linknode for the original commit
   $ hg repack
 
 Push commit 1 to the server
-  $ hg unhide 1
+  $ hg hide 'successors(1)' -q
   $ hg push -r 1 --allow-anon
   pushing to ssh://user@dummy/master
   searching for changes
