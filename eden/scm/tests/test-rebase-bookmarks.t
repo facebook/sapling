@@ -1,9 +1,6 @@
 #chg-compatible
 
-TODO: configure mutation
-  $ configure noevolution
   $ enable rebase
-  $ setconfig phases.publish=false
 
 Create a repo with several bookmarks
   $ hg init a
@@ -72,9 +69,9 @@ Test deleting divergent bookmarks from dest (issue3685)
   rebasing 49cb3485fa0c "C" (Y Z)
 
   $ tglog
-  @  3: 17fb3faba63c 'C' Y Z
+  @  4: 17fb3faba63c 'C' Y Z
   |
-  o  2: 41acb9dca9eb 'D' W X@diverge
+  o  3: 41acb9dca9eb 'D' W X@diverge
   |
   | o  1: 6c81ed0049f8 'B' X
   |/
@@ -93,7 +90,7 @@ Do not try to keep active but deleted divergent bookmark
   rebasing 41acb9dca9eb "D" (W)
 
   $ hg bookmarks
-     W                         3:0d3554f74897
+     W                         4:0d3554f74897
      X                         1:6c81ed0049f8
      Y                         2:49cb3485fa0c
      Z                         2:49cb3485fa0c
@@ -111,11 +108,11 @@ Keep bookmarks to the correct rebased changeset
   rebasing 49cb3485fa0c "C" (Y Z)
 
   $ tglog
-  @  3: 3d5fa227f4b5 'C' Y Z
+  @  5: 3d5fa227f4b5 'C' Y Z
   |
-  o  2: e926fccfa8ec 'B' X
+  o  4: e926fccfa8ec 'B' X
   |
-  o  1: 41acb9dca9eb 'D' W
+  o  3: 41acb9dca9eb 'D' W
   |
   o  0: 1994f17a630e 'A'
   
@@ -133,31 +130,31 @@ Keep active bookmark on the correct changeset
   rebasing 49cb3485fa0c "C" (Y Z)
 
   $ tglog
-  o  3: 3d5fa227f4b5 'C' Y Z
+  o  5: 3d5fa227f4b5 'C' Y Z
   |
-  @  2: e926fccfa8ec 'B' X
+  @  4: e926fccfa8ec 'B' X
   |
-  o  1: 41acb9dca9eb 'D' W
+  o  3: 41acb9dca9eb 'D' W
   |
   o  0: 1994f17a630e 'A'
   
   $ hg bookmarks
-     W                         1:41acb9dca9eb
-   * X                         2:e926fccfa8ec
-     Y                         3:3d5fa227f4b5
-     Z                         3:3d5fa227f4b5
+     W                         3:41acb9dca9eb
+   * X                         4:e926fccfa8ec
+     Y                         5:3d5fa227f4b5
+     Z                         5:3d5fa227f4b5
 
 rebase --continue with bookmarks present (issue3802)
 
-  $ hg up 2
+  $ hg up 'bookmark(X)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark X)
   $ echo 'C' > c
   $ hg add c
   $ hg ci -m 'other C'
-  $ hg up 3
+  $ hg up 'bookmark(Y)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg rebase --dest 4
+  $ hg rebase --dest 'desc(other)'
   rebasing 3d5fa227f4b5 "C" (Y Z)
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
@@ -170,13 +167,13 @@ rebase --continue with bookmarks present (issue3802)
   $ hg rebase --continue
   rebasing 3d5fa227f4b5 "C" (Y Z)
   $ tglog
-  @  4: 45c0f0ec1203 'C' Y Z
+  @  7: 45c0f0ec1203 'C' Y Z
   |
-  o  3: b0e10b7175fd 'other C'
+  o  6: b0e10b7175fd 'other C'
   |
-  o  2: e926fccfa8ec 'B' X
+  o  4: e926fccfa8ec 'B' X
   |
-  o  1: 41acb9dca9eb 'D' W
+  o  3: 41acb9dca9eb 'D' W
   |
   o  0: 1994f17a630e 'A'
   
@@ -184,7 +181,7 @@ rebase --continue with bookmarks present (issue3802)
 ensure that bookmarks given the names of revset functions can be used
 as --rev arguments (issue3950)
 
-  $ hg update -q 3
+  $ hg update -q 'desc(other)'
   $ echo bimble > bimble
   $ hg add bimble
   $ hg commit -q -m 'bisect'
