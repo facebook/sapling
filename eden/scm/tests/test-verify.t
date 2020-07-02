@@ -5,7 +5,6 @@
 Verify works on revlog repos. It is incompatible with zstore-backed changelog.d:
 
   $ setconfig format.use-zstore-commit-data=false
-  $ setconfig visibility.enabled=false
 
 prepare repo
 
