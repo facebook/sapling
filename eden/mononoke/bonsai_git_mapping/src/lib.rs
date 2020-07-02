@@ -92,6 +92,13 @@ pub trait BonsaiGitMapping: Send + Sync {
         entries: &[BonsaiGitMappingEntry],
     ) -> Result<(), AddGitMappingErrorKind>;
 
+    async fn bulk_add_git_mapping_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiGitMappingEntry],
+        transaction: Transaction,
+    ) -> Result<Transaction, AddGitMappingErrorKind>;
+
     async fn get(
         &self,
         ctx: &CoreContext,
@@ -159,6 +166,17 @@ impl BonsaiGitMapping for Arc<dyn BonsaiGitMapping> {
         (**self).bulk_add(ctx, entries).await
     }
 
+    async fn bulk_add_git_mapping_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiGitMappingEntry],
+        transaction: Transaction,
+    ) -> Result<Transaction, AddGitMappingErrorKind> {
+        (**self)
+            .bulk_add_git_mapping_in_transaction(ctx, entries, transaction)
+            .await
+    }
+
     async fn get(
         &self,
         ctx: &CoreContext,
@@ -213,6 +231,20 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         ctx: &CoreContext,
         entries: &[BonsaiGitMappingEntry],
     ) -> Result<(), AddGitMappingErrorKind> {
+        let txn = self.write_connection.start_transaction().compat().await?;
+        let txn = self
+            .bulk_add_git_mapping_in_transaction(ctx, entries, txn)
+            .await?;
+        txn.commit().compat().await?;
+        Ok(())
+    }
+
+    async fn bulk_add_git_mapping_in_transaction(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiGitMappingEntry],
+        transaction: Transaction,
+    ) -> Result<Transaction, AddGitMappingErrorKind> {
         STATS::adds.add_value(entries.len().try_into().map_err(anyhow::Error::from)?);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
@@ -222,37 +254,47 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (&self.repo_id, git_sha1, bcs_id))
             .collect();
 
-        let res = InsertMapping::query(&self.write_connection, &rows[..])
+        let (transaction, res) = InsertMapping::query_with_transaction(transaction, &rows[..])
             .compat()
             .await?;
 
-        if res.affected_rows() != rows.len() as u64 {
+        let transaction = if res.affected_rows() != rows.len() as u64 {
             // Let's see if there are any conflicting entries in DB.
-            let git_shas = BonsaisOrGitShas::GitSha1(
-                entries
-                    .iter()
-                    .map(
-                        |BonsaiGitMappingEntry {
-                             git_sha1,
-                             bcs_id: _,
-                         }| git_sha1.clone(),
-                    )
-                    .collect(),
-            );
-            let mapping_from_db: BTreeMap<_, _> = self
-                .get(ctx, git_shas)
-                .await?
-                .into_iter()
-                .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (git_sha1, bcs_id))
-                .collect();
+            let git_shas = entries
+                .iter()
+                .map(
+                    |BonsaiGitMappingEntry {
+                         git_sha1,
+                         bcs_id: _,
+                     }| git_sha1.clone(),
+                )
+                .collect::<Vec<_>>();
+
+            let (transaction, mapping_from_db) = SelectMappingByGitSha1::query_with_transaction(
+                transaction,
+                &self.repo_id,
+                &git_shas[..],
+            )
+            .compat()
+            .await?;
+
+            let mapping_from_db: BTreeMap<_, _> = mapping_from_db.into_iter().collect();
+
             for entry in entries.iter() {
                 match mapping_from_db.get(&entry.git_sha1) {
                     Some(bcs_id) if bcs_id == &entry.bcs_id => (), // We've tried to insert a duplicate, proceed.
-                    _ => Err(AddGitMappingErrorKind::Conflict(vec![entry.clone()].into()))?, // A real conflict!
+                    _ => {
+                        return Err(AddGitMappingErrorKind::Conflict(vec![entry.clone()].into()));
+                    } // A real conflict!
                 }
             }
-        }
-        return Ok(());
+
+            transaction
+        } else {
+            transaction
+        };
+
+        Ok(transaction)
     }
 
     async fn get(
@@ -316,34 +358,6 @@ impl SqlConstruct for SqlBonsaiGitMappingConnection {
 }
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGitMappingConnection {}
-
-/// An in-transaction version of bulk_add. Instead of using multiple connections
-/// it reuses existing `Transaction`. Useful for updating the mapping atomically
-/// with other changes.
-///
-/// It would be nice if we could use the usual SqlBonsaiGitMapping for this
-/// purpose as well but a self-contained object owning connection is very
-/// convenient to use and making every method take connection or transaction a
-/// parameter would complicate it greatly.
-pub async fn bulk_add_git_mapping_in_transaction(
-    transaction: Transaction,
-    repo_id: &RepositoryId,
-    entries: &[BonsaiGitMappingEntry],
-) -> Result<Transaction, AddGitMappingErrorKind> {
-    let rows: Vec<_> = entries
-        .into_iter()
-        .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (repo_id, git_sha1, bcs_id))
-        .collect();
-
-    let (transaction, res) = InsertMapping::query_with_transaction(transaction, &rows[..])
-        .compat()
-        .await?;
-
-    if res.affected_rows() != rows.len() as u64 {
-        Err(AddGitMappingErrorKind::Conflict(entries.into()))?;
-    }
-    Ok(transaction)
-}
 
 fn filter_fetched_ids(
     cs: BonsaisOrGitShas,

@@ -10,8 +10,8 @@
 use anyhow::Error;
 use assert_matches::assert_matches;
 use bonsai_git_mapping::{
-    bulk_add_git_mapping_in_transaction, AddGitMappingErrorKind, BonsaiGitMapping,
-    BonsaiGitMappingEntry, BonsaisOrGitShas, SqlBonsaiGitMappingConnection,
+    AddGitMappingErrorKind, BonsaiGitMapping, BonsaiGitMappingEntry, BonsaisOrGitShas,
+    SqlBonsaiGitMappingConnection,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -89,7 +89,8 @@ async fn test_add_conflict(fb: FacebookInit) -> Result<(), Error> {
 
     let entries = vec![
         BonsaiGitMappingEntry {
-            // This entry should be inserted normally.
+            // This entry could be inserted normally, but it won't because we have a conflicting
+            // entry
             bcs_id: bonsai::TWOS_CSID,
             git_sha1: TWOS_GIT_SHA1,
         },
@@ -103,6 +104,18 @@ async fn test_add_conflict(fb: FacebookInit) -> Result<(), Error> {
     let res = mapping.bulk_add(&ctx, &entries).await;
     assert_matches!(res, Err(AddGitMappingErrorKind::Conflict(_)));
 
+    let result = mapping
+        .get_git_sha1_from_bonsai(&ctx, bonsai::TWOS_CSID)
+        .await?;
+    assert_eq!(result, None);
+
+    let entries = vec![BonsaiGitMappingEntry {
+        // Now this entry will be inserted normally
+        bcs_id: bonsai::TWOS_CSID,
+        git_sha1: TWOS_GIT_SHA1,
+    }];
+
+    mapping.bulk_add(&ctx, &entries).await?;
     let result = mapping
         .get_git_sha1_from_bonsai(&ctx, bonsai::TWOS_CSID)
         .await?;
@@ -172,7 +185,8 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let txn = conn.start_transaction().compat().await?;
-    bulk_add_git_mapping_in_transaction(txn, &REPO_ZERO, &[entry1.clone()])
+    mapping
+        .bulk_add_git_mapping_in_transaction(&ctx, &[entry1.clone()], txn)
         .await?
         .commit()
         .compat()
@@ -186,7 +200,8 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
     );
 
     let txn = conn.start_transaction().compat().await?;
-    bulk_add_git_mapping_in_transaction(txn, &REPO_ZERO, &[entry2.clone()])
+    mapping
+        .bulk_add_git_mapping_in_transaction(&ctx, &[entry2.clone()], txn)
         .await?
         .commit()
         .compat()
@@ -201,13 +216,22 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
 
     // Inserting duplicates fails
     let txn = conn.start_transaction().compat().await?;
-    let res = async move {
-        bulk_add_git_mapping_in_transaction(txn, &REPO_ZERO, &[entry2.clone()])
-            .await?
-            .commit()
-            .compat()
-            .await?;
-        Result::<_, AddGitMappingErrorKind>::Ok(())
+    let res = {
+        let ctx = ctx.clone();
+        let mapping = mapping.clone();
+        async move {
+            let entry_conflict = BonsaiGitMappingEntry {
+                bcs_id: bonsai::TWOS_CSID,
+                git_sha1: THREES_GIT_SHA1,
+            };
+            mapping
+                .bulk_add_git_mapping_in_transaction(&ctx, &[entry_conflict], txn)
+                .await?
+                .commit()
+                .compat()
+                .await?;
+            Result::<_, AddGitMappingErrorKind>::Ok(())
+        }
     }
     .await;
     assert_matches!(res, Err(AddGitMappingErrorKind::Conflict(_)));

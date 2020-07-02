@@ -52,7 +52,9 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
 
     let book = bookmark(&ctx, &repo, "master").set_to(cs1).await?;
 
-    let hooks = [GitMappingPushrebaseHook::new(repo.get_repoid())];
+    let hooks = [GitMappingPushrebaseHook::new(
+        repo.bonsai_git_mapping().clone(),
+    )];
     let onto = OntoBookmarkParams::new(book);
 
     let rebased = do_pushrebase_bonsai(

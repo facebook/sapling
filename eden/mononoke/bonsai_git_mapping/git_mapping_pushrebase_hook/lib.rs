@@ -9,15 +9,15 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
-use mononoke_types::{hash::GitSha1, BonsaiChangesetMut, ChangesetId, RepositoryId};
+use mononoke_types::{hash::GitSha1, BonsaiChangesetMut, ChangesetId};
 use pushrebase::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
 };
 use sql::Transaction;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use bonsai_git_mapping::{
-    bulk_add_git_mapping_in_transaction, extract_git_sha1_from_bonsai_extra, BonsaiGitMappingEntry,
+    extract_git_sha1_from_bonsai_extra, BonsaiGitMapping, BonsaiGitMappingEntry,
 };
 
 #[cfg(test)]
@@ -25,12 +25,12 @@ mod test;
 
 #[derive(Clone)]
 pub struct GitMappingPushrebaseHook {
-    repository_id: RepositoryId,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
 }
 
 impl GitMappingPushrebaseHook {
-    pub fn new(repository_id: RepositoryId) -> Box<dyn PushrebaseHook> {
-        Box::new(Self { repository_id })
+    pub fn new(bonsai_git_mapping: Arc<dyn BonsaiGitMapping>) -> Box<dyn PushrebaseHook> {
+        Box::new(Self { bonsai_git_mapping })
     }
 }
 
@@ -38,7 +38,7 @@ impl GitMappingPushrebaseHook {
 impl PushrebaseHook for GitMappingPushrebaseHook {
     async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
         let hook = Box::new(GitMappingCommitHook {
-            repository_id: self.repository_id,
+            bonsai_git_mapping: self.bonsai_git_mapping.clone(),
             assignments: HashMap::new(),
         }) as Box<dyn PushrebaseCommitHook>;
         Ok(hook)
@@ -46,7 +46,7 @@ impl PushrebaseHook for GitMappingPushrebaseHook {
 }
 
 struct GitMappingCommitHook {
-    repository_id: RepositoryId,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     assignments: HashMap<ChangesetId, GitSha1>,
 }
 
@@ -103,14 +103,14 @@ impl PushrebaseCommitHook for GitMappingCommitHook {
         }
 
         Ok(Box::new(GitMappingTransactionHook {
-            repository_id: self.repository_id,
+            bonsai_git_mapping: self.bonsai_git_mapping,
             entries,
         }) as Box<dyn PushrebaseTransactionHook>)
     }
 }
 
 struct GitMappingTransactionHook {
-    repository_id: RepositoryId,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     entries: Vec<BonsaiGitMappingEntry>,
 }
 
@@ -118,10 +118,12 @@ struct GitMappingTransactionHook {
 impl PushrebaseTransactionHook for GitMappingTransactionHook {
     async fn populate_transaction(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         txn: Transaction,
     ) -> Result<Transaction, BookmarkTransactionError> {
-        let txn = bulk_add_git_mapping_in_transaction(txn, &self.repository_id, &self.entries[..])
+        let txn = self
+            .bonsai_git_mapping
+            .bulk_add_git_mapping_in_transaction(ctx, &self.entries[..], txn)
             .await
             .map_err(|e| BookmarkTransactionError::Other(e.into()))?;
         Ok(txn)

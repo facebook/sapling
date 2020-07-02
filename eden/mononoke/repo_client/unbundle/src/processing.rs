@@ -15,7 +15,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_git_mapping::{
-    bulk_add_git_mapping_in_transaction, extract_git_sha1_from_bonsai_extra, BonsaiGitMappingEntry,
+    extract_git_sha1_from_bonsai_extra, BonsaiGitMapping, BonsaiGitMappingEntry,
 };
 use bookmarks::{
     BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction, TransactionHook,
@@ -32,7 +32,7 @@ use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use maplit::hashset;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
-use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id, RepositoryId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
 use pushrebase::{self, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
 use reverse_filler_queue::ReverseFillerQueue;
@@ -214,7 +214,6 @@ async fn run_push(
 
     let new_commits = uploaded_bonsais.keys().map(|k| *k).collect::<Vec<_>>();
 
-    let repo_id = repo.get_repoid();
     let mut txn_hook = None;
     if populate_git_mapping {
         let parents_of_uploaded =
@@ -223,7 +222,7 @@ async fn run_push(
             find_ancestors_without_git_mapping(&ctx, &repo, parents_of_uploaded).await?;
 
         txn_hook = Some(upload_git_mapping_bookmark_txn_hook(
-            repo_id,
+            repo.bonsai_git_mapping().clone(),
             uploaded_bonsais,
             ancestors_no_git_mapping,
         ));
@@ -337,7 +336,7 @@ async fn find_ancestors_without_git_mapping(
 }
 
 fn upload_git_mapping_bookmark_txn_hook(
-    repo_id: RepositoryId,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     uploaded_bonsais: HashMap<ChangesetId, BonsaiChangeset>,
     ancestors_no_git_mapping: HashMap<ChangesetId, BonsaiChangeset>,
 ) -> TransactionHook {
@@ -375,8 +374,10 @@ fn upload_git_mapping_bookmark_txn_hook(
             .add("git_mapping_inserting", mapping_entries.len())
             .log_with_msg("Inserting git mapping", None);
 
+        let bonsai_git_mapping = bonsai_git_mapping.clone();
         async move {
-            let sql_txn = bulk_add_git_mapping_in_transaction(sql_txn, &repo_id, &mapping_entries)
+            let sql_txn = bonsai_git_mapping
+                .bulk_add_git_mapping_in_transaction(&ctx, &mapping_entries, sql_txn)
                 .map_err(Error::from)
                 .await?;
             ctx.scuba()
@@ -660,7 +661,7 @@ async fn run_bookmark_only_pushrebase(
             let ancestors_no_git_mapping =
                 find_ancestors_without_git_mapping(&ctx, &repo, hashset! {new}).await?;
             txn_hook = Some(upload_git_mapping_bookmark_txn_hook(
-                repo.get_repoid(),
+                repo.bonsai_git_mapping().clone(),
                 HashMap::new(),
                 ancestors_no_git_mapping,
             ));
@@ -1056,7 +1057,7 @@ pub fn get_pushrebase_hooks(
     }
 
     if params.populate_git_mapping {
-        let hook = GitMappingPushrebaseHook::new(repo.get_repoid());
+        let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping().clone());
         hooks.push(hook);
     }
 
