@@ -17,6 +17,7 @@ sha2 = "0.8"
 thrift-types = { path = "../thrift-types" }
 types = { path = "../types" }
 util = { path = "../util" }
+zstd = "0.4"
 
 [dev-dependencies]
 tempfile = "3.1"
