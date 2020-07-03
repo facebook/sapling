@@ -158,6 +158,7 @@ members = [
     "blobstore/samplingblob",
     "blobstore/sqlblob",
     "blobstore/throttledblob",
+    "blobstore/virtually_sharded_blobstore",
     "blobstore_sync_queue",
     "bonsai_git_mapping",
     "bonsai_git_mapping/git_mapping_pushrebase_hook",

@@ -49,11 +49,13 @@ define_perf_counters! {
     enum PerfCounterType {
         BlobGets,
         BlobGetsAccessWait,
+        BlobGetsShardAccessWait,
         BlobGetsMaxLatency,
         BlobPresenceChecks,
         BlobPresenceChecksMaxLatency,
         BlobPuts,
         BlobPutsAccessWait,
+        BlobPutsShardAccessWait,
         BlobPutsMaxLatency,
         BytesSent,
         CachelibHits,
