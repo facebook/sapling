@@ -779,7 +779,7 @@ class thriftasset(asset):
             thriftfile = pjoin(thriftdir, thriftdest)
             subprocess.check_call(
                 [
-                    "../../../../installed/fbthrift/bin/thrift1",
+                    os.environ["THRIFT"],
                     "-I",
                     thriftdir,
                     "-gen",

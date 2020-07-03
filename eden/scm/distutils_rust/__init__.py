@@ -401,7 +401,7 @@ replace-with = "vendored-sources"
             return os.environ.get("RUST_VENDORED_CRATES_DIR")
 
         def rust_binary_paths(self):
-            return {"cargo": "cargo"}
+            return {"cargo": os.environ.get("CARGO_BIN", "cargo")}
 
 
 class InstallRustExt(distutils.command.install_scripts.install_scripts):
