@@ -37,8 +37,6 @@ jobs:
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/dag/Cargo.toml
     - name: Run drawdag tests
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/drawdag/Cargo.toml
-    - name: Run edenapi tests
-      run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/edenapi/Cargo.toml
     # thrift-types does not build
     # - name: Run edenfs-client tests
     #   run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/edenfs-client/Cargo.toml
