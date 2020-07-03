@@ -8,7 +8,6 @@
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable, LoadableError};
-use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{self as deleted_manifest, RootDeletedManifestId};
@@ -97,7 +96,7 @@ pub enum HistoryAcrossDeletions {
 ///    |
 ///    o A    - stage: 3
 ///
-/// On each step of bounded_traversal_stream:
+/// On each step of try_unfold:
 ///   1 - prefetch fastlog batch for the `prefetch` changeset id and fill the commit graph
 ///   2 - perform BFS until the node for which parents haven't been prefetched
 ///   3 - stream all the "ready" nodes and set the last node to prefetch
@@ -167,15 +166,14 @@ where
     // generate file history
     Ok(stream::iter(top_history)
         .chain({
-            bounded_traversal_stream(
-                256,
+            stream::try_unfold(
                 // starting point
-                Some(TraversalState {
+                TraversalState {
                     history_graph,
                     visited,
                     bfs,
-                    prefetch: the_last_change,
-                }),
+                    prefetch: Some(the_last_change),
+                },
                 // unfold
                 move |state| {
                     cloned!(ctx, repo, path, terminator);
@@ -429,7 +427,7 @@ struct TraversalState {
     history_graph: CommitGraph,
     visited: HashSet<ChangesetId>,
     bfs: VecDeque<ChangesetId>,
-    prefetch: ChangesetId,
+    prefetch: Option<ChangesetId>,
 }
 
 async fn do_history_unfold<Terminator, TFut>(
@@ -439,7 +437,7 @@ async fn do_history_unfold<Terminator, TFut>(
     state: TraversalState,
     terminator: Option<Terminator>,
     history_across_deletions: HistoryAcrossDeletions,
-) -> Result<(Vec<ChangesetId>, Option<TraversalState>), Error>
+) -> Result<Option<(Vec<ChangesetId>, TraversalState)>, Error>
 where
     Terminator: Fn(ChangesetId) -> TFut + Clone,
     TFut: Future<Output = Result<bool, Error>>,
@@ -451,6 +449,10 @@ where
         prefetch,
     } = state;
 
+    let prefetch = match prefetch {
+        Some(prefetch) => prefetch,
+        _ => return Ok(None),
+    };
     let terminate = match terminator {
         Some(terminator) => terminator(prefetch.clone()).await?,
         _ => false,
@@ -531,18 +533,15 @@ where
         }
     }
 
-    let new_state = if let Some(prefetch) = next_to_fetch {
-        Some(TraversalState {
+    Ok(Some((
+        history,
+        TraversalState {
             history_graph,
             visited,
             bfs,
-            prefetch,
-        })
-    } else {
-        None
-    };
-
-    Ok((history, new_state))
+            prefetch: next_to_fetch,
+        },
+    )))
 }
 
 // Now let's process commits which have a "path" in their manifests but

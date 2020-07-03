@@ -12,7 +12,6 @@ path = "lib.rs"
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
 blobstore = { path = "../../blobstore" }
-bounded_traversal = { path = "../../common/bounded_traversal" }
 context = { path = "../../server/context" }
 deleted_files_manifest = { path = "../deleted_files_manifest" }
 derived_data = { path = ".." }
