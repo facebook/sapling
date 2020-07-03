@@ -4468,6 +4468,7 @@ def _render(
     level=0,
     maxlevel=3,
     maxlen=8,
+    maxdictlen=64,
     hex=None,
     basectx=None,
     abstractsmartset=None,
@@ -4501,6 +4502,7 @@ def _render(
         level=level + 1,
         maxlevel=maxlevel,
         maxlen=maxlen,
+        maxdictlen=maxdictlen,
         hex=hex,
         basectx=basectx,
         abstractsmartset=abstractsmartset,
@@ -4531,9 +4533,15 @@ def _render(
         else:
             result = "{%s}" % ", ".join(map(render, sorted(value)))
     elif isinstance(value, dict):
-        result = "{%s}" % ", ".join(
-            "%s: %s" % (render(k), render(v)) for k, v in value.items() if v is not None
-        )
+        count = 0
+        items = []
+        for k, v in value.items():
+            count += 1
+            if count > maxdictlen:
+                items.append("...")
+                break
+            items.append("%s: %s" % (render(k), render(v)))
+        result = "{%s}" % ", ".join(items)
     else:
         raise NotRendered(value)
     if len(result) > 1024:
@@ -4572,6 +4580,7 @@ def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
         while frame is not None:
             frames.append((frame, frame.f_lineno))
             frame = frame.f_back
+        frames.reverse()
     else:
         raise TypeError("frameortb is not a frame or traceback")
 
