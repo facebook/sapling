@@ -245,7 +245,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
 
             // First, check the cache, and acquire a permit for this key if necessary.
 
-            let mut permit = match inner.get_from_cache(&cache_key)? {
+            let take_lease = match inner.get_from_cache(&cache_key)? {
                 Some(CacheData::Stored(v)) => {
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::CachelibHits);
@@ -254,52 +254,62 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
                 Some(CacheData::NotStorable) => {
                     // We know for sure this data isn't cacheable. Don't try to acquire a permit
                     // for it, and proceed without the semaphore.
+                    false
+                }
+                None => true,
+            };
+
+            let fut = async move {
+                let mut permit = if take_lease {
+                    Some(inner.read_shards.acquire(&ctx, &key).await)
+                } else {
                     None
+                };
+
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::CachelibMisses);
+
+                // Now, check the cache again. Since we waited for a permit, the data could have been
+                // added to the cache in between. Note that it might turn out that the data isn't
+                // cacheable here.
+
+                match inner.get_from_cache(&cache_key)? {
+                    Some(CacheData::Stored(v)) => {
+                        // The data is cached, that's great. Return it.
+                        STATS::gets_deduped.add_value(1);
+                        ctx.perf_counters()
+                            .increment_counter(PerfCounterType::BlobGetsDeduplicated);
+                        return Ok(Some(v));
+                    }
+                    Some(CacheData::NotStorable) => {
+                        // If we had any permit, we should release it to unblock any other waiters on
+                        // this semaphore, since we don't expect to succeed in populating the cache for
+                        // this key (though we might).
+                        STATS::gets_not_storable.add_value(1);
+                        let _ = permit.take();
+                    }
+                    None => {
+                        // We still don't have it. Fallthrough to read.
+                    }
+                };
+
+                // NOTE: This is a no-op, but it's here to ensure permit is still in scope at this
+                // point (which it should: if it doesn't, then that means we unconditionally released
+                // the semaphore before doing the get, and that's wrong).
+                scopeguard::defer! { drop(permit); };
+
+                // Now, actually go the underlying blobstore.
+                let res = inner.blobstore.get(ctx, key.clone()).await?;
+
+                // And finally, attempt to cache what we got back.
+                if let Some(ref data) = res {
+                    let _ = inner.set_in_cache(&cache_key, data.clone());
                 }
-                None => Some(inner.read_shards.acquire(&ctx, &key).await),
+
+                Ok(res)
             };
 
-            ctx.perf_counters()
-                .increment_counter(PerfCounterType::CachelibMisses);
-
-            // Now, check the cache again. Since we waited for a permit, the data could have been
-            // added to the cache in between. Note that it might turn out that the data isn't
-            // cacheable here.
-
-            match inner.get_from_cache(&cache_key)? {
-                Some(CacheData::Stored(v)) => {
-                    // The data is cached, that's great. Return it.
-                    STATS::gets_deduped.add_value(1);
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::BlobGetsDeduplicated);
-                    return Ok(Some(v));
-                }
-                Some(CacheData::NotStorable) => {
-                    // If we had any permit, we should release it to unblock any other waiters on
-                    // this semaphore, since we don't expect to succeed in populating the cache for
-                    // this key (though we might).
-                    STATS::gets_not_storable.add_value(1);
-                    let _ = permit.take();
-                }
-                None => {
-                    // We still don't have it. Fallthrough to read.
-                }
-            };
-
-            // NOTE: This is a no-op, but it's here to ensure permit is still in scope at this
-            // point (which it should: if it doesn't, then that means we unconditionally released
-            // the semaphore before doing the get, and that's wrong).
-            scopeguard::defer! { drop(permit); };
-
-            // Now, actually go the underlying blobstore.
-            let res = inner.blobstore.get(ctx, key.clone()).await?;
-
-            // And finally, attempt to cache what we got back.
-            if let Some(ref data) = res {
-                let _ = inner.set_in_cache(&cache_key, data.clone());
-            }
-
-            Ok(res)
+            tokio::spawn(fut).await?
         }
         .boxed()
     }
@@ -323,22 +333,26 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
                 return Ok(());
             }
 
-            let permit = inner.write_shards.acquire(&ctx, &key).await;
-            scopeguard::defer! { drop(permit); };
+            let fut = async move {
+                let permit = inner.write_shards.acquire(&ctx, &key).await;
+                scopeguard::defer! { drop(permit); };
 
-            if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
-                STATS::puts_deduped.add_value(1);
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::BlobPutsDeduplicated);
-                return Ok(());
-            }
+                if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
+                    STATS::puts_deduped.add_value(1);
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::BlobPutsDeduplicated);
+                    return Ok(());
+                }
 
-            let res = inner.blobstore.put(ctx, key.clone(), value.clone()).await?;
+                let res = inner.blobstore.put(ctx, key.clone(), value.clone()).await?;
 
-            let value = BlobstoreGetData::new(BlobstoreMetadata::new(None), value);
-            let _ = inner.set_in_cache(&cache_key, value);
+                let value = BlobstoreGetData::new(BlobstoreMetadata::new(None), value);
+                let _ = inner.set_in_cache(&cache_key, value);
 
-            Ok(res)
+                Ok(res)
+            };
+
+            tokio::spawn(fut).await?
         }
         .boxed()
     }
