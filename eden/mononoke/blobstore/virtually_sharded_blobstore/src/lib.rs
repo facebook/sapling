@@ -14,6 +14,7 @@ use context::{CoreContext, PerfCounterType};
 use futures::future::{BoxFuture, FutureExt};
 use futures_stats::TimedFutureExt;
 use mononoke_types::BlobstoreBytes;
+use stats::prelude::*;
 use std::collections::hash_map::DefaultHasher;
 use std::convert::AsRef;
 use std::fmt;
@@ -22,6 +23,15 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 use time_ext::DurationExt;
 use tokio::sync::{Semaphore, SemaphorePermit};
+
+define_stats! {
+    prefix = "mononoke.virtually_sharded_blobstore";
+    gets: timeseries(Sum),
+    gets_deduped: timeseries(Sum),
+    gets_not_storable: timeseries(Sum),
+    puts: timeseries(Sum),
+    puts_deduped: timeseries(Sum),
+}
 
 // 4MiB, minus a little space for the STORED prefix and the key.
 const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024 - 1024;
@@ -230,6 +240,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
         cloned!(self.inner);
 
         async move {
+            STATS::gets.add_value(1);
             let cache_key = CacheKey::from_key(&key);
 
             // First, check the cache, and acquire a permit for this key if necessary.
@@ -258,6 +269,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
             match inner.get_from_cache(&cache_key)? {
                 Some(CacheData::Stored(v)) => {
                     // The data is cached, that's great. Return it.
+                    STATS::gets_deduped.add_value(1);
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::BlobGetsDeduplicated);
                     return Ok(Some(v));
@@ -266,6 +278,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
                     // If we had any permit, we should release it to unblock any other waiters on
                     // this semaphore, since we don't expect to succeed in populating the cache for
                     // this key (though we might).
+                    STATS::gets_not_storable.add_value(1);
                     let _ = permit.take();
                 }
                 None => {
@@ -300,9 +313,11 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
         cloned!(self.inner);
 
         async move {
+            STATS::puts.add_value(1);
             let cache_key = CacheKey::from_key(&key);
 
             if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
+                STATS::puts_deduped.add_value(1);
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::BlobPutsDeduplicated);
                 return Ok(());
@@ -312,6 +327,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
             scopeguard::defer! { drop(permit); };
 
             if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
+                STATS::puts_deduped.add_value(1);
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::BlobPutsDeduplicated);
                 return Ok(());
