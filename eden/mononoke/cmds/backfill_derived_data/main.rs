@@ -63,6 +63,7 @@ define_stats! {
     derivation_time_ms: dynamic_timeseries("{}.derivation_time_ms", (reponame: String); Average, Sum),
 }
 
+const ARG_ALL_TYPES: &str = "all-types";
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
 const ARG_DRY_RUN: &str = "dry-run";
 const ARG_OUT_FILENAME: &str = "out-filename";
@@ -158,7 +159,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .about("tail public commits and fill derived data")
                 .arg(
                     Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                        .required(true)
+                        .required(false)
                         .multiple(true)
                         .index(1)
                         .possible_values(POSSIBLE_DERIVED_TYPES)
@@ -181,17 +182,25 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             SubCommand::with_name(SUBCOMMAND_SINGLE)
                 .about("backfill single changeset (mainly for performance testing purposes)")
                 .arg(
-                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                        .required(true)
-                        .index(1)
-                        .possible_values(POSSIBLE_DERIVED_TYPES)
-                        .help("derived data type for which backfill will be run"),
+                    Arg::with_name(ARG_ALL_TYPES)
+                        .long(ARG_ALL_TYPES)
+                        .required(false)
+                        .takes_value(false)
+                        .help("derive all derived data types enabled for this repo"),
                 )
                 .arg(
                     Arg::with_name(ARG_CHANGESET)
                         .required(true)
-                        .index(2)
+                        .index(1)
                         .help("changeset by {hd|bonsai} hash or bookmark"),
+                )
+                .arg(
+                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                        .required(false)
+                        .index(2)
+                        .conflicts_with(ARG_ALL_TYPES)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
+                        .help("derived data type for which backfill will be run"),
                 ),
         );
     let matches = app.get_matches();
@@ -339,17 +348,47 @@ async fn run_subcmd<'a>(
                 .value_of_lossy(ARG_CHANGESET)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_CHANGESET))?
                 .to_string();
-            let derived_data_type = sub_m
-                .value_of(ARG_DERIVED_DATA_TYPE)
-                .ok_or_else(|| format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE))?
-                .to_string();
-            let repo = open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
-                .compat()
-                .await?;
+            let all = sub_m.is_present(ARG_ALL_TYPES);
+            let derived_data_type = sub_m.value_of(ARG_DERIVED_DATA_TYPE);
+            let (repo, types): (_, Vec<String>) = match (all, derived_data_type) {
+                (true, None) => {
+                    let repo = args::open_repo_unredacted(fb, logger, matches)
+                        .compat()
+                        .await?;
+                    let types = repo
+                        .get_derived_data_config()
+                        .derived_data_types
+                        .clone()
+                        .into_iter()
+                        .collect();
+                    (repo, types)
+                }
+                (false, Some(derived_data_type)) => {
+                    let repo =
+                        open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
+                            .compat()
+                            .await?;
+                    (repo, vec![derived_data_type.to_string()])
+                }
+                (true, Some(_)) => {
+                    return Err(format_err!(
+                        "{} and {} can't be specified",
+                        ARG_ALL_TYPES,
+                        ARG_DERIVED_DATA_TYPE
+                    ));
+                }
+                (false, None) => {
+                    return Err(format_err!(
+                        "{} or {} should be specified",
+                        ARG_ALL_TYPES,
+                        ARG_DERIVED_DATA_TYPE
+                    ));
+                }
+            };
             let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                 .compat()
                 .await?;
-            subcommand_single(&ctx, &repo, csid, &derived_data_type).await
+            subcommand_single(&ctx, &repo, csid, types).await
         }
         (name, _) => Err(format_err!("unhandled subcommand: {}", name)),
     }
@@ -540,25 +579,36 @@ async fn subcommand_single(
     ctx: &CoreContext,
     repo: &BlobRepo,
     csid: ChangesetId,
-    derived_data_type: &str,
+    derived_data_types: Vec<String>,
 ) -> Result<(), Error> {
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
-    let derived_utils = derived_data_utils(repo.clone(), derived_data_type)?;
-    derived_utils.regenerate(&vec![csid]);
-    derived_utils
-        .derive(ctx.clone(), repo, csid)
-        .timed({
-            cloned!(ctx);
-            move |stats, result| {
-                info!(
-                    ctx.logger(),
-                    "derived in {:?}: {:?}", stats.completion_time, result
-                );
-                Ok(())
-            }
+    let mut derived_utils = vec![];
+    for ty in derived_data_types {
+        let utils = derived_data_utils(repo.clone(), ty)?;
+        utils.regenerate(&vec![csid]);
+        derived_utils.push(utils);
+    }
+    stream::iter(derived_utils)
+        .map(Ok)
+        .try_for_each_concurrent(100, |derived_utils| {
+            derived_utils
+                .derive(ctx.clone(), repo.clone(), csid)
+                .timed({
+                    cloned!(ctx);
+                    move |stats, result| {
+                        info!(
+                            ctx.logger(),
+                            "derived {} in {:?}: {:?}",
+                            derived_utils.name(),
+                            stats.completion_time,
+                            result
+                        );
+                        Ok(())
+                    }
+                })
+                .map(|_| ())
+                .compat()
         })
-        .map(|_| ())
-        .compat()
         .await
 }
 
@@ -602,10 +652,22 @@ mod tests {
         let counting_blobstore = counting_blobstore.unwrap();
 
         let master = resolve_cs_id(&ctx, &repo, "master").await?;
-        subcommand_single(&ctx, &repo, master, RootUnodeManifestId::NAME).await?;
+        subcommand_single(
+            &ctx,
+            &repo,
+            master,
+            vec![RootUnodeManifestId::NAME.to_string()],
+        )
+        .await?;
 
         let writes_count = counting_blobstore.writes_count();
-        subcommand_single(&ctx, &repo, master, RootUnodeManifestId::NAME).await?;
+        subcommand_single(
+            &ctx,
+            &repo,
+            master,
+            vec![RootUnodeManifestId::NAME.to_string()],
+        )
+        .await?;
         assert!(counting_blobstore.writes_count() > writes_count);
         Ok(())
     }
