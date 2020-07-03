@@ -14,19 +14,17 @@ use sha1::{Digest, Sha1};
 
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-/// Tombstone string to replace the content of redacted files with
-/// TODO(T48685378): Handle redacted content in a less hacky way
+/// Tombstone string that replaces the content of redacted files.
+/// TODO(T48685378): Handle redacted content in a less hacky way.
 const REDACTED_TOMBSTONE: &str =
     "PoUOK1GkdH6Xtx5j9WKYew3dZXspyfkahcNkhV6MJ4rhyNICTvX0nxmbCImFoT0oH\
      AF9ivWGaC6ByswQZUgf1nlyxcDcahHknJS15Vl9Lvc4NokYhMg0mV1rapq1a4bhNo\
      UI9EWTBiAkYmkadkO3YQXV0TAjyhUQWxxLVskjOwiiFPdL1l1pdYYCLTE3CpgOoxQ\
      V3EPVxGUPh1FGfk7F9Myv22qN1sUPSNN4h3IFfm2NNPRFgWPDsqAcaQ7BUSKa\n";
 
-/// Structure representing source control data (typically
-/// either file content or a tree entry) on the wire.
-/// Includes the information required to add the data to
-/// a MutableDataPack, along with the hgid's parent
-/// information to allow for hash verification.
+/// Structure representing source control data (typically either file content
+/// or a tree entry) on the wire. Includes the information required to add the
+/// data to a mutable store, along with the parents for hash validation.
 #[derive(
     Clone,
     Debug,
@@ -56,14 +54,13 @@ pub enum Validity {
     /// did not validate but matches the known tombstone content for
     /// redacted data.
     Redacted,
-    /// Validation failed, but the path associated with this data is
-    /// empty. If this DataEntry represents a tree manifest hgid, this
-    /// situation is sometimes expected in legacy situations involving
-    /// hybrid tree manifests. The filenode hash represents is that of
-    /// a flat manifest while the data is the content of a root tree
-    /// manifest. Given that this situation does occur in practice,
-    /// this is a separate variant that higher-level code can choose
-    /// to treat as a special case.
+    /// Validation failed, but the path associated with this data is empty.
+    /// If this entry contains manifest content and represents a root node
+    /// (i.e., has an empty path), it may be a hybrid tree manifest which
+    /// has the content of a root tree manifest node, but the hash of the
+    /// corresponding flat manifest. This situation should only occur for
+    /// manifests created in "hybrid mode" (i.e., during a transition from
+    /// flat manifests to tree manifests).
     InvalidEmptyPath(Error),
     /// Validation failed.
     Invalid(Error),
@@ -84,16 +81,16 @@ impl DataEntry {
         (self.data.clone(), self.validate())
     }
 
-    /// Compute the filenode hash of this `DataEntry` using its parents and
-    /// content, and compare it with the known hgid hash from the entry's `Key`.
+    /// Compute the file/manifest ID of this `DataEntry` using its parents and
+    /// content, and compare it with the known hgid from the entry's `Key`.
     fn validate(&self) -> Validity {
-        // TODO(T48685378): Handle redacted content in a less hacky ways
+        // TODO(T48685378): Handle redacted content in a less hacky way.
         if self.data.len() == REDACTED_TOMBSTONE.len() && self.data == REDACTED_TOMBSTONE {
             return Validity::Redacted;
         }
 
         // Mercurial hashes the parent nodes in sorted order
-        // when computing the hgid hash.
+        // when computing the file/manifest ID.
         let (p1, p2) = match self.parents.clone().into_nodes() {
             (p1, p2) if p1 > p2 => (p2, p1),
             (p1, p2) => (p1, p2),
