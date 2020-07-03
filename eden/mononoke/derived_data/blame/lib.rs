@@ -21,8 +21,8 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, DeriveError};
-use futures::future::TryFutureExt;
-use futures_ext::FutureExt;
+use futures::future::{FutureExt, TryFutureExt};
+use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{future, Future};
 use manifest::ManifestOps;
 use mononoke_types::{
@@ -75,10 +75,14 @@ pub fn fetch_blame(
             }
         })
         .and_then(move |(blame_id, blame)| {
-            derived::fetch_file_full_content(ctx, repo.get_blobstore().boxed(), blame_id.into())
-                .and_then(|result| result.map_err(Error::from))
-                .map(|content| (content, blame))
-                .from_err()
+            async move {
+                derived::fetch_file_full_content(&ctx, repo.blobstore(), blame_id.into()).await
+            }
+            .boxed()
+            .compat()
+            .and_then(|result| result.map_err(Error::from))
+            .map(|content| (content, blame))
+            .from_err()
         })
 }
 

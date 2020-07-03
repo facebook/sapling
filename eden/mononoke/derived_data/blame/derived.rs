@@ -13,13 +13,16 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filestore::{self, FetchKey};
-use futures::future::TryFutureExt;
-use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{FutureExt, TryFutureExt},
+};
+use futures_ext::{spawn_future, BoxFuture, FutureExt as OldFutureExt, StreamExt};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{
     blame::{store_blame, Blame, BlameId, BlameRejected},
-    BonsaiChangeset, ChangesetId, FileUnodeId, MPath,
+    BonsaiChangeset, ChangesetId, ContentId, FileUnodeId, MPath,
 };
 use std::{collections::HashMap, iter::FromIterator, sync::Arc};
 use thiserror::Error;
@@ -159,7 +162,14 @@ fn create_blame(
                     cloned!(ctx, blobstore);
                     move |file_unode_id| {
                         (
-                            fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id),
+                            {
+                                cloned!(ctx, blobstore);
+                                async move {
+                                    fetch_file_full_content(&ctx, &blobstore, file_unode_id).await
+                                }
+                            }
+                            .boxed()
+                            .compat(),
                             BlameId::from(file_unode_id)
                                 .load(ctx.clone(), &blobstore)
                                 .compat()
@@ -171,7 +181,12 @@ fn create_blame(
                 .collect();
 
             (
-                fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id),
+                {
+                    cloned!(ctx, blobstore);
+                    async move { fetch_file_full_content(&ctx, &blobstore, file_unode_id).await }
+                        .boxed()
+                        .compat()
+                },
                 future::join_all(parents_content_and_blame),
             )
                 .into_future()
@@ -196,60 +211,79 @@ fn create_blame(
         })
 }
 
-pub fn fetch_file_full_content(
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+pub async fn fetch_file_full_content<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
     file_unode_id: FileUnodeId,
-) -> impl Future<Item = Result<Bytes, BlameRejected>, Error = Error> {
-    #[derive(Error, Debug)]
-    enum FetchError {
-        #[error("FetchError::Rejected")]
-        Rejected(#[source] BlameRejected),
-        #[error("FetchError::Error")]
-        Error(#[source] Error),
-    }
+) -> Result<Result<Bytes, BlameRejected>, Error>
+where
+    B: Blobstore + Clone,
+{
+    let file_unode = file_unode_id
+        .load(ctx.clone(), blobstore)
+        .map_err(|error| FetchError::Error(error.into()))
+        .await?;
 
-    fn check_binary(content: &[u8]) -> Result<&[u8], FetchError> {
-        if content.contains(&0u8) {
-            Err(FetchError::Rejected(BlameRejected::Binary))
-        } else {
-            Ok(content)
+    let content_id = *file_unode.content_id();
+    let result = fetch_from_filestore(ctx, blobstore, content_id).await;
+
+    match result {
+        Err(FetchError::Error(error)) => Err(error),
+        Err(FetchError::Rejected(rejected)) => Ok(Err(rejected)),
+        Ok(content) => Ok(Ok(content)),
+    }
+}
+
+#[derive(Error, Debug)]
+enum FetchError {
+    #[error("FetchError::Rejected")]
+    Rejected(#[source] BlameRejected),
+    #[error("FetchError::Error")]
+    Error(#[source] Error),
+}
+
+fn check_binary(content: &[u8]) -> Result<&[u8], FetchError> {
+    if content.contains(&0u8) {
+        Err(FetchError::Rejected(BlameRejected::Binary))
+    } else {
+        Ok(content)
+    }
+}
+
+async fn fetch_from_filestore<B>(
+    ctx: &CoreContext,
+    blobstore: &B,
+    content_id: ContentId,
+) -> Result<Bytes, FetchError>
+where
+    B: Blobstore + Clone,
+{
+    let result =
+        filestore::fetch_with_size(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+            .map_err(FetchError::Error)
+            .compat()
+            .await?;
+
+    match result {
+        None => {
+            let error = FetchError::Error(format_err!("Missing content: {}", content_id));
+            Err(error)
+        }
+        Some((stream, size)) => {
+            if size > BLAME_FILESIZE_LIMIT {
+                return Err(FetchError::Rejected(BlameRejected::TooBig));
+            }
+            let v = Vec::with_capacity(size as usize);
+            let bytes = stream
+                .map_err(FetchError::Error)
+                .fold(v, |mut acc, bytes| {
+                    acc.extend(check_binary(bytes.as_ref())?);
+                    Ok(acc)
+                })
+                .map(Bytes::from)
+                .compat()
+                .await?;
+            Ok(bytes)
         }
     }
-
-    file_unode_id
-        .load(ctx.clone(), &blobstore)
-        .compat()
-        .map_err(|error| FetchError::Error(error.into()))
-        .and_then(move |file_unode| {
-            let content_id = *file_unode.content_id();
-            filestore::fetch_with_size(&blobstore, ctx, &FetchKey::Canonical(content_id))
-                .map_err(FetchError::Error)
-                .and_then(move |result| match result {
-                    None => {
-                        let error =
-                            FetchError::Error(format_err!("Missing content: {}", content_id));
-                        future::err(error).left_future()
-                    }
-                    Some((stream, size)) => {
-                        if size > BLAME_FILESIZE_LIMIT {
-                            return future::err(FetchError::Rejected(BlameRejected::TooBig))
-                                .left_future();
-                        }
-                        stream
-                            .map_err(FetchError::Error)
-                            .fold(Vec::new(), |mut acc, bytes| {
-                                acc.extend(check_binary(bytes.as_ref())?);
-                                Ok(acc)
-                            })
-                            .map(Bytes::from)
-                            .right_future()
-                    }
-                })
-        })
-        .then(|result| match result {
-            Err(FetchError::Error(error)) => Err(error),
-            Err(FetchError::Rejected(rejected)) => Ok(Err(rejected)),
-            Ok(content) => Ok(Ok(content)),
-        })
 }

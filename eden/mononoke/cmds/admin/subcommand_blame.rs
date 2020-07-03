@@ -19,10 +19,13 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{ready, try_join, FutureExt, TryFutureExt},
+};
 use futures_ext::{
     bounded_traversal::{bounded_traversal_dag, Iter},
-    BoxFuture, FutureExt,
+    BoxFuture, FutureExt as OldFutureExt,
 };
 use futures_old::{future, Future, IntoFuture};
 use manifest::ManifestOps;
@@ -229,33 +232,36 @@ fn diff(
     new: FileUnodeId,
     old: FileUnodeId,
 ) -> impl Future<Item = String, Error = Error> {
-    (
-        fetch_file_full_content(ctx.clone(), blobstore.clone(), new)
-            .and_then(|result| result.map_err(Error::from)),
-        fetch_file_full_content(ctx, blobstore, old).and_then(|result| result.map_err(Error::from)),
-    )
-        .into_future()
-        .map(|(new, old)| {
-            let new = xdiff::DiffFile {
-                path: "new",
-                contents: xdiff::FileContent::Inline(new),
-                file_type: xdiff::FileType::Regular,
-            };
-            let old = xdiff::DiffFile {
-                path: "old",
-                contents: xdiff::FileContent::Inline(old),
-                file_type: xdiff::FileType::Regular,
-            };
-            let diff = xdiff::diff_unified(
-                Some(old),
-                Some(new),
-                xdiff::DiffOpts {
-                    context: 3,
-                    copy_info: xdiff::CopyInfo::None,
-                },
-            );
-            String::from_utf8_lossy(&diff).into_owned()
-        })
+    async move {
+        let f1 = fetch_file_full_content(&ctx, &blobstore, new)
+            .and_then(|result| ready(result.map_err(Error::from)));
+        let f2 = fetch_file_full_content(&ctx, &blobstore, old)
+            .and_then(|result| ready(result.map_err(Error::from)));
+        try_join(f1, f2).await
+    }
+    .boxed()
+    .compat()
+    .map(|(new, old)| {
+        let new = xdiff::DiffFile {
+            path: "new",
+            contents: xdiff::FileContent::Inline(new),
+            file_type: xdiff::FileType::Regular,
+        };
+        let old = xdiff::DiffFile {
+            path: "old",
+            contents: xdiff::FileContent::Inline(old),
+            file_type: xdiff::FileType::Regular,
+        };
+        let diff = xdiff::diff_unified(
+            Some(old),
+            Some(new),
+            xdiff::DiffOpts {
+                context: 3,
+                copy_info: xdiff::CopyInfo::None,
+            },
+        );
+        String::from_utf8_lossy(&diff).into_owned()
+    })
 }
 
 /// Recalculate balme by going through whole history of a file
@@ -328,7 +334,14 @@ fn subcommand_compute_blame(
                     {
                         move |(csid, path, file_unode_id), parents: Iter<Result<(Bytes, Blame), BlameRejected>>| {
                             cloned!(path);
-                            fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id)
+                            {
+                                cloned!(ctx, blobstore);
+                                async move {
+                                    fetch_file_full_content(&ctx, &blobstore, file_unode_id).await
+                                }
+                            }
+                            .boxed()
+                            .compat()
                                 .and_then(move |content| match content {
                                     Err(rejected) => Ok(Err(rejected)),
                                     Ok(content) => {

@@ -175,17 +175,12 @@ async fn prefetch_content(
             .iter()
             .cloned()
             .chain(rename)
-            .map({
-                cloned!(blobstore);
-                move |file_unode_id| {
-                    fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id).compat()
-                }
-            })
+            .map(|file_unode_id| fetch_file_full_content(&ctx, &blobstore, file_unode_id))
             .collect();
 
         // the assignment is needed to avoid unused_must_use warnings
         let _ = future::try_join(
-            fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id).compat(),
+            fetch_file_full_content(ctx, &blobstore, file_unode_id),
             future::try_join_all(parents_content),
         )
         .await?;
