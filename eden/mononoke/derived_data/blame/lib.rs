@@ -75,14 +75,12 @@ pub fn fetch_blame(
             }
         })
         .and_then(move |(blame_id, blame)| {
-            async move {
-                derived::fetch_file_full_content(&ctx, repo.blobstore(), blame_id.into()).await
-            }
-            .boxed()
-            .compat()
-            .and_then(|result| result.map_err(Error::from))
-            .map(|content| (content, blame))
-            .from_err()
+            async move { derived::fetch_file_full_content(&ctx, &repo, blame_id.into()).await }
+                .boxed()
+                .compat()
+                .and_then(|result| result.map_err(Error::from))
+                .map(|content| (content, blame))
+                .from_err()
         })
 }
 

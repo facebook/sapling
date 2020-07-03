@@ -78,7 +78,7 @@ impl BonsaiDerived for BlameRoot {
                     .map(move |(path, file)| {
                         spawn_future(create_blame(
                             ctx.clone(),
-                            blobstore.clone(),
+                            repo.clone(),
                             renames.clone(),
                             csid,
                             path,
@@ -142,12 +142,14 @@ impl BonsaiDerivedMapping for BlameRootMapping {
 
 fn create_blame(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    repo: BlobRepo,
     renames: Arc<HashMap<MPath, FileUnodeId>>,
     csid: ChangesetId,
     path: MPath,
     file_unode_id: FileUnodeId,
 ) -> impl Future<Item = BlameId, Error = Error> {
+    let blobstore = repo.blobstore().clone();
+
     file_unode_id
         .load(ctx.clone(), &blobstore)
         .compat()
@@ -159,13 +161,13 @@ fn create_blame(
                 .cloned()
                 .chain(renames.get(&path).cloned())
                 .map({
-                    cloned!(ctx, blobstore);
+                    cloned!(ctx, blobstore, repo);
                     move |file_unode_id| {
                         (
                             {
-                                cloned!(ctx, blobstore);
+                                cloned!(ctx, repo);
                                 async move {
-                                    fetch_file_full_content(&ctx, &blobstore, file_unode_id).await
+                                    fetch_file_full_content(&ctx, &repo, file_unode_id).await
                                 }
                             }
                             .boxed()
@@ -182,8 +184,8 @@ fn create_blame(
 
             (
                 {
-                    cloned!(ctx, blobstore);
-                    async move { fetch_file_full_content(&ctx, &blobstore, file_unode_id).await }
+                    cloned!(ctx, repo);
+                    async move { fetch_file_full_content(&ctx, &repo, file_unode_id).await }
                         .boxed()
                         .compat()
                 },
@@ -211,14 +213,12 @@ fn create_blame(
         })
 }
 
-pub async fn fetch_file_full_content<B>(
+pub async fn fetch_file_full_content(
     ctx: &CoreContext,
-    blobstore: &B,
+    repo: &BlobRepo,
     file_unode_id: FileUnodeId,
-) -> Result<Result<Bytes, BlameRejected>, Error>
-where
-    B: Blobstore + Clone,
-{
+) -> Result<Result<Bytes, BlameRejected>, Error> {
+    let blobstore = repo.blobstore();
     let file_unode = file_unode_id
         .load(ctx.clone(), blobstore)
         .map_err(|error| FetchError::Error(error.into()))

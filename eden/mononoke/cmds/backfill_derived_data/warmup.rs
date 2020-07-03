@@ -8,7 +8,7 @@
 use anyhow::Error;
 use blame::{fetch_file_full_content, BlameRoot};
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
@@ -164,23 +164,24 @@ async fn prefetch_content(
 ) -> Result<(), Error> {
     async fn prefetch_content_unode<'a>(
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
+        repo: BlobRepo,
         rename: Option<FileUnodeId>,
         file_unode_id: FileUnodeId,
     ) -> Result<(), Error> {
         let ctx = &ctx;
-        let file_unode = file_unode_id.load(ctx.clone(), &blobstore).await?;
+        let blobstore = repo.blobstore();
+        let file_unode = file_unode_id.load(ctx.clone(), blobstore).await?;
         let parents_content: Vec<_> = file_unode
             .parents()
             .iter()
             .cloned()
             .chain(rename)
-            .map(|file_unode_id| fetch_file_full_content(&ctx, &blobstore, file_unode_id))
+            .map(|file_unode_id| fetch_file_full_content(&ctx, &repo, file_unode_id))
             .collect();
 
         // the assignment is needed to avoid unused_must_use warnings
         let _ = future::try_join(
-            fetch_file_full_content(ctx, &blobstore, file_unode_id),
+            fetch_file_full_content(ctx, &repo, file_unode_id),
             future::try_join_all(parents_content),
         )
         .await?;
@@ -223,7 +224,7 @@ async fn prefetch_content(
         match result {
             Ok((path, file)) => {
                 let rename = renames.get(&path).copied();
-                let fut = prefetch_content_unode(ctx.clone(), blobstore.clone(), rename, file);
+                let fut = prefetch_content_unode(ctx.clone(), repo.clone(), rename, file);
                 let join_handle = tokio::task::spawn(fut);
                 join_handle.await?
             }

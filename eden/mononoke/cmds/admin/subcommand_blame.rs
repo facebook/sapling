@@ -11,7 +11,7 @@ use anyhow::{format_err, Error};
 use blame::{fetch_blame, fetch_file_full_content};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Loadable;
 use bytes::Bytes;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
@@ -34,8 +34,8 @@ use mononoke_types::{
     ChangesetId, FileUnodeId, MPath,
 };
 use slog::Logger;
+use std::collections::HashMap;
 use std::fmt::Write;
-use std::{collections::HashMap, sync::Arc};
 use unodes::RootUnodeManifestId;
 
 pub const BLAME: &str = "blame";
@@ -196,7 +196,7 @@ fn subcommand_show_diffs(
     path: MPath,
 ) -> impl Future<Item = (), Error = Error> {
     let blobstore = repo.get_blobstore();
-    find_leaf(ctx.clone(), repo, csid, path)
+    find_leaf(ctx.clone(), repo.clone(), csid, path)
         .and_then({
             cloned!(ctx, blobstore);
             move |file_unode_id| {
@@ -215,8 +215,8 @@ fn subcommand_show_diffs(
                 .collect::<Vec<_>>()
                 .into_iter()
                 .map({
-                    cloned!(ctx, blobstore);
-                    move |parent| diff(ctx.clone(), blobstore.boxed(), file_unode_id, parent)
+                    cloned!(ctx, repo);
+                    move |parent| diff(ctx.clone(), repo.clone(), file_unode_id, parent)
                 });
             future::join_all(diffs).map(|diffs| {
                 for diff in diffs {
@@ -228,14 +228,14 @@ fn subcommand_show_diffs(
 
 fn diff(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    repo: BlobRepo,
     new: FileUnodeId,
     old: FileUnodeId,
 ) -> impl Future<Item = String, Error = Error> {
     async move {
-        let f1 = fetch_file_full_content(&ctx, &blobstore, new)
+        let f1 = fetch_file_full_content(&ctx, &repo, new)
             .and_then(|result| ready(result.map_err(Error::from)));
-        let f2 = fetch_file_full_content(&ctx, &blobstore, old)
+        let f2 = fetch_file_full_content(&ctx, &repo, old)
             .and_then(|result| ready(result.map_err(Error::from)));
         try_join(f1, f2).await
     }
@@ -335,9 +335,9 @@ fn subcommand_compute_blame(
                         move |(csid, path, file_unode_id), parents: Iter<Result<(Bytes, Blame), BlameRejected>>| {
                             cloned!(path);
                             {
-                                cloned!(ctx, blobstore);
+                                cloned!(ctx, repo);
                                 async move {
-                                    fetch_file_full_content(&ctx, &blobstore, file_unode_id).await
+                                    fetch_file_full_content(&ctx, &repo, file_unode_id).await
                                 }
                             }
                             .boxed()
