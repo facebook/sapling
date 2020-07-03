@@ -17,12 +17,11 @@ mod request_handler;
 
 pub use crate::connection_acceptor::wait_for_connections_closed;
 
-use anyhow::Error;
+use anyhow::Result;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::Future;
+use futures::compat::Future01CompatExt;
 use openssl::ssl::SslAcceptor;
 use scribe_ext::Scribe;
 use slog::{debug, Logger};
@@ -36,15 +35,15 @@ use metaconfig_types::{CommonConfig, RepoConfig};
 use crate::connection_acceptor::connection_acceptor;
 use crate::repo_handlers::repo_handlers;
 
-pub fn create_repo_listeners(
+pub async fn create_repo_listeners(
     fb: FacebookInit,
     common_config: CommonConfig,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     mysql_options: MysqlOptions,
     caching: Caching,
     disabled_hooks: HashMap<String, HashSet<String>>,
-    root_log: &Logger,
-    sockname: &str,
+    root_log: Logger,
+    sockname: String,
     tls_acceptor: SslAcceptor,
     service: ReadyFlagService,
     terminate_process: Arc<AtomicBool>,
@@ -52,11 +51,8 @@ pub fn create_repo_listeners(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     scribe: Scribe,
-) -> BoxFuture<(), Error> {
-    let sockname = String::from(sockname);
-    let root_log = root_log.clone();
-
-    repo_handlers(
+) -> Result<()> {
+    let handlers = repo_handlers(
         fb,
         repos,
         mysql_options,
@@ -67,20 +63,22 @@ pub fn create_repo_listeners(
         blobstore_options,
         &root_log,
     )
-    .and_then(move |handlers| {
-        debug!(root_log, "Mononoke server is listening on {}", sockname);
-        connection_acceptor(
-            fb,
-            common_config,
-            sockname,
-            service,
-            root_log,
-            handlers,
-            tls_acceptor,
-            terminate_process,
-            config_store,
-            scribe,
-        )
-    })
-    .boxify()
+    .compat()
+    .await?;
+
+    debug!(root_log, "Mononoke server is listening on {}", sockname);
+    connection_acceptor(
+        fb,
+        common_config,
+        sockname,
+        service,
+        root_log,
+        handlers,
+        tls_acceptor,
+        terminate_process,
+        config_store,
+        scribe,
+    )
+    .compat()
+    .await
 }

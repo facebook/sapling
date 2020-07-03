@@ -10,9 +10,9 @@
 
 use anyhow::Result;
 use clap::App;
+use cloned::cloned;
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use slog::info;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -81,25 +81,30 @@ fn main(fb: FacebookInit) -> Result<()> {
     let service = ReadyFlagService::new();
     let terminate = Arc::new(AtomicBool::new(false));
 
-    let repo_listeners = repo_listener::create_repo_listeners(
-        fb,
-        config.common,
-        config.repos.into_iter(),
-        cmdlib::args::parse_mysql_options(&matches),
-        caching,
-        cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?,
-        &root_log,
-        matches
-            .value_of("listening-host-port")
-            .expect("listening path must be specified"),
-        acceptor,
-        service.clone(),
-        terminate.clone(),
-        config_source,
-        cmdlib::args::parse_readonly_storage(&matches),
-        cmdlib::args::parse_blobstore_options(&matches),
-        cmdlib::args::get_scribe(fb, &matches)?,
-    );
+    let repo_listeners = {
+        cloned!(root_log);
+
+        repo_listener::create_repo_listeners(
+            fb,
+            config.common,
+            config.repos.into_iter(),
+            cmdlib::args::parse_mysql_options(&matches),
+            caching,
+            cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?,
+            root_log,
+            matches
+                .value_of("listening-host-port")
+                .expect("listening path must be specified")
+                .to_string(),
+            acceptor,
+            service.clone(),
+            terminate.clone(),
+            config_source,
+            cmdlib::args::parse_readonly_storage(&matches),
+            cmdlib::args::parse_blobstore_options(&matches),
+            cmdlib::args::get_scribe(fb, &matches)?,
+        )
+    };
 
     #[cfg(fbcode_build)]
     {
@@ -111,7 +116,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     cmdlib::helpers::serve_forever(
         runtime,
-        repo_listeners.compat(),
+        repo_listeners,
         &root_log,
         || {},
         args::get_shutdown_grace_period(&matches)?,
