@@ -182,6 +182,7 @@ from distutils_rust import RustBinary, BuildRustExt, InstallRustExt
 import distutils
 
 havefb = os.path.exists("fb")
+isgetdepsbuild = os.environ.get("GETDEPS_BUILD") == "1"
 
 iswindows = os.name == "nt"
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
@@ -705,7 +706,9 @@ class fbsourcepylibrary(asset):
     be excluded from the installation image. """
 
     def __init__(self, name, path, excludes=None):
-        assert havefb, "can only build this internally at FB"
+        assert (
+            havefb or isgetdepsbuild
+        ), "can only build this internally at FB or via the getdeps.py script"
         topname = "fbsource-" + name.replace("/", ".")
         super(fbsourcepylibrary, self).__init__(name=name, destdir=topname)
         self.path = path
@@ -752,6 +755,51 @@ class edenpythrift(asset):
                     ensureexists(os.path.dirname(pjoin(destpath, targetname)))
                     with open(pjoin(destpath, targetname), "wb") as target:
                         target.write(f.read(name))
+
+
+class thriftasset(asset):
+    def __init__(self, name, sourcemap, destdir=None):
+        assert isgetdepsbuild, "can only build this only via the getdeps.py script"
+
+        if destdir is None:
+            destdir = name + "-py"
+        assert name != destdir, "name (%s) and destdir cannot be the same" % name
+
+        super(thriftasset, self).__init__(name=name, destdir=destdir)
+        self.sourcemap = sourcemap
+
+    def _download(self):
+        for source, dest in self.sourcemap.items():
+            copy_to(pjoin(scriptdir, source), pjoin(builddir, self.name, dest))
+
+    def _extract(self):
+        thriftdir = pjoin(builddir, self.name)
+        destdir = pjoin(builddir, self.destdir)
+        for thriftdest in self.sourcemap.values():
+            thriftfile = pjoin(thriftdir, thriftdest)
+            subprocess.check_call(
+                [
+                    "../../../../installed/fbthrift/bin/thrift1",
+                    "-I",
+                    thriftdir,
+                    "-gen",
+                    "py:new_style",
+                    "-out",
+                    destdir,
+                    thriftfile,
+                ]
+            )
+
+    def __hash__(self):
+        thriftdir = pjoin(builddir, self.name)
+        hasher = hashlib.sha1()
+
+        for thriftdest in sorted(self.sourcemap.values()):
+            thriftfile = pjoin(thriftdir, thriftdest)
+            if os.path.exists(thriftfile):
+                with open(thriftfile) as f:
+                    hasher.update(f.read())
+        return int(hasher.hexdigest(), 16)
 
 
 class fetchbuilddeps(Command):
@@ -811,9 +859,25 @@ class fetchbuilddeps(Command):
         ),
         fbsourcepylibrary("eden", "../../eden/fs/py/eden"),
     ]
-    pyassets += [
-        edenpythrift(name="eden-rust-deps-e0fd3d6d06542b491712b6e7fdedfae9b6e7ad15.zip")
-    ]
+    pyassets += (
+        [
+            edenpythrift(
+                name="eden-rust-deps-e0fd3d6d06542b491712b6e7fdedfae9b6e7ad15.zip"
+            )
+        ]
+        if havefb
+        else [
+            thriftasset(
+                name="eden-thrift",
+                sourcemap={
+                    "../../eden/fs/service/eden.thrift": "eden/fs/service/eden.thrift",
+                    "../../eden/fs/config/eden_config.thrift": "eden/fs/config/eden_config.thrift",
+                    "../../common/fb303/if/fb303.thrift": "common/fb303/if/fb303.thrift",
+                    "../../fb303/thrift/fb303_core.thrift": "fb303/thrift/fb303_core.thrift",
+                },
+            )
+        ]
+    )
 
     assets = pyassets
 

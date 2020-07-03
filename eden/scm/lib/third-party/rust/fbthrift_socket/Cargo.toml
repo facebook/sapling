@@ -1,0 +1,14 @@
+[package]
+name = "fbthrift_socket"
+edition = "2018"
+version = "0.0.0"
+include = ["lib.rs"]
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+fbthrift_socket = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+
+[patch."https://github.com/facebookexperimental/rust-shed.git"]
+fbthrift_socket = { path = "../../../../../../common/rust/shed/fbthrift_ext/socket" }

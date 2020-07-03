@@ -239,7 +239,7 @@ replace-with = "vendored-sources"
 
 [source.vendored-sources]
 """
-            config += 'directory = "{}/vendor"\n'.format(vendored_path)
+            config += 'directory = "{}"\n'.format(vendored_path)
 
         if os.name == "nt":
             config = config.replace("\\", "\\\\")
@@ -398,7 +398,7 @@ replace-with = "vendored-sources"
     except ImportError:
 
         def rust_vendored_crate_path(self):
-            return None
+            return os.environ.get("RUST_VENDORED_CRATES_DIR")
 
         def rust_binary_paths(self):
             return {"cargo": "cargo"}
