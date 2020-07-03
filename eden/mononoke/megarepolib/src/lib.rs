@@ -24,6 +24,7 @@ use mononoke_types::{ChangesetId, ContentId, FileChange, FileType};
 use movers::Mover;
 use slog::info;
 use std::collections::BTreeMap;
+use std::num::NonZeroU64;
 
 pub mod common;
 use crate::common::{create_and_save_changeset, ChangesetArgs};
@@ -122,7 +123,7 @@ pub async fn perform_stack_move<'a>(
     repo: &'a BlobRepo,
     parent_bcs_id: ChangesetId,
     path_converter: Mover,
-    max_num_of_moves_in_commit: usize,
+    max_num_of_moves_in_commit: NonZeroU64,
     resulting_changeset_args: impl Fn(usize) -> ChangesetArgs,
 ) -> Result<Vec<HgChangesetId>, Error> {
     perform_stack_move_impl(
@@ -133,7 +134,7 @@ pub async fn perform_stack_move<'a>(
         |file_changes| {
             file_changes
                 .into_iter()
-                .chunks(max_num_of_moves_in_commit)
+                .chunks(max_num_of_moves_in_commit.get() as usize)
                 .into_iter()
                 .map(|chunk| chunk.collect())
                 .collect()
@@ -470,7 +471,7 @@ mod test {
             &repo,
             old_bcs_id,
             Arc::new(shift_all),
-            1,
+            NonZeroU64::new(1).unwrap(),
             create_cs_args,
         )
         .await?;
@@ -483,7 +484,7 @@ mod test {
             &repo,
             old_bcs_id,
             Arc::new(shift_all),
-            2,
+            NonZeroU64::new(2).unwrap(),
             create_cs_args,
         )
         .await?;
