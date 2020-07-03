@@ -59,7 +59,7 @@ Run the heal, with write errors injected, simulating store still bad
   >  sed -re 's/^(Adding source blobstores \[BlobstoreId\(1\), BlobstoreId\(2\)\] to the queue so that failed destination blob stores \[BlobstoreId\(0\)\] will be retried later).*/\1/' |
   >  uniq -c | sed 's/^ *//'
   > }
-  $ mononoke_blobstore_healer --blobstore-write-chaos-rate 1 -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
+  $ mononoke_blobstore_healer --blobstore-write-chaos-rate 1 -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -v "speed" | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
   1 Replication lag is * (glob)
   1 Fetched 60 queue entires (before building healing futures)
   1 Out of them 30 distinct blobstore keys, 30 distinct operation keys

@@ -42,7 +42,7 @@ use sql_ext::{
 use sql_facebook::{myrouter, raw};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const CONFIGERATOR_REGIONS_CONFIG: &str = "myrouter/regions.json";
 const QUIET_ARG: &'static str = "quiet";
@@ -240,8 +240,11 @@ async fn schedule_healing(
     let mut count = 0;
     let replication_monitor = LaggableCollectionMonitor::new(conns);
     let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
+    let healing_start_time = Instant::now();
+    let mut total_deleted_rows = 0;
 
     loop {
+        let iteration_start_time = Instant::now();
         count += 1;
         if let Some(iter_limit) = iter_limit {
             if count > iter_limit {
@@ -256,11 +259,23 @@ async fn schedule_healing(
 
         let now = DateTime::now().into_chrono();
         let healing_deadline = DateTime::new(now - heal_min_age);
-        let last_batch_was_full_size = multiplex_healer
+        let (last_batch_was_full_size, deleted_rows) = multiplex_healer
             .heal(ctx.clone(), healing_deadline)
             .compat()
             .await
             .context("While healing")?;
+
+        total_deleted_rows += deleted_rows;
+        let total_elapsed = healing_start_time.elapsed().as_secs();
+        let iteration_elapsed = iteration_start_time.elapsed().as_secs();
+        if total_elapsed != 0 && iteration_elapsed != 0 {
+            let iteration_speed = deleted_rows / iteration_elapsed;
+            let total_speed = total_deleted_rows / total_elapsed;
+            info!(
+                ctx.logger(),
+                "Iteration speed: {} rows/s, total speed: {} rows/s", iteration_speed, total_speed
+            );
+        }
 
         // if last batch read was not full,  wait at least 1 second, to avoid busy looping as don't
         // want to hammer the database with thousands of reads a second.

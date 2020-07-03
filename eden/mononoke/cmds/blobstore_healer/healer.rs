@@ -57,11 +57,14 @@ impl Healer {
 
     /// Heal one batch of entries. It selects a set of entries which are not too young (bounded
     /// by healing_deadline) up to `blobstore_sync_queue_limit` at once.
+    /// Returns a tuple:
+    /// - first item indicates whether a full batch was fetcehd
+    /// - second item shows how many rows were deleted from the DB
     pub fn heal(
         &self,
         ctx: CoreContext,
         healing_deadline: DateTime,
-    ) -> impl Future<Item = bool, Error = Error> {
+    ) -> impl Future<Item = (bool, u64), Error = Error> {
         cloned!(
             self.blobstore_sync_queue_limit,
             self.sync_queue,
@@ -159,7 +162,7 @@ impl Healer {
 
                 if last_batch_size == 0 {
                     info!(ctx.logger(), "All caught up, nothing to do");
-                    return futures_old::future::ok(false).left_future();
+                    return futures_old::future::ok((false, 0)).left_future();
                 }
 
                 info!(
@@ -184,10 +187,11 @@ impl Healer {
                             let entries_to_remove =
                                 processed_entries.into_iter().flatten().collect();
                             cleanup_after_healing(ctx, sync_queue, entries_to_remove).and_then(
-                                move |()| {
-                                    return futures_old::future::ok(
+                                move |deleted_rows| {
+                                    return futures_old::future::ok((
                                         unique_operation_keys == max_batch_size,
-                                    );
+                                        deleted_rows,
+                                    ));
                                 },
                             )
                         },
@@ -481,13 +485,10 @@ fn cleanup_after_healing(
     ctx: CoreContext,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     entries: Vec<BlobstoreSyncQueueEntry>,
-) -> impl Future<Item = (), Error = Error> {
-    info!(
-        ctx.logger(),
-        "Deleting {} actioned queue entries",
-        entries.len()
-    );
-    sync_queue.del(ctx, entries)
+) -> impl Future<Item = u64, Error = Error> {
+    let n = entries.len() as u64;
+    info!(ctx.logger(), "Deleting {} actioned queue entries", n);
+    sync_queue.del(ctx, entries).map(move |_| n)
 }
 
 /// Write new queue items with a populated source blobstore for unhealed entries
@@ -1310,7 +1311,7 @@ mod tests {
             .await?;
 
         let healer = Healer::new(2, 10, sync_queue.clone(), stores, mp, None, false);
-        let complete_batch = healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+        let (complete_batch, _) = healer.heal(ctx.clone(), DateTime::now()).compat().await?;
         assert!(complete_batch);
         Ok(())
     }
@@ -1341,7 +1342,7 @@ mod tests {
             .await?;
 
         let healer = Healer::new(20, 10, sync_queue.clone(), stores, mp, None, false);
-        let complete_batch = healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+        let (complete_batch, _) = healer.heal(ctx.clone(), DateTime::now()).compat().await?;
         assert!(!complete_batch);
         Ok(())
     }

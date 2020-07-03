@@ -448,8 +448,6 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         _ctx: CoreContext,
         entries: Vec<BlobstoreSyncQueueEntry>,
     ) -> BoxFuture<(), Error> {
-        STATS::dels.add_value(1);
-
         let ids: Result<Vec<u64>, Error> = entries
             .into_iter()
             .map(|entry| {
@@ -466,6 +464,9 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
             .and_then({
                 cloned!(self.write_connection);
                 move |chunk: Vec<u64>| DeleteEntries::query(&write_connection, &chunk[..])
+            })
+            .map(|deletion_result| {
+                STATS::dels.add_value(deletion_result.affected_rows() as i64);
             })
             .for_each(|_| Ok(()))
             .boxify()
