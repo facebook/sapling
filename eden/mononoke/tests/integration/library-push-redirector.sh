@@ -130,8 +130,13 @@ function start_large_small_repo {
   echo "Starting Mononoke server"
   mononoke "$@"
   wait_for_mononoke
-
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL, 'backsync_from_$REPOIDLARGE', 2)";
+  # Setting XREPOSYNC allows the user of this fn to set x-repo sync mutable counter instead of the backsync one
+  # This is useful, if the intention is to use x-repo sync instead of backsync after the setup
+  if [[ -v XREPOSYNC ]]; then
+    sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDLARGE, 'xreposync_from_$REPOIDSMALL', 2)";
+  else
+    sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL, 'backsync_from_$REPOIDLARGE', 2)";
+  fi
 }
 
 function createfile {
@@ -172,4 +177,22 @@ function backsync_large_to_small_forever {
 
   export BACKSYNCER_PID=$!
   echo "$BACKSYNCER_PID" >> "$DAEMON_PIDS"
+}
+
+function mononoke_x_repo_sync_forever() {
+  source_repo_id=$1
+  target_repo_id=$2
+  shift
+  shift
+  GLOG_minloglevel=5 "$MONONOKE_X_REPO_SYNC" \
+    "${COMMON_ARGS[@]}" \
+    --test-instance \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --source-repo-id "$source_repo_id" \
+    --target-repo-id "$target_repo_id" \
+    "$@" \
+    tail --sleep-secs=1 >> "$TESTTMP/xreposync.out" 2>&1 &
+
+  export XREPOSYNC_PID=$!
+  echo "$XREPOSYNC_PID" >> "$DAEMON_PIDS"
 }
