@@ -28,7 +28,10 @@ thiserror = "1.0"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
+blobrepo_override = { path = "../../blobrepo/override" }
+metaconfig_types = { path = "../../metaconfig/types" }
 tests_utils = { path = "../../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
+tokio-compat = "0.1"

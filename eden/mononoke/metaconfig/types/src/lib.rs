@@ -189,6 +189,10 @@ pub struct DerivedDataConfig {
     pub derived_data_types: BTreeSet<String>,
     /// What unode version should be used (defaults to V1)
     pub unode_version: UnodeVersion,
+    /// Override the file size limit for blame. Blame won't be derived for files which
+    /// size is above the limit. NOTE: if `override_blame_filesize_limit` is None
+    /// then a default limit will be used!
+    pub override_blame_filesize_limit: Option<u64>,
 }
 
 /// What type of unode derived data to generate

@@ -873,6 +873,7 @@ mod test {
 
             [derived_data_config]
             derived_data_types=["fsnodes"]
+            override_blame_filesize_limit=101
 
             [derived_data_config.raw_unode_version]
             unode_version_v2 = {}
@@ -1147,6 +1148,7 @@ mod test {
                     derived_data_types: btreeset![String::from("fsnodes")],
                     scuba_table: None,
                     unode_version: UnodeVersion::V2,
+                    override_blame_filesize_limit: Some(101),
                 },
                 hgsql_name: HgsqlName("fbsource".to_string()),
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("fbsource".to_string()),

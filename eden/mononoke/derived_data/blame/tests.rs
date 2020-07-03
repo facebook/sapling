@@ -5,16 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use crate::fetch_blame;
-use anyhow::Error;
+use crate::{fetch_blame, BlameError};
+use anyhow::{anyhow, Error};
+use blobrepo_override::DangerousOverride;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use maplit::{btreemap, hashmap};
+use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{Blame, ChangesetId, MPath};
 use std::collections::HashMap;
-use tests_utils::{create_commit, store_files, store_rename};
+use tests_utils::{create_commit, store_files, store_rename, CreateCommitContext};
 
 // File with multiple changes and a merge
 const F0: &[&str] = &[
@@ -238,6 +240,49 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
 
         Ok(())
     })
+}
+
+#[fbinit::compat_test]
+async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo = blobrepo_factory::new_memblob_empty(None)?;
+    let file1 = "file1";
+    let content = "content";
+    let c1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(file1, content)
+        .commit()
+        .await?;
+
+    // Default file size is 10Mb, so blame should be computed
+    // without problems.
+    fetch_blame(ctx.clone(), repo.clone(), c1, MPath::new(file1)?)
+        .compat()
+        .await?;
+
+    let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+        derived_data_config.override_blame_filesize_limit = Some(4);
+        derived_data_config
+    });
+
+    let file2 = "file2";
+    let c2 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file(file2, content)
+        .commit()
+        .await?;
+
+    // We decreased the limit, so derivation should fail now
+    let res = fetch_blame(ctx.clone(), repo.clone(), c2, MPath::new(file2)?)
+        .compat()
+        .await;
+
+    match res {
+        Err(BlameError::Rejected(_)) => {}
+        _ => {
+            return Err(anyhow!("unexpected result: {:?}", res));
+        }
+    }
+
+    Ok(())
 }
 
 fn annotate(

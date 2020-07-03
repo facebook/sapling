@@ -357,6 +357,9 @@ impl Convert for RawDerivedDataConfig {
             scuba_table: self.scuba_table,
             derived_data_types: self.derived_data_types.unwrap_or_default(),
             unode_version,
+            override_blame_filesize_limit: self
+                .override_blame_filesize_limit
+                .map(|limit| limit as u64),
         })
     }
 }

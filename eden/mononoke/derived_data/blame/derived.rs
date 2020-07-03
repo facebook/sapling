@@ -225,7 +225,7 @@ pub async fn fetch_file_full_content(
         .await?;
 
     let content_id = *file_unode.content_id();
-    let result = fetch_from_filestore(ctx, blobstore, content_id).await;
+    let result = fetch_from_filestore(ctx, repo, content_id).await;
 
     match result {
         Err(FetchError::Error(error)) => Err(error),
@@ -250,14 +250,12 @@ fn check_binary(content: &[u8]) -> Result<&[u8], FetchError> {
     }
 }
 
-async fn fetch_from_filestore<B>(
+async fn fetch_from_filestore(
     ctx: &CoreContext,
-    blobstore: &B,
+    repo: &BlobRepo,
     content_id: ContentId,
-) -> Result<Bytes, FetchError>
-where
-    B: Blobstore + Clone,
-{
+) -> Result<Bytes, FetchError> {
+    let blobstore = repo.blobstore();
     let result =
         filestore::fetch_with_size(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
             .map_err(FetchError::Error)
@@ -270,7 +268,11 @@ where
             Err(error)
         }
         Some((stream, size)) => {
-            if size > BLAME_FILESIZE_LIMIT {
+            let config = repo.get_derived_data_config();
+            let filesize_limit = config
+                .override_blame_filesize_limit
+                .unwrap_or(BLAME_FILESIZE_LIMIT);
+            if size > filesize_limit {
                 return Err(FetchError::Rejected(BlameRejected::TooBig));
             }
             let v = Vec::with_capacity(size as usize);

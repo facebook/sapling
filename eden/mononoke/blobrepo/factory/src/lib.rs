@@ -395,6 +395,7 @@ pub fn init_all_derived_data() -> DerivedDataConfig {
             TreeHandle::NAME.to_string(),
         },
         unode_version: UnodeVersion::V2,
+        override_blame_filesize_limit: None,
     }
 }
 
