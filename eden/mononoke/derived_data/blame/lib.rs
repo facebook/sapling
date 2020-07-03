@@ -66,9 +66,16 @@ pub fn fetch_blame(
                         blame_id
                             .load(ctx.clone(), repo.blobstore())
                             .compat()
-                            .from_err()
-                            .and_then(|blame_maybe_rejected| blame_maybe_rejected.into_blame())
-                            .map(move |blame| (blame_id, blame))
+                            .map_err(|err| {
+                                let err = Error::from(err);
+                                BlameError::Error(err)
+                            })
+                            .and_then(move |blame_maybe_rejected| match blame_maybe_rejected {
+                                BlameMaybeRejected::Blame(blame) => Ok((blame_id, blame)),
+                                BlameMaybeRejected::Rejected(reason) => {
+                                    Err(BlameError::Rejected(reason.into()))
+                                }
+                            })
                             .from_err()
                     })
                     .right_future(),
@@ -78,9 +85,9 @@ pub fn fetch_blame(
             async move { derived::fetch_file_full_content(&ctx, &repo, blame_id.into()).await }
                 .boxed()
                 .compat()
-                .and_then(|result| result.map_err(Error::from))
+                .map_err(BlameError::Error)
+                .and_then(|result| result.map_err(BlameError::Rejected))
                 .map(|content| (content, blame))
-                .from_err()
         })
 }
 
@@ -121,7 +128,9 @@ fn fetch_blame_if_derived(
                     .compat()
                     .then(move |result| match result {
                         Ok(BlameMaybeRejected::Blame(blame)) => Ok(Ok((blame_id, blame))),
-                        Ok(BlameMaybeRejected::Rejected(reason)) => Err(reason.into()),
+                        Ok(BlameMaybeRejected::Rejected(reason)) => {
+                            Err(BlameError::Rejected(reason.into()))
+                        }
                         Err(LoadableError::Error(error)) => Err(error.into()),
                         Err(LoadableError::Missing(_)) => Ok(Err(blame_id)),
                     })
