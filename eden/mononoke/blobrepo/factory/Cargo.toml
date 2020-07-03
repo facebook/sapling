@@ -42,6 +42,7 @@ sql_construct = { path = "../../common/sql_construct" }
 sql_ext = { path = "../../common/rust/sql_ext" }
 type_map = { path = "../../common/type_map" }
 unodes = { path = "../../derived_data/unodes" }
+virtually_sharded_blobstore = { path = "../../blobstore/virtually_sharded_blobstore" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

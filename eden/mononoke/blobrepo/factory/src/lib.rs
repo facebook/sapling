@@ -48,17 +48,21 @@ use slog::Logger;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_construct::SqlConstruct;
 use sql_ext::{facebook::MysqlOptions, SqlConnections};
+use std::num::NonZeroUsize;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use type_map::TypeMap;
 use unodes::RootUnodeManifestId;
+use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 
 pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Caching {
-    Enabled,
+    // Usize in Enabled and CachelibOnlyBlobstore represents the number of cache shards. If zero,
+    // sharding is not used.
+    Enabled(usize),
+    CachelibOnlyBlobstore(usize),
     Disabled,
-    CachelibOnlyBlobstore,
 }
 
 const BLOBSTORE_BLOBS_CACHE_POOL: &'static str = "blobstore-blobs";
@@ -222,17 +226,9 @@ pub async fn open_blobrepo_given_datasources(
         .unwrap_or_default();
 
     let repo = match caching {
-        Caching::Disabled | Caching::CachelibOnlyBlobstore => {
-            let blobstore = if caching == Caching::CachelibOnlyBlobstore {
-                // Use cachelib
-                let blob_pool = get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL)?;
-                let presence_pool = get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL)?;
-
-                Arc::new(new_cachelib_blobstore_no_lease(
-                    blobstore,
-                    Arc::new(blob_pool),
-                    Arc::new(presence_pool),
-                ))
+        Caching::Disabled | Caching::CachelibOnlyBlobstore(_) => {
+            let blobstore = if let Caching::CachelibOnlyBlobstore(cache_shards) = caching {
+                get_cachelib_blobstore(blobstore, cache_shards)?
             } else {
                 blobstore
             };
@@ -251,7 +247,7 @@ pub async fn open_blobrepo_given_datasources(
             )
             .await?
         }
-        Caching::Enabled => {
+        Caching::Enabled(cache_shards) => {
             new_production(
                 fb,
                 &sql_factory,
@@ -264,6 +260,7 @@ pub async fn open_blobrepo_given_datasources(
                 readonly_storage,
                 derived_data_config,
                 reponame,
+                cache_shards,
             )
             .await?
         }
@@ -615,16 +612,10 @@ async fn new_production(
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
     reponame: String,
+    cache_shards: usize,
 ) -> Result<BlobRepo, Error> {
-    let blob_pool = get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL)?;
-    let presence_pool = get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL)?;
-
     let blobstore = new_memcache_blobstore(fb, blobstore, "multiplexed", "")?;
-    let blobstore = Arc::new(new_cachelib_blobstore_no_lease(
-        blobstore,
-        Arc::new(blob_pool),
-        Arc::new(presence_pool),
-    )) as Arc<dyn Blobstore>;
+    let blobstore = get_cachelib_blobstore(blobstore, cache_shards)?;
 
     let filenodes_pool = get_volatile_pool("filenodes")?;
     let filenodes_history_pool = get_volatile_pool("filenodes_history")?;
@@ -744,6 +735,39 @@ fn get_volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
 fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
     cachelib::get_pool(name)
         .ok_or_else(|| Error::from(ErrorKind::MissingCachePool(name.to_string())))
+}
+
+pub fn get_cachelib_blobstore<B: Blobstore + Clone>(
+    blobstore: B,
+    cache_shards: usize,
+) -> Result<Arc<dyn Blobstore>, Error> {
+    let blobstore = match NonZeroUsize::new(cache_shards) {
+        Some(cache_shards) => {
+            let blob_pool = get_volatile_pool(BLOBSTORE_BLOBS_CACHE_POOL)?;
+            let presence_pool = get_volatile_pool(BLOBSTORE_PRESENCE_CACHE_POOL)?;
+
+            Arc::new(VirtuallyShardedBlobstore::new(
+                blobstore,
+                blob_pool,
+                presence_pool,
+                // Semaphores are quite cheap compared to the size of the underlying cache.
+                // This is at most a few MB.
+                cache_shards,
+            )) as Arc<dyn Blobstore>
+        }
+        None => {
+            let blob_pool = get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL)?;
+            let presence_pool = get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL)?;
+
+            Arc::new(new_cachelib_blobstore_no_lease(
+                blobstore,
+                Arc::new(blob_pool),
+                Arc::new(presence_pool),
+            )) as Arc<dyn Blobstore>
+        }
+    };
+
+    Ok(blobstore)
 }
 
 pub fn blobrepo_new(

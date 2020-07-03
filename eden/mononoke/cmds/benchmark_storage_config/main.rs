@@ -13,10 +13,10 @@ use clap::Arg;
 use criterion::Criterion;
 use tokio_compat::runtime::Runtime;
 
-use blobrepo_factory::Caching;
+use blobrepo_factory::{get_cachelib_blobstore, Caching};
 use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
-use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
+use cacheblob::new_memcache_blobstore_no_lease;
 use cmdlib::args;
 use context::CoreContext;
 
@@ -33,9 +33,6 @@ const ARG_STORAGE_CONFIG_NAME: &str = "storage-config-name";
 const ARG_SAVE_BASELINE: &str = "save-baseline";
 const ARG_USE_BASELINE: &str = "use-baseline";
 const ARG_FILTER_BENCHMARKS: &str = "filter";
-
-const BLOBSTORE_BLOBS_CACHE_POOL: &str = "blobstore-blobs";
-const BLOBSTORE_PRESENCE_CACHE_POOL: &str = "blobstore-presence";
 
 #[fbinit::main]
 fn main(fb: fbinit::FacebookInit) {
@@ -122,32 +119,13 @@ fn main(fb: fbinit::FacebookInit) {
         .expect("Could not make blobstore");
         match caching {
             Caching::Disabled => blobstore,
-            Caching::CachelibOnlyBlobstore => {
-                let blob_pool = Arc::new(
-                    cachelib::get_pool(BLOBSTORE_BLOBS_CACHE_POOL)
-                        .expect("Could not get blob pool"),
-                );
-                let presence_pool = Arc::new(
-                    cachelib::get_pool(BLOBSTORE_PRESENCE_CACHE_POOL)
-                        .expect("Could not get presence pool"),
-                );
-                Arc::new(new_cachelib_blobstore_no_lease(
-                    blobstore,
-                    blob_pool,
-                    presence_pool,
-                ))
+            Caching::CachelibOnlyBlobstore(cache_shards) => {
+                get_cachelib_blobstore(blobstore, cache_shards)
+                    .expect("get_cachelib_blobstore failed")
             }
-            Caching::Enabled => {
-                let blob_pool = Arc::new(
-                    cachelib::get_pool(BLOBSTORE_BLOBS_CACHE_POOL)
-                        .expect("Could not get blob pool"),
-                );
-                let presence_pool = Arc::new(
-                    cachelib::get_pool(BLOBSTORE_PRESENCE_CACHE_POOL)
-                        .expect("Could not get presence pool"),
-                );
-                let cachelib_blobstore =
-                    new_cachelib_blobstore_no_lease(blobstore, blob_pool, presence_pool);
+            Caching::Enabled(cache_shards) => {
+                let cachelib_blobstore = get_cachelib_blobstore(blobstore, cache_shards)
+                    .expect("get_cachelib_blobstore failed");
                 Arc::new(
                     new_memcache_blobstore_no_lease(fb, cachelib_blobstore, "benchmark", "")
                         .expect("Memcache blobstore issues"),

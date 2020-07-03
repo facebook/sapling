@@ -16,6 +16,7 @@ const MAX_PROCESS_SIZE: &str = "max-process-size";
 const MIN_PROCESS_SIZE: &str = "min-process-size";
 const SKIP_CACHING: &str = "skip-caching";
 const CACHELIB_ONLY_BLOBSTORE: &str = "cachelib-only-blobstore";
+const CACHELIB_SHARDS: &str = "cachelib-shards";
 const READONLY_STORAGE: &str = "readonly-storage";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
@@ -109,6 +110,12 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
             .help("do not init memcache for blobstore"),
     )
     .arg(
+        Arg::with_name(CACHELIB_SHARDS)
+            .long(CACHELIB_SHARDS)
+            .takes_value(true)
+            .help("number of shards to control concurrent access to a blobstore behind cachelib"),
+    )
+    .arg(
         Arg::with_name(READONLY_STORAGE)
             .long(READONLY_STORAGE)
             .help("Error on any attempts to write to storage"),
@@ -116,13 +123,20 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
     .args(&cache_args)
 }
 
+pub fn parse_cachelib_shards<'a>(matches: &ArgMatches<'a>) -> usize {
+    match matches.value_of(CACHELIB_SHARDS) {
+        Some(v) => v.parse().unwrap(),
+        None => 0,
+    }
+}
+
 pub(crate) fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
     if matches.is_present(SKIP_CACHING) {
         Caching::Disabled
     } else if matches.is_present(CACHELIB_ONLY_BLOBSTORE) {
-        Caching::CachelibOnlyBlobstore
+        Caching::CachelibOnlyBlobstore(parse_cachelib_shards(matches))
     } else {
-        Caching::Enabled
+        Caching::Enabled(parse_cachelib_shards(matches))
     }
 }
 
@@ -133,56 +147,66 @@ pub fn init_cachelib<'a>(
 ) -> Caching {
     let caching = parse_caching(matches);
 
-    if caching == Caching::Enabled || caching == Caching::CachelibOnlyBlobstore {
-        let mut settings = CachelibSettings::default();
-        if let Some(cache_size) = matches.value_of(CACHE_SIZE_GB) {
-            settings.cache_size = cache_size.parse::<usize>().unwrap() * 1024 * 1024 * 1024;
-        }
-        if let Some(max_process_size) = matches.value_of(MAX_PROCESS_SIZE) {
-            settings.max_process_size_gib = Some(max_process_size.parse().unwrap());
-        }
-        if let Some(min_process_size) = matches.value_of(MIN_PROCESS_SIZE) {
-            settings.min_process_size_gib = Some(min_process_size.parse().unwrap());
-        }
-        settings.use_tupperware_shrinker = matches.is_present(USE_TUPPERWARE_SHRINKER);
-        if let Some(presence_cache_size) = matches.value_of("presence-cache-size") {
-            settings.presence_cache_size = Some(presence_cache_size.parse().unwrap());
-        }
-        if let Some(changesets_cache_size) = matches.value_of("changesets-cache-size") {
-            settings.changesets_cache_size = Some(changesets_cache_size.parse().unwrap());
-        }
-        if let Some(filenodes_cache_size) = matches.value_of("filenodes-cache-size") {
-            settings.filenodes_cache_size = Some(filenodes_cache_size.parse().unwrap());
-        }
-        if let Some(filenodes_history_cache_size) = matches.value_of("filenodes-history-cache-size")
-        {
-            settings.filenodes_history_cache_size =
-                Some(filenodes_history_cache_size.parse().unwrap());
-        }
-        if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
-            settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
-        }
-        if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
-            settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
-        }
-        if let Some(phases_cache_size) = matches.value_of(PHASES_CACHE_SIZE) {
-            settings.phases_cache_size = Some(phases_cache_size.parse().unwrap());
-        }
-        if let Some(buckets_power) = matches.value_of(BUCKETS_POWER) {
-            settings.buckets_power = Some(buckets_power.parse().unwrap());
-        }
+    match caching {
+        Caching::Enabled(..) | Caching::CachelibOnlyBlobstore(..) => {
+            let mut settings = CachelibSettings::default();
+            if let Some(cache_size) = matches.value_of(CACHE_SIZE_GB) {
+                settings.cache_size = cache_size.parse::<usize>().unwrap() * 1024 * 1024 * 1024;
+            }
+            if let Some(max_process_size) = matches.value_of(MAX_PROCESS_SIZE) {
+                settings.max_process_size_gib = Some(max_process_size.parse().unwrap());
+            }
+            if let Some(min_process_size) = matches.value_of(MIN_PROCESS_SIZE) {
+                settings.min_process_size_gib = Some(min_process_size.parse().unwrap());
+            }
+            settings.use_tupperware_shrinker = matches.is_present(USE_TUPPERWARE_SHRINKER);
+            if let Some(presence_cache_size) = matches.value_of("presence-cache-size") {
+                settings.presence_cache_size = Some(presence_cache_size.parse().unwrap());
+            }
+            if let Some(changesets_cache_size) = matches.value_of("changesets-cache-size") {
+                settings.changesets_cache_size = Some(changesets_cache_size.parse().unwrap());
+            }
+            if let Some(filenodes_cache_size) = matches.value_of("filenodes-cache-size") {
+                settings.filenodes_cache_size = Some(filenodes_cache_size.parse().unwrap());
+            }
+            if let Some(filenodes_history_cache_size) =
+                matches.value_of("filenodes-history-cache-size")
+            {
+                settings.filenodes_history_cache_size =
+                    Some(filenodes_history_cache_size.parse().unwrap());
+            }
+            if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
+                settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
+            }
+            if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
+                settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
+            }
+            if let Some(phases_cache_size) = matches.value_of(PHASES_CACHE_SIZE) {
+                settings.phases_cache_size = Some(phases_cache_size.parse().unwrap());
+            }
+            if let Some(buckets_power) = matches.value_of(BUCKETS_POWER) {
+                settings.buckets_power = Some(buckets_power.parse().unwrap());
+            }
 
-        #[cfg(not(fbcode_build))]
-        {
-            let _ = (fb, expected_item_size_bytes);
-            unimplemented!("Initialization of cachelib works only for fbcode builds")
-        }
-        #[cfg(fbcode_build)]
-        {
-            super::facebook::init_cachelib_from_settings(fb, settings, expected_item_size_bytes)
+            #[cfg(not(fbcode_build))]
+            {
+                let _ = (fb, expected_item_size_bytes);
+                unimplemented!("Initialization of cachelib works only for fbcode builds")
+            }
+            #[cfg(fbcode_build)]
+            {
+                super::facebook::init_cachelib_from_settings(
+                    fb,
+                    settings,
+                    expected_item_size_bytes,
+                )
                 .unwrap();
+            }
         }
-    }
+        Caching::Disabled => {
+            // No-op
+        }
+    };
 
     caching
 }
