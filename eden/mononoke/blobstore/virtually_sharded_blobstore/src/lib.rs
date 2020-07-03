@@ -15,6 +15,7 @@ use futures::future::{BoxFuture, FutureExt};
 use futures_stats::TimedFutureExt;
 use mononoke_types::BlobstoreBytes;
 use std::collections::hash_map::DefaultHasher;
+use std::convert::AsRef;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroUsize;
@@ -23,6 +24,20 @@ use time_ext::DurationExt;
 use tokio::sync::{Semaphore, SemaphorePermit};
 
 const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024;
+
+struct CacheKey(String);
+
+impl CacheKey {
+    fn from_key(key: &str) -> Self {
+        Self(format!("vsb.{}", key))
+    }
+}
+
+impl AsRef<[u8]> for CacheKey {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
 
 /// A layer over an existing blobstore that serializes access to virtual slices of the blobstore,
 /// indexed by key. It also deduplicates writes for data that is already present.
@@ -112,7 +127,7 @@ impl Shards {
 }
 
 impl<T> Inner<T> {
-    fn get_from_cache(&self, key: &str) -> Result<BlobstoreGetData, Error> {
+    fn get_from_cache(&self, key: &CacheKey) -> Result<BlobstoreGetData, Error> {
         let val = self
             .blob_pool
             .get(key)?
@@ -121,12 +136,12 @@ impl<T> Inner<T> {
         Ok(val)
     }
 
-    fn set_is_present(&self, key: &str) -> Result<(), Error> {
+    fn set_is_present(&self, key: &CacheKey) -> Result<(), Error> {
         self.presence_pool.set(key, Bytes::from(b"P".as_ref()))?;
         Ok(())
     }
 
-    fn set_in_cache(&self, key: &str, value: BlobstoreGetData) -> Result<(), Error> {
+    fn set_in_cache(&self, key: &CacheKey, value: BlobstoreGetData) -> Result<(), Error> {
         self.set_is_present(key)?;
 
         let bytes = value
@@ -140,8 +155,8 @@ impl<T> Inner<T> {
     /// Ask the cache if it knows whether the backing store has a value for this key. Returns
     /// `true` if there is definitely a value (i.e. cache entry in Present or Known state), `false`
     /// otherwise (Empty or Leased states).
-    fn known_to_be_present_in_blobstore(&self, key: &str) -> Result<bool, Error> {
-        Ok(self.presence_pool.get(&key)?.is_some())
+    fn known_to_be_present_in_blobstore(&self, key: &CacheKey) -> Result<bool, Error> {
+        Ok(self.presence_pool.get(key)?.is_some())
     }
 }
 
@@ -156,21 +171,23 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
         cloned!(self.inner);
 
         async move {
-            if let Ok(v) = inner.get_from_cache(&key) {
+            let cache_key = CacheKey::from_key(&key);
+
+            if let Ok(v) = inner.get_from_cache(&cache_key) {
                 return Ok(Some(v));
             }
 
             let permit = inner.read_shards.acquire(&ctx, &key).await;
             scopeguard::defer! { drop(permit); };
 
-            if let Ok(v) = inner.get_from_cache(&key) {
+            if let Ok(v) = inner.get_from_cache(&cache_key) {
                 return Ok(Some(v));
             }
 
             let res = inner.blobstore.get(ctx, key.clone()).await?;
 
             if let Some(ref data) = res {
-                let _ = inner.set_in_cache(&key, data.clone());
+                let _ = inner.set_in_cache(&cache_key, data.clone());
             }
 
             Ok(res)
@@ -187,21 +204,23 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
         cloned!(self.inner);
 
         async move {
-            if let Ok(true) = inner.known_to_be_present_in_blobstore(&key) {
+            let cache_key = CacheKey::from_key(&key);
+
+            if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
                 return Ok(());
             }
 
             let permit = inner.write_shards.acquire(&ctx, &key).await;
             scopeguard::defer! { drop(permit); };
 
-            if let Ok(true) = inner.known_to_be_present_in_blobstore(&key) {
+            if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
                 return Ok(());
             }
 
             let res = inner.blobstore.put(ctx, key.clone(), value.clone()).await?;
 
             let value = BlobstoreGetData::new(BlobstoreMetadata::new(None), value);
-            let _ = inner.set_in_cache(&key, value);
+            let _ = inner.set_in_cache(&cache_key, value);
 
             Ok(res)
         }
@@ -212,14 +231,16 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
         cloned!(self.inner);
 
         async move {
-            if let Ok(true) = inner.known_to_be_present_in_blobstore(&key) {
+            let cache_key = CacheKey::from_key(&key);
+
+            if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
                 return Ok(true);
             }
 
             let exists = inner.blobstore.is_present(ctx, key.clone()).await?;
 
             if exists {
-                let _ = inner.set_is_present(&key);
+                let _ = inner.set_is_present(&cache_key);
             }
 
             Ok(exists)
