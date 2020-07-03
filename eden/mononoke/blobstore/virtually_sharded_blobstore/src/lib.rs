@@ -236,6 +236,8 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
 
             let mut permit = match inner.get_from_cache(&cache_key)? {
                 Some(CacheData::Stored(v)) => {
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::CachelibHits);
                     return Ok(Some(v));
                 }
                 Some(CacheData::NotStorable) => {
@@ -246,6 +248,9 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
                 None => Some(inner.read_shards.acquire(&ctx, &key).await),
             };
 
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::CachelibMisses);
+
             // Now, check the cache again. Since we waited for a permit, the data could have been
             // added to the cache in between. Note that it might turn out that the data isn't
             // cacheable here.
@@ -253,6 +258,8 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
             match inner.get_from_cache(&cache_key)? {
                 Some(CacheData::Stored(v)) => {
                     // The data is cached, that's great. Return it.
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::BlobGetsDeduplicated);
                     return Ok(Some(v));
                 }
                 Some(CacheData::NotStorable) => {
@@ -296,6 +303,8 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
             let cache_key = CacheKey::from_key(&key);
 
             if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::BlobPutsDeduplicated);
                 return Ok(());
             }
 
@@ -303,6 +312,8 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
             scopeguard::defer! { drop(permit); };
 
             if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::BlobPutsDeduplicated);
                 return Ok(());
             }
 
