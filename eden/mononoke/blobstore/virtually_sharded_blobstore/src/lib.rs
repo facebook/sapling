@@ -14,6 +14,7 @@ use context::{CoreContext, PerfCounterType};
 use futures::future::{BoxFuture, FutureExt};
 use futures_stats::TimedFutureExt;
 use mononoke_types::BlobstoreBytes;
+use scuba_ext::ScubaSampleBuilderExt;
 use stats::prelude::*;
 use std::collections::hash_map::DefaultHasher;
 use std::convert::AsRef;
@@ -231,6 +232,16 @@ impl<T> Inner<T> {
     }
 }
 
+fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
+    STATS::puts_deduped.add_value(1);
+    ctx.scuba()
+        .clone()
+        .add("key", key)
+        .log_with_msg("Put deduplicated", None);
+    ctx.perf_counters()
+        .increment_counter(PerfCounterType::BlobPutsDeduplicated);
+}
+
 impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
     fn get(
         &self,
@@ -327,9 +338,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
             let cache_key = CacheKey::from_key(&key);
 
             if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
-                STATS::puts_deduped.add_value(1);
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::BlobPutsDeduplicated);
+                report_deduplicated_put(&ctx, &key);
                 return Ok(());
             }
 
@@ -338,9 +347,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
                 scopeguard::defer! { drop(permit); };
 
                 if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
-                    STATS::puts_deduped.add_value(1);
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::BlobPutsDeduplicated);
+                    report_deduplicated_put(&ctx, &key);
                     return Ok(());
                 }
 
