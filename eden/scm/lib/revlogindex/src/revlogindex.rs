@@ -521,6 +521,9 @@ impl RevlogIndex {
 
     /// Insert a new revision with given parents at the end.
     pub fn insert(&mut self, node: Vertex, parents: Vec<u32>, raw_data: Bytes) {
+        if self.contains_vertex_name(&node).unwrap_or(false) {
+            return;
+        }
         let p1 = parents.get(0).map(|r| *r as i32).unwrap_or(-1);
         let p2 = parents.get(1).map(|r| *r as i32).unwrap_or(-1);
         let idx = self.pending_parents.len();
@@ -1258,6 +1261,7 @@ commit 3"#
         let mut revlog2 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
         revlog1.insert(v(1), vec![], b"commit 1".to_vec().into());
+
         // commit 2 is lz4-friendly.
         let text = b"commit 2 (............................................)";
         revlog1.insert(v(2), vec![0], text.to_vec().into());
@@ -1265,6 +1269,12 @@ commit 3"#
         revlog2.insert(v(3), vec![], b"commit 3".to_vec().into());
         revlog2.insert(v(4), vec![0], b"commit 4".to_vec().into());
         revlog2.insert(v(5), vec![1, 0], b"commit 5".to_vec().into());
+
+        // Inserting an existing node is ignored.
+        let old_len = revlog1.len();
+        revlog1.insert(v(1), vec![], b"commit 1".to_vec().into());
+        revlog1.insert(v(2), vec![0], text.to_vec().into());
+        assert_eq!(revlog1.len(), old_len);
 
         revlog1.flush()?;
         revlog2.flush()?;
