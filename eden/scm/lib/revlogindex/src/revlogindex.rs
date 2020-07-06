@@ -964,6 +964,76 @@ impl DagAlgorithm for RevlogIndex {
         Ok(Set::from_spans_idmap(result_id_set, self.get_snapshot()))
     }
 
+    /// Calculate `::reachable - ::unreachable`.
+    fn only(&self, reachable: Set, unreachable: Set) -> Result<Set> {
+        let reachable_ids = self.to_id_set(&reachable)?;
+        let unreachable_ids = self.to_id_set(&unreachable)?;
+
+        if reachable_ids.is_empty() {
+            return Ok(Set::empty());
+        } else if unreachable_ids.is_empty() {
+            return self.ancestors(reachable);
+        }
+
+        let max_id = reachable_ids
+            .max()
+            .unwrap()
+            .max(unreachable_ids.max().unwrap());
+
+        // bits[i*2]: true if i is reachable from "reachable".
+        // bits[i*2+1]: true if i is reachable from "unreachable".
+        let mut bits = BitVec::from_elem(((max_id.0 + 1) * 2) as usize, false);
+
+        // set "unreachable" heads.
+        for id in unreachable_ids.iter() {
+            bits.set((id.0 * 2 + 1) as usize, true);
+        }
+
+        // alive: count of "id"s that might belong to the result set but haven't
+        // been added to the result set yet.  alive == 0 indicates there is no
+        // need to check more ids.
+        let mut alive = 0;
+        for id in reachable_ids.iter() {
+            if !bits[(id.0 * 2 + 1) as _] {
+                bits.set((id.0 * 2) as usize, true);
+                alive += 1;
+            }
+        }
+
+        let mut result = IdSet::empty();
+        for rev in (0..=max_id.0 as usize).rev() {
+            let is_reachable = bits[rev * 2];
+            let is_unreachable = bits[rev * 2 + 1];
+            if is_unreachable {
+                // Update unreachable's parents to unreachable.
+                for p in self.parent_revs(rev as u32).as_revs() {
+                    bits.set((p * 2 + 1) as usize, true);
+                }
+            } else if is_reachable {
+                // Push to result - only reachable from 'reachable'.
+                result.push(Id(rev as _));
+                // Parents might belong to the result set.
+                for p in self.parent_revs(rev as u32).as_revs() {
+                    let i = (p * 2) as usize;
+                    if !bits[i] && !bits[i + 1] {
+                        bits.set(i, true);
+                        alive += 1;
+                    }
+                }
+            }
+            if is_reachable {
+                // This rev is processed. It's no longer a "potential".
+                alive -= 1;
+            }
+            if alive == 0 {
+                break;
+            }
+        }
+
+        let result = Set::from_spans_idmap(result, self.get_snapshot());
+        Ok(result)
+    }
+
     /// Calculate `::reachable - ::unreachable` and `::unreachable`.
     fn only_both(&self, reachable: Set, unreachable: Set) -> Result<(Set, Set)> {
         let reachable_ids = self.to_id_set(&reachable)?;
