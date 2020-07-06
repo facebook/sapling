@@ -699,8 +699,26 @@ impl PrefixLookup for RevlogIndex {
             }
         }
         // Search through the NodeRevMap
-        if let Some(node) = self.nodemap.hex_prefix_to_node(hex_prefix)? {
-            result.push(node.to_vec().into());
+        match self.nodemap.hex_prefix_to_node(hex_prefix) {
+            Ok(Some(node)) => {
+                if limit > 0 {
+                    result.push(node.to_vec().into());
+                }
+            }
+            Ok(None) => (),
+            Err(e) => {
+                if let Some(e) = e.downcast_ref::<radixbuf::errors::ErrorKind>() {
+                    if e == &radixbuf::errors::ErrorKind::AmbiguousPrefix {
+                        // Convert AmbiguousPrefix to a non-error with multiple vertex pushed to
+                        // result.  That's what the Python code base expects.
+                        while result.len() < limit {
+                            result.push(Vertex::from(Bytes::from_static(b"")));
+                        }
+                        return Ok(result);
+                    }
+                }
+                return Err(e);
+            }
         }
         Ok(result)
     }

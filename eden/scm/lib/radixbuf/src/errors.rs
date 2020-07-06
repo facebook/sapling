@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::key::KeyId;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum ErrorKind {
     #[error("offset {0} is out of range")]
     OffsetOverflow(u64),
