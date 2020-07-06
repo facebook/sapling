@@ -1157,6 +1157,8 @@ impl DagAddHeads for RevlogIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering::SeqCst;
     use tempfile::tempdir;
 
     #[test]
@@ -1338,5 +1340,21 @@ commit 3"#
         let xxd = "00000000: 3132 3334 0a                             1234.";
         let bytes = from_xxd(xxd);
         assert_eq!(bytes, b"1234\n");
+    }
+
+    #[test]
+    fn test_generic_dag() {
+        let dir = tempdir().unwrap();
+        let id = AtomicUsize::new(0);
+        let new_dag = {
+            let dir = dir.path();
+            move || -> RevlogIndex {
+                let id = id.fetch_add(1, SeqCst);
+                let revlog_path = dir.join(format!("{}.i", id));
+                let nodemap_path = dir.join(format!("{}.nodemap", id));
+                RevlogIndex::new(&revlog_path, &nodemap_path).unwrap()
+            }
+        };
+        dag::tests::test_generic_dag(new_dag);
     }
 }
