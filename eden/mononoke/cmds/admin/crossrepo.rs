@@ -155,7 +155,7 @@ fn subcommand_map(
                             }
                         })
                         .left_future(),
-                    Some(target_hash) => {
+                    Some((target_hash, _)) => {
                         println!("Hash {} maps to {}", source_hash, target_hash);
                         future::ok(()).right_future()
                     }
@@ -294,7 +294,7 @@ async fn update_large_repo_bookmarks(
                     .compat()
                     .await?;
 
-                if let Some(large_cs_id) = maybe_large_cs_id {
+                if let Some((large_cs_id, _)) = maybe_large_cs_id {
                     let reason = BookmarkUpdateReason::XRepoSync;
                     let large_bookmark = bookmark_renamer(&target_bookmark).ok_or(format_err!(
                         "small bookmark {} remaps to nothing",

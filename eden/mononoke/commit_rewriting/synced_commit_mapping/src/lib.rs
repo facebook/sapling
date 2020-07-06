@@ -109,7 +109,7 @@ pub trait SyncedCommitMapping: Send + Sync {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<Option<ChangesetId>, Error>;
+    ) -> BoxFuture<Option<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error>;
 
     /// Inserts equivalent working copy of a large bcs id. It's similar to mapping entry,
     /// however there are a few differences:
@@ -153,7 +153,7 @@ impl SyncedCommitMapping for Arc<dyn SyncedCommitMapping> {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
+    ) -> BoxFuture<Option<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error> {
         (**self).get(ctx, source_repo_id, bcs_id, target_repo_id)
     }
 
@@ -199,8 +199,8 @@ queries! {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> (RepositoryId, ChangesetId, RepositoryId, ChangesetId) {
-        "SELECT large_repo_id, large_bcs_id, small_repo_id, small_bcs_id
+    ) -> (RepositoryId, ChangesetId, RepositoryId, ChangesetId, Option<String>) {
+        "SELECT large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name
          FROM synced_commit_mapping
          WHERE (large_repo_id = {source_repo_id} AND large_bcs_id = {bcs_id} AND small_repo_id = {target_repo_id}) OR
          (small_repo_id = {source_repo_id} AND small_bcs_id = {bcs_id} AND large_repo_id = {target_repo_id})"
@@ -285,7 +285,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
+    ) -> BoxFuture<Option<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error> {
         STATS::gets.add_value(1);
 
         SelectMapping::query(
@@ -313,11 +313,16 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         })
         .map(move |rows| {
             if rows.len() == 1 {
-                let (large_repo_id, large_bcs_id, _small_repo_id, small_bcs_id) = rows[0];
+                let (large_repo_id, large_bcs_id, _small_repo_id, small_bcs_id, ref version_name) =
+                    rows[0];
+                let maybe_version_name: Option<CommitSyncConfigVersion> = match version_name {
+                    Some(version_name) => Some(CommitSyncConfigVersion(version_name.to_owned())),
+                    None => None,
+                };
                 if target_repo_id == large_repo_id {
-                    Some(large_bcs_id)
+                    Some((large_bcs_id, maybe_version_name))
                 } else {
-                    Some(small_bcs_id)
+                    Some((small_bcs_id, maybe_version_name))
                 }
             } else {
                 None

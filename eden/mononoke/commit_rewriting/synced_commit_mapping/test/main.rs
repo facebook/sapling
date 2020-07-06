@@ -91,14 +91,18 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         .get(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID, REPO_ONE)
         .compat()
         .await
-        .expect("Get failed");
-    assert_eq!(result, Some(bonsai::TWOS_CSID));
+        .expect("Get failed")
+        .expect("Unexpectedly, mapping is None")
+        .0;
+    assert_eq!(result, bonsai::TWOS_CSID);
     let result = mapping
         .get(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
         .compat()
         .await
-        .expect("Get failed");
-    assert_eq!(result, Some(bonsai::ONES_CSID));
+        .expect("Get failed")
+        .expect("Unexpectedly, mapping is None")
+        .0;
+    assert_eq!(result, bonsai::ONES_CSID);
 }
 
 async fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {

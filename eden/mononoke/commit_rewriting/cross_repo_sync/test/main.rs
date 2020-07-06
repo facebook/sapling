@@ -193,7 +193,8 @@ async fn check_mapping<M>(
             )
             .compat()
             .await
-            .unwrap(),
+            .unwrap()
+            .map(|(cs, _maybe_version)| cs),
         expected_bcs_id
     );
 
@@ -208,7 +209,8 @@ async fn check_mapping<M>(
                 )
                 .compat()
                 .await
-                .unwrap(),
+                .unwrap()
+                .map(|(cs, _maybe_version)| cs),
             Some(source_bcs_id)
         );
     }

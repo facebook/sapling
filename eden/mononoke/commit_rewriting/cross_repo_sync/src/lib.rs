@@ -293,7 +293,7 @@ pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         .compat()
         .await?;
 
-    if let Some(cs_id) = remapped {
+    if let Some((cs_id, _)) = remapped {
         // If we have a mapping for this commit, then it is already synced
         if cs_id == source_cs_id.0 {
             return Ok(Some(CommitSyncOutcome::Preserved));
