@@ -92,7 +92,7 @@ Test basic case of splitting a head.
   o  0 c20cc4d302fc add a1 and a2
 
 Split in the middle of a stack.
-  $ hg up 2
+  $ hg up e5cbbeb3434b2ce1b3d802a8326f8bf5e4e46119
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg split << EOF
   > y
@@ -133,10 +133,10 @@ Split in the middle of a stack.
   o  0 c20cc4d302fc add a1 and a2
 
 Split with multiple children and using hash.
-  $ hg up c20c
+  $ hg up c20cc4d302fc
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   $ mkcommit d
-  $ hg split c20c << EOF
+  $ hg split c20cc4d302fc << EOF
   > y
   > y
   > n
@@ -183,7 +183,9 @@ Split with multiple children and using hash.
   o  11 5a5595e342b1 add a1 and a2
 
 Split using revset.
-  $ hg debugstrip 18
+  $ hg hide 'max(desc(add))'
+  hiding commit 5ad76779e999 "add d1 and d2"
+  1 changeset hidden
   $ hg split "children(.)" << EOF
   > y
   > y
@@ -212,17 +214,17 @@ Split using revset.
   rebasing c2fa6cc56f60 "add d1 and d2"
 
   $ showgraph
-  o  23 065a5bb834a6 add d1 and d2
+  o  24 065a5bb834a6 add d1 and d2
   |
-  o  22 e3e63b66173e add d1 and d2
+  o  23 e3e63b66173e add d1 and d2
   |
-  o  21 6b6c4cdbcb5c add c1 and c2
+  o  22 6b6c4cdbcb5c add c1 and c2
   |
-  o  20 216c1cfd66ba add c1 and c2
+  o  21 216c1cfd66ba add c1 and c2
   |
-  @  19 ef9770b15bd8 add b1 and b2
+  @  20 ef9770b15bd8 add b1 and b2
   |
-  o  18 172212eeb9e4 add b1 and b2
+  o  19 172212eeb9e4 add b1 and b2
   |
   o  12 a265b3c6c419 add a1 and a2
   |
@@ -236,25 +238,25 @@ Test that command aborts when given multiple commits.
 
 Test --no-rebase flag.
   $ mkcommit e
-  $ hg rebase -s 20 -d .
+  $ hg rebase -s 216c1cfd66baf1e1febc262d5c0771c4db0da5dd -d .
   rebasing 216c1cfd66ba "add c1 and c2"
   rebasing 6b6c4cdbcb5c "add c1 and c2"
   rebasing e3e63b66173e "add d1 and d2"
   rebasing 065a5bb834a6 "add d1 and d2"
   $ showgraph
-  o  28 5f8ed24aed8c add d1 and d2
+  o  29 5f8ed24aed8c add d1 and d2
   |
-  o  27 b5591417a3eb add d1 and d2
+  o  28 b5591417a3eb add d1 and d2
   |
-  o  26 484cd1d66520 add c1 and c2
+  o  27 484cd1d66520 add c1 and c2
   |
-  o  25 e051398780c8 add c1 and c2
+  o  26 e051398780c8 add c1 and c2
   |
-  @  24 c1d00dbe112a add e1 and e2
+  @  25 c1d00dbe112a add e1 and e2
   |
-  o  19 ef9770b15bd8 add b1 and b2
+  o  20 ef9770b15bd8 add b1 and b2
   |
-  o  18 172212eeb9e4 add b1 and b2
+  o  19 172212eeb9e4 add b1 and b2
   |
   o  12 a265b3c6c419 add a1 and a2
   |
@@ -283,23 +285,23 @@ Test --no-rebase flag.
   Done splitting? [yN] y
 
   $ showgraph
-  @  30 f98ad9103c3d add e1 and e2
+  @  31 f98ad9103c3d add e1 and e2
   |
-  o  29 cc95492dd94d add e1 and e2
+  o  30 cc95492dd94d add e1 and e2
   |
-  | o  28 5f8ed24aed8c add d1 and d2
+  | o  29 5f8ed24aed8c add d1 and d2
   | |
-  | o  27 b5591417a3eb add d1 and d2
+  | o  28 b5591417a3eb add d1 and d2
   | |
-  | o  26 484cd1d66520 add c1 and c2
+  | o  27 484cd1d66520 add c1 and c2
   | |
-  | o  25 e051398780c8 add c1 and c2
+  | o  26 e051398780c8 add c1 and c2
   | |
-  | x  24 c1d00dbe112a add e1 and e2
+  | x  25 c1d00dbe112a add e1 and e2
   |/
-  o  19 ef9770b15bd8 add b1 and b2
+  o  20 ef9770b15bd8 add b1 and b2
   |
-  o  18 172212eeb9e4 add b1 and b2
+  o  19 172212eeb9e4 add b1 and b2
   |
   o  12 a265b3c6c419 add a1 and a2
   |
