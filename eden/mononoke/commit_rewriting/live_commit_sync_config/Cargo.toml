@@ -20,6 +20,7 @@ metaconfig_parser = { path = "../../metaconfig/parser" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 pushredirect_enable = { path = "../../../../configerator/structs/scm/mononoke/pushredirect" }
+repos = { path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }

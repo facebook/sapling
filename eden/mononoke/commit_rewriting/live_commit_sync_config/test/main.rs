@@ -16,10 +16,24 @@ use live_commit_sync_config::{
 };
 use std::{sync::Arc, thread, time::Duration};
 
+macro_rules! is_error_kind {
+    ($result_expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
+        match $result_expression {
+            Ok(_) => false,
+            Err(e) => match e.downcast_ref::<ErrorKind>() {
+                $( Some($pattern) )|+ $( if $guard )? => true,
+                _ => false
+            }
+        }
+    }
+}
+
+mod all_changes;
+mod all_simple;
 mod current_changes;
 mod current_invalid;
+mod current_simple;
 mod push_redirection;
-mod simple;
 
 const EMPTY_PUSHREDIRECTOR: &str = r#"{
      "per_repo": {}

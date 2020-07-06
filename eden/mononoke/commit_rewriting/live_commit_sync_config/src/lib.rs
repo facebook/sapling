@@ -12,10 +12,12 @@ use cached_config::{ConfigHandle, ConfigStore};
 use commitsync::types::{RawCommitSyncAllVersions, RawCommitSyncCurrentVersions};
 use context::CoreContext;
 use metaconfig_parser::Convert;
-use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion};
 use mononoke_types::RepositoryId;
 use pushredirect_enable::types::{MononokePushRedirectEnable, PushRedirectEnableState};
+use repos::types::RawCommitSyncConfig;
 use slog::{debug, error, info, Logger};
+use std::collections::HashMap;
 use thiserror::Error;
 
 pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
@@ -29,6 +31,14 @@ pub enum ErrorKind {
     NotPartOfAnyCommitSyncConfig(RepositoryId),
     #[error("{0:?} is a part of multiple CommitSyncConfigs")]
     PartOfMultipleCommitSyncConfigs(RepositoryId),
+    #[error("Some versions of CommitSyncConfig relate to {0:?}, others don't")]
+    OnlySomeVersionsRelateToRepo(RepositoryId),
+    #[error("{0:?} is not a part of any CommitSyncConfig version set")]
+    NotPartOfAnyCommitSyncConfigVersionSet(RepositoryId),
+    #[error("{0:?} is a part of multiple CommitSyncConfigs version sets")]
+    PartOfMultipleCommitSyncConfigsVersionSets(RepositoryId),
+    #[error("{0:?} has no CommitSyncConfig with version name {1}")]
+    UnknownCommitSyncConfigVersion(RepositoryId, String),
 }
 
 #[derive(Clone)]
@@ -72,6 +82,11 @@ impl LiveCommitSyncConfig {
         config.per_repo.get(&(repo_id.id() as i64)).cloned()
     }
 
+    /// Return whether push redirection is currently
+    /// enabled for draft commits in `repo_id`
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries  config source
     pub fn push_redirector_enabled_for_draft(&self, repo_id: RepositoryId) -> bool {
         match self.get_push_redirection_repo_state(repo_id) {
             Some(config) => config.draft_push,
@@ -79,6 +94,11 @@ impl LiveCommitSyncConfig {
         }
     }
 
+    /// Return whether push redirection is currently
+    /// enabled for public commits in `repo_id`
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries  config source
     pub fn push_redirector_enabled_for_public(&self, repo_id: RepositoryId) -> bool {
         match self.get_push_redirection_repo_state(repo_id) {
             Some(config) => config.public_push,
@@ -86,6 +106,39 @@ impl LiveCommitSyncConfig {
         }
     }
 
+    fn related_to_repo(
+        raw_commit_sync_config: &RawCommitSyncConfig,
+        repo_id: RepositoryId,
+    ) -> bool {
+        raw_commit_sync_config.large_repo_id == repo_id.id()
+            || raw_commit_sync_config
+                .small_repos
+                .iter()
+                .any(|small_repo| small_repo.repoid == repo_id.id())
+    }
+
+    /// Return a clone of the only item in an iterator
+    /// Error out otherwise
+    fn get_only_item<T: Clone, I: IntoIterator<Item = T>, N: Fn() -> Error, M: Fn() -> Error>(
+        items: I,
+        no_items_error: N,
+        many_items_error: M,
+    ) -> Result<T> {
+        let mut iter = items.into_iter();
+        let maybe_first = iter.next();
+        let maybe_second = iter.next();
+        match (maybe_first, maybe_second) {
+            (None, None) => Err(no_items_error()),
+            (Some(only_item), None) => Ok(only_item.clone()),
+            (_, _) => return Err(many_items_error()),
+        }
+    }
+
+    /// Return current version of `CommitSyncConfig` struct
+    /// for a given repository
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries  config source
     pub fn get_current_commit_sync_config(
         &self,
         ctx: &CoreContext,
@@ -93,25 +146,20 @@ impl LiveCommitSyncConfig {
     ) -> Result<CommitSyncConfig> {
         let config = self.config_handle_for_current_versions.get();
         let raw_commit_sync_config = {
-            let mut interesting_top_level_configs = config
+            let interesting_top_level_configs = config
                 .repos
                 .iter()
-                .filter(|(_, commit_sync_config)| {
-                    commit_sync_config.large_repo_id == repo_id.id()
-                        || commit_sync_config
-                            .small_repos
-                            .iter()
-                            .any(|small_repo| small_repo.repoid == repo_id.id())
+                .filter(|(_, raw_commit_sync_config)| {
+                    Self::related_to_repo(raw_commit_sync_config, repo_id)
                 })
                 .map(|(_, commit_sync_config)| commit_sync_config);
 
-            let maybe_first = interesting_top_level_configs.next();
-            let maybe_second = interesting_top_level_configs.next();
-            match (maybe_first, maybe_second) {
-                (None, None) => return Err(ErrorKind::NotPartOfAnyCommitSyncConfig(repo_id).into()),
-                (Some(raw_config), None) => raw_config.clone(),
-                (_, _) => return Err(ErrorKind::PartOfMultipleCommitSyncConfigs(repo_id).into()),
-            }
+            Self::get_only_item(
+                interesting_top_level_configs,
+                || ErrorKind::NotPartOfAnyCommitSyncConfig(repo_id).into(),
+                || ErrorKind::PartOfMultipleCommitSyncConfigs(repo_id).into(),
+            )?
+            .clone()
         };
 
         let commit_sync_config = raw_commit_sync_config.convert()?;
@@ -122,5 +170,50 @@ impl LiveCommitSyncConfig {
         );
 
         Ok(commit_sync_config)
+    }
+
+    /// Return all historical versions of `CommitSyncConfig`
+    /// structs for a given repository
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries config source
+    pub fn get_all_commit_sync_config_versions(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>> {
+        let large_repo_config_version_sets = &self.config_handle_for_all_versions.get().repos;
+
+        let mut interesting_configs: Vec<_> = vec![];
+        for (_, config_version_set) in large_repo_config_version_sets.iter() {
+            for raw_commit_sync_config in config_version_set.versions.iter() {
+                if Self::related_to_repo(&raw_commit_sync_config, repo_id) {
+                    interesting_configs.push(raw_commit_sync_config.clone());
+                }
+            }
+        }
+
+        let versions: Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>> =
+            interesting_configs
+                .into_iter()
+                .map(|raw_commit_sync_config| {
+                    let commit_sync_config = raw_commit_sync_config.clone().convert()?;
+                    let version_name = commit_sync_config.version_name.clone();
+                    Ok((version_name, commit_sync_config))
+                })
+                .collect();
+
+        Ok(versions?)
+    }
+
+    /// Return `CommitSyncConfig` for repo `repo_id` of version `version_name`
+    pub fn get_commit_sync_config_by_version(
+        &self,
+        repo_id: RepositoryId,
+        version_name: &CommitSyncConfigVersion,
+    ) -> Result<CommitSyncConfig> {
+        let mut all_versions = self.get_all_commit_sync_config_versions(repo_id)?;
+        all_versions.remove(&version_name).ok_or_else(|| {
+            ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
+        })
     }
 }

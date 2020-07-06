@@ -121,18 +121,6 @@ const CURRENT_COMMIT_SYNC_CONFIG_INVALID_SMALL_IN_ONE_LARGE_IN_OTHER: &str = r#"
     }
 }"#;
 
-macro_rules! is_error_kind {
-    ($result_expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
-        match $result_expression {
-            Ok(_) => false,
-            Err(e) => match e.downcast_ref::<ErrorKind>() {
-                $( Some($pattern) )|+ $( if $guard )? => true,
-                _ => false
-            }
-        }
-    }
-}
-
 #[fbinit::test]
 fn test_unknown_repo(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
