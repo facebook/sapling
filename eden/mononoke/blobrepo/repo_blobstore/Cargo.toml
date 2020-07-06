@@ -9,7 +9,6 @@ include = ["src/**/*.rs"]
 [dependencies]
 blobstore = { path = "../../blobstore" }
 context = { path = "../../server/context" }
-context_concurrency_blobstore = { path = "../../blobstore/context_concurrency_blobstore" }
 mononoke_types = { path = "../../mononoke_types" }
 prefixblob = { path = "../../blobstore/prefixblob" }
 redactedblobstore = { path = "../../blobstore/redactedblobstore" }

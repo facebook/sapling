@@ -7,6 +7,7 @@ license = "GPLv2+"
 include = ["src/*.rs"]
 
 [dependencies]
+async_limiter = { path = "../../common/async_limiter" }
 blobstore = { path = ".." }
 context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
@@ -24,6 +25,8 @@ tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 nonzero_ext = "0.2"
 once_cell = "1.4"
-tokio-compat = "0.1"
+ratelimit_meter = "5"
+slog = { version = "2.5", features = ["max_level_debug"] }

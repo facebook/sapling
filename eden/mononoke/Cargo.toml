@@ -141,7 +141,6 @@ members = [
     "blobstore/blobstore_stats",
     "blobstore/cacheblob",
     "blobstore/chaosblob",
-    "blobstore/context_concurrency_blobstore",
     "blobstore/delayblob",
     "blobstore/factory",
     "blobstore/fileblob",

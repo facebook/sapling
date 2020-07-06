@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+mod ratelimit;
+mod shard;
+
 use anyhow::{anyhow, Error};
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
 use bytes::{buf::ext::Chain, Bytes};
@@ -12,18 +15,16 @@ use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::future::{BoxFuture, FutureExt};
-use futures_stats::TimedFutureExt;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::ScubaSampleBuilderExt;
 use stats::prelude::*;
-use std::collections::hash_map::DefaultHasher;
 use std::convert::AsRef;
 use std::fmt;
-use std::hash::{Hash, Hasher};
 use std::num::NonZeroUsize;
 use std::sync::Arc;
-use time_ext::DurationExt;
-use tokio::sync::{Semaphore, SemaphorePermit};
+
+use crate::ratelimit::{AccessReason, Ticket};
+use shard::{SemaphoreAcquisition, Shards};
 
 define_stats! {
     prefix = "mononoke.virtually_sharded_blobstore";
@@ -61,6 +62,9 @@ enum CacheData {
     /// presumably). For this data, we skip semaphore access.
     NotStorable,
 }
+
+/// A type representing that a blob is known to exist. Used in matches below.
+struct KnownToExist;
 
 /// We allow filtering cache writes to make testing easier. This function is a default that does
 /// not filter.
@@ -134,47 +138,6 @@ impl<T> Inner<T> {
     }
 }
 
-pub struct Shards {
-    semaphores: Vec<Semaphore>,
-    perf_counter_type: PerfCounterType,
-}
-
-impl Shards {
-    fn new(shard_count: NonZeroUsize, perf_counter_type: PerfCounterType) -> Self {
-        let semaphores = (0..shard_count.get())
-            .into_iter()
-            .map(|_| Semaphore::new(1))
-            .collect();
-
-        Self {
-            semaphores,
-            perf_counter_type,
-        }
-    }
-
-    fn len(&self) -> usize {
-        self.semaphores.len()
-    }
-
-    async fn acquire<'a>(&'a self, ctx: &CoreContext, key: &str) -> SemaphorePermit<'a> {
-        let mut hasher = DefaultHasher::new();
-        key.hash(&mut hasher);
-
-        let (stats, permit) = self.semaphores
-            [(hasher.finish() % self.semaphores.len() as u64) as usize]
-            .acquire()
-            .timed()
-            .await;
-
-        ctx.perf_counters().add_to_counter(
-            self.perf_counter_type,
-            stats.completion_time.as_millis_unchecked() as i64,
-        );
-
-        permit
-    }
-}
-
 impl<T> Inner<T> {
     fn get_from_cache(&self, key: &CacheKey) -> Result<Option<CacheData>, Error> {
         let mut val = match self.blob_pool.get(key)? {
@@ -227,8 +190,8 @@ impl<T> Inner<T> {
     /// Ask the cache if it knows whether the backing store has a value for this key. Returns
     /// `true` if there is definitely a value (i.e. cache entry in Present or Known state), `false`
     /// otherwise (Empty or Leased states).
-    fn known_to_be_present_in_blobstore(&self, key: &CacheKey) -> Result<bool, Error> {
-        Ok(self.presence_pool.get(key)?.is_some())
+    fn check_presence(&self, key: &CacheKey) -> Result<Option<KnownToExist>, Error> {
+        Ok(self.presence_pool.get(key)?.map(|_| KnownToExist))
     }
 }
 
@@ -271,37 +234,40 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
             };
 
             let fut = async move {
-                let mut permit = if take_lease {
-                    Some(inner.read_shards.acquire(&ctx, &key).await)
-                } else {
-                    None
-                };
-
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::CachelibMisses);
 
-                // Now, check the cache again. Since we waited for a permit, the data could have been
-                // added to the cache in between. Note that it might turn out that the data isn't
-                // cacheable here.
+                let ticket = Ticket::new(&ctx, AccessReason::Read);
 
-                match inner.get_from_cache(&cache_key)? {
-                    Some(CacheData::Stored(v)) => {
-                        // The data is cached, that's great. Return it.
-                        STATS::gets_deduped.add_value(1);
-                        ctx.perf_counters()
-                            .increment_counter(PerfCounterType::BlobGetsDeduplicated);
-                        return Ok(Some(v));
+                let permit = if take_lease {
+                    let acq = inner
+                        .read_shards
+                        .acquire(&ctx, &key, ticket, || inner.get_from_cache(&cache_key))
+                        .await?;
+
+                    match acq {
+                        SemaphoreAcquisition::Cancelled(CacheData::Stored(v), ticket) => {
+                            // The data is cached, that's great. Return it. We're not going to hit
+                            // the blobstore, so also return out ticket.
+                            STATS::gets_deduped.add_value(1);
+                            ctx.perf_counters()
+                                .increment_counter(PerfCounterType::BlobGetsDeduplicated);
+                            ticket.cancel();
+                            return Ok(Some(v));
+                        }
+                        SemaphoreAcquisition::Cancelled(CacheData::NotStorable, ticket) => {
+                            // The data cannot be cached. We'll have to go to the blobstore. Wait
+                            // for our ticket first.
+                            STATS::gets_not_storable.add_value(1);
+                            ticket.finish().await?;
+                            None
+                        }
+                        SemaphoreAcquisition::Acquired(permit) => Some(permit),
                     }
-                    Some(CacheData::NotStorable) => {
-                        // If we had any permit, we should release it to unblock any other waiters on
-                        // this semaphore, since we don't expect to succeed in populating the cache for
-                        // this key (though we might).
-                        STATS::gets_not_storable.add_value(1);
-                        let _ = permit.take();
-                    }
-                    None => {
-                        // We still don't have it. Fallthrough to read.
-                    }
+                } else {
+                    // We'll go to the blobstore, so wait for our ticket.
+                    ticket.finish().await?;
+                    None
                 };
 
                 // NOTE: This is a no-op, but it's here to ensure permit is still in scope at this
@@ -310,7 +276,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
                 scopeguard::defer! { drop(permit); };
 
                 // Now, actually go the underlying blobstore.
-                let res = inner.blobstore.get(ctx, key.clone()).await?;
+                let res = inner.blobstore.get(ctx.clone(), key.clone()).await?;
 
                 // And finally, attempt to cache what we got back.
                 if let Some(ref data) = res {
@@ -337,21 +303,34 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
             STATS::puts.add_value(1);
             let cache_key = CacheKey::from_key(&key);
 
-            if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
+            if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key) {
                 report_deduplicated_put(&ctx, &key);
                 return Ok(());
             }
 
             let fut = async move {
-                let permit = inner.write_shards.acquire(&ctx, &key).await;
+                let ticket = Ticket::new(&ctx, AccessReason::Write);
+
+                let acq = inner
+                    .write_shards
+                    .acquire(&ctx, &key, ticket, || inner.check_presence(&cache_key))
+                    .await?;
+
+                let permit = match acq {
+                    SemaphoreAcquisition::Cancelled(KnownToExist, ticket) => {
+                        report_deduplicated_put(&ctx, &key);
+                        ticket.cancel();
+                        return Ok(());
+                    }
+                    SemaphoreAcquisition::Acquired(permit) => permit,
+                };
+
                 scopeguard::defer! { drop(permit); };
 
-                if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
-                    report_deduplicated_put(&ctx, &key);
-                    return Ok(());
-                }
-
-                let res = inner.blobstore.put(ctx, key.clone(), value.clone()).await?;
+                let res = inner
+                    .blobstore
+                    .put(ctx.clone(), key.clone(), value.clone())
+                    .await?;
 
                 let value = BlobstoreGetData::new(BlobstoreMetadata::new(None), value);
                 let _ = inner.set_in_cache(&cache_key, value);
@@ -370,9 +349,11 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
         async move {
             let cache_key = CacheKey::from_key(&key);
 
-            if let Ok(true) = inner.known_to_be_present_in_blobstore(&cache_key) {
+            if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key) {
                 return Ok(true);
             }
+
+            Ticket::new(&ctx, AccessReason::Read).finish().await?;
 
             let exists = inner.blobstore.is_present(ctx, key.clone()).await?;
 
@@ -390,130 +371,17 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
 mod test {
     use super::*;
     use fbinit::FacebookInit;
+    use futures_stats::TimedTryFutureExt;
     use nonzero_ext::nonzero;
     use once_cell::sync::OnceCell;
-    use std::collections::HashMap;
-    use std::sync::Mutex;
-    use std::time::Duration;
-    use tokio::sync::broadcast::{self, Receiver, Sender};
+    use time_ext::DurationExt;
 
-    const TIMEOUT_MS: u64 = 100;
-
-    /// Represents data stored in our TestBlobstore
-    #[derive(Debug)]
-    enum BlobData {
-        Bytes(BlobstoreBytes),
-        Channel(Sender<BlobstoreBytes>),
-    }
-
-    impl BlobData {
-        /// Obtain a handle for a new get
-        fn handle(&self) -> BlobDataHandle {
-            match self {
-                BlobData::Bytes(ref b) => BlobDataHandle::Bytes(b.clone()),
-                BlobData::Channel(ref s) => BlobDataHandle::Channel(s.subscribe()),
-            }
-        }
-    }
-
-    /// Represents a handle for a single get from our TestBlobstore
-    enum BlobDataHandle {
-        Bytes(BlobstoreBytes),
-        Channel(Receiver<BlobstoreBytes>),
-    }
-
-    impl BlobDataHandle {
-        /// Obtain the bytes for this get.
-        async fn bytes(self) -> Result<BlobstoreBytes, Error> {
-            let b = match self {
-                BlobDataHandle::Bytes(b) => b,
-                BlobDataHandle::Channel(mut r) => r.recv().await?,
-            };
-
-            Ok(b)
-        }
-    }
-
-    #[derive(Default, Debug)]
-    struct Blob {
-        puts: u64,
-        gets: u64,
-        data: Option<BlobData>,
-    }
-
-    #[derive(Debug, Clone)]
-    struct TestBlobstore {
-        data: Arc<Mutex<HashMap<String, Blob>>>,
-    }
-
-    impl TestBlobstore {
-        fn new() -> Self {
-            Self {
-                data: Arc::new(Mutex::new(HashMap::new())),
-            }
-        }
-    }
-
-    impl Blobstore for TestBlobstore {
-        fn put(
-            &self,
-            _ctx: CoreContext,
-            key: String,
-            value: BlobstoreBytes,
-        ) -> BoxFuture<'static, Result<(), Error>> {
-            cloned!(self.data);
-
-            async move {
-                let mut data = data.lock().unwrap();
-                let mut blob = data.entry(key).or_default();
-                blob.puts += 1;
-                blob.data = Some(BlobData::Bytes(value));
-                Ok(())
-            }
-            .boxed()
-        }
-
-        fn get(
-            &self,
-            _ctx: CoreContext,
-            key: String,
-        ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
-            cloned!(self.data);
-
-            async move {
-                let handle = {
-                    let mut data = data.lock().unwrap();
-                    let blob = data.entry(key).or_default();
-                    blob.gets += 1;
-                    blob.data.as_ref().map(BlobData::handle)
-                };
-
-                let handle = match handle {
-                    Some(handle) => handle,
-                    None => {
-                        return Ok(None);
-                    }
-                };
-
-                let bytes = handle.bytes().await?;
-
-                Ok(Some(BlobstoreGetData::new(
-                    BlobstoreMetadata::new(None),
-                    bytes,
-                )))
-            }
-            .boxed()
-        }
-    }
-
-    fn reject_all_filter(_: &Bytes) -> Result<(), Error> {
-        Err(anyhow!("Rejected!"))
-    }
-
-    fn make_blobstore(
+    fn make_blobstore<B: Blobstore>(
         fb: FacebookInit,
+        blob: B,
+        cache_shards: NonZeroUsize,
         cache_filter: fn(&Bytes) -> Result<(), Error>,
-    ) -> Result<VirtuallyShardedBlobstore<TestBlobstore>, Error> {
+    ) -> Result<VirtuallyShardedBlobstore<B>, Error> {
         static INSTANCE: OnceCell<()> = OnceCell::new();
         INSTANCE.get_or_init(|| {
             let config = cachelib::LruCacheConfig::new(64 * 1024 * 1024);
@@ -523,243 +391,523 @@ mod test {
         let blob_pool = cachelib::get_or_create_volatile_pool("blobs", 8 * 1024 * 1024)?;
         let presence_pool = cachelib::get_or_create_volatile_pool("presence", 8 * 1024 * 1024)?;
 
-        let inner = Inner::new(
-            TestBlobstore::new(),
-            blob_pool,
-            presence_pool,
-            nonzero!(2usize),
-            cache_filter,
-        );
+        let inner = Inner::new(blob, blob_pool, presence_pool, cache_shards, cache_filter);
 
         Ok(VirtuallyShardedBlobstore {
             inner: Arc::new(inner),
         })
     }
 
-    #[fbinit::compat_test]
-    async fn test_dedupe_reads(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let blobstore = make_blobstore(fb, allow_all_filter)?;
-
-        let key = "foo".to_string();
-
-        futures::future::try_join_all(
-            (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
-        )
-        .await?;
-
-        {
-            let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-            let mut blob = data.entry(key.clone()).or_default();
-            assert_eq!(blob.gets, 10);
-            blob.data = Some(BlobData::Bytes(BlobstoreBytes::from_bytes("foo")));
-        }
-
-        futures::future::try_join_all(
-            (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
-        )
-        .await?;
-
-        {
-            let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-            let blob = data.entry(key.clone()).or_default();
-            assert_eq!(blob.gets, 11);
-        }
-
-        futures::future::try_join_all(
-            (0..10usize).map(|_| blobstore.is_present(ctx.clone(), key.clone())),
-        )
-        .await?;
-
-        {
-            let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-            let blob = data.entry(key.clone()).or_default();
-            assert_eq!(blob.gets, 11);
-        }
-
-        Ok(())
+    fn reject_all_filter(_: &Bytes) -> Result<(), Error> {
+        Err(anyhow!("Rejected!"))
     }
 
-    #[fbinit::compat_test]
-    async fn test_cache_read(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let blobstore = make_blobstore(fb, allow_all_filter)?;
+    mod sharding {
+        use super::*;
+        use std::collections::HashMap;
+        use std::sync::Mutex;
+        use std::time::Duration;
+        use tokio::sync::broadcast::{self, Receiver, Sender};
 
-        let key = "foo".to_string();
-        let val = BlobstoreBytes::from_bytes("foo");
+        const TIMEOUT_MS: u64 = 100;
 
-        {
-            let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-            let mut blob = data.entry(key.clone()).or_default();
-            blob.data = Some(BlobData::Bytes(val.clone()));
+        /// Represents data stored in our TestBlobstore
+        #[derive(Debug)]
+        enum BlobData {
+            Bytes(BlobstoreBytes),
+            Channel(Sender<BlobstoreBytes>),
         }
 
-        let v1 = blobstore.get(ctx.clone(), key.clone()).await?;
-        let v2 = blobstore.get(ctx.clone(), key.clone()).await?;
-
-        {
-            let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-            let blob = data.entry(key.clone()).or_default();
-            assert_eq!(blob.gets, 1);
-        }
-
-        assert_eq!(v1.unwrap().as_bytes(), &val);
-        assert_eq!(v2.unwrap().as_bytes(), &val);
-
-        Ok(())
-    }
-
-    #[fbinit::compat_test]
-    async fn test_read_after_write(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let blobstore = make_blobstore(fb, allow_all_filter)?;
-
-        let key = "foo".to_string();
-        let val = BlobstoreBytes::from_bytes("foo");
-
-        blobstore.put(ctx.clone(), key.clone(), val.clone()).await?;
-        let v1 = blobstore.get(ctx.clone(), key.clone()).await?;
-
-        {
-            let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-            let blob = data.entry(key.clone()).or_default();
-            assert_eq!(blob.gets, 0);
-        }
-
-        assert_eq!(v1.unwrap().as_bytes(), &val);
-
-        Ok(())
-    }
-
-    #[fbinit::compat_test]
-    async fn test_do_not_serialize_not_storable(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let blobstore = make_blobstore(fb, reject_all_filter)?;
-
-        let key = "foo".to_string();
-        let val = BlobstoreBytes::from_bytes("foo");
-
-        let (sender, _) = broadcast::channel(1);
-        assert_eq!(sender.receiver_count(), 0); // Nothing is waiting here yet
-
-        {
-            let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-            let mut blob = data.entry(key.clone()).or_default();
-            blob.data = Some(BlobData::Channel(sender.clone()));
-        }
-
-        // Spawn a bunch of reads
-        let futs = tokio::spawn(futures::future::try_join_all(
-            (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
-        ));
-
-        tokio::time::timeout(Duration::from_millis(TIMEOUT_MS), async {
-            // Wait for the first request to arrive. It'll be alone, since at this point we don't
-            // know this is not cacheable.
-            loop {
-                tokio::task::yield_now().await;
-                let count = sender.receiver_count();
-
-                if count > 1 {
-                    return Err(anyhow!("Too many receivers: {}", count));
-                }
-
-                if count > 0 {
-                    sender
-                        .send(val.clone())
-                        .map_err(|_| anyhow!("First send failed"))?;
-
-                    break;
+        impl BlobData {
+            /// Obtain a handle for a new get
+            fn handle(&self) -> BlobDataHandle {
+                match self {
+                    BlobData::Bytes(ref b) => BlobDataHandle::Bytes(b.clone()),
+                    BlobData::Channel(ref s) => BlobDataHandle::Channel(s.subscribe()),
                 }
             }
+        }
 
-            // Wait for the next requests to arrive. At this point, we know this is not cacheable,
-            // and they should all arrive concurrently.
-            loop {
-                tokio::task::yield_now().await;
+        /// Represents a handle for a single get from our TestBlobstore
+        enum BlobDataHandle {
+            Bytes(BlobstoreBytes),
+            Channel(Receiver<BlobstoreBytes>),
+        }
 
-                if sender.receiver_count() >= 9 {
-                    sender
-                        .send(val.clone())
-                        .map_err(|_| anyhow!("Second send failed"))?;
-                    break;
+        impl BlobDataHandle {
+            /// Obtain the bytes for this get.
+            async fn bytes(self) -> Result<BlobstoreBytes, Error> {
+                let b = match self {
+                    BlobDataHandle::Bytes(b) => b,
+                    BlobDataHandle::Channel(mut r) => r.recv().await?,
+                };
+
+                Ok(b)
+            }
+        }
+
+        #[derive(Default, Debug)]
+        struct Blob {
+            puts: u64,
+            gets: u64,
+            data: Option<BlobData>,
+        }
+
+        #[derive(Debug, Clone)]
+        struct TestBlobstore {
+            data: Arc<Mutex<HashMap<String, Blob>>>,
+        }
+
+        impl TestBlobstore {
+            fn new() -> Self {
+                Self {
+                    data: Arc::new(Mutex::new(HashMap::new())),
                 }
             }
+        }
 
-            // Now, spawn a bunch more tasks, and check that they all reach the receiver together.
-            // Those tasks are a bit different from the ones we had already spawned, since they'll
-            // check the cache *before* acquiring the semaphore, and won't ever try to acquire it
-            // (whereas the other ones would have acquired it, and been released by the firs task
-            // afterwards).
+        impl Blobstore for TestBlobstore {
+            fn put(
+                &self,
+                _ctx: CoreContext,
+                key: String,
+                value: BlobstoreBytes,
+            ) -> BoxFuture<'static, Result<(), Error>> {
+                cloned!(self.data);
+
+                async move {
+                    let mut data = data.lock().unwrap();
+                    let mut blob = data.entry(key).or_default();
+                    blob.puts += 1;
+                    blob.data = Some(BlobData::Bytes(value));
+                    Ok(())
+                }
+                .boxed()
+            }
+
+            fn get(
+                &self,
+                _ctx: CoreContext,
+                key: String,
+            ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+                cloned!(self.data);
+
+                async move {
+                    let handle = {
+                        let mut data = data.lock().unwrap();
+                        let blob = data.entry(key).or_default();
+                        blob.gets += 1;
+                        blob.data.as_ref().map(BlobData::handle)
+                    };
+
+                    let handle = match handle {
+                        Some(handle) => handle,
+                        None => {
+                            return Ok(None);
+                        }
+                    };
+
+                    let bytes = handle.bytes().await?;
+
+                    Ok(Some(BlobstoreGetData::new(
+                        BlobstoreMetadata::new(None),
+                        bytes,
+                    )))
+                }
+                .boxed()
+            }
+        }
+
+        #[fbinit::test]
+        async fn test_dedupe_reads(fb: FacebookInit) -> Result<(), Error> {
+            let ctx = CoreContext::test_mock(fb);
+            let blobstore =
+                make_blobstore(fb, TestBlobstore::new(), nonzero!(2usize), allow_all_filter)?;
+
+            let key = "foo".to_string();
+
+            futures::future::try_join_all(
+                (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
+            )
+            .await?;
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let mut blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.gets, 10);
+                blob.data = Some(BlobData::Bytes(BlobstoreBytes::from_bytes("foo")));
+            }
+
+            futures::future::try_join_all(
+                (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
+            )
+            .await?;
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.gets, 11);
+            }
+
+            futures::future::try_join_all(
+                (0..10usize).map(|_| blobstore.is_present(ctx.clone(), key.clone())),
+            )
+            .await?;
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.gets, 11);
+            }
+
+            Ok(())
+        }
+
+        #[fbinit::test]
+        async fn test_cache_read(fb: FacebookInit) -> Result<(), Error> {
+            let ctx = CoreContext::test_mock(fb);
+            let blobstore =
+                make_blobstore(fb, TestBlobstore::new(), nonzero!(2usize), allow_all_filter)?;
+
+            let key = "foo".to_string();
+            let val = BlobstoreBytes::from_bytes("foo");
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let mut blob = data.entry(key.clone()).or_default();
+                blob.data = Some(BlobData::Bytes(val.clone()));
+            }
+
+            let v1 = blobstore.get(ctx.clone(), key.clone()).await?;
+            let v2 = blobstore.get(ctx.clone(), key.clone()).await?;
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.gets, 1);
+            }
+
+            assert_eq!(v1.unwrap().as_bytes(), &val);
+            assert_eq!(v2.unwrap().as_bytes(), &val);
+
+            Ok(())
+        }
+
+        #[fbinit::test]
+        async fn test_read_after_write(fb: FacebookInit) -> Result<(), Error> {
+            let ctx = CoreContext::test_mock(fb);
+            let blobstore =
+                make_blobstore(fb, TestBlobstore::new(), nonzero!(2usize), allow_all_filter)?;
+
+            let key = "foo".to_string();
+            let val = BlobstoreBytes::from_bytes("foo");
+
+            blobstore.put(ctx.clone(), key.clone(), val.clone()).await?;
+            let v1 = blobstore.get(ctx.clone(), key.clone()).await?;
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.gets, 0);
+            }
+
+            assert_eq!(v1.unwrap().as_bytes(), &val);
+
+            Ok(())
+        }
+
+        #[fbinit::test]
+        async fn test_do_not_serialize_not_storable(fb: FacebookInit) -> Result<(), Error> {
+            let ctx = CoreContext::test_mock(fb);
+            let blobstore = make_blobstore(
+                fb,
+                TestBlobstore::new(),
+                nonzero!(2usize),
+                reject_all_filter,
+            )?;
+
+            let key = "foo".to_string();
+            let val = BlobstoreBytes::from_bytes("foo");
+
+            let (sender, _) = broadcast::channel(1);
+            assert_eq!(sender.receiver_count(), 0); // Nothing is waiting here yet
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let mut blob = data.entry(key.clone()).or_default();
+                blob.data = Some(BlobData::Channel(sender.clone()));
+            }
+
+            // Spawn a bunch of reads
             let futs = tokio::spawn(futures::future::try_join_all(
                 (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
             ));
 
-            // Finally, wait for those requests to arrive.
-            loop {
-                tokio::task::yield_now().await;
+            tokio::time::timeout(Duration::from_millis(TIMEOUT_MS), async {
+                // Wait for the first request to arrive. It'll be alone, since at this point we don't
+                // know this is not cacheable.
+                loop {
+                    tokio::task::yield_now().await;
+                    let count = sender.receiver_count();
 
-                if sender.receiver_count() >= 10 {
-                    sender
-                        .send(val.clone())
-                        .map_err(|_| anyhow!("Third send failed"))?;
-                    break;
+                    if count > 1 {
+                        return Err(anyhow!("Too many receivers: {}", count));
+                    }
+
+                    if count > 0 {
+                        sender
+                            .send(val.clone())
+                            .map_err(|_| anyhow!("First send failed"))?;
+
+                        break;
+                    }
                 }
-            }
 
-            // Check our results
+                // Wait for the next requests to arrive. At this point, we know this is not cacheable,
+                // and they should all arrive concurrently.
+                loop {
+                    tokio::task::yield_now().await;
+
+                    if sender.receiver_count() >= 9 {
+                        sender
+                            .send(val.clone())
+                            .map_err(|_| anyhow!("Second send failed"))?;
+                        break;
+                    }
+                }
+
+                // Now, spawn a bunch more tasks, and check that they all reach the receiver together.
+                // Those tasks are a bit different from the ones we had already spawned, since they'll
+                // check the cache *before* acquiring the semaphore, and won't ever try to acquire it
+                // (whereas the other ones would have acquired it, and been released by the firs task
+                // afterwards).
+                let futs = tokio::spawn(futures::future::try_join_all(
+                    (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
+                ));
+
+                // Finally, wait for those requests to arrive.
+                loop {
+                    tokio::task::yield_now().await;
+
+                    if sender.receiver_count() >= 10 {
+                        sender
+                            .send(val.clone())
+                            .map_err(|_| anyhow!("Third send failed"))?;
+                        break;
+                    }
+                }
+
+                // Check our results
+                let res = futs.await??;
+                assert_eq!(res.len(), 10);
+                for v in res {
+                    assert_eq!(v.unwrap().as_bytes(), &val);
+                }
+
+                Result::<_, Error>::Ok(())
+            })
+            .await??;
+
+            // Check our results for the earlier calls.
             let res = futs.await??;
             assert_eq!(res.len(), 10);
             for v in res {
                 assert_eq!(v.unwrap().as_bytes(), &val);
             }
 
-            Result::<_, Error>::Ok(())
-        })
-        .await??;
-
-        // Check our results for the earlier calls.
-        let res = futs.await??;
-        assert_eq!(res.len(), 10);
-        for v in res {
-            assert_eq!(v.unwrap().as_bytes(), &val);
+            Ok(())
         }
 
-        Ok(())
+        #[fbinit::test]
+        async fn test_dedupe_writes(fb: FacebookInit) -> Result<(), Error> {
+            let ctx = CoreContext::test_mock(fb);
+            let blobstore =
+                make_blobstore(fb, TestBlobstore::new(), nonzero!(2usize), allow_all_filter)?;
+
+            let key = "foo".to_string();
+            let val = BlobstoreBytes::from_bytes("foo");
+
+            futures::future::try_join_all(
+                (0..10usize).map(|_| blobstore.put(ctx.clone(), key.clone(), val.clone())),
+            )
+            .await?;
+
+            let handle = {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.puts, 1);
+                blob.data.as_ref().unwrap().handle()
+            };
+            assert_eq!(handle.bytes().await?, val);
+
+            futures::future::try_join_all(
+                (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
+            )
+            .await?;
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.gets, 0);
+            }
+
+            Ok(())
+        }
     }
 
-    #[fbinit::compat_test]
-    async fn test_dedupe_writes(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let blobstore = make_blobstore(fb, allow_all_filter)?;
+    mod ratelimiting {
+        use super::*;
+        use async_limiter::AsyncLimiter;
+        use context::SessionContainer;
+        use fbinit::FacebookInit;
+        use nonzero_ext::nonzero;
+        use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
+        use scuba_ext::ScubaSampleBuilder;
+        use slog::{o, Drain, Level, Logger};
+        use slog_glog_fmt::default_drain;
+        use std::time::Duration;
 
-        let key = "foo".to_string();
-        let val = BlobstoreBytes::from_bytes("foo");
+        #[derive(Clone, Debug)]
+        struct DummyBlob;
 
-        futures::future::try_join_all(
-            (0..10usize).map(|_| blobstore.put(ctx.clone(), key.clone(), val.clone())),
-        )
-        .await?;
-
-        let handle = {
-            let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-            let blob = data.entry(key.clone()).or_default();
-            assert_eq!(blob.puts, 1);
-            blob.data.as_ref().unwrap().handle()
-        };
-        assert_eq!(handle.bytes().await?, val);
-
-        futures::future::try_join_all(
-            (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
-        )
-        .await?;
-
-        {
-            let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-            let blob = data.entry(key.clone()).or_default();
-            assert_eq!(blob.gets, 0);
+        impl DummyBlob {
+            fn new() -> Self {
+                Self
+            }
         }
 
-        Ok(())
+        impl Blobstore for DummyBlob {
+            fn get(
+                &self,
+                _ctx: CoreContext,
+                _key: String,
+            ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+                async move {
+                    Ok(Some(BlobstoreGetData::new(
+                        BlobstoreMetadata::new(None),
+                        BlobstoreBytes::from_bytes("foo"),
+                    )))
+                }
+                .boxed()
+            }
+
+            fn put(
+                &self,
+                _ctx: CoreContext,
+                _key: String,
+                _value: BlobstoreBytes,
+            ) -> BoxFuture<'static, Result<(), Error>> {
+                async move { Ok(()) }.boxed()
+            }
+
+            fn is_present(
+                &self,
+                _ctx: CoreContext,
+                _key: String,
+            ) -> BoxFuture<'static, Result<bool, Error>> {
+                async move { Ok(false) }.boxed()
+            }
+        }
+
+        fn logger() -> Logger {
+            let drain = default_drain().filter_level(Level::Debug).ignore_res();
+            Logger::root(drain, o![])
+        }
+
+        #[fbinit::test]
+        async fn test_qps(fb: FacebookInit) -> Result<(), Error> {
+            let l1 =
+                DirectRateLimiter::<LeakyBucket>::new(nonzero!(1u32), Duration::from_millis(10));
+            let l1 = AsyncLimiter::new(l1).await;
+
+            let l2 =
+                DirectRateLimiter::<LeakyBucket>::new(nonzero!(1u32), Duration::from_millis(10));
+            let l2 = AsyncLimiter::new(l2).await;
+
+            let mut builder = SessionContainer::builder(fb);
+            builder.blobstore_read_limiter(l1);
+            builder.blobstore_write_limiter(l2);
+            let session = builder.build();
+            let ctx = session.new_context(logger(), ScubaSampleBuilder::with_discard());
+
+            let blobstore =
+                make_blobstore(fb, DummyBlob::new(), nonzero!(100usize), allow_all_filter)?;
+
+            // get
+            let (stats, _) = futures::future::try_join_all(
+                (0..10u64).map(|i| blobstore.get(ctx.clone(), format!("get{}", i))),
+            )
+            .try_timed()
+            .await?;
+            assert!(stats.completion_time.as_millis_unchecked() > 50);
+
+            // is_present
+            let (stats, _) = futures::future::try_join_all(
+                (0..10u64).map(|i| blobstore.is_present(ctx.clone(), format!("present{}", i))),
+            )
+            .try_timed()
+            .await?;
+            assert!(stats.completion_time.as_millis_unchecked() > 50);
+
+            // put
+            let bytes = BlobstoreBytes::from_bytes("test foobar");
+            let (stats, _) = futures::future::try_join_all(
+                (0..10u64).map(|i| blobstore.put(ctx.clone(), format!("put{}", i), bytes.clone())),
+            )
+            .try_timed()
+            .await?;
+            assert!(stats.completion_time.as_millis_unchecked() > 50);
+
+            Ok(())
+        }
+
+        #[fbinit::test]
+        async fn test_early_cache_hits_do_not_count(fb: FacebookInit) -> Result<(), Error> {
+            let l1 =
+                DirectRateLimiter::<LeakyBucket>::new(nonzero!(10u32), Duration::from_millis(100));
+            let l1 = AsyncLimiter::new(l1).await;
+
+            let l2 =
+                DirectRateLimiter::<LeakyBucket>::new(nonzero!(10u32), Duration::from_millis(100));
+            let l2 = AsyncLimiter::new(l2).await;
+
+            let mut builder = SessionContainer::builder(fb);
+            builder.blobstore_read_limiter(l1);
+            builder.blobstore_write_limiter(l2);
+            let session = builder.build();
+            let ctx = &session.new_context(logger(), ScubaSampleBuilder::with_discard());
+
+            let blobstore =
+                &make_blobstore(fb, DummyBlob::new(), nonzero!(100usize), allow_all_filter)?;
+
+            // get
+            let (stats, _) = futures::future::try_join_all(
+                (0..10u64)
+                    .map(|i| {
+                        (0..10u64).map(move |_| blobstore.get(ctx.clone(), format!("get{}", i)))
+                    })
+                    .flatten(),
+            )
+            .try_timed()
+            .await?;
+            assert!(stats.completion_time.as_millis_unchecked() < 20);
+
+            // put
+            let bytes = &BlobstoreBytes::from_bytes("test foobar");
+            let (stats, _) = futures::future::try_join_all(
+                (0..10u64)
+                    .map(|i| {
+                        (0..10u64).map(move |_| {
+                            blobstore.put(ctx.clone(), format!("put{}", i), bytes.clone())
+                        })
+                    })
+                    .flatten(),
+            )
+            .try_timed()
+            .await?;
+            assert!(stats.completion_time.as_millis_unchecked() <= 20);
+
+            Ok(())
+        }
     }
 }
