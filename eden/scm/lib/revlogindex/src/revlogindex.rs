@@ -26,12 +26,15 @@ use dag::Vertex;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::utils::mmap_bytes;
 use minibytes::Bytes;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 use std::convert::TryFrom;
 use std::fs;
+use std::fs::File;
 use std::io;
+use std::io::Read;
 use std::io::Seek;
 use std::io::Write;
 use std::marker::PhantomData;
@@ -335,6 +338,9 @@ pub struct RevlogIndex {
     /// Snapshot used to construct Set.
     snapshot: RwLock<Option<Arc<RevlogIndex>>>,
 
+    /// File handler to the revlog data.
+    data_handler: Mutex<Option<File>>,
+
     /// Index to convert node to rev.
     pub nodemap: NodeRevMap<BytesSlice<RevlogEntry>, BytesSlice<u32>>,
 
@@ -434,6 +440,7 @@ impl RevlogIndex {
             pending_nodes_index: Default::default(),
             pending_raw_data: Default::default(),
             snapshot: Default::default(),
+            data_handler: Default::default(),
             index_path: changelogi_path.to_path_buf(),
             nodemap_path: nodemap_path.to_path_buf(),
         };
@@ -469,7 +476,7 @@ impl RevlogIndex {
     }
 
     /// Get raw content from a revision.
-    pub fn raw_data(&self, rev: u32, mut file: impl io::Seek + io::Read) -> Result<Bytes> {
+    pub fn raw_data(&self, rev: u32) -> Result<Bytes> {
         if rev as usize >= self.data_len() {
             let result = &self.pending_raw_data[rev as usize - self.data_len()];
             return Ok(result.clone());
@@ -491,6 +498,15 @@ impl RevlogIndex {
 
         let compressed_size = i32::from_be(entry.compressed) as usize;
         let mut chunk = vec![0; compressed_size];
+
+        let mut locked = self.data_handler.lock();
+        if locked.is_none() {
+            let revlog_data_path = self.index_path.with_extension("d");
+            let file = fs::OpenOptions::new().read(true).open(revlog_data_path)?;
+            *locked = Some(file);
+        }
+        let file = locked.as_mut().unwrap();
+
         file.seek(io::SeekFrom::Start(offset))?;
         file.read_exact(&mut chunk)?;
         let decompressed = match chunk.get(0) {
@@ -642,6 +658,7 @@ impl RevlogIndex {
                     pending_nodes_index: self.pending_nodes_index.clone(),
                     pending_raw_data: self.pending_raw_data.clone(),
                     snapshot: Default::default(),
+                    data_handler: Default::default(),
                     nodemap: self.nodemap.clone(),
                     changelogi_data: self.changelogi_data.clone(),
                     index_path: self.index_path.clone(),
@@ -1028,7 +1045,9 @@ mod tests {
         let dir = tempdir()?;
         let dir = dir.path();
         let changelog_i_path = dir.join("00changelog.i");
-        std::fs::write(&changelog_i_path, changelog_i)?;
+        fs::write(&changelog_i_path, changelog_i)?;
+        let changelog_d_path = dir.join("00changelog.d");
+        fs::write(&changelog_d_path, changelog_d)?;
         let nodemap_path = dir.join("00changelog.nodemap");
         let index = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
@@ -1039,8 +1058,7 @@ mod tests {
 
         // Read commit data.
         let read = |rev: u32| -> Result<String> {
-            let mut data = io::Cursor::new(&changelog_d);
-            Ok(std::str::from_utf8(&index.raw_data(rev, &mut data)?)?.to_string())
+            Ok(std::str::from_utf8(&index.raw_data(rev)?)?.to_string())
         };
         assert_eq!(
             read(0)?,
@@ -1116,15 +1134,10 @@ commit 3"#
         assert_eq!(revlog3.vertex_id(v(3))?, Id(2));
 
         // Read commit data.
-        let data = fs::read(dir.join("00changelog.d"))?;
         let read = |rev: u32| -> Result<String> {
-            let mut data = io::Cursor::new(&data);
-            let raw = revlog3.raw_data(rev, &mut data)?;
+            let raw = revlog3.raw_data(rev)?;
             for index in vec![&revlog1, &revlog2] {
-                ensure!(
-                    index.raw_data(rev, &mut data)? == raw,
-                    "index read mismatch"
-                );
+                ensure!(index.raw_data(rev)? == raw, "index read mismatch");
             }
             Ok(std::str::from_utf8(&raw)?.to_string())
         };
