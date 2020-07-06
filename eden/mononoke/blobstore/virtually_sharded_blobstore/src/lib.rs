@@ -805,7 +805,7 @@ mod test {
                 _ctx: CoreContext,
                 _key: String,
             ) -> BoxFuture<'static, Result<bool, Error>> {
-                async move { Ok(false) }.boxed()
+                async move { Ok(true) }.boxed()
             }
         }
 
@@ -890,7 +890,7 @@ mod test {
             )
             .try_timed()
             .await?;
-            assert!(stats.completion_time.as_millis_unchecked() < 20);
+            assert!(stats.completion_time.as_millis_unchecked() <= 100);
 
             // put
             let bytes = &BlobstoreBytes::from_bytes("test foobar");
@@ -905,7 +905,7 @@ mod test {
             )
             .try_timed()
             .await?;
-            assert!(stats.completion_time.as_millis_unchecked() <= 20);
+            assert!(stats.completion_time.as_millis_unchecked() <= 100);
 
             Ok(())
         }
