@@ -522,10 +522,10 @@ impl RevlogIndex {
     pub fn insert(&mut self, node: Vertex, parents: Vec<u32>, raw_data: Bytes) {
         let p1 = parents.get(0).map(|r| *r as i32).unwrap_or(-1);
         let p2 = parents.get(1).map(|r| *r as i32).unwrap_or(-1);
+        let idx = self.pending_parents.len();
         self.pending_parents.push(ParentRevs::from_p1p2(p1, p2));
         self.pending_nodes.push(node.clone());
 
-        let idx = self.pending_parents.len();
         self.pending_nodes_index.insert(node, idx);
         *self.snapshot.write() = None;
 
