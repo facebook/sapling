@@ -8,6 +8,7 @@ anyhow = "1.0.20"
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
 dag = { path = "../../../../lib/dag" }
+hgcommits = { path = "../../../../lib/hgcommits" }
 renderdag = { path = "../../../../lib/renderdag" }
 
 [features]

@@ -281,8 +281,10 @@ class BaseService(pycompat.ABC):
                 parents = [p for p in nodeinfos[node].parents if p in nodeinfos]
             return parents
 
-        dag = bindings.dag.memnamedag()
-        dag.addheads(sorted(nodeinfos.keys()), getparents)
+        dag = bindings.dag.commits.openmemory()
+        commits = [(node, getparents(node), b"") for node in sorted(nodeinfos.keys())]
+        dag.addcommits(commits)
+        dag = dag.dagalgo()
         return SmartlogInfo(
             dag=dag,
             public=public,
