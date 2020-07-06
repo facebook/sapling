@@ -190,7 +190,6 @@ from edenscm.mercurial import (
     pycompat,
     registrar,
     repair,
-    repoview,
     revset,
     scmutil,
     smartset,
@@ -344,14 +343,6 @@ def cloneshallow(orig, ui, repo, *args, **opts):
             repos.append(self.unfiltered())
             # set up the client hooks so the post-clone update works
             setupclient(self.ui, self.unfiltered())
-
-            # setupclient fixed the class on the repo itself
-            # but we also need to fix it on the repoview
-            if isinstance(self, repoview.repoview):
-                self.__class__.__bases__ = (
-                    self.__class__.__bases__[0],
-                    self.unfiltered().__class__,
-                )
 
             if shallowrepo.requirement not in self.requirements:
                 self.requirements.add(shallowrepo.requirement)

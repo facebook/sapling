@@ -1812,7 +1812,9 @@ sh % "hg debugrevspec '0:wdir() & fffb'" == r"""
     abort: 00changelog.i@fffb: ambiguous identifier!
     [255]"""
 # BROKEN should be '2' (node lookup uses unfiltered repo since dc25ed84bee8)
-sh % "hg debugrevspec '0:wdir() & id(fffb)'" == "2"
+sh % "hg debugrevspec '0:wdir() & id(fffb)'" == r"""
+    abort: 00changelog.i@fffb: ambiguous identifier!
+    [255]"""
 sh % "hg debugrevspec '0:wdir() & ffff8'" == "4"
 sh % "hg debugrevspec '0:wdir() & fffff'" == "2147483647"
 

@@ -57,7 +57,6 @@ from . import (
     pushkey,
     pycompat,
     repository,
-    repoview,
     revlog,
     revset,
     revsetlang,
@@ -1006,8 +1005,7 @@ class localrepository(object):
 
     def filtered(self, name):
         """Return a filtered version of a repository"""
-        cls = repoview.newtype(self.unfiltered().__class__)
-        return cls(self, name)
+        return self
 
     @repofilecache(localpaths=["shared"])
     def sharedfeatures(self):

@@ -45,7 +45,6 @@ from edenscm.mercurial import (
     pycompat,
     registrar,
     repair,
-    repoview,
     revset,
     scmutil,
     setdiscovery,
@@ -639,14 +638,6 @@ def extsetup(ui):
     extensions.wrapfunction(exchange.pushoperation, "__init__", expushop)
     extensions.wrapfunction(exchange, "push", expush)
     extensions.wrapfunction(exchange, "pull", expull)
-    # _getdynamicblockers was renamed to pinnedrevs in 4.3
-    blockername = "pinnedrevs"
-    if not util.safehasattr(repoview, blockername):
-        # but there was a temporary name of revealedrevs, remove after 4.3
-        blockername = "revealedrevs"
-        if not util.safehasattr(repoview, blockername):
-            blockername = "_getdynamicblockers"
-    extensions.wrapfunction(repoview, blockername, blockerhook)
     extensions.wrapfunction(bookmarks, "updatefromremote", exupdatefromremote)
     extensions.wrapfunction(bookmarks, "reachablerevs", exreachablerevs)
     if util.safehasattr(bookmarks, "activate"):

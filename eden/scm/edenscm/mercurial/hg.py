@@ -39,7 +39,6 @@ from . import (
     phases,
     progress,
     pycompat,
-    repoview,
     scmutil,
     sshpeer,
     ui as uimod,
@@ -399,16 +398,6 @@ def copystore(ui, srcrepo, destpath):
     except:  # re-raises
         release(destlock)
         raise
-
-
-def _cachetocopy(srcrepo):
-    """return the list of cache file valuable to copy during a clone"""
-    # In local clones we're copying all nodes, not just served
-    # ones. Therefore copy all branch caches over.
-    cachefiles = ["branch2"]
-    cachefiles += ["branch2-%s" % f for f in repoview.filtertable]
-    cachefiles += ["rbc-names-v1", "rbc-revs-v1"]
-    return cachefiles
 
 
 def clone(

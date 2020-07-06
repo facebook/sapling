@@ -79,7 +79,9 @@
   stdout: 1 files updated, 0 files merged, 10 files removed, 0 files unresolved
   (activating bookmark master)
   
-  stdout: rebasing f8d4b0697695 "test commit"
+  stdout: already rebased 20b2121f9781 "test commit"
+  already rebased b17a0147d61c "test commit"
+  rebasing f8d4b0697695 "test commit"
   
   ran 'immrebase' in * sec (glob)
   stdout: pulling from $TESTTMP/repo1

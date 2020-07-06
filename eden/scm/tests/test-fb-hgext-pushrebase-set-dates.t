@@ -97,6 +97,8 @@ Make a push from the client
   |
   o  server commit [public:bb4844f92c89]
   |
+  | x  client push [draft:772868146114]
+  |/
   o  initial [public:2bb9d20e471c]
   
 Apply a bundle on the second server via the command line
@@ -170,6 +172,8 @@ Push a stack
   |
   o  server commit [public:bb4844f92c89]
   |
+  | x  client push [draft:772868146114]
+  |/
   o  initial [public:2bb9d20e471c]
   
   $ hg log -r '.^::.' -T '{node}\n'

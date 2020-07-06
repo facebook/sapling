@@ -215,7 +215,6 @@ def _preimportmodules():
         "pushkey",
         "rcutil",
         "repository",
-        "repoview",
         "revlog",
         "revset",
         "revsetlang",

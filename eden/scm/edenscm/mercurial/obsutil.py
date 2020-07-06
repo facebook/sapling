@@ -79,11 +79,7 @@ def getmarkers(repo, nodes=None, exclusive=False):
 
 
 def closestpredecessors(repo, nodeid):
-    """yield the list of next predecessors pointing on visible changectx nodes
-
-    This function respect the repoview filtering, filtered revision will be
-    considered missing.
-    """
+    """yield the list of next predecessors pointing on visible changectx nodes"""
 
     precursors = repo.obsstore.predecessors
     stack = [nodeid]
@@ -404,10 +400,6 @@ def successorssets(repo, initialnode, closest=False, cache=None):
     Finally, final successors unknown locally are considered to be pruned
     (pruned: obsoleted without any successors). (Final: successors not affected
     by markers).
-
-    The 'closest' mode respect the repoview filtering. For example, without
-    filter it will stop at the first locally known changeset, with 'visible'
-    filter it will stop on visible changesets).
 
     The optional `cache` parameter is a dictionary that may contains
     precomputed successors sets. It is meant to reuse the computation of a

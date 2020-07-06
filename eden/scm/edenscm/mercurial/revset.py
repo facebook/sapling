@@ -32,7 +32,6 @@ from . import (
     phases,
     pycompat,
     registrar,
-    repoview,
     revsetlang,
     scmutil,
     smartset,
@@ -1030,9 +1029,6 @@ def filelog(repo, subset, x):
     The pattern without explicit kind like ``glob:`` is expected to be
     relative to the current directory and match against a file exactly
     for efficiency.
-
-    If some linkrev points to revisions filtered by the current repoview, we'll
-    work around it to return a non-filtered value.
     """
 
     # i18n: "filelog" is a keyword
@@ -1380,8 +1376,7 @@ def hidden(repo, subset, x):
     """
     # i18n: "hidden" is a keyword
     getargs(x, 0, 0, _("hidden takes no arguments"))
-    hiddenrevs = repoview.filterrevs(repo, "visible")
-    return subset & hiddenrevs
+    return baseset([])
 
 
 @predicate("keyword(string)", safe=True, weight=10)

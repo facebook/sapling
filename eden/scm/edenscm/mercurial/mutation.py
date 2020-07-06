@@ -11,7 +11,7 @@ from collections import defaultdict
 
 from bindings import mutationstore
 
-from . import error, node as nodemod, perftrace, phases, repoview, util
+from . import error, node as nodemod, perftrace, phases, util
 from .i18n import _
 from .node import nullid
 
@@ -267,7 +267,6 @@ class obsoletecache(object):
         unfi = repo.unfiltered()
         clhasnode = getisvisiblefunc(repo)
         clrev = unfi.changelog.rev
-        hiddenrevs = repoview.filterrevs(repo, "visible")
 
         for succ in allsuccessors(repo, [node], startdepth=1):
             # If any successor is already known to be obsolete, we can
@@ -277,7 +276,7 @@ class obsoletecache(object):
                 return True
             # The node is obsolete if any successor is visible in the normal
             # filtered repo.
-            if clhasnode(succ) and clrev(succ) not in hiddenrevs:
+            if clhasnode(succ):
                 obsolete.add(node)
                 return True
         self.notobsolete[repo.filtername].add(node)
@@ -301,15 +300,10 @@ class obsoletecache(object):
             clhasnode = getisvisiblefunc(repo)
             clrev = repo.changelog.rev
             obsolete = self.obsolete[repo.filtername]
-            hiddenrevs = repoview.filterrevs(repo, "visible")
             for node in repo.nodes("not public()"):
                 succsets = successorssets(repo, node, closest=True)
                 if succsets != [[node]]:
-                    if any(
-                        clrev(succ) not in hiddenrevs
-                        for succset in succsets
-                        for succ in succset
-                    ):
+                    if any(clhasnode(succ) for succset in succsets for succ in succset):
                         obsolete.add(node)
             candidates = set(obsolete)
             seen = set(obsolete)

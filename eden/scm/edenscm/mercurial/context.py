@@ -31,7 +31,6 @@ from . import (
     pathutil,
     phases,
     pycompat,
-    repoview,
     revlog,
     scmutil,
     util,
@@ -594,9 +593,6 @@ class changectx(basectx):
     def phase(self):
         # type: () -> int
         return self._repo._phasecache.phase(self._repo, self._rev)
-
-    def hidden(self):
-        return self._rev in repoview.filterrevs(self._repo, "visible")
 
     @propertycache
     def _mutationentry(self):

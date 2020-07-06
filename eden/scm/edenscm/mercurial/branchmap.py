@@ -17,11 +17,6 @@ from .node import nullid, nullrev
 
 
 def updatecache(repo):
-    # Don't write the branchmap if it's disabled.
-    # The original logic has unnecessary steps, ex. it calculates the "served"
-    # repoview as an attempt to build branchcache for "visible". And then
-    # calculates "immutable" for calculating "served", recursively.
-    #
     # Just use a shortcut path that construct the branchcache directly.
     partial = repo._branchcaches.get(repo.filtername)
     if partial is None:
@@ -52,18 +47,10 @@ class branchcache(dict):
     branch head closes a branch or not.
     """
 
-    def __init__(
-        self,
-        entries=(),
-        tipnode=nullid,
-        tiprev=nullrev,
-        filteredhash=None,
-        closednodes=None,
-    ):
+    def __init__(self, entries=(), tipnode=nullid, tiprev=nullrev, closednodes=None):
         super(branchcache, self).__init__(entries)
         self.tipnode = tipnode
         self.tiprev = tiprev
-        self.filteredhash = filteredhash
         # closednodes is a set of nodes that close their branch. If the branch
         # cache has been updated, it may contain nodes that are no longer
         # heads.
@@ -78,9 +65,7 @@ class branchcache(dict):
         - False when cached tipnode is unknown or if we detect a strip.
         - True when cache is up to date or a subset of current repo."""
         try:
-            return (self.tipnode == repo.changelog.node(self.tiprev)) and (
-                self.filteredhash == scmutil.filteredhash(repo, self.tiprev)
-            )
+            return self.tipnode == repo.changelog.node(self.tiprev)
         except IndexError:
             return False
 
@@ -118,9 +103,7 @@ class branchcache(dict):
     def copy(self):
         # type: () -> branchcache
         """return an deep copy of the branchcache object"""
-        return branchcache(
-            self, self.tipnode, self.tiprev, self.filteredhash, self._closednodes
-        )
+        return branchcache(self, self.tipnode, self.tiprev, self._closednodes)
 
     def update(self, repo, revgen):
         """Given a branchhead cache, self, that may have extra nodes or be
@@ -148,7 +131,6 @@ class branchcache(dict):
             tiprev = branchheads[-1]
         self.tipnode = cl.node(tiprev)
         self.tiprev = tiprev
-        self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
         repo.ui.log(
             "branchcache", "perftweaks updated %s branch cache\n", repo.filtername
         )

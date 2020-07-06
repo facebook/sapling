@@ -987,7 +987,7 @@ class propertycache(Generic[C, T]):
 
     def cachevalue(self, obj, value):
         # type: (C, T) -> None
-        # __dict__ assignment required to bypass __setattr__ (eg: repoview)
+        # __dict__ assignment required to bypass __setattr__
         obj.__dict__[self.name] = value
 
 

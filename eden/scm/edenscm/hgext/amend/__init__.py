@@ -594,7 +594,7 @@ def wraprebase(orig, ui, repo, *pats, **opts):
         # The --hidden option is handled at a higher level, so instead of
         # checking for it directly we have to check whether the repo
         # is unfiltered.
-        if repo == repo.unfiltered():
+        if repo.ui.configbool("visibility", "all-heads"):
             raise error.Abort(_("cannot use both --hidden and --restack"))
 
         return restack.restack(ui, repo, **opts)

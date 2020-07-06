@@ -23,7 +23,6 @@ from .. import (
     hook,
     profiling,
     pycompat,
-    repoview,
     templatefilters,
     templater,
     ui as uimod,
@@ -259,7 +258,6 @@ class hgweb(object):
         self.reponame = name
 
     def _webifyrepo(self, repo):
-        repo = getwebview(repo)
         self.websubtable = webutil.getwebsubs(repo)
         return repo
 
@@ -469,24 +467,3 @@ class hgweb(object):
     def check_perm(self, rctx, req, op):
         for permhook in permhooks:
             permhook(rctx, req, op)
-
-
-def getwebview(repo):
-    """The 'web.view' config controls changeset filter to hgweb. Possible
-    values are ``served``, ``visible`` and ``all``. Default is ``served``.
-    The ``served`` filter only shows changesets that can be pulled from the
-    hgweb instance.  The``visible`` filter includes secret changesets but
-    still excludes "hidden" one.
-
-    See the repoview module for details.
-
-    The option has been around undocumented since Mercurial 2.5, but no
-    user ever asked about it. So we better keep it undocumented for now."""
-    # experimental config: web.view
-    viewconfig = repo.ui.config("web", "view", untrusted=True)
-    if viewconfig == "all":
-        return repo.unfiltered()
-    elif viewconfig in repoview.filtertable:
-        return repo.filtered(viewconfig)
-    else:
-        return repo.filtered("served")

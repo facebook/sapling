@@ -389,31 +389,6 @@ class casecollisionauditor(object):
         self._newfiles.add(f)
 
 
-def filteredhash(repo, maxrev):
-    """build hash of filtered revisions in the current repoview.
-
-    Multiple caches perform up-to-date validation by checking that the
-    tiprev and tipnode stored in the cache file match the current repository.
-    However, this is not sufficient for validating repoviews because the set
-    of revisions in the view may change without the repository tiprev and
-    tipnode changing.
-
-    This function hashes all the revs filtered from the view and returns
-    that SHA-1 digest.
-    """
-    cl = repo.changelog
-    if not cl.filteredrevs:
-        return None
-    key = None
-    revs = sorted(r for r in cl.filteredrevs if r <= maxrev)
-    if revs:
-        s = hashlib.sha1()
-        for rev in revs:
-            s.update(encodeutf8("%d;" % rev))
-        key = s.digest()
-    return key
-
-
 def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
     """yield every hg repository under path, always recursively.
     The recurse flag will only control recursion into repo working dirs"""

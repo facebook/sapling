@@ -1157,7 +1157,7 @@ def spanset(repo, start=0, end=None):
     ascending = start <= end
     if not ascending:
         start, end = end + 1, start + 1
-    return _spanset(start, end, ascending, repo.changelog.filteredrevs)
+    return _spanset(start, end, ascending)
 
 
 class _spanset(abstractsmartset):
@@ -1167,15 +1167,13 @@ class _spanset(abstractsmartset):
     Note that spanset(x, y) behave almost like range(x, y) except for two
     notable points:
     - when x < y it will be automatically descending,
-    - revision filtered with this repoview will be skipped.
 
     """
 
-    def __init__(self, start, end, ascending, hiddenrevs):
+    def __init__(self, start, end, ascending):
         self._start = start
         self._end = end
         self._ascending = ascending
-        self._hiddenrevs = hiddenrevs
 
     def sort(self, reverse=False):
         self._ascending = not reverse
@@ -1189,12 +1187,6 @@ class _spanset(abstractsmartset):
         # again instead.
         return False
 
-    def _iterfilter(self, iterrange):
-        s = self._hiddenrevs
-        for r in iterrange:
-            if r not in s:
-                yield r
-
     def __iter__(self):
         if self._ascending:
             return self.fastasc()
@@ -1203,19 +1195,14 @@ class _spanset(abstractsmartset):
 
     def fastasc(self):
         iterrange = range(self._start, self._end)
-        if self._hiddenrevs:
-            return self._iterfilter(iterrange)
         return iter(iterrange)
 
     def fastdesc(self):
         iterrange = range(self._end - 1, self._start - 1, -1)
-        if self._hiddenrevs:
-            return self._iterfilter(iterrange)
         return iter(iterrange)
 
     def __contains__(self, rev):
-        hidden = self._hiddenrevs
-        return (self._start <= rev < self._end) and not (hidden and rev in hidden)
+        return self._start <= rev < self._end
 
     def __nonzero__(self):
         for r in self:
@@ -1225,16 +1212,7 @@ class _spanset(abstractsmartset):
     __bool__ = __nonzero__
 
     def __len__(self):
-        if not self._hiddenrevs:
-            return abs(self._end - self._start)
-        else:
-            count = 0
-            start = self._start
-            end = self._end
-            for rev in self._hiddenrevs:
-                if (end < rev <= start) or (start <= rev < end):
-                    count += 1
-            return abs(self._end - self._start) - count
+        return abs(self._end - self._start)
 
     def isascending(self):
         return self._ascending
@@ -1261,16 +1239,13 @@ class _spanset(abstractsmartset):
         return None
 
     def _slice(self, start, stop):
-        if self._hiddenrevs:
-            # unoptimized since all hidden revisions in range has to be scanned
-            return super(_spanset, self)._slice(start, stop)
         if self._ascending:
             x = min(self._start + start, self._end)
             y = min(self._start + stop, self._end)
         else:
             x = max(self._end - stop, self._start)
             y = max(self._end - start, self._start)
-        return _spanset(x, y, self._ascending, self._hiddenrevs)
+        return _spanset(x, y, self._ascending)
 
     def __repr__(self):
         d = {False: "-", True: "+"}[self._ascending]
@@ -1303,9 +1278,7 @@ class fullreposet(_spanset):
     """
 
     def __init__(self, repo):
-        super(fullreposet, self).__init__(
-            0, len(repo), True, repo.changelog.filteredrevs
-        )
+        super(fullreposet, self).__init__(0, len(repo), True)
 
     def __and__(self, other):
         """As self contains the whole repo, all of the other set should also be
@@ -1320,7 +1293,7 @@ class fullreposet(_spanset):
             #
             # `other` was used with "&", let's assume this is a set like
             # object.
-            other = baseset(other - self._hiddenrevs)
+            other = baseset(other)
 
         other.sort(reverse=self.isdescending())
         return other

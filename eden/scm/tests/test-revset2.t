@@ -1626,9 +1626,13 @@ Test obsstore related revsets
   |
   | o  G
   | |
+  | | x  F
+  | |/
   | o  E
   | |
   | | o  D
+  | |/
+  | | x  C
   | |/
   x |  B
   |/
@@ -1653,8 +1657,10 @@ Test obsstore related revsets
 
   $ hg log -r "successors($B)" -T '{desc}\n'
   B
+  C
   D
   E
+  F
   G
 
   $ hg log -r "successors($B)" -T '{desc}\n' --hidden
@@ -1673,6 +1679,7 @@ Test obsstore related revsets
 
   $ hg log -r "predecessors($D)" -T '{desc}\n'
   B
+  C
   D
 
   $ hg log -r "predecessors($D)" -T '{desc}\n' --hidden
@@ -1693,6 +1700,8 @@ Test obsstore related revsets
   A
   Z
   B
+  C
+  F
 
   $ hg log -r "successors($B+$A)-contentdivergent()-obsolete()" -T '{desc}\n'
   Z
