@@ -9,7 +9,7 @@ use anyhow::Error;
 use futures::{
     channel::{mpsc, oneshot},
     future::{self, Future, FutureExt},
-    stream::StreamExt,
+    stream::{self, StreamExt},
 };
 use ratelimit_meter::{algorithms::Algorithm, clock::Clock, DirectRateLimiter};
 
@@ -19,6 +19,7 @@ use crate::{EarliestPossible, ErrorKind, RateLimitStream};
 #[derive(Clone)]
 pub struct AsyncLimiter {
     dispatch: mpsc::UnboundedSender<oneshot::Sender<()>>,
+    cancel: mpsc::Sender<()>,
 }
 
 impl AsyncLimiter {
@@ -31,19 +32,19 @@ impl AsyncLimiter {
         A::NegativeDecision: EarliestPossible,
     {
         let (dispatch, dispatch_recv) = mpsc::unbounded();
+        let (cancel, cancel_recv) = mpsc::channel(1);
         let rate_limit = RateLimitStream::new(limiter);
 
-        let worker =
-            dispatch_recv
-                .zip(rate_limit)
-                .for_each(|(reply, ()): (oneshot::Sender<()>, ())| {
-                    let _ = reply.send(());
-                    future::ready(())
-                });
+        let worker = dispatch_recv
+            .zip(stream::select(cancel_recv, rate_limit))
+            .for_each(|(reply, ()): (oneshot::Sender<()>, ())| {
+                let _ = reply.send(());
+                future::ready(())
+            });
 
         tokio::spawn(worker.boxed());
 
-        Self { dispatch }
+        Self { dispatch, cancel }
     }
 
     /// access() returns a result of a future that returns once the rate limiter reports that it is
@@ -71,6 +72,12 @@ impl AsyncLimiter {
             Ok(())
         }
     }
+
+    /// cancel() allows a caller to return a token they didn't use. The token will be passed
+    /// on to any active waiter. If there are no active waiters, the token is discarded.
+    pub fn cancel(&self) {
+        let _ = self.cancel.clone().try_send(());
+    }
 }
 
 #[cfg(test)]
@@ -93,7 +100,23 @@ mod test {
         limiter.access().await?;
         limiter.access().await?;
 
-        assert!((Instant::now() - now) < Duration::from_millis(100));
+        assert!(now.elapsed() < Duration::from_millis(100));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_cancel() -> Result<(), Error> {
+        let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(1u32));
+        let limiter = AsyncLimiter::new(limiter).await;
+
+        let now = Instant::now();
+
+        for _ in 0..100 {
+            limiter.access().await?;
+            limiter.cancel();
+        }
+
+        assert!(now.elapsed() < Duration::from_millis(100));
         Ok(())
     }
 }
