@@ -20,6 +20,7 @@ use crate::hgid::{HgId, NULL_ID};
 /// In Rust, these restrictions can be enforced with an enum that makes invalid
 /// states unrepresentable.
 #[derive(
+    Copy,
     Clone,
     Debug,
     Eq,

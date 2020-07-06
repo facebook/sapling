@@ -21,8 +21,8 @@ use serde_cbor::Deserializer;
 use url::Url;
 
 use edenapi_types::{
-    CompleteTreeRequest, DataEntry, DataRequest, DataResponse, HistoryEntry, HistoryRequest,
-    HistoryResponse, Validity, WireHistoryEntry,
+    CompleteTreeRequest, DataEntry, DataError, DataRequest, DataResponse, HistoryEntry,
+    HistoryRequest, HistoryResponse, WireHistoryEntry,
 };
 use types::{HgId, Key, RepoPathBuf};
 
@@ -594,28 +594,24 @@ fn prepare_cbor_post<H, R: Serialize>(
 /// result and the user's configuration.
 fn check_data(entry: &DataEntry, validate: bool) -> Result<Bytes> {
     log::trace!("Validating data for: {}", entry.key());
-
-    let (data, validity) = entry.data();
-
-    match (validity, validate) {
-        (Validity::Valid, _) => Ok(data),
-        (Validity::Redacted, _) => {
-            log::debug!("Skipping validation for redacted content: {}", entry.key());
-            Ok(data)
+    entry.data().or_else(|e| match e {
+        DataError::Redacted(..) => {
+            log::warn!("Skipping validation for redacted content: {}", entry.key());
+            Ok(e.data())
         }
-        (Validity::InvalidEmptyPath(_), _) => {
+        DataError::MaybeHybridManifest(_) => {
             log::warn!("Ignoring validation failure for: {}", entry.key());
-            log::warn!("This failure may be expected for legacy reasons");
-            Ok(data)
+            log::warn!("(Possible hybrid manifest)");
+            Ok(e.data())
         }
-        (Validity::Invalid(e), true) => {
-            log::debug!("Data validation failed for: {}", entry.key());
-            Err(e)
+        DataError::Corrupt(_) if validate => {
+            log::warn!("Data validation failed for: {}", entry.key());
+            Err(e.into())
         }
-        (Validity::Invalid(_), false) => {
+        DataError::Corrupt(_) => {
             log::warn!("Ignoring validation failure for: {}", entry.key());
             log::warn!("(Failure ignored because data validation is disabled)");
-            Ok(data)
+            Ok(e.data())
         }
-    }
+    })
 }

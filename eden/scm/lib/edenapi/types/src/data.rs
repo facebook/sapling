@@ -7,10 +7,10 @@
 
 use std::iter::FromIterator;
 
-use anyhow::{format_err, Error};
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use thiserror::Error;
 
 use types::{hgid::HgId, key::Key, parents::Parents};
 
@@ -21,6 +21,47 @@ const REDACTED_TOMBSTONE: &str =
      AF9ivWGaC6ByswQZUgf1nlyxcDcahHknJS15Vl9Lvc4NokYhMg0mV1rapq1a4bhNo\
      UI9EWTBiAkYmkadkO3YQXV0TAjyhUQWxxLVskjOwiiFPdL1l1pdYYCLTE3CpgOoxQ\
      V3EPVxGUPh1FGfk7F9Myv22qN1sUPSNN4h3IFfm2NNPRFgWPDsqAcaQ7BUSKa\n";
+
+#[derive(Debug, Error)]
+pub enum DataError {
+    #[error(transparent)]
+    Corrupt(InvalidHgId),
+    /// Data entry was redacted by the server. The received content
+    /// did not validate but matches the known tombstone content for
+    /// redacted data.
+    #[error("Content for {0} is redacted")]
+    Redacted(Key, Bytes),
+    /// If this entry contains manifest content and represents a root node
+    /// (i.e., has an empty path), it may be a hybrid tree manifest which
+    /// has the content of a root tree manifest node, but the hash of the
+    /// corresponding flat manifest. This situation should only occur for
+    /// manifests created in "hybrid mode" (i.e., during a transition from
+    /// flat manifests to tree manifests).
+    #[error("Detected possible hybrid manifest: {0}")]
+    MaybeHybridManifest(#[source] InvalidHgId),
+}
+
+impl DataError {
+    /// Get the data anyway, despite the error.
+    pub fn data(&self) -> Bytes {
+        use DataError::*;
+        match self {
+            Redacted(_, data) => data,
+            Corrupt(InvalidHgId { data, .. }) => data,
+            MaybeHybridManifest(InvalidHgId { data, .. }) => data,
+        }
+        .clone()
+    }
+}
+
+#[derive(Debug, Error)]
+#[error("Invalid hash: {expected} (expected) != {computed} (computed)")]
+pub struct InvalidHgId {
+    expected: HgId,
+    computed: HgId,
+    data: Bytes,
+    parents: Parents,
+}
 
 /// Structure representing source control data (typically either file content
 /// or a tree entry) on the wire. Includes the information required to add the
@@ -43,29 +84,6 @@ pub struct DataEntry {
     parents: Parents,
 }
 
-/// Enum representing the results of attempting to validate a DataEntry
-/// by computing the expected filenode hash of its content. Due to various
-/// corner cases, the result of such a validation is more complex than
-/// a simple boolean.
-pub enum Validity {
-    /// Filenode hash successfully validated.
-    Valid,
-    /// Data entry was redacted by the server. The received content
-    /// did not validate but matches the known tombstone content for
-    /// redacted data.
-    Redacted,
-    /// Validation failed, but the path associated with this data is empty.
-    /// If this entry contains manifest content and represents a root node
-    /// (i.e., has an empty path), it may be a hybrid tree manifest which
-    /// has the content of a root tree manifest node, but the hash of the
-    /// corresponding flat manifest. This situation should only occur for
-    /// manifests created in "hybrid mode" (i.e., during a transition from
-    /// flat manifests to tree manifests).
-    InvalidEmptyPath(Error),
-    /// Validation failed.
-    Invalid(Error),
-}
-
 impl DataEntry {
     pub fn new(key: Key, data: Bytes, parents: Parents) -> Self {
         Self { key, data, parents }
@@ -75,53 +93,62 @@ impl DataEntry {
         &self.key
     }
 
-    /// Get this entry's data content. This method checks the validity of the
-    /// data and return the validation result along with the data iself.
-    pub fn data(&self) -> (Bytes, Validity) {
-        (self.data.clone(), self.validate())
+    /// Get this entry's data. Checks data integrity but allows hash mismatches
+    /// if the content is redacted or if this is a suspected hybrid manifest.
+    pub fn data(&self) -> Result<Bytes, DataError> {
+        use DataError::*;
+        self.data_checked().or_else(|e| match e {
+            Corrupt(_) => Err(e),
+            Redacted(..) | MaybeHybridManifest(_) => Ok(e.data()),
+        })
     }
 
-    /// Compute the file/manifest ID of this `DataEntry` using its parents and
-    /// content, and compare it with the known hgid from the entry's `Key`.
-    fn validate(&self) -> Validity {
+    /// Get this entry's data after verifying the hgid hash.
+    pub fn data_checked(&self) -> Result<Bytes, DataError> {
         // TODO(T48685378): Handle redacted content in a less hacky way.
         if self.data.len() == REDACTED_TOMBSTONE.len() && self.data == REDACTED_TOMBSTONE {
-            return Validity::Redacted;
+            return Err(DataError::Redacted(self.key.clone(), self.data.clone()));
         }
 
-        // Mercurial hashes the parent nodes in sorted order
-        // when computing the file/manifest ID.
-        let (p1, p2) = match self.parents.clone().into_nodes() {
-            (p1, p2) if p1 > p2 => (p2, p1),
-            (p1, p2) => (p1, p2),
-        };
+        let computed = compute_hgid(&self.data, self.parents);
+        if computed != self.key.hgid {
+            let err = InvalidHgId {
+                expected: self.key.hgid,
+                computed,
+                data: self.data.clone(),
+                parents: self.parents,
+            };
 
-        let mut hasher = Sha1::new();
-        hasher.input(p1.as_ref());
-        hasher.input(p2.as_ref());
-        hasher.input(&self.data);
-        let hash: [u8; 20] = hasher.result().into();
-
-        let computed = HgId::from_byte_array(hash);
-        let expected = &self.key.hgid;
-
-        if &computed != expected {
-            let err = format_err!(
-                "Content hash validation failed. Expected: {}; Computed: {}; Parents: (p1: {}, p2: {})",
-                expected.to_hex(),
-                computed.to_hex(),
-                p1.to_hex(),
-                p2.to_hex(),
-            );
-            if self.key.path.is_empty() {
-                return Validity::InvalidEmptyPath(err);
+            return Err(if self.key.path.is_empty() {
+                DataError::Corrupt(err)
             } else {
-                return Validity::Invalid(err);
-            }
+                DataError::MaybeHybridManifest(err)
+            });
         }
 
-        Validity::Valid
+        Ok(self.data.clone())
     }
+
+    /// Get this entry's data without verifying the hgid hash.
+    pub fn data_unchecked(&self) -> Bytes {
+        self.data.clone()
+    }
+}
+
+fn compute_hgid(data: &[u8], parents: Parents) -> HgId {
+    // Parents must be hashed in sorted order.
+    let (p1, p2) = match parents.into_nodes() {
+        (p1, p2) if p1 > p2 => (p2, p1),
+        (p1, p2) => (p1, p2),
+    };
+
+    let mut hasher = Sha1::new();
+    hasher.input(p1.as_ref());
+    hasher.input(p2.as_ref());
+    hasher.input(data);
+    let hash: [u8; 20] = hasher.result().into();
+
+    HgId::from_byte_array(hash)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]

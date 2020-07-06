@@ -22,7 +22,7 @@ use serde::de::DeserializeOwned;
 use serde_cbor::Deserializer;
 use structopt::StructOpt;
 
-use edenapi_types::{DataEntry, HistoryResponseChunk, Validity, WireHistoryEntry};
+use edenapi_types::{DataEntry, DataError, HistoryResponseChunk, WireHistoryEntry};
 use types::{Key, Parents, RepoPathBuf};
 
 #[derive(Debug, StructOpt)]
@@ -126,21 +126,21 @@ fn cmd_data_cat(args: DataCatArgs) -> Result<()> {
         .find(|entry| entry.key() == &key)
         .ok_or_else(|| anyhow!("Key not found"))?;
 
-    write_output(args.output, &entry.data().0)
+    write_output(args.output, &entry.data()?)
 }
 
 fn cmd_data_check(args: DataCheckArgs) -> Result<()> {
     let entries: Vec<DataEntry> = read_input(args.input)?;
     for entry in entries {
-        match entry.data().1 {
-            Validity::Valid => {}
-            Validity::Redacted => {
+        match entry.data() {
+            Ok(_) => {}
+            Err(DataError::Redacted(..)) => {
                 println!("{} [Contents redacted]", entry.key());
             }
-            Validity::InvalidEmptyPath(e) => {
+            Err(DataError::MaybeHybridManifest(e)) => {
                 println!("{} [Possible flat manifest hash] {}", entry.key(), e);
             }
-            Validity::Invalid(e) => {
+            Err(DataError::Corrupt(e)) => {
                 println!("{} [Invalid hash] {}", entry.key(), e);
             }
         }

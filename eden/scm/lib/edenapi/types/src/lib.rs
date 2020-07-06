@@ -30,7 +30,7 @@ pub mod history;
 pub mod json;
 pub mod tree;
 
-pub use crate::data::{DataEntry, DataRequest, DataResponse, Validity};
+pub use crate::data::{DataEntry, DataError, DataRequest, DataResponse};
 pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
 };
