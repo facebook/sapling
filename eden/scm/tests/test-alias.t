@@ -456,8 +456,8 @@ optional repository
 no usage
 
   $ hg nousage
-  no rollback information available
-  [1]
+  abort: rollback is dangerous and should not be used
+  [255]
 
   $ echo foo > foo
   $ hg commit -Amfoo

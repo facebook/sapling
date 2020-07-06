@@ -5559,14 +5559,7 @@ def rollback(ui, repo, **opts):
 
     Returns 0 on success, 1 if no rollback data is available.
     """
-    if not util.istest():
-        ui.deprecate("hg-rollback", "rollback is deprecated because it is unsafe")
-    if not ui.configbool("ui", "rollback"):
-        raise error.Abort(
-            _("rollback is disabled because it is unsafe"),
-            hint=_("see `hg help -v rollback` for information"),
-        )
-    return repo.rollback(dryrun=opts.get(r"dry_run"), force=opts.get(r"force"))
+    raise error.Abort(_("rollback is dangerous and should not be used"))
 
 
 @command(
