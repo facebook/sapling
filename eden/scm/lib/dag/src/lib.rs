@@ -45,5 +45,4 @@ pub use namedag::MemNameDag as MemDag;
 pub use nameset::NameIter as SetIter;
 pub type Vertex = VertexName;
 
-#[cfg(test)]
-mod tests;
+pub mod tests;

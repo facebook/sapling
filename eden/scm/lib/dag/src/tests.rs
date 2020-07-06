@@ -5,14 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::id::{Group, Id, VertexName};
-use crate::iddag::FirstAncestorConstraint;
-use crate::namedag::MemNameDag;
+use crate::id::{Group, VertexName};
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
 use crate::ops::ImportAscii;
-use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
-#[cfg(test)]
 use crate::DagAlgorithm;
 use crate::IdMap;
 use crate::InverseDag;
@@ -22,6 +18,15 @@ use crate::SpanSet;
 use anyhow::Result;
 use std::sync::Arc;
 use tempfile::tempdir;
+
+#[cfg(test)]
+use crate::iddag::FirstAncestorConstraint;
+#[cfg(test)]
+use crate::namedag::MemNameDag;
+#[cfg(test)]
+use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
+#[cfg(test)]
+use crate::Id;
 
 // Example from segmented-changelog.pdf
 // - DAG1: page 10
@@ -55,9 +60,8 @@ static ASCII_DAG5: &str = r#"
          \   \   \
       A---C---E---G"#;
 
-#[test]
-fn test_mem_namedag() -> Result<()> {
-    let dag = from_ascii(ASCII_DAG1);
+fn test_generic_dag1(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
+    let dag = from_ascii(dag, ASCII_DAG1);
     assert_eq!(expand(dag.all()?), "L K J I H G F E D C B A");
     assert_eq!(expand(dag.ancestors(nameset("H I"))?), "I H G F E D C B A");
     assert_eq!(expand(dag.parents(nameset("H I E"))?), "G D B");
@@ -68,9 +72,10 @@ fn test_mem_namedag() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_inverse_dag() -> Result<()> {
-    let dag = InverseDag::new(Arc::new(from_ascii(ASCII_DAG1)));
+fn test_generic_dag_inverse(
+    dag: impl DagAlgorithm + DagAddHeads + Send + Sync + 'static,
+) -> Result<()> {
+    let dag = InverseDag::new(Arc::new(from_ascii(dag, ASCII_DAG1)));
     assert_eq!(expand(dag.all()?), "L K J I H G F E D C B A");
     assert_eq!(
         expand(dag.descendants(nameset("H I"))?),
@@ -86,8 +91,7 @@ fn test_inverse_dag() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_beautify() -> Result<()> {
+fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -> D) -> Result<()> {
     let ascii = r#"
         A C
         | |
@@ -95,7 +99,7 @@ fn test_beautify() -> Result<()> {
         |/
         E"#;
     let order = ["B", "D", "A", "C"];
-    let dag = from_ascii_with_heads(ascii, Some(&order));
+    let dag = from_ascii_with_heads(new_dag(), ascii, Some(&order));
     assert_eq!(expand(dag.all()?), "C A D B E");
 
     let dag2 = dag.beautify(None)?;
@@ -116,7 +120,7 @@ fn test_beautify() -> Result<()> {
         |/
         D"#;
     let order = ["C", "E", "G", "F", "A"];
-    let dag = from_ascii_with_heads(ascii, Some(&order));
+    let dag = from_ascii_with_heads(new_dag(), ascii, Some(&order));
     assert_eq!(expand(dag.all()?), "A F G B E C D");
 
     let dag2 = dag.beautify(None)?;
@@ -132,7 +136,7 @@ fn test_beautify() -> Result<()> {
                    \
                     L "#;
     let order = ["D", "J", "L", "K", "G"];
-    let dag = from_ascii_with_heads(ascii, Some(&order));
+    let dag = from_ascii_with_heads(new_dag(), ascii, Some(&order));
     assert_eq!(expand(dag.all()?), "G F E K L J I H D C B A");
 
     let dag2 = dag.beautify(None)?;
@@ -141,8 +145,7 @@ fn test_beautify() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_namedag() -> Result<()> {
+fn test_generic_dag2(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     let ascii = r#"
             J K
            /|\|\
@@ -151,8 +154,7 @@ fn test_namedag() -> Result<()> {
           E F
          /|/|\
         A B C D"#;
-    let result = build_segments(ascii, "J K", 2);
-    let dag = &result.name_dag;
+    let dag = from_ascii_with_heads(dag, ascii, Some(&["J", "K"][..]));
 
     let v = |name: &str| -> VertexName { VertexName::copy_from(name.as_bytes()) };
 
@@ -177,6 +179,28 @@ fn test_namedag() -> Result<()> {
     assert_eq!(expand(dag.descendants(nameset("F E"))?), "K J I H F G E");
 
     Ok(())
+}
+
+#[test]
+fn test_mem_namedag() {
+    test_generic_dag1(MemNameDag::new()).unwrap()
+}
+
+#[test]
+fn test_inverse_dag() {
+    test_generic_dag_inverse(MemNameDag::new()).unwrap()
+}
+
+#[test]
+fn test_dag_beautify() {
+    test_generic_dag_beautify(|| MemNameDag::new()).unwrap()
+}
+
+#[test]
+fn test_namedag() {
+    let dir = tempdir().unwrap();
+    let name_dag = NameDag::open(dir.path().join("n")).unwrap();
+    test_generic_dag2(name_dag).unwrap();
 }
 
 #[test]
@@ -1000,12 +1024,21 @@ pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> Bu
     }
 }
 
-fn from_ascii(text: &str) -> MemNameDag {
-    from_ascii_with_heads(text, None)
+fn from_ascii<D: DagAddHeads>(dag: D, text: &str) -> D {
+    from_ascii_with_heads(dag, text, None)
 }
 
-fn from_ascii_with_heads(text: &str, heads: Option<&[&str]>) -> MemNameDag {
-    let mut dag = MemNameDag::new();
+fn from_ascii_with_heads<D: DagAddHeads>(mut dag: D, text: &str, heads: Option<&[&str]>) -> D {
     dag.import_ascii_with_heads(text, heads).unwrap();
     dag
+}
+
+/// Test a general DAG interface against a few test cases.
+pub fn test_generic_dag<D: DagAddHeads + DagAlgorithm + Send + Sync + 'static>(
+    new_dag: impl Fn() -> D,
+) {
+    test_generic_dag1(new_dag()).unwrap();
+    test_generic_dag2(new_dag()).unwrap();
+    test_generic_dag_inverse(new_dag()).unwrap();
+    test_generic_dag_beautify(new_dag).unwrap()
 }
