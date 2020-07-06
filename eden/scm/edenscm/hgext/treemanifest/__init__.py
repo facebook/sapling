@@ -487,6 +487,12 @@ def wraprepo(repo):
             if not self.ui.configbool("treemanifest", "prefetchdraftparents"):
                 return
 
+            # strip only logically removes commits, the added commits are
+            # pointless and can have issues like invalidated revs. Do nothing
+            # in this case.
+            if self.ui.cmdname == "debugstrip" or "strip" in tr.desc:
+                return
+
             revs = tr.changes.get("revs")
             if not revs:
                 return
