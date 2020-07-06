@@ -30,6 +30,7 @@ use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::convert::TryFrom;
 use std::fs;
@@ -567,6 +568,15 @@ impl RevlogIndex {
             "changelog was truncated unexpectedly"
         );
 
+        // Read from disk about new nodes. Do not write them again.
+        let mut existed_nodes = HashSet::new();
+        if old_rev_len > self.data_len() {
+            let data = BytesSlice::<RevlogEntry>::from(read_path(&self.index_path, Bytes::new())?);
+            for entry in &data.as_ref()[self.data_len()..] {
+                existed_nodes.insert(entry.node.as_ref().to_vec());
+            }
+        }
+
         // Adjust `rev` to take possible changes on-disk into consideration.
         // For example,
         // - On-disk revlog.i has rev 0, rev 1.
@@ -586,14 +596,17 @@ impl RevlogIndex {
 
         let mut new_data = Vec::new();
         let mut new_index = Vec::new();
+        let mut i = 0;
 
-        for (i, ((raw, node), parents)) in self
+        for ((raw, node), parents) in self
             .pending_raw_data
             .iter()
             .zip(self.pending_nodes.iter())
             .zip(self.pending_parents.iter())
-            .enumerate()
         {
+            if existed_nodes.contains(node.as_ref()) {
+                continue;
+            }
             let raw_len = raw.len();
             let compressed = lz4_pyframe::compress(&raw)?;
             let chunk = if compressed.len() < raw.len() {
@@ -610,6 +623,7 @@ impl RevlogIndex {
 
             let offset = old_offset + new_data.len() as u64;
             let rev = old_rev_len + i;
+            i += 1;
 
             let entry = RevlogEntry {
                 offset_flags: u64::to_be(offset << 16),
@@ -1270,6 +1284,7 @@ commit 3"#
         revlog1.insert(v(2), vec![0], text.to_vec().into());
 
         revlog2.insert(v(3), vec![], b"commit 3".to_vec().into());
+        revlog2.insert(v(1), vec![], b"commit 1".to_vec().into()); // duplicate with revlog1
         revlog2.insert(v(4), vec![0], b"commit 4".to_vec().into());
         revlog2.insert(v(5), vec![1, 0], b"commit 5".to_vec().into());
 
