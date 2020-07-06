@@ -192,18 +192,17 @@ def _determine_actions_for_conflicts(repo, src, conflicts):
     for conflict in conflicts:
         # The action tuple is:
         # - path_in_1, path_in_2, path_in_ancestor, move, ancestor_node
+        path = pycompat.decodeutf8(conflict.path)
 
         if conflict.type == ConflictType.ERROR:
             # We don't record this as a conflict for now.
             # We will report the error, but the file will show modified in
             # the working directory status after the update returns.
-            repo.ui.write_err(
-                _("error updating %s: %s\n") % (conflict.path, conflict.message)
-            )
+            repo.ui.write_err(_("error updating %s: %s\n") % (path, conflict.message))
             continue
         elif conflict.type == ConflictType.MODIFIED_REMOVED:
             action_type = "cd"
-            action = (conflict.path, None, conflict.path, False, src.node())
+            action = (path, None, path, False, src.node())
             prompt = "prompt changed/deleted"
         elif conflict.type == ConflictType.UNTRACKED_ADDED:
             # In core Mercurial, this is the case where the file does not exist
@@ -213,11 +212,11 @@ def _determine_actions_for_conflicts(repo, src, conflicts):
             # does not exist in the manifest of the common ancestor for the
             # merge.
             action_type = "m"
-            action = (conflict.path, conflict.path, None, False, src.node())
+            action = (path, path, None, False, src.node())
             prompt = "both created"
         elif conflict.type == ConflictType.REMOVED_MODIFIED:
             action_type = "dc"
-            action = (None, conflict.path, conflict.path, False, src.node())
+            action = (None, path, path, False, src.node())
             prompt = "prompt deleted/changed"
         elif conflict.type == ConflictType.MISSING_REMOVED:
             # Nothing to do here really.  The file was already removed
@@ -226,7 +225,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts):
             continue
         elif conflict.type == ConflictType.MODIFIED_MODIFIED:
             action_type = "m"
-            action = (conflict.path, conflict.path, conflict.path, False, src.node())
+            action = (path, path, path, False, src.node())
             prompt = "versions differ"
         elif conflict.type == ConflictType.DIRECTORY_NOT_EMPTY:
             # This is a file in a directory that Eden would have normally
@@ -236,10 +235,10 @@ def _determine_actions_for_conflicts(repo, src, conflicts):
         else:
             raise RuntimeError(
                 "unknown conflict type received from eden: "
-                "%r, %r, %r" % (conflict.type, conflict.path, conflict.message)
+                "%r, %r, %r" % (conflict.type, path, conflict.message)
             )
 
-        actions[action_type].append((conflict.path, action, prompt))
+        actions[action_type].append((path, action, prompt))
 
     return actions
 
