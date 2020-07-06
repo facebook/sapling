@@ -8,12 +8,14 @@
 use crate::nodemap;
 use crate::NodeRevMap;
 use anyhow::bail;
+use anyhow::ensure;
 use anyhow::Result;
 use bit_vec::BitVec;
 use dag::nameset::hints::Flags;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
 use dag::ops::IdMapEq;
+use dag::ops::IdMapSnapshot;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
 use dag::Group;
@@ -332,7 +334,7 @@ pub struct RevlogIndex {
 }
 
 /// "smallvec" optimization
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct ParentRevs([i32; 2]);
 
 impl ParentRevs {
@@ -355,7 +357,7 @@ impl ParentRevs {
 
 /// Revlog entry. See "# index ng" in revlog.py.
 #[repr(packed)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct RevlogEntry {
     offset_flags: u64,
     compressed: i32,
@@ -451,6 +453,36 @@ impl RevlogIndex {
         let p1 = i32::from_be(data[rev as usize].p1);
         let p2 = i32::from_be(data[rev as usize].p2);
         ParentRevs::from_p1p2(p1, p2)
+    }
+
+    /// Get raw content from a revision.
+    pub fn raw_data(&self, rev: u32, mut file: impl io::Seek + io::Read) -> Result<Bytes> {
+        let entry = self.data()[rev as usize];
+        let base = i32::from_be(entry.base);
+        ensure!(
+            base == rev as i32 || base == -1,
+            "delta-chain (base {}, rev {}) is unsupported when reading changelog",
+            base,
+            rev,
+        );
+
+        let offset = if rev == 0 {
+            0
+        } else {
+            u64::from_be(entry.offset_flags) >> 16
+        };
+
+        let compressed_size = i32::from_be(entry.compressed) as usize;
+        let mut chunk = vec![0; compressed_size];
+        file.seek(io::SeekFrom::Start(offset))?;
+        file.read_exact(&mut chunk)?;
+        let decompressed = match chunk.get(0) {
+            None => Bytes::new(),
+            Some(b'u') | Some(b'\0') => Bytes::copy_from_slice(&chunk[1..]),
+            Some(b'4') => Bytes::from(lz4_pyframe::decompress(&chunk[1..])?),
+            Some(&c) => bail!("unsupported header: {:?}", c as char),
+        };
+        Ok(decompressed)
     }
 
     /// Insert a new revision with given parents at the end.
@@ -806,5 +838,128 @@ impl IdMapEq for RevlogIndex {
             other,
             &(self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>),
         )
+    }
+}
+
+impl IdMapSnapshot for RevlogIndex {
+    fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
+        Ok(self.get_snapshot())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_simple_3_commits() -> Result<()> {
+        // 00changelog.i and 00changelog.d are created by real hg commands.
+        let changelog_i = from_xxd(
+            r#"
+00000000: 0000 0001 0000 0000 0000 003d 0000 0059  ...........=...Y
+00000010: 0000 0000 0000 0000 ffff ffff ffff ffff  ................
+00000020: 5d97 babb c8ff 796c c63e 3d1b d85d 303c  ].....yl.>=..]0<
+00000030: 6741 d574 0000 0000 0000 0000 0000 0000  gA.t............
+00000040: 0000 0000 003d 0000 0000 0046 0000 00c4  .....=.....F....
+00000050: 0000 0001 0000 0001 0000 0000 ffff ffff  ................
+00000060: 116d 9f6f fa04 e925 47bd 7a4c e3d2 6bb2  .m.o...%G.zL..k.
+00000070: fe3e aa71 0000 0000 0000 0000 0000 0000  .>.q............
+00000080: 0000 0000 0083 0000 0000 005c 0000 005b  ...........\...[
+00000090: 0000 0002 0000 0002 0000 0001 ffff ffff  ................
+000000a0: d9ab b672 e662 0779 042a 5309 f250 60f1  ...r.b.y.*S..P`.
+000000b0: 0f6a bf0d 0000 0000 0000 0000 0000 0000  .j..............
+"#,
+        );
+        let changelog_d = from_xxd(
+            r#"
+00000000: 3459 0000 001f 3001 0014 f022 0a4a 756e  4Y....0....".Jun
+00000010: 2057 7520 3c71 7561 726b 4066 622e 636f   Wu <quark@fb.co
+00000020: 6d3e 0a31 3539 3131 3336 3439 3420 3235  m>.1591136494 25
+00000030: 3230 300a 0a63 6f6d 6d69 7420 3134 c400  200..commit 14..
+00000040: 0000 1f30 0100 14ff 220a 4a75 6e20 5775  ...0....".Jun Wu
+00000050: 203c 7175 6172 6b40 6662 2e63 6f6d 3e0a   <quark@fb.com>.
+00000060: 3135 3931 3133 3635 3036 2032 3532 3030  1591136506 25200
+00000070: 0a0a 636f 6d6d 6974 2032 0100 5350 3232  ..commit 2..SP22
+00000080: 3232 3275 3835 3135 6434 6266 6461 3736  222u8515d4bfda76
+00000090: 3865 3034 6166 3463 3133 6136 3961 3732  8e04af4c13a69a72
+000000a0: 6532 3863 3765 6666 6265 6137 0a4a 756e  e28c7effbea7.Jun
+000000b0: 2057 7520 3c71 7561 726b 4066 622e 636f   Wu <quark@fb.co
+000000c0: 6d3e 0a31 3539 3131 3339 3531 3620 3235  m>.1591139516 25
+000000d0: 3230 300a 610a 0a63 6f6d 6d69 7420 33    200.a..commit 3
+"#,
+        );
+
+        let dir = tempdir()?;
+        let dir = dir.path();
+        let changelog_i_path = dir.join("00changelog.i");
+        std::fs::write(&changelog_i_path, changelog_i)?;
+        let nodemap_path = dir.join("00changelog.nodemap");
+        let index = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
+
+        // Read parents.
+        assert_eq!(index.parent_revs(0), ParentRevs([-1, -1]));
+        assert_eq!(index.parent_revs(1), ParentRevs([0, -1]));
+        assert_eq!(index.parent_revs(2), ParentRevs([1, -1]));
+
+        // Read commit data.
+        let read = |rev: u32| -> Result<String> {
+            let mut data = io::Cursor::new(&changelog_d);
+            Ok(std::str::from_utf8(&index.raw_data(rev, &mut data)?)?.to_string())
+        };
+        assert_eq!(
+            read(0)?,
+            r#"0000000000000000000000000000000000000000
+Jun Wu <quark@fb.com>
+1591136494 25200
+
+commit 1"#
+        );
+        assert_eq!(
+            read(1)?,
+            r#"0000000000000000000000000000000000000000
+Jun Wu <quark@fb.com>
+1591136506 25200
+
+commit 222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"#
+        );
+        // commit 3 is not lz4 compressed.
+        assert_eq!(
+            read(2)?,
+            r#"8515d4bfda768e04af4c13a69a72e28c7effbea7
+Jun Wu <quark@fb.com>
+1591139516 25200
+a
+
+commit 3"#
+        );
+
+        Ok(())
+    }
+
+    fn from_xxd(s: &str) -> Vec<u8> {
+        s.lines()
+            .flat_map(|line| {
+                line.split("  ")
+                    .nth(0)
+                    .unwrap_or("")
+                    .split(": ")
+                    .nth(1)
+                    .unwrap_or("")
+                    .split(" ")
+                    .flat_map(|s| {
+                        (0..(s.len() / 2))
+                            .map(|i| u8::from_str_radix(&s[i * 2..i * 2 + 2], 16).unwrap())
+                            .collect::<Vec<_>>()
+                    })
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_xxd() {
+        let xxd = "00000000: 3132 3334 0a                             1234.";
+        let bytes = from_xxd(xxd);
+        assert_eq!(bytes, b"1234\n");
     }
 }

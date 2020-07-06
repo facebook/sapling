@@ -8,7 +8,11 @@ anyhow = "1.0.20"
 bit-vec = "0.6"
 dag = { path = "../dag" }
 indexedlog = { path = "../indexedlog" }
+lz4-pyframe = { path = "../lz4-pyframe" }
 minibytes = { path = "../minibytes" }
 parking_lot = "0.10"
 radixbuf = { path = "../radixbuf" }
 util = { path = "../util" }
+
+[dev-dependencies]
+tempfile = "3"
