@@ -223,6 +223,10 @@ def strip(ui, repo, nodelist, backup=True, topic="backup"):
             deleteobsmarkers(repo.obsstore, stripobsidx)
             del repo.obsstore
 
+        # changelog was just stripped. Various indexes using mmap would
+        # have wrong data. Force a reload.
+        repo.invalidatechangelog()
+
         repo._phasecache.filterunknown(repo)
         if tmpbundlefile:
             ui.note(_("adding branch\n"))

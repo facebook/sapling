@@ -1847,6 +1847,13 @@ class localrepository(object):
             # changes detectable, and abort if changed.
             self.store.invalidatecaches()
 
+    def invalidatechangelog(self):
+        """Invalidates the changelog. Discard pending changes."""
+        if "changelog" in self._filecache:
+            del self._filecache["changelog"]
+        if "changelog" in self.__dict__:
+            del self.__dict__["changelog"]
+
     def invalidateall(self):
         """Fully invalidates both store and non-store parts, causing the
         subsequent operation to reread any outside changes."""
