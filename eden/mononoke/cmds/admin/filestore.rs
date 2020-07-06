@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{anyhow, bail, format_err, Error, Result};
 use blobstore::Loadable;
 use bytes::BytesMut;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -14,7 +14,11 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{FutureExt, TryFutureExt},
+    stream::{StreamExt, TryStreamExt},
+};
 use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{Future, IntoFuture};
 use mononoke_types::{
@@ -23,7 +27,10 @@ use mononoke_types::{
 };
 use slog::{info, Logger};
 use std::str::FromStr;
-use tokio::{fs::File, io::BufReader};
+use tokio::{
+    fs::File,
+    io::{AsyncWriteExt, BufReader},
+};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 use crate::error::SubcommandError;
@@ -31,6 +38,7 @@ use crate::error::SubcommandError;
 pub const FILESTORE: &str = "filestore";
 const COMMAND_METADATA: &str = "metadata";
 const COMMAND_STORE: &str = "store";
+const COMMAND_FETCH: &str = "fetch";
 const COMMAND_VERIFY: &str = "verify";
 const COMMAND_IS_CHUNKED: &str = "is-chunked";
 
@@ -67,6 +75,11 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                     .takes_value(true)
                     .required(true),
             ),
+        )
+        .subcommand(
+            SubCommand::with_name(COMMAND_FETCH)
+                .arg(kind_arg.clone())
+                .arg(id_arg.clone()),
         )
         .subcommand(
             SubCommand::with_name(COMMAND_VERIFY)
@@ -128,6 +141,28 @@ pub async fn execute_command<'a>(
                     logger,
                     "Wrote {} ({} bytes)", metadata.content_id, metadata.total_size
                 );
+                Ok(())
+            }
+            .boxed()
+            .compat()
+            .boxify()
+        }
+        (COMMAND_FETCH, Some(matches)) => {
+            let fetch_key = extract_fetch_key(matches)?;
+            async move {
+                let repo = blobrepo.compat().await?;
+                let mut stream = filestore::fetch(&repo.get_blobstore(), ctx.clone(), &fetch_key)
+                    .compat()
+                    .await?
+                    .ok_or_else(|| anyhow!("content not found"))?
+                    .compat();
+
+                let mut stdout = tokio::io::stdout();
+
+                while let Some(b) = stream.next().await {
+                    stdout.write_all(b?.as_ref()).await.map_err(Error::from)?;
+                }
+
                 Ok(())
             }
             .boxed()
