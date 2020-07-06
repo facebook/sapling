@@ -62,12 +62,12 @@ static ASCII_DAG5: &str = r#"
 
 fn test_generic_dag1(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     let dag = from_ascii(dag, ASCII_DAG1);
-    assert_eq!(expand(dag.all()?), "L K J I H G F E D C B A");
-    assert_eq!(expand(dag.ancestors(nameset("H I"))?), "I H G F E D C B A");
-    assert_eq!(expand(dag.parents(nameset("H I E"))?), "G D B");
-    assert_eq!(expand(dag.children(nameset("G D L"))?), "I H E");
-    assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "I C A");
-    assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "J F");
+    assert_eq!(expand(dag.all()?), "A B C D E F G H I J K L");
+    assert_eq!(expand(dag.ancestors(nameset("H I"))?), "A B C D E F G H I");
+    assert_eq!(expand(dag.parents(nameset("H I E"))?), "B D G");
+    assert_eq!(expand(dag.children(nameset("G D L"))?), "E H I");
+    assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "A C I");
+    assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "F J");
     assert_eq!(expand(dag.gca_all(nameset("J K H"))?), "G");
     Ok(())
 }
@@ -76,17 +76,17 @@ fn test_generic_dag_inverse(
     dag: impl DagAlgorithm + DagAddHeads + Send + Sync + 'static,
 ) -> Result<()> {
     let dag = InverseDag::new(Arc::new(from_ascii(dag, ASCII_DAG1)));
-    assert_eq!(expand(dag.all()?), "L K J I H G F E D C B A");
+    assert_eq!(expand(dag.all()?), "A B C D E F G H I J K L");
     assert_eq!(
         expand(dag.descendants(nameset("H I"))?),
-        "I H G F E D C B A"
+        "A B C D E F G H I"
     );
-    assert_eq!(expand(dag.children(nameset("H I E"))?), "G D B");
-    assert_eq!(expand(dag.parents(nameset("G D L"))?), "I H E");
+    assert_eq!(expand(dag.children(nameset("H I E"))?), "B D G");
+    assert_eq!(expand(dag.parents(nameset("G D L"))?), "E H I");
     assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "A C I");
-    assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "J F");
+    assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "F J");
     assert_eq!(expand(dag.gca_all(nameset("J H"))?), "K");
-    assert_eq!(expand(dag.range(nameset("F"), nameset("D"))?), "F E D");
+    assert_eq!(expand(dag.range(nameset("F"), nameset("D"))?), "D E F");
     assert_eq!(expand(dag.range(nameset("D"), nameset("F"))?), "");
     Ok(())
 }
@@ -100,7 +100,7 @@ fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -
         E"#;
     let order = ["B", "D", "A", "C"];
     let dag = from_ascii_with_heads(new_dag(), ascii, Some(&order));
-    assert_eq!(expand(dag.all()?), "C A D B E");
+    assert_eq!(expand(dag.all()?), "A B C D E");
 
     let dag2 = dag.beautify(None)?;
     assert_eq!(expand(dag2.all()?), "A B C D E");
@@ -109,7 +109,7 @@ fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -
     assert_eq!(expand(dag3.all()?), "A B C D E");
 
     let dag4 = dag.beautify(Some(nameset("C D E")))?;
-    assert_eq!(expand(dag4.all()?), "C D A B E");
+    assert_eq!(expand(dag4.all()?), "A B C D E");
 
     let ascii = r#"
         A G
@@ -121,13 +121,13 @@ fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -
         D"#;
     let order = ["C", "E", "G", "F", "A"];
     let dag = from_ascii_with_heads(new_dag(), ascii, Some(&order));
-    assert_eq!(expand(dag.all()?), "A F G B E C D");
+    assert_eq!(expand(dag.all()?), "A B C D E F G");
 
     let dag2 = dag.beautify(None)?;
-    assert_eq!(expand(dag2.all()?), "A G B F C E D");
+    assert_eq!(expand(dag2.all()?), "A B C D E F G");
 
     let dag3 = dag.beautify(Some(dag.ancestors(nameset("A"))?))?;
-    assert_eq!(expand(dag3.all()?), "A G B F C E D");
+    assert_eq!(expand(dag3.all()?), "A B C D E F G");
 
     let ascii = r#"
         A---B---C---D---E---F---G
@@ -137,10 +137,10 @@ fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -
                     L "#;
     let order = ["D", "J", "L", "K", "G"];
     let dag = from_ascii_with_heads(new_dag(), ascii, Some(&order));
-    assert_eq!(expand(dag.all()?), "G F E K L J I H D C B A");
+    assert_eq!(expand(dag.all()?), "A B C D E F G H I J K L");
 
     let dag2 = dag.beautify(None)?;
-    assert_eq!(expand(dag2.all()?), "G F E D C K J L I H B A");
+    assert_eq!(expand(dag2.all()?), "A B C D E F G H I J K L");
 
     Ok(())
 }
@@ -158,25 +158,25 @@ fn test_generic_dag2(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
 
     let v = |name: &str| -> VertexName { VertexName::copy_from(name.as_bytes()) };
 
-    assert_eq!(expand(dag.all()?), "K J I H F D C G E B A");
-    assert_eq!(expand(dag.ancestors(nameset("H I"))?), "I H F D C E B A");
-    assert_eq!(expand(dag.parents(nameset("H I E"))?), "F E B A");
+    assert_eq!(expand(dag.all()?), "A B C D E F G H I J K");
+    assert_eq!(expand(dag.ancestors(nameset("H I"))?), "A B C D E F H I");
+    assert_eq!(expand(dag.parents(nameset("H I E"))?), "A B E F");
     assert_eq!(dag.first_ancestor_nth(v("H"), 2)?, v("A"));
     assert_eq!(expand(dag.heads(nameset("E H F K I D"))?), "K");
-    assert_eq!(expand(dag.children(nameset("E F I"))?), "K J I H G");
-    assert_eq!(expand(dag.roots(nameset("E G H J I K D"))?), "I D E");
+    assert_eq!(expand(dag.children(nameset("E F I"))?), "G H I J K");
+    assert_eq!(expand(dag.roots(nameset("E G H J I K D"))?), "D E I");
     assert_eq!(dag.gca_one(nameset("J K"))?, Some(v("I")));
-    assert_eq!(expand(dag.gca_all(nameset("J K"))?), "I H");
-    assert_eq!(expand(dag.common_ancestors(nameset("G H"))?), "E B A");
+    assert_eq!(expand(dag.gca_all(nameset("J K"))?), "H I");
+    assert_eq!(expand(dag.common_ancestors(nameset("G H"))?), "A B E");
     assert!(dag.is_ancestor(v("B"), v("K"))?);
     assert!(!dag.is_ancestor(v("K"), v("B"))?);
     assert_eq!(expand(dag.heads_ancestors(nameset("A E F D G"))?), "F G");
-    assert_eq!(expand(dag.range(nameset("A"), nameset("K"))?), "K H E A");
-    assert_eq!(expand(dag.only(nameset("I"), nameset("G"))?), "I F D C");
+    assert_eq!(expand(dag.range(nameset("A"), nameset("K"))?), "A E H K");
+    assert_eq!(expand(dag.only(nameset("I"), nameset("G"))?), "C D F I");
     let (reachable, unreachable) = dag.only_both(nameset("I"), nameset("G"))?;
-    assert_eq!(expand(reachable), "I F D C");
+    assert_eq!(expand(reachable), "C D F I");
     assert_eq!(expand(unreachable), expand(dag.ancestors(nameset("G"))?));
-    assert_eq!(expand(dag.descendants(nameset("F E"))?), "K J I H F G E");
+    assert_eq!(expand(dag.descendants(nameset("F E"))?), "E F G H I J K");
 
     Ok(())
 }
@@ -927,11 +927,13 @@ Lv4: R0-9[]"#
 // Test utilities
 
 fn expand(set: NameSet) -> String {
-    set.iter()
+    let mut names = set
+        .iter()
         .unwrap()
         .map(|n| String::from_utf8_lossy(n.unwrap().as_ref()).to_string())
-        .collect::<Vec<String>>()
-        .join(" ")
+        .collect::<Vec<String>>();
+    names.sort();
+    names.join(" ")
 }
 
 fn nameset(names: &str) -> NameSet {
