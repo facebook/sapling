@@ -2612,8 +2612,14 @@ class localrepository(object):
                     visibleheads = cl._visibleheads.heads
                 nodes += visibleheads
             # Do not report nullid. index2.headsancestors does not support it.
-            revs = [r for r in map(torev, nodes) if r is not None and r >= 0]
-            headrevs = cl.index2.headsancestors(revs)
+            if cl.userust("index2"):
+                hasnode = cl.hasnode
+                nodes = [n for n in set(nodes) - {nullid} if hasnode(n)]
+                headnodes = cl.dag.headsancestors(nodes)
+                headrevs = list(cl.torevs(headnodes))
+            else:
+                revs = [r for r in map(torev, nodes) if r is not None and r >= 0]
+                headrevs = cl.index2.headsancestors(revs)
             # headrevs is already in DESC.
             reverse = not reverse
         else:

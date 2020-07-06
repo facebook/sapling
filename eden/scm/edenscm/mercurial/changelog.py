@@ -322,9 +322,8 @@ class changelog(revlog.revlog):
             datafile=datafile,
             checkambig=True,
             mmaplargeindex=True,
-            index2=True,
+            index2=not self.userust("index2"),
         )
-        assert self.index2 is not None
 
         if self._initempty:
             # changelogs don't benefit from generaldelta
