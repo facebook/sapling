@@ -36,6 +36,8 @@ pub struct HgCommit {
 
 mod hgsha1commits;
 mod memhgcommits;
+mod revlog;
 
 pub use hgsha1commits::HgCommits;
 pub use memhgcommits::MemHgCommits;
+pub use revlog::RevlogCommits;
