@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ configure modern
   $ hg init
 
   $ echo qqq>qqq.txt
@@ -29,7 +30,7 @@ set bookmark
 
 update to -2 (deactivates the active bookmark)
 
-  $ hg update -r -2
+  $ hg update -r '.^'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark test2)
 
@@ -47,10 +48,14 @@ bookmarks updated?
 
 strip to revision 1
 
-  $ hg debugstrip 'desc(2)'
+  $ hg hide 'desc(2)'
+  hiding commit 25e1ee7a0081 "2"
+  1 changeset hidden
+  removing bookmark "test (was at: 25e1ee7a0081)"
+  removing bookmark "test2 (was at: 25e1ee7a0081)"
+  2 bookmarks removed
 
 list bookmarks
 
   $ hg book
-     test                      0:5c9ad3787638
-     test2                     0:5c9ad3787638
+  no bookmarks set
