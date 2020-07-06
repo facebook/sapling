@@ -1,0 +1,13 @@
+[package]
+name = "hgcommits"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1"
+dag = { path = "../dag" }
+minibytes = { path = "../minibytes" }
+zstore = { path = "../zstore" }
+
+[dev-dependencies]
+quickcheck = "0.9"
