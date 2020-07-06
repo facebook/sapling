@@ -32,8 +32,10 @@ use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::ops::IdMapEq;
+use crate::ops::IdMapSnapshot;
 use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
+use crate::ops::ToSet;
 use crate::spanset::SpanSet;
 use anyhow::{anyhow, bail, ensure, Result};
 use indexedlog::multi;
@@ -323,7 +325,7 @@ impl DagAddHeads for MemNameDag {
 // See [`IdDag`] for the actual implementations of these algorithms.
 
 /// DAG related read-only algorithms.
-impl<T: NameDagStorage> DagAlgorithm for T {
+impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     /// Sort a `NameSet` topologically.
     fn sort(&self, set: &NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::TOPO_DESC) {
@@ -358,7 +360,12 @@ impl<T: NameDagStorage> DagAlgorithm for T {
 
     /// Calculates all ancestors reachable from any name from the given set.
     fn ancestors(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().ancestors(self.to_id_set(&set)?)?;
+        let spans = self.to_id_set(&set)?;
+        #[cfg(test)]
+        {
+            self.to_set(&spans)?.assert_eq(set.clone());
+        }
+        let spans = self.dag().ancestors(spans)?;
         Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
     }
 
@@ -721,5 +728,17 @@ impl IdMapEq for NameDag {
 impl IdMapEq for MemNameDag {
     fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool {
         Arc::ptr_eq(other, &self.snapshot_map)
+    }
+}
+
+impl IdMapSnapshot for NameDag {
+    fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
+        Ok(Arc::clone(&self.snapshot_map))
+    }
+}
+
+impl IdMapSnapshot for MemNameDag {
+    fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
+        Ok(Arc::clone(&self.snapshot_map))
     }
 }

@@ -353,9 +353,19 @@ pub trait ToIdSet {
     fn to_id_set(&self, set: &NameSet) -> Result<IdSet>;
 }
 
+pub trait ToSet {
+    /// Converts [`SpanSet`] to [`NameSet`].
+    fn to_set(&self, set: &IdSet) -> Result<NameSet>;
+}
+
 pub trait IdMapEq {
     /// (Cheaply) test if the map is compatible (same).
     fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool;
+}
+
+pub trait IdMapSnapshot {
+    /// Get a snapshot of IdMap.
+    fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>>;
 }
 
 impl<T: IdConvert + IdMapEq> ToIdSet for T {
@@ -385,5 +395,13 @@ impl<T: IdConvert + IdMapEq> ToIdSet for T {
             spans.push(id);
         }
         Ok(spans)
+    }
+}
+
+impl<T: IdMapSnapshot> ToSet for T {
+    /// Converts [`SpanSet`] to [`NameSet`].
+    fn to_set(&self, set: &IdSet) -> Result<NameSet> {
+        let id_map = self.id_map_snapshot()?;
+        Ok(NameSet::from_spans_idmap(set.clone(), id_map))
     }
 }
