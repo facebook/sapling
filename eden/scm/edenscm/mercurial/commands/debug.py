@@ -938,7 +938,6 @@ def debugdifftree(ui, repo, *pats, **opts):
     Print changed paths.
     """
     revs = scmutil.revrange(repo, opts.get("rev"))
-    repo = repo.unfiltered()
     oldrev = revs.first()
     newrev = revs.last()
     oldctx = repo[oldrev]
@@ -2071,11 +2070,11 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                 prec = parsenodeid(precursor)
                 parents = None
                 if opts["record_parents"]:
-                    if prec not in repo.unfiltered():
+                    if prec not in repo:
                         raise error.Abort(
                             "cannot used --record-parents on " "unknown changesets"
                         )
-                    parents = repo.unfiltered()[prec].parents()
+                    parents = repo[prec].parents()
                     parents = tuple(p.node() for p in parents)
                 repo.obsstore.create(
                     tr,
@@ -2087,7 +2086,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                     metadata=metadata,
                     ui=ui,
                 )
-                unfi = repo.unfiltered()
+                unfi = repo
                 if prec in unfi:
                     visibility.remove(unfi, [prec])
                 tr.close()

@@ -227,7 +227,7 @@ def exclusivemarkers(repo, nodes):
     """
     # running on a filtered repository would be dangerous as markers could be
     # reported as exclusive when they are relevant for other filtered nodes.
-    unfi = repo.unfiltered()
+    unfi = repo
 
     # shortcut to various useful item
     nm = unfi.changelog.nodemap
@@ -304,7 +304,6 @@ def foreground(repo, nodes):
 
     Beware that possible obsolescence cycle may result if complex situation.
     """
-    repo = repo.unfiltered()
     foreground = set(repo.set("%ln::", nodes))
     if repo.obsstore:
         # We only need this complicated logic if there is obsolescence
@@ -324,7 +323,7 @@ def foreground(repo, nodes):
 
 def getobsoleted(repo, tr):
     """return the set of pre-existing revisions obsoleted by a transaction"""
-    torev = repo.unfiltered().changelog.nodemap.get
+    torev = repo.changelog.nodemap.get
     phase = repo._phasecache.phase
     succsmarkers = repo.obsstore.successors.get
     public = phases.public

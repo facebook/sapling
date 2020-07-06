@@ -373,7 +373,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     # Pull all the new heads and any bookmark hashes we don't have. We need to
     # filter cloudrefs before pull as pull doesn't check if a rev is present
     # locally.
-    unfi = repo.unfiltered()
+    unfi = repo
     newheads = [head for head in cloudrefs.heads if head not in unfi]
     if maxage is not None and maxage >= 0:
         mindate = time.time() - maxage * 86400
@@ -474,7 +474,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     if obsolete.isenabled(repo, obsolete.createmarkersopt) and not repo.ui.configbool(
         "mutation", "proxy-obsstore"
     ):
-        unfi = repo.unfiltered()
+        unfi = repo
         # Commits that are only visible in the cloud are commits that are
         # ancestors of the cloud heads but are hidden locally.
         cloudvisibleonly = list(
@@ -630,7 +630,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
         """returns True if cloudnode should be a new state for the remote bookmark
 
         Both cloudnode and localnode are public commits."""
-        unfi = repo.unfiltered()
+        unfi = repo
         if localnode not in unfi:
             # we somehow don't have the localnode in the repo, probably may want
             # to fetch it
@@ -697,7 +697,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
         remote, name = bookmarks.splitremotename(name)
         return not repo._scratchbranchmatcher.match(name)
 
-    unfi = repo.unfiltered()
+    unfi = repo
     newnodes = set(
         node
         for name, node in pycompat.iteritems(updates)
@@ -712,7 +712,7 @@ def _updateremotebookmarks(repo, tr, updates):
     protectednames = set(repo.ui.configlist("remotenames", "selectivepulldefault"))
     newremotebookmarks = {}
     omittedremotebookmarks = []
-    unfi = repo.unfiltered()
+    unfi = repo
 
     # Filter out any deletions of default names.  These are protected and shouldn't
     # be deleted.
@@ -773,7 +773,7 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
 
     Returns a list of the omitted bookmark names.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
     localbookmarks = _getbookmarks(repo)
     omittedbookmarks = set(lastsyncstate.omittedbookmarks)
     changes = []
@@ -864,7 +864,6 @@ def _mergeobsmarkers(repo, tr, obsmarkers):
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
         tr._commitcloudskippendingobsmarkers = True
         repo.obsstore.add(tr, obsmarkers)
-        repo.filteredrevcache.clear()
 
 
 @perftrace.tracefunc("Check Omissions")
@@ -876,7 +875,7 @@ def _checkomissions(repo, remotepath, lastsyncstate, tr):
     them manually), then remove the tracking of those heads being omitted, and
     restore any bookmarks that can now be restored.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
     lastomittedheads = set(lastsyncstate.omittedheads)
     lastomittedbookmarks = set(lastsyncstate.omittedbookmarks)
     lastomittedremotebookmarks = set(lastsyncstate.omittedremotebookmarks)

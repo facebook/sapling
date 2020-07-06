@@ -69,7 +69,6 @@ def _differentialhash(ui, repo, phabrev):
 
 def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
     # Phabricator revs are often filtered (hidden)
-    repo = repo.unfiltered()
     # First reconstruct textual diffs for rev1 and rev2 independently.
     def changediff(node):
         nodebase = repo[node].p1().node()
@@ -166,14 +165,14 @@ def _diff(orig, ui, repo, *pats, **opts):
     # if patterns aren't provided, restrict diff to files in both changesets
     # this prevents performing a diff on rebased changes
     if len(pats) == 0:
-        prev = set(repo.unfiltered()[rev].files())
+        prev = set(repo[rev].files())
         curr = set(repo[targetrev].files())
         pats = tuple(os.path.join(repo.root, p) for p in prev | curr)
 
     if opts.get("since_last_submit_2o"):
         return _diff2o(ui, repo, rev, targetrev, **opts)
     else:
-        return orig(ui, repo.unfiltered(), *pats, **opts)
+        return orig(ui, repo, *pats, **opts)
 
 
 @revsetpredicate("lastsubmitted(set)")
@@ -196,6 +195,6 @@ def lastsubmitted(repo, subset, x):
 
         lasthash = str(diffrev["hash"])
         _maybepull(repo, lasthash)
-        resultrevs.add(repo.unfiltered()[lasthash].rev())
+        resultrevs.add(repo[lasthash].rev())
 
     return subset & smartset.baseset(sorted(resultrevs))

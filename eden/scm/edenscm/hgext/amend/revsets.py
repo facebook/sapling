@@ -17,7 +17,7 @@ revsetpredicate = registrar.revsetpredicate()
 @revsetpredicate("_destrestack(SRC)")
 def _destrestack(repo, subset, x):
     """restack destination for given single source revision"""
-    unfi = repo.unfiltered()
+    unfi = repo
     obsoleted = unfi.revs("obsolete()")
     getparents = unfi.changelog.parentrevs
     getphase = unfi._phasecache.phase

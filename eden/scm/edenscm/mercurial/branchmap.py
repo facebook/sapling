@@ -18,11 +18,9 @@ from .node import nullid, nullrev
 
 def updatecache(repo):
     # Just use a shortcut path that construct the branchcache directly.
-    partial = repo._branchcaches.get(repo.filtername)
-    if partial is None:
-        partial = branchcache()
+    partial = branchcache()
     partial.update(repo, None)
-    repo._branchcaches[repo.filtername] = partial
+    repo._branchcaches[None] = partial
 
 
 class branchcache(dict):
@@ -131,6 +129,4 @@ class branchcache(dict):
             tiprev = branchheads[-1]
         self.tipnode = cl.node(tiprev)
         self.tiprev = tiprev
-        repo.ui.log(
-            "branchcache", "perftweaks updated %s branch cache\n", repo.filtername
-        )
+        repo.ui.log("branchcache", "perftweaks updated branch cache\n")

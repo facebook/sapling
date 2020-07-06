@@ -61,7 +61,7 @@ def unamend(ui, repo, **opts):
       version, regardless of whether the changes resulted from an :hg:`amend`
       operation or from another operation, such as :hg:`rebase`.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
 
     # identify the commit from which to unamend
     curctx = repo["."]

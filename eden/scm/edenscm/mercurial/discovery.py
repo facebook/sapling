@@ -67,7 +67,7 @@ def findcommonincoming(
         needlargestcommonset=needlargestcommonset,
     )
     common, anyinc, srvheads = res
-    unfi = repo.unfiltered()
+    unfi = repo
     # anyinc = True prints "no changes found". However that is not always
     # true if heads is provided. Do a double check.
     if anyinc is False and heads and any(head not in unfi for head in heads):
@@ -167,7 +167,7 @@ def findcommonoutgoing(
         og.missingheads = onlyheads or repo.heads()
     elif onlyheads is None:
         # use visible heads as it should be cached
-        og.missingheads = repo.filtered("served").heads()
+        og.missingheads = repo.heads()
         og.excluded = [ctx.node() for ctx in repo.set("secret()")]
     else:
         # compute common, missing and exclude secret stuff
@@ -202,7 +202,7 @@ def findcommonoutgoing(
 
 def _nowarnheads(pushop):
     # Compute newly pushed bookmarks. We don't warn about bookmarked heads.
-    repo = pushop.repo.unfiltered()
+    repo = pushop.repo
     remote = pushop.remote
     localbookmarks = repo._bookmarks
     remotebookmarks = remote.listkeys("bookmarks")

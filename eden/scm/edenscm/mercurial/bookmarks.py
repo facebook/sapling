@@ -817,7 +817,6 @@ def summary(repo, other):
 
 def validdest(repo, old, new):
     """Is the new bookmark destination a valid update from the old one"""
-    repo = repo.unfiltered()
     if old == new:
         # Old == new -> nothing to update.
         return False
@@ -1114,7 +1113,7 @@ def saveremotenames(repo, remotebookmarks, override=True):
                     _writesingleremotename(f, remote, nametype, rname, node)
 
         journal = []
-        nm = repo.unfiltered().changelog.nodemap
+        nm = repo.changelog.nodemap
         missingnode = False
         for remote, rmbookmarks in pycompat.iteritems(remotebookmarks):
             rmbookmarks = {} if rmbookmarks is None else rmbookmarks
@@ -1409,7 +1408,7 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
                 else:
                     newbookmarks[rname] = node
 
-            nodemap = repo.unfiltered().changelog.nodemap
+            nodemap = repo.changelog.nodemap
             for rname, node in pycompat.iteritems(bookmarks):
                 # if the node is known locally, update the old value or add new
                 if bin(node) in nodemap:

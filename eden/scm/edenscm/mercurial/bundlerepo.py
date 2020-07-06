@@ -208,14 +208,7 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
         # may replace this class with another that does. Same story with
         # manifest and filelog classes.
 
-        # This bypasses filtering on changelog.node() and rev() because we need
-        # revision text of the bundle base even if it is hidden.
-        oldfilter = self.filteredrevs
-        try:
-            self.filteredrevs = ()
-            return changelog.changelog.revision(self, nodeorrev, raw=True)
-        finally:
-            self.filteredrevs = oldfilter
+        return changelog.changelog.revision(self, nodeorrev, raw=True)
 
     def _loadvisibleheads(self, opener):
         return visibility.bundlevisibleheads(opener)
@@ -397,15 +390,15 @@ class bundlerepository(localrepo.localrepository):
 
         return self.localvfs.open(self.tempfile, mode="rb")
 
-    @localrepo.unfilteredpropertycache
+    @util.propertycache
     def _phasecache(self):
         return bundlephasecache(self, self._phasedefaults)
 
-    @localrepo.unfilteredpropertycache
+    @util.propertycache
     def _mutationstore(self):
         return mutation.bundlemutationstore(self)
 
-    @localrepo.unfilteredpropertycache
+    @util.propertycache
     def changelog(self):
         # consume the header if it exists
         self._cgunpacker.changelogheader()
@@ -413,7 +406,7 @@ class bundlerepository(localrepo.localrepository):
         self.manstart = self._cgunpacker.tell()
         return c
 
-    @localrepo.unfilteredpropertycache
+    @util.propertycache
     def manifestlog(self):
         return super(bundlerepository, self).manifestlog
 
@@ -421,7 +414,7 @@ class bundlerepository(localrepo.localrepository):
         self._cgunpacker.seek(self.manstart)
         # consume the header if it exists
         self._cgunpacker.manifestheader()
-        linkmapper = self.unfiltered().changelog.rev
+        linkmapper = self.changelog.rev
         m = bundlemanifest(self.svfs, self._cgunpacker, linkmapper)
         self.filestart = self._cgunpacker.tell()
         return m
@@ -444,12 +437,12 @@ class bundlerepository(localrepo.localrepository):
 
         self.filestart = self._cgunpacker.tell()
 
-    @localrepo.unfilteredpropertycache
+    @util.propertycache
     def manstart(self):
         self.changelog
         return self.manstart
 
-    @localrepo.unfilteredpropertycache
+    @util.propertycache
     def filestart(self):
         self.manifestlog
 
@@ -474,7 +467,8 @@ class bundlerepository(localrepo.localrepository):
 
         if f in self._cgfilespos:
             self._cgunpacker.seek(self._cgfilespos[f])
-            linkmapper = self.unfiltered().changelog.rev
+            # pyre-fixme[16]: Callable `changelog` has no attribute `rev`.
+            linkmapper = self.changelog.rev
             return bundlefilelog(self.svfs, f, self._cgunpacker, linkmapper)
         else:
             return filelog.filelog(self.svfs, f)
@@ -637,11 +631,6 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None, force=Fal
             localrepo = bundlerepo = bundlerepository(repo.baseui, repo.root, fname)
             # this repo contains local and other now, so filter out local again
             common = repo.heads()
-    if localrepo:
-        # Part of common may be remotely filtered
-        # So use an unfiltered version
-        # The discovery process probably need cleanup to avoid that
-        localrepo = localrepo.unfiltered()
 
     csets = localrepo.changelog.findmissing(common, rheads)
 

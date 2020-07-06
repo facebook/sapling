@@ -996,7 +996,7 @@ def _pushkeyescape(markers):
 
 def listmarkers(repo):
     """List markers over pushkey"""
-    if not repo.obsstore:
+    if not getattr(repo, "obsstore", None):
         return {}
     return _pushkeyescape(sorted(repo.obsstore))
 
@@ -1093,8 +1093,7 @@ def getrevs(repo, name):
     """Return the set of revision that belong to the <name> set
 
     Such access may compute the set and cache it for future use"""
-    repo = repo.unfiltered()
-    if not repo.obsstore:
+    if not getattr(repo, "obsstore", None):
         return frozenset()
     if name not in repo.obsstore.caches:
         repo.obsstore.caches[name] = cachefuncs[name](repo)
@@ -1287,7 +1286,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None, operation=N
     This function operates within a transaction of its own, but does
     not take any lock on the repo.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
 
     # Change predecessors to unfiltered contexts. An X -> X marker can be used
     # to revive X. Ideally it's () -> X. But predecessor must be a single node
@@ -1399,7 +1398,6 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None, operation=N
                 metadata=localmetadata,
                 ui=repo.ui,
             )
-            repo.filteredrevcache.clear()
         tr.close()
     finally:
         tr.release()

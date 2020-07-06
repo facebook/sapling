@@ -1244,7 +1244,7 @@ class GitHandler(object):
                     new_refs[b"refs/heads/master"] = self.map_git_get(tip)
 
         # mapped nodes might be hidden
-        unfiltered = self.repo.unfiltered()
+        unfiltered = self.repo
         for rev, rev_refs in pycompat.iteritems(exportable):
             ctx = self.repo[rev]
             if not rev_refs:

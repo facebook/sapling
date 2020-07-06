@@ -141,7 +141,7 @@ def wrapupdate(
     newnode = repo[node].node()
     if matcher is None or matcher.always():
         partial = False
-        distance = watchmanclient.calcdistance(repo.unfiltered(), oldnode, newnode)
+        distance = watchmanclient.calcdistance(repo, oldnode, newnode)
 
     with watchmanclient.state_update(
         repo,

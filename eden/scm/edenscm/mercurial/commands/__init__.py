@@ -4666,7 +4666,7 @@ def phase(ui, repo, *revs, **opts):
 
         # moving revision from public to draft may hide them
         # We have to check result on an unfiltered repository
-        unfi = repo.unfiltered()
+        unfi = repo
         cl = unfi.changelog
         getphase = unfi._phasecache.phase
         rejected = [n for n in nodes if getphase(unfi, cl.rev(n)) < targetphase]

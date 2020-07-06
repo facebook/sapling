@@ -133,14 +133,14 @@ def extsetup(ui):
 
 
 def _dagwalker(orig, repo, revs):
-    return orig(repo.unfiltered(), revs)
+    return orig(repo, revs)
 
 
 def _updaterepo(orig, repo, node, overwrite, **opts):
     """prevents the repo from updating onto a snapshot node
     """
     allowsnapshots = repo.ui.configbool("ui", "allow-checkout-snapshot")
-    unfi = repo.unfiltered()
+    unfi = repo
     if not allowsnapshots and node in unfi:
         ctx = unfi[node]
         if "snapshotmetadataid" in ctx.extra():
@@ -157,7 +157,7 @@ def _updaterepo(orig, repo, node, overwrite, **opts):
 def _updateheads(orig, self, repo, newheads, tr):
     """ensures that we don't try to make the snapshot nodes visible
     """
-    unfi = repo.unfiltered()
+    unfi = repo
     heads = []
     for h in newheads:
         if h not in unfi:
@@ -179,7 +179,7 @@ def _showgraphnode(orig, repo, ctx, **args):
 
 def _update(orig, ui, repo, node=None, rev=None, **opts):
     allowsnapshots = repo.ui.configbool("ui", "allow-checkout-snapshot")
-    unfi = repo.unfiltered()
+    unfi = repo
     if not allowsnapshots and node in unfi:
         ctx = unfi[node]
         if "snapshotmetadataid" in ctx.extra():
@@ -206,13 +206,13 @@ def _handlebundle2part(orig, self, bundle, part):
 def _smartlogrevset(orig, repo, subset, x):
     revs = orig(repo, subset, x)
     snapshotstring = revsetlang.formatspec("snapshot()")
-    return smartset.addset(revs, repo.unfiltered().anyrevs([snapshotstring], user=True))
+    return smartset.addset(revs, repo.anyrevs([snapshotstring], user=True))
 
 
 def _dounhide(orig, repo, revs):
     """prevents the snapshot nodes from being visible
     """
-    unfi = repo.unfiltered()
+    unfi = repo
     revs = [r for r in revs if "snapshotmetadataid" not in unfi[r].extra()]
     if len(revs) > 0:
         orig(repo, revs)
@@ -224,7 +224,7 @@ revsetpredicate = registrar.revsetpredicate()
 @revsetpredicate("snapshot")
 def snapshot(repo, subset, x):
     """Snapshot changesets"""
-    unfi = repo.unfiltered()
+    unfi = repo
     # get all the hex nodes of snapshots from the file
     nodes = repo.snapshotlist.snapshots
     return subset & unfi.revs("%ls", nodes)

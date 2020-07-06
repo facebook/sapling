@@ -415,7 +415,7 @@ def _setupcommit(ui):
         orig(self, node)
 
         # Use unfiltered to avoid computing hidden commits
-        repo = self._repo.unfiltered()
+        repo = self._repo
 
         if util.safehasattr(repo, "getsparsepatterns"):
             ctx = repo[node]
@@ -533,7 +533,7 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
             with self.ui.configoverride(overrides, "sparse"):
                 _config(
                     self.ui,
-                    self.unfiltered(),
+                    self,
                     pat,
                     {},
                     include=include,
@@ -882,7 +882,7 @@ def _wraprepo(ui, repo):
             if rev is None:
                 raise error.Abort(_("cannot parse sparse patterns from working copy"))
 
-            repo = self.unfiltered()
+            repo = self
             if config is None:
                 if not self.localvfs.exists("sparse"):
                     self._warnfullcheckout()
@@ -977,7 +977,7 @@ def _wraprepo(ui, repo):
                 )
 
         def getrawprofile(self, profile, changeid):
-            repo = self.unfiltered()
+            repo = self
             try:
                 simplecache = extensions.find("simplecache")
 
@@ -1122,7 +1122,7 @@ def _wraprepo(ui, repo):
 
         def getactiveprofiles(self):
             # Use unfiltered to avoid computing hidden commits
-            repo = self.unfiltered()
+            repo = self
             revs = [
                 repo.changelog.rev(node)
                 for node in repo.dirstate.parents()
@@ -1737,7 +1737,6 @@ def debugsparsematch(ui, repo, *args, **opts):
     working copy.
     """
     # Make it work in an edenfs checkout.
-    repo = repo.unfiltered()
     if "eden" in repo.requirements:
         _wraprepo(ui, repo)
     filename = opts.get("sparse_profile")

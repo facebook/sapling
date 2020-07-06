@@ -2195,12 +2195,12 @@ def _mapbynodefunc(repo, s, f):
     talking about nodes. Handles converting between rev numbers and nodes, and
     filtering.
     """
-    cl = repo.unfiltered().changelog
+    cl = repo.changelog
     torev = cl.rev
     tonode = cl.node
     nodemap = cl.nodemap
     result = set(torev(n) for n in f(tonode(r) for r in s) if n in nodemap)
-    return smartset.baseset(result - repo.changelog.filteredrevs)
+    return smartset.baseset(result)
 
 
 @predicate("allprecursors(set[, depth])")
@@ -2626,7 +2626,7 @@ def matchany(ui, specs, repo=None, localalias=None):
     tree = revsetlang.foldconcat(tree)
     tree = revsetlang.analyze(tree)
     if repo is not None:
-        lookup = repo.unfiltered().__contains__
+        lookup = repo.__contains__
         unknownnames = list(scanunknowns([tree], lookup))
     tree = revsetlang.optimize(tree)
 

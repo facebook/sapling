@@ -391,7 +391,7 @@ def getvfs(repo):
 
 
 def clearfilecache(repo, attrname):
-    unfi = repo.unfiltered()
+    unfi = repo
     if attrname in vars(unfi):
         delattr(unfi, attrname)
     unfi._filecache.pop(attrname, None)
@@ -919,7 +919,6 @@ def perfparents(ui, repo, **opts):
     count = getint(ui, "perf", "parentscount", 1000)
     if len(repo.changelog) < count:
         raise error.Abort("repo needs %d commits for this test" % count)
-    repo = repo.unfiltered()
     nl = [repo.changelog.node(i) for i in xrange(count)]
 
     def d():

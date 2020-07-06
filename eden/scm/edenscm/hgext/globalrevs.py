@@ -401,7 +401,7 @@ def updateglobalrevmeta(ui, repo, *args, **opts):
     """Reads globalrevs from the latest hg commits and adds them to the
     globalrev-hg mapping."""
     with repo.wlock(), repo.lock():
-        unfi = repo.unfiltered()
+        unfi = repo
         clnode = unfi.changelog.node
         clrevision = unfi.changelog.changelogrevision
         globalrevmap = _globalrevmap(unfi)

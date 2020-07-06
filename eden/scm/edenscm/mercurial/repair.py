@@ -120,7 +120,6 @@ def strip(ui, repo, nodelist, backup=True, topic="backup"):
     if backup in ["none", "strip"]:
         backup = False
 
-    repo = repo.unfiltered()
     repo.destroying()
 
     cl = repo.changelog
@@ -288,7 +287,7 @@ def strip(ui, repo, nodelist, backup=True, topic="backup"):
 
 def safestriproots(ui, repo, nodes):
     """return list of roots of nodes where descendants are covered by nodes"""
-    torev = repo.unfiltered().changelog.rev
+    torev = repo.changelog.rev
     revs = set(torev(n) for n in nodes)
     # tostrip = wanted - unsafe = wanted - ancestors(orphaned)
     # orphaned = affected - wanted
@@ -367,7 +366,6 @@ def rebuildfncache(ui, repo):
 
     Missing entries will be added. Extra entries will be removed.
     """
-    repo = repo.unfiltered()
 
     if "fncache" not in repo.requirements:
         ui.warn(

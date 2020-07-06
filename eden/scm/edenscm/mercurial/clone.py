@@ -11,7 +11,6 @@ from .i18n import _
 
 def shallowclone(source, repo):
     """clone from source into an empty shallow repo"""
-    repo = repo.unfiltered()
 
     with repo.wlock(), repo.lock(), repo.transaction("clone"):
         if any(

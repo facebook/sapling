@@ -156,10 +156,6 @@ def fastannotate(ui, repo, *pats, **opts):
     if not pats:
         raise error.Abort(_("at least one filename or pattern is required"))
 
-    # performance hack: filtered repo can be slow. unfilter by default.
-    if ui.configbool("fastannotate", "unfilteredrepo", True):
-        repo = repo.unfiltered()
-
     rev = opts.get("rev", ".")
     rebuild = opts.get("rebuild", False)
 
@@ -240,10 +236,6 @@ _knownopts = set(
 
 def _annotatewrapper(orig, ui, repo, *pats, **opts):
     """used by wrapdefault"""
-    # we need this hack until the obsstore has 0.0 seconds perf impact
-    if ui.configbool("fastannotate", "unfilteredrepo", True):
-        repo = repo.unfiltered()
-
     # treat the file as text (skip the isbinary check)
     if ui.configbool("fastannotate", "forcetext", True):
         opts["text"] = True
@@ -291,8 +283,6 @@ def debugbuildannotatecache(ui, repo, *pats, **opts):
             _("you need to provide a revision"),
             hint=_("set fastannotate.mainbranch or use --rev"),
         )
-    if ui.configbool("fastannotate", "unfilteredrepo", True):
-        repo = repo.unfiltered()
     ctx = scmutil.revsingle(repo, rev)
     m = scmutil.match(ctx, pats, opts)
     paths = list(ctx.walk(m))

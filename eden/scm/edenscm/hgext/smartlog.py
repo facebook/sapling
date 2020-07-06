@@ -587,9 +587,7 @@ def _smartlog(ui, repo, *pats, **opts):
         return
 
     # Print it!
-    revdag, reserved = getdag(
-        ui, repo.unfiltered(), sorted(revs, reverse=True), masterrev
-    )
+    revdag, reserved = getdag(ui, repo, sorted(revs, reverse=True), masterrev)
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     ui.pager("smartlog")
     if ui.config("experimental", "graph.renderer") == "legacy":

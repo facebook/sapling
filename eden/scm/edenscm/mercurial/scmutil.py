@@ -739,7 +739,7 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
     if moves is None:
         moves = {}
     # Unfiltered repo is needed since nodes in replacements might be hidden.
-    unfi = repo.unfiltered()
+    unfi = repo
     for oldnode, newnodes in replacements.items():
         if oldnode in moves:
             continue
@@ -1402,7 +1402,6 @@ def trackrevnumfortests(repo, specs):
             candidates.append("max(desc(%s))" % desc.split()[0])
         candidates.append("%s" % ctx.hex())
 
-        repo = repo.unfiltered()
         for candidate in candidates:
             try:
                 nodes = list(repo.nodes(candidate))

@@ -83,7 +83,7 @@ class eden_dirstate(dirstate.dirstate):
 
     def _p1_ctx(self):
         """Return the context object for the first parent commit."""
-        return self._map._repo.unfiltered()[self.p1()]
+        return self._map._repo[self.p1()]
 
     def _call_match_callbacks(self, match, results1, results2):
         """

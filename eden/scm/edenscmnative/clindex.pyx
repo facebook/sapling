@@ -114,9 +114,6 @@ cdef class clindex(object):
     def headrevs(self):
         return self._origindex.headrevs()
 
-    def headrevsfiltered(self, filtered):
-        return self._origindex.headrevsfiltered(filtered)
-
     def deltachain(self, rev, stoprev, generaldelta):
         return self._origindex.deltachain(rev, stoprev, generaldelta)
 
@@ -437,10 +434,7 @@ def reposetup(ui, repo):
     except AttributeError:
         pass
 
-    unfilteredmethod = localrepo.unfilteredmethod
-
     class clindexrepo(repo.__class__):
-        @unfilteredmethod
         def updatecaches(self, tr=None):
             try:
                 self.changelog.index.updatecaches()
@@ -448,7 +442,6 @@ def reposetup(ui, repo):
                 pass
             super(clindexrepo, self).updatecaches(tr)
 
-        @unfilteredmethod
         def destroying(self):
             # Tell clindex to prepare for the strip. clindex will unlink
             # nodemap and other caches.
@@ -458,7 +451,6 @@ def reposetup(ui, repo):
                 pass
             super(clindexrepo, self).destroying()
 
-        @unfilteredmethod
         def destroyed(self):
             # Force a reload of changelog. The current "self.changelog" object
             # has an outdated snapshot of changelog.i. We need to read the new

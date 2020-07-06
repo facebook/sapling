@@ -335,7 +335,7 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
 
     # We only want to use this for existence checks. We don't want hidden
     # commits to result in throwing an exception here.
-    cl = local.unfiltered().changelog
+    cl = local.changelog
 
     if cl.tip() == nullid:
         if srvheadhashes != [nullid]:
@@ -365,7 +365,6 @@ def pullremotenames(repo, remote, bookmarks):
         # they won't show up as heads on the next pull, so we
         # remove them here otherwise we would require the user
         # to issue a pull to refresh .hg/remotenames
-        repo = repo.unfiltered()
         saveremotenames(repo, {path: bookmarks})
 
         # repo.ui.paths.get(path) might be empty during clone.
@@ -445,7 +444,7 @@ def exclone(orig, ui, *args, **opts):
                     vfs.write("bookmarks", b"")
             # Invalidate bookmark caches.
             repo._filecache.pop("_bookmarks", None)
-            repo.unfiltered().__dict__.pop("_bookmarks", None)
+            repo.__dict__.pop("_bookmarks", None)
             # Avoid writing out bookmarks on transaction close.
             tr.removefilegenerator("bookmarks")
 
@@ -623,7 +622,7 @@ def expaths(orig, ui, repo, *args, **opts):
 def exnowarnheads(orig, pushop):
     heads = orig(pushop)
     if pushop.to:
-        repo = pushop.repo.unfiltered()
+        repo = pushop.repo
         rev = pushop.revs[0]
         heads.add(repo[rev].node())
     return heads
@@ -775,7 +774,7 @@ def exlog(orig, ui, repo, *args, **opts):
 
 
 def expushdiscoverybookmarks(pushop):
-    repo = pushop.repo.unfiltered()
+    repo = pushop.repo
     remotemarks = pushop.remote.listkeys("bookmarks")
 
     if pushop.delete:
@@ -1265,7 +1264,6 @@ def displayremotebookmarks(ui, repo, opts, fm):
     label = "log." + color
 
     # it seems overkill to hide displaying hidden remote bookmarks
-    repo = repo.unfiltered()
     useformatted = repo.ui.formatted
 
     for name in sorted(ns.listnames(repo)):
@@ -1623,7 +1621,6 @@ def upstream_revs(filt, repo, subset, x):
 @revsetpredicate("upstream()")
 def upstream(repo, subset, x):
     """Select changesets in an upstream repository according to remotenames."""
-    repo = repo.unfiltered()
     upstream_names = repo.ui.configlist("remotenames", "upstream")
     # override default args from hgrc with args passed in on the command line
     if x:

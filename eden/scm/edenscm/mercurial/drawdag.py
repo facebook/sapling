@@ -591,7 +591,7 @@ def drawdag(repo, text, **opts):
 
     # handle special comments
     with repo.wlock(), repo.lock(), repo.transaction("drawdag"):
-        getctx = lambda x: repo.unfiltered()[committed[x.strip()]]
+        getctx = lambda x: repo[committed[x.strip()]]
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
             for cmd, markers in obsmarkers:
                 obsrels = [(getctx(p), [getctx(s) for s in ss]) for p, ss in markers]

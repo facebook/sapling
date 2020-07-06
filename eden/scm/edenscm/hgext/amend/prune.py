@@ -232,7 +232,7 @@ def prune(ui, repo, *revs, **opts):
         # informs that changeset have been pruned
         ui.status(_("%i changesets pruned\n") % len(precs))
 
-        for ctx in repo.unfiltered().set("bookmark() and %ld", precs):
+        for ctx in repo.set("bookmark() and %ld", precs):
             # used to be:
             #
             #   ldest = list(repo.set('max((::%d) - obsolete())', ctx))

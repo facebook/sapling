@@ -136,7 +136,6 @@ def _readroots(repo, phasedefaults=None):
     Return (roots, dirty) where dirty is true if roots differ from
     what is being stored.
     """
-    repo = repo.unfiltered()
     dirty = False
     roots = [set() for i in allphases]
     try:
@@ -243,8 +242,6 @@ class phasecache(object):
                 revs = self._phasesets[p]
             else:
                 revs = set.union(*[self._phasesets[p] for p in phases])
-            if repo.changelog.filteredrevs:
-                revs = revs - repo.changelog.filteredrevs
             if subset is None:
                 return smartset.baseset(revs)
             else:
@@ -286,7 +283,6 @@ class phasecache(object):
 
     def _getphaserevsnative(self, repo):
         assert not self._headbased
-        repo = repo.unfiltered()
         nativeroots = []
         for phase in trackedphases:
             nativeroots.append(list(map(repo.changelog.rev, self.phaseroots[phase])))
@@ -294,7 +290,6 @@ class phasecache(object):
 
     def _computephaserevspure(self, repo):
         assert not self._headbased
-        repo = repo.unfiltered()
         cl = repo.changelog
         self._phasesets = [set() for phase in allphases]
         roots = pycompat.maplist(cl.rev, self.phaseroots[secret])
@@ -405,7 +400,6 @@ class phasecache(object):
             # head-based phases do not need to track phase of new commits
             # explcitly. visible heads and remotenames track them implicitly.
             return
-        repo = repo.unfiltered()
         self._retractboundary(repo, tr, targetphase, nodes)
         if tr is not None and "phases" in tr.changes:
             phasetracking = tr.changes["phases"]
@@ -431,8 +425,6 @@ class phasecache(object):
             phasetracking = None
         else:
             phasetracking = tr.changes.get("phases")
-
-        repo = repo.unfiltered()
 
         delroots = []  # set of root deleted by this path
         for phase in range(targetphase + 1, len(allphases)):
@@ -472,7 +464,6 @@ class phasecache(object):
             phasetracking = None
         else:
             phasetracking = tr.changes.get("phases")
-        repo = repo.unfiltered()
         if (
             self._retractboundary(repo, tr, targetphase, nodes)
             and phasetracking is not None
@@ -502,7 +493,6 @@ class phasecache(object):
         assert not self._headbased
         # Be careful to preserve shallow-copied values: do not update
         # phaseroots values, replace them.
-        repo = repo.unfiltered()
         currentroots = self.phaseroots[targetphase]
         finalroots = oldroots = set(currentroots)
         newroots = [n for n in nodes if self.phase(repo, repo[n].rev()) < targetphase]
@@ -600,7 +590,7 @@ def listphases(repo):
     keys = util.sortdict()
     if not repo._phasecache._headbased:
         value = "%i" % draft
-        cl = repo.unfiltered().changelog
+        cl = repo.changelog
         for root in repo._phasecache.phaseroots[draft]:
             if repo._phasecache.phase(repo, cl.rev(root)) <= draft:
                 keys[hex(root)] = value
@@ -628,7 +618,6 @@ def listphases(repo):
 
 def pushphase(repo, nhex, oldphasestr, newphasestr):
     """List phases root for serialization over pushkey"""
-    repo = repo.unfiltered()
     with repo.lock():
         currentphase = repo[nhex].phase()
         newphase = abs(int(newphasestr))  # let's avoid negative index surprise
@@ -684,7 +673,6 @@ def analyzeremotephases(repo, subset, roots):
 
     Accept unknown element input
     """
-    repo = repo.unfiltered()
     # build list from dictionary
     draftroots = []
     nodemap = repo.changelog.nodemap  # to filter unknown nodes
@@ -720,7 +708,6 @@ class remotephasessummary(object):
     """
 
     def __init__(self, repo, remotesubset, remoteroots):
-        unfi = repo.unfiltered()
         self._allremoteroots = remoteroots
 
         self.publishing = remoteroots.get("publishing", False)
@@ -728,7 +715,7 @@ class remotephasessummary(object):
         ana = analyzeremotephases(repo, remotesubset, remoteroots)
         self.publicheads, self.draftroots = ana
         # Get the list of all "heads" revs draft on remote
-        dheads = unfi.set("heads(%ln::%ln)", self.draftroots, remotesubset)
+        dheads = repo.set("heads(%ln::%ln)", self.draftroots, remotesubset)
         self.draftheads = [c.node() for c in dheads]
 
 
@@ -737,7 +724,6 @@ def newheads(repo, heads, roots):
 
     * `heads`: define the first subset
     * `roots`: define the second we subtract from the first"""
-    repo = repo.unfiltered()
     revset = repo.set(
         "heads((%ln + parents(%ln)) - (%ln::%ln))", heads, roots, roots, heads
     )

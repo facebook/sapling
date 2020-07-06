@@ -435,7 +435,6 @@ def checknoisybranches(repo):
     - Not edited locally ('predecessors(x) - x' is empty).
     - Most (> 50%) changes are not authored by the current user.
     """
-    repo = repo.unfiltered()
     ui = repo.ui
     heads = repo.changelog._visibleheads.heads
     noisyheads = set()

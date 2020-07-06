@@ -177,7 +177,7 @@ def safelog(repo, command):
                 repo.ui.log("undologlock", "lock acquired\n")
                 tr = lighttransaction(repo)
                 with tr:
-                    changes = log(repo.filtered("visible"), command, tr)
+                    changes = log(repo, command, tr)
                     if changes and not ("undo" == command[0] or "redo" == command[0]):
                         _delundoredo(repo)
         except error.LockUnavailable:  # no write permissions
@@ -539,7 +539,7 @@ def _cachedgetolddrafts(repo, nodedict):
             oldlogrevstring = revsetlang.formatspec(
                 "(draft() & ancestors(%ls)) - %ls", oldheadslist, oldobslist
             )
-            urepo = repo.unfiltered()
+            urepo = repo
             cache[key] = smartset.baseset(urepo.revs(oldlogrevstring))
     return cache[key]
 
@@ -607,7 +607,7 @@ def _cachedgetoldworkingcopyparent(repo, wkpnode):
         oldworkingparent = _readnode(repo, "workingparent.i", wkpnode)
         oldworkingparent = filter(None, oldworkingparent.split("\n"))
         oldwkprevstring = revsetlang.formatspec("%ls", oldworkingparent)
-        urepo = repo.unfiltered()
+        urepo = repo
         cache[key] = smartset.baseset(urepo.revs(oldwkprevstring))
     return cache[key]
 
@@ -653,7 +653,6 @@ def showundonecommits(context, mapping, args):
 
 
 def _donehexnodes(repo, reverseindex):
-    repo = repo.unfiltered()
     revstring = revsetlang.formatspec("olddraft(%d)", reverseindex)
     return list(repo.nodes(revstring))
 
@@ -738,7 +737,6 @@ def oldworkingparenttemplate(context, mapping, args):
     )
     repo = mapping["ctx"]._repo
     ctx = mapping["ctx"]
-    repo = repo.unfiltered()
     revstring = revsetlang.formatspec("oldworkingcopyparent(%d)", reverseindex)
     nodes = list(repo.nodes(revstring))
     if ctx.node() in nodes:
@@ -824,8 +822,6 @@ def undo(ui, repo, *args, **opts):
         raise error.Abort(_("interactive ui is not supported on Windows"))
     if interactive:
         preview = True
-
-    repo = repo.unfiltered()
 
     if branch and reverseindex != 1 and reverseindex != -1:
         raise error.Abort(_("--branch with --index not supported"))
@@ -982,7 +978,6 @@ def redo(ui, repo, *args, **opts):
     with repo.wlock(), repo.lock(), repo.transaction("redo"):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
-        repo = repo.unfiltered()
         _undoto(ui, repo, reverseindex)
         # update undredo by removing what the given undo added
         _logundoredoindex(repo, shiftedindex, branch)
@@ -998,8 +993,6 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
             _("'undo --branch' is no longer supported in the current setup")
         )
 
-    if repo != repo.unfiltered():
-        raise error.ProgrammingError(_("_undoto expects unfilterd repo"))
     try:
         nodedict = _readindex(repo, reverseindex)
     except IndexError:
@@ -1187,7 +1180,6 @@ def _findnextdelta(repo, reverseindex, branch, direction):
     #   copy parent change that effects the given branch
     if 0 == direction:  # no infinite cycles guarantee
         raise error.ProgrammingError
-    repo = repo.unfiltered()
     # current state
     try:
         nodedict = _readindex(repo, reverseindex)
@@ -1270,7 +1262,7 @@ def smarthide(repo, revhide, revshow, local=False):
     markers = []
     nodes = []
     for ctx in hidectxs:
-        unfi = repo.unfiltered()
+        unfi = repo
         related = set()
         if mutation.enabled(unfi):
             related.update(mutation.allpredecessors(unfi, [ctx.node()]))
@@ -1335,7 +1327,6 @@ def _preview(ui, repo, reverseindex):
 
     opts = {}
     opts["template"] = "{undopreview}"
-    repo = repo.unfiltered()
 
     try:
         nodedict = _readindex(repo, reverseindex)

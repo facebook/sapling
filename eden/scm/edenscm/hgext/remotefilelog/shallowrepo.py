@@ -44,7 +44,7 @@ def wraprepo(repo):
 
             return path
 
-        @localrepo.unfilteredpropertycache
+        @util.propertycache
         def fileslog(self):
             return remotefilelog.remotefileslog(self)
 
@@ -74,14 +74,12 @@ def wraprepo(repo):
             else:
                 return super(shallowrepository, self).filectx(path, changeid, fileid)
 
-        @localrepo.unfilteredmethod
         def close(self):
             result = super(shallowrepository, self).close()
             if "fileslog" in self.__dict__:
                 self.fileslog.abortpending()
             return result
 
-        @localrepo.unfilteredmethod
         def commitpending(self):
             super(shallowrepository, self).commitpending()
 
@@ -96,7 +94,6 @@ def wraprepo(repo):
                 domaintenancerepack(self)
                 self.numtransactioncommits = 0
 
-        @localrepo.unfilteredmethod
         def commitctx(self, ctx, error=False):
             """Add a new revision to current repository.
             Revision information is passed via the context argument.

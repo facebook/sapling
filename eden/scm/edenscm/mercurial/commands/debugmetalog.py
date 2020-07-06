@@ -24,7 +24,6 @@ def debugmetalog(ui, repo, **opts):
         matchdate = util.matchdate(timerange)
         matchdatefuncs.append(matchdate)
 
-    repo = repo.unfiltered()
     metalog = repo.svfs.metalog
     metalogpath = repo.svfs.join("metalog")
     roots = metalog.listroots(metalogpath)
@@ -125,7 +124,6 @@ class displayer(object):
 @command("debugmetalogroots", [] + cmdutil.templateopts)
 def debugmetalogroots(ui, repo, **opts):
     """list roots stored in metalog"""
-    repo = repo.unfiltered()
     metalog = repo.svfs.metalog
     metalogpath = repo.svfs.join("metalog")
     roots = metalog.listroots(metalogpath)

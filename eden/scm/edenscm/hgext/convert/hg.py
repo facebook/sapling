@@ -273,7 +273,7 @@ class mercurial_sink(common.converter_sink):
         if commit.rev and commit.saverev:
             extra["convert_revision"] = commit.rev
 
-        unfi = self.repo.unfiltered()
+        unfi = self.repo
         while parents:
             p1 = p2
             p2 = parents.pop(0)

@@ -73,7 +73,7 @@ def _cleanuplanded(repo, dryrun=False):
             % ex
         )
         return
-    unfi = repo.unfiltered()
+    unfi = repo
     mutationentries = []
     tohide = set()
     markedcount = 0
@@ -170,7 +170,7 @@ def createmarkers(pullres, repo, start, stop, fromdrafts=True):
     if not tocreate:
         return
 
-    unfi = repo.unfiltered()
+    unfi = repo
     with unfi.lock(), unfi.transaction("pullcreatemarkers"):
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
             obsolete.createmarkers(unfi, tocreate)
@@ -216,7 +216,7 @@ def getmarkers(repo, landeddiffs):
 
 def getmarkersfromdrafts(repo, landeddiffs):
     tocreate = []
-    unfiltered = repo.unfiltered()
+    unfiltered = repo
 
     for rev in unfiltered.revs("draft() - obsolete() - hidden()"):
         rev = unfiltered[rev]

@@ -296,7 +296,7 @@ def diffidtonode(repo, diffid):
                 continue
 
             node = bin(hexnode)
-            unfi = repo.unfiltered()
+            unfi = repo
             if node in unfi:
                 # Find a successor.
                 successors = list(
@@ -327,7 +327,6 @@ def diffidtonode(repo, diffid):
 
 
 def _lookupname(repo, name):
-    repo = repo.unfiltered()
     if name.startswith("D") and name[1:].isdigit():
         diffid = name[1:]
         node = diffidtonode(repo, diffid)
@@ -354,7 +353,6 @@ def _autopullphabdiff(repo, name, rewritepullrev=False):
     if not repo.ui.configbool("phrevset", "autopull"):
         return
 
-    repo = repo.unfiltered()
     if (
         name.startswith("D")
         and name[1:].isdigit()

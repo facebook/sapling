@@ -90,9 +90,6 @@ annotate cache greatly. Run "debugbuildlinkrevcache" before
     # to avoid a file fetch if remotefilelog is used. (default: True)
     forcetext = True
 
-    # use unfiltered repo for better performance.
-    unfilteredrepo = True
-
     # sacrifice correctness in some corner cases for performance. it does not
     # affect the correctness of the annotate cache being built. the option
     # is experimental and may disappear in the future (default: False)

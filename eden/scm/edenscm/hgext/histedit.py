@@ -1289,7 +1289,7 @@ def _finishhistedit(ui, repo, state, fm):
         mapping[n] = ()
 
     # remove entries about unknown nodes
-    nodemap = repo.unfiltered().changelog.nodemap
+    nodemap = repo.changelog.nodemap
     mapping = {
         k: v
         for k, v in mapping.items()
@@ -1335,7 +1335,7 @@ def _aborthistedit(ui, repo, state):
             os.remove(backupfile)
 
         # check whether we should update away
-        unfi = repo.unfiltered()
+        unfi = repo
         revs = list(unfi.revs("%ln::", leafs | tmpnodes))
         if unfi.revs("parents() and (%n  or %ld)", state.parentctxnode, revs):
             with repo.transaction("histedit.abort") as tr:
@@ -1635,7 +1635,7 @@ def adjustreplacementsfrommarkers(repo, oldreplacements):
     if not obsolete.isenabled(repo, obsolete.createmarkersopt):
         return oldreplacements
 
-    unfi = repo.unfiltered()
+    unfi = repo
     nm = unfi.changelog.nodemap
     obsstore = repo.obsstore
     newreplacements = list(oldreplacements)
@@ -1677,7 +1677,7 @@ def adjustreplacementsfrommutation(repo, oldreplacements):
     state and does not account for changes that are not recorded there.  This
     function fixes that by adding data read from commit mutation records.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
     newreplacements = list(oldreplacements)
     oldsuccs = [r[1] for r in oldreplacements]
     # successors that have already been added to succstocheck once

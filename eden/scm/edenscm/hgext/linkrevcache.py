@@ -359,7 +359,6 @@ def _buildlinkrevcache(ui, repo, db, end):
     # 2441406: 10G by default (assuming page size = 4K).
     maxpagesize = ui.configint("linkrevcache", "maxpagesize") or 2441406
 
-    repo = repo.unfiltered()
     cl = repo.changelog
     idx = cl.index
     ml = repo.manifestlog
@@ -446,8 +445,7 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
     paths = {}  # {id: name}
     nodes = {}  # {id: name}
 
-    repo = repo.unfiltered()
-    idx = repo.unfiltered().changelog.index
+    idx = repo.changelog.index
 
     db = repo._linkrevcache
     paths = dict(db._getdb(db._pathdbname))
@@ -500,7 +498,7 @@ def _adjustlinkrev(orig, self, *args, **kwds):
     srcrev = args[-1]
     cache = getattr(self._repo, "_linkrevcache", None)
     if cache is not None and srcrev is not None:
-        index = repo.unfiltered().changelog.index
+        index = repo.changelog.index
         try:
             linkrevs = set(cache.getlinkrevs(self._path, self._filenode))
         except Exception:

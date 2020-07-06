@@ -122,7 +122,7 @@ def pushbackupbookmarks(repo, remotepath, getconnection, backupstate):
     Push a backup bundle to the server that updates the infinitepush backup
     bookmarks.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
 
     # Create backup bookmarks for the heads and bookmarks of the user.  We
     # need to include only commit that have been successfully backed up, so

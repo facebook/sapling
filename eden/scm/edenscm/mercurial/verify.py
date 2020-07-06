@@ -36,7 +36,7 @@ class verifier(object):
     # The match argument is always None in hg core, but e.g. the narrowhg
     # extension will pass in a matcher here.
     def __init__(self, repo, match=None, revs=None):
-        self.repo = repo.unfiltered()
+        self.repo = repo
         self.ui = repo.ui
         self.match = match or scmutil.matchall(repo)
         self.badrevs = set()

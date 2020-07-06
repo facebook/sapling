@@ -1179,7 +1179,6 @@ def _dispatch(req):
                 if repo:
                     ui = repo.ui
                     if options["hidden"]:
-                        repo = repo.unfiltered()
                         repo.ui.setconfig("visibility", "all-heads", "true", "--hidden")
                     if repo != req.repo:
                         ui.atexit(repo.close)

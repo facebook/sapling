@@ -47,7 +47,7 @@ class BackupState(object):
                 self.initfromserver()
                 return
             heads = (nodemod.bin(head.strip()) for head in lines[2:])
-            hasnode = repo.unfiltered().changelog.hasnode
+            hasnode = repo.changelog.hasnode
             self.heads = {h for h in heads if hasnode(h)}
         else:
             self.initfromserver()
@@ -57,7 +57,7 @@ class BackupState(object):
         # know are backed up.
         repo = self.repo
         remotepath = self.remotepath
-        unfi = repo.unfiltered()
+        unfi = repo
         unknown = [
             nodemod.hex(n)
             for n in unfi.nodes(
@@ -87,7 +87,7 @@ class BackupState(object):
 
     @util.propertycache
     def backedup(self):
-        unfi = self.repo.unfiltered()
+        unfi = self.repo
         hasnode = unfi.changelog.hasnode
         heads = [head for head in self.heads if hasnode(head)]
         return set(unfi.nodes("not public() & ::%ln", heads))
@@ -99,7 +99,7 @@ class BackupState(object):
             f.write(encodeutf8("%s\n" % nodemod.hex(h)))
 
     def update(self, newnodes, tr=None):
-        unfi = self.repo.unfiltered()
+        unfi = self.repo
         # The new backed up heads are the heads of all commits we already knew
         # were backed up plus the newly backed up commits.
         self.heads = list(

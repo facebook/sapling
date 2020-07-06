@@ -497,7 +497,7 @@ def wraprepo(repo):
             try:
                 revset = "parents(%ld & draft() - hidden()) & public()"
                 with self.ui.configoverride({("devel", "legacy.revnum"): ""}):
-                    draftparents = list(self.unfiltered().set(revset, revs))
+                    draftparents = list(self.set(revset, revs))
 
                 if draftparents:
                     self.prefetchtrees([c.manifestnode() for c in draftparents])
@@ -1075,7 +1075,7 @@ class basetreemanifestlog(object):
 
 class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
     def __init__(self, opener, repo, treemanifest=False):
-        self._repo = repo.unfiltered()
+        self._repo = repo
         basetreemanifestlog.__init__(self, self._repo)
         assert treemanifest is False
         cachesize = 4
@@ -1102,7 +1102,7 @@ class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
 
 class treeonlymanifestlog(basetreemanifestlog):
     def __init__(self, opener, repo):
-        self._repo = repo.unfiltered()
+        self._repo = repo
         super(treeonlymanifestlog, self).__init__(self._repo)
         self._opener = opener
         self.ui = repo.ui
@@ -2315,7 +2315,6 @@ def pull(orig, ui, repo, *pats, **opts):
 
 
 def _postpullprefetch(ui, repo):
-    repo = repo.unfiltered()
 
     ctxs = []
     mfstore = repo.manifestlog.datastore

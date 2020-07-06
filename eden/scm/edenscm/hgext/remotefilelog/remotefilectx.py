@@ -129,7 +129,7 @@ class remotefilectx(context.filectx):
         repo = self._repo
         path = self._path
         fileid = self._filenode
-        cl = repo.unfiltered().changelog
+        cl = repo.changelog
         mfl = repo.manifestlog
 
         with repo.ui.timesection("scanlinkrev"), repo.ui.configoverride(
@@ -272,7 +272,7 @@ class remotefilectx(context.filectx):
         we get to a linkrev, we stop when we see any of the known linknodes.
         """
         repo = self._repo
-        cl = repo.unfiltered().changelog
+        cl = repo.changelog
         mfl = repo.manifestlog
         linknode = self.getnodeinfo()[2]
 

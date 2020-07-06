@@ -239,7 +239,7 @@ class gitnodemap(object):
                 for line in open(mapfile, "r"):
                     githexnode, hghexnode = line.split()
                     mapadd(bin(githexnode), bin(hghexnode))
-            unfi = repo.unfiltered()
+            unfi = repo
             clnode = unfi.changelog.node
             clrevision = unfi.changelog.changelogrevision
             # Read git hashes from commit extras.

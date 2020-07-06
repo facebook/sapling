@@ -204,7 +204,7 @@ class rebaseruntime(object):
     @property
     def repo(self):
         if self.prepared:
-            return self._repo.unfiltered()
+            return self._repo
         else:
             return self._repo
 
@@ -220,7 +220,6 @@ class rebaseruntime(object):
 
     def _writestatus(self, f):
         repo = self.repo
-        assert repo.filtername is None
         f.write(pycompat.encodeutf8(repo[self.originalwd].hex() + "\n"))
         # was "dest". we now write dest per src root below.
         f.write(b"\n")
@@ -247,7 +246,6 @@ class rebaseruntime(object):
         """Restore a previously stored status"""
         self.prepared = True
         repo = self.repo
-        assert repo.filtername is None
         legacydest = None
         collapse = False
         external = nullrev
@@ -1286,8 +1284,8 @@ def _definepredmap(repo, rebaseset):
     Returns a map of {rev: [preds]}, where preds are the predecessors of the
     rebased node that are also being rebased.
     """
-    clnode = repo.unfiltered().changelog.node
-    clrev = repo.unfiltered().changelog.rev
+    clnode = repo.changelog.node
+    clrev = repo.changelog.rev
     if mutation.enabled(repo):
         predmap = {
             r: [
@@ -1586,7 +1584,6 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped):
 
 def successorrevs(unfi, rev):
     """yield revision numbers for successors of rev"""
-    assert unfi.filtername is None
     nodemap = unfi.changelog.nodemap
     node = unfi[rev].node()
     if mutation.enabled(unfi):
@@ -1614,7 +1611,6 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
     block below.
     """
     # use unfiltered changelog since successorrevs may return filtered nodes
-    assert repo.filtername is None
     cl = repo.changelog
 
     def isancestor(a, b):
@@ -2112,7 +2108,6 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
     obsoletenotrebased = {}
     obsoletewithoutsuccessorindestination = set([])
 
-    assert repo.filtername is None
     cl = repo.changelog
     nodemap = cl.nodemap
     for srcrev in rebaseobsrevs:

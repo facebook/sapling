@@ -340,9 +340,9 @@ def cloneshallow(orig, ui, repo, *args, **opts):
         repos = []
 
         def pull_shallow(orig, self, *args, **kwargs):
-            repos.append(self.unfiltered())
+            repos.append(self)
             # set up the client hooks so the post-clone update works
-            setupclient(self.ui, self.unfiltered())
+            setupclient(self.ui, self)
 
             if shallowrepo.requirement not in self.requirements:
                 self.requirements.add(shallowrepo.requirement)

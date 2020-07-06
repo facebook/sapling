@@ -1998,7 +1998,7 @@ def handlecheckphases(op, inpart):
     This is used to detect a push race.
     """
     phasetonodes = phases.binarydecode(inpart)
-    unfi = op.repo.unfiltered()
+    unfi = op.repo
     cl = unfi.changelog
     phasecache = unfi._phasecache
     msg = (
@@ -2200,7 +2200,7 @@ def handlephases(op, inpart):
     # type: (bundleoperation, unbundlepart) -> None
     """apply phases from bundle part to repo"""
     headsbyphase = phases.binarydecode(inpart)
-    phases.updatephases(op.repo.unfiltered(), op.gettransaction, headsbyphase)
+    phases.updatephases(op.repo, op.gettransaction, headsbyphase)
 
 
 @parthandler("reply:pushkey", ("return", "in-reply-to"))

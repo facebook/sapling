@@ -143,7 +143,7 @@ class filerevnav(revnav):
         :path: path of the file we generate nav for
         """
         # used for iteration
-        self._changelog = repo.unfiltered().changelog
+        self._changelog = repo.changelog
         # used for hex generation
         self._revlog = repo.file(path)
 

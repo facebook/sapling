@@ -423,7 +423,7 @@ def _dopull(orig, ui, repo, source="default", **opts):
     source, branches = hg.parseurl(ui.expandpath(source), opts.get("branch"))
 
     scratchbookmarks = {}
-    unfi = repo.unfiltered()
+    unfi = repo
     unknownnodes = []
     pullbookmarks = opts.get("bookmark") or []
     if opts.get("rev", None):
@@ -458,21 +458,6 @@ def _dopull(orig, ui, repo, source="default", **opts):
                 revs.append(fetchedbookmarks[bookmark])
         opts["bookmark"] = realbookmarks
         opts["rev"] = [rev for rev in revs if rev not in scratchbookmarks]
-
-    # Pulling revisions that were filtered results in a error.
-    # Let's revive them.
-    unfi = repo.unfiltered()
-    torevive = []
-    for rev in opts.get("rev", []):
-        try:
-            repo[rev]
-        except error.FilteredRepoLookupError:
-            torevive.append(rev)
-        except error.RepoLookupError:
-            pass
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        obsolete.revive([unfi[r] for r in torevive])
-    visibility.add(repo, [unfi[r].node() for r in torevive])
 
     if scratchbookmarks or unknownnodes:
         # Set anyincoming to True

@@ -259,12 +259,12 @@ class obsoletecache(object):
         ispublic = getispublicfunc(repo)
         if ispublic(node):
             return False
-        obsolete = self.obsolete[repo.filtername]
+        obsolete = self.obsolete[None]
         if node in obsolete:
             return True
-        if self.complete[repo.filtername] or node in self.notobsolete[repo.filtername]:
+        if self.complete[None] or node in self.notobsolete[None]:
             return False
-        unfi = repo.unfiltered()
+        unfi = repo
         clhasnode = getisvisiblefunc(repo)
         clrev = unfi.changelog.rev
 
@@ -279,12 +279,12 @@ class obsoletecache(object):
             if clhasnode(succ):
                 obsolete.add(node)
                 return True
-        self.notobsolete[repo.filtername].add(node)
+        self.notobsolete[None].add(node)
         return False
 
     def obsoletenodes(self, repo):
-        if self.complete[repo.filtername]:
-            return self.obsolete[repo.filtername]
+        if self.complete[None]:
+            return self.obsolete[None]
 
         with perftrace.trace("Compute Obsolete Nodes"):
             perftrace.traceflag("mutation")
@@ -299,7 +299,7 @@ class obsoletecache(object):
             # even if the filter for this repo includes other commits.
             clhasnode = getisvisiblefunc(repo)
             clrev = repo.changelog.rev
-            obsolete = self.obsolete[repo.filtername]
+            obsolete = self.obsolete[None]
             for node in repo.nodes("not public()"):
                 succsets = successorssets(repo, node, closest=True)
                 if succsets != [[node]]:
@@ -317,13 +317,13 @@ class obsoletecache(object):
                             seen.add(pred)
                             if clhasnode(pred) and pred != nullid:
                                 obsolete.add(pred)
-            self.obsolete[repo.filtername] = frozenset(obsolete)
-            self.complete[repo.filtername] = True
+            self.obsolete[None] = frozenset(obsolete)
+            self.complete[None] = True
             # Since we know all obsolete commits, no need to remember which ones
             # are not obsolete.
-            if repo.filtername in self.notobsolete:
-                del self.notobsolete[repo.filtername]
-            return self.obsolete[repo.filtername]
+            if None in self.notobsolete:
+                del self.notobsolete[None]
+            return self.obsolete[None]
 
 
 def isobsolete(repo, node):
@@ -587,7 +587,7 @@ def foreground(repo, nodes):
     The foreground of a commit is the transitive closure of all descendants
     and successors of the commit.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
     nm = unfi.changelog.nodemap
     foreground = set(nodes)
     newnodes = set(nodes)

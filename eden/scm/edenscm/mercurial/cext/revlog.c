@@ -70,7 +70,6 @@ typedef struct {
   Py_ssize_t length; /* current number of elements */
   PyObject* added; /* populated on demand */
   PyObject* headrevs; /* cache, invalidated on changes */
-  PyObject* filteredrevs; /* filtered revs set */
   nodetree* nt; /* base-16 trie */
   unsigned ntlength; /* # nodes in use */
   unsigned ntcapacity; /* # nodes allocated */
@@ -416,32 +415,6 @@ static PyObject* list_copy(PyObject* list) {
   return newlist;
 }
 
-static int check_filter(PyObject* filter, Py_ssize_t arg) {
-  if (filter) {
-    PyObject *arglist, *result;
-    int isfiltered;
-
-    arglist = Py_BuildValue("(n)", arg);
-    if (!arglist) {
-      return -1;
-    }
-
-    result = PyEval_CallObject(filter, arglist);
-    Py_DECREF(arglist);
-    if (!result) {
-      return -1;
-    }
-
-    /* PyObject_IsTrue returns 1 if true, 0 if false, -1 if error,
-     * same as this function, so we can just return it directly.*/
-    isfiltered = PyObject_IsTrue(result);
-    Py_DECREF(result);
-    return isfiltered;
-  } else {
-    return 0;
-  }
-}
-
 static Py_ssize_t add_roots_get_min(
     indexObject* self,
     PyObject* list,
@@ -726,28 +699,9 @@ static PyObject* index_headrevs(indexObject* self, PyObject* args) {
   Py_ssize_t i, j, len;
   char* nothead = NULL;
   PyObject* heads = NULL;
-  PyObject* filter = NULL;
-  PyObject* filteredrevs = Py_None;
 
-  if (!PyArg_ParseTuple(args, "|O", &filteredrevs)) {
-    return NULL;
-  }
-
-  if (self->headrevs && filteredrevs == self->filteredrevs)
+  if (self->headrevs)
     return list_copy(self->headrevs);
-
-  Py_DECREF(self->filteredrevs);
-  self->filteredrevs = filteredrevs;
-  Py_INCREF(filteredrevs);
-
-  if (filteredrevs != Py_None) {
-    filter = PyObject_GetAttrString(filteredrevs, "__contains__");
-    if (!filter) {
-      PyErr_SetString(
-          PyExc_TypeError, "filteredrevs has no attribute __contains__");
-      goto bail;
-    }
-  }
 
   len = index_length(self) - 1;
   heads = PyList_New(0);
@@ -769,25 +723,7 @@ static PyObject* index_headrevs(indexObject* self, PyObject* args) {
   }
 
   for (i = len - 1; i >= 0; i--) {
-    int isfiltered;
     int parents[2];
-
-    /* If nothead[i] == 1, it means we've seen an unfiltered child of this
-     * node already, and therefore this node is not filtered. So we can skip
-     * the expensive check_filter step.
-     */
-    if (nothead[i] != 1) {
-      isfiltered = check_filter(filter, i);
-      if (isfiltered == -1) {
-        PyErr_SetString(PyExc_TypeError, "unable to check filter");
-        goto bail;
-      }
-
-      if (isfiltered) {
-        nothead[i] = 1;
-        continue;
-      }
-    }
 
     if (index_get_parents(self, i, parents, (int)len - 1) < 0)
       goto bail;
@@ -811,11 +747,9 @@ static PyObject* index_headrevs(indexObject* self, PyObject* args) {
 
 done:
   self->headrevs = heads;
-  Py_XDECREF(filter);
   free(nothead);
   return list_copy(self->headrevs);
 bail:
-  Py_XDECREF(filter);
   Py_XDECREF(heads);
   free(nothead);
   return NULL;
@@ -1854,7 +1788,6 @@ static int index_init(indexObject* self, PyObject* args) {
   self->data = NULL;
   memset(&self->buf, 0, sizeof(self->buf));
   self->headrevs = NULL;
-  self->filteredrevs = Py_None;
   Py_INCREF(Py_None);
   self->nt = NULL;
   self->offsets = NULL;
@@ -1906,7 +1839,6 @@ static PyObject* index_nodemap(indexObject* self) {
 
 static void index_dealloc(indexObject* self) {
   _index_clearcaches(self);
-  Py_XDECREF(self->filteredrevs);
   if (self->buf.buf) {
     PyBuffer_Release(&self->buf);
     memset(&self->buf, 0, sizeof(self->buf));
@@ -1958,11 +1890,7 @@ static PyMethodDef index_methods[] = {
     {"headrevs",
      (PyCFunction)index_headrevs,
      METH_VARARGS,
-     "get head revisions"}, /* Can do filtering since 3.2 */
-    {"headrevsfiltered",
-     (PyCFunction)index_headrevs,
-     METH_VARARGS,
-     "get filtered head revisions"}, /* Can always do filtering */
+     "get head revisions"},
     {"deltachain",
      (PyCFunction)index_deltachain,
      METH_VARARGS,

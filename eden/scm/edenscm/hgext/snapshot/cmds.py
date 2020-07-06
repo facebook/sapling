@@ -134,7 +134,7 @@ def getsnapshotctx(ui, repo, args):
         raise error.Abort(_("you must specify a snapshot revision id\n"))
     node = args[0]
     try:
-        cctx = repo.unfiltered()[node]
+        cctx = repo[node]
     except error.RepoLookupError:
         ui.status(_("%s is not a valid revision id\n") % node)
         raise
@@ -151,10 +151,10 @@ def snapshotshow(ui, repo, *args, **opts):
     rev = cctx.hex()
     opts["rev"] = [rev]
     opts["patch"] = True
-    revs, expr, filematcher = cmdutil.getlogrevs(repo.unfiltered(), [], opts)
+    revs, expr, filematcher = cmdutil.getlogrevs(repo, [], opts)
     revmatchfn = filematcher(rev) if filematcher else None
     ui.pager("snapshotshow")
-    displayer = cmdutil.show_changeset(ui, repo.unfiltered(), opts, buffered=True)
+    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     with extensions.wrappedfunction(patch, "diff", _diff), extensions.wrappedfunction(
         cmdutil.changeset_printer, "_show", _show
     ), extensions.wrappedfunction(cmdutil.changeset_templater, "_show", _show):
@@ -183,7 +183,7 @@ def _diff(orig, repo, *args, **kwargs):
     if node2 is None:
         # this should be the snapshot node
         return
-    ctx2 = repo.unfiltered()[node2]
+    ctx2 = repo[node2]
     date2 = util.datestr(ctx2.date())
     node1 = kwargs.get("node1") or args[0]
     if node1 is not None:
@@ -257,11 +257,11 @@ def snapshotcheckout(ui, repo, *args, **opts):
     with repo.wlock():
         parents = [p.node() for p in cctx.parents()]
         # First we check out on the 1st parent of the snapshot state
-        hg.update(repo.unfiltered(), parents[0], quietempty=True)
+        hg.update(repo, parents[0], quietempty=True)
         # Then we update snapshot files in the working copy
         # Here the dirstate is not updated because of the matcher
         matcher = scmutil.matchfiles(repo, cctx.files(), opts)
-        mergemod.update(repo.unfiltered(), cctx.hex(), False, False, matcher=matcher)
+        mergemod.update(repo, cctx.hex(), False, False, matcher=matcher)
         # Finally, we mark the modified files in the dirstate
         scmutil.addremove(repo, matcher, "", opts)
         # Tie the state to the 2nd parent if needed

@@ -22,7 +22,7 @@ def _convertfromobsolete(repo):
         {("mutation", "enabled"): False, ("visibility", "enabled"): False},
         "convertfromobsolete",
     ):
-        return list(repo.unfiltered().nodes("heads((not public()) - hidden())"))
+        return list(repo.nodes("heads((not public()) - hidden())"))
 
 
 def starttracking(repo):
@@ -123,7 +123,7 @@ class visibleheads(object):
         newheads = list(newheads)
         # Remove heads that are not actually heads, and preserve the ordering
         # in self.heads for heads that have not changed.
-        unfi = repo.unfiltered()
+        unfi = repo
         if len(newheads) > 1:
             hasnode = repo.changelog.nodemap.__contains__
             realnewheads = list(
@@ -161,7 +161,7 @@ class visibleheads(object):
         self._updateheads(repo, newheads, tr)
 
     def remove(self, repo, oldnodes, tr):
-        unfi = repo.unfiltered()
+        unfi = repo
         clrev = unfi.changelog.rev
         clparents = unfi.changelog.parents
         phasecache = unfi._phasecache

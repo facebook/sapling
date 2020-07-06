@@ -2447,7 +2447,6 @@ def sqlrefill(ui, startrev, **opts):
 
     startrev = int(startrev)
 
-    repo = repo.unfiltered()
     with repo.lock():
         repo.sqlconnect()
         repo.sqlwritelock()
@@ -2703,7 +2702,7 @@ def sqlverify(ui, repo, *args, **opts):
                 rl = revlogcache.get(filepath)
                 if rl is None:
                     if filepath == "00changelog.i":
-                        rl = repo.unfiltered().changelog
+                        rl = repo.changelog
                     elif filepath == "00manifest.i":
                         rl = repo.manifestlog._revlog
                     else:
@@ -2759,7 +2758,7 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
             rl = revlogcache.get(path)
             if rl is None:
                 if path == "00changelog.i":
-                    rl = repo.unfiltered().changelog
+                    rl = repo.changelog
                 elif path == "00manifest.i":
                     rl = repo.manifestlog._revlog
                 else:

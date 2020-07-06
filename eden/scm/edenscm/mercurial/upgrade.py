@@ -827,7 +827,6 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
 def upgraderepo(ui, repo, run=False, optimize=None):
     """Upgrade a repository in place."""
     optimize = set(optimize or [])
-    repo = repo.unfiltered()
 
     # Ensure the repository can be upgraded.
     missingreqs = requiredsourcerequirements(repo) - repo.requirements

@@ -196,6 +196,6 @@ def split(ui, repo, *revs, **opts):
             if torebase:
                 rebaseopts = {"dest": "_destrestack(SRC)", "rev": torebase}
                 rebase.rebase(ui, repo, **rebaseopts)
-            unfi = repo.unfiltered()
+            unfi = repo
             with repo.transaction("post-split-hide"):
                 visibility.remove(repo, [unfi[r].node()])

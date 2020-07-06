@@ -192,7 +192,7 @@ def repository(ui, path="", create=False, presetupfuncs=None):
     repo = peer.local()
     if not repo:
         raise error.Abort(_("repository '%s' is not local") % (path or peer.url()))
-    return repo.filtered("visible")
+    return repo
 
 
 def peer(uiorrepo, opts, path, create=False):
@@ -308,13 +308,13 @@ def unshare(ui, repo):
 
     # update store, spath, svfs and sjoin of repo
     # invalidate before rerunning __init__
-    repo.unfiltered().invalidate(clearfilecache=True)
-    repo.unfiltered().invalidatedirstate()
-    repo.unfiltered().__init__(repo.baseui, repo.root)
+    repo.invalidate(clearfilecache=True)
+    repo.invalidatedirstate()
+    repo.__init__(repo.baseui, repo.root)
 
     # reinitialize zstore
     if repo.ui.configbool("format", "use-zstore-commit-data"):
-        repo.unfiltered()._syncrevlogtozstore()
+        repo._syncrevlogtozstore()
 
 
 def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
@@ -1064,7 +1064,6 @@ class cachedlocalrepo(object):
         assert isinstance(repo, localrepo.localrepository)
         self._repo = repo
         self._state, self.mtime = self._repostate()
-        self._filtername = repo.filtername
 
     def fetch(self):
         """Refresh (if necessary) and return a repository.
@@ -1085,10 +1084,7 @@ class cachedlocalrepo(object):
             return self._repo, False
 
         repo = repository(self._repo.baseui, self._repo.url())
-        if self._filtername:
-            self._repo = repo.filtered(self._filtername)
-        else:
-            self._repo = repo.unfiltered()
+        self._repo = repo
         self._state = state
         self.mtime = mtime
 
@@ -1116,10 +1112,6 @@ class cachedlocalrepo(object):
         completely independent of the original.
         """
         repo = repository(self._repo.baseui, self._repo.origroot)
-        if self._filtername:
-            repo = repo.filtered(self._filtername)
-        else:
-            repo = repo.unfiltered()
         c = cachedlocalrepo(repo)
         c._state = self._state
         c.mtime = self.mtime

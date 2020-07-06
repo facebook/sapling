@@ -59,7 +59,7 @@ class snapshotlist(object):
             self._check(repo)
 
     def _check(self, repo):
-        unfi = repo.unfiltered()
+        unfi = repo
         toremove = set()
         for snapshotnode in self.snapshots:
             binsnapshotnode = node.bin(snapshotnode)
@@ -92,7 +92,7 @@ class snapshotlist(object):
         fm = ui.formatter("snapshots", opts)
         if len(self.snapshots) == 0:
             ui.status(_("no snapshots created\n"))
-        unfi = repo.unfiltered()
+        unfi = repo
         for snapshotnode in self.snapshots:
             ctx = unfi[snapshotnode]
             message = ctx.description().split("\n")[0]

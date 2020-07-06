@@ -45,7 +45,7 @@ def _backup(
     were backed up, and "failed" is a revset of the commits that could not be
     backed up.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
 
     if revs is None:
         # No revs specified.  Back up all visible commits that are not already

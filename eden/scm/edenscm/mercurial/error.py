@@ -96,10 +96,6 @@ class RevlogError(Hint, Context, Exception):
     __bytes__ = _tobytes
 
 
-class FilteredIndexError(IndexError):
-    __bytes__ = _tobytes
-
-
 class LookupError(RevlogError, KeyError):
     def __init__(self, name, index, message):
         self.name = name
@@ -122,10 +118,6 @@ class LookupError(RevlogError, KeyError):
 
     def __str__(self):
         return RevlogError.__str__(self)
-
-
-class FilteredLookupError(LookupError):
-    pass
 
 
 class ManifestLookupError(LookupError):
@@ -246,10 +238,6 @@ class AbandonedTransactionFoundError(RepoError):
 
 
 class RepoLookupError(RepoError):
-    pass
-
-
-class FilteredRepoLookupError(RepoLookupError):
     pass
 
 

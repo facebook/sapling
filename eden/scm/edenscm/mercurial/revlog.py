@@ -1189,8 +1189,7 @@ class revlog(object):
         except RevlogError:
             # parsers.c radix tree lookup gave multiple matches
             # fast path: for unfiltered changelog, radix tree is accurate
-            if not getattr(self, "filteredrevs", None):
-                raise LookupError(id, self.indexfile, _("ambiguous identifier"))
+            raise LookupError(id, self.indexfile, _("ambiguous identifier"))
             # fall through to slow path that filters hidden revisions
         except (AttributeError, ValueError):
             # we are pure python, or key was too short to search radix tree
@@ -2418,11 +2417,6 @@ class revlog(object):
 
         if len(destrevlog):
             raise ValueError(_("destination revlog is not empty"))
-
-        if getattr(self, "filteredrevs", None):
-            raise ValueError(_("source revlog has filtered revisions"))
-        if getattr(destrevlog, "filteredrevs", None):
-            raise ValueError(_("destination revlog has filtered revisions"))
 
         # lazydeltabase controls whether to reuse a cached delta, if possible.
         oldlazydeltabase = destrevlog._lazydeltabase

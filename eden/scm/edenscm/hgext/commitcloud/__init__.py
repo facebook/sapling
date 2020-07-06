@@ -310,7 +310,7 @@ def cloudremote(repo, subset, x):
             repo, [nodemod.bin(nodehex) for nodehex in args]
         )
         hexnodespulled = [nodemod.hex(node) for node in nodespulled]
-        return subset & repo.unfiltered().revs("%ls", hexnodespulled)
+        return subset & repo.revs("%ls", hexnodespulled)
     except Exception as e:
         repo.ui.status(
             _("unable to pull all changesets from the remote store\n%s\n") % e,
@@ -324,7 +324,7 @@ def missingcloudrevspull(repo, nodes):
 
     This is, for example, the case for all hidden revs on new clone + cloud sync.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
 
     def obscontains(nodebin):
         return bool(unfi.obsstore.successors.get(nodebin, None))
@@ -341,7 +341,7 @@ def missingcloudrevspull(repo, nodes):
 @revsetpredicate("backedup")
 def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
-    unfi = repo.unfiltered()
+    unfi = repo
     state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
     backedup = unfi.revs("not public() and ::%ln", state.heads)
     return smartset.filteredset(subset & repo.revs("draft()"), lambda r: r in backedup)
@@ -350,7 +350,7 @@ def backedup(repo, subset, x):
 @revsetpredicate("notbackedup")
 def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
-    unfi = repo.unfiltered()
+    unfi = repo
     state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
     backedup = unfi.revs("not public() and ::%ln", state.heads)
     return smartset.filteredset(

@@ -256,7 +256,7 @@ class state_update(object):
         partial=False,
         metadata=None,
     ):
-        self.repo = repo.unfiltered()
+        self.repo = repo
         self.name = name
         self.oldnode = oldnode
         self.newnode = newnode

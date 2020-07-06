@@ -22,7 +22,7 @@ from .cmdtable import command
 )
 def debugmutation(ui, repo, **opts):
     """display the mutation history (or future) of a commit"""
-    unfi = repo.unfiltered()
+    unfi = repo
 
     matchdatefuncs = []
     for timerange in opts.get("time_range") or []:

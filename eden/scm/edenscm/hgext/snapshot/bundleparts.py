@@ -33,7 +33,7 @@ def getmetadatafromrevs(repo, revs):
     """get binary representation of snapshot metadata by a list of revs
     """
     metadataids = set()
-    unfi = repo.unfiltered()
+    unfi = repo
     for rev in revs:
         # TODO(alexeyqu): move this check into a function
         if rev not in unfi:

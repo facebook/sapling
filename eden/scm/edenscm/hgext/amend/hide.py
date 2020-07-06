@@ -188,12 +188,12 @@ def unhide(ui, repo, *revs, **opts):
     """
     revs = list(revs) + opts.pop("rev", [])
     with repo.lock():
-        revs = set(scmutil.revrange(repo.unfiltered(), revs))
+        revs = set(scmutil.revrange(repo, revs))
         _dounhide(repo, revs)
 
 
 def _dounhide(repo, revs):
-    unfi = repo.unfiltered()
+    unfi = repo
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
         ctxs = unfi.set("not public() & ::(%ld) & obsolete()", revs)
         obsolete.revive(ctxs, operation="unhide")

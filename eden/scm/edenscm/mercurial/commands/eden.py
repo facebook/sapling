@@ -223,7 +223,7 @@ class HgServer(object):
         else:
             self.out_file = fdopen(out_fd, "wb")
 
-        self.repo = repo.unfiltered()
+        self.repo = repo
 
         try:
             self.treemanifest = extensions.find("treemanifest")
@@ -279,11 +279,11 @@ class HgServer(object):
             flags |= START_FLAGS_TREEMANIFEST_SUPPORTED
             treemanifest_paths = [
                 shallowutil.getlocalpackpath(
-                    self.repo.svfs.vfs.base, constants.TREEPACK_CATEGORY
+                    self.repo.svfs.join(""), constants.TREEPACK_CATEGORY
                 ),
                 shallowutil.getcachepackpath(self.repo, constants.TREEPACK_CATEGORY),
                 shallowutil.getlocalpackpath(
-                    self.repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+                    self.repo.svfs.join(""), constants.FILEPACK_CATEGORY
                 ),
                 shallowutil.getcachepackpath(self.repo, constants.FILEPACK_CATEGORY),
             ]

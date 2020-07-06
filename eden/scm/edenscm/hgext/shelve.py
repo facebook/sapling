@@ -453,7 +453,7 @@ def _nothingtoshelvemessaging(ui, repo, pats, opts):
 def _shelvecreatedcommit(ui, repo, node, name):
     shelvedfile(repo, name, "oshelve").writeobsshelveinfo({"node": nodemod.hex(node)})
     cmdutil.export(
-        repo.unfiltered(),
+        repo,
         [node],
         fp=shelvedfile(repo, name, patchextension).opener("wb"),
         opts=mdiff.diffopts(git=True),
@@ -537,7 +537,7 @@ def _docreatecmd(ui, repo, pats, opts):
     # it might have been created previously and shelve just
     # reuses it
     try:
-        hg.update(repo.unfiltered(), parent.node())
+        hg.update(repo, parent.node())
     except (KeyboardInterrupt, Exception):
         # failed to update to the original revision, which has left us on the
         # (hidden) shelve commit.  Move directly to the original commit by
@@ -774,7 +774,7 @@ def unshelvecontinue(ui, repo, state, opts):
         try:
             # if shelve is obs-based, we want rebase to be able
             # to create markers to already-obsoleted commits
-            _repo = repo.unfiltered() if state.obsshelve else repo
+            _repo = repo if state.obsshelve else repo
             with ui.configoverride(
                 {("experimental", "rebaseskipobsolete"): "off"}, "unshelve"
             ):
@@ -834,7 +834,6 @@ def _unshelverestorecommit(ui, repo, basename, obsshelve):
         if obsshelve:
             md = shelvedfile(repo, basename, "oshelve").readobsshelveinfo()
             shelvenode = nodemod.bin(md["node"])
-            repo = repo.unfiltered()
             try:
                 shelvectx = repo[shelvenode]
             except error.RepoLookupError:
@@ -950,7 +949,7 @@ def _finishunshelve(repo, oldtiprev, tr, activebookmark, obsshelve):
     # but it doesn't update the inmemory structures, so addchangegroup
     # hooks still fire and try to operate on the missing commits.
     # Clean up manually to prevent this.
-    repo.unfiltered().changelog.strip(oldtiprev, tr)
+    repo.changelog.strip(oldtiprev, tr)
     _aborttransaction(repo)
 
 
@@ -978,7 +977,7 @@ def _obsoleteredundantnodes(repo, tr, pctx, shelvectx, tmpwctx):
 
 
 def _hidenodes(repo, nodes):
-    unfi = repo.unfiltered()
+    unfi = repo
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
         markers = [(unfi[n], ()) for n in nodes]
         obsolete.createmarkers(repo, markers)

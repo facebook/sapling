@@ -564,7 +564,7 @@ class manifestlog(object):
 
         self._opener = opener
         self._revlog = repo._constructmanifest()
-        self._repo = repo.unfiltered()
+        self._repo = repo
 
         # A cache of the manifestctx or treemanifestctx for each directory
         self._dirmancache = {}

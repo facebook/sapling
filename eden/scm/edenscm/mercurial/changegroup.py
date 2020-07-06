@@ -324,7 +324,6 @@ class cg1unpacker(object):
         - fewer heads than before: -1-removed heads (-2..-n)
         - number of heads stays the same: 1
         """
-        repo = repo.unfiltered()
 
         def csmap(x):
             repo.ui.debug("add changeset %s\n" % short(x))
@@ -1102,7 +1101,6 @@ def makestream(
 
     bundler = getbundler(version, repo, bundlecaps=bundlecaps, b2caps=b2caps)
 
-    repo = repo.unfiltered()
     commonrevs = outgoing.common
     csets = outgoing.missing
 
@@ -1119,9 +1117,7 @@ def makestream(
         # heads have been requested (since we then know there all linkrevs will
         # be pulled by the client).
         heads.sort()
-        fastpathlinkrev = fastpath or (
-            repo.filtername is None and heads == sorted(repo.heads())
-        )
+        fastpathlinkrev = fastpath or heads == sorted(repo.heads())
 
     repo.hook("preoutgoing", throw=True, source=source)
     _changegroupinfo(repo, csets, source)

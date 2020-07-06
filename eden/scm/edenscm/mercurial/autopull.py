@@ -163,7 +163,7 @@ def trypull(repo, xs):
                 attempt.execute(repo)
                 attempt = other
         attempt.execute(repo)
-        unfi = repo.unfiltered()
+        unfi = repo
         return all(x in unfi for x in xs)
 
     return False

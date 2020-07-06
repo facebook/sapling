@@ -681,7 +681,7 @@ def getdispatchrepo(repo, proto, command):
     extensions that need commands to operate on different repo views under
     specialized circumstances.
     """
-    return repo.filtered("served")
+    return repo
 
 
 def wrapstreamres(towrap, logger, start_time):
@@ -872,7 +872,6 @@ def wireprotocommand(name, args=""):
 
 @wireprotocommand("batch", "cmds *")
 def batch(repo, proto, cmds, others):
-    repo = repo.filtered("served")
     res = []
     for pair in cmds.split(";"):
         op, args = pair.split(" ", 1)

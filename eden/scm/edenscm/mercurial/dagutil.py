@@ -153,9 +153,7 @@ class revlogbaseddag(basedag):
         rl = self._revlog
         if filterunknown:
             return [
-                r
-                for r in map(rl.nodemap.get, ids)
-                if (r is not None and r != nullrev and r not in rl.filteredrevs)
+                r for r in map(rl.nodemap.get, ids) if (r is not None and r != nullrev)
             ]
         return [self._internalize(i) for i in ids]
 

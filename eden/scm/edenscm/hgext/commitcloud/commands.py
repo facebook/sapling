@@ -890,7 +890,7 @@ def cloudcheck(ui, repo, dest=None, **opts):
         revs = ["."]
 
     remotepath = ccutil.getremotepath(repo, dest)
-    unfi = repo.unfiltered()
+    unfi = repo
     revs = scmutil.revrange(repo, revs)
     nodestocheck = [repo[r].hex() for r in revs]
 

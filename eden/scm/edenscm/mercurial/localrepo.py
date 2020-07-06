@@ -87,19 +87,18 @@ _cachedfiles = set()
 
 
 class _basefilecache(scmutil.filecache):
-    """All filecache usage on repo are done for logic that should be unfiltered
-    """
+    """filecache usage on repo"""
 
     def __get__(self, repo, type=None):
         if repo is None:
             return self
-        return super(_basefilecache, self).__get__(repo.unfiltered(), type)
+        return super(_basefilecache, self).__get__(repo, type)
 
     def __set__(self, repo, value):
-        return super(_basefilecache, self).__set__(repo.unfiltered(), value)
+        return super(_basefilecache, self).__set__(repo, value)
 
     def __delete__(self, repo):
-        return super(_basefilecache, self).__delete__(repo.unfiltered())
+        return super(_basefilecache, self).__delete__(repo)
 
 
 class repofilecache(_basefilecache):
@@ -139,41 +138,15 @@ def isfilecached(repo, name):
 
     This returns (cachedobj-or-None, iscached) tuple.
     """
-    cacheentry = repo.unfiltered()._filecache.get(name, None)
+    cacheentry = repo._filecache.get(name, None)
     if not cacheentry:
         return None, False
     return cacheentry.obj, True
 
 
-class unfilteredpropertycache(util.propertycache):
-    """propertycache that apply to unfiltered repo only"""
-
-    def __get__(self, repo, type=None):
-        unfi = repo.unfiltered()
-        if unfi is repo:
-            return super(unfilteredpropertycache, self).__get__(unfi)
-        return getattr(unfi, self.name)
-
-
-class filteredpropertycache(util.propertycache):
-    """propertycache that must take filtering in account"""
-
-    def cachevalue(self, obj, value):
-        object.__setattr__(obj, self.name, value)
-
-
-def hasunfilteredcache(repo, name):
-    """check if a repo has an unfilteredpropertycache value for <name>"""
-    return name in vars(repo.unfiltered())
-
-
-def unfilteredmethod(orig):
-    """decorate method that always need to be run on unfiltered version"""
-
-    def wrapper(repo, *args, **kwargs):
-        return orig(repo.unfiltered(), *args, **kwargs)
-
-    return wrapper
+def hascache(repo, name):
+    """check if a repo has an value for <name>"""
+    return name in vars(repo)
 
 
 moderncaps = {"lookup", "branchmap", "pushkey", "known", "getbundle", "unbundle"}
@@ -188,7 +161,7 @@ class localpeer(repository.peer):
 
         if caps is None:
             caps = moderncaps.copy()
-        self._repo = repo.filtered("served")
+        self._repo = repo
         self._ui = repo.ui
         self._caps = repo._restrictcapabilities(caps)
 
@@ -404,7 +377,6 @@ class localrepository(object):
     def __init__(self, baseui, path, create=False):
         self.requirements = set()
         self.storerequirements = set()
-        self.filtername = None
         # wvfs: rooted at the repository root, used to access the working copy
         self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True, cacheaudited=False)
         # localvfs: rooted at .hg, used to access repo files outside of
@@ -598,15 +570,6 @@ class localrepository(object):
         # Maps a property name to its util.filecacheentry
         self._filecache = {}
 
-        # hold sets of revision to be filtered
-        # should be cleared when something might have changed the filter value:
-        # - new changesets,
-        # - phase change,
-        # - new obsolescence marker,
-        # - working directory parent change,
-        # - bookmark changes
-        self.filteredrevcache = {}
-
         # post-dirstate-status hooks
         self._postdsstatus = []
 
@@ -705,12 +668,12 @@ class localrepository(object):
     def _syncrevlogtozstore(self):
         """Sync commit data from revlog to zstore"""
         zstore = bindings.zstore.zstore(self.svfs.join("hgcommits/v1"))
-        self.unfiltered().changelog.zstore = zstore
+        self.changelog.zstore = zstore
 
         if self.ui.configbool(
             "format", "use-zstore-commit-data-revlog-fallback"
         ) or self.ui.configbool("format", "use-zstore-commit-data-server-fallback"):
-            revs = list(self.unfiltered().revs("not public()"))
+            revs = list(self.revs("not public()"))
         else:
             revs = self
 
@@ -824,14 +787,12 @@ class localrepository(object):
             supported = basesupported
         return supported
 
-    @unfilteredmethod
     def close(self):
         if util.safehasattr(self, "connectionpool"):
             self.connectionpool.close()
 
         self.commitpending()
 
-    @unfilteredmethod
     def commitpending(self):
         # If we have any pending manifests, commit them to disk.
         if "manifestlog" in self.__dict__:
@@ -997,16 +958,6 @@ class localrepository(object):
         source, _branches = hg.parseurl(self.ui.expandpath(source))
         return self.connectionpool.get(source, opts=opts)
 
-    def unfiltered(self):
-        """Return unfiltered version of the repository
-
-        Intended to be overwritten by filtered repo."""
-        return self
-
-    def filtered(self, name):
-        """Return a filtered version of a repository"""
-        return self
-
     @repofilecache(localpaths=["shared"])
     def sharedfeatures(self):
         """Returns the set of enabled 'shared' features for this repo"""
@@ -1112,7 +1063,7 @@ class localrepository(object):
     def manifestlog(self):
         return manifest.manifestlog(self.svfs, self)
 
-    @unfilteredpropertycache
+    @util.propertycache
     def fileslog(self):
         return filelog.fileslog(self)
 
@@ -1166,9 +1117,7 @@ class localrepository(object):
         if isinstance(changeid, slice):
             # wdirrev isn't contiguous so the slice shouldn't include it
             return [
-                context.changectx(self, i)
-                for i in range(*changeid.indices(len(self)))
-                if i not in self.changelog.filteredrevs
+                context.changectx(self, i) for i in range(*changeid.indices(len(self)))
             ]
         try:
             return context.changectx(self, changeid)
@@ -1265,7 +1214,7 @@ class localrepository(object):
         """
         return hook.hook(self.ui, self, name, throw, **args)
 
-    @unfilteredpropertycache
+    @util.propertycache
     def _mutationstore(self):
         return mutation.makemutationstore(self)
 
@@ -1281,7 +1230,7 @@ class localrepository(object):
         """returns a dictionary {branch: [branchheads]} with branchheads
         ordered by increasing revision number"""
         branchmap.updatecache(self)
-        return self._branchcaches[self.filtername]
+        return self._branchcaches[None]
 
     def branchtip(self, branch, ignoremissing=False):
         """return the tip node for a given branch
@@ -1313,11 +1262,10 @@ class localrepository(object):
     def known(self, nodes):
         cl = self.changelog
         nm = cl.nodemap
-        filtered = cl.filteredrevs
         result = []
         for n in nodes:
             r = nm.get(n)
-            resp = not (r is None or r in filtered)
+            resp = not (r is None)
             result.append(resp)
         return result
 
@@ -1340,8 +1288,7 @@ class localrepository(object):
             return False
         if not self.publishing():
             return True
-        # if publishing we can't copy if there is filtered content
-        return not self.filtered("visible").changelog.filteredrevs
+        return True
 
     def shared(self):
         """the type of shared repository (None if not shared)"""
@@ -1416,11 +1363,11 @@ class localrepository(object):
 
         return data
 
-    @unfilteredpropertycache
+    @util.propertycache
     def _encodefilterpats(self):
         return self._loadfilter("encode")
 
-    @unfilteredpropertycache
+    @util.propertycache
     def _decodefilterpats(self):
         return self._loadfilter("decode")
 
@@ -1520,7 +1467,7 @@ class localrepository(object):
                     args.update(bookmarks.preparehookargs(name, old, new))
                     repo.hook("pretxnclose-bookmark", throw=True, txnname=desc, **args)
             if hook.hashook(repo.ui, "pretxnclose-phase"):
-                cl = repo.unfiltered().changelog
+                cl = repo.changelog
                 for rev, (old, new) in tr.changes["phases"].items():
                     args = tr.hookargs.copy()
                     node = hex(cl.node(rev))
@@ -1571,18 +1518,16 @@ class localrepository(object):
 
         tr.hookargs["txnid"] = txnid
 
-        # Write parts of the repository store that don't participate in the
-        # standard transaction mechanism.
-        unfi = self.unfiltered()
+        # TODO: Consider changing 'self' to 'reporef()'.
 
         def commitnotransaction(tr):
-            unfi.commitpending()
+            self.commitpending()
 
         def abortnotransaction(tr):
-            if "manifestlog" in unfi.__dict__:
+            if "manifestlog" in self.__dict__:
                 self.manifestlog.abortpending()
 
-            if "fileslog" in unfi.__dict__:
+            if "fileslog" in self.__dict__:
                 self.fileslog.abortpending()
 
         def writependingnotransaction(tr):
@@ -1624,7 +1569,7 @@ class localrepository(object):
                         )
 
                 if hook.hashook(repo.ui, "txnclose-phase"):
-                    cl = repo.unfiltered().changelog
+                    cl = repo.changelog
                     phasemv = sorted(tr.changes["phases"].items())
                     for rev, (old, new) in phasemv:
                         args = tr.hookargs.copy()
@@ -1665,7 +1610,6 @@ class localrepository(object):
     def undofiles(self):
         return [(vfs, undoname(x)) for vfs, x in self._journalfiles()]
 
-    @unfilteredmethod
     def _writejournal(self, desc):
         self.dirstate.savebackup(None, "journal.dirstate")
         self.localvfs.writeutf8("journal.branch", "default")
@@ -1711,7 +1655,6 @@ class localrepository(object):
         finally:
             release(dsguard, lock, wlock)
 
-    @unfilteredmethod  # Until we get smarter cache management
     def _rollback(self, dryrun, force, dsguard):
         ui = self.ui
         try:
@@ -1813,7 +1756,6 @@ class localrepository(object):
 
         return updater
 
-    @unfilteredmethod
     def updatecaches(self, tr=None):
         """warm appropriate caches
 
@@ -1827,16 +1769,14 @@ class localrepository(object):
             return
 
     def invalidatecaches(self):
-        self.unfiltered()._branchcaches.clear()
+        self._branchcaches.clear()
         self.invalidatevolatilesets()
 
     def invalidatevolatilesets(self):
-        self.filteredrevcache.clear()
         obsolete.clearobscaches(self)
         mutation.clearobsoletecache(self)
-        unfi = self.unfiltered()
-        if "_phasecache" in unfi._filecache and "_phasecache" in unfi.__dict__:
-            unfi._phasecache.invalidate()
+        if "_phasecache" in self._filecache and "_phasecache" in self.__dict__:
+            self._phasecache.invalidate()
 
     def invalidatedirstate(self):
         """Invalidates the dirstate, causing the next call to dirstate
@@ -1852,13 +1792,13 @@ class localrepository(object):
             self.dirstate.invalidate()
             return
 
-        if hasunfilteredcache(self, "dirstate"):
+        if hascache(self, "dirstate"):
             for k in self.dirstate._filecache:
                 try:
                     delattr(self.dirstate, k)
                 except AttributeError:
                     pass
-            delattr(self.unfiltered(), "dirstate")
+            delattr(self, "dirstate")
 
     def invalidate(self, clearfilecache=False):
         """Invalidates both store and non-store parts other than dirstate
@@ -1868,7 +1808,6 @@ class localrepository(object):
         (e.g. incomplete fncache causes unintentional failure, but
         redundant one doesn't).
         """
-        unfiltered = self.unfiltered()  # all file caches are stored unfiltered
         for k in list(self._filecache.keys()):
             # dirstate is invalidated separately in invalidatedirstate()
             if k == "dirstate":
@@ -1883,7 +1822,7 @@ class localrepository(object):
                 # TODO: Solve the problem instead of working around it.
                 continue
 
-            if k == "manifestlog" and "manifestlog" in unfiltered.__dict__:
+            if k == "manifestlog" and "manifestlog" in self.__dict__:
                 # The manifestlog may have uncommitted additions, let's just
                 # flush them to disk so we don't lose them.
                 self.manifestlog.commitpending()
@@ -1891,15 +1830,15 @@ class localrepository(object):
             if clearfilecache:
                 del self._filecache[k]
             try:
-                delattr(unfiltered, k)
+                delattr(self, k)
             except AttributeError:
                 pass
 
-        if "fileslog" in unfiltered.__dict__:
+        if "fileslog" in self.__dict__:
             # The fileslog may have uncommitted additions, let's just
             # flush them to disk so we don't lose them.
-            unfiltered.fileslog.commitpending()
-            del unfiltered.__dict__["fileslog"]
+            self.fileslog.commitpending()
+            del self.__dict__["fileslog"]
 
         self.invalidatecaches()
         if not self.currenttransaction():
@@ -1915,7 +1854,6 @@ class localrepository(object):
         self.invalidate()
         self.invalidatedirstate()
 
-    @unfilteredmethod
     def _refreshfilecachestats(self, tr):
         """Reload stats of cached files so that they are flagged as valid"""
         for k, ce in self._filecache.items():
@@ -2259,7 +2197,6 @@ class localrepository(object):
                     elif f not in self.dirstate:
                         fail(f, _("file not tracked!"))
 
-    @unfilteredmethod
     def commit(
         self,
         text="",
@@ -2375,7 +2312,6 @@ class localrepository(object):
         self._afterlock(commithook)
         return ret
 
-    @unfilteredmethod
     def commitctx(self, ctx, error=False):
         """Add a new revision to current repository.
         Revision information is passed via the context argument.
@@ -2552,7 +2488,6 @@ class localrepository(object):
                 tr.release()
             lock.release()
 
-    @unfilteredmethod
     def destroying(self):
         """Inform the repository that nodes are about to be destroyed.
         Intended for use by strip and rollback, so there's a common
@@ -2570,7 +2505,6 @@ class localrepository(object):
         if "_phasecache" in vars(self):
             self._phasecache.write()
 
-    @unfilteredmethod
     def destroyed(self):
         """Inform the repository that nodes have been destroyed.
         Intended for use by strip and rollback, so there's a common
@@ -2675,8 +2609,6 @@ class localrepository(object):
             headrevs = cl.index2.headsancestors(revs)
             # headrevs is already in DESC.
             reverse = not reverse
-        elif cl.filteredrevs:
-            headrevs = cl.index.headrevsfiltered(cl.filteredrevs)
         else:
             headrevs = cl.index.headrevs()
         if start is not None:
@@ -2692,7 +2624,7 @@ class localrepository(object):
         return list(map(self.changelog.node, headrevs))
 
     def branchheads(self, branch=None, start=None, closed=False):
-        """return a (possibly filtered) list of heads for the given branch
+        """return a list of heads for the given branch
 
         Heads are returned in topological order, from newest to oldest.
         If branch is None, use the dirstate branch.
@@ -2751,7 +2683,7 @@ class localrepository(object):
         command.
         """
 
-    @unfilteredpropertycache
+    @util.propertycache
     def prepushoutgoinghooks(self):
         """Return util.hooks consists of a pushop with repo, remote, outgoing
         methods, which are called before pushing changesets.

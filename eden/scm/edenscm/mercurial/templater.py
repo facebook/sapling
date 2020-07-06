@@ -1195,7 +1195,7 @@ def shortest(context, mapping, args):
     # _partialmatch() of filtered changelog could take O(len(repo)) time,
     # which would be unacceptably slow. so we look for hash collision in
     # unfiltered space, which means some hashes may be slightly longer.
-    cl = mapping["ctx"]._repo.unfiltered().changelog
+    cl = mapping["ctx"]._repo.changelog
     return cl.shortest(node, minlength)
 
 

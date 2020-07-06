@@ -689,7 +689,6 @@ def unfilteredcmd(orig, *args, **opts):
     for i in [1, 2]:
         if len(args) > i and util.safehasattr(args[i], "unfiltered"):
             args = list(args)
-            args[i] = args[i].unfiltered()
             args = tuple(args)
     return orig(*args, **opts)
 

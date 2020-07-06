@@ -368,20 +368,6 @@ class basectx(object):
         return r
 
 
-def _filterederror(repo, changeid):
-    """build an exception to be raised about a filtered changeid
-
-    This is extracted in a function to help extensions (eg: evolve) to
-    experiment with various message variants."""
-    if repo.filtername.startswith("visible"):
-        msg = _("hidden revision '%s'") % changeid
-        hint = _("use --hidden to access hidden revisions")
-        return error.FilteredRepoLookupError(msg, hint=hint)
-    msg = _("filtered revision '%s' (not in '%s' subset)")
-    msg %= (changeid, repo.filtername)
-    return error.FilteredRepoLookupError(msg)
-
-
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already present in
@@ -419,7 +405,7 @@ class changectx(basectx):
                     # this is a hack to delay/avoid loading obsmarkers
                     # when we know that '.' won't be hidden
                     self._node = repo.dirstate.p1()
-                    self._rev = repo.unfiltered().changelog.rev(self._node)
+                    self._rev = repo.changelog.rev(self._node)
                     return
             except Exception:
                 self._repo.ui.warn(
@@ -433,8 +419,6 @@ class changectx(basectx):
                     self._node = changeid
                     self._rev = repo.changelog.rev(changeid)
                     return
-                except error.FilteredRepoLookupError:
-                    raise
                 except LookupError:
                     # The only valid bytes changeid is a node, and if the node was not
                     # found above, this is now considered an unknown changeid.
@@ -462,8 +446,6 @@ class changectx(basectx):
                 self._rev = r
                 self._node = repo.changelog.node(r)
                 return
-            except error.FilteredIndexError:
-                raise
             except (ValueError, OverflowError, IndexError):
                 pass
 
@@ -472,8 +454,6 @@ class changectx(basectx):
                     self._node = bin(changeid)
                     self._rev = repo.changelog.rev(self._node)
                     return
-                except error.FilteredLookupError:
-                    raise
                 except (TypeError, LookupError):
                     pass
 
@@ -484,22 +464,17 @@ class changectx(basectx):
                 return
             except KeyError:
                 pass
-            except error.FilteredRepoLookupError:
-                raise
             except error.RepoLookupError:
                 pass
 
-            self._node = repo.unfiltered().changelog._partialmatch(changeid)
+            self._node = repo.changelog._partialmatch(changeid)
             if self._node is not None:
                 self._rev = repo.changelog.rev(self._node)
                 return
 
             # lookup failed
             # check if it might have come from damaged dirstate
-            #
-            # XXX we could avoid the unfiltered if we had a recognizable
-            # exception for filtered changeset access
-            if repo.local() and changeid in repo.unfiltered().dirstate.parents():
+            if repo.local() and changeid in repo.dirstate.parents():
                 msg = _("working directory has unknown parent '%s'!")
                 raise error.Abort(msg % short(changeid))
             try:
@@ -507,12 +482,6 @@ class changectx(basectx):
                     changeid = hex(changeid)
             except TypeError:
                 pass
-        except (
-            error.FilteredIndexError,
-            error.FilteredLookupError,
-            error.FilteredRepoLookupError,
-        ):
-            raise _filterederror(repo, changeid)
         except IndexError:
             pass
         raise error.RepoLookupError(_("unknown revision '%s'") % changeid)
@@ -921,7 +890,7 @@ class basefilectx(object):
         :inclusive: if true, the src revision will also be checked
         """
         repo = self._repo
-        cl = repo.unfiltered().changelog
+        cl = repo.changelog
         mfl = repo.manifestlog
         # fetch the linkrev
         lkr = self.linkrev()
@@ -1276,26 +1245,7 @@ class filectx(basefilectx):
 
     @propertycache
     def _changectx(self):
-        try:
-            return changectx(self._repo, self._changeid)
-        except error.FilteredRepoLookupError:
-            # Linkrev may point to any revision in the repository.  When the
-            # repository is filtered this may lead to `filectx` trying to build
-            # `changectx` for filtered revision. In such case we fallback to
-            # creating `changectx` on the unfiltered version of the repository.
-            # This fallback should not be an issue because `changectx` from
-            # `filectx` are not used in complex operations that care about
-            # filtering.
-            #
-            # This fallback is a cheap and dirty fix that prevent several
-            # crashes. It does not ensure the behavior is correct. However the
-            # behavior was not correct before filtering either and "incorrect
-            # behavior" is seen as better as "crash"
-            #
-            # Linkrevs have several serious troubles with filtering that are
-            # complicated to solve. Proper handling of the issue here should be
-            # considered when solving linkrev issue are on the table.
-            return changectx(self._repo.unfiltered(), self._changeid)
+        return changectx(self._repo, self._changeid)
 
     def filectx(self, fileid, changeid=None):
         """opens an arbitrary revision of the file without

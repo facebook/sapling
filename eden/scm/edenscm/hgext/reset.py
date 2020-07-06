@@ -81,7 +81,7 @@ def _revive(repo, rev):
     """Brings the given rev back into the repository. Finding it in backup
     bundles if necessary.
     """
-    unfi = repo.unfiltered()
+    unfi = repo
     try:
         ctx = unfi[rev]
     except error.RepoLookupError:

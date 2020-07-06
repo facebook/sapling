@@ -641,7 +641,7 @@ class fixupstate(object):
         self.ui = ui or nullui()
         self.opts = opts or {}
         self.stack = stack
-        self.repo = stack[-1].repo().unfiltered()
+        self.repo = stack[-1].repo()
         self.checkoutidentifier = self.repo.dirstate.checkoutidentifier
 
         # following fields will be filled later

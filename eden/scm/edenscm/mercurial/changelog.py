@@ -333,7 +333,6 @@ class changelog(revlog.revlog):
         self._delayed = False
         self._delaybuf = None
         self._divert = False
-        self.filteredrevs = frozenset()
 
         if uiconfig.configbool("format", "use-zstore-commit-data-revlog-fallback"):
             self._zstorefallback = "revlog"
@@ -351,32 +350,21 @@ class changelog(revlog.revlog):
         # type: () -> bytes
         """filtered version of revlog.tip"""
         for i in range(len(self) - 1, -2, -1):
-            if i not in self.filteredrevs:
-                # pyre-fixme[7]: Expected `bytes` but got implicit return value of
-                #  `None`.
-                return self.node(i)
+            # pyre-fixme[7]: Expected `bytes` but got implicit return value of `None`.
+            return self.node(i)
 
     def __contains__(self, rev):
         """filtered version of revlog.__contains__"""
-        return rev is not None and 0 <= rev < len(self) and rev not in self.filteredrevs
+        return rev is not None and 0 <= rev < len(self)
 
     def __iter__(self):
         """filtered version of revlog.__iter__"""
-        if len(self.filteredrevs) == 0:
-            return revlog.revlog.__iter__(self)
-
-        def filterediter():
-            for i in range(len(self)):
-                if i not in self.filteredrevs:
-                    yield i
-
-        return filterediter()
+        return revlog.revlog.__iter__(self)
 
     def revs(self, start=0, stop=None):
         """filtered version of revlog.revs"""
         for i in super(changelog, self).revs(start, stop):
-            if i not in self.filteredrevs:
-                yield i
+            yield i
 
     @util.propertycache
     def nodemap(self):
@@ -408,45 +396,30 @@ class changelog(revlog.revlog):
         heads in a consistent way, then discovery can just use references as
         heads isntead.
         """
-        return self.index.headrevsfiltered(self.filteredrevs)
+        return self.index.headrevs()
 
     def strip(self, *args, **kwargs):
-        # XXX make something better than assert
-        # We can't expect proper strip behavior if we are filtered.
-        assert not self.filteredrevs
         super(changelog, self).strip(*args, **kwargs)
 
     def rev(self, node):
         """filtered version of revlog.rev"""
         r = super(changelog, self).rev(node)
-        if r in self.filteredrevs:
-            raise error.FilteredLookupError(
-                hex(node), self.indexfile, _("filtered node")
-            )
         return r
 
     def node(self, rev):
         """filtered version of revlog.node"""
-        if rev in self.filteredrevs:
-            raise error.FilteredIndexError(rev)
         return super(changelog, self).node(rev)
 
     def linkrev(self, rev):
         """filtered version of revlog.linkrev"""
-        if rev in self.filteredrevs:
-            raise error.FilteredIndexError(rev)
         return super(changelog, self).linkrev(rev)
 
     def parentrevs(self, rev):
         """filtered version of revlog.parentrevs"""
-        if rev in self.filteredrevs:
-            raise error.FilteredIndexError(rev)
         return super(changelog, self).parentrevs(rev)
 
     def flags(self, rev):
         """filtered version of revlog.flags"""
-        if rev in self.filteredrevs:
-            raise error.FilteredIndexError(rev)
         return super(changelog, self).flags(rev)
 
     def delayupdate(self, tr):

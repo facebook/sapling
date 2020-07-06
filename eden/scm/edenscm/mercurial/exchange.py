@@ -392,7 +392,7 @@ class pushoperation(object):
         if self.revs is None:
             # not target to push, all common are relevant
             return self.outgoing.commonheads
-        unfi = self.repo.unfiltered()
+        unfi = self.repo
         # I want cheads = heads(::missingheads and ::commonheads)
         # (missingheads is revs with secret changeset filtered out)
         #
@@ -574,7 +574,7 @@ def _pushdiscoveryphase(pushop):
     if pushop.repo.ui.configbool("experimental", "narrow-heads"):
         return
     outgoing = pushop.outgoing
-    unfi = pushop.repo.unfiltered()
+    unfi = pushop.repo
     remotephases = pushop.remote.listkeys("phases")
 
     pushop.remotephases = phases.remotephasessummary(
@@ -621,7 +621,7 @@ def _pushdiscoveryobsmarkers(pushop):
 @pushdiscovery("bookmarks")
 def _pushdiscoverybookmarks(pushop):
     ui = pushop.ui
-    repo = pushop.repo.unfiltered()
+    repo = pushop.repo
     remote = pushop.remote
     ui.debug("checking for updated bookmarks\n")
     ancestors = ()
@@ -689,7 +689,7 @@ def _pushdiscoverybookmarks(pushop):
 
 def _pushcheckoutgoing(pushop):
     outgoing = pushop.outgoing
-    unfi = pushop.repo.unfiltered()
+    unfi = pushop.repo
     if not outgoing.missing:
         # nothing to push
         scmutil.nochangesfound(unfi.ui, unfi, outgoing.excluded)
@@ -1083,9 +1083,7 @@ def _pushchangeset(pushop):
     # TODO: get bundlecaps from remote
     bundlecaps = None
     # create a changegroup from local
-    if pushop.revs is None and not (
-        outgoing.excluded or pushop.repo.changelog.filteredrevs
-    ):
+    if pushop.revs is None and not (outgoing.excluded):
         # push everything,
         # use the fast path, no race possible on push
         cg = changegroup.makechangegroup(
@@ -1492,7 +1490,7 @@ def _pulldiscoverychangegroup(pullop):
         needlargestcommonset=False,
     )
     common, fetch, rheads = tmp
-    nm = pullop.repo.unfiltered().changelog.nodemap
+    nm = pullop.repo.changelog.nodemap
     if fetch and rheads:
         # If a remote heads is filtered locally, put in back in common.
         #
@@ -1696,7 +1694,7 @@ def _pullapplyphases(pullop, remotephases):
         # should be seen as public
         pheads = pullop.pulledsubset
         dheads = []
-    unfi = pullop.repo.unfiltered()
+    unfi = pullop.repo
     phase = unfi._phasecache.phase
     rev = unfi.changelog.nodemap.get
     public = phases.public
