@@ -964,6 +964,21 @@ impl DagAlgorithm for RevlogIndex {
         Ok(Set::from_spans_idmap(result_id_set, self.get_snapshot()))
     }
 
+    /// Calculate `::reachable - ::unreachable` and `::unreachable`.
+    fn only_both(&self, reachable: Set, unreachable: Set) -> Result<(Set, Set)> {
+        let reachable_ids = self.to_id_set(&reachable)?;
+        let unreachable_ids = self.to_id_set(&unreachable)?;
+        let reachable_revs: Vec<u32> = reachable_ids.into_iter().map(|i| i.0 as u32).collect();
+        let unreachable_revs: Vec<u32> = unreachable_ids.into_iter().map(|i| i.0 as u32).collect();
+        // This is a same problem to head-based public/draft phase calculation.
+        let (result_unreachable_id_set, result_reachable_id_set) =
+            self.phasesets(unreachable_revs, reachable_revs);
+        Ok((
+            Set::from_spans_idmap(result_reachable_id_set, self.get_snapshot()),
+            Set::from_spans_idmap(result_unreachable_id_set, self.get_snapshot()),
+        ))
+    }
+
     /// Calculates the descendants of the given set.
     fn descendants(&self, set: Set) -> Result<Set> {
         let id_set = self.to_id_set(&set)?;
