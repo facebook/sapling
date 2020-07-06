@@ -222,16 +222,23 @@ impl AsyncIntoResponse<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::Commit
             changesets_grouped_by_repo
                 .into_iter()
                 .map(|(repo, changesets)| async move {
-                    Ok::<
-                        Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>,
-                        errors::ServiceError,
-                    >(
-                        map_commit_identities(&repo, changesets, identity_schemes)
-                            .await?
-                            .into_iter()
-                            .map(|(_k, v)| v)
-                            .collect(),
-                    )
+                    let id_map =
+                        map_commit_identities(&repo, changesets.clone(), identity_schemes).await?;
+
+                    changesets
+                        .iter()
+                        .map(move |id| {
+                            id_map.get(id).cloned().ok_or_else(|| {
+                                errors::internal_error(
+                                    "programming error, id is missing from the map",
+                                )
+                                .into()
+                            })
+                        })
+                        .collect::<Result<
+                            Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>,
+                            errors::ServiceError,
+                        >>()
                 })
         })
         .await?
