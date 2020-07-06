@@ -1,6 +1,12 @@
 #chg-compatible
 
   $ disable treemanifest
+
+This test uses too many revlog low-level details that are not respected by the
+Rust revlog implementation.
+
+  $ setconfig experimental.rust-commits=false
+
 Check whether size of generaldelta revlog is not bigger than its
 regular equivalent. Test would fail if generaldelta was naive
 implementation of parentdelta: third manifest revision would be fully
