@@ -22,6 +22,7 @@ bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 scopeguard = "1.0.0"
 tokio = { version = "=0.2.13", features = ["full"] }
+twox-hash = "1.5"
 
 [dev-dependencies]
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

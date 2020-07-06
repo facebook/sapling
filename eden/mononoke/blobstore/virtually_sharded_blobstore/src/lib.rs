@@ -8,9 +8,9 @@
 mod ratelimit;
 mod shard;
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
-use bytes::{buf::ext::Chain, Bytes};
+use bytes::{buf::ext::Chain, BufMut, Bytes, BytesMut};
 use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
@@ -19,9 +19,12 @@ use mononoke_types::BlobstoreBytes;
 use scuba_ext::ScubaSampleBuilderExt;
 use stats::prelude::*;
 use std::convert::AsRef;
+use std::convert::TryInto;
 use std::fmt;
+use std::hash::Hasher;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
+use twox_hash::XxHash;
 
 use crate::ratelimit::{AccessReason, Ticket};
 use shard::{SemaphoreAcquisition, Shards};
@@ -41,6 +44,7 @@ const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024 - 1024;
 const NOT_STORABLE: Bytes = Bytes::from_static(&[0]);
 const STORED: Bytes = Bytes::from_static(&[1]);
 
+#[derive(Debug)]
 struct CacheKey(String);
 
 impl CacheKey {
@@ -61,6 +65,81 @@ enum CacheData {
     /// Represents data that is known to not be storable in cache (because it's too large,
     /// presumably). For this data, we skip semaphore access.
     NotStorable,
+}
+
+impl CacheData {
+    fn deserialize(mut val: Bytes) -> Result<Self, Error> {
+        let prefix = val.split_to(1);
+
+        if prefix.as_ref() == NOT_STORABLE {
+            return Ok(Self::NotStorable);
+        }
+
+        if prefix.as_ref() == STORED {
+            let val = BlobstoreGetData::decode(val)
+                .map_err(|()| anyhow!("Invalid data in blob cache"))?;
+            return Ok(Self::Stored(val));
+        }
+
+        Err(anyhow!("Invalid prefix: {:?}", prefix))
+    }
+}
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+enum PresenceData {
+    /// We read this at some point. We will not dedupe based on this.
+    Get,
+    /// We wrote this ourselves, and this is the hash of the data. We will dedupe based on this.
+    Put(u64),
+}
+
+impl PresenceData {
+    const GET: Bytes = Bytes::from_static(&[0]);
+    const PUT: Bytes = Bytes::from_static(&[1]);
+
+    fn from_put(v: &BlobstoreBytes) -> Self {
+        let mut hasher = XxHash::with_seed(0);
+        hasher.write(v.as_bytes().as_ref());
+        Self::Put(hasher.finish())
+    }
+
+    fn deserialize(mut val: Bytes) -> Result<Self, Error> {
+        let prefix = val.split_to(1);
+
+        if prefix.as_ref() == Self::GET {
+            return Ok(Self::Get);
+        }
+
+        if prefix.as_ref() == Self::PUT {
+            let bytes: [u8; 8] = val
+                .as_ref()
+                .try_into()
+                .context("Invalid put data in presence cache")?;
+
+            return Ok(Self::Put(u64::from_ne_bytes(bytes)));
+        }
+
+        Err(anyhow!("Invalid prefix: {:?}", prefix))
+    }
+
+    fn serialize(&self) -> Bytes {
+        match self {
+            Self::Get => Self::GET,
+            Self::Put(v) => {
+                let mut buff = BytesMut::with_capacity(1 + std::mem::size_of::<u64>());
+                buff.put(Self::PUT);
+                buff.put(v.to_ne_bytes().as_ref());
+                buff.freeze()
+            }
+        }
+    }
+
+    fn is_put(&self) -> bool {
+        match self {
+            Self::Get => false,
+            Self::Put(..) => true,
+        }
+    }
 }
 
 /// A type representing that a blob is known to exist. Used in matches below.
@@ -140,32 +219,37 @@ impl<T> Inner<T> {
 
 impl<T> Inner<T> {
     fn get_from_cache(&self, key: &CacheKey) -> Result<Option<CacheData>, Error> {
-        let mut val = match self.blob_pool.get(key)? {
+        let val = match self.blob_pool.get(key)? {
             Some(val) => val,
             None => return Ok(None),
         };
 
-        let prefix = val.split_to(1);
-
-        if prefix.as_ref() == NOT_STORABLE {
-            return Ok(Some(CacheData::NotStorable));
-        }
-
-        if prefix.as_ref() == STORED {
-            let val = BlobstoreGetData::decode(val).map_err(|()| anyhow!("Could not decode"))?;
-            return Ok(Some(CacheData::Stored(val)));
-        }
-
-        Err(anyhow!("Invalid prefix"))
+        Ok(Some(CacheData::deserialize(val)?))
     }
 
-    fn set_is_present(&self, key: &CacheKey) -> Result<(), Error> {
-        self.presence_pool.set(key, Bytes::from(b"P".as_ref()))?;
+    /// Set presence for this cache key.
+    fn set_is_present(&self, key: &CacheKey, value: PresenceData) -> Result<(), Error> {
+        // If it's a put, then we overwrite existing data in cache, to record the new value.
+        if value.is_put() {
+            self.presence_pool.set_or_replace(key, value.serialize())?;
+            return Ok(());
+        }
+
+        // If it's a get, we leave existing data alone. If existing data was a get then there is no
+        // use updating it, and if it was a put, we don't *want* to update it (see
+        // test_dedupe_writes_different_data).
+        self.presence_pool.set(key, value.serialize())?;
+
         Ok(())
     }
 
-    fn set_in_cache(&self, key: &CacheKey, value: BlobstoreGetData) -> Result<(), Error> {
-        self.set_is_present(key)?;
+    fn set_in_cache(
+        &self,
+        key: &CacheKey,
+        presence: PresenceData,
+        value: BlobstoreGetData,
+    ) -> Result<(), Error> {
+        self.set_is_present(key, presence)?;
 
         let stored = value
             .encode(MAX_CACHELIB_VALUE_SIZE)
@@ -187,11 +271,48 @@ impl<T> Inner<T> {
         Ok(())
     }
 
-    /// Ask the cache if it knows whether the backing store has a value for this key. Returns
-    /// `true` if there is definitely a value (i.e. cache entry in Present or Known state), `false`
-    /// otherwise (Empty or Leased states).
-    fn check_presence(&self, key: &CacheKey) -> Result<Option<KnownToExist>, Error> {
-        Ok(self.presence_pool.get(key)?.map(|_| KnownToExist))
+    /// Ask the cache if it knows whether the backing store has a given request PresenceData for
+    /// this key. Returns Some(KnownToExist) if so. The request argument lets the caller control
+    /// what they want to see: PresenceData::Get means we just want to know this key is readable.
+    /// PresenceData::Put(v) means we want to know v specifically was last written by us.
+    fn check_presence(
+        &self,
+        key: &CacheKey,
+        request: PresenceData,
+    ) -> Result<Option<KnownToExist>, Error> {
+        let stored = self
+            .presence_pool
+            .get(key)?
+            .map(PresenceData::deserialize)
+            .transpose()?;
+
+        let r = match (stored, request) {
+            (None, _) => {
+                // Nothing in the presence cache at all (see test_read_after_write).
+                None
+            }
+            (Some(_), PresenceData::Get) => {
+                // Something in the cache, and we're not really looking for a specific value. This
+                // works (see test_dedupe_reads).
+                Some(KnownToExist)
+            }
+            (Some(PresenceData::Get), PresenceData::Put(..)) => {
+                // We want a specific value, but we don't have one in cache. This does not work
+                // (see test_dedupe_writes_different_data).
+                None
+            }
+            (Some(PresenceData::Put(v1)), PresenceData::Put(v2)) => {
+                // We have a put in the cache, and we want to check for a put. If they're the same,
+                // this is a match (see test_dedupe_writes and test_dedupe_writes_different_data).
+                if v1 == v2 {
+                    Some(KnownToExist)
+                } else {
+                    None
+                }
+            }
+        };
+
+        Ok(r)
     }
 }
 
@@ -280,7 +401,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
 
                 // And finally, attempt to cache what we got back.
                 if let Some(ref data) = res {
-                    let _ = inner.set_in_cache(&cache_key, data.clone());
+                    let _ = inner.set_in_cache(&cache_key, PresenceData::Get, data.clone());
                 }
 
                 Ok(res)
@@ -302,8 +423,9 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
         async move {
             STATS::puts.add_value(1);
             let cache_key = CacheKey::from_key(&key);
+            let presence = PresenceData::from_put(&value);
 
-            if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key) {
+            if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key, presence) {
                 report_deduplicated_put(&ctx, &key);
                 return Ok(());
             }
@@ -313,7 +435,9 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
 
                 let acq = inner
                     .write_shards
-                    .acquire(&ctx, &key, ticket, || inner.check_presence(&cache_key))
+                    .acquire(&ctx, &key, ticket, || {
+                        inner.check_presence(&cache_key, presence)
+                    })
                     .await?;
 
                 let permit = match acq {
@@ -333,7 +457,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
                     .await?;
 
                 let value = BlobstoreGetData::new(BlobstoreMetadata::new(None), value);
-                let _ = inner.set_in_cache(&cache_key, value);
+                let _ = inner.set_in_cache(&cache_key, presence, value);
 
                 Ok(res)
             };
@@ -348,8 +472,9 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
 
         async move {
             let cache_key = CacheKey::from_key(&key);
+            let presence = PresenceData::Get;
 
-            if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key) {
+            if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key, presence) {
                 return Ok(true);
             }
 
@@ -358,7 +483,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
             let exists = inner.blobstore.is_present(ctx, key.clone()).await?;
 
             if exists {
-                let _ = inner.set_is_present(&cache_key);
+                let _ = inner.set_is_present(&cache_key, presence);
             }
 
             Ok(exists)
@@ -379,6 +504,7 @@ mod test {
     fn make_blobstore<B: Blobstore>(
         fb: FacebookInit,
         blob: B,
+        blob_pool_name: &str,
         cache_shards: NonZeroUsize,
         cache_filter: fn(&Bytes) -> Result<(), Error>,
     ) -> Result<VirtuallyShardedBlobstore<B>, Error> {
@@ -388,7 +514,7 @@ mod test {
             cachelib::init_cache_once(fb, config).unwrap();
         });
 
-        let blob_pool = cachelib::get_or_create_volatile_pool("blobs", 8 * 1024 * 1024)?;
+        let blob_pool = cachelib::get_or_create_volatile_pool(blob_pool_name, 8 * 1024 * 1024)?;
         let presence_pool = cachelib::get_or_create_volatile_pool("presence", 8 * 1024 * 1024)?;
 
         let inner = Inner::new(blob, blob_pool, presence_pool, cache_shards, cache_filter);
@@ -521,8 +647,13 @@ mod test {
         #[fbinit::test]
         async fn test_dedupe_reads(fb: FacebookInit) -> Result<(), Error> {
             let ctx = CoreContext::test_mock(fb);
-            let blobstore =
-                make_blobstore(fb, TestBlobstore::new(), nonzero!(2usize), allow_all_filter)?;
+            let blobstore = make_blobstore(
+                fb,
+                TestBlobstore::new(),
+                "blobs",
+                nonzero!(2usize),
+                allow_all_filter,
+            )?;
 
             let key = "foo".to_string();
 
@@ -566,8 +697,13 @@ mod test {
         #[fbinit::test]
         async fn test_cache_read(fb: FacebookInit) -> Result<(), Error> {
             let ctx = CoreContext::test_mock(fb);
-            let blobstore =
-                make_blobstore(fb, TestBlobstore::new(), nonzero!(2usize), allow_all_filter)?;
+            let blobstore = make_blobstore(
+                fb,
+                TestBlobstore::new(),
+                "blobs",
+                nonzero!(2usize),
+                allow_all_filter,
+            )?;
 
             let key = "foo".to_string();
             let val = BlobstoreBytes::from_bytes("foo");
@@ -596,8 +732,13 @@ mod test {
         #[fbinit::test]
         async fn test_read_after_write(fb: FacebookInit) -> Result<(), Error> {
             let ctx = CoreContext::test_mock(fb);
-            let blobstore =
-                make_blobstore(fb, TestBlobstore::new(), nonzero!(2usize), allow_all_filter)?;
+            let blobstore = make_blobstore(
+                fb,
+                TestBlobstore::new(),
+                "blobs",
+                nonzero!(2usize),
+                allow_all_filter,
+            )?;
 
             let key = "foo".to_string();
             let val = BlobstoreBytes::from_bytes("foo");
@@ -622,6 +763,7 @@ mod test {
             let blobstore = make_blobstore(
                 fb,
                 TestBlobstore::new(),
+                "blobs",
                 nonzero!(2usize),
                 reject_all_filter,
             )?;
@@ -721,8 +863,13 @@ mod test {
         #[fbinit::test]
         async fn test_dedupe_writes(fb: FacebookInit) -> Result<(), Error> {
             let ctx = CoreContext::test_mock(fb);
-            let blobstore =
-                make_blobstore(fb, TestBlobstore::new(), nonzero!(2usize), allow_all_filter)?;
+            let blobstore = make_blobstore(
+                fb,
+                TestBlobstore::new(),
+                "blobs",
+                nonzero!(2usize),
+                allow_all_filter,
+            )?;
 
             let key = "foo".to_string();
             let val = BlobstoreBytes::from_bytes("foo");
@@ -750,6 +897,105 @@ mod test {
                 let blob = data.entry(key.clone()).or_default();
                 assert_eq!(blob.gets, 0);
             }
+
+            Ok(())
+        }
+
+        #[fbinit::test]
+        async fn test_dedupe_writes_different_data(fb: FacebookInit) -> Result<(), Error> {
+            let ctx = CoreContext::test_mock(fb);
+            let blobstore = make_blobstore(
+                fb,
+                TestBlobstore::new(),
+                "blobs",
+                nonzero!(2usize),
+                allow_all_filter,
+            )?;
+
+            let key = "foo".to_string();
+            let val0 = BlobstoreBytes::from_bytes("foo");
+            let val1 = BlobstoreBytes::from_bytes("foo");
+            let val2 = BlobstoreBytes::from_bytes("bar");
+
+            // First, populate the presence cache with some get data.
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let mut blob = data.entry(key.clone()).or_default();
+                blob.data = Some(BlobData::Bytes(val0.clone()));
+            }
+
+            blobstore.get(ctx.clone(), key.clone()).await?;
+
+            // Now, check that a put still goes through.
+
+            blobstore
+                .put(ctx.clone(), key.clone(), val1.clone())
+                .await?;
+
+            let handle1 = {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.puts, 1);
+                blob.data.as_ref().unwrap().handle()
+            };
+            assert_eq!(handle1.bytes().await?, val1);
+
+            // Put it again. This time, we don't expect a put to make it through to the blobstore.
+            blobstore
+                .put(ctx.clone(), key.clone(), val1.clone())
+                .await?;
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.puts, 1);
+            };
+
+            // Now, check that a put for different data also goes through.
+
+            blobstore
+                .put(ctx.clone(), key.clone(), val2.clone())
+                .await?;
+
+            let handle2 = {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.puts, 2);
+                blob.data.as_ref().unwrap().handle()
+            };
+            assert_eq!(handle2.bytes().await?, val2);
+
+            // Finally, "evict" all the cached data by creating a new blobstore with a new blob
+            // pool (but with the same presence pool), and check that a get doesn't overwrite the
+            // put state after a get.
+
+            let blobstore = make_blobstore(
+                fb,
+                TestBlobstore::new(),
+                "blobs2",
+                nonzero!(2usize),
+                allow_all_filter,
+            )?;
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let mut blob = data.entry(key.clone()).or_default();
+                blob.data = Some(BlobData::Bytes(val0.clone()));
+            };
+
+            blobstore.get(ctx.clone(), key.clone()).await?;
+
+            blobstore
+                .put(ctx.clone(), key.clone(), val2.clone())
+                .await?;
+
+            {
+                let mut data = blobstore.inner.blobstore.data.lock().unwrap();
+                let blob = data.entry(key.clone()).or_default();
+                assert_eq!(blob.gets, 1);
+                assert_eq!(blob.puts, 0);
+            };
 
             Ok(())
         }
@@ -830,8 +1076,13 @@ mod test {
             let session = builder.build();
             let ctx = session.new_context(logger(), ScubaSampleBuilder::with_discard());
 
-            let blobstore =
-                make_blobstore(fb, DummyBlob::new(), nonzero!(100usize), allow_all_filter)?;
+            let blobstore = make_blobstore(
+                fb,
+                DummyBlob::new(),
+                "blobs",
+                nonzero!(100usize),
+                allow_all_filter,
+            )?;
 
             // get
             let (stats, _) = futures::future::try_join_all(
@@ -877,8 +1128,13 @@ mod test {
             let session = builder.build();
             let ctx = &session.new_context(logger(), ScubaSampleBuilder::with_discard());
 
-            let blobstore =
-                &make_blobstore(fb, DummyBlob::new(), nonzero!(100usize), allow_all_filter)?;
+            let blobstore = &make_blobstore(
+                fb,
+                DummyBlob::new(),
+                "blobs",
+                nonzero!(100usize),
+                allow_all_filter,
+            )?;
 
             // get
             let (stats, _) = futures::future::try_join_all(
