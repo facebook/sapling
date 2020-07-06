@@ -7,24 +7,24 @@
 
 use anyhow::{bail, format_err, Error, Result};
 use blobstore::Loadable;
+use bytes::BytesMut;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
 use futures_ext::FutureExt as OldFutureExt;
-use futures_old::{Future, IntoFuture, Stream};
+use futures_old::{Future, IntoFuture};
 use mononoke_types::{
     hash::{Sha1, Sha256},
     ContentId, FileContents,
 };
 use slog::{info, Logger};
-use std::convert::TryInto;
-use std::io::BufReader;
 use std::str::FromStr;
-use tokio_old::{codec, fs::File};
+use tokio::{fs::File, io::BufReader};
+use tokio_util::codec::{BytesCodec, FramedRead};
 
 use crate::error::SubcommandError;
 
@@ -105,42 +105,35 @@ pub async fn execute_command<'a>(
             })
             .from_err()
             .boxify(),
-        (COMMAND_STORE, Some(matches)) => (
-            blobrepo,
-            File::open(matches.value_of(ARG_FILE).unwrap().to_string())
-                .and_then(|file| file.metadata())
-                .from_err(),
-        )
-            .into_future()
-            .and_then(|(blobrepo, (file, metadata))| {
-                let file_buf = BufReader::new(file);
-                // If the size doesn't fit into a u64, we aren't going to be able to process
-                // it anyway.
-                let len: u64 = metadata.len().try_into().unwrap();
-                let data = codec::FramedRead::new(file_buf, codec::BytesCodec::new())
-                    .map(|bytes_mut| bytes_mut.freeze())
-                    .map(bytes_ext::copy_from_old)
-                    .from_err();
-                filestore::store(
+        (COMMAND_STORE, Some(matches)) => {
+            let file = matches.value_of(ARG_FILE).unwrap().to_string();
+            async move {
+                let blobrepo = blobrepo.compat().await?;
+                let file = File::open(&file).await.map_err(Error::from)?;
+                let metadata = file.metadata().await.map_err(Error::from)?;
+
+                let data = BufReader::new(file);
+                let data = FramedRead::new(data, BytesCodec::new()).map_ok(BytesMut::freeze);
+                let len = metadata.len();
+                let metadata = filestore::store(
                     blobrepo.get_blobstore(),
                     blobrepo.filestore_config(),
                     ctx,
                     &StoreRequest::new(len),
-                    data,
+                    data.map_err(Error::from).compat(),
                 )
-            })
-            .map({
-                cloned!(logger);
-                move |metadata| {
-                    info!(
-                        logger,
-                        "Wrote {} ({} bytes)", metadata.content_id, metadata.total_size
-                    );
-                    ()
-                }
-            })
-            .from_err()
-            .boxify(),
+                .compat()
+                .await?;
+                info!(
+                    logger,
+                    "Wrote {} ({} bytes)", metadata.content_id, metadata.total_size
+                );
+                Ok(())
+            }
+            .boxed()
+            .compat()
+            .boxify()
+        }
         (COMMAND_VERIFY, Some(matches)) => (blobrepo, extract_fetch_key(matches).into_future())
             .into_future()
             .and_then(move |(blobrepo, key)| {
