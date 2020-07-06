@@ -8,6 +8,7 @@ anyhow = "1"
 dag = { path = "../dag" }
 minibytes = { path = "../minibytes" }
 revlogindex = { path = "../revlogindex" }
+serde = { version = "1", features = ["derive"] }
 zstore = { path = "../zstore" }
 
 [dev-dependencies]

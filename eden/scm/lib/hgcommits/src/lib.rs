@@ -12,6 +12,8 @@
 use anyhow::Result;
 use dag::Vertex;
 use minibytes::Bytes;
+use serde::Deserialize;
+use serde::Serialize;
 
 pub trait ReadCommitText {
     /// Read raw text for a commit.
@@ -27,7 +29,7 @@ pub trait AppendCommits {
 }
 
 /// Parameter used by `add_commits`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HgCommit {
     pub vertex: Vertex,
     pub parents: Vec<Vertex>,
