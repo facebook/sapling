@@ -46,7 +46,6 @@ chmod +x:
   $ hg tip -q
   2:3a34410f282e
   $ test -x new
-  $ hg rollback -q
 #else
   $ hg tip -q
   1:ab199dc869b5
@@ -73,14 +72,13 @@ Copy and removing x bit:
   $ test ! -x copy
   $ test -x copyx
   $ hg tip -q
-  2:21dfaae65c71
+  3:37bacb7ca14d
 #else
   $ hg tip -q
   2:0efdaa8e3bf3
 #endif
 
   $ hg up -qCr1
-  $ hg rollback -q
 
 Copy (like above but independent of execbit):
 
@@ -97,7 +95,7 @@ Copy (like above but independent of execbit):
   applying patch from stdin
 
   $ hg tip -q
-  2:0efdaa8e3bf3
+  4:0efdaa8e3bf3
   $ test -f copy
 
   $ cat copy
@@ -117,7 +115,7 @@ Rename:
   applying patch from stdin
 
   $ hg tip -q
-  3:b1f57753fad2
+  5:b1f57753fad2
 
   $ hg locate
   copyx
@@ -139,7 +137,7 @@ Delete:
   applying patch from stdin
 
   $ hg tip -q
-  4:1bd1da94b9b2
+  6:1bd1da94b9b2
 
   $ hg locate
   empty
@@ -166,7 +164,7 @@ Regular diff:
   applying patch from stdin
 
   $ hg tip -q
-  5:46fe99cb3035
+  7:46fe99cb3035
 
 Copy and modify:
 
@@ -189,7 +187,7 @@ Copy and modify:
   applying patch from stdin
 
   $ hg tip -q
-  6:ffeb3197c12d
+  8:ffeb3197c12d
 
   $ hg cat copy2
   a
@@ -219,7 +217,7 @@ Rename and modify:
   applying patch from stdin
 
   $ hg tip -q
-  7:401aede9e6bb
+  9:401aede9e6bb
 
   $ hg locate copy2
   [1]
@@ -243,10 +241,10 @@ One file renamed multiple times:
   applying patch from stdin
 
   $ hg tip -q
-  8:2ef727e684e8
+  10:2ef727e684e8
 
   $ hg log -vr. --template '{rev} {files} / {file_copies}\n'
-  8 rename2 rename3 rename3-2 / rename3 (rename2)rename3-2 (rename2)
+  10 rename2 rename3 rename3-2 / rename3 (rename2)rename3-2 (rename2)
 
   $ hg locate rename2 rename3 rename3-2
   rename3
@@ -287,7 +285,7 @@ Binary files and regular patch hunks:
   applying patch from stdin
 
   $ hg tip -q
-  10:27377172366e
+  12:27377172366e
 
   $ cat foo2
   foo
@@ -316,7 +314,7 @@ Multiple binary files:
   applying patch from stdin
 
   $ hg tip -q
-  11:18b73a84b4ab
+  13:18b73a84b4ab
 
   $ hg manifest --debug | grep mbinary
   045c85ba38952325e126c70962cc0f9d9077bc67 644   mbinary1
@@ -448,7 +446,7 @@ Filenames with spaces:
   applying patch from stdin
 
   $ hg tip -q
-  14:4b79479c9a6d
+  16:4b79479c9a6d
 
   $ cat "foo bar"
   foo
@@ -471,7 +469,7 @@ Copy then modify the original file:
   applying patch from stdin
 
   $ hg tip -q
-  15:9cbe44af4ae9
+  17:9cbe44af4ae9
 
   $ cat foo3
   foo
@@ -505,9 +503,6 @@ Move text file and patch as binary
 
 Invalid base85 content
 
-  $ hg rollback
-  repository tip rolled back to revision 16 (undo import)
-  working directory now based on revision 16
   $ hg revert -aq
   $ hg import -d "1000000 0" -m invalid-binary - <<"EOF"
   > diff --git a/text2 b/binary2
@@ -569,7 +564,8 @@ Simulate a copy/paste turning LF into CRLF (issue2870)
   >>> data = fp.read()
   >>> fp.close()
   >>> _ = open('binary.diff', 'wb').write(data.replace(b'\n', b'\r\n'))
-  $ rm binary2
+  $ hg mv binary2 text2
+  $ hg commit -m foo
   $ hg import --no-commit binary.diff
   applying binary.diff
 

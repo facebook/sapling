@@ -104,9 +104,6 @@ clone, commit, pull
 
 we must not cause a failure if we cannot write to the log
 
-  $ hg rollback
-  repository tip rolled back to revision 1 (undo pull)
-
   $ rm -rf .hg/blackbox*
   $ mkdir -p .hg/blackbox
   $ touch .hg/blackbox/v1
@@ -114,27 +111,12 @@ we must not cause a failure if we cannot write to the log
   comparing with $TESTTMP/blackboxtest
   query 1; heads
   searching for changes
-  all local heads known remotely
-  changeset:   2:d02f48003e62c24e2659d97d30f2a83abe5d5d51
-  phase:       draft
-  parent:      1:6563da9dcf87b1949716e38ff3e3dfaa3198eb06
-  parent:      -1:0000000000000000000000000000000000000000
-  manifest:    ab9d46b053ebf45b7996f2922b9893ff4b63d892
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  files+:      c
-  extra:       branch=default
-  description:
-  c
-  
-  
+  all remote heads known locally
+  no changes found
   $ hg pull
   pulling from $TESTTMP/blackboxtest
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
+  no changes found
 
   $ rm .hg/blackbox/v1
 

@@ -51,9 +51,6 @@
   searching for changes
   no changes found
 
-  $ hg rollback --dry-run --verbose
-  repository tip rolled back to revision 0 (undo pull)
-
 Test pull of non-existing 20 character revision specification, making sure plain ascii identifiers
 not are encoded like a node:
 

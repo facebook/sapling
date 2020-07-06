@@ -71,10 +71,6 @@
   > EOF
 
   $ echo 12345 > asdf
-  $ hg commit --config ui.interactive=False -m ask
-  enter a commit username: 
-  no username found, using '[^']*' instead (re)
-  $ hg rollback -q
 
   $ hg commit --config ui.interactive=True -m ask <<EOF
   > Asked User <ask@example.com>

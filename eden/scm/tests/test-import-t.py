@@ -11,6 +11,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "setconfig 'extensions.treemanifest=!'"
+sh % "enable amend"
 
 sh % "hg init a"
 sh % "mkdir a/d1"
@@ -298,30 +299,8 @@ sh % "hg --cwd b12 import -v ../patch1 ../patch2" == r"""
     committing manifest
     committing changelog
     created 6d019af21222"""
-sh % "hg --cwd b12 rollback" == r"""
-    repository tip rolled back to revision 0 (undo import)
-    working directory now based on revision 0"""
-sh % "hg --cwd b12 parents --template 'parent: {rev}\\n'" == "parent: 0"
-
-# Test that "hg rollback" doesn't restore dirstate to one at the
-# beginning of the rolled back transaction in not-"parent-gone" case.
-
-# invoking pretxncommit hook will cause marking '.hg/dirstate' as a file
-# to be restored when rolling back, after DirstateTransactionPlan (see wiki
-# page for detail).
-
-sh % "hg --cwd b12 commit -m foobar"
-sh % "hg --cwd b12 update 0 -q"
-sh % "hg --cwd b12 import ../patch1 ../patch2 --config 'hooks.pretxncommit=true'" == r"""
-    applying ../patch1
-    applying ../patch2"""
-sh % "hg --cwd b12 update -q 1"
-sh % "hg --cwd b12 rollback -q"
+sh % "hg --cwd b12 hide -q tip" == ""
 sh % "hg --cwd b12 parents --template 'parent: {rev}\\n'" == "parent: 1"
-
-sh % "hg --cwd b12 update -q -C 0"
-sh % "hg --cwd b12 debugstrip -q 1"
-
 
 # importing a patch in a subdirectory failed at the commit stage
 

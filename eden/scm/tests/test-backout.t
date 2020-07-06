@@ -126,34 +126,6 @@ backout of backout is as if nothing happened
   commit: (clean)
   phases: 4 draft
 
-Test that 'hg rollback' restores dirstate just before opening
-transaction: in-memory dirstate changes should be written into
-'.hg/journal.dirstate' as expected.
-
-  $ echo 'removed soon' > b
-  $ hg commit -A -d '4 0' -m 'prepare for subsequent removing'
-  adding b
-  $ echo 'newly added' > c
-  $ hg add c
-  $ hg remove b
-  $ hg commit -d '5 0' -m 'prepare for subsequent backout'
-  $ touch -t 200001010000 c
-  $ hg status -A
-  C c
-  $ hg debugstate --nodates
-  n 644         12 set                 c
-  $ hg backout -d '6 0' -m 'to be rollback-ed soon' -r .
-  adding b
-  removing c
-  changeset 6:3ab761ce0df4 backs out changeset 5:19a306f2a2e0
-  $ hg rollback -q
-  $ hg status -A
-  A b
-  R c
-  $ hg debugstate --nodates
-  a   0         -1 unset               b
-  r   0          0 unset               c
-
 across branch
 
   $ cd ..
@@ -424,26 +396,6 @@ backout of non-merge with parent should fail
   [255]
 
 backout with valid parent should be ok
-
-  $ hg backout -d '5 0' --parent 2 4 --tool=true
-  removing d
-  changeset 5:84e16af81ce4 backs out changeset 4:b2f3bb92043e
-  $ hg summary
-  parent: 5:84e16af81ce4 
-   Back out "d"
-  commit: (clean)
-  phases: 6 draft
-
-  $ hg rollback
-  repository tip rolled back to revision 4 (undo commit)
-  working directory now based on revision 4
-  $ hg update -C
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg summary
-  parent: 4:b2f3bb92043e 
-   d
-  commit: (clean)
-  phases: 5 draft
 
   $ hg backout -d '6 0' --parent 3 4 --tool=true
   removing c

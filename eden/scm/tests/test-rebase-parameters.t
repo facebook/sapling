@@ -140,12 +140,6 @@ Rebase with no arguments (from 3 onto 8):
   |
   o  0: cd010b8cd998 'A'
   
-Try to rollback after a rebase (fail):
-
-  $ hg rollback
-  no rollback information available
-  [1]
-
   $ cd ..
 
 Rebase with base == '.' => same as no arguments (from 3 onto 8):

@@ -361,11 +361,6 @@ then, check "modify the message" itself
   summary:     f
   
 
-rollback should not work after a histedit
-  $ hg rollback
-  no rollback information available
-  [1]
-
   $ cd ..
   $ hg clone -qr0 r r0
   $ cd r0

@@ -498,32 +498,11 @@ test id
   $ hg id
   db815d6d32e6 Y/Z/x  y
 
-test rollback
-
   $ echo foo > f1
-  $ hg bookmark tmp-rollback
-  $ hg ci -Amr
-  adding f1
-  $ hg bookmarks
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         2:db815d6d32e6
-   * tmp-rollback              3:2bf5cfec5864
-     x  y                      2:db815d6d32e6
-  $ hg rollback
-  repository tip rolled back to revision 2 (undo commit)
-  working directory now based on revision 2
-  $ hg bookmarks
-  unknown reference in .hg/bookmarks: tmp-rollback 2bf5cfec5864a07e71c9d3a2a96f5c9766595ba1
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         2:db815d6d32e6
-     x  y                      2:db815d6d32e6
 
 activate bookmark on working dir parent without --force
 
   $ hg bookmark --inactive Z
-  unknown reference in .hg/bookmarks: tmp-rollback 2bf5cfec5864a07e71c9d3a2a96f5c9766595ba1
   $ hg bookmark Z
 
 test clone
@@ -641,7 +620,7 @@ working directory of current repository)
   parent: 2:db815d6d32e6 
    2
   bookmarks: *Z Y x  y
-  commit: 1 added, * unknown (glob) (fsmonitor !)
+  commit: * unknown* (glob)
   phases: 5 draft
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

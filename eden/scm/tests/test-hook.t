@@ -340,8 +340,7 @@ outgoing hooks can see env vars
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark quux
-  $ hg rollback
-  repository tip rolled back to revision 3 (undo pull)
+  $ hg debugstrip -q tip
 
 preoutgoing hook can prevent outgoing changes
 

@@ -4,12 +4,6 @@
 
   $ echo qqq>qqq.txt
 
-rollback dry run without rollback information
-
-  $ hg rollback
-  no rollback information available
-  [1]
-
 add file
 
   $ hg add

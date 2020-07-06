@@ -68,13 +68,13 @@ Pull a missing revision:
 
 Pull multiple revisions with update:
 
+  $ cp -R . $TESTTMP/copy1
+  $ cd $TESTTMP/copy1
   $ hg pull -qu -r 0 -r 1 ../repo
   $ hg -q parents
   0:bbd179dfa0a7
-  $ hg rollback
-  repository tip rolled back to revision -1 (undo pull)
-  working directory now based on revision -1
 
+  $ cd $TESTTMP/copy
   $ hg pull -qr 0 ../repo
   $ hg log
   changeset:   0:bbd179dfa0a7

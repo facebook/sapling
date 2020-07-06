@@ -4,6 +4,7 @@
   $ shortlog() {
   >     hg log -G --template '{rev}:{node|short} {author} {date|hgdate} - {desc|firstline}\n'
   > }
+  $ enable amend
 
 Test --bypass with other options
 
@@ -50,7 +51,7 @@ Test failure without --exact
 
 Test --user, --date and --message
 
-  $ hg up 0
+  $ hg up 'desc(adda)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg import --bypass --u test2 -d '1 0' -m patch2 ../test.diff
   applying ../test.diff
@@ -63,8 +64,7 @@ Test --user, --date and --message
   |/
   @  0:07f494440405 test 0 0 - adda
   
-  $ hg rollback
-  repository tip rolled back to revision 1 (undo import)
+  $ hg hide -q tip
 
 Test --strip
 
@@ -85,8 +85,6 @@ Test --strip
   > +a
   > EOF
   applying patch from stdin
-  $ hg rollback
-  repository tip rolled back to revision 1 (undo import)
 
 Test --strip with --bypass
 
@@ -99,7 +97,7 @@ Test --strip with --bypass
   adding dir/dir2/b
   adding dir/dir2/c
   $ shortlog
-  @  2:d805bc8236b6 test 0 0 - addabcd
+  @  3:d805bc8236b6 test 0 0 - addabcd
   |
   | o  1:540395c44225 test 0 0 - changea
   |/
@@ -136,15 +134,15 @@ Test --strip with --bypass
   applying patch from stdin
 
   $ shortlog
-  o  3:5bd46886ca3e test 0 0 - changeabcd
+  o  4:5bd46886ca3e test 0 0 - changeabcd
   |
-  @  2:d805bc8236b6 test 0 0 - addabcd
+  @  3:d805bc8236b6 test 0 0 - addabcd
   |
   | o  1:540395c44225 test 0 0 - changea
   |/
   o  0:07f494440405 test 0 0 - adda
   
-  $ hg diff --change 3 --git
+  $ hg diff --change 'desc(changeabcd)' --git
   diff --git a/dir/a b/dir/a
   new file mode 100644
   --- /dev/null
@@ -221,9 +219,9 @@ commit message is explicitly specified, regardless of '--edit')
   $ hg --config patch.eol=auto import -d '0 0' -m 'test patch.eol' --bypass ../test.diff
   applying ../test.diff
   $ shortlog
-  o  3:c606edafba99 test 0 0 - test patch.eol
+  o  4:c606edafba99 test 0 0 - test patch.eol
   |
-  @  2:872023de769d test 0 0 - makeacrlf
+  @  3:872023de769d test 0 0 - makeacrlf
   |
   | o  1:540395c44225 test 0 0 - changea
   |/
@@ -232,12 +230,12 @@ commit message is explicitly specified, regardless of '--edit')
 
 Test applying multiple patches
 
-  $ hg up -qC 0
+  $ hg up -qC 'desc(adda)'
   $ echo e > e
   $ hg ci -Am adde
   adding e
   $ hg export . > ../patch1.diff
-  $ hg up -qC 1
+  $ hg up -qC 'desc(changea)'
   $ echo f > f
   $ hg ci -Am addf
   adding f
@@ -251,7 +249,7 @@ Test applying multiple patches
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-multi1
-  $ hg up 0
+  $ hg up 'desc(adda)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg import --bypass ../patch1.diff ../patch2.diff
   applying ../patch1.diff

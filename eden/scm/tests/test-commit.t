@@ -604,7 +604,6 @@ specific template keywords work well
   M 
   A changed removed
   R 
-  $ hg rollback -q
 
   $ cat >> .hg/hgrc <<EOF
   > # disable customizing for subsequent tests
@@ -646,6 +645,8 @@ Test making empty commits
   
   
 verify pathauditor blocks evil filepaths
+  $ cp -R . $TESTTMP/audit2
+  $ cp -R . $TESTTMP/audit3
   $ cat > evil-commit.py <<EOF
   > from __future__ import absolute_import
   > from edenscm.mercurial import context, hg, node, pycompat, ui as uimod
@@ -670,8 +671,7 @@ verify pathauditor blocks evil filepaths
   [255]
 #endif
 
-  $ hg rollback -f
-  repository tip rolled back to revision 2 (undo commit)
+  $ cd $TESTTMP/audit2
   $ cat > evil-commit.py <<EOF
   > from __future__ import absolute_import
   > from edenscm.mercurial import context, hg, node, ui as uimod
@@ -690,8 +690,7 @@ verify pathauditor blocks evil filepaths
   abort: path contains illegal component: HG~1/hgrc
   [255]
 
-  $ hg rollback -f
-  repository tip rolled back to revision 2 (undo commit)
+  $ cd $TESTTMP/audit3
   $ cat > evil-commit.py <<EOF
   > from __future__ import absolute_import
   > from edenscm.mercurial import context, hg, node, ui as uimod

@@ -152,19 +152,18 @@ Test checkheadshook alias
 
 We can fix the head and push again
 
+  $ cp -R $TESTTMP/main $TESTTMP/main2
   $ hg up 6
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ printf "first\nsecond" > b.txt
   $ hg ci -m "remove CRLF from b.txt"
-  $ hg push -f ../main
-  pushing to ../main
+  $ hg push -f ../main2
+  pushing to ../main2
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files
-  $ hg -R ../main rollback
-  repository tip rolled back to revision 5 (undo push)
 
 Test it still fails with checkallhook
 
@@ -178,7 +177,7 @@ Test it still fails with checkallhook
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 5 files
+  added 3 changesets with 3 changes to 2 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   transaction abort!
@@ -195,7 +194,7 @@ But we can push the clean head
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 4 files
+  added 1 changesets with 1 changes to 1 files
 
 Test multiple files/revisions output
 

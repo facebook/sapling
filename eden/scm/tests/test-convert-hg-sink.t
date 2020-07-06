@@ -494,26 +494,6 @@ An additional round, demonstrating that unchanged files don't get converted
   o  0 0 (a-only f)
   
 
-Conversion after rollback
-
-  $ hg -R a rollback -f
-  repository tip rolled back to revision 2 (undo convert)
-
-  $ hg convert --filemap filemap-b 0 a --config convert.hg.revs=1::
-  scanning source...
-  sorting...
-  converting...
-  0 extra f+a-only change
-
-  $ hg -R a log -G -T '{rev} {desc|firstline} ({files})\n'
-  o  3 extra f+a-only change (f)
-  |
-  o  2 x (f)
-  |
-  @  1 a (f)
-  |
-  o  0 0 (a-only f)
-  
 Convert with --full adds and removes files that didn't change
 
   $ echo f >> 0/f

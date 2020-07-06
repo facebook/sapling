@@ -144,8 +144,6 @@
   crosschecking files in changesets and manifests
   checking files
   4 files, 9 changesets, 7 total revisions
-  $ hg rollback
-  repository tip rolled back to revision 4 (undo pull)
   $ cd ..
 
 should fail
@@ -226,65 +224,53 @@ revision 8
   crosschecking files in changesets and manifests
   checking files
   4 files, 9 changesets, 7 total revisions
-  $ hg rollback
-  repository tip rolled back to revision 2 (undo unbundle)
 
 revision 2
 
-  $ hg tip -q
-  2:4ce51a113780
   $ hg unbundle ../test-bundle-branch1.hg
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
+  added 0 changesets with 0 changes to 2 files
 
 revision 4
 
-  $ hg tip -q
-  4:916f1afdef90
   $ hg verify
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  2 files, 5 changesets, 5 total revisions
-  $ hg rollback
-  repository tip rolled back to revision 2 (undo unbundle)
+  4 files, 9 changesets, 7 total revisions
   $ hg unbundle ../test-bundle-branch2.hg
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 3 changes to 3 files
+  added 0 changesets with 0 changes to 3 files
 
 revision 6
 
-  $ hg tip -q
-  6:faa2e4234c7a
   $ hg verify
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  3 files, 7 changesets, 6 total revisions
-  $ hg rollback
-  repository tip rolled back to revision 2 (undo unbundle)
+  4 files, 9 changesets, 7 total revisions
   $ hg unbundle ../test-bundle-cset-7.hg
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
+  added 0 changesets with 0 changes to 2 files
 
 revision 4
 
   $ hg tip -q
-  4:916f1afdef90
+  8:916f1afdef90
   $ hg verify
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  2 files, 5 changesets, 5 total revisions
+  4 files, 9 changesets, 7 total revisions
 
   $ cd ../test
   $ hg merge 7
