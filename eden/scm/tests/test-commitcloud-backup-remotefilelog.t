@@ -47,11 +47,11 @@ Pull changes client-side
 
 Make commit on top of commit that will be stripped server-side. Also make two
 bookmarks
-  $ hg up 0
+  $ hg up 'desc(serverinitialcommit)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - \(1 misses, 0.00% hit ratio\) over [\d.]+s (re) (?)
   $ hg book goodbooktobackup
-  $ hg up 2
+  $ hg up 'desc(committostripsecond)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark goodbooktobackup)
   1 files fetched over 1 fetches - \(1 misses, 0.00% hit ratio\) over [\d.]+s (re) (?)
@@ -70,7 +70,7 @@ bookmarks
 
 Strip commit server-side
   $ cd repo
-  $ hg log -r 1 -T '{node}\n'
+  $ hg log -r 'desc(committostripfirst)' -T '{node}\n'
   48acd0edbb460dec0d93314393d41f801a9797ce
   $ hg debugstrip 48acd0edbb460dec0d93314393d41f801a9797ce
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -111,7 +111,7 @@ Now try to restore it from different client. Make sure bookmark
 
 Create a commit which deletes a file. Make sure it is backed up correctly
   $ cd ../client
-  $ hg up -q 0
+  $ hg up -q 'desc(serverinitialcommit)'
   $ mkcommit filetodelete
   $ hg rm filetodelete
   $ hg ci -m 'deleted'

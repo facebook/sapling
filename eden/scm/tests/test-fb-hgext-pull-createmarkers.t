@@ -83,12 +83,12 @@ The first client works on several diffs while the second client lands one of her
 Here we strip commits 6, 7, 8 to simulate what happens with landcastle, the
 push doesn't directly go to the server
 
-  $ hg debugstrip 6
+  $ hg debugstrip d446b1b2be434509eb0ed51c1da3056d1bc21d12
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
 
 We update to commit 1 to avoid keeping 2, 3, and 4 visible with inhibit
 
-  $ hg update 1
+  $ hg update 11b76ecbf1d49ab485207f46d8c45ee8c96b1bfb
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Here pull should mark 2, 3, and 4 as obsolete since they landed as 6, 7, 8 on
@@ -124,7 +124,7 @@ the remote
 Rebasing a stack containing landed changesets should only rebase the non-landed
 changesets
 
-  $ hg up --hidden 4 # --hidden because directaccess works only with hashes
+  $ hg up --hidden d5895ab3603770985bf7ab04bf25c0da2d7e08ab # --hidden because directaccess works only with hashes
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit k 202
   $ hg rebase -d default/master
@@ -135,7 +135,7 @@ changesets
 
   $ echo more >> k
   $ hg amend
-  $ hg unhide 10
+  $ hg unhide c34ae580ee12e8c648afba30a093690a6e018dac
 
   $ cd ../server
   $ mkcommit k 202

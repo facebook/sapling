@@ -57,12 +57,12 @@ Set up a client repository, and work on 3 diffs
 Now land the first two diff, but with amended commit messages, as would happen
 when a diff is landed with landcastle.
 
-  $ hg update -r 1
+  $ hg update -r 11b76ecbf1d49ab485207f46d8c45ee8c96b1bfb
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  $ hg graft -r 2
+  $ hg graft -r 948715751816b5aaf59c890f413d3b4c89008f12
   grafting 948715751816 "add b"
   $ land_amend
-  $ hg graft -r 3
+  $ hg graft -r 0e229072f72376ff68c3ead4de01e8b8888e1e50
   grafting 0e229072f723 "add c"
   $ land_amend
   $ hg push -r . --to master
@@ -75,9 +75,9 @@ when a diff is landed with landcastle.
 
 Strip the commits we just landed.
 
-  $ hg update -r 1
+  $ hg update -r 11b76ecbf1d49ab485207f46d8c45ee8c96b1bfb
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg debugstrip -r 6
+  $ hg debugstrip -r e0672eeeb97c5767cc642e702951cfcfa73cdc82
 
 Here pull should now detect commits 2 and 3 as landed, but it won't be able to
 hide them since there is a non-hidden successor.
@@ -111,16 +111,16 @@ hide them since there is a non-hidden successor.
   |
   o  0 "add initial"
   
-  $ hg log -T '{rev}\n' -r 'allsuccessors(2)'
+  $ hg log -T '{rev}\n' -r 'allsuccessors(948715751816b5aaf59c890f413d3b4c89008f12)'
   6
-  $ hg log -T '{rev}\n' -r 'allsuccessors(3)'
+  $ hg log -T '{rev}\n' -r 'allsuccessors(0e229072f72376ff68c3ead4de01e8b8888e1e50)'
   7
 
 Now land the last diff.
 
-  $ hg update -r 7
+  $ hg update -r 'max(desc(add))'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg graft -r 4
+  $ hg graft -r e4b5974890c0ceff0317ecbc08ec357613fd01dd
   grafting e4b5974890c0 "add d"
   $ land_amend
   $ hg push -r . --to master
@@ -132,9 +132,9 @@ Now land the last diff.
 
 And strip the commit we just landed.
 
-  $ hg update -r 7
+  $ hg update -r cc68f5e5f8d6a0aa5683ff6fb1afd15aa95a08b8
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg debugstrip -r 9
+  $ hg debugstrip -r 'max(desc(add))'
 
 Here pull should now detect commit 4 has been landed.  It should hide this
 commit, and should also hide 3 and 2, which were previously landed, but up

@@ -529,5 +529,5 @@ because it calls `repo.lookup(...)` with int argument
   $ touch c
   $ hg add c
   $ hg ci -m "adding c"
-  $ hg bundle -r . --base 0 file.txt
+  $ hg bundle -r . --base fc5f87aa174b7d4016abf3e908fd63cc99774540 file.txt
   2 changesets found

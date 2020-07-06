@@ -47,7 +47,7 @@ bookmarks updated?
 
 strip to revision 1
 
-  $ hg debugstrip 1
+  $ hg debugstrip 'desc(2)'
 
 list bookmarks
 

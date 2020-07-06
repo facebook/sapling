@@ -11,7 +11,7 @@ Populate the db with an initial commit
   $ hg commit -Aqm 'add a'
   $ echo b > b
   $ hg commit -Aqm 'add b'
-  $ hg up -q 0
+  $ hg up -q 1f0dee641bb7258c56bd60e93edfa2405381c41e
   $ echo c > c
   $ hg commit -Aqm 'add c'
 
@@ -22,7 +22,7 @@ Run with a correct revlog
 
 Run with incorrect local revlogs
 
-  $ hg debugstrip -r 1 --config hgsql.bypass=True
+  $ hg debugstrip -r 7c3bad9141dcb46ff89abf5f61856facd56e476c --config hgsql.bypass=True
   $ hg unbundle --config hgsql.bypass=True $TESTTMP/master/.hg/strip-backup/7c3bad9141dc-81844e36-backup.hg
   adding changesets
   adding manifests
@@ -35,7 +35,7 @@ Run with incorrect local revlogs
   $ grep "Corruption.*linkrev" $TESTTMP/sqlverify.out || cat $TESTTMP/sqlverify.out
   *CorruptionException: * with linkrev *, disk does not match mysql (glob)
 
-  $ hg debugstrip -q -r 1: --config hgsql.bypass=True --no-backup
+  $ hg debugstrip -q -r d67cd0334eeecfded222fed9009f0db4beb57585: --config hgsql.bypass=True --no-backup
   $ hg log -r tip --forcesync -T '\n'
   
 

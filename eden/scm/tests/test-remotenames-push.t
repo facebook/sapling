@@ -139,7 +139,7 @@ Set up server repo
   $ hg init rnserver
   $ cd rnserver
   $ mkcommit a
-  $ hg book -r 0 rbook
+  $ hg book -r 'desc(add)' rbook
   $ cd ..
 
 Set up client repo
@@ -157,9 +157,9 @@ We want to test both the advancement of locally known remote bookmark and the
 creation of a new one (locally unknonw).
   $ cd rnserver
   $ mkcommit b
-  $ hg book -r 1 rbook
+  $ hg book -r 'max(desc(add))' rbook
   moving bookmark 'rbook' forward from 1f0dee641bb7
-  $ hg book -r 1 rbook2
+  $ hg book -r 'max(desc(add))' rbook2
   $ hg book
      rbook                     1:7c3bad9141dc
      rbook2                    1:7c3bad9141dc

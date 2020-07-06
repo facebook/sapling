@@ -162,8 +162,8 @@ Test doing a non-fastforward bookmark move
 
 Test a push that comes with out-of-date bookmark discovery
 
-  $ hg -R server debugstrip -q 0
-  $ hg -R client debugstrip -q 0
+  $ hg -R server debugstrip -q 'desc(initial)'
+  $ hg -R client debugstrip -q 'desc(initial)'
 
   $ hg bookmarks --cwd server -d master newbook
 
@@ -198,7 +198,7 @@ Test a push that comes with out-of-date bookmark discovery
   > pretxnopen.movebook = python:$TESTTMP/move.py:movebookmark
   > EOF
   $ hg -R client pull -q -r 0
-  $ hg -R client update -q 0
+  $ hg -R client update -q 'desc(aa)'
   $ echo c >> client/c
   $ hg -R client commit -qAm 'cc'
   $ hg -R client log -G -T '{rev} "{desc}" {bookmarks}'

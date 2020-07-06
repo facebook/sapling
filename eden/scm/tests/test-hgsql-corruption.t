@@ -11,7 +11,7 @@
   $ hg commit -qAm x
   $ echo y > y
   $ hg commit -qAm y
-  $ hg up 0
+  $ hg up 'desc(x)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo z > z
   $ hg commit -qAm z
@@ -24,7 +24,7 @@
 
 # Strip middle commit, verify sync fails
 
-  $ hg debugstrip -r 1 --config hgsql.bypass=True
+  $ hg debugstrip -r 'desc(y)' --config hgsql.bypass=True
 - The huge number in the output below is because we're trying to apply rev 0
 (which contains the generaldelta bit in the offset int) to a non-rev 0
 location (so the generaldelta bit isn't stripped before the comparison)
@@ -54,7 +54,7 @@ location (so the generaldelta bit isn't stripped before the comparison)
 
 # Fix ordering, can pull now
 
-  $ hg debugstrip -r 1 --config hgsql.bypass=True
+  $ hg debugstrip -r 'desc(z)' --config hgsql.bypass=True
   $ hg unbundle -q $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-48128f20-backup.hg --config hgsql.bypass=True
   $ hg pull ../client
   pulling from ../client

@@ -106,13 +106,13 @@ Verify that a profile is updated across multiple commits
   readme.txt
   webpage.sparse
 
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ ls
   backend.sparse
   data.py
   webpage.sparse
 
-  $ hg up -q 1
+  $ hg up -q 'desc(edit)'
   $ ls
   backend.sparse
   data.py
@@ -121,7 +121,7 @@ Verify that a profile is updated across multiple commits
 
 Introduce a conflicting .hgsparse change
 
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ cat > backend.sparse <<EOF
   > [metadata]
   > title: Different backend sparse profile
@@ -139,7 +139,7 @@ Introduce a conflicting .hgsparse change
 
 Verify conflicting merge pulls in the conflicting changes
 
-  $ hg merge 1
+  $ hg merge e7901640ca22b6074f2724228278811021be5bd9
   temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
   merging data.py
@@ -197,14 +197,14 @@ Verify stripping refreshes dirstate
 
 Verify rebase conflicts pulls in the conflicting changes
 
-  $ hg up -q 1
+  $ hg up -q e7901640ca22b6074f2724228278811021be5bd9
   $ ls
   backend.sparse
   data.py
   readme.txt
   webpage.sparse
 
-  $ hg rebase -d 2
+  $ hg rebase -d 'max(desc(edit))'
   rebasing e7901640ca22 "edit profile"
   temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
@@ -299,9 +299,9 @@ Test file permissions changing across a sparse profile change
   > b
   > EOF
   $ hg commit -qm 'update profile'
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ hg sparse enableprofile .hgsparse
-  $ hg up -q 2
+  $ hg up -q 'desc(update)'
   $ ls -l b
   -rwxr-xr-x* b (glob)
 

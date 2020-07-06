@@ -25,7 +25,7 @@
   $ echo c3 >> common
   $ hg ci -m C3
 
-  $ hg up -q -C 1
+  $ hg up -q -C 'desc(C2)'
 
   $ echo l1 >> extra
   $ hg add extra
@@ -49,7 +49,7 @@
 
 Conflicting rebase:
 
-  $ hg rebase -s 3 -d 2
+  $ hg rebase -s 'desc(L1)' -d 'desc(C3)'
   rebasing 3163e20567cc "L1"
   rebasing 46f0b057b5c0 "L2"
   merging common
@@ -123,7 +123,7 @@ Test safety for inconsistent rebase state, which may be created (and
 forgotten) by Mercurial earlier than 2.7. This emulates Mercurial
 earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
 
-  $ hg rebase -s 3 -d 2
+  $ hg rebase -s 3163e20567cc93074fbb7a53c8b93312e59dbf2c -d 'desc(C3)'
   rebasing 3163e20567cc "L1"
   rebasing 46f0b057b5c0 "L2"
   merging common
@@ -132,7 +132,7 @@ earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
   [1]
 
   $ mv .hg/rebasestate .hg/rebasestate.back
-  $ hg update --quiet --clean 2
+  $ hg update --quiet --clean 'desc(C3)'
   $ hg debugstrip --quiet "tip"
   $ mv .hg/rebasestate.back .hg/rebasestate
 
@@ -165,7 +165,7 @@ Construct new repo:
   $ hg ci -Am C
   adding c
 
-  $ hg up -q 0
+  $ hg up -q 'desc(A)'
 
   $ echo b > b
   $ hg ci -Am 'B bis'
@@ -175,7 +175,7 @@ Construct new repo:
   $ hg ci -Am C1
   adding c
 
-  $ hg debugmakepublic 1
+  $ hg debugmakepublic 6c81ed0049f86eccdfa07f4d71b328a6c970b13f
 
 Rebase and abort without generating new changesets:
 
@@ -190,7 +190,7 @@ Rebase and abort without generating new changesets:
   |/
   o  0: 1994f17a630e public 'A'
   
-  $ hg rebase -b 4 -d 2
+  $ hg rebase -b 'desc(C1)' -d 49cb3485fa0c1934763ac434487005741b74316f
   rebasing a6484957d6b9 "B bis"
   note: rebase of 3:a6484957d6b9 created no changes to commit
   rebasing 145842775fec "C1"
@@ -282,7 +282,7 @@ user has somehow managed to update to a different revision (issue4009)
   $ echo x > b
   $ hg add b
   $ hg commit -m b1
-  $ hg up 0
+  $ hg up 'desc(a)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark @)
   $ hg book foo
@@ -296,7 +296,7 @@ user has somehow managed to update to a different revision (issue4009)
   [1]
 
   $ mv .hg/rebasestate ./ # so we're allowed to hg up like in mercurial <2.6.3
-  $ hg up -C 0            # user does other stuff in the repo
+  $ hg up -C 'desc(a)'            # user does other stuff in the repo
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ mv rebasestate .hg/   # user upgrades to 2.7
@@ -335,10 +335,10 @@ test aborting an interrupted series (issue5084)
   $ touch d
   $ hg add d
   $ hg commit -m d
-  $ hg co -q 1
+  $ hg co -q 'max(desc(a))'
   $ hg rm a
   $ hg commit -m no-a
-  $ hg co 0
+  $ hg co 'desc(base)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G --template "{rev} {desc} {bookmarks}"
   o  6 no-a
@@ -355,7 +355,7 @@ test aborting an interrupted series (issue5084)
   |
   @  0 base
   
-  $ hg --config extensions.n=$TESTDIR/failfilemerge.py rebase -s 3 -d tip
+  $ hg --config extensions.n=$TESTDIR/failfilemerge.py rebase -s 'max(desc(b))' -d tip
   rebasing 3a71550954f1 "b"
   rebasing e80b69427d80 "c"
   abort: ^C
@@ -395,15 +395,15 @@ during a rebase (issue4661)
   adding foo.txt
   $ hg ci -m "initial checkin"
   $ echo "change 1" > foo.txt
-  $ hg ci -m "change 1"
-  $ hg up 0
+  $ hg ci -m "change desc(change)"
+  $ hg up 'desc(initial)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "conflicting change 1" > foo.txt
   $ hg ci -m "conflicting 1"
   $ echo "conflicting change 2" > foo.txt
   $ hg ci -m "conflicting 2"
 
-  $ hg rebase -d 1 --tool 'internal:fail'
+  $ hg rebase -d 'desc(change)' --tool 'internal:fail'
   rebasing e4ea5cdc9789 "conflicting 1"
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
@@ -433,7 +433,7 @@ commit will cause merge conflict on rebase
   $ hg debugmakepublic
 
 setup the draft branch that will be rebased onto public commit
-  $ hg up -r 0 -q
+  $ hg up -r 'desc(root)' -q
   $ echo 'content' > disappear
 commit will disappear
   $ hg commit -A -m 'disappear draft' -q

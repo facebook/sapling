@@ -146,7 +146,7 @@ Pull should not have updated:
 
 Going back to the default branch:
 
-  $ hg up -C 0
+  $ hg up -C 'desc(add)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg parents
@@ -162,7 +162,7 @@ No new revs, no update:
   $ hg parents -q
   0:1f0dee641bb7
 
-  $ hg debugstrip 1 --no-backup
+  $ hg debugstrip 'desc(change)' --no-backup
 
   $ hg parents -q
   0:1f0dee641bb7
@@ -178,10 +178,10 @@ Pull -u takes us back to branch foo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
   
-  $ hg debugstrip 2 --no-backup
+  $ hg debugstrip 'desc(new)' --no-backup
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg up -C 0
+  $ hg up -C 'desc(add)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark foo)
 

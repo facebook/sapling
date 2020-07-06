@@ -49,7 +49,7 @@
 # Verify local bookmark pull
 
   $ cd ../master
-  $ hg book foo -r 0
+  $ hg book foo -r 'desc(x)'
   $ hg book
      foo                       0:b292c1e3311f
   $ cd ../client
@@ -106,7 +106,7 @@
 # Verify that multiple heads and bookmarks work
 
   $ cd ../client
-  $ hg up 0
+  $ hg up 'desc(x)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (leaving bookmark foo)
   $ echo a > a

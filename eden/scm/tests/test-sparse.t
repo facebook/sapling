@@ -18,7 +18,7 @@ test sparse
 
 Verify basic include
 
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ hg sparse include 'hide'
   $ ls
   hide
@@ -115,11 +115,11 @@ Verify 'hg sparse' default output
   
 Verify update only writes included files
 
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ ls
   show
 
-  $ hg up -q 1
+  $ hg up -q 'desc(two)'
   $ ls
   show
   show2
@@ -188,7 +188,7 @@ Verify adding sparseness hides files
 
 Verify rebase temporarily includes excluded files
 
-  $ hg rebase -d 1 -r 2 --config extensions.rebase=
+  $ hg rebase -d 'desc(two)' -r 'desc(edit)' --config extensions.rebase=
   rebasing b91df4f39e75 "edit hide"
   temporarily included 1 file(s) in the sparse checkout for merging
   merging hide
@@ -225,8 +225,8 @@ Verify aborting a rebase cleans up temporary files
 
 Verify merge fails if merging excluded files
 
-  $ hg up -q 1
-  $ hg merge -r 2
+  $ hg up -q 'desc(two)'
+  $ hg merge -r 'desc(edit)'
   temporarily included 1 file(s) in the sparse checkout for merging
   merging hide
   warning: 1 conflicts while merging hide! (edit, then use 'hg resolve --mark')
@@ -277,7 +277,7 @@ Verify strip -k resets dirstate correctly
 Verify rebase succeeds if all changed files are in sparse checkout
 
   $ hg commit -Aqm "add show2"
-  $ hg rebase -d 1 --config extensions.rebase=
+  $ hg rebase -d 'desc(edit)' --config extensions.rebase=
   rebasing bdde55290160 "add show2"
 
 Verify log --sparse only shows commits that affect the sparse checkout

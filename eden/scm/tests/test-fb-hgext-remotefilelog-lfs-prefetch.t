@@ -44,39 +44,39 @@
   fetching selected remote bookmarks
   $ cd shallow
 
-  $ hg prefetch -r 0
+  $ hg prefetch -r 'desc(x)'
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
-  $ hg cat -r 0 x
+  $ hg cat -r 'desc(x)' x
   x
 
 # prefetch a range of revisions
 
   $ clearcache
-  $ hg prefetch -r 0::1
+  $ hg prefetch -r 'desc(x)'::109c3a557a73b62e762a1a928070e84f52c9e2c6
   4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob) (?)
 
-  $ hg cat -r 0 x
+  $ hg cat -r 'desc(x)' x
   x
-  $ hg cat -r 1 x
+  $ hg cat -r 109c3a557a73b62e762a1a928070e84f52c9e2c6 x
   x2
 
 # prefetch certain files
 
   $ clearcache
-  $ hg prefetch -r 1 x
+  $ hg prefetch -r 109c3a557a73b62e762a1a928070e84f52c9e2c6 x
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
-  $ hg cat -r 1 x
+  $ hg cat -r 109c3a557a73b62e762a1a928070e84f52c9e2c6 x
   x2
 
-  $ hg cat -r 1 y
+  $ hg cat -r 109c3a557a73b62e762a1a928070e84f52c9e2c6 y
   y
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # prefetch large file
 
-  $ hg prefetch -r 2
+  $ hg prefetch -r 'max(desc(y))'
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # prefetch on pull when configured

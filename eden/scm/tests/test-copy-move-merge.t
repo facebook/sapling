@@ -16,7 +16,7 @@ Test for the full copytracing algorithm
 
   $ hg ci -qAm "second"
 
-  $ hg co -C 0
+  $ hg co -C 'desc(first)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ echo 0 > a
@@ -69,8 +69,8 @@ Test disabling copy tracing
 
 - first verify copy metadata was kept
 
-  $ hg up -qC 2
-  $ hg rebase --keep -d 1 -b 2 --config extensions.rebase=
+  $ hg up -qC 'desc(other)'
+  $ hg rebase --keep -d 'desc(second)' -b 'desc(other)' --config extensions.rebase=
   rebasing add3f11052fa "other"
   merging b and a to b
   merging c and a to c
@@ -84,8 +84,8 @@ Test disabling copy tracing
 
   $ hg debugstrip -r .
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg up -qC 2
-  $ hg rebase --keep -d 1 -b 2 --config extensions.rebase= --config experimental.copytrace=off --config ui.interactive=True << EOF
+  $ hg up -qC 'desc(other)'
+  $ hg rebase --keep -d 'desc(second)' -b 'desc(other)' --config extensions.rebase= --config experimental.copytrace=off --config ui.interactive=True << EOF
   > c
   > EOF
   rebasing add3f11052fa "other"
@@ -109,7 +109,7 @@ Verify disabling copy tracing still keeps copies from rebase source
   $ hg cp b x
   $ echo x >> x
   $ hg ci -qm 'copy b->x'
-  $ hg up -q 1
+  $ hg up -q 'max(desc(add))'
   $ touch z
   $ hg ci -Aqm 'add z'
   $ hg log -G -T '{rev} {desc}\n'
@@ -121,9 +121,9 @@ Verify disabling copy tracing still keeps copies from rebase source
   |
   o  0 add a
   
-  $ hg rebase -d . -b 2 --config extensions.rebase= --config experimental.copytrace=off
+  $ hg rebase -d . -b 'desc(copy)' --config extensions.rebase= --config experimental.copytrace=off
   rebasing 6adcf8c12e7d "copy b->x"
-  $ hg up -q 4
+  $ hg up -q 'max(desc(copy))'
   $ hg log -f x -T '{rev} {desc}\n'
   4 copy b->x
   1 add b, c
@@ -140,7 +140,7 @@ Verify we duplicate existing copies, instead of detecting them
   $ hg ci -Aqm 'copy a->b'
   $ hg mv b c
   $ hg ci -Aqm 'move b->c'
-  $ hg up -q 0
+  $ hg up -q 'desc(add)'
   $ hg cp a b
   $ echo b >> b
   $ hg ci -Aqm 'copy a->b (2)'
@@ -153,7 +153,7 @@ Verify we duplicate existing copies, instead of detecting them
   |/
   o  0 add a
   
-  $ hg rebase -d 2 -s 3 --config extensions.rebase= --config experimental.copytrace=off
+  $ hg rebase -d 'desc(move)' -s 'max(desc(copy))' --config extensions.rebase= --config experimental.copytrace=off
   rebasing 47e1a9e6273b "copy a->b (2)"
 
   $ hg log -G -f b

@@ -92,7 +92,7 @@ the server supports our custom getfiles method.
 
 # pull from shallow to shallow (ssh)
 
-  $ hg debugstrip -r 1
+  $ hg debugstrip -r d34c38483be9d08f205eaae60c380a29b48e0189
   $ hg pull ssh://user@dummy/$TESTTMP/shallow --config remotefilelog.cachepath=${CACHEDIR}2
   pulling from ssh://user@dummy/$TESTTMP/shallow
   searching for changes
@@ -116,8 +116,8 @@ the server supports our custom getfiles method.
   z
 
 
-  $ hg -R ../shallow debugstrip -qr 3
-  $ hg debugstrip -qr 3
+  $ hg -R ../shallow debugstrip -qr 'desc(xxyy)'
+  $ hg debugstrip -qr 'desc(xxyy)'
   $ cd ..
 
 # push from shallow to shallow
@@ -170,11 +170,11 @@ the server supports our custom getfiles method.
                         write : { bytes : 1496}}}}
 
   $ cd ../master
-  $ hg log -l 1 -r 3 --style compact
+  $ hg log -l 1 -r 'desc(a)' --style compact
   3   1489bbbc46f0   1970-01-01 00:00 +0000   test
     a
   
-  $ hg up 3
+  $ hg up 'desc(a)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat a
   a
@@ -219,7 +219,7 @@ the server supports our custom getfiles method.
   $ hg commit -qAm b
   $ echo c > c
   $ hg commit -qAm c1
-  $ hg up -q 0
+  $ hg up -q 'desc(a)'
   $ echo c > c
   $ hg commit -qAm c2
   $ echo cc > c
@@ -252,7 +252,7 @@ the server supports our custom getfiles method.
                         read : { bytes : 2952},
                         write : { bytes : 701}}}}
 
-  $ hg up -q 5
+  $ hg up -q 'desc(c22)'
   $ hg log -f -T '{rev}\n' c
   5
   4

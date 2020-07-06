@@ -208,7 +208,7 @@
   $ cd ../master
   $ hg mv y x
   $ hg commit -m 'move y back to x'
-  $ hg revert -r 0 x
+  $ hg revert -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c x
   $ mv x y
   $ hg add y
   $ echo >> y
@@ -279,7 +279,7 @@ Incremental repack
   > EOF
 
 Single pack - repack does nothing
-  $ hg prefetch -r 0
+  $ hg prefetch -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      63 2d66e09c3bf8a000428af1630d978127182e496e.datapack
@@ -292,11 +292,11 @@ Single pack - repack does nothing
   -r--r--r--      90 c3399b56e035f73c3295276ed098235a08a0ed8c.histpack
 
 3 gen1 packs, 1 gen0 pack - packs 3 gen1 into 1
-  $ hg prefetch -r 1
+  $ hg prefetch -r 'desc(x2)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ hg prefetch -r 2
+  $ hg prefetch -r 'desc(x3)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ hg prefetch -r 3
+  $ hg prefetch -r 'desc(x4)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      69 20e1a91049a48630732a9b2ceaf4fa783a3af6c5.datapack
@@ -321,13 +321,13 @@ Pull should run background repack
   > backgroundrepack=True
   > EOF
   $ clearcache
-  $ hg prefetch -r 0
+  $ hg prefetch -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ hg prefetch -r 1
+  $ hg prefetch -r 'desc(x2)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ hg prefetch -r 2
+  $ hg prefetch -r 'desc(x3)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ hg prefetch -r 3
+  $ hg prefetch -r 'desc(x4)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      69 20e1a91049a48630732a9b2ceaf4fa783a3af6c5.datapack

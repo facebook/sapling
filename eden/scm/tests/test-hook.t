@@ -66,7 +66,7 @@ pretxncommit and commit hooks can see both parents of merge
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   commit.b hook: HG_HOOKNAME=commit.b HG_HOOKTYPE=commit HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
-  $ hg update -C 0
+  $ hg update -C cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b > b
   $ hg add b
@@ -79,7 +79,7 @@ pretxncommit and commit hooks can see both parents of merge
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   commit hook: HG_HOOKNAME=commit HG_HOOKTYPE=commit HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   commit.b hook: HG_HOOKNAME=commit.b HG_HOOKTYPE=commit HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
-  $ hg merge 1
+  $ hg merge 'desc(a1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m merge -d '2 0'
@@ -197,7 +197,7 @@ preupdate hook can prevent update
   $ cat >> .hg/hgrc <<EOF
   > preupdate = sh -c "printenv.py preupdate"
   > EOF
-  $ hg update 1
+  $ hg update 'desc(a1)'
   preupdate hook: HG_HOOKNAME=preupdate HG_HOOKTYPE=preupdate HG_PARENT1=ab228980c14d
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
@@ -686,7 +686,7 @@ commit and update hooks should run after command completion.
   $ echo bb > a
   $ hg ci -ma
   223eafe2750c
-  $ hg up 0
+  $ hg up cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   cb9a9f314b8b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -771,7 +771,7 @@ pretxnclose hook failure should abort the transaction
   > [hooks]
   > pretxnclose.error = exit 1
   > EOF
-  $ hg debugstrip -r 0
+  $ hg debugstrip -r 'desc(a)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   transaction abort!
   rollback completed

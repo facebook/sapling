@@ -32,17 +32,17 @@
   $ printf "[extensions]\nsparse=\n" >> .hg/hgrc
 
   $ hg sparse -I x
-  $ hg prefetch -r 0
+  $ hg prefetch -r 'desc(x1)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
-  $ hg cat -r 0 x
+  $ hg cat -r 'desc(x1)' x
   x
 
   $ hg sparse -I z
-  $ hg prefetch -r 0
+  $ hg prefetch -r 'desc(x1)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
-  $ hg cat -r 0 z
+  $ hg cat -r 'desc(x1)' z
   z
 
 # prefetch sparse only on pull when configured
@@ -81,7 +81,7 @@
   $ cd shallow2
   $ printf "[extensions]\nsparse=\n" >> .hg/hgrc
 
-  $ hg up -q 0
+  $ hg up -q 'desc(x1)'
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   $ touch a
   $ hg ci -Aqm a
@@ -91,11 +91,11 @@
 pulled
 
   $ cd ../shallow
-  $ hg up -q 1
+  $ hg up -q 'desc(x2)'
   $ hg pull -q
   $ hg sparse -I z
   $ clearcache
   $ hg prefetch -r '. + .^' -I x -I z
   4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob) (?)
-  $ hg rebase -d 2 --keep
+  $ hg rebase -d 'desc(a)' --keep
   rebasing 876b1317060d "x2" (foo)
