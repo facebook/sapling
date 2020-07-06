@@ -178,6 +178,10 @@ fn test_generic_dag2(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     assert_eq!(expand(unreachable), expand(dag.ancestors(nameset("G"))?));
     assert_eq!(expand(dag.descendants(nameset("F E"))?), "E F G H I J K");
 
+    assert!(dag.is_ancestor(v("B"), v("J"))?);
+    assert!(dag.is_ancestor(v("F"), v("F"))?);
+    assert!(!dag.is_ancestor(v("K"), v("I"))?);
+
     Ok(())
 }
 

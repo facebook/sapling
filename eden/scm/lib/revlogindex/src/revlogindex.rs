@@ -943,6 +943,9 @@ impl DagAlgorithm for RevlogIndex {
     fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> Result<bool> {
         let ancestor_rev = self.vertex_id(ancestor)?.0 as u32;
         let descendant_rev = self.vertex_id(descendant)?.0 as u32;
+        if ancestor_rev == descendant_rev {
+            return Ok(true);
+        }
         Ok(self.gca_revs(&[ancestor_rev, descendant_rev], 1).get(0) == Some(&ancestor_rev))
     }
 
