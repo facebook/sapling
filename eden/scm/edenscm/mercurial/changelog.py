@@ -14,6 +14,8 @@ from __future__ import absolute_import
 
 from typing import IO, Any, Dict, List, Optional, Union
 
+import bindings
+
 from . import encoding, error, mdiff, revlog, util, visibility
 from .i18n import _
 from .node import bbin, bin, hex, nullid
@@ -302,6 +304,16 @@ class changelog(revlog.revlog):
         else:
             indexfile = "00changelog.i"
 
+        if uiconfig.configbool("experimental", "rust-commits") and bypasstransaction:
+            # self.inner: The Rust object that handles all changelog
+            # operations. Currently it is used in parallel with the
+            # existing revlog logic. Eventually it will replace all
+            # operations here with modern setup.
+            self.inner = bindings.dag.commits.openrevlog(opener.join(""))
+        else:
+            self.inner = None
+        self._userustcache = {}
+
         datafile = "00changelog.d"
         revlog.revlog.__init__(
             self,
@@ -342,6 +354,50 @@ class changelog(revlog.revlog):
             self._zstorefallback = None
 
         self.zstore = zstore
+
+    def userust(self, name):
+        """Test whether to use rust-commit structure for a particular job
+
+        Eventually (after migrating narrow-heads repos, and killing hgsql) this
+        should always return True.
+        """
+        cache = self._userustcache
+        value = cache.get(name)
+        if value is None:
+            if self.inner is None:
+                value = False
+            else:
+                value = self._uiconfig.configbool(
+                    "experimental", "rust-commits:%s" % name
+                )
+            cache[name] = value
+        return value
+
+    @property
+    def dag(self):
+        """Get the DAG with algorithms. Require rust-commit."""
+        inner = self.inner
+        if inner is None:
+            return None
+        return inner.dagalgo()
+
+    @property
+    def idmap(self):
+        """Get the IdMap. Require rust-commit."""
+        return self.inner.idmap()
+
+    @property
+    def torevs(self):
+        """Convert a Set using commit hashes to an IdSet using numbers
+
+        The Set is usually obtained via `self.dag` APIs.
+        """
+        return self.inner.torevs
+
+    @property
+    def tonodes(self):
+        """Convert an IdSet to Set. The reverse of torevs."""
+        return self.inner.tonodes
 
     def _loadvisibleheads(self, opener):
         return visibility.visibleheads(opener)
@@ -400,6 +456,11 @@ class changelog(revlog.revlog):
 
     def strip(self, *args, **kwargs):
         super(changelog, self).strip(*args, **kwargs)
+
+        # Invalidate on-disk nodemap.
+        if self.indexfile.startswith("00changelog"):
+            self.opener.tryunlink("00changelog.nodemap")
+            self.opener.tryunlink("00changelog.i.nodemap")
 
     def rev(self, node):
         """filtered version of revlog.rev"""
@@ -587,7 +648,7 @@ class changelog(revlog.revlog):
             if rawtext is None:
                 baserev, delta = cachedelta
                 basetext = self.revision(baserev, _df=dfh, raw=False)
-                text = mdiff.patch(basetext, delta)
+                text = rawtext = mdiff.patch(basetext, delta)
             else:
                 # text == rawtext only if there is no flags.
                 # We need 'text' to calculate commit SHA1.
@@ -597,6 +658,15 @@ class changelog(revlog.revlog):
             # Use `p1` as a potential delta-base.
             zstorenode = zstore.insert(sha1text, [p1])
             assert zstorenode == node, "zstore SHA1 should match node"
+
+        inner = self.inner
+        if inner is not None:
+            if rawtext is None:
+                baserev, delta = cachedelta
+                basetext = self.revision(baserev, _df=dfh, raw=False)
+                rawtext = mdiff.patch(basetext, delta)
+            parentnodes = [p for p in (p1, p2) if p != nullid]
+            inner.addcommits([(node, parentnodes, bytes(rawtext))])
 
         revs = transaction.changes.get("revs")
         if revs is not None:

@@ -2316,6 +2316,14 @@ class revlog(object):
 
         del self.index[rev:-1]
 
+        # index2 does not support `del`. Reload it directly.
+        index2 = getattr(self, "index2", None)
+        if index2 is not None:
+            nodemapfile = self.indexfile[:-2] + ".nodemap"
+            self.index2 = bindings.revlogindex.revlogindex(
+                self.opener.join(self.indexfile), self.opener.join(nodemapfile)
+            )
+
     def checksize(self):
         expected = 0
         if len(self):

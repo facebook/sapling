@@ -653,6 +653,10 @@ def subsetphaseheads(repo, subset):
 @perftrace.tracefunc("Update Phases")
 def updatephases(repo, trgetter, headsbyphase):
     """Updates the repo with the given phase heads"""
+    # Head-bases phases do not need update.
+    if repo._phasecache._headbased:
+        return
+
     # Now advance phase boundaries of all but secret phase
     #
     # run the update (and fetch transaction) only if there are actually things

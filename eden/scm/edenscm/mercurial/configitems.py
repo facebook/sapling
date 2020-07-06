@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import functools
 import re
 
-from . import encoding, error
+from . import encoding, error, util
 
 
 def loadconfigtable(ui, extname, configtable):
@@ -297,6 +297,10 @@ coreconfigitem("experimental", "mergedriver", default=None)
 coreconfigitem("experimental", "narrow-heads", default=True)
 coreconfigitem("experimental", "obsmarkers-exchange-debug", default=False)
 coreconfigitem("experimental", "remotenames", default=False)
+
+# load Rust-based HgCommits on changelog.
+coreconfigitem("experimental", "rust-commits", default=util.istest())
+
 coreconfigitem("experimental", "single-head-per-branch", default=False)
 coreconfigitem("experimental", "spacemovesdown", default=False)
 coreconfigitem("experimental", "sparse-read", default=False)
