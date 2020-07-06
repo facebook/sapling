@@ -52,6 +52,26 @@ pub(crate) fn heads_ancestors(
     this.heads(this.ancestors(set)?)
 }
 
+pub(crate) fn only(
+    this: &(impl DagAlgorithm + ?Sized),
+    reachable: NameSet,
+    unreachable: NameSet,
+) -> Result<NameSet> {
+    let reachable = this.ancestors(reachable)?;
+    let unreachable = this.ancestors(unreachable)?;
+    Ok(reachable - unreachable)
+}
+
+pub(crate) fn only_both(
+    this: &(impl DagAlgorithm + ?Sized),
+    reachable: NameSet,
+    unreachable: NameSet,
+) -> Result<(NameSet, NameSet)> {
+    let reachable = this.ancestors(reachable)?;
+    let unreachable = this.ancestors(unreachable)?;
+    Ok((reachable - unreachable.clone(), unreachable))
+}
+
 pub(crate) fn gca_one(
     this: &(impl DagAlgorithm + ?Sized),
     set: NameSet,

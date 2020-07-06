@@ -238,6 +238,19 @@ pub trait DagAlgorithm {
     /// Calculates the "dag range" - vertexes reachable from both sides.
     fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet>;
 
+    /// Calculates `ancestors(reachable) - ancestors(unreachable)`.
+    fn only(&self, reachable: NameSet, unreachable: NameSet) -> Result<NameSet> {
+        default_impl::only(self, reachable, unreachable)
+    }
+
+    /// Calculates `ancestors(reachable) - ancestors(unreachable)`, and
+    /// `ancestors(unreachable)`.
+    /// This might be faster in some implementations than calculating `only` and
+    /// `ancestors` separately.
+    fn only_both(&self, reachable: NameSet, unreachable: NameSet) -> Result<(NameSet, NameSet)> {
+        default_impl::only_both(self, reachable, unreachable)
+    }
+
     /// Calculates the descendants of the given set.
     fn descendants(&self, set: NameSet) -> Result<NameSet>;
 }

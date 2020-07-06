@@ -170,6 +170,10 @@ fn test_namedag() -> Result<()> {
     assert!(!dag.is_ancestor(v("K"), v("B"))?);
     assert_eq!(expand(dag.heads_ancestors(nameset("A E F D G"))?), "F G");
     assert_eq!(expand(dag.range(nameset("A"), nameset("K"))?), "K H E A");
+    assert_eq!(expand(dag.only(nameset("I"), nameset("G"))?), "I F D C");
+    let (reachable, unreachable) = dag.only_both(nameset("I"), nameset("G"))?;
+    assert_eq!(expand(reachable), "I F D C");
+    assert_eq!(expand(unreachable), expand(dag.ancestors(nameset("G"))?));
     assert_eq!(expand(dag.descendants(nameset("F E"))?), "K J I H F G E");
 
     Ok(())
