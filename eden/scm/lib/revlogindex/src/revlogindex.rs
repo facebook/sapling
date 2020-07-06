@@ -12,6 +12,7 @@ use anyhow::ensure;
 use anyhow::Result;
 use bit_vec::BitVec;
 use dag::nameset::hints::Flags;
+use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
 use dag::ops::IdMapEq;
@@ -1099,6 +1100,57 @@ impl IdMapEq for RevlogIndex {
 impl IdMapSnapshot for RevlogIndex {
     fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
         Ok(self.get_snapshot())
+    }
+}
+
+impl RevlogIndex {
+    fn add_heads_for_testing<F>(&mut self, parents_func: &F, heads: &[Vertex]) -> Result<()>
+    where
+        F: Fn(Vertex) -> Result<Vec<Vertex>>,
+    {
+        if !cfg!(test) {
+            panic!(
+                "add_heads should only works for testing \
+                   because it uses dummy commit message and \
+                   revlog does not support separating commit \
+                   messages from the graph"
+            );
+        }
+
+        // Update IdMap. Keep track of what heads are added.
+        for head in heads.iter() {
+            if !self.contains_vertex_name(&head)? {
+                let parents = parents_func(head.clone())?;
+                for parent in parents.iter() {
+                    self.add_heads_for_testing(parents_func, &[parent.clone()])?;
+                }
+                if !self.contains_vertex_name(&head)? {
+                    let parent_revs: Vec<u32> = parents
+                        .iter()
+                        .map(|p| self.vertex_id(p.clone()).unwrap().0 as u32)
+                        .collect();
+                    if parent_revs.len() > 2 {
+                        bail!(
+                            "revlog does not support > 2 parents (when inserting {:?})",
+                            &head
+                        );
+                    }
+                    let text = Bytes::from_static(b"DUMMY COMMIT MESSAGE FOR TESTING");
+                    self.insert(head.clone(), parent_revs, text);
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl DagAddHeads for RevlogIndex {
+    fn add_heads<F>(&mut self, parents_func: F, heads: &[Vertex]) -> Result<()>
+    where
+        F: Fn(Vertex) -> Result<Vec<Vertex>>,
+    {
+        self.add_heads_for_testing(&parents_func, heads)
     }
 }
 
