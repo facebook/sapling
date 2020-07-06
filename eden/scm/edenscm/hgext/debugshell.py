@@ -63,9 +63,12 @@ def _assignobjects(objects, repo):
 
         # Commit cloud service.
         ui = repo.ui
-        token = cc.token.TokenLocator(ui).token
-        if token is not None:
-            objects["serv"] = cc.service.get(ui, token)
+        try:
+            token = cc.token.TokenLocator(ui).token
+            if token is not None:
+                objects["serv"] = cc.service.get(ui, token)
+        except Exception:
+            pass
 
     # Import other handy modules
     for name in ["os", "sys", "subprocess", "re"]:
