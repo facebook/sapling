@@ -67,10 +67,11 @@ py_class!(class revlogindex |py| {
 
     /// Insert a new revision that hasn't been written to disk.
     /// Used by revlog._addrevision.
-    def insert(&self, node: PyBytes, parents: Vec<u32>) -> PyResult<PyNone> {
+    def insert(&self, node: PyBytes, parents: Vec<u32>, data: Option<PyBytes> = None) -> PyResult<PyNone> {
         let node = node.data(py).to_vec().into();
         let mut revlog = self.index(py).borrow_mut();
-        revlog.insert(node, parents);
+        let data = data.map(|p| p.data(py).to_vec()).unwrap_or_default();
+        revlog.insert(node, parents, data.into());
         Ok(PyNone)
     }
 

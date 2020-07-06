@@ -23,17 +23,22 @@ use dag::Id;
 use dag::IdSet;
 use dag::Set;
 use dag::Vertex;
+use indexedlog::lock::ScopedDirLock;
 use indexedlog::utils::mmap_bytes;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
+use std::convert::TryFrom;
 use std::fs;
 use std::io;
+use std::io::Seek;
+use std::io::Write;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::Deref;
 use std::path::Path;
+use std::path::PathBuf;
 use std::slice;
 use std::sync::Arc;
 use util::path::atomic_write_symlink;
@@ -325,12 +330,17 @@ pub struct RevlogIndex {
     /// Inserted node -> index of pending_parents.
     pub pending_nodes: Vec<Vertex>,
     pub pending_nodes_index: BTreeMap<Vertex, usize>,
+    pub pending_raw_data: Vec<Bytes>,
 
     /// Snapshot used to construct Set.
     snapshot: RwLock<Option<Arc<RevlogIndex>>>,
 
     /// Index to convert node to rev.
     pub nodemap: NodeRevMap<BytesSlice<RevlogEntry>, BytesSlice<u32>>,
+
+    /// Paths to the on-disk files.
+    index_path: PathBuf,
+    nodemap_path: PathBuf,
 }
 
 /// "smallvec" optimization
@@ -422,7 +432,10 @@ impl RevlogIndex {
             pending_parents: Default::default(),
             pending_nodes: Default::default(),
             pending_nodes_index: Default::default(),
+            pending_raw_data: Default::default(),
             snapshot: Default::default(),
+            index_path: changelogi_path.to_path_buf(),
+            nodemap_path: nodemap_path.to_path_buf(),
         };
         Ok(result)
     }
@@ -457,6 +470,10 @@ impl RevlogIndex {
 
     /// Get raw content from a revision.
     pub fn raw_data(&self, rev: u32, mut file: impl io::Seek + io::Read) -> Result<Bytes> {
+        if rev as usize >= self.data_len() {
+            let result = &self.pending_raw_data[rev as usize - self.data_len()];
+            return Ok(result.clone());
+        }
         let entry = self.data()[rev as usize];
         let base = i32::from_be(entry.base);
         ensure!(
@@ -486,7 +503,7 @@ impl RevlogIndex {
     }
 
     /// Insert a new revision with given parents at the end.
-    pub fn insert(&mut self, node: Vertex, parents: Vec<u32>) {
+    pub fn insert(&mut self, node: Vertex, parents: Vec<u32>, raw_data: Bytes) {
         let p1 = parents.get(0).map(|r| *r as i32).unwrap_or(-1);
         let p2 = parents.get(1).map(|r| *r as i32).unwrap_or(-1);
         self.pending_parents.push(ParentRevs::from_p1p2(p1, p2));
@@ -495,6 +512,121 @@ impl RevlogIndex {
         let idx = self.pending_parents.len();
         self.pending_nodes_index.insert(node, idx);
         *self.snapshot.write() = None;
+
+        self.pending_raw_data.push(raw_data);
+    }
+
+    /// Write pending commits to disk.
+    pub fn flush(&mut self) -> Result<()> {
+        let _lock = ScopedDirLock::new(
+            self.index_path
+                .parent()
+                .expect("index_path should not be root dir"),
+        )?;
+
+        let revlog_data_path = self.index_path.with_extension("d");
+        let mut revlog_data = fs::OpenOptions::new()
+            .read(true)
+            .create(true)
+            .append(true)
+            .write(true)
+            .open(&revlog_data_path)?;
+        let mut revlog_index = fs::OpenOptions::new()
+            .read(true)
+            .create(true)
+            .append(true)
+            .write(true)
+            .open(&self.index_path)?;
+
+        let old_rev_len =
+            revlog_index.seek(io::SeekFrom::End(0))? as usize / mem::size_of::<RevlogEntry>();
+        let old_offset = revlog_data.seek(io::SeekFrom::End(0))?;
+
+        ensure!(
+            old_rev_len >= self.data_len(),
+            "changelog was truncated unexpectedly"
+        );
+
+        // Adjust `rev` to take possible changes on-disk into consideration.
+        // For example,
+        // - On-disk revlog.i has rev 0, rev 1.
+        // - On-disk revlog.i loaded as RevlogIndex r1.
+        // - r1.insert(...), got rev 2.
+        // - On-disk revlog.i got appended to have rev 2.
+        // - r1.flush(), rev 2 was taken by the on-disk revlog, it needs to be adjusted to rev 3.
+        let adjust_rev = |rev: i32| -> i32 {
+            if rev >= self.data_len() as _ {
+                // need fixup.
+                rev + old_rev_len as i32 - self.data_len() as i32
+            } else {
+                // rev is already on-disk - no need to fix.
+                rev
+            }
+        };
+
+        let mut new_data = Vec::new();
+        let mut new_index = Vec::new();
+
+        for (i, ((raw, node), parents)) in self
+            .pending_raw_data
+            .iter()
+            .zip(self.pending_nodes.iter())
+            .zip(self.pending_parents.iter())
+            .enumerate()
+        {
+            let raw_len = raw.len();
+            let compressed = lz4_pyframe::compress(&raw)?;
+            let chunk = if compressed.len() < raw.len() {
+                // Use LZ4 compression ('4' header).
+                let mut chunk = vec![b'4'];
+                chunk.extend(compressed);
+                chunk
+            } else {
+                // Do not use compression ('u' header).
+                let mut chunk = vec![b'u'];
+                chunk.extend(raw.as_ref().to_vec());
+                chunk
+            };
+
+            let offset = old_offset + new_data.len() as u64;
+            let rev = old_rev_len + i;
+
+            let entry = RevlogEntry {
+                offset_flags: u64::to_be(offset << 16),
+                compressed: i32::to_be(chunk.len() as i32),
+                len: i32::to_be(raw_len as i32),
+                base: i32::to_be(rev as i32),
+                link: i32::to_be(rev as i32),
+                p1: i32::to_be(adjust_rev(parents.0[0])),
+                p2: i32::to_be(adjust_rev(parents.0[1])),
+                node: <[u8; 20]>::try_from(node.as_ref())?,
+                _padding: [0u8; 12],
+            };
+
+            let entry_bytes: [u8; 64] = unsafe { std::mem::transmute(entry) };
+
+            new_index.write_all(&entry_bytes)?;
+            new_data.write_all(&chunk)?;
+        }
+
+        // Special case. First 6 bytes of the index file are not the offset but
+        // specify the version and flags.
+        if old_rev_len == 0 && new_index.len() > 4 {
+            new_index[3] = 1; // revlog v1
+        }
+
+        // Write revlog data before revlog index.
+        revlog_data.write_all(&new_data)?;
+        drop(revlog_data);
+
+        // Write revlog index.
+        revlog_index.write_all(&new_index)?;
+        drop(revlog_index);
+
+        // Reload.
+        *self = Self::new(&self.index_path, &self.nodemap_path)?;
+
+        Ok(())
     }
 
     /// Create a Arc snapshot of IdConvert trait object on demand.
@@ -508,9 +640,12 @@ impl RevlogIndex {
                     pending_parents: self.pending_parents.clone(),
                     pending_nodes: self.pending_nodes.clone(),
                     pending_nodes_index: self.pending_nodes_index.clone(),
+                    pending_raw_data: self.pending_raw_data.clone(),
                     snapshot: Default::default(),
                     nodemap: self.nodemap.clone(),
                     changelogi_data: self.changelogi_data.clone(),
+                    index_path: self.index_path.clone(),
+                    nodemap_path: self.nodemap_path.clone(),
                 });
                 *snapshot = Some(result.clone());
                 result
@@ -935,6 +1070,80 @@ commit 3"#
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn test_flush() -> Result<()> {
+        let dir = tempdir()?;
+        let dir = dir.path();
+        let changelog_i_path = dir.join("00changelog.i");
+        let nodemap_path = dir.join("00changelog.nodemap");
+
+        let mut revlog1 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
+        let mut revlog2 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
+
+        revlog1.insert(v(1), vec![], b"commit 1".to_vec().into());
+        // commit 2 is lz4-friendly.
+        let text = b"commit 2 (............................................)";
+        revlog1.insert(v(2), vec![0], text.to_vec().into());
+
+        revlog2.insert(v(3), vec![], b"commit 3".to_vec().into());
+        revlog2.insert(v(4), vec![0], b"commit 4".to_vec().into());
+        revlog2.insert(v(5), vec![1, 0], b"commit 5".to_vec().into());
+
+        revlog1.flush()?;
+        revlog2.flush()?;
+
+        // The second flush reloads data, without writing new data.
+        revlog1.flush()?;
+        revlog2.flush()?;
+
+        // Read the flushed data into revlog3.
+        let revlog3 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
+
+        // Read parents.
+        assert_eq!(revlog3.parent_revs(0), ParentRevs([-1, -1]));
+        assert_eq!(revlog3.parent_revs(1), ParentRevs([0, -1]));
+        assert_eq!(revlog3.parent_revs(2), ParentRevs([-1, -1]));
+        assert_eq!(revlog3.parent_revs(3), ParentRevs([2, -1]));
+        assert_eq!(revlog3.parent_revs(4), ParentRevs([3, 2]));
+
+        // Prefix lookup.
+        assert_eq!(revlog3.vertexes_by_hex_prefix(b"0303", 2)?, vec![v(3)]);
+
+        // Id - Vertex.
+        assert_eq!(revlog3.vertex_name(Id(2))?, v(3));
+        assert_eq!(revlog3.vertex_id(v(3))?, Id(2));
+
+        // Read commit data.
+        let data = fs::read(dir.join("00changelog.d"))?;
+        let read = |rev: u32| -> Result<String> {
+            let mut data = io::Cursor::new(&data);
+            let raw = revlog3.raw_data(rev, &mut data)?;
+            for index in vec![&revlog1, &revlog2] {
+                ensure!(
+                    index.raw_data(rev, &mut data)? == raw,
+                    "index read mismatch"
+                );
+            }
+            Ok(std::str::from_utf8(&raw)?.to_string())
+        };
+
+        assert_eq!(read(0)?, "commit 1");
+        assert_eq!(
+            read(1)?,
+            "commit 2 (............................................)"
+        );
+        assert_eq!(read(2)?, "commit 3");
+        assert_eq!(read(3)?, "commit 4");
+        assert_eq!(read(4)?, "commit 5");
+
+        Ok(())
+    }
+
+    /// Quickly construct a Vertex from a byte.
+    fn v(byte: u8) -> Vertex {
+        Vertex::from(vec![byte; 20])
     }
 
     fn from_xxd(s: &str) -> Vec<u8> {
