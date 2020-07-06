@@ -17,7 +17,7 @@ pub trait IdMap: IdConvert + PrefixLookup {}
 impl<T> IdMap for T where T: IdConvert + PrefixLookup {}
 
 // Mercurial's special case. -1 maps to (b"\0" * 20)
-const NULL_NODE: [u8; 20] = [0u8; 20];
+pub(crate) const NULL_NODE: [u8; 20] = [0u8; 20];
 
 py_class!(pub class idmap |py| {
     data map: Box<dyn IdMap + Send + 'static>;

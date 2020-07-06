@@ -134,7 +134,18 @@ impl<'a> FromPyObject<'a> for Spans {
         // Collecting ids to a Vec first to preserve error handling.
         let ids: PyResult<Vec<Id>> = obj
             .iter(py)?
-            .map(|o| Ok(Id(o?.extract::<u64>(py)?)))
+            .map(|o| Ok(o?.extract::<i64>(py)?))
+            .filter_map(|o| match o {
+                Ok(i) => {
+                    // Skip "nullrev" automatically.
+                    if i >= 0 {
+                        Some(Ok(Id(i as u64)))
+                    } else {
+                        None
+                    }
+                }
+                Err(e) => Some(Err(e)),
+            })
             .collect();
         Ok(Spans(IdSet::from_spans(ids?)))
     }

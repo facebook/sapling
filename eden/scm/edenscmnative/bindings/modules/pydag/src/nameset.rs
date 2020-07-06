@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::idmap::NULL_NODE;
 use anyhow::Result;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
@@ -137,11 +138,15 @@ impl<'a> FromPyObject<'a> for Names {
 
         // type(obj) is list - convert to StaticSet
         if let Ok(pylist) = obj.extract::<Vec<PyBytes>>(py) {
-            let set = Set::from_static_names(
-                pylist
-                    .into_iter()
-                    .map(|name| Vertex::copy_from(name.data(py))),
-            );
+            let set = Set::from_static_names(pylist.into_iter().filter_map(|name| {
+                let data = name.data(py);
+                // Skip "nullid" automatically.
+                if data == &NULL_NODE[..] {
+                    None
+                } else {
+                    Some(Vertex::copy_from(data))
+                }
+            }));
             return Ok(Names(set));
         }
 
@@ -185,7 +190,13 @@ impl Iterator for PyNameIter {
                 None => Ok(None),
                 Some(Ok(value)) => {
                     let value = value.extract::<PyBytes>(py)?;
-                    Ok(Some(Vertex::copy_from(value.data(py))))
+                    let data = value.data(py);
+                    if data == &NULL_NODE[..] {
+                        // Skip "nullid" automatically.
+                        self.next().transpose().map_pyerr(py)
+                    } else {
+                        Ok(Some(Vertex::copy_from(data)))
+                    }
                 }
                 Some(Err(err)) => {
                     self.errored = true;
