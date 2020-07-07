@@ -19,6 +19,8 @@ import typing
 from pathlib import Path
 from typing import Iterable, List, NamedTuple, Optional, Tuple
 
+import eden.thrift.legacy
+
 
 log: logging.Logger = logging.getLogger("eden.fs.cli.proc_utils")
 ProcessID = int
@@ -48,6 +50,47 @@ class EdenFSProcess(NamedTuple):
     # of EdenFS will detect this and exit if their lock file is deleted, but older
     # versions of EdenFS would continue to run in this state.
     holding_lock: Optional[bool] = None
+
+    def is_edenfs_idle(self) -> bool:
+        # Get the counters about number of thrift calls
+        counter_regex = r"^thrift\.EdenService\..*\.num_calls\.sum\.600$"
+        try:
+            with eden.thrift.legacy.create_thrift_client(
+                eden_dir=str(self.eden_dir), timeout=0.5
+            ) as client:
+                counters = client.getRegexCounters(counter_regex)
+        except Exception as ex:
+            log.warning(
+                f"Failed to query counters from EdenFS process {self.pid}: {ex}"
+            )
+            # Default to reporting not idle for now.
+            return False
+
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(f"  Counters from EdenFS process {self.pid}:")
+            for key, value in counters.items():
+                log.debug(f"  {key:>65}: {value}")
+
+        # If there have been any checkout or clone operations in the last 10
+        # minutes then consider the daemon not idle
+        for call in ("checkOutRevision", "resetParentCommits", "mount", "unmount"):
+            key = f"thrift.EdenService.{call}.num_calls.sum.600"
+            value = counters.get(key, 0)
+            if value > 0:
+                return False
+
+        # It would potentially be nice if we could also look at the FUSE I/O
+        # rates to guess at system idleness.  This info is available in the
+        # "fuse.<operation>_us.count.60" counters.
+        #
+        # However, various background tools can end up causing a relatively high write
+        # I/O rate even when the system is idle.  (Particularly for www checkouts there
+        # are various tools that run hg commands periodically in the background, which
+        # ends up triggering write traffic to the hg blackbox log.)
+        #
+        # Therefore for now we ignore the FUSE I/O counters.
+
+        return True
 
     def get_build_info(self) -> BuildInfo:
         """
