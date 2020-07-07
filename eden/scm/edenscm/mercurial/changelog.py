@@ -298,7 +298,7 @@ class changelog(revlog.revlog):
         """
         self._uiconfig = uiconfig
         self._visibleheads = self._loadvisibleheads(opener)
-
+        bypasstransaction = False
         if trypending and opener.exists("00changelog.i.a"):
             indexfile = "00changelog.i.a"
         else:
