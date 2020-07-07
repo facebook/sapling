@@ -35,18 +35,18 @@ EdenFS is supported on Linux, macOS, and Windows.  The mechanism used to
 interact with the filesystem layer is different across these three different
 platforms.
 
-On Linux, EdenFS is implemented uses
+On Linux, EdenFS uses
 [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to provide
 filesystem functionality.  On macOS EdenFS uses [FUSE for
 macOS](https://osxfuse.github.io/), which behaves very similarly to Linux FUSE.
 
-On Windows EdenFS uses Microsoft's
+On Windows, EdenFS uses Microsoft's
 [Projected File System](https://docs.microsoft.com/en-us/windows/win32/projfs/projected-file-system).
 This behaves fairly differently from FUSE, but EdenFS still shares most of the
 same internal logic for tracking file state.
 
-Parts of the design discussion that follow focus primarily on the Linux and
-macOS implementations.  On Windows the interface to the OS behaves a bit
+Parts of this design discussion focus primarily on the Linux and
+macOS implementations. On Windows, the interface to the OS behaves a bit
 differently, but internally EdenFS still tracks its state using the same inode
 structure that is used on Linux and macOS.
 

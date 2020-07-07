@@ -7,10 +7,10 @@ provides two primary interfaces for other processes to interact with it.
 
 The first of these is the file system interface
 ([FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) on Linux and
-macOS, [Projected FS](https://docs.microsoft.com/en-us/windows/win32/projfs/projected-file-system).
+macOS, [Projected FS](https://docs.microsoft.com/en-us/windows/win32/projfs/projected-file-system)
 on Windows), through which it exposes virtual filesystems.  Other
 applications can interact with files and directories in EdenFS checkouts just
-like they would use any other normal local filesystem.  This allows other
+like they would on any other normal local filesystem.  This allows other
 applications to transparently interact with EdenFS checkouts without needing
 any specific knowledge of EdenFS.
 
@@ -32,7 +32,7 @@ and Mac each checkout is exposed as a separate filesystem
 [mount point](https://en.wikipedia.org/wiki/Mount_%28computing%29).  On
 Windows, each checkout is a separate ProjectedFS virtualization root.
 
-When the user clones a new checkout EdenFS creates a new file system mount
+When the user clones a new checkout, EdenFS creates a new file system mount
 point to expose the checkout.  To remove a checkout users should use the
 `edenfsctl rm` command: mount points cannot be removed normally with `rmdir`,
 but must instead be unmounted.
