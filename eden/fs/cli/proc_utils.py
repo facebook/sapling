@@ -7,6 +7,7 @@
 # pyre-strict
 
 import abc
+import datetime
 import errno
 import logging
 import os
@@ -185,6 +186,54 @@ class ProcUtils(abc.ABC):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def is_system_idle(
+        self, tty_idle_timeout: datetime.timedelta, root_path: Path
+    ) -> bool:
+        """Return true if the system seems idle"""
+        raise NotImplementedError()
+
+    def is_edenfs_idle(self, edenfs: EdenFSProcess) -> bool:
+        # Get the counters about number of thrift calls
+        counter_regex = r"^thrift\.EdenService\..*\.num_calls\.sum\.600$"
+        try:
+            with eden.thrift.legacy.create_thrift_client(
+                eden_dir=str(edenfs.eden_dir), timeout=0.5
+            ) as client:
+                counters = client.getRegexCounters(counter_regex)
+        except Exception as ex:
+            log.warning(
+                f"Failed to query counters from EdenFS process {edenfs.pid}: {ex}"
+            )
+            # Default to reporting not idle for now.
+            return False
+
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(f"  Counters from EdenFS process {edenfs.pid}:")
+            for key, value in counters.items():
+                log.debug(f"  {key:>65}: {value}")
+
+        # If there have been any checkout or clone operations in the last 10
+        # minutes then consider the daemon not idle
+        for call in ("checkOutRevision", "resetParentCommits", "mount", "unmount"):
+            key = f"thrift.EdenService.{call}.num_calls.sum.600"
+            value = counters.get(key, 0)
+            if value > 0:
+                return False
+
+        # It would potentially be nice if we could also look at the FUSE I/O
+        # rates to guess at system idleness.  This info is available in the
+        # "fuse.<operation>_us.count.60" counters.
+        #
+        # However, various background tools can end up causing a relatively high write
+        # I/O rate even when the system is idle.  (Particularly for www checkouts there
+        # are various tools that run hg commands periodically in the background, which
+        # ends up triggering write traffic to the hg blackbox log.)
+        #
+        # Therefore for now we ignore the FUSE I/O counters.
+
+        return True
+
     def read_lock_file(self, path: Path) -> bytes:
         """Read an EdenFS lock file.
         This method exists primarily to allow it to be overridden in test cases.
@@ -247,7 +296,14 @@ class MacProcUtils(UnixProcUtils):
 
     def get_process_start_time(self, pid: int) -> float:
         raise NotImplementedError(
-            "NopProcUtils does not currently implement get_process_start_time()"
+            "MacProcUtils does not currently implement get_process_start_time()"
+        )
+
+    def is_system_idle(
+        self, tty_idle_timeout: datetime.timedelta, root_path: Path
+    ) -> bool:
+        raise NotImplementedError(
+            "MacProcUtils does not currently implement is_system_idle()"
         )
 
 
@@ -382,6 +438,43 @@ class LinuxProcUtils(UnixProcUtils):
             jps = os.sysconf(os.sysconf_names["SC_CLK_TCK"])
             self._jiffies_per_sec = jps
         return jps
+
+    def is_system_idle(
+        self, tty_idle_timeout: datetime.timedelta, root_path: Path
+    ) -> bool:
+        # We compute system idleness for now just by looking to at the most recent time
+        # that any of the TTYs have received input.  If there has been no activity
+        # within the specified idle interval we consider the system idle.
+        max_idle_time: float = (time.time() - tty_idle_timeout.total_seconds())
+        dev_path = root_path / "dev"
+
+        def is_tty_busy(tty_path: Path) -> bool:
+            try:
+                s = tty_path.lstat()
+            except OSError:
+                return False
+
+            # Check the atime.  This is what the "w" utility uses to report idleness.
+            # We don't want to use the mtime, since it gets updated whenever there is
+            # output to the terminal, even if the user has not made any input for a long
+            # time.  (e.g., if the user has left a command like "top" constantly
+            # printing output to the terminal and left it running for days.)
+            return s.st_atime > max_idle_time
+
+        try:
+            for entry in (dev_path / "pts").iterdir():
+                if is_tty_busy(entry):
+                    return False
+
+            for entry in dev_path.iterdir():
+                if not entry.name.startswith("tty"):
+                    continue
+                if is_tty_busy(entry):
+                    return False
+        except OSError:
+            pass
+
+        return True
 
 
 def new() -> ProcUtils:

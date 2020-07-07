@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 import ctypes
+import datetime
 import sys
 import types
 from ctypes.wintypes import (
@@ -14,6 +15,7 @@ from ctypes.wintypes import (
     LPSTR as _LPSTR,
     WORD as _WORD,
 )
+from pathlib import Path
 from typing import Iterable, NoReturn, Optional, Type
 
 from . import proc_utils
@@ -162,6 +164,13 @@ class WinProcUtils(proc_utils.ProcUtils):
     def get_process_start_time(self, pid: int) -> float:
         raise NotImplementedError(
             "Windows does not currently implement get_process_start_time()"
+        )
+
+    def is_system_idle(
+        self, tty_idle_timeout: datetime.timedelta, root_path: Path
+    ) -> bool:
+        raise NotImplementedError(
+            "Windows does not currently implement is_system_idle()"
         )
 
     def kill_process(self, pid: int) -> None:
