@@ -103,7 +103,7 @@ async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 clap = "2.33"
 criterion = "0.3"
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 itertools = "0.8"

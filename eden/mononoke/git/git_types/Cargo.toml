@@ -20,7 +20,7 @@ fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master"
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 digest = "0.8"
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 sha-1 = "0.8"
 thiserror = "1.0"

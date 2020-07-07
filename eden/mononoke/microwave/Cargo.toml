@@ -18,6 +18,6 @@ microwave-if = { path = "if" }
 mononoke_types = { path = "../mononoke_types" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 anyhow = "1.0"
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }

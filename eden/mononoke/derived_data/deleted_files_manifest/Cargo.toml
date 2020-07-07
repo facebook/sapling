@@ -22,7 +22,7 @@ cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 parking_lot = "0.10.2"
 tokio = "0.1"

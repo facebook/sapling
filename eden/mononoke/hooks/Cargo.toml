@@ -27,7 +27,7 @@ stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch 
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 hyper = "0.13"
 hyper-tls = "0.4"
 ipnetwork = "0.15"

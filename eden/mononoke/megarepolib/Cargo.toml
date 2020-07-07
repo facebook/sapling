@@ -17,7 +17,7 @@ mercurial_types = { path = "../mercurial/types" }
 mononoke_types = { path = "../mononoke_types" }
 movers = { path = "../commit_rewriting/movers" }
 anyhow = "1.0"
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 itertools = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
 

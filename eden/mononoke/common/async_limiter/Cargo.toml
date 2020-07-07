@@ -9,7 +9,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 anyhow = "1.0"
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 ratelimit_meter = "5"
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }

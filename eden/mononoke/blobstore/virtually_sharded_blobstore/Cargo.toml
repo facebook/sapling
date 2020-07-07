@@ -19,7 +19,7 @@ stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch 
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 scopeguard = "1.0.0"
 tokio = { version = "=0.2.13", features = ["full"] }
 twox-hash = "1.5"

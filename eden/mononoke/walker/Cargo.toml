@@ -45,7 +45,7 @@ clap = "2.33"
 dashmap = "3.11.0"
 derive_more = "0.99.3"
 filetime = "0.2.9"
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 hex = "0.4"
 inlinable_string = "0.1"

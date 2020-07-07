@@ -47,7 +47,7 @@ futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", b
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 clap = "2.33"
-futures = { version = "0.3", features = ["async-await", "compat"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 rand = { version = "0.7", features = ["small_rng"] }
 rand_distr = "0.2"
