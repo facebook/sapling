@@ -270,6 +270,76 @@ Show the options for the "serve" command
   -v
   -y
 
+Show aliases with -v
+  $ hg debugcomplete update -v
+  update checkout co
+
+  $ hg debugcomplete -v
+  add
+  addremove
+  annotate blame
+  archive
+  backout
+  bisect
+  blackbox
+  bookmarks
+  branch
+  bundle
+  cat
+  clone
+  commit ci
+  continue
+  copy cp
+  diff
+  doctor
+  dump-trace
+  export
+  files
+  forget
+  fs
+  githelp
+  graft
+  grep
+  heads
+  help
+  hint
+  histgrep
+  identify
+  import patch
+  incoming
+  init
+  locate
+  log history
+  manifest
+  merge
+  outgoing
+  parents
+  paths
+  phase
+  pull
+  purge clean
+  push
+  record
+  recover
+  remove rm
+  rename move mv
+  resolve
+  revert
+  rollback
+  root
+  serve
+  show
+  status
+  summary
+  tag
+  tags
+  tip
+  unbundle
+  uncommit
+  update checkout co
+  verify
+  version
+
 Show an error if we use --options with an ambiguous abbreviation
   $ hg debugcomplete --options s
   unknown command 's'

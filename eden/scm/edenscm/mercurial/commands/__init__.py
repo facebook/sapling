@@ -1995,10 +1995,24 @@ def debugcomplete(ui, cmd="", **opts):
         if not includedebug and "debug" in name:
             continue
         aliases = name.split("|")
+        cmddesc = None  # ex. "update" or "update checkout" with -v
         for alias in aliases:
             if alias.startswith(cmd):
-                cmdlist.append(alias)
-                break
+                if cmddesc is None:
+                    cmddesc = alias
+                    break
+        if cmddesc is not None:
+            if ui.verbose:
+                # Also show aliases, but not prefixes.
+                aliases = sorted(aliases)
+                for i, alias in enumerate(aliases):
+                    if alias in cmddesc or any(
+                        a.startswith(alias) for a in aliases[i + 1 : i + 2]
+                    ):
+                        # alias is a prefix, skip.
+                        continue
+                    cmddesc += " %s" % alias
+            cmdlist.append(cmddesc)
     ui.write("%s\n" % "\n".join(sorted(cmdlist)))
 
 
