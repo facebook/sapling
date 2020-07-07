@@ -94,6 +94,7 @@ define_perf_counters! {
         SqlWrites,
         SumManifoldPollTime,
         UndesiredFileFetch,
+        UndesiredFileFetchSize,
         UndesiredTreeFetch,
     }
 }

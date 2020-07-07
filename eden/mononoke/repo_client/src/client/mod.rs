@@ -114,6 +114,7 @@ define_stats! {
 
     undesired_tree_fetches: timeseries(Sum),
     undesired_file_fetches: timeseries(Sum),
+    undesired_file_fetches_sizes: timeseries(Sum),
 }
 
 mod ops {
@@ -307,17 +308,24 @@ impl UndesiredPathLogger {
         }
     }
 
-    fn maybe_log_file(&self, path: Option<&MPath>) {
+    fn maybe_log_file(&self, path: Option<&MPath>, sizes: impl Iterator<Item = u64>) {
         if self.should_log(path) {
-            STATS::undesired_file_fetches.add_value(1);
-            self.ctx
-                .perf_counters()
-                .add_to_counter(PerfCounterType::UndesiredFileFetch, 1);
+            for size in sizes {
+                STATS::undesired_file_fetches.add_value(1);
+                STATS::undesired_file_fetches_sizes.add_value(size as i64);
+                self.ctx
+                    .perf_counters()
+                    .add_to_counter(PerfCounterType::UndesiredFileFetch, 1);
+                self.ctx
+                    .perf_counters()
+                    .add_to_counter(PerfCounterType::UndesiredFileFetchSize, size as i64);
 
-            self.ctx
-                .scuba()
-                .clone()
-                .log_with_msg("Undesired file fetch", format!("{:?}", path));
+                self.ctx
+                    .scuba()
+                    .clone()
+                    .add("undesired_file_size", size)
+                    .log_with_msg("Undesired file fetch", format!("{:?}", path));
+            }
         }
     }
 
@@ -630,6 +638,7 @@ impl RepoClient {
         self.command_stream(name, |ctx, command_logger| {
             let undesired_path_logger =
                 try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blobrepo()));
+            let undesired_path_logger = Arc::new(undesired_path_logger);
             // We buffer all parameters in memory so that we can log them.
             // That shouldn't be a problem because requests are quite small
             let getpack_params = Arc::new(Mutex::new(vec![]));
@@ -666,7 +675,6 @@ impl RepoClient {
                                 getpack_params.push((path.clone(), filenodes.clone()));
                             }
 
-                            undesired_path_logger.maybe_log_file(Some(&path));
                             ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
 
                             let blob_futs: Vec<_> = filenodes
@@ -695,14 +703,22 @@ impl RepoClient {
                                 .collect(),
                             );
 
-                            future_old::join_all(blob_futs.into_iter()).map(move |blobs| {
-                                let total_weight = blobs.iter().map(|(size, _)| size).sum();
-                                let content_futs = blobs.into_iter().map(|(_, fut)| fut);
-                                let contents_and_history = future_old::join_all(content_futs)
-                                    .join(history_fut)
-                                    .map(move |(contents, history)| (path, contents, history));
+                            future_old::join_all(blob_futs.into_iter()).map({
+                                cloned!(undesired_path_logger);
+                                move |blobs| {
+                                    undesired_path_logger.maybe_log_file(
+                                        Some(&path),
+                                        blobs.iter().map(|(size, _)| *size),
+                                    );
 
-                                (contents_and_history, total_weight)
+                                    let total_weight = blobs.iter().map(|(size, _)| size).sum();
+                                    let content_futs = blobs.into_iter().map(|(_, fut)| fut);
+                                    let contents_and_history = future_old::join_all(content_futs)
+                                        .join(history_fut)
+                                        .map(move |(contents, history)| (path, contents, history));
+
+                                    (contents_and_history, total_weight)
+                                }
                             })
                         }
                     })
