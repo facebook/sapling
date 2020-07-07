@@ -299,6 +299,7 @@ coreconfigitem("experimental", "obsmarkers-exchange-debug", default=False)
 coreconfigitem("experimental", "remotenames", default=False)
 
 # load Rust-based HgCommits on changelog.
+# pyre-fixme[16]: Module `util` has no attribute `istest`.
 coreconfigitem("experimental", "rust-commits", default=util.istest())
 coreconfigitem("experimental", "rust-commits:index2", default=True)
 
