@@ -428,19 +428,15 @@ class SystemdUserBus:
 
     _cleanups: contextlib.ExitStack
     _dbus: "pystemd.dbuslib.DBus"
-    _event_loop: asyncio.AbstractEventLoop
     _manager: "pystemd.SDManager"
 
-    def __init__(
-        self, event_loop: asyncio.AbstractEventLoop, xdg_runtime_dir: str
-    ) -> None:
+    def __init__(self, xdg_runtime_dir: str) -> None:
         if pystemd_import_error is not None:
             raise pystemd_import_error
 
         super().__init__()
         self._cleanups = contextlib.ExitStack()
         self._dbus = self._get_dbus(xdg_runtime_dir)
-        self._event_loop = event_loop
         self._manager = pystemd.systemd1.manager.Manager(bus=self._dbus)
 
     @staticmethod
@@ -457,19 +453,6 @@ class SystemdUserBus:
         return pystemd.dbuslib.DBusAddress(
             b"unix:path=" + escape_dbus_address(bytes(socket_path)), peer_to_peer=True
         )
-
-    def open(self) -> None:
-        self._cleanups.enter_context(self._dbus)
-        self._manager.load()
-        self._add_to_event_loop()
-
-    def close(self) -> None:
-        self._cleanups.close()
-
-    def _add_to_event_loop(self) -> None:
-        dbus_fd = self._dbus.get_fd()
-        self._event_loop.add_reader(dbus_fd, self._process_queued_messages)
-        self._cleanups.callback(lambda: self._event_loop.remove_reader(dbus_fd))
 
     def _process_queued_messages(self) -> None:
         while True:
@@ -573,6 +556,7 @@ class SystemdUserBus:
     ) -> "SystemdSignalSubscription[JobRemovedSignal]":
         """Subscribe to org.freedesktop.systemd1.Manager.JobRemoved.
         """
+        event_loop = asyncio.get_running_loop()
         subscription: SystemdSignalSubscription[
             JobRemovedSignal
         ] = SystemdSignalSubscription(self._manager)
@@ -585,7 +569,7 @@ class SystemdUserBus:
                     interface=b"org.freedesktop.systemd1.Manager",
                     member=b"JobRemoved",
                     callback=self._on_job_removed,
-                    userdata=(subscription, self._event_loop),
+                    userdata=(subscription, event_loop),
                 )
             ),
         )
@@ -628,19 +612,26 @@ class SystemdUserBus:
         await self._run_in_executor_async(go)
 
     async def _run_in_executor_async(self, func: typing.Callable[[], "_T"]) -> "_T":
-        return await self._event_loop.run_in_executor(executor=None, func=func)
+        return await asyncio.get_running_loop().run_in_executor(
+            executor=None, func=func
+        )
 
-    def __enter__(self):
-        self.open()
+    async def __aenter__(self):
+        loop = asyncio.get_running_loop()
+        self._cleanups.enter_context(self._dbus)
+        self._manager.load()
+        dbus_fd = self._dbus.get_fd()
+        loop.add_reader(dbus_fd, self._process_queued_messages)
+        self._cleanups.callback(lambda: loop.remove_reader(dbus_fd))
         return self
 
-    def __exit__(
+    async def __aexit__(
         self,
         exc_type: typing.Optional[typing.Type[BaseException]],
         exc_value: typing.Optional[BaseException],
         traceback: typing.Optional[types.TracebackType],
     ) -> None:
-        self.close()
+        self._cleanups.close()
 
 
 _DBusSignal = typing.TypeVar("_DBusSignal")

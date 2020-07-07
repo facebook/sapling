@@ -108,7 +108,7 @@ def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
         )
 
 
-def start_edenfs_service(
+async def start_edenfs_service(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
@@ -117,7 +117,7 @@ def start_edenfs_service(
     if instance.should_use_experimental_systemd_mode():
         from . import systemd_service
 
-        return systemd_service.start_systemd_service(
+        return await systemd_service.start_systemd_service(
             instance=instance, daemon_binary=daemon_binary, edenfs_args=edenfs_args
         )
 

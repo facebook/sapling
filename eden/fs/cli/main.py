@@ -609,7 +609,7 @@ class CloneCmd(Subcmd):
             help=argparse.SUPPRESS,
         )
 
-    def run(self, args: argparse.Namespace) -> int:
+    async def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
         # Make sure the destination directory does not exist or is an empty
@@ -680,7 +680,7 @@ re-run `eden clone` with --allow-empty-repo"""
             print("edenfs daemon is not currently running.  Starting edenfs...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
-            exit_code = daemon.start_edenfs_service(
+            exit_code = await daemon.start_edenfs_service(
                 instance, args.daemon_binary, args.edenfs_args
             )
             if exit_code != 0:
@@ -1264,7 +1264,7 @@ class StartCmd(Subcmd):
             "to the edenfs daemon.",
         )
 
-    def run(self, args: argparse.Namespace) -> int:
+    async def run(self, args: argparse.Namespace) -> int:
         # If the user put an "--" argument before the edenfs args, argparse passes
         # that through to us.  Strip it out.
         try:
@@ -1312,7 +1312,9 @@ class StartCmd(Subcmd):
                 instance, daemon_binary, args.edenfs_args
             )
 
-        return daemon.start_edenfs_service(instance, daemon_binary, args.edenfs_args)
+        return await daemon.start_edenfs_service(
+            instance, daemon_binary, args.edenfs_args
+        )
 
     def start_in_foreground(
         self, instance: EdenInstance, daemon_binary: str, args: argparse.Namespace
@@ -1428,7 +1430,7 @@ class RestartCmd(Subcmd):
             "performing a full restart.",
         )
 
-    def run(self, args: argparse.Namespace) -> int:
+    async def run(self, args: argparse.Namespace) -> int:
         self.args = args
         if args.restart_type is None:
             # Default to a full restart for now
@@ -1441,15 +1443,15 @@ class RestartCmd(Subcmd):
         if health.is_healthy():
             assert edenfs_pid is not None
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
-                return self._graceful_restart(instance)
+                return await self._graceful_restart(instance)
             else:
-                status = self._full_restart(instance, edenfs_pid)
+                status = await self._full_restart(instance, edenfs_pid)
                 success = status == 0
                 instance.log_sample("full_restart", success=success)
                 return status
         elif edenfs_pid is None:
             # The daemon is not running
-            return self._start(instance)
+            return await self._start(instance)
         else:
             if health.status == fb303_status.STARTING:
                 print(
@@ -1482,9 +1484,9 @@ class RestartCmd(Subcmd):
             if not self.args.force_restart:
                 print(f"Use --force if you want to forcibly restart the current daemon")
                 return 1
-            return self._force_restart(instance, edenfs_pid, stop_timeout)
+            return await self._force_restart(instance, edenfs_pid, stop_timeout)
 
-    def _recover_after_failed_graceful_restart(
+    async def _recover_after_failed_graceful_restart(
         self, instance: EdenInstance, telemetry_sample: TelemetrySample
     ) -> int:
         health = instance.check_health()
@@ -1496,7 +1498,7 @@ class RestartCmd(Subcmd):
                 "starting it"
             )
             telemetry_sample.fail("EdenFS was not running after graceful restart")
-            return self._start(instance)
+            return await self._start(instance)
 
         print(
             "Attempting to recover the current edenfs daemon "
@@ -1533,7 +1535,7 @@ class RestartCmd(Subcmd):
             # timeout waiting and by the time we call os.kill, just
             # continue on with the restart
             pass
-        if self._finish_restart(instance) == 0:
+        if await self._finish_restart(instance) == 0:
             telemetry_sample.fail(
                 "EdenFS was not healthy after graceful restart; performed a "
                 "hard restart"
@@ -1546,7 +1548,7 @@ class RestartCmd(Subcmd):
             )
             return 3
 
-    def _graceful_restart(self, instance: EdenInstance) -> int:
+    async def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
         if instance.should_use_experimental_systemd_mode():
             raise NotImplementedError(
@@ -1572,17 +1574,17 @@ class RestartCmd(Subcmd):
                 # After this point, the initial graceful restart was unsuccessful.
                 # Make sure that the old process recovers. If it does not recover,
                 # run start to make sure that an EdenFS process is running.
-                return self._recover_after_failed_graceful_restart(
+                return await self._recover_after_failed_graceful_restart(
                     instance, telemetry_sample
                 )
 
-    def _start(self, instance: EdenInstance) -> int:
+    async def _start(self, instance: EdenInstance) -> int:
         print("Eden is not currently running.  Starting it...")
-        return daemon.start_edenfs_service(
+        return await daemon.start_edenfs_service(
             instance, daemon_binary=self.args.daemon_binary
         )
 
-    def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
+    async def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
         print(
             """\
 About to perform a full restart of Eden.
@@ -1597,9 +1599,9 @@ re-open these files after Eden is restarted.
                 return 1
 
         self._do_stop(instance, old_pid, timeout=15)
-        return self._finish_restart(instance)
+        return await self._finish_restart(instance)
 
-    def _force_restart(
+    async def _force_restart(
         self, instance: EdenInstance, old_pid: int, stop_timeout: int
     ) -> int:
         print("Forcing a full restart...")
@@ -1610,7 +1612,7 @@ re-open these files after Eden is restarted.
         else:
             self._do_stop(instance, old_pid, stop_timeout)
 
-        return self._finish_restart(instance)
+        return await self._finish_restart(instance)
 
     def _wait_for_stop(self, instance: EdenInstance, pid: int, timeout: float) -> None:
         # If --shutdown-timeout was specified on the command line that always takes
@@ -1635,8 +1637,8 @@ re-open these files after Eden is restarted.
                 os.kill(pid, signal.SIGTERM)
         self._wait_for_stop(instance, pid, timeout)
 
-    def _finish_restart(self, instance: EdenInstance) -> int:
-        exit_code = daemon.start_edenfs_service(
+    async def _finish_restart(self, instance: EdenInstance) -> int:
+        exit_code = await daemon.start_edenfs_service(
             instance, daemon_binary=self.args.daemon_binary
         )
         if exit_code != 0:
@@ -1950,6 +1952,13 @@ Please run "cd / && cd -" to update your shell's working directory."""
     return None
 
 
+# TODO: Remove when we can rely on Python 3.7 everywhere.
+try:
+    asyncio_run = asyncio.run
+except AttributeError:
+    asyncio_run = asyncio.get_event_loop().run_until_complete
+
+
 def main() -> int:
     # Before doing anything else check that the current working directory is valid.
     # This helps catch the case where a user is trying to run the Eden CLI inside
@@ -1968,7 +1977,7 @@ def main() -> int:
     try:
         result = args.func(args)
         if inspect.isawaitable(result):
-            return_code: int = asyncio.run(result)
+            return_code: int = asyncio_run(result)
         else:
             return_code: int = result
     except subcmd_mod.CmdError as ex:

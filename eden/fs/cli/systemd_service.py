@@ -28,7 +28,7 @@ from .systemd import (
 from .util import print_stderr
 
 
-def start_systemd_service(
+async def start_systemd_service(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
@@ -54,9 +54,7 @@ def start_systemd_service(
         loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
 
         async def start_service_async() -> int:
-            with SystemdUserBus(
-                event_loop=loop, xdg_runtime_dir=xdg_runtime_dir
-            ) as systemd:
+            async with SystemdUserBus(xdg_runtime_dir=xdg_runtime_dir) as systemd:
                 service_name_bytes = service_name.encode()
                 active_state = await systemd.get_unit_active_state_async(
                     service_name_bytes
@@ -72,9 +70,8 @@ def start_systemd_service(
                 return 0
 
         try:
-            start_task = loop.create_task(start_service_async())
             loop.create_task(log_forwarder.poll_forever_async())
-            return loop.run_until_complete(start_task)
+            return await start_service_async()
         except (SystemdConnectionRefusedError, SystemdFileNotFoundError):
             print_stderr(
                 f"error: The systemd user manager is not running. Run the "
