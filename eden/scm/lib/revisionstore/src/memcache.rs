@@ -213,7 +213,7 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
             }
         }
 
-        span.record("hits", &hits);
+        span.record("hit_count", &hits);
         span.record("size", &size);
 
         Ok(())
