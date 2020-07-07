@@ -1129,6 +1129,56 @@ TEST(DiffTest, emptyIgnoreFile) {
           std::make_pair("src/subdir/new.txt", ScmFileStatus::ADDED)));
 }
 
+TEST(DiffTest, ignoredFilePatternCarriageReturn) {
+  DiffTest test({
+      {"src/foo.txt", "test\n"},
+      {"src/.gitignore", "Icon[\r]"},
+  });
+
+  test.getMount().addFile("src/Icon\r", "");
+
+  auto result = test.diff();
+  EXPECT_THAT(result.entries, UnorderedElementsAre());
+
+  result = test.diff(true);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/Icon\r", ScmFileStatus::IGNORED)));
+}
+
+TEST(DiffTest, ignoredFileDoubleCarriageReturn) {
+  DiffTest test({
+      {"src/foo.txt", "test\n"},
+      {"src/.gitignore", "Icon\r\r"},
+  });
+
+  test.getMount().addFile("src/Icon\r", "");
+
+  auto result = test.diff();
+  EXPECT_THAT(result.entries, UnorderedElementsAre());
+
+  result = test.diff(true);
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(
+          std::make_pair("src/Icon\r", ScmFileStatus::IGNORED)));
+}
+
+TEST(DiffTest, ignoredFileSingleCarriageReturn) {
+  DiffTest test({
+      {"src/foo.txt", "test\n"},
+      {"src/.gitignore", "Icon\r"},
+  });
+
+  test.getMount().addFile("src/Icon\r", "");
+
+  auto result = test.diff();
+  EXPECT_THAT(
+      result.entries,
+      UnorderedElementsAre(std::make_pair("src/Icon\r", ScmFileStatus::ADDED)));
+}
+
 // Files under the .hg directory should never be reported in diff results
 TEST(DiffTest, ignoreHidden) {
   DiffTest test({
