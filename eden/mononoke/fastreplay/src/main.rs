@@ -61,6 +61,8 @@ define_stats! {
     admitted: timeseries(Rate, Sum),
     processed: timeseries(Rate, Sum),
     skipped: timeseries(Rate, Sum),
+    replay_success: timeseries(Rate, Sum),
+    replay_failure: timeseries(Rate, Sum),
     replay_outcome_permille: timeseries(Average),
 }
 
@@ -176,11 +178,13 @@ async fn dispatch(
 
     match res {
         Ok(size) => {
+            STATS::replay_success.add_value(1);
             STATS::replay_outcome_permille.add_value(1000);
             scuba.add("replay_response_size", size);
             scuba.log_with_msg("Replay Succeeded", None);
         }
         Err(e) => {
+            STATS::replay_failure.add_value(1);
             STATS::replay_outcome_permille.add_value(0);
             scuba
                 .unsampled()
