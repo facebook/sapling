@@ -341,3 +341,21 @@ Rebasing commits outside X:: can be surprising and more easily cause conflicts.
   o  1 ac2f7407182b A
   |
   o  0 48b9aae0607f Z
+
+
+Test that invisible children do not trigger auto restack.
+
+  $ newrepo
+  $ drawdag << 'EOS'
+  >  C D
+  >  | |
+  > B1 B2  # amend: B1 -> B2
+  >  |/
+  >  A
+  > EOS
+  $ hg hide -q $D
+  $ hg up -q $B2
+  $ hg amend -m B3 --config hint.ack='*'
+  rebasing c29017759dc3 "C"
+
+BUG: C should not be auto rebased.
