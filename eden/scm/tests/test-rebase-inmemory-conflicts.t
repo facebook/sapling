@@ -92,8 +92,6 @@ Try it with uncommitted changes, ensure it aborts nicely:
   rebasing in-memory!
   rebasing d82c41319fdd "e" (e)
   rebasing c33e7f678afd "f" (f)
-  transaction abort!
-  rollback completed
   abort: must use on-disk merge for this rebase (hit merge conflicts in c), but you have working copy changes
   (commit, revert, or shelve them)
   [255]

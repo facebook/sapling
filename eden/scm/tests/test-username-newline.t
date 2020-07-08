@@ -22,8 +22,6 @@
   [255]
   $ hg ci -Am m -u "`(echo foo; echo bar3)`"
   adding a
-  transaction abort!
-  rollback completed
   abort: username 'foo\nbar3' contains a newline!
   [255]
 

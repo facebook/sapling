@@ -312,8 +312,6 @@ check saving last-message.txt, at first
   HG: added f
   ====
   note: commit message saved in .hg/last-message.txt
-  transaction abort!
-  rollback completed
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
   $ cat .hg/last-message.txt
@@ -336,8 +334,6 @@ action)
   HG: branch 'default'
   HG: added f
   note: commit message saved in .hg/last-message.txt
-  transaction abort!
-  rollback completed
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
 
@@ -349,12 +345,12 @@ action)
 
 then, check "modify the message" itself
 
-  $ hg histedit tip --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit . --commands - << EOF | fixbundle
   > mess 1fd3b2fe7754 f
   > EOF
   $ hg status
   $ hg log --limit 1
-  changeset:   12:62feedb1200e
+  changeset:   13:62feedb1200e
   parent:      8:a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

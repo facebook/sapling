@@ -158,8 +158,8 @@ at first, test saving last-message.txt
 
   $ rm -f .hg/last-message.txt
   $ hg commit --amend -m "message given from command line"
-  transaction abort!
-  rollback completed
+  transaction abort! (?)
+  rollback completed (?)
   abort: pretxncommit.test-saving-last-message hook exited with status 1
   [255]
 
@@ -179,8 +179,8 @@ at first, test saving last-message.txt
   HG: branch 'default'
   HG: added B
   HG: changed A
-  transaction abort!
-  rollback completed
+  transaction abort! (?)
+  rollback completed (?)
   abort: pretxncommit.test-saving-last-message hook exited with status 1
   [255]
 
@@ -223,7 +223,7 @@ Same, but with changes in working dir (different code path):
 
   $ rm editor.sh
   $ hg log -r .
-  changeset:   9:f7f2c5aae908
+  changeset:   10:f7f2c5aae908
   parent:      0:4a2df7238c3b
   user:        foo
   date:        Thu Jan 01 00:00:01 1970 +0000

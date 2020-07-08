@@ -151,8 +151,6 @@ Test that --exact on a bad header doesn't corrupt the repo (issue3616)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   patching file a
   Hunk #1 succeeded at 1 with fuzz 1 (offset -1 lines).
-  transaction abort!
-  rollback completed
   abort: patch is damaged or loses information
   [255]
   $ hg verify
@@ -160,4 +158,4 @@ Test that --exact on a bad header doesn't corrupt the repo (issue3616)
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  1 files, 2 changesets, 2 total revisions
+  1 files, 3 changesets, 3 total revisions

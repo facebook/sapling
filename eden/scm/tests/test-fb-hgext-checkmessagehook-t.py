@@ -23,13 +23,12 @@ sh % 'hg commit -A -l "$TESTDIR/ctrlchar-msg.txt"' == r"""
     non-printable characters in commit message
     Line 5: 'This has a sneaky ctrl-A: \x01'
     Line 6: 'And this has esc: \x1b'
-    transaction abort!
-    rollback completed
     abort: pretxncommit.checkmessage hook failed
     [255]"""
 sh % 'hg commit -A -l "$TESTDIR/perfectlyok-msg.txt"' == "adding a"
 sh % "hg log -r ." == r"""
-    changeset:   0:d9cf9881be7b
+    changeset:   1:d9cf9881be7b
+    parent:      -1:000000000000
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     This commit message is perfectly OK, and has no sneaky control characters."""

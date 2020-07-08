@@ -324,8 +324,6 @@ Test rebase interrupted by hooks
   rebasing 965c486023db "C"
   summary:     C
   rebasing a0b2430ebfb8 "F"
-  transaction abort!
-  rollback completed
   abort: pretxncommit hook exited with status 1
   [255]
   $ tglogp

@@ -33,7 +33,7 @@ FIXME: hg tip should not require '--hidden' to see pending commits in hooks
   $ hg commit -m a
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=0000000000000000000000000000000000000000
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PARENT1=0000000000000000000000000000000000000000
   0:cb9a9f314b8b
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
@@ -60,7 +60,7 @@ pretxncommit and commit hooks can see both parents of merge
   $ hg commit -m a1 -d "1 0"
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   1:ab228980c14d
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
@@ -73,7 +73,7 @@ pretxncommit and commit hooks can see both parents of merge
   $ hg commit -m b -d '1 0'
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   2:ee9deb46ab31
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
@@ -85,7 +85,7 @@ pretxncommit and commit hooks can see both parents of merge
   $ hg commit -m merge -d '2 0'
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PARENT1=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT2=ab228980c14deea8b9555d91c9581127383e40fd
   3:07f3376c1e65
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
@@ -119,7 +119,7 @@ test generic hooks
   $ hg commit -Aqm "add fake tag for test compatibility"
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2
   4:dbd0abf46c19
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
@@ -140,18 +140,14 @@ more there after
   $ hg commit -m 'fail' -d '4 0'
   precommit hook: HG_HOOKNAME=precommit HG_HOOKTYPE=precommit HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da
   pretxnopen hook: HG_HOOKNAME=pretxnopen HG_HOOKTYPE=pretxnopen HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=be45546c4e597cf3f586e4f844961b0f9f7e66e8 HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
+  pretxncommit hook: HG_HOOKNAME=pretxncommit HG_HOOKTYPE=pretxncommit HG_NODE=be45546c4e597cf3f586e4f844961b0f9f7e66e8 HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da
   5:be45546c4e59
   5:be45546c4e59
-  pretxncommit.forbid hook: HG_HOOKNAME=pretxncommit.forbid1 HG_HOOKTYPE=pretxncommit HG_NODE=be45546c4e597cf3f586e4f844961b0f9f7e66e8 HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PENDING=$TESTTMP/a HG_SHAREDPENDING=$TESTTMP/a
-  transaction abort!
-  txnabort Python hook: txnid,txnname
-  txnabort hook: HG_HOOKNAME=txnabort.1 HG_HOOKTYPE=txnabort HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  rollback completed
+  pretxncommit.forbid hook: HG_HOOKNAME=pretxncommit.forbid1 HG_HOOKTYPE=pretxncommit HG_NODE=be45546c4e597cf3f586e4f844961b0f9f7e66e8 HG_PARENT1=dbd0abf46c19f379dcb1964594ee71a3ec9947da
   abort: pretxncommit.forbid1 hook exited with status 1
   [255]
   $ hg -q tip
-  4:dbd0abf46c19
+  5:be45546c4e59
 
 (Check that no 'changelog.i.a' file were left behind)
 
@@ -190,7 +186,7 @@ precommit hook can prevent commit
   abort: precommit.forbid hook exited with status 1
   [255]
   $ hg -q tip
-  4:dbd0abf46c19
+  5:be45546c4e59
 
 preupdate hook can prevent update
 
@@ -314,7 +310,7 @@ incoming changes no longer there after
   adding file changes
   added 1 changesets with 1 changes to 1 files
   4:dbd0abf46c19
-  pretxnchangegroup.forbid hook: HG_HOOKNAME=pretxnchangegroup.forbid1 HG_HOOKTYPE=pretxnchangegroup HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_NODE_LAST=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_PENDING=$TESTTMP/b HG_SHAREDPENDING=$TESTTMP/b HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
+  pretxnchangegroup.forbid hook: HG_HOOKNAME=pretxnchangegroup.forbid1 HG_HOOKTYPE=pretxnchangegroup HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_NODE_LAST=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
   transaction abort!
   rollback completed
   abort: pretxnchangegroup.forbid1 hook exited with status 1
@@ -789,43 +785,25 @@ repositories visible to an external hook.
 (emulate a transaction running concurrently by copied
 .hg/store/00changelog.i.a in subsequent test)
 
-  $ cat > $TESTTMP/savepending.sh <<EOF
-  > cp .hg/store/00changelog.i.a  .hg/store/00changelog.i.a.saved
+  $ cat > $TESTTMP/print-head.sh <<EOF
+  > hg log -r 'head()' -T '{desc}\n'
   > exit 1 # to avoid adding new revision for subsequent tests
   > EOF
   $ cd a
-  $ hg tip -q
-  4:dbd0abf46c19
-  $ hg --config hooks.pretxnclose="sh $TESTTMP/savepending.sh" commit -m "invisible"
+  $ hg log -r 'head()' -T '{desc}\n'
+  add fake tag for test compatibility
+  $ hg --config hooks.pretxnclose="sh $TESTTMP/print-head.sh" commit -m "invisible"
+  invisible
   transaction abort!
   rollback completed
   abort: pretxnclose hook exited with status 1
   [255]
-  $ cp .hg/store/00changelog.i.a.saved .hg/store/00changelog.i.a
 
 (check (in)visibility of new changeset while transaction running in
 repo)
 
-  $ cat > $TESTTMP/checkpending.sh <<EOF
-  > echo '@a'
-  > hg -R "$TESTTMP/a" tip -q
-  > echo '@a/nested'
-  > hg -R "$TESTTMP/a/nested" tip -q
-  > exit 1 # to avoid adding new revision for subsequent tests
-  > EOF
-  $ hg init nested
-  $ cd nested
-  $ echo a > a
-  $ hg add a
-  $ hg --config hooks.pretxnclose="sh $TESTTMP/checkpending.sh" commit -m '#0'
-  @a
-  4:dbd0abf46c19
-  @a/nested
-  0:bf5e395ced2c
-  transaction abort!
-  rollback completed
-  abort: pretxnclose hook exited with status 1
-  [255]
+  $ hg log -r 'head()' -T '{desc}\n'
+  add fake tag for test compatibility
 
 Hook from untrusted hgrc are no longer failures
 ================================================

@@ -1273,18 +1273,6 @@ sh % "hg commit -Aqm commit1"
 sh % "echo 2" > "file2"
 
 
-def createmarkers(orig, *args, **kwargs):
-    orig(*args, **kwargs)
-    raise KeyboardInterrupt
-
-
-with extensions.wrappedfunction(obsolete, "createmarkers", createmarkers):
-    sh % "hg shelve" == r"""
-        transaction abort!
-        rollback completed
-        interrupted!
-        [255]"""
-
 sh % "cat file2" == "2"
 sh % "tglog" == "@  0: 6408d34d8180 'commit1'"
 

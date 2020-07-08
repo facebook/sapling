@@ -43,14 +43,6 @@ setup repo-hg
 create master bookmark
   $ hg bookmark master_bookmark -r tip
 
-check that the file created had both the content and path large enough to
-create a hashed index and data revlogs
-
-  $ du .hg/store/dh/this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/this_i75ebb3f31bf65e471c16ebbef3bc32a326d92ae6.i
-  4	.hg/store/dh/this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/this_i75ebb3f31bf65e471c16ebbef3bc32a326d92ae6.i
-  $ du .hg/store/dh/this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/this_i4680ea2a5b12ad9620ef7e598dcae10adf62b11c.d
-  (152|156)	.hg/store/dh/this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/this_i4680ea2a5b12ad9620ef7e598dcae10adf62b11c.d (re)
-
 blobimport and start mononoke
 
   $ cd $TESTTMP

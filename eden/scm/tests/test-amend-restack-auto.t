@@ -222,8 +222,6 @@ amend.autorestack=no-conflict, and conflicting changes (expect cancelled restack
   rebasing b6c0d35dc9e9 "C" (C)
   rebasing 02cc3cc1d010 "D" (D)
   merging file
-  transaction abort!
-  rollback completed
   restacking would create conflicts (hit merge conflicts in file), so you must run it manually
   (run `hg restack` manually to restack this commit's children)
   $ showgraph

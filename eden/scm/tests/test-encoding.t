@@ -28,8 +28,6 @@ should fail with encoding error
   ? latin-1-tag
   ? utf-8
   $ HGENCODING=ascii hg ci -l latin-1
-  transaction abort!
-  rollback completed
   abort: decoding near ' encoded: \xe9': 'utf8' codec can't decode byte 0xe9 in position 20: unexpected end of data! (esc)
   [255]
 

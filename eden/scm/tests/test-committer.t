@@ -92,8 +92,6 @@
 
   $ echo space2 > asdf
   $ hg commit -u ' ' -m commit-1
-  transaction abort!
-  rollback completed
   abort: empty username!
   [255]
 

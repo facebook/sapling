@@ -198,8 +198,6 @@ check saving last-message.txt
   HG: added d
   HG: added f
   ====
-  transaction abort!
-  rollback completed
   abort: pretxncommit.abortfolding hook failed
   [255]
 

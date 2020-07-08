@@ -34,14 +34,10 @@ sh % "hg add foo"
 
 sh % "hg ci -m foo" == r"""
     error: pretxncommit.nocommits hook failed: no commits allowed
-    transaction abort!
-    rollback completed
     abort: no commits allowed
     [255]"""
 sh % "hg ci -m foo" == r"""
     error: pretxncommit.nocommits hook failed: no commits allowed
-    transaction abort!
-    rollback completed
     abort: no commits allowed
     [255]"""
 

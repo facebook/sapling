@@ -84,7 +84,7 @@ Pull the new commits in the clone
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_NODE_LAST=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_PENDING=$TESTTMP/clone HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_NODE_LAST=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   remote: changegroup2
   adding changesets
   adding manifests
@@ -151,7 +151,7 @@ pullop.cgresult
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_NODE_LAST=8a5212ebc8527f9fb821601504794e3eb11a1ed3 HG_PENDING=$TESTTMP/clone HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_NODE_LAST=8a5212ebc8527f9fb821601504794e3eb11a1ed3 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   remote: changegroup2
   adding changesets
   adding manifests
@@ -218,7 +218,7 @@ pullop.cgresult
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_NODE_LAST=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_PENDING=$TESTTMP/clone HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_NODE_LAST=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   remote: changegroup2
   adding changesets
   adding manifests

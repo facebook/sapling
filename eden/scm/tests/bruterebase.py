@@ -44,6 +44,7 @@ def debugbruterebase(ui, repo, source, dest):
             tr = repo.transaction("rebase")
             tr.report = lambda x: 0  # hide "transaction abort"
 
+            oldnodes = set(repo.nodes("all()"))
             ui.pushbuffer()
             try:
                 rebase.rebase(ui, repo, dest=dest, rev=[spec])
@@ -55,7 +56,9 @@ def debugbruterebase(ui, repo, source, dest):
                 # short summary about new nodes
                 cl = repo.changelog
                 descs = []
-                for rev in xrange(repolen, len(repo)):
+                newnodes = set(repo.nodes("all()"))
+                newrevs = list(map(cl.rev, newnodes - oldnodes))
+                for rev in sorted(newrevs):
                     desc = "%s:" % getdesc(rev)
                     for prev in cl.parentrevs(rev):
                         if prev > -1:

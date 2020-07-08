@@ -32,10 +32,7 @@ class RollbackTest(EdenHgTestCase):
                 "--config",
                 "hooks.pretxncommit=false",
             )
-        expected_msg = (
-            b"transaction abort!\nrollback completed\n"
-            b"abort: pretxncommit hook exited with status 1\n"
-        )
+        expected_msg = b"abort: pretxncommit hook exited with status 1\n"
         self.assertIn(expected_msg, context.exception.stderr)
 
         self.assertEqual(

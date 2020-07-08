@@ -373,8 +373,10 @@ filemap rename undoing revision rename
   repository tip rolled back to revision 0 (undo convert)
   0 modify
   $ glog -R renameundo2
-  o  1 "modify" files: a c
+  o  2 "modify" files: a c
   |
+  | o  1 "rename" files:
+  |/
   o  0 "add" files: a c
   
 

@@ -131,22 +131,6 @@ def basic(repo):
     repo.cached
 
 
-def test_filecache_synced():
-    # test old behavior that caused filecached properties to go out of sync
-    os.system("hg init && echo a >> a && hg ci -qAm.")
-    repo = hg.repository(uimod.ui.load())
-    # first rollback clears the filecache, but changelog to stays in __dict__
-    repo.rollback()
-    repo.commit(".")
-    # second rollback comes along and touches the changelog externally
-    # (file is moved)
-    repo.rollback()
-    # but since changelog isn't under the filecache control anymore, we don't
-    # see that it changed, and return the old changelog without reconstructing
-    # it
-    repo.commit(".")
-
-
 def setbeforeget(repo):
     os.remove("x")
     os.remove("y")
@@ -230,8 +214,6 @@ def antiambiguity():
 print("basic:")
 print()
 basic(fakerepo())
-print()
-test_filecache_synced()
 print()
 print("setbeforeget:")
 print()

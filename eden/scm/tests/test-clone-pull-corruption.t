@@ -32,8 +32,6 @@ start a commit...
   $ sleep 1
   $ hg pull ../source 2>/dev/null
   pulling from ../source
-  transaction abort!
-  rollback completed
   abort: pretxncommit hook exited with status 1
   searching for changes
   adding changesets
@@ -49,6 +47,9 @@ see what happened
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  1 files, 2 changesets, 2 total revisions
+   warning: revlog 'data/bar.i' not in fncache!
+  2 files, 3 changesets, 3 total revisions
+  1 warnings encountered!
+  hint: run "hg debugrebuildfncache" to recover from corrupt fncache
 
   $ cd ..

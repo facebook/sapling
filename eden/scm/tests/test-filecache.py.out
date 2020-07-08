@@ -19,11 +19,6 @@ creating
 * both files changed inode
 creating
 
-repository tip rolled back to revision -1 (undo commit)
-working directory now based on revision -1
-repository tip rolled back to revision -1 (undo commit)
-working directory now based on revision -1
-
 setbeforeget:
 
 * neither file exists

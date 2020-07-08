@@ -28,7 +28,6 @@ List files in store/data (should show a 'b.d'):
   >   echo $i
   > done
   .hg/store/data/a.i
-  .hg/store/data/b.d
   .hg/store/data/b.i
 
 Default operation:
@@ -68,9 +67,8 @@ No update, with debug option:
   progress: linking: 8
   progress: linking: 9
   progress: linking: 10
-  progress: linking: 11
   progress: linking (end)
-  linked 11 files
+  linked 10 files
   progress: migrating commit data: 1/11 commits (9.09%)
   progress: migrating commit data: 2/11 commits (18.18%)
   progress: migrating commit data: 3/11 commits (27.27%)
