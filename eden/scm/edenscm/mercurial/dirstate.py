@@ -485,6 +485,8 @@ class dirstate(object):
             scmutil.checkfilename(f)
             if self._map.hastrackeddir(f):
                 raise error.Abort(_("directory %r already in dirstate") % f)
+            if os.path.isabs(f):
+                raise error.Abort(_("cannot add non-root-relative path to dirstate: %s") % f)
             # shadows
             for d in util.finddirs(f):
                 if self._map.hastrackeddir(d):
