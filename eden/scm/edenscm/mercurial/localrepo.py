@@ -530,7 +530,6 @@ class localrepository(object):
                 self.svfs.vfs.audit = self._getsvfsward(self.svfs.vfs.audit)
             else:  # standard vfs
                 self.svfs.audit = self._getsvfsward(self.svfs.audit)
-        self._applyopenerreqs()
         if not create and "store" in self.requirements:
             try:
                 self.storerequirements = scmutil.readrequires(
@@ -575,6 +574,8 @@ class localrepository(object):
 
         # generic mapping between names and nodes
         self.names = namespaces.namespaces(self)
+
+        self._applyopenerreqs()
 
         self._eventreporting = True
         try:
@@ -849,6 +850,11 @@ class localrepository(object):
 
         treemanifestserver = self.ui.configbool("treemanifest", "server")
         self.svfs.options["treemanifest-server"] = treemanifestserver
+
+        bypassrevlogtransaction = self.ui.configbool(
+            "experimental", "narrow-heads"
+        ) and self.ui.configbool("experimental", "head-based-commit-transaction")
+        self.svfs.options["bypass-revlog-transaction"] = bypassrevlogtransaction
 
     def _writerequirements(self):
         scmutil.writerequires(self.localvfs, self.requirements)

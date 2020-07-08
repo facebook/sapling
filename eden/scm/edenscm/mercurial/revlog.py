@@ -481,6 +481,11 @@ class revlog(object):
         self._chaininfocache = {}
         # revlog header -> revlog compressor
         self._decompressors = {}
+        # Whether to bypass ftruncate-based transaction framework.
+        # If set (usually for changelog), commits are always flushed
+        # without buffering or rolling back, and commit references
+        # like visibleheads and bookmarks control the commit graph.
+        self._bypasstransaction = bool(opts and opts.get("bypass-revlog-transaction"))
 
     @util.propertycache
     def _compressor(self):
@@ -2105,19 +2110,22 @@ class revlog(object):
 
         curr = len(self) - 1
         if not self._inline:
-            transaction.add(self.datafile, offset)
-            transaction.add(self.indexfile, curr * len(entry))
+            if not self._bypasstransaction:
+                transaction.add(self.datafile, offset)
+                transaction.add(self.indexfile, curr * len(entry))
             if data[0]:
                 dfh.write(data[0])
             dfh.write(data[1])
             ifh.write(entry)
         else:
             offset += curr * self._io.size
-            transaction.add(self.indexfile, offset, curr)
+            if not self._bypasstransaction:
+                transaction.add(self.indexfile, offset, curr)
             ifh.write(entry)
             ifh.write(data[0])
             ifh.write(data[1])
-            self.checkinlinesize(transaction, ifh)
+            if not self._bypasstransaction:
+                self.checkinlinesize(transaction, ifh)
 
     def addgroup(self, deltas, linkmapper, transaction, addrevisioncb=None):
         """

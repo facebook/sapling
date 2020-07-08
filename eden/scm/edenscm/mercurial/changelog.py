@@ -298,8 +298,10 @@ class changelog(revlog.revlog):
         """
         self._uiconfig = uiconfig
         self._visibleheads = self._loadvisibleheads(opener)
-        bypasstransaction = False
-        if trypending and opener.exists("00changelog.i.a"):
+        bypasstransaction = bool(
+            getattr(opener, "options", {}).get("bypass-revlog-transaction")
+        )
+        if trypending and not bypasstransaction and opener.exists("00changelog.i.a"):
             indexfile = "00changelog.i.a"
         else:
             indexfile = "00changelog.i"
@@ -484,6 +486,8 @@ class changelog(revlog.revlog):
 
     def delayupdate(self, tr):
         "delay visibility of index updates to other readers"
+        if self._bypasstransaction:
+            return
 
         if not self._delayed:
             if len(self) == 0:
@@ -502,6 +506,8 @@ class changelog(revlog.revlog):
 
     def _finalize(self, tr):
         "finalize index updates"
+        if self._bypasstransaction:
+            return
         self._delayed = False
         self.opener = self._realopener
         # move redirected index data back into place
@@ -522,6 +528,7 @@ class changelog(revlog.revlog):
 
     def _writepending(self, tr):
         "create a file containing the unfinalized state for pretxnchangegroup"
+        assert not self._bypasstransaction
         if self._delaybuf:
             # make a temporary copy of the index
             fp1 = self._realopener(self.indexfile)
