@@ -153,7 +153,7 @@ std::string readPidName(pid_t pid) {
 
   return extractCommandLineFromProcArgs(procargs, len).str();
 #else
-  char target[256];
+  char target[1024];
   const auto fd =
       folly::openNoInt(getProcPidCmdLine(pid).data(), O_RDONLY | O_CLOEXEC);
   if (fd == -1) {
