@@ -356,6 +356,3 @@ Test that invisible children do not trigger auto restack.
   $ hg hide -q $D
   $ hg up -q $B2
   $ hg amend -m B3 --config hint.ack='*'
-  rebasing c29017759dc3 "C"
-
-BUG: C should not be auto rebased.

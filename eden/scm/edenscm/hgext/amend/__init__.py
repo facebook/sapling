@@ -373,7 +373,7 @@ def amend(ui, repo, *pats, **opts):
     if len(repo[None].parents()) > 1:
         raise error.Abort(_("cannot amend while merging"))
 
-    haschildren = len(old.children()) > 0
+    haschildren = bool(repo.revs("children(.)"))
 
     opts["message"] = cmdutil.logmessage(repo, opts)
     # Avoid further processing of any logfile. If such a file existed, its
