@@ -16,6 +16,7 @@ use anyhow::{Error, Result};
 use async_compression::Decompressor;
 use bytes_old::{Bytes, BytesMut};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
+use limited_async_read::LimitedAsyncRead;
 use slog::{debug, o, Logger};
 use tokio_codec::{Decoder, Framed, FramedParts};
 use tokio_io::AsyncRead;
@@ -41,13 +42,17 @@ pub fn outer_stream<R: AsyncRead + BufRead + Send + 'static>(
     Ok(Framed::from_parts(FramedParts::new(
         match decompressor_type {
             None => UncompressedRead(r),
-            Some(decompressor_type) => CompressedRead(Decompressor::new(r, decompressor_type)),
+            Some(decompressor_type) => CompressedRead(LimitedAsyncRead::new(Decompressor::new(
+                r,
+                decompressor_type,
+            ))),
         },
         OuterDecoder::new(logger.new(o!("stream" => "outer"))),
     )))
 }
 
-pub type OuterStream<R> = Framed<Either<R, Decompressor<'static, R>>, OuterDecoder>;
+pub type OuterStream<R> =
+    Framed<Either<R, LimitedAsyncRead<Decompressor<'static, R>>>, OuterDecoder>;
 
 #[derive(Debug)]
 enum OuterState {

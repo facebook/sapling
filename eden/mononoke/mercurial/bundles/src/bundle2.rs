@@ -258,7 +258,7 @@ impl Bundle2StreamInner {
 
                         let io = match io {
                             Either::A(io) => io,
-                            Either::B(decompressor) => decompressor.into_inner(),
+                            Either::B(decompressor) => decompressor.into_inner().into_inner(),
                         };
 
                         let (cursor, io) = io.into_inner();

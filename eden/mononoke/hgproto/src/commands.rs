@@ -22,6 +22,7 @@ use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
+use limited_async_read::LimitedAsyncRead;
 use slog::Logger;
 use tokio_io::codec::Decoder;
 use tokio_io::AsyncRead;
@@ -177,7 +178,8 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     (dechunker, None)
                 };
 
-                let bundle2stream = Bundle2Stream::new(self.logger.clone(), dechunker);
+                let bundle2stream =
+                    Bundle2Stream::new(self.logger.clone(), LimitedAsyncRead::new(dechunker));
                 let (bundle2stream, remainder) = extract_remainder_from_bundle2(bundle2stream);
 
                 let remainder = remainder
@@ -192,7 +194,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                             )
                             .into()))
                         } else {
-                            Either::B(remainder.check_is_done().from_err())
+                            Either::B(remainder.into_inner().check_is_done().from_err())
                         }
                     })
                     .then(

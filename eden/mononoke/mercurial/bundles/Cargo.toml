@@ -20,6 +20,7 @@ async_compression = { git = "https://github.com/facebookexperimental/rust-shed.g
 bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+limited_async_read = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 bufsize = "0.4"
 byteorder = "1.3"
