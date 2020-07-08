@@ -22,7 +22,7 @@ mod response;
 mod stats;
 
 pub use cbor::CborStream;
-pub use client::HttpClient;
+pub use client::{HttpClient, ResponseStream, StatsFuture};
 pub use errors::{Abort, CertOrKeyMissing, HttpClientError};
 pub use header::Header;
 pub use progress::Progress;
