@@ -159,8 +159,21 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
                     let key_tuple = from_key_to_tuple(py, &key);
                     results.append(py, key_tuple.into_object());
                 }
-                StoreKey::Content(_, _) => {
-                    return Err(format_err!("Unsupported key: {:?}", key)).map_pyerr(py)
+                StoreKey::Content(_, key) => {
+                    // This is tricky, when ran on the ContentStore, Python will only call this
+                    // method when the network is flaky and the connection to the server is
+                    // severed. In this case, the Python code will attempt to not continue from
+                    // where it left of, and thus calls datastore.getmissing. It is very possible
+                    // that some LFS pointers were received but we didn't have a chance to receive
+                    // the blobs themself, leading the ContentStore code to logically indicate that
+                    // the blob is missing, but not the pointer.
+                    //
+                    // It might be worth moving the retry logic from Python to be driven in Rust
+                    // entirely as this would eliminate this hack entirely.
+                    if let Some(key) = key {
+                        let key_tuple = from_key_to_tuple(py, &key);
+                        results.append(py, key_tuple.into_object());
+                    }
                 }
             }
         }
