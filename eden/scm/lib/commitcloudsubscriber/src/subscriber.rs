@@ -19,7 +19,6 @@ use log::{error, info, warn};
 use reqwest::Url;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::net::ToSocketAddrs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
@@ -314,7 +313,7 @@ impl WorkspaceSubscriberService {
             info!("{} Thread started...", sid);
 
             let fire = |reason: &'static str, version: Option<u64>| {
-                if service_url.to_socket_addrs().is_err() {
+                if service_url.socket_addrs(|| None).is_err() {
                     warn!(
                         "{} Skip CloudSyncTrigger: failed to lookup address information {}",
                         sid, service_url
