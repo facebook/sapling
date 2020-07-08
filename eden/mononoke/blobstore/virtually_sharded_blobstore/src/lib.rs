@@ -22,8 +22,10 @@ use std::convert::AsRef;
 use std::convert::TryInto;
 use std::fmt;
 use std::hash::Hasher;
+use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
+use tunables::tunables;
 use twox_hash::XxHash;
 
 use crate::ratelimit::{AccessReason, Ticket};
@@ -318,10 +320,17 @@ impl<T> Inner<T> {
 
 fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
     STATS::puts_deduped.add_value(1);
-    ctx.scuba()
-        .clone()
-        .add("key", key)
-        .log_with_msg("Put deduplicated", None);
+
+    let mut scuba = ctx.scuba().clone();
+    if let Ok(Some(v)) = tunables()
+        .get_deduplicated_put_sampling_rate()
+        .try_into()
+        .map(NonZeroU64::new)
+    {
+        scuba.sampled(v);
+    }
+    scuba.add("key", key).log_with_msg("Put deduplicated", None);
+
     ctx.perf_counters()
         .increment_counter(PerfCounterType::BlobPutsDeduplicated);
 }
