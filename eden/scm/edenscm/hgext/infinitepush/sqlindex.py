@@ -90,7 +90,9 @@ class sqlindex(object):
         retry = 3
         while True:
             try:
-                self.sqlconn = mysql.connector.connect(force_ipv6=True, **self.sqlargs)
+                self.sqlconn = mysql.connector.connect(
+                    force_ipv6=True, ssl_disabled=True, **self.sqlargs
+                )
 
                 # Code is copy-pasted from hgsql. Bug fixes need to be
                 # back-ported!

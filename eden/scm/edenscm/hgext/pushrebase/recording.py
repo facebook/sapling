@@ -124,5 +124,5 @@ def _recordpushrebaserecordtodb(ui, params):
         ui.warn(_("%s: %s") % (errmsg, "recordingsqlargs are invalid"))
         return
 
-    sqlconn = mysql.connector.connect(force_ipv6=True, **sqlargs)
+    sqlconn = mysql.connector.connect(force_ipv6=True, ssl_disabled=True, **sqlargs)
     mysqlutil.insert(sqlconn, "pushrebaserecording", params)
