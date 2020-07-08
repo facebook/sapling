@@ -26,7 +26,7 @@ use futures_old::sync::mpsc;
 use futures_old::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
 use itertools::join;
 use lazy_static::lazy_static;
-use live_commit_sync_config::LiveCommitSyncConfig;
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use metaconfig_types::{AllowlistEntry, CommonConfig};
 use openssl::ssl::SslAcceptor;
 use permission_checker::{
@@ -97,7 +97,7 @@ pub fn connection_acceptor(
             };
 
             let maybe_live_commit_sync_config = Some(try_boxfuture!({
-                LiveCommitSyncConfig::new(&root_log, &config_store)
+                CfgrLiveCommitSyncConfig::new(&root_log, &config_store)
             }));
             (load_limiting_config, maybe_live_commit_sync_config)
         }
@@ -156,7 +156,7 @@ fn accept(
     tls_acceptor: Arc<SslAcceptor>,
     security_checker: Arc<ConnectionsSecurityChecker>,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
-    maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
+    maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
     scribe: Scribe,
 ) -> impl Future<Item = (), Error = ()> {
     let addr = sock.peer_addr();

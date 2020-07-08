@@ -6,6 +6,7 @@
  */
 
 use fbinit::FacebookInit;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_types::RepositoryId;
 
 use crate::{

@@ -20,7 +20,7 @@ use futures_stats::TimedFutureExt;
 use hgproto::{sshproto, HgProtoHandler};
 use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
-use live_commit_sync_config::LiveCommitSyncConfig;
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use load_limiter::{LoadLimiterBuilder, Metric};
 use maplit::{hashmap, hashset};
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
@@ -110,7 +110,7 @@ pub async fn request_handler(
     stdio: Stdio,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     addr: IpAddr,
-    maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
+    maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
     scribe: Scribe,
 ) {
     let Stdio {

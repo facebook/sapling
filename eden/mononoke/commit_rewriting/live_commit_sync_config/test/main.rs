@@ -11,7 +11,7 @@ use cached_config::{ConfigStore, TestSource};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use live_commit_sync_config::{
-    LiveCommitSyncConfig, CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
+    CfgrLiveCommitSyncConfig, CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
     CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS, CONFIGERATOR_PUSHREDIRECT_ENABLE,
 };
 use std::{sync::Arc, thread, time::Duration};
@@ -104,7 +104,7 @@ fn get_ctx_source_store_and_live_config(
     CoreContext,
     Arc<TestSource>,
     ConfigStore,
-    LiveCommitSyncConfig,
+    CfgrLiveCommitSyncConfig,
 ) {
     let ctx = CoreContext::test_mock(fb);
     let test_source = Arc::new(TestSource::new());
@@ -122,6 +122,6 @@ fn get_ctx_source_store_and_live_config(
     test_source.insert_to_refresh(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string());
 
     let store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
-    let live_commit_sync_config = LiveCommitSyncConfig::new(ctx.logger(), &store).unwrap();
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &store).unwrap();
     (ctx, test_source, store, live_commit_sync_config)
 }

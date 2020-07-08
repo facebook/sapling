@@ -39,7 +39,7 @@ use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hostname::get_hostname;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use live_commit_sync_config::LiveCommitSyncConfig;
+use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use load_limiter::Metric;
 use manifest::{Diff, Entry, ManifestOps};
 use maplit::hashmap;
@@ -361,7 +361,7 @@ pub struct RepoClient {
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
     force_lfs: Arc<AtomicBool>,
-    maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
+    maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
 }
 
 fn get_pull_default_bookmarks_maybe_stale_raw(
@@ -418,7 +418,7 @@ impl RepoClient {
         preserve_raw_bundle2: bool,
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
-        maybe_live_commit_sync_config: Option<LiveCommitSyncConfig>,
+        maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
     ) -> Self {
         Self {
             repo,

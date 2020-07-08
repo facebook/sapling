@@ -41,16 +41,60 @@ pub enum ErrorKind {
     UnknownCommitSyncConfigVersion(RepositoryId, String),
 }
 
+pub trait LiveCommitSyncConfig: Clone {
+    /// Return whether push redirection is currently
+    /// enabled for draft commits in `repo_id`
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries  config source
+    fn push_redirector_enabled_for_draft(&self, repo_id: RepositoryId) -> bool;
+
+    /// Return whether push redirection is currently
+    /// enabled for public commits in `repo_id`
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries  config source
+    fn push_redirector_enabled_for_public(&self, repo_id: RepositoryId) -> bool;
+
+    /// Return current version of `CommitSyncConfig` struct
+    /// for a given repository
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries  config source
+    fn get_current_commit_sync_config(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<CommitSyncConfig>;
+
+    /// Return all historical versions of `CommitSyncConfig`
+    /// structs for a given repository
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries config source
+    fn get_all_commit_sync_config_versions(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>>;
+
+    /// Return `CommitSyncConfig` for repo `repo_id` of version `version_name`
+    fn get_commit_sync_config_by_version(
+        &self,
+        repo_id: RepositoryId,
+        version_name: &CommitSyncConfigVersion,
+    ) -> Result<CommitSyncConfig>;
+}
+
 #[derive(Clone)]
-pub struct LiveCommitSyncConfig {
+pub struct CfgrLiveCommitSyncConfig {
     config_handle_for_current_versions: ConfigHandle<RawCommitSyncCurrentVersions>,
     config_handle_for_all_versions: ConfigHandle<RawCommitSyncAllVersions>,
     config_handle_for_push_redirection: ConfigHandle<MononokePushRedirectEnable>,
 }
 
-impl LiveCommitSyncConfig {
+impl CfgrLiveCommitSyncConfig {
     pub fn new(logger: &Logger, config_store: &ConfigStore) -> Result<Self, Error> {
-        info!(logger, "Initializing LiveCommitSyncConfig");
+        info!(logger, "Initializing CfgrLiveCommitSyncConfig");
         let config_handle_for_push_redirection =
             config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())?;
         debug!(logger, "Initialized PushRedirect configerator config");
@@ -66,7 +110,7 @@ impl LiveCommitSyncConfig {
             logger,
             "Initialized all commit sync versions configerator config"
         );
-        info!(logger, "Done initializing LiveCommitSyncConfig");
+        info!(logger, "Done initializing CfgrLiveCommitSyncConfig");
         Ok(Self {
             config_handle_for_current_versions,
             config_handle_for_all_versions,
@@ -80,30 +124,6 @@ impl LiveCommitSyncConfig {
     ) -> Option<PushRedirectEnableState> {
         let config = self.config_handle_for_push_redirection.get();
         config.per_repo.get(&(repo_id.id() as i64)).cloned()
-    }
-
-    /// Return whether push redirection is currently
-    /// enabled for draft commits in `repo_id`
-    ///
-    /// NOTE: two subsequent calls may return different results
-    ///       as this queries  config source
-    pub fn push_redirector_enabled_for_draft(&self, repo_id: RepositoryId) -> bool {
-        match self.get_push_redirection_repo_state(repo_id) {
-            Some(config) => config.draft_push,
-            None => false,
-        }
-    }
-
-    /// Return whether push redirection is currently
-    /// enabled for public commits in `repo_id`
-    ///
-    /// NOTE: two subsequent calls may return different results
-    ///       as this queries  config source
-    pub fn push_redirector_enabled_for_public(&self, repo_id: RepositoryId) -> bool {
-        match self.get_push_redirection_repo_state(repo_id) {
-            Some(config) => config.public_push,
-            None => false,
-        }
     }
 
     fn related_to_repo(
@@ -133,13 +153,39 @@ impl LiveCommitSyncConfig {
             (_, _) => return Err(many_items_error()),
         }
     }
+}
+
+impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
+    /// Return whether push redirection is currently
+    /// enabled for draft commits in `repo_id`
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries  config source
+    fn push_redirector_enabled_for_draft(&self, repo_id: RepositoryId) -> bool {
+        match self.get_push_redirection_repo_state(repo_id) {
+            Some(config) => config.draft_push,
+            None => false,
+        }
+    }
+
+    /// Return whether push redirection is currently
+    /// enabled for public commits in `repo_id`
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries  config source
+    fn push_redirector_enabled_for_public(&self, repo_id: RepositoryId) -> bool {
+        match self.get_push_redirection_repo_state(repo_id) {
+            Some(config) => config.public_push,
+            None => false,
+        }
+    }
 
     /// Return current version of `CommitSyncConfig` struct
     /// for a given repository
     ///
     /// NOTE: two subsequent calls may return different results
     ///       as this queries  config source
-    pub fn get_current_commit_sync_config(
+    fn get_current_commit_sync_config(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
@@ -177,7 +223,7 @@ impl LiveCommitSyncConfig {
     ///
     /// NOTE: two subsequent calls may return different results
     ///       as this queries config source
-    pub fn get_all_commit_sync_config_versions(
+    fn get_all_commit_sync_config_versions(
         &self,
         repo_id: RepositoryId,
     ) -> Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>> {
@@ -206,7 +252,7 @@ impl LiveCommitSyncConfig {
     }
 
     /// Return `CommitSyncConfig` for repo `repo_id` of version `version_name`
-    pub fn get_commit_sync_config_by_version(
+    fn get_commit_sync_config_by_version(
         &self,
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,

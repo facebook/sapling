@@ -35,7 +35,7 @@ use futures::{
     try_join,
 };
 use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
-use live_commit_sync_config::LiveCommitSyncConfig;
+use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfig;
 use mononoke_repo::MononokeRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -82,7 +82,7 @@ impl PushRedirectorArgs {
     pub fn into_push_redirector(
         self,
         ctx: &CoreContext,
-        maybe_live_commit_sync_config: &Option<LiveCommitSyncConfig>,
+        maybe_live_commit_sync_config: &Option<CfgrLiveCommitSyncConfig>,
     ) -> Result<PushRedirector, Error> {
         // TODO: This function needs to be extended
         //       and query configerator for the fresh

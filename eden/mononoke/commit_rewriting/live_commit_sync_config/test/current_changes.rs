@@ -7,7 +7,7 @@
 
 use ascii::AsciiString;
 use fbinit::FacebookInit;
-use live_commit_sync_config::CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS;
+use live_commit_sync_config::{LiveCommitSyncConfig, CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS};
 use mononoke_types::RepositoryId;
 use std::str::FromStr;
 

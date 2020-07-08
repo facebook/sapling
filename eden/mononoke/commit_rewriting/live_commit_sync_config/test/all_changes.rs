@@ -6,8 +6,8 @@
  */
 
 use fbinit::FacebookInit;
-use live_commit_sync_config::ErrorKind;
 use live_commit_sync_config::CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS;
+use live_commit_sync_config::{ErrorKind, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::RepositoryId;
 
