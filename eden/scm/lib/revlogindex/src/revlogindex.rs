@@ -47,6 +47,7 @@ use std::path::PathBuf;
 use std::slice;
 use std::sync::Arc;
 use util::path::atomic_write_symlink;
+use util::path::remove_file;
 
 impl RevlogIndex {
     /// Calculate `heads(ancestors(revs))`.
@@ -414,6 +415,16 @@ impl UnsafeSliceCast for RevlogEntry {}
 impl RevlogIndex {
     /// Constructs a RevlogIndex. The NodeRevMap is automatically manage>
     pub fn new(changelogi_path: &Path, nodemap_path: &Path) -> Result<Self> {
+        // 20000 is chosen as it takes a few milliseconds to build up nodemap.
+        Self::new_advanced(changelogi_path, nodemap_path, 20000)
+    }
+
+    /// Constructs a RevlogIndex with customized nodemap lag threshold.
+    pub fn new_advanced(
+        changelogi_path: &Path,
+        nodemap_path: &Path,
+        nodemap_lag_threshold: usize,
+    ) -> Result<Self> {
         let empty_nodemap_data = Bytes::from(nodemap::empty_index_buffer());
         let nodemap_data = read_path(nodemap_path, empty_nodemap_data.clone())?;
         let changelogi_data = read_path(changelogi_path, Bytes::default())?;
@@ -422,14 +433,22 @@ impl RevlogIndex {
                 // Attempt to rebuild the index (in-memory) automatically.
                 NodeRevMap::new(changelogi_data.clone().into(), empty_nodemap_data.into())
             })?;
-        // 20000 is chosen as it takes a few milliseconds to build up.
-        if nodemap.lag() > 20000 {
+        if nodemap.lag() as usize > nodemap_lag_threshold {
             // The index is lagged, and less efficient. Update it.
             // Building is incremental. Writing to disk is not.
             if let Ok(buf) = nodemap.build_incrementally() {
                 // Cast [u32] to [u8] for writing.
                 let slice =
                     unsafe { slice::from_raw_parts(buf.as_ptr() as *const u8, buf.len() * 4) };
+                // nodemap_path should be a symlink. Older repos might have the non-symlink
+                // file. Attempt to delete it.
+                // This is useful on Windows to prevent atomic_write_symlink failures when
+                // the nodemap file was non-symlink and mmaped.
+                if let Ok(meta) = nodemap_path.symlink_metadata() {
+                    if !meta.file_type().is_symlink() {
+                        remove_file(nodemap_path)?;
+                    }
+                }
                 // Not fatal if we cannot update the on-disk index.
                 let _ = atomic_write_symlink(nodemap_path, slice);
             }
@@ -1384,5 +1403,60 @@ commit 3"#
             }
         };
         dag::tests::test_generic_dag(new_dag);
+    }
+
+    #[test]
+    fn test_replace_non_symlink_mmap() -> Result<()> {
+        // Test that while nodemap is 1. not a symlink (legacy setup); 2. being mmaped.
+        // It can still be updated to a new version that is a symlink.
+        // This test is more relevant on Windows.
+
+        let dir = tempdir()?;
+        let dir = dir.path();
+        let changelog_i_path = dir.join("00changelog.i");
+        let nodemap_path = dir.join("00changelog.nodemap");
+
+        let mut revlog1 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
+        revlog1.insert(v(1), vec![], b"commit 1".to_vec().into());
+        revlog1.flush()?;
+
+        // Trigger nodemap build.
+        let build_nodemap = || -> Result<()> {
+            RevlogIndex::new_advanced(&changelog_i_path, &nodemap_path, 0)?;
+            Ok(())
+        };
+        build_nodemap()?;
+
+        // Convert nodemap to a non-symlink file.
+        let nodemap_bytes = fs::read(&nodemap_path)?;
+        assert!(nodemap_bytes.len() > 0);
+        fs::remove_file(&nodemap_path)?;
+        assert_eq!(
+            nodemap_path.symlink_metadata().unwrap_err().kind(),
+            io::ErrorKind::NotFound
+        );
+        fs::write(&nodemap_path, &nodemap_bytes)?;
+        assert!(!nodemap_path.symlink_metadata()?.file_type().is_symlink());
+
+        // Keep mmap on nodemap.
+        let revlog2 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
+
+        // Make nodemap lagged.
+        revlog1.insert(v(0xff), vec![], b"commit 1".to_vec().into());
+        revlog1.flush()?;
+
+        // Trigger nodemap build while keeping the mmap.
+        build_nodemap()?;
+        drop(revlog2);
+
+        // The nodemap should be replaced to a symlink with more data.
+        assert_ne!(
+            &fs::read(&nodemap_path)?,
+            &nodemap_bytes,
+            "nodemap should be updated"
+        );
+        assert!(nodemap_path.symlink_metadata()?.file_type().is_symlink());
+
+        Ok(())
     }
 }

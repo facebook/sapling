@@ -511,6 +511,7 @@ mod tests {
         assert_eq!(count(), 4);
 
         // It's possible to replace a non-symlink to a symlink.
+        // (but this might fail if "a" is mmap-ed on Windows).
         atomic_write_symlink(&j("a"), b"4")?;
         // Exercise the GC logic a bit.
         atomic_write_symlink(&j("a"), b"5")?;
