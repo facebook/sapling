@@ -1415,6 +1415,12 @@ def _reloadenv():
         getuser = platform.getuser
 
 
+def istest():
+    # Dummy implementation to make pyre aware of the function.
+    # Will be replaced by `_reloadenv()`.
+    return False
+
+
 # To keep pyre happy
 timer = time.time
 checkosfilename = platform.checkosfilename
