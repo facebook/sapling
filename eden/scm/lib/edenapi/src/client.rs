@@ -35,12 +35,16 @@ mod paths {
 
 pub struct Client {
     config: Config,
+    client: HttpClient,
 }
 
 impl Client {
     /// Create an EdenAPI client with the given configuration.
     pub(crate) fn with_config(config: Config) -> Self {
-        Self { config }
+        Self {
+            config,
+            client: HttpClient::new(),
+        }
     }
 
     /// Append a repo name and endpoint path onto the server's base URL.
@@ -89,6 +93,44 @@ impl Client {
             })
             .collect()
     }
+
+    /// Fetch data from the server.
+    ///
+    /// Concurrently performs all of the given HTTP requests, each of
+    /// which must result in streaming response of CBOR-encoded values
+    /// of type `T`. The metadata of each response will be returned in
+    /// the order the responses arrive. The response streams will be
+    /// combined into a single stream, in which the returned entries
+    /// from different HTTP responses may be arbitrarily interleaved.
+    async fn fetch<T: DeserializeOwned + Send + 'static>(
+        &self,
+        requests: Vec<Request>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<T>, EdenApiError> {
+        let progress = progress.unwrap_or_else(|| Box::new(|_| ()));
+        let requests = requests.into_iter().collect::<Vec<_>>();
+        let n_requests = requests.len();
+
+        let (mut responses, stats) = self.client.send_async_with_progress(requests, progress)?;
+
+        let mut meta = Vec::with_capacity(n_requests);
+        let mut streams = Vec::with_capacity(n_requests);
+
+        while let Some(res) = responses.try_next().await? {
+            meta.push(ResponseMeta::from(&res));
+
+            let entries = res.into_cbor_stream::<T>().err_into().boxed();
+            streams.push(entries);
+        }
+
+        let entries = stream::select_all(streams).boxed();
+
+        Ok(Fetch {
+            meta,
+            entries,
+            stats,
+        })
+    }
 }
 
 #[async_trait]
@@ -115,7 +157,7 @@ impl EdenApi for Client {
             keys,
         })?;
 
-        fetch::<DataEntry>(requests, progress).await
+        self.fetch::<DataEntry>(requests, progress).await
     }
 
     async fn history(
@@ -138,7 +180,9 @@ impl EdenApi for Client {
             meta,
             entries,
             stats,
-        } = fetch::<HistoryResponseChunk>(requests, progress).await?;
+        } = self
+            .fetch::<HistoryResponseChunk>(requests, progress)
+            .await?;
 
         // Convert received `HistoryResponseChunk`s into `HistoryEntry`s.
         let entries = entries
@@ -168,7 +212,7 @@ impl EdenApi for Client {
             keys,
         })?;
 
-        fetch::<DataEntry>(requests, progress).await
+        self.fetch::<DataEntry>(requests, progress).await
     }
 
     async fn complete_trees(
@@ -193,46 +237,8 @@ impl EdenApi for Client {
             .cbor(&tree_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        fetch::<DataEntry>(vec![req], progress).await
+        self.fetch::<DataEntry>(vec![req], progress).await
     }
-}
-
-/// Fetch data from the server.
-///
-/// Concurrently performs all of the given HTTP requests, each of
-/// which must result in streaming response of CBOR-encoded values
-/// of type `T`. The metadata of each response will be returned in
-/// the order the responses arrive. The response streams will be
-/// combined into a single stream, in which the returned entries
-/// from different HTTP responses may be arbitrarily interleaved.
-async fn fetch<T: DeserializeOwned + Send + 'static>(
-    requests: Vec<Request>,
-    progress: Option<ProgressCallback>,
-) -> Result<Fetch<T>, EdenApiError> {
-    let progress = progress.unwrap_or_else(|| Box::new(|_| ()));
-    let requests = requests.into_iter().collect::<Vec<_>>();
-    let n_requests = requests.len();
-
-    let client = HttpClient::new();
-    let (mut responses, stats) = client.send_async_with_progress(requests, progress)?;
-
-    let mut meta = Vec::with_capacity(n_requests);
-    let mut streams = Vec::with_capacity(n_requests);
-
-    while let Some(res) = responses.try_next().await? {
-        meta.push(ResponseMeta::from(&res));
-
-        let entries = res.into_cbor_stream::<T>().err_into().boxed();
-        streams.push(entries);
-    }
-
-    let entries = stream::select_all(streams).boxed();
-
-    Ok(Fetch {
-        meta,
-        entries,
-        stats,
-    })
 }
 
 /// Split up a collection of keys into batches of at most `batch_size`.
