@@ -120,45 +120,6 @@ Configs:
     ``remotefilelog.userustpackstore`` use the Rust PackStore.
 
     ``remotefilelog.cachekey`` cache key prefix to use.
-
-Configs for Eden API (HTTP data fetching):
-
-    ``edenapi.enabled`` specifies whether HTTP data fetching should be used.
-
-    ``edenapi.debug`` enables debug output for HTTP data fetching.
-
-    ``edenapi.url`` specifies the base URL of the API server.
-
-    ``edenapi.databatchsize`` specifies the batch size for file data requests
-    for backends that support batching.
-
-    ``edenapi.historybatchsize`` specifies the batch size for history requests
-    for backends that support batching.
-
-    ``edenapi.maxretries`` specifies the maximum number of times the client
-    should retry failed HTTP requests.
-
-    ``edenapi.validate`` specifies that the client should recompute and
-    validate the node hash for data fetched over HTTP.
-
-    ``edenapi.streamdata`` specifies that the client should request a
-    streaming response for data fetches
-
-    ``edenapi.streamhistory`` specifies that the client should request a
-    streaming response for history fetches
-
-    ``edenapi.streamtrees`` specifies that the client should request a
-    streaming response for tree fetches
-
-Eden API TLS credentials are configured using the auth section:
-
-    ``auth.edenapi.prefix``: base URL (without scheme) for which to set credentials.
-
-    ``auth.edenapi.schemes``: URL scheme to match; should usually be "https".
-
-    ``auth.edenapi.cert``: client certificate for TLS mutual authenticaton.
-
-    ``auth.edenapi.key``: client key for TLS mutual authentication.
 """
 from __future__ import absolute_import
 
@@ -204,7 +165,6 @@ from edenscm.mercurial.node import hex, nullrev
 
 from . import (
     debugcommands,
-    edenapi,
     fileserverclient,
     remotefilectx,
     remotefilelog,
@@ -242,18 +202,6 @@ configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
 configitem("remotefilelog", "getpackversion", default=1)
 configitem("remotefilelog", "commitsperrepack", default=100)
-
-# Config items for HTTP data fetching.
-configitem("edenapi", "enabled", default=False)
-configitem("edenapi", "debug", default=False)
-configitem("edenapi", "url", default=None)
-configitem("edenapi", "databatchsize", default=None)
-configitem("edenapi", "historybatchsize", default=None)
-configitem("edenapi", "maxretries", default=3)
-configitem("edenapi", "validate", default=True)
-configitem("edenapi", "streamdata", default=False)
-configitem("edenapi", "streamhistory", default=False)
-configitem("edenapi", "streamtrees", default=False)
 
 testedwith = "ships-with-fb-hgext"
 
@@ -429,15 +377,6 @@ def setupclient(ui, repo):
 
     shallowrepo.wraprepo(repo)
     repo.store = shallowstore.wrapstore(repo.store)
-
-    if edenapi.enabled(ui):
-        try:
-            repo.edenapi = edenapi.pyclient(ui, repo)
-        except Exception as e:
-            ui.warn(_("failed to initialize Eden API client;"))
-            ui.warn(_(" disabling HTTPS data fetching\n"))
-            edenapi.logexception(ui, e)
-            edenapi._disabled = True
 
 
 clientonetime = False
@@ -1117,47 +1056,6 @@ def debugwaitonrepack(ui, repo, **opts):
 @command("debugwaitonprefetch", [], _("hg debugwaitonprefetch"))
 def debugwaitonprefetch(ui, repo, **opts):
     return debugcommands.debugwaitonprefetch(repo)
-
-
-@command("debuggetfiles|debuggetfile", [], _("hg debuggetfiles"))
-def debuggetfiles(ui, repo, **opts):
-    """download file content from the API server
-    Read filenode/path pairs from stdin, fetch the content of each file
-    from the API server, and write the results to a datapack.
-    """
-    return debugcommands.debuggetfiles(ui, repo, **opts)
-
-
-@command("debugserialgetfiles", [], _("hg debugserialgetfiles"))
-def debugserialgetfiles(ui, repo, **opts):
-    """serially download file content from the API server
-    Read filenode/path pairs from stdin, fetch the content of each file
-    from the API server one at a time. This is useful for testing the
-    performance of serial fetching, which should ordinarily be avoided.
-    """
-    return debugcommands.debugserialgetfiles(ui, repo, **opts)
-
-
-@command(
-    "debuggethistory",
-    [("d", "depth", 0, _("how many history entries to fetch per file"), _("DEPTH"))],
-    _("hg debuggethistory"),
-)
-def debuggethistory(ui, repo, **opts):
-    """download file history from the API server
-    Read filenode/path pairs from stdin, fetch the history of each file
-    from the API server, and write the results to a historypack.
-    """
-    return debugcommands.debuggethistory(ui, repo, **opts)
-
-
-@command("debuggettrees", [], _("hg debuggettrees"))
-def debuggettrees(ui, repo, **opts):
-    """download tree content from the API server
-    Read manifestnode/path pairs from stdin, fetch the content of each tree
-    from the API server, and write the results to a datapack.
-    """
-    return debugcommands.debuggettrees(ui, repo, **opts)
 
 
 def resolveprefetchopts(ui, opts):

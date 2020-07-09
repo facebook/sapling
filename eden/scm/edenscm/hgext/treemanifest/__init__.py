@@ -119,14 +119,6 @@ trees from the server.
     [treemanifest]
     fetchdepth = 65536
 
-`treemanifest.usehttp` causes treemanifest to fetch tress over HTTP using
-the Eden API.
-
-::
-
-    [treemanifest]
-    usehttp = true
-
 `treemanifest.prefetchdraftparents` causes treemanifest to prefetch the parent
 trees for new draft roots added to the repository.
 
@@ -138,7 +130,6 @@ trees for new draft roots added to the repository.
 `treemanifest.bfsprefetch` causes the client to perform a BFS over the
 tree to be prefetched and manually request all missing nodes from the
 server, rather than relying on the server to perform this computation.
-This option has no effect unless treemanifest.usehttp is set to true.
 
 ::
 
@@ -148,8 +139,7 @@ This option has no effect unless treemanifest.usehttp is set to true.
 `treemanifest.ondemandfetch` causes treemanifest to use an on-demand tree fetching
 strategy. The client will only download the tree nodes needed to complete the desired
 operation, rather than fetching the entire tree. This setting only applies to SSH
-fetching; HTTP fetching already uses this fetching strategy. As such, this setting
-has no effect when HTTP fetching is enabled.
+fetching.
 
 ::
 
@@ -204,7 +194,6 @@ from edenscm.mercurial.pycompat import decodeutf8, range
 from ..extutil import flock
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
-    edenapi,
     mutablestores,
     resolveprefetchopts,
     shallowbundle,
@@ -243,7 +232,6 @@ configitem("treemanifest", "servercacheevictionpercent", default=50)
 configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "treeonly", default=True)
-configitem("treemanifest", "usehttp", default=False)
 configitem("treemanifest", "prefetchdraftparents", default=True)
 configitem("treemanifest", "ondemandfetch", default=False)
 
@@ -565,9 +553,6 @@ def wraprepo(repo):
                 self._bfsprefetch(rootdir, mfnodes, depth)
                 return
 
-            if self.httpgettreepack(rootdir, mfnodes, basemfnodes, depth):
-                return
-
             start = util.timer()
             with self.ui.timesection("fetchingtrees"):
                 with self.connectionpool.get(
@@ -646,40 +631,6 @@ def wraprepo(repo):
 
             return True
 
-        def httpgettreepack(self, rootdir, mfnodes, basemfnodes, depth=None):
-            """
-            Wrapper around _httpgettreepack() that catches any exceptions
-            and returns False if fetching failed for any reason, including
-            HTTP fetching being disabled.
-
-            Intended to allow for graceful fallback to SSH if needed.
-            """
-            if _usehttp(self.ui):
-                try:
-                    self._httpgettreepack(rootdir, mfnodes, basemfnodes, depth)
-                    return True
-                except Exception as e:
-                    self.ui.warn(_("encountered error during HTTPS fetching;"))
-                    self.ui.warn(_(" falling back to SSH\n"))
-                    edenapi.logexception(self.ui, e)
-            return False
-
-        @perftrace.tracefunc("HTTP Gettreepack")
-        def _httpgettreepack(self, rootdir, mfnodes, basemfnodes, depth=None):
-            """
-            Fetch the specified nodes over HTTP using EdenAPI's equivalent
-            of the gettreepack wireproto command.
-            """
-            dpack, _hpack = self.manifestlog.getmutablesharedpacks()
-
-            with progress.spinner(self.ui, "prefetching trees over HTTPS"):
-                stats = self.edenapi.prefetch_trees(
-                    rootdir, mfnodes, basemfnodes, dpack, depth
-                )
-
-            if self.ui.interactive() and edenapi.debug(self.ui):
-                self.ui.warn(_("%s\n") % stats.to_str())
-
         def forcebfsprefetch(self, rootdir, mfnodes, depth=None):
             # It is always safe to enable ondemandfetch: this requires the
             # underlying designatednodes capability on the server side, but if
@@ -695,68 +646,6 @@ def wraprepo(repo):
                 store = self.manifestlog.datastore
                 for node in mfnodes:
                     rustmanifest.prefetch(store, node, rootdir, depth)
-
-        def httpgettrees(self, keys):
-            """
-            Fetch the specified tree nodes over HTTP via the Eden API.
-
-            Wrapper around _httpgettrees() that catches any exceptions
-            and returns False if fetching failed for any reason, including
-            HTTP fetching being disabled.
-            """
-            if _usehttp(self.ui):
-                try:
-                    self._httpgettrees(keys)
-                    return True
-                except Exception as e:
-                    self.ui.warn(_("encountered error during HTTPS fetching;"))
-                    self.ui.warn(_(" falling back to SSH\n"))
-                    edenapi.logexception(self.ui, e)
-            return False
-
-        def _httpgettrees(self, keys):
-            """
-            Fetch the specified tree nodes over HTTP via the Eden API.
-
-            Takes a list of (name, node) tuples identifying the manifest
-            nodes to fetch, and fetches and writes the nodes to the shared
-            store.
-
-            Only the specified nodes are fetched. This differs from the
-            behavior of the gettreepack wireproto command, which may also
-            fetch the entire subtree rooted at each of the specified nodes.
-            """
-            n = len(keys)
-            if n == 0:
-                return
-
-            keys = [(name, hex(node)) for (name, node) in keys]
-
-            if self.ui.interactive() and edenapi.debug(self.ui):
-                self.ui.warn(
-                    _n("fetching tree for %(key)s\n", "fetching %(num)s trees\n", n)
-                    % {"key": str(keys[0]), "num": n}
-                )
-
-            dpack, _hpack = self.manifestlog.getmutablesharedpacks()
-
-            with progress.bar(
-                self.ui,
-                "fetching trees over HTTPS",
-                start=0,
-                unit=_("bytes"),
-                formatfunc=util.bytecount,
-            ) as prog:
-
-                def progcallback(dl, dlt, ul, ult):
-                    if dl > 0:
-                        prog._total = dlt
-                        prog.value = dl
-
-                stats = self.edenapi.get_trees(keys, dpack, progcallback)
-
-            if self.ui.interactive() and edenapi.debug(self.ui):
-                self.ui.warn(_("%s\n") % stats.to_str())
 
     repo.__class__ = treerepository
     repo._treefetches = 0
@@ -1152,10 +1041,6 @@ class hybridmanifestlog(manifest.manifestlog):
     def abortpending(self):
         super(hybridmanifestlog, self).abortpending()
         self.treemanifestlog.abortpending()
-
-
-def _usehttp(ui):
-    return edenapi.enabled(ui) and ui.configbool("treemanifest", "usehttp")
 
 
 def _buildtree(manifestlog, node=None):
@@ -2671,12 +2556,6 @@ class generatingdatastore(pycompat.ABC):
 
 class remotetreestore(generatingdatastore):
     def _generatetrees(self, name, node):
-        # First attempt to fetch the single tree node over HTTP.
-        # If that fails, fall back to SSH and perform a full
-        # (and likely slow) recursive prefetch of the entire tree.
-        if self._repo.httpgettrees([(name, node)]):
-            return
-
         # If on-demand fetching is enabled, we should attempt to
         # fetch the single tree node over SSH via gettreepack.
         # If the server does not support calling gettreepack in
@@ -2727,11 +2606,6 @@ class remotetreestore(generatingdatastore):
         # Filter out keys for nodes already present locally.
         keys = self._shareddata.getmissing(keys)
         if not keys:
-            return
-
-        # If HTTP fetching is enabled, prefetch the nodes that way.
-        if _usehttp(self._repo.ui):
-            self._repo._httpgettrees(keys)
             return
 
         # Otherwise, try to fetch the desired nodes via SSH. This
