@@ -214,13 +214,16 @@ fn bindgen_test_layout_s_xdemitconf() {
 }
 pub type xdemitconf_t = s_xdemitconf;
 extern "C" {
-    pub fn xdl_mmfile_first(mmf: *mut mmfile_t, size: *mut i64) -> *mut ::std::os::raw::c_void;
+    pub fn xdl_mmfile_first_vendored(
+        mmf: *mut mmfile_t,
+        size: *mut i64,
+    ) -> *mut ::std::os::raw::c_void;
 }
 extern "C" {
-    pub fn xdl_mmfile_size(mmf: *mut mmfile_t) -> i64;
+    pub fn xdl_mmfile_size_vendored(mmf: *mut mmfile_t) -> i64;
 }
 extern "C" {
-    pub fn xdl_diff(
+    pub fn xdl_diff_vendored(
         mf1: *mut mmfile_t,
         mf2: *mut mmfile_t,
         xpp: *const xpparam_t,

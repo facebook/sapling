@@ -13,7 +13,7 @@ extern crate xdiff_sys;
 use std::env;
 use std::fs;
 use std::os::raw::{c_char, c_int, c_void};
-use xdiff_sys::{mmfile_t, xdemitcb_t, xdemitconf_t, xdl_diff, xpparam_t};
+use xdiff_sys::{mmfile_t, xdemitcb_t, xdemitconf_t, xdl_diff_vendored, xpparam_t};
 
 extern "C" fn hunk_func(a1: i64, a2: i64, b1: i64, b2: i64, _priv: *mut c_void) -> c_int {
     print!("@@ -{},{} +{},{} @@\n", a1, a2, b1, b2);
@@ -48,7 +48,7 @@ fn main() -> Result<(), std::io::Error> {
     };
 
     unsafe {
-        xdl_diff(&mut a_mmfile, &mut b_mmfile, &xpp, &xecfg, &mut ecb);
+        xdl_diff_vendored(&mut a_mmfile, &mut b_mmfile, &xpp, &xecfg, &mut ecb);
     }
     Ok(())
 }

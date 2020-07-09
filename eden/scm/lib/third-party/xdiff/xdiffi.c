@@ -269,7 +269,7 @@ static int64_t xdl_split(uint64_t const *ha1, int64_t off1, int64_t lim1,
  * the box splitting function. Note that the real job (marking changed lines)
  * is done in the two boundary reaching checks.
  */
-int xdl_recs_cmp(diffdata_t *dd1, int64_t off1, int64_t lim1,
+int xdl_recs_cmp_vendored(diffdata_t *dd1, int64_t off1, int64_t lim1,
 		 diffdata_t *dd2, int64_t off2, int64_t lim2,
 		 int64_t *kvdf, int64_t *kvdb, int need_min, xdalgoenv_t *xenv) {
 	uint64_t const *ha1 = dd1->ha, *ha2 = dd2->ha;
@@ -312,9 +312,9 @@ int xdl_recs_cmp(diffdata_t *dd1, int64_t off1, int64_t lim1,
 		/*
 		 * ... et Impera.
 		 */
-		if (xdl_recs_cmp(dd1, off1, spl.i1, dd2, off2, spl.i2,
+		if (xdl_recs_cmp_vendored(dd1, off1, spl.i1, dd2, off2, spl.i2,
 				 kvdf, kvdb, spl.min_lo, xenv) < 0 ||
-		    xdl_recs_cmp(dd1, spl.i1, lim1, dd2, spl.i2, lim2,
+		    xdl_recs_cmp_vendored(dd1, spl.i1, lim1, dd2, spl.i2, lim2,
 				 kvdf, kvdb, spl.min_hi, xenv) < 0) {
 
 			return -1;
@@ -325,7 +325,7 @@ int xdl_recs_cmp(diffdata_t *dd1, int64_t off1, int64_t lim1,
 }
 
 
-int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		xdfenv_t *xe) {
 	int64_t ndiags;
 	int64_t *kvd, *kvdf, *kvdb;
@@ -367,7 +367,7 @@ int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	dd2.rchg = xe->xdf2.rchg;
 	dd2.rindex = xe->xdf2.rindex;
 
-	if (xdl_recs_cmp(&dd1, 0, dd1.nrec, &dd2, 0, dd2.nrec,
+	if (xdl_recs_cmp_vendored(&dd1, 0, dd1.nrec, &dd2, 0, dd2.nrec,
 			 kvdf, kvdb, (xpp->flags & XDF_NEED_MINIMAL) != 0, &xenv) < 0) {
 
 		xdl_free(kvd);
@@ -817,7 +817,7 @@ static void xdl_bug(const char *msg)
  * This also helps in finding joinable change groups and reducing the diff
  * size.
  */
-int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, int64_t flags) {
+int xdl_change_compact_vendored(xdfile_t *xdf, xdfile_t *xdfo, int64_t flags) {
 	struct xdlgroup g, go;
 	int64_t earliest_end, end_matching_other;
 	int64_t groupsize;
@@ -971,7 +971,7 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, int64_t flags) {
 }
 
 
-int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
+int xdl_build_script_vendored(xdfenv_t *xe, xdchange_t **xscr) {
 	xdchange_t *cscr = NULL, *xch;
 	char *rchg1 = xe->xdf1.rchg, *rchg2 = xe->xdf2.rchg;
 	int64_t i1, i2, l1, l2;
@@ -985,7 +985,7 @@ int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
 			for (l2 = i2; rchg2[i2 - 1]; i2--);
 
 			if (!(xch = xdl_add_change(cscr, i1, i2, l1 - i1, l2 - i2))) {
-				xdl_free_script(cscr);
+				xdl_free_script_vendored(cscr);
 				return -1;
 			}
 			cscr = xch;
@@ -997,7 +997,7 @@ int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
 }
 
 
-void xdl_free_script(xdchange_t *xscr) {
+void xdl_free_script_vendored(xdchange_t *xscr) {
 	xdchange_t *xch;
 
 	while ((xch = xscr) != NULL) {
@@ -1012,7 +1012,7 @@ void xdl_free_script(xdchange_t *xscr) {
  * inside the differential hunk according to the specified configuration.
  * Also advance xscr if the first changes must be discarded.
  */
-xdchange_t *xdl_get_hunk(xdchange_t **xscr)
+xdchange_t *xdl_get_hunk_vendored(xdchange_t **xscr)
 {
 	xdchange_t *xch, *xchp, *lxch;
 	uint64_t ignored = 0; /* number of ignored blank lines */
@@ -1068,7 +1068,7 @@ static int xdl_call_hunk_func(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 	if ((xecfg->flags & XDL_EMIT_BDIFFHUNK) != 0) {
 		int64_t i1 = 0, i2 = 0, n1 = xe->xdf1.nrec, n2 = xe->xdf2.nrec;
 		for (xch = xscr; xch; xch = xche->next) {
-			xche = xdl_get_hunk(&xch);
+			xche = xdl_get_hunk_vendored(&xch);
 			if (!xch)
 				break;
 			if (xch != xche)
@@ -1087,7 +1087,7 @@ static int xdl_call_hunk_func(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 			return -1;
 	} else {
 		for (xch = xscr; xch; xch = xche->next) {
-			xche = xdl_get_hunk(&xch);
+			xche = xdl_get_hunk_vendored(&xch);
 			if (!xch)
 				break;
 			if (xecfg->hunk_func(xch->i1 + p,
@@ -1101,29 +1101,29 @@ static int xdl_call_hunk_func(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 	return 0;
 }
 
-int xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int xdl_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb) {
 	xdchange_t *xscr;
 	xdfenv_t xe;
 
-	if (xdl_do_diff(mf1, mf2, xpp, &xe) < 0) {
+	if (xdl_do_diff_vendored(mf1, mf2, xpp, &xe) < 0) {
 
 		return -1;
 	}
-	if (xdl_change_compact(&xe.xdf1, &xe.xdf2, xpp->flags) < 0 ||
-	    xdl_change_compact(&xe.xdf2, &xe.xdf1, xpp->flags) < 0 ||
-	    xdl_build_script(&xe, &xscr) < 0) {
+	if (xdl_change_compact_vendored(&xe.xdf1, &xe.xdf2, xpp->flags) < 0 ||
+	    xdl_change_compact_vendored(&xe.xdf2, &xe.xdf1, xpp->flags) < 0 ||
+	    xdl_build_script_vendored(&xe, &xscr) < 0) {
 
 		xdl_free_env(&xe);
 		return -1;
 	}
 
 	if (xdl_call_hunk_func(&xe, xscr, ecb, xecfg) < 0) {
-		xdl_free_script(xscr);
+		xdl_free_script_vendored(xscr);
 		xdl_free_env(&xe);
 		return -1;
 	}
-	xdl_free_script(xscr);
+	xdl_free_script_vendored(xscr);
 	xdl_free_env(&xe);
 
 	return 0;

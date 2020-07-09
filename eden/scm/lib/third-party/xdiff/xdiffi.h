@@ -46,13 +46,13 @@ typedef struct s_xdchange {
 
 
 
-int xdl_recs_cmp(diffdata_t *dd1, int64_t off1, int64_t lim1,
+int xdl_recs_cmp_vendored(diffdata_t *dd1, int64_t off1, int64_t lim1,
 		 diffdata_t *dd2, int64_t off2, int64_t lim2,
 		 int64_t *kvdf, int64_t *kvdb, int need_min, xdalgoenv_t *xenv);
-int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		xdfenv_t *xe);
-int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, int64_t flags);
-int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr);
-void xdl_free_script(xdchange_t *xscr);
+int xdl_change_compact_vendored(xdfile_t *xdf, xdfile_t *xdfo, int64_t flags);
+int xdl_build_script_vendored(xdfenv_t *xe, xdchange_t **xscr);
+void xdl_free_script_vendored(xdchange_t *xscr);
 
 #endif /* #if !defined(XDIFFI_H) */

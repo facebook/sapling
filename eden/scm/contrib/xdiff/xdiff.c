@@ -70,7 +70,7 @@ int main(int argc, char const *argv[])
 	    0, /* priv */
 	};
 
-	xdl_diff(&a, &b, &xpp, &xecfg, &ecb);
+	xdl_diff_vendored(&a, &b, &xpp, &xecfg, &ecb);
 
 	free(a.ptr);
 	free(b.ptr);

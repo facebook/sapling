@@ -40,14 +40,14 @@ int64_t xdl_bogosqrt(int64_t n) {
 }
 
 
-void *xdl_mmfile_first(mmfile_t *mmf, int64_t *size)
+void *xdl_mmfile_first_vendored(mmfile_t *mmf, int64_t *size)
 {
 	*size = mmf->size;
 	return mmf->ptr;
 }
 
 
-int64_t xdl_mmfile_size(mmfile_t *mmf)
+int64_t xdl_mmfile_size_vendored(mmfile_t *mmf)
 {
 	return mmf->size;
 }
@@ -104,7 +104,7 @@ int64_t xdl_guess_lines(mmfile_t *mf, int64_t sample) {
 	int64_t nl = 0, size, tsize = 0;
 	char const *data, *cur, *top;
 
-	if ((cur = data = xdl_mmfile_first(mf, &size)) != NULL) {
+	if ((cur = data = xdl_mmfile_first_vendored(mf, &size)) != NULL) {
 		for (top = data + size; nl < sample && cur < top; ) {
 			nl++;
 			if (!(cur = memchr(cur, '\n', top - cur)))
@@ -116,7 +116,7 @@ int64_t xdl_guess_lines(mmfile_t *mf, int64_t sample) {
 	}
 
 	if (nl && tsize)
-		nl = xdl_mmfile_size(mf) / (tsize / nl);
+		nl = xdl_mmfile_size_vendored(mf) / (tsize / nl);
 
 	return nl + 1;
 }

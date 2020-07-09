@@ -102,7 +102,7 @@ where
     };
 
     unsafe {
-        ffi::xdl_diff(&mut old_mmfile, &mut new_mmfile, &xpp, &xecfg, &mut ecb);
+        ffi::xdl_diff_vendored(&mut old_mmfile, &mut new_mmfile, &xpp, &xecfg, &mut ecb);
     }
     return result;
 }

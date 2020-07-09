@@ -52,7 +52,7 @@ static PyObject* blocks(PyObject* self, PyObject* args) {
       rl, /* priv */
   };
 
-  if (xdl_diff(&a, &b, &xpp, &xecfg, &ecb) != 0) {
+  if (xdl_diff_vendored(&a, &b, &xpp, &xecfg, &ecb) != 0) {
     Py_DECREF(rl);
     return PyErr_NoMemory();
   }

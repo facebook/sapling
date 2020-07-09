@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-// A small subset of xdiff bindings that is just enough to run xdl_diff
+// A small subset of xdiff bindings that is just enough to run xdl_diff_vendored
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
@@ -19,7 +19,7 @@ mod tests {
     use std::os::raw::{c_char, c_int, c_void};
 
     #[test]
-    fn test_xdl_diff() {
+    fn test_xdl_diff_vendored() {
         extern "C" fn hunk_func(a1: i64, a2: i64, b1: i64, b2: i64, _priv: *mut c_void) -> c_int {
             let mut _priv = unsafe { (_priv as *mut Vec<(i64, i64, i64, i64)>).as_mut() };
             if let Some(result) = _priv {
@@ -49,7 +49,7 @@ mod tests {
         };
 
         unsafe {
-            xdl_diff(&mut a_mmfile, &mut b_mmfile, &xpp, &xecfg, &mut ecb);
+            xdl_diff_vendored(&mut a_mmfile, &mut b_mmfile, &xpp, &xecfg, &mut ecb);
         }
         assert_eq!(result, [(1, 1, 1, 0), (4, 0, 3, 1)]);
     }

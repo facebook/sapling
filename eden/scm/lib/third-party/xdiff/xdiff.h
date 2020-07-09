@@ -71,10 +71,10 @@ typedef struct s_xdemitconf {
 #define xdl_free(ptr) free(ptr)
 #define xdl_realloc(ptr,x) realloc(ptr,x)
 
-void *xdl_mmfile_first(mmfile_t *mmf, int64_t *size);
-int64_t xdl_mmfile_size(mmfile_t *mmf);
+void *xdl_mmfile_first_vendored(mmfile_t *mmf, int64_t *size);
+int64_t xdl_mmfile_size_vendored(mmfile_t *mmf);
 
-int xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int xdl_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb);
 
 #ifdef __cplusplus
