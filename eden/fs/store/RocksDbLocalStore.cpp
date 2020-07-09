@@ -59,32 +59,56 @@ rocksdb::ColumnFamilyOptions makeColumnOptions(uint64_t LRUblockCacheSizeMB) {
  * The different key spaces that we desire.
  * The ordering is coupled with the values of the KeySpace enum.
  */
-const std::vector<rocksdb::ColumnFamilyDescriptor>& columnFamilies() {
-  auto makeColumnFamilyDescriptors = [] {
-    // Most of the column families will share the same cache.  We
-    // want the blob data to live in its own smaller cache; the assumption
-    // is that the vfs cache will compensate for that, together with the
-    // idea that we shouldn't need to materialize a great many files.
-    auto options = makeColumnOptions(64);
-    auto blobOptions = makeColumnOptions(8);
+const std::vector<rocksdb::ColumnFamilyDescriptor> columnFamilies(
+    const rocksdb::DBOptions& db_options,
+    const std::string& name) {
+  // Most of the column families will share the same cache.  We
+  // want the blob data to live in its own smaller cache; the assumption
+  // is that the vfs cache will compensate for that, together with the
+  // idea that we shouldn't need to materialize a great many files.
+  auto options = makeColumnOptions(64);
+  auto blobOptions = makeColumnOptions(8);
 
-    // Meyers singleton to avoid SIOF issues
-    std::vector<rocksdb::ColumnFamilyDescriptor> families;
-    for (auto& ks : KeySpace::kAll) {
-      families.emplace_back(
-          ks->name.str(),
-          (ks->index == KeySpace::BlobFamily.index) ? blobOptions : options);
+  // We have to open all column families that currenly exists in our RocksDb.
+  // Else we will get "Invalid argument: You have to open all column
+  // families." when we try to open the DB. This tracks if there are any
+  // pre-existing column families that we don't open (may be the cause if we
+  // delete a column family from KeySpace or need to roll back from a version
+  // that added a column family.)
+  std::vector<std::string> oldUnopenedColumnFamilies{};
+  rocksdb::DB::ListColumnFamilies(db_options, name, &oldUnopenedColumnFamilies);
+
+  std::vector<rocksdb::ColumnFamilyDescriptor> families;
+  for (auto& ks : KeySpace::kAll) {
+    families.emplace_back(
+        ks->name.str(),
+        (ks->index == KeySpace::BlobFamily.index) ? blobOptions : options);
+    auto oldFamily = find(
+        oldUnopenedColumnFamilies.begin(),
+        oldUnopenedColumnFamilies.end(),
+        ks->name.str());
+    if (oldFamily != oldUnopenedColumnFamilies.end()) {
+      oldUnopenedColumnFamilies.erase(oldFamily);
     }
-    // Put the default column family last.
-    // This way the KeySpace enum values can be used directly as indexes
-    // into our column family vectors.
-    families.emplace_back(rocksdb::kDefaultColumnFamilyName, options);
-    return families;
-  };
+  }
+  // Put the default column family after the defined KeySpace values.
+  // This way the KeySpace enum values can be used directly as indexes
+  // into our column family vectors.
+  families.emplace_back(rocksdb::kDefaultColumnFamilyName, options);
+  auto oldFamily = find(
+      oldUnopenedColumnFamilies.begin(),
+      oldUnopenedColumnFamilies.end(),
+      rocksdb::kDefaultColumnFamilyName);
+  if (oldFamily != oldUnopenedColumnFamilies.end()) {
+    oldUnopenedColumnFamilies.erase(oldFamily);
+  }
 
-  // Meyers singleton to avoid SIOF issues
-  static const std::vector<rocksdb::ColumnFamilyDescriptor> families =
-      makeColumnFamilyDescriptors();
+  // add any column families we missed with our default options;
+  // we have to open them but otherwise we don't care about them
+  for (auto& family : oldUnopenedColumnFamilies) {
+    families.emplace_back(family, options);
+  }
+
   return families;
 }
 
@@ -222,8 +246,10 @@ rocksdb::Options getRocksdbOptions() {
 
 RocksHandles openDB(AbsolutePathPiece path, RocksDBOpenMode mode) {
   auto options = getRocksdbOptions();
+  const auto columnDescriptors =
+      columnFamilies(rocksdb::DBOptions{options}, path.stringPiece().str());
   try {
-    return RocksHandles(path.stringPiece(), mode, options, columnFamilies());
+    return RocksHandles(path.stringPiece(), mode, options, columnDescriptors);
   } catch (const RocksException& ex) {
     XLOG(ERR) << "Error opening RocksDB storage at " << path << ": "
               << ex.what();
@@ -237,7 +263,7 @@ RocksHandles openDB(AbsolutePathPiece path, RocksDBOpenMode mode) {
   RocksDbLocalStore::repairDB(path);
 
   // Now try opening the DB again.
-  return RocksHandles(path.stringPiece(), mode, options, columnFamilies());
+  return RocksHandles(path.stringPiece(), mode, options, columnDescriptors);
 }
 
 } // namespace
@@ -278,10 +304,12 @@ void RocksDbLocalStore::repairDB(AbsolutePathPiece path) {
   unknownColumFamilyOptions.OptimizeForPointLookup(8);
   unknownColumFamilyOptions.OptimizeLevelStyleCompaction();
 
-  const auto& columnDescriptors = columnFamilies();
-
   auto dbPathStr = path.stringPiece().str();
   rocksdb::DBOptions dbOptions(getRocksdbOptions());
+
+  const auto columnDescriptors =
+      columnFamilies(dbOptions, path.stringPiece().str());
+
   auto status = RepairDB(
       dbPathStr, dbOptions, columnDescriptors, unknownColumFamilyOptions);
   if (!status.ok()) {
