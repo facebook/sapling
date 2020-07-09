@@ -142,6 +142,7 @@ coreconfigitem("blackbox", "maxfiles", default=3)
 coreconfigitem("bookmarks", "pushing", default=list)
 # bundle.mainreporoot: internal hack for bundlerepo
 coreconfigitem("bundle", "mainreporoot", default="")
+coreconfigitem("bundle2", "rechunkthreshold", default="1MB")
 # bundle.reorder: experimental config
 coreconfigitem("bundle", "reorder", default="auto")
 coreconfigitem("censor", "policy", default="abort")

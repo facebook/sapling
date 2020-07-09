@@ -1197,7 +1197,7 @@ class bundlepart(object):
         yield headerchunk
         ## payload
         try:
-            for chunk in self._payloadchunks():
+            for chunk in self._payloadchunks(ui):
                 outdebug(ui, "payload chunk size: %i" % len(chunk))
                 yield _pack(_fpayloadsize, len(chunk))
                 yield chunk
@@ -1227,25 +1227,31 @@ class bundlepart(object):
         yield _pack(_fpayloadsize, 0)
         self._generated = True
 
-    def _payloadchunks(self):
+    def _payloadchunks(self, ui):
         # type: () -> Iterable[bytes]
         """yield chunks of a the part payload
 
         Exists to handle the different methods to provide data to a part."""
-        # we only support fixed size data now.
-        # This will be improved in the future.
-        if util.safehasattr(self.data, "next") or util.safehasattr(
-            self.data, "__next__"
-        ):
-            buff = util.chunkbuffer(self.data)
+        data = self.data
+
+        # If data is a large blob, let's convert it to chunks so the chunkbuffer
+        # below will split it into smaller chunks.
+        chunkthreshold = ui.configbytes("bundle2", "rechunkthreshold")
+        if isinstance(data, bytes) and len(data) > chunkthreshold:
+            data = iter([self.data])
+
+        if util.safehasattr(data, "next") or util.safehasattr(data, "__next__"):
+            buff = util.chunkbuffer(data)
             chunk = buff.read(preferedchunksize)
             while chunk:
                 assert isinstance(chunk, bytes)
                 yield chunk
                 chunk = buff.read(preferedchunksize)
-        elif len(self.data):
-            assert isinstance(self.data, bytes)
-            yield self.data
+        # pyre-fixme[6]: Expected `Sized` for 1st param but got
+        #  `Union[typing.Iterator[bytes], bytes]`.
+        elif len(data):
+            assert isinstance(data, bytes)
+            yield data
 
 
 flaginterrupt = -1
