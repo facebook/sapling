@@ -993,7 +993,7 @@ Test list of internal help commands
                  retrieves a bundle from a repo
    debuggetroottree
                  (no help text available)
-   debughttp     check whether api server is reachable
+   debughttp     check whether the EdenAPI server is reachable
    debugignore   display the combined ignore pattern and information about
                  ignored files
    debugindex    dump the contents of an index file

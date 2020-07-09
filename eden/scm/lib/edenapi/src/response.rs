@@ -7,10 +7,12 @@
 
 use std::pin::Pin;
 
+use anyhow::Context;
 use futures::prelude::*;
 use http::{HeaderMap, StatusCode, Version};
+use tokio::runtime::Runtime;
 
-use http_client::{AsyncResponse, Response, StatsFuture};
+use http_client::{AsyncResponse, Response, Stats, StatsFuture};
 
 use crate::errors::EdenApiError;
 
@@ -40,6 +42,37 @@ pub struct Fetch<T> {
     /// all of the HTTP requests involved in the fetching operation. Will
     /// only resolve once all of the requests have completed.
     pub stats: StatsFuture,
+}
+
+/// Non-async version of `Fetch`.
+pub struct BlockingFetch<T> {
+    pub meta: Vec<ResponseMeta>,
+    pub entries: Vec<T>,
+    pub stats: Stats,
+}
+
+impl<T> BlockingFetch<T> {
+    pub(crate) fn from_async<F>(fetch: F) -> Result<Self, EdenApiError>
+    where
+        F: Future<Output = Result<Fetch<T>, EdenApiError>>,
+    {
+        let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
+
+        let Fetch {
+            meta,
+            entries,
+            stats,
+        } = rt.block_on(fetch)?;
+
+        let entries = rt.block_on(entries.try_collect())?;
+        let stats = rt.block_on(stats)?;
+
+        Ok(Self {
+            meta,
+            entries,
+            stats,
+        })
+    }
 }
 
 /// Metadata extracted from the headers of an individual HTTP response.

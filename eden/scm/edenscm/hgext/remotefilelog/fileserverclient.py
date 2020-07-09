@@ -33,7 +33,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid
 
-from . import constants, edenapi, shallowutil, wirepack
+from . import constants, shallowutil, wirepack
 from .contentstore import unioncontentstore
 from .lz4wrapper import lz4decompress
 from .metadatastore import unionmetadatastore

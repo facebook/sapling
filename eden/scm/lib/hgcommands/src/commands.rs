@@ -18,7 +18,7 @@ use tempfile::tempfile_in;
 
 use blackbox::{event::Event, json, SessionId};
 use dynamicconfig::Generator;
-use edenapi_old::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
+use edenapi::EdenApiBlocking;
 use revisionstore::{
     CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, UnionHgIdDataStore,
 };
@@ -71,7 +71,7 @@ pub fn table() -> CommandTable {
     table.register(
         debughttp,
         "debughttp",
-        "check whether api server is reachable",
+        "check whether the EdenAPI server is reachable",
     );
     table.register(
         debugdynamicconfig,
@@ -287,10 +287,9 @@ pub fn debugindexedlogrepair(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
 }
 
 pub fn debughttp(_opts: NoOpts, io: &mut IO, repo: Repo) -> Result<u8> {
-    let config = EdenApiConfig::from_hg_config(repo.config())?;
-    let client = EdenApiCurlClient::new(config)?;
-    let hostname = client.hostname()?;
-    io.write(format!("successfully connected to: {}\n", hostname))?;
+    let client = edenapi::Builder::from_config(repo.config())?.build()?;
+    let meta = client.health_blocking()?;
+    io.write(format!("{:#?}\n", &meta))?;
     Ok(0)
 }
 
