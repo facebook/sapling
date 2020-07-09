@@ -11,6 +11,7 @@ use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use context::{CoreContext, PerfCounterType};
 use futures::compat::Future01CompatExt;
+use futures::future;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{DateTime, RepositoryId};
 use slog::debug;
@@ -349,10 +350,11 @@ impl SqlHgMutationStore {
     ) -> Result<()> {
         let to_fetch: Vec<_> = changesets
             .iter()
+            .cloned()
             .filter(|hg_cs_id| !entry_set.entries.contains_key(hg_cs_id))
             .collect();
         if !to_fetch.is_empty() {
-            let rows = SelectBySuccessorRef::query(connection, &self.repo_id, to_fetch.as_slice())
+            let rows = SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice())
                 .compat()
                 .await?;
             self.collect_entries(connection, entry_set, rows).await?;
@@ -378,13 +380,17 @@ impl SqlHgMutationStore {
                 break;
             }
             let to_fetch: Vec<_> = to_fetch.into_iter().collect();
-            let rows = SelectByPrimordialOrSuccessor::query(
-                connection,
-                &self.repo_id,
-                to_fetch.as_slice(),
+            // Fetch by both primordial ID and successor ID.  This includes
+            // mutation entries which extend the history of a commit backwards
+            // beyond the original primordial.
+            let (primordial_rows, successor_rows) = future::try_join(
+                SelectByPrimordial::query(connection, &self.repo_id, to_fetch.as_slice()).compat(),
+                SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice()).compat(),
             )
-            .compat()
             .await?;
+            let rows = primordial_rows
+                .into_iter()
+                .chain(successor_rows.into_iter());
             self.collect_entries(connection, entry_set, rows).await?;
             fetched_primordials.extend(to_fetch);
         }
@@ -617,7 +623,7 @@ queries! {
         WHERE repo_id = {repo_id} AND changeset_id IN {cs_id}"
     }
 
-    read SelectBySuccessorRef(repo_id: RepositoryId, >list cs_id: &HgChangesetId) -> (
+    read SelectBySuccessor(repo_id: RepositoryId, >list cs_id: HgChangesetId) -> (
         HgChangesetId,
         HgChangesetId,
         u64,
@@ -643,7 +649,7 @@ queries! {
         ORDER BY m.successor, p.seq ASC"
     }
 
-    read SelectByPrimordialOrSuccessor(repo_id: RepositoryId, >list cs_id: HgChangesetId) -> (
+    read SelectByPrimordial(repo_id: RepositoryId, >list cs_id: HgChangesetId) -> (
         HgChangesetId,
         HgChangesetId,
         u64,
@@ -665,7 +671,7 @@ queries! {
         FROM
             hg_mutation_info m LEFT JOIN hg_mutation_preds p
             ON m.repo_id = p.repo_id AND m.successor = p.successor
-        WHERE m.repo_id = {repo_id} AND (m.primordial IN {cs_id} OR m.successor IN {cs_id})
+        WHERE m.repo_id = {repo_id} AND m.primordial IN {cs_id}
         ORDER BY m.successor, p.seq ASC"
     }
 
