@@ -74,12 +74,9 @@ def _initclient(ui, repo):
         "url": url,
         "repo": repo.name,
         "creds": _getcreds(ui, url),
-        "databatchsize": ui.configint("edenapi", "databatchsize"),
-        "historybatchsize": ui.configint("edenapi", "historybatchsize"),
-        "validate": ui.configbool("edenapi", "validate"),
-        "streamdata": ui.configbool("edenapi", "streamdata"),
-        "streamhistory": ui.configbool("edenapi", "streamhistory"),
-        "streamtrees": ui.configbool("edenapi", "streamtrees"),
+        "maxfiles": ui.configint("edenapi", "maxfiles"),
+        "maxhistory": ui.configint("edenapi", "maxhistory"),
+        "maxtrees": ui.configint("edenapi", "maxtrees"),
     }
     return edenapi.client(**kwargs)
 
