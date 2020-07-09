@@ -11,17 +11,18 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, stream, StreamExt, TryStreamExt};
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures::{compat::Future01CompatExt, stream, StreamExt, TryFutureExt, TryStreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
+use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
 };
 use thiserror::Error;
 
-pub mod derive_impl;
+mod derive_impl;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Mode {
@@ -76,15 +77,12 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     ///
     /// This function fails immediately if this type of derived data is not enabled for this repo.
     fn derive(ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<Self, DeriveError> {
+        try_boxfuture!(Self::check_if_derivation_allowed(
+            &repo,
+            Mode::OnlyIfEnabled
+        ));
         let mapping = Self::mapping(&ctx, &repo);
-        derive_impl::derive_impl::<Self, Self::Mapping>(
-            ctx,
-            repo,
-            mapping,
-            csid,
-            Mode::OnlyIfEnabled,
-        )
-        .boxify()
+        derive_impl::derive_impl::<Self, Self::Mapping>(ctx, repo, mapping, csid).boxify()
     }
 
     /// Derives derived data even if it's disabled in the config. Should normally
@@ -95,8 +93,9 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         csid: ChangesetId,
         mode: Mode,
     ) -> BoxFuture<Self, DeriveError> {
+        try_boxfuture!(Self::check_if_derivation_allowed(&repo, mode));
         let mapping = Self::mapping(&ctx, &repo);
-        derive_impl::derive_impl::<Self, Self::Mapping>(ctx, repo, mapping, csid, mode).boxify()
+        derive_impl::derive_impl::<Self, Self::Mapping>(ctx, repo, mapping, csid).boxify()
     }
 
     /// Returns min(number of ancestors of `csid` to be derived, `limit`)
@@ -109,13 +108,13 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         limit: u64,
     ) -> Result<u64, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
+        Self::check_if_derivation_allowed(repo, Mode::OnlyIfEnabled)?;
         let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping>(
             ctx,
             repo,
             &mapping,
             csid,
             Some(limit),
-            Mode::OnlyIfEnabled,
         )
         .await?;
         Ok(underived.len() as u64)
@@ -127,13 +126,9 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         csid: &ChangesetId,
     ) -> Result<Vec<ChangesetId>, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
+        Self::check_if_derivation_allowed(repo, Mode::OnlyIfEnabled)?;
         let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping>(
-            ctx,
-            repo,
-            &mapping,
-            csid,
-            None,
-            Mode::OnlyIfEnabled,
+            ctx, repo, &mapping, csid, None,
         )
         .await?;
         Ok(underived)
@@ -148,26 +143,62 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         Ok(count == 0)
     }
 
+    fn check_if_derivation_allowed(repo: &BlobRepo, mode: Mode) -> Result<(), DeriveError> {
+        if mode == Mode::OnlyIfEnabled {
+            if !repo
+                .get_derived_data_config()
+                .derived_data_types
+                .contains(Self::NAME)
+            {
+                derive_impl::STATS::derived_data_disabled
+                    .add_value(1, (repo.get_repoid().id(), Self::NAME));
+                return Err(DeriveError::Disabled(Self::NAME, repo.get_repoid()));
+            }
+        }
+        Ok(())
+    }
+
     /// This method might be overridden by BonsaiDerived implementors if there's a more efficienta
     /// way to derive a batch of commits
-    async fn batch_derive<'a, Iter>(
+    async fn batch_derive<'a, Iter, M>(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Iter,
-    ) -> Result<HashMap<ChangesetId, Self>, Error>
+        mapping: &M,
+        mode: Mode,
+    ) -> Result<HashMap<ChangesetId, Self>, DeriveError>
     where
         Iter: IntoIterator<Item = ChangesetId> + Send,
         Iter::IntoIter: Send,
+        M: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
+    {
+        Self::check_if_derivation_allowed(repo, mode)?;
+        Self::batch_derive_impl(ctx, repo, csids, mapping).await
+    }
+
+    async fn batch_derive_impl<'a, Iter, M>(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csids: Iter,
+        mapping: &M,
+    ) -> Result<HashMap<ChangesetId, Self>, DeriveError>
+    where
+        Iter: IntoIterator<Item = ChangesetId> + Send,
+        Iter::IntoIter: Send,
+        M: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
         let iter = csids.into_iter();
         stream::iter(iter.map(|cs_id| async move {
-            let derived = Self::derive(ctx.clone(), repo.clone(), cs_id)
-                .compat()
-                .await?;
+            let derived =
+                derive_impl::derive_impl(ctx.clone(), repo.clone(), mapping.clone(), cs_id)
+                    .compat()
+                    .await?;
+
             Ok((cs_id, derived))
         }))
         .buffered(100)
         .try_collect::<HashMap<_, _>>()
+        .map_err(DeriveError::Error)
         .await
     }
 }

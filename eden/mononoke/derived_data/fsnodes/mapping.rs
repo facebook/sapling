@@ -13,7 +13,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::{BonsaiDerived, BonsaiDerivedMapping, DeriveError};
 use futures::{
     compat::Future01CompatExt, stream as new_stream, StreamExt as NewStreamExt, TryFutureExt,
     TryStreamExt,
@@ -95,19 +95,19 @@ impl BonsaiDerived for RootFsnodeId {
         .boxify()
     }
 
-    async fn batch_derive<'a, Iter>(
+    async fn batch_derive_impl<'a, Iter, M>(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Iter,
-    ) -> Result<HashMap<ChangesetId, Self>, Error>
+        mapping: &M,
+    ) -> Result<HashMap<ChangesetId, Self>, DeriveError>
     where
         Iter: IntoIterator<Item = ChangesetId> + Send,
         Iter::IntoIter: Send,
+        M: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
         let csids = csids.into_iter().collect::<Vec<_>>();
         let derived = derive_fsnode_in_batch(ctx, repo, csids.clone()).await?;
-
-        let mapping = Self::mapping(ctx, repo);
 
         new_stream::iter(derived.into_iter().map(|(cs_id, derived)| {
             let mapping = mapping.clone();
@@ -122,6 +122,7 @@ impl BonsaiDerived for RootFsnodeId {
         }))
         .buffered(100)
         .try_collect::<HashMap<_, _>>()
+        .map_err(DeriveError::Error)
         .await
     }
 }

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::{BonsaiDerived, BonsaiDerivedMapping, DeriveError, Mode};
+use crate::{BonsaiDerived, BonsaiDerivedMapping, DeriveError};
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -79,12 +79,11 @@ pub fn derive_impl<
     repo: BlobRepo,
     derived_mapping: Mapping,
     start_csid: ChangesetId,
-    mode: Mode,
 ) -> impl Future<Item = Derived, Error = DeriveError> {
     async move {
         let derivation = async {
             let all_csids =
-                find_topo_sorted_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode)
+                find_topo_sorted_underived(&ctx, &repo, &derived_mapping, &start_csid, None)
                     .await?;
 
             for csid in &all_csids {
@@ -149,18 +148,6 @@ pub fn derive_impl<
     .compat()
 }
 
-fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), DeriveError> {
-    if !repo
-        .get_derived_data_config()
-        .derived_data_types
-        .contains(Derived::NAME)
-    {
-        STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), Derived::NAME));
-        return Err(DeriveError::Disabled(Derived::NAME, repo.get_repoid()));
-    }
-    Ok(())
-}
-
 pub(crate) async fn find_topo_sorted_underived<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
@@ -170,12 +157,7 @@ pub(crate) async fn find_topo_sorted_underived<
     derived_mapping: &Mapping,
     start_csid: &ChangesetId,
     limit: Option<u64>,
-    mode: Mode,
 ) -> Result<Vec<ChangesetId>, Error> {
-    if mode == Mode::OnlyIfEnabled {
-        fail_if_disabled::<Derived>(repo)?;
-    }
-
     let changeset_fetcher = repo.get_changeset_fetcher();
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
     let visited: Arc<Mutex<HashSet<ChangesetId>>> = Arc::new(Mutex::new(HashSet::new()));
@@ -521,6 +503,7 @@ impl<Derived: BonsaiDerived> DeriveNode<Derived> {
 mod test {
     use super::*;
 
+    use crate::Mode;
     use anyhow::Error;
     use blobrepo_hg::BlobRepoHg;
     use blobrepo_override::DangerousOverride;
@@ -829,7 +812,10 @@ mod test {
                     .await?;
             // Reverse them to derive parents before children
             let cs_ids = cs_ids.clone().into_iter().rev().collect::<Vec<_>>();
-            let derived_batch = TestGenNum::batch_derive(&ctx, &repo, cs_ids).await?;
+            let mapping = TestGenNum::mapping(&ctx, &repo);
+            let derived_batch =
+                TestGenNum::batch_derive(&ctx, &repo, cs_ids, &mapping, Mode::OnlyIfEnabled)
+                    .await?;
             derived_batch
                 .get(&master_cs_id)
                 .unwrap_or_else(|| panic!("{} has not been derived", master_cs_id))
