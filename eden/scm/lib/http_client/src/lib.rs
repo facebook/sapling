@@ -15,6 +15,7 @@ mod driver;
 mod errors;
 mod handler;
 mod header;
+mod pool;
 mod progress;
 mod receiver;
 mod request;

@@ -8,13 +8,14 @@
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
 
-use curl::{easy::Easy2, multi::Multi};
+use curl::easy::Easy2;
 use futures::prelude::*;
 
 use crate::{
     driver::MultiDriver,
     errors::{Abort, HttpClientError},
     handler::{Buffered, Streaming},
+    pool::Pool,
     progress::Progress,
     receiver::{ChannelReceiver, Receiver},
     request::{Request, StreamRequest},
@@ -36,15 +37,14 @@ pub type StatsFuture =
 ///
 /// NOTE: If you do not need to perform multiple concurrent
 /// requests, you may want to use  `Request::send` instead.
+#[derive(Clone)]
 pub struct HttpClient {
-    multi: Multi,
+    pool: Pool,
 }
 
 impl HttpClient {
     pub fn new() -> Self {
-        Self {
-            multi: Multi::new(),
-        }
+        Self { pool: Pool::new() }
     }
 
     /// Perform multiple HTTP requests concurrently.
@@ -78,7 +78,8 @@ impl HttpClient {
         F: FnMut(Result<Response, HttpClientError>) -> Result<(), Abort>,
         P: FnMut(Progress),
     {
-        let driver = MultiDriver::new(&self.multi, progress_cb);
+        let multi = self.pool.multi();
+        let driver = MultiDriver::new(multi.get(), progress_cb);
 
         for request in requests {
             let handle: Easy2<Buffered> = request.try_into()?;
@@ -102,7 +103,7 @@ impl HttpClient {
     /// the headers for that responses have been received. The response body is
     /// available as a `Stream` inside of each returned `Response` struct
     pub fn send_async<I: IntoIterator<Item = Request>>(
-        self,
+        &self,
         requests: I,
     ) -> Result<(ResponseStream, StatsFuture), HttpClientError> {
         self.send_async_with_progress(requests, |_| ())
@@ -113,7 +114,7 @@ impl HttpClient {
     /// The closure will be called whenever any of the underlying
     /// transfers make progress.
     pub fn send_async_with_progress<I, P>(
-        self,
+        &self,
         requests: I,
         progress_cb: P,
     ) -> Result<(ResponseStream, StatsFuture), HttpClientError>
@@ -121,7 +122,7 @@ impl HttpClient {
         I: IntoIterator<Item = Request>,
         P: FnMut(Progress) + Send + 'static,
     {
-        let client = self;
+        let client = self.clone();
 
         let mut stream_requests = Vec::new();
         let response_stream = stream::FuturesUnordered::new();
@@ -176,7 +177,8 @@ impl HttpClient {
         R: Receiver,
         P: FnMut(Progress),
     {
-        let driver = MultiDriver::new(&self.multi, progress_cb);
+        let multi = self.pool.multi();
+        let driver = MultiDriver::new(multi.get(), progress_cb);
 
         for request in requests {
             let handle: Easy2<Streaming<R>> = request.try_into()?;
@@ -186,28 +188,6 @@ impl HttpClient {
         driver.perform(report_result_and_drop_receiver)
     }
 }
-
-/// From [libcurl's documentation][1]:
-///
-/// > You must never share the same handle in multiple threads. You can pass the
-/// > handles around among threads, but you must never use a single handle from
-/// > more than one thread at any given time.
-///
-/// `curl::Multi` does not implement `Send` or `Sync` because of the above
-/// constraints. In particular, it is not `Sync` because libcurl has no
-/// internal synchronization, and it is not `Send` because a single Multi
-/// session can only be used to drive transfers from a single thread at
-/// any one time.
-///
-/// In this case, all usage of the `Multi` session to drive a collection of
-/// transfers is confined to an individual call to `HttpClient::send`. All
-/// of the transfer handles are created, driven to completion, and removed
-/// from the `Multi` session within that single call. As such, the client
-/// maintains the invariant that the `Multi` session contains no transfers
-/// outside of a `send` call, so it can be safely sent across threads.
-///
-/// [1]: https://curl.haxx.se/libcurl/c/threadsafe.html
-unsafe impl Send for HttpClient {}
 
 /// Callback for `MultiDriver::perform` when working with
 /// a `Streaming` handler. Reports the result of the
