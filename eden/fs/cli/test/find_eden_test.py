@@ -14,6 +14,7 @@ from typing import Optional, Union
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .. import config as config_mod
+from ..util import resolve_path
 
 
 class CheckoutInfo:
@@ -66,7 +67,7 @@ class CheckoutInfo:
 
 class FindEdenTest(unittest.TestCase, TemporaryDirectoryMixin):
     def setUp(self) -> None:
-        self._tmp_path = Path(self.make_temporary_directory()).resolve()
+        self._tmp_path = resolve_path(Path(self.make_temporary_directory()))
         self._home_dir = self._tmp_path.joinpath("home")
         self._home_dir.mkdir()
         self._etc_eden_dir = self._tmp_path.joinpath("etc_eden")

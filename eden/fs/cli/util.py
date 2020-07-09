@@ -616,7 +616,7 @@ def write_file_atomically(path: Path, contents: bytes) -> None:
         raise
 
 
-def resolve_path(path: Path, strict: bool) -> Path:
+def resolve_path(path: Path, strict: bool = False) -> Path:
     """
     Python 3.6 on Windows has use of uninitialized memory bug in
     `Path.resolve`. This is a helper method to work around that by using

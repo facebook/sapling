@@ -758,7 +758,7 @@ class EdenCheckout:
         correctly resolve an input path of "/data/user/foo/eden_checkout/test"
         """
         if not already_resolved:
-            path = path.resolve(strict=False)
+            path = resolve_path(path, strict=False)
 
         # First try using path.relative_to()
         # This should work in the common case
@@ -934,7 +934,7 @@ def find_eden(
     if isinstance(path, str):
         path = Path(path)
 
-    path = path.resolve(strict=False)
+    path = resolve_path(path, strict=False)
 
     # First check to see if this looks like a mounted checkout
     eden_state_dir = None
