@@ -14,6 +14,7 @@ use env_logger::Env;
 use futures::prelude::*;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Serialize;
+use serde_json::Deserializer;
 use structopt::StructOpt;
 use tokio::prelude::*;
 
@@ -54,9 +55,7 @@ struct Args {
 struct Setup<R> {
     repo: RepoName,
     client: Client,
-    req: R,
-    bar: ProgressBar,
-    cb: ProgressCallback,
+    requests: Vec<R>,
 }
 
 impl<R: FromJson + Debug> Setup<R> {
@@ -64,17 +63,12 @@ impl<R: FromJson + Debug> Setup<R> {
     fn from_args(args: Args) -> Result<Self> {
         let repo = args.repo.parse()?;
         let client = init_client(args.config)?;
-        let req: R = read_request()?;
-        let (bar, cb) = progress_bar();
-
-        log::trace!("{:?}", &req);
+        let requests: Vec<R> = read_requests()?;
 
         Ok(Self {
             repo,
             client,
-            req,
-            bar,
-            cb,
+            requests,
         })
     }
 }
@@ -103,82 +97,87 @@ async fn cmd_files(args: Args) -> Result<()> {
     let Setup {
         repo,
         client,
-        req,
-        bar,
-        cb,
+        requests,
     } = <Setup<DataRequest>>::from_args(args)?;
 
-    log::info!(
-        "Requesting content for {} files in repo {}",
-        req.keys.len(),
-        &repo
-    );
+    for req in requests {
+        log::info!("Requesting content for {} files", req.keys.len(),);
 
-    let response = client.files(repo, req.keys, Some(cb)).await?;
-    handle_response(response, bar).await
+        let (bar, cb) = progress_bar();
+        let response = client.files(repo.clone(), req.keys, Some(cb)).await?;
+        handle_response(response, bar).await?;
+    }
+
+    Ok(())
 }
 
 async fn cmd_history(args: Args) -> Result<()> {
     let Setup {
         repo,
         client,
-        req,
-        bar,
-        cb,
+        requests,
     } = <Setup<HistoryRequest>>::from_args(args)?;
 
-    log::info!(
-        "Requesting history for {} files in repo {}",
-        req.keys.len(),
-        &repo
-    );
+    for req in requests {
+        log::info!("Requesting history for {} files", req.keys.len(),);
 
-    let res = client.history(repo, req.keys, req.length, Some(cb)).await?;
-    handle_response(res, bar).await
+        let (bar, cb) = progress_bar();
+        let res = client
+            .history(repo.clone(), req.keys, req.length, Some(cb))
+            .await?;
+        handle_response(res, bar).await?;
+    }
+
+    Ok(())
 }
 
 async fn cmd_trees(args: Args) -> Result<()> {
     let Setup {
         repo,
         client,
-        req,
-        bar,
-        cb,
+        requests,
     } = <Setup<DataRequest>>::from_args(args)?;
 
-    log::info!("Requesting {} tree nodes in repo {}", req.keys.len(), &repo);
-    log::trace!("{:?}", &req);
+    for req in requests {
+        log::info!("Requesting {} tree nodes", req.keys.len());
+        log::trace!("{:?}", &req);
 
-    let res = client.trees(repo, req.keys, Some(cb)).await?;
-    handle_response(res, bar).await
+        let (bar, cb) = progress_bar();
+        let res = client.trees(repo.clone(), req.keys, Some(cb)).await?;
+        handle_response(res, bar).await?;
+    }
+
+    Ok(())
 }
 
 async fn cmd_complete_trees(args: Args) -> Result<()> {
     let Setup {
         repo,
         client,
-        req,
-        bar,
-        cb,
+        requests,
     } = <Setup<CompleteTreeRequest>>::from_args(args)?;
 
-    log::info!(
-        "Requesting complete trees under {} root(s) in repo '{}'",
-        req.mfnodes.len(),
-        &repo
-    );
+    for req in requests {
+        log::info!(
+            "Requesting complete trees under {} root(s)",
+            req.mfnodes.len(),
+        );
 
-    let res = client
-        .complete_trees(
-            repo,
-            req.rootdir,
-            req.mfnodes,
-            req.basemfnodes,
-            req.depth,
-            Some(cb),
-        )
-        .await?;
-    handle_response(res, bar).await
+        let (bar, cb) = progress_bar();
+        let res = client
+            .complete_trees(
+                repo.clone(),
+                req.rootdir,
+                req.mfnodes,
+                req.basemfnodes,
+                req.depth,
+                Some(cb),
+            )
+            .await?;
+        handle_response(res, bar).await?;
+    }
+
+    Ok(())
 }
 
 /// Handle the incoming deserialized response by reserializing it
@@ -240,10 +239,12 @@ fn load_config(path: Option<PathBuf>) -> Result<ConfigSet> {
     }
 }
 
-fn read_request<R: FromJson>() -> Result<R> {
-    log::info!("Reading request as JSON from stdin...");
-    let json = serde_json::from_reader(stdin())?;
-    R::from_json(&json)
+fn read_requests<R: FromJson>() -> Result<Vec<R>> {
+    log::info!("Reading requests as JSON from stdin...");
+    Deserializer::from_reader(stdin())
+        .into_iter()
+        .map(|json| Ok(R::from_json(&json?)?))
+        .collect()
 }
 
 fn progress_bar() -> (ProgressBar, ProgressCallback) {
