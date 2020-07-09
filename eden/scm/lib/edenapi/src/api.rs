@@ -18,7 +18,7 @@ use crate::response::{Fetch, ResponseMeta};
 pub type ProgressCallback = Box<dyn FnMut(Progress) + Send + 'static>;
 
 #[async_trait]
-pub trait EdenApi: Send + 'static {
+pub trait EdenApi: Send + Sync + 'static {
     async fn health(&self) -> Result<ResponseMeta, EdenApiError>;
 
     async fn files(

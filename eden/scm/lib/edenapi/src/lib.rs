@@ -24,4 +24,4 @@ pub use crate::name::RepoName;
 pub use crate::response::{BlockingFetch, Entries, Fetch, ResponseMeta};
 
 // Re-export for convenience.
-pub use http_client::Progress;
+pub use http_client::{Progress, Stats};

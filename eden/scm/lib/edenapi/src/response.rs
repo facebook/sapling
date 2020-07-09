@@ -76,7 +76,7 @@ impl<T> BlockingFetch<T> {
 }
 
 /// Metadata extracted from the headers of an individual HTTP response.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ResponseMeta {
     pub version: Version,
     pub status: StatusCode,

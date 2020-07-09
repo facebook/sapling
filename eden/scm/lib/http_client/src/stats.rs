@@ -7,7 +7,7 @@
 
 use std::{fmt, time::Duration};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Stats {
     pub downloaded: usize,
     pub uploaded: usize,

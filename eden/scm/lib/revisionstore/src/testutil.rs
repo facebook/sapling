@@ -5,15 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, path::Path, sync::Arc, time::Duration};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
+use async_trait::async_trait;
 use bytes::Bytes;
+use futures::prelude::*;
 
 use configparser::config::ConfigSet;
-use edenapi_old::{ApiResult, DownloadStats, EdenApi, ProgressFn};
-use edenapi_types::HistoryEntry;
-use types::{HgId, Key, NodeInfo, RepoPathBuf};
+use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, RepoName, ResponseMeta, Stats};
+use edenapi_types::{DataEntry, HistoryEntry};
+use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
 
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
@@ -182,71 +184,65 @@ impl FakeEdenApi {
     pub fn new(map: HashMap<Key, Bytes>) -> FakeEdenApi {
         Self { map }
     }
-
-    fn fake_downloadstats(&self) -> DownloadStats {
-        DownloadStats {
-            downloaded: 0,
-            uploaded: 0,
-            requests: 0,
-            time: Duration::from_secs(0),
-            latency: Duration::from_secs(0),
-        }
-    }
 }
 
+#[async_trait]
 impl EdenApi for FakeEdenApi {
-    fn health_check(&self) -> ApiResult<()> {
-        Ok(())
+    async fn health(&self) -> Result<ResponseMeta, EdenApiError> {
+        Ok(ResponseMeta::default())
     }
 
-    fn hostname(&self) -> ApiResult<String> {
-        Ok("test".to_string())
-    }
-
-    fn get_files(
+    async fn files(
         &self,
+        _repo: RepoName,
         keys: Vec<Key>,
-        _progress: Option<ProgressFn>,
-    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
-        let stats = self.fake_downloadstats();
-        let iter = keys
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<DataEntry>, EdenApiError> {
+        let entries = keys
             .into_iter()
             .map(|key| {
-                self.map
-                    .get(&key)
-                    .ok_or_else(|| "Not found".into())
-                    .map(|data| (key, data.clone()))
+                let data = self.map.get(&key).context("Not found")?.clone();
+                let parents = Parents::default();
+                Ok(DataEntry::new(key, data, parents))
             })
-            .collect::<ApiResult<Vec<(Key, Bytes)>>>()?;
-        Ok((Box::new(iter.into_iter()), stats))
+            .collect::<Vec<_>>();
+
+        Ok(Fetch {
+            meta: vec![ResponseMeta::default()],
+            entries: Box::pin(stream::iter(entries)),
+            stats: Box::pin(future::ok(Stats::default())),
+        })
     }
 
-    fn get_history(
+    async fn history(
         &self,
+        _repo: RepoName,
         _keys: Vec<Key>,
-        _max_depth: Option<u32>,
-        _progress: Option<ProgressFn>,
-    ) -> ApiResult<(Box<dyn Iterator<Item = HistoryEntry>>, DownloadStats)> {
-        unreachable!();
+        _length: Option<u32>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<HistoryEntry>, EdenApiError> {
+        unimplemented!()
     }
 
-    fn get_trees(
+    async fn trees(
         &self,
+        _repo: RepoName,
         _keys: Vec<Key>,
-        _progress: Option<ProgressFn>,
-    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
-        unreachable!();
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<DataEntry>, EdenApiError> {
+        unimplemented!()
     }
 
-    fn prefetch_trees(
+    async fn complete_trees(
         &self,
+        _repo: RepoName,
         _rootdir: RepoPathBuf,
         _mfnodes: Vec<HgId>,
         _basemfnodes: Vec<HgId>,
         _depth: Option<usize>,
-        _progress: Option<ProgressFn>,
-    ) -> ApiResult<(Box<dyn Iterator<Item = (Key, Bytes)>>, DownloadStats)> {
-        unreachable!();
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<DataEntry>, EdenApiError> {
+        unimplemented!()
     }
 }
 

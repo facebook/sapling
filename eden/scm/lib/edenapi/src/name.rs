@@ -8,7 +8,10 @@
 use std::fmt;
 use std::str::FromStr;
 
+use anyhow::Error;
 use ascii::{AsAsciiStr, AsciiString};
+
+use configparser::hg::FromConfigValue;
 
 use crate::errors::EdenApiError;
 
@@ -46,6 +49,12 @@ impl AsRef<str> for RepoName {
 impl fmt::Display for RepoName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl FromConfigValue for RepoName {
+    fn try_from_str(s: &str) -> Result<Self, Error> {
+        Ok(s.parse()?)
     }
 }
 

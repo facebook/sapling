@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-use edenapi_old::EdenApi;
+use edenapi::{EdenApi, EdenApiBlocking, RepoName};
 use types::Key;
 
 use crate::{
@@ -30,20 +30,23 @@ enum EdenApiHgIdRemoteStoreKind {
 /// the `HgIdDataStore` methods will always fetch data from the network.
 pub struct EdenApiHgIdRemoteStore {
     edenapi: Arc<dyn EdenApi>,
+    repo: RepoName,
     kind: EdenApiHgIdRemoteStoreKind,
 }
 
 impl EdenApiHgIdRemoteStore {
-    pub fn filestore(edenapi: Arc<dyn EdenApi>) -> Self {
+    pub fn filestore(repo: RepoName, edenapi: Arc<dyn EdenApi>) -> Self {
         Self {
             edenapi,
+            repo,
             kind: EdenApiHgIdRemoteStoreKind::File,
         }
     }
 
-    pub fn treestore(edenapi: Arc<dyn EdenApi>) -> Self {
+    pub fn treestore(repo: RepoName, edenapi: Arc<dyn EdenApi>) -> Self {
         Self {
             edenapi,
+            repo,
             kind: EdenApiHgIdRemoteStoreKind::Tree,
         }
     }
@@ -76,6 +79,7 @@ struct EdenApiRemoteDataStore {
 impl RemoteDataStore for EdenApiRemoteDataStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         let edenapi = &self.edenapi;
+        let repo = edenapi.repo.clone();
 
         let keys = keys
             .iter()
@@ -84,13 +88,13 @@ impl RemoteDataStore for EdenApiRemoteDataStore {
                 StoreKey::Content(_, _) => None,
             })
             .collect::<Vec<_>>();
-        let (entries, _) = match edenapi.kind {
-            EdenApiHgIdRemoteStoreKind::File => edenapi.edenapi.get_files(keys, None)?,
-            EdenApiHgIdRemoteStoreKind::Tree => edenapi.edenapi.get_trees(keys, None)?,
+        let response = match edenapi.kind {
+            EdenApiHgIdRemoteStoreKind::File => edenapi.edenapi.files_blocking(repo, keys, None)?,
+            EdenApiHgIdRemoteStoreKind::Tree => edenapi.edenapi.trees_blocking(repo, keys, None)?,
         };
-        for entry in entries {
-            let key = entry.0.clone();
-            let data = entry.1;
+        for entry in response.entries {
+            let key = entry.key().clone();
+            let data = entry.data()?;
             let metadata = Metadata {
                 size: Some(data.len() as u64),
                 flags: None,
@@ -157,7 +161,10 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(k.clone(), d.data.clone());
 
-        let edenapi = Arc::new(EdenApiHgIdRemoteStore::filestore(fake_edenapi(map)));
+        let edenapi = Arc::new(EdenApiHgIdRemoteStore::filestore(
+            "repo".parse()?,
+            fake_edenapi(map),
+        ));
 
         let remotestore = edenapi.datastore(store.clone());
 
@@ -176,7 +183,10 @@ mod tests {
         let store = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
 
         let map = HashMap::new();
-        let edenapi = Arc::new(EdenApiHgIdRemoteStore::filestore(fake_edenapi(map)));
+        let edenapi = Arc::new(EdenApiHgIdRemoteStore::filestore(
+            "repo".parse()?,
+            fake_edenapi(map),
+        ));
 
         let remotestore = edenapi.datastore(store);
 
