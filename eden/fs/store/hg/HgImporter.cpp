@@ -195,8 +195,6 @@ HgImporter::HgImporter(
   (*env)["LSAN_OPTIONS"] = "detect_leaks=0";
   // If we're using `hg debugedenimporthelper`, don't allow the user
   // configuration to change behavior away from the system defaults.
-  // This is harmless even if we're using hg_import_helper.py, so
-  // it is done unconditionally.
   (*env)["HGPLAIN"] = "1";
   (*env)["CHGDISABLE"] = "1";
 
@@ -350,7 +348,7 @@ unique_ptr<Blob> HgImporter::importFileContents(
         path,
         ", ",
         blobHash,
-        ") from hg_import_helper.py is too "
+        ") from debugedenimporthelper is too "
         "short for body length field: length = ",
         header.dataLength);
     XLOG(ERR) << msg;
@@ -653,7 +651,7 @@ void HgImporter::readFromHelper(void* buf, uint32_t size, StringPiece context) {
     HgImporterError importErr(
         "error reading ",
         context,
-        " from hg_import_helper.py: ",
+        " from debugedenimporthelper: ",
         folly::exceptionStr(ex));
     XLOG(ERR) << importErr.what();
     throw importErr;
@@ -664,7 +662,7 @@ void HgImporter::readFromHelper(void* buf, uint32_t size, StringPiece context) {
     HgImporterError err(
         "error reading ",
         context,
-        " from hg_import_helper.py: ",
+        " from debugedenimporthelper: ",
         folly::errnoStr(errno));
     XLOG(ERR) << err.what();
     throw err;
@@ -675,7 +673,7 @@ void HgImporter::readFromHelper(void* buf, uint32_t size, StringPiece context) {
     // The helper process closed the pipe early.
     // This generally means that it exited.
     HgImporterEofError err(
-        "received unexpected EOF from hg_import_helper.py after ",
+        "received unexpected EOF from debugedenimporthelper after ",
         bytesRead,
         " bytes while reading ",
         context);
@@ -698,7 +696,7 @@ void HgImporter::writeToHelper(
     HgImporterError importErr(
         "error writing ",
         context,
-        " to hg_import_helper.py: ",
+        " to debugedenimporthelper: ",
         folly::exceptionStr(ex));
     XLOG(ERR) << importErr.what();
     throw importErr;
@@ -709,7 +707,7 @@ void HgImporter::writeToHelper(
     HgImporterError err(
         "error writing ",
         context,
-        " to hg_import_helper.py: ",
+        " to debugedenimporthelper: ",
         folly::errnoStr(errno));
     XLOG(ERR) << err.what();
     throw err;
@@ -798,7 +796,7 @@ HgImporter* HgImporterManager::getImporter() {
 
 void HgImporterManager::resetHgImporter(const std::exception& ex) {
   importer_.reset();
-  XLOG(WARN) << "error communicating with hg_import_helper.py: " << ex.what();
+  XLOG(WARN) << "error communicating with debugedenimporthelper: " << ex.what();
 }
 
 } // namespace eden
