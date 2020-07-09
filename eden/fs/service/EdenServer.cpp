@@ -850,10 +850,7 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
               AbsolutePathPiece{info.stateDirectory});
 
           return mount(
-              std::move(initialConfig),
-              false,
-              [logger](auto msg) { logger->log(msg); },
-              std::move(info));
+              std::move(initialConfig), false, [](auto) {}, std::move(info));
         })
             .thenTry([logger, mountPath = info.mountPath](
                          folly::Try<std::shared_ptr<EdenMount>>&& result) {
@@ -1200,7 +1197,7 @@ Future<Unit> EdenServer::completeTakeoverStart(
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<CheckoutConfig> initialConfig,
     bool readOnly,
-    std::function<void(std::string)>&& progressCallback,
+    OverlayChecker::ProgressCallback&& progressCallback,
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
   folly::stop_watch<> mountStopWatch;
 

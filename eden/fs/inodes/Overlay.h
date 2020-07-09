@@ -17,6 +17,7 @@
 #include <optional>
 #include <thread>
 #include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -101,7 +102,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    *   by an older version of the software.
    */
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> initialize(
-      std::function<void(std::string)>&& progressCallback = nullptr);
+      OverlayChecker::ProgressCallback&& progressCallback = [](auto) {});
 
   /**
    * Closes the overlay. It is undefined behavior to access the
@@ -245,7 +246,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   };
 
   void initOverlay(
-      const std::function<void(std::string)>& progressCallback = nullptr);
+      const OverlayChecker::ProgressCallback& progressCallback = [](auto) {});
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);
 

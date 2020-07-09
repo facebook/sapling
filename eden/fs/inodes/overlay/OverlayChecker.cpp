@@ -655,8 +655,7 @@ OverlayChecker::OverlayChecker(
 
 OverlayChecker::~OverlayChecker() {}
 
-void OverlayChecker::scanForErrors(
-    const std::function<void(std::string)>& progressCallback) {
+void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
   auto fsck_start_msg = folly::to<std::string>(
       "Starting fsck scan on overlay ", fs_->getLocalDir());
   XLOG(INFO) << fsck_start_msg;
@@ -852,8 +851,7 @@ PathComponent OverlayChecker::findChildName(
   return PathComponent(folly::to<string>("[missing_child(", child, ")]"));
 }
 
-void OverlayChecker::readInodes(
-    const std::function<void(std::string)>& progressCallback) {
+void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
   // Walk through all of the sharded subdirectories
   uint32_t progress10pct = 0;
   std::array<char, 2> subdirBuffer;

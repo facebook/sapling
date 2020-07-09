@@ -26,7 +26,6 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
-#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/inodes/TreePrefetchLease.h"
@@ -219,7 +218,7 @@ EdenMount::EdenMount(
 }
 
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
-    std::function<void(std::string)>&& progressCallback,
+    OverlayChecker::ProgressCallback&& progressCallback,
     const std::optional<SerializedInodeMap>& takeover) {
   transitionState(State::UNINITIALIZED, State::INITIALIZING);
 

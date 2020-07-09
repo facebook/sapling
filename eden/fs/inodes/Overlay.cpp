@@ -31,7 +31,7 @@
 #else
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
-#include "eden/fs/inodes/overlay/OverlayChecker.h"
+
 #endif // !_WIN32
 
 namespace facebook {
@@ -104,7 +104,7 @@ struct statfs Overlay::statFs() {
 #endif // !_WIN32
 
 folly::SemiFuture<Unit> Overlay::initialize(
-    std::function<void(std::string)>&& progressCallback) {
+    OverlayChecker::ProgressCallback&& progressCallback) {
   // The initOverlay() call is potentially slow, so we want to avoid
   // performing it in the current thread and blocking returning to our caller.
   //
@@ -137,7 +137,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
 }
 
 void Overlay::initOverlay(
-    const std::function<void(std::string)>& progressCallback) {
+    const OverlayChecker::ProgressCallback& progressCallback) {
   IORequest req{this};
   auto optNextInodeNumber = backingOverlay_.initOverlay(true);
   if (!optNextInodeNumber.has_value()) {

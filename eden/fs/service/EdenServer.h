@@ -221,7 +221,7 @@ class EdenServer : private TakeoverHandler {
   FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> mount(
       std::unique_ptr<CheckoutConfig> initialConfig,
       bool readOnly,
-      std::function<void(std::string)>&& progressCallback = nullptr,
+      OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
       std::optional<TakeoverData::MountInfo>&& optionalTakeover = std::nullopt);
 
   /**

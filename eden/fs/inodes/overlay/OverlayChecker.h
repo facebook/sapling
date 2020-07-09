@@ -61,11 +61,12 @@ class OverlayChecker {
 
   ~OverlayChecker();
 
+  using ProgressCallback = std::function<void(std::string)>;
+
   /**
    * Scan the overlay for problems.
    */
-  void scanForErrors(
-      const std::function<void(std::string)>& progressCallback = nullptr);
+  void scanForErrors(const ProgressCallback& progressCallback = [](auto) {});
 
   /**
    * Attempt to repair the errors that were found by scanForErrors().
@@ -186,8 +187,7 @@ class OverlayChecker {
   PathInfo cachedPathComputation(InodeNumber number, Fn&& fn);
 
   using ShardID = uint32_t;
-  void readInodes(
-      const std::function<void(std::string)>& progressCallback = nullptr);
+  void readInodes(const ProgressCallback& progressCallback = [](auto) {});
   void readInodeSubdir(const AbsolutePath& path, ShardID shardID);
   void loadInode(InodeNumber number, ShardID shardID);
   InodeInfo loadInodeInfo(InodeNumber number);

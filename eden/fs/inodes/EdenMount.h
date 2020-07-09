@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
@@ -176,7 +177,7 @@ class EdenMount {
    * If takeover data is specified, it is used to initialize the inode map.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
-      std::function<void(std::string)>&& progressCallback = nullptr,
+      OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
       const std::optional<SerializedInodeMap>& takeover = std::nullopt);
 
   /**
