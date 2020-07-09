@@ -61,7 +61,7 @@ class OverlayChecker {
 
   ~OverlayChecker();
 
-  using ProgressCallback = std::function<void(std::string)>;
+  using ProgressCallback = std::function<void(uint16_t)>;
 
   /**
    * Scan the overlay for problems.

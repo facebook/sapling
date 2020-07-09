@@ -606,6 +606,37 @@ class EdenServer : private TakeoverHandler {
    */
   const std::string version_;
 
+  struct ProgressState {
+    std::string mountPath;
+    std::string localDir;
+    uint16_t percentComplete{0};
+    bool finished{false};
+    ProgressState(std::string&& mountPath, std::string&& localDir)
+        : mountPath(std::move(mountPath)), localDir(std::move(localDir)) {}
+  };
+
+  struct ProgressManager {
+    static constexpr size_t kMaxProgressLines = 8;
+    std::vector<ProgressState> progresses;
+
+    size_t totalLinesPrinted{0};
+    size_t totalFinished{0};
+    size_t totalInProgress{0};
+
+    void updateProgressState(size_t processIndex, uint16_t percent);
+    void printProgresses(std::shared_ptr<StartupLogger>);
+    void finishProgress(size_t processIndex);
+
+    size_t registerEntry(std::string&& mountPath, std::string&& localDir);
+
+    void manageProgress(
+        std::shared_ptr<StartupLogger> logger,
+        size_t processIndex,
+        uint16_t percent);
+  };
+
+  const std::unique_ptr<folly::Synchronized<ProgressManager>> progressManager_;
+
   /**
    * The EventBase driving the main thread loop.
    *

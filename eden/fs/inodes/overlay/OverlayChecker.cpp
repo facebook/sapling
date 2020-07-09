@@ -656,12 +656,9 @@ OverlayChecker::OverlayChecker(
 OverlayChecker::~OverlayChecker() {}
 
 void OverlayChecker::scanForErrors(const ProgressCallback& progressCallback) {
-  auto fsck_start_msg = folly::to<std::string>(
-      "Starting fsck scan on overlay ", fs_->getLocalDir());
-  XLOG(INFO) << fsck_start_msg;
-
+  XLOG(INFO) << "Starting fsck scan on overlay " << fs_->getLocalDir();
   if (auto callback = progressCallback) {
-    callback(fsck_start_msg);
+    callback(0);
   }
   readInodes(progressCallback);
   linkInodeChildren();
@@ -857,30 +854,25 @@ void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
   std::array<char, 2> subdirBuffer;
   MutableStringPiece subdir{subdirBuffer.data(), subdirBuffer.size()};
   for (uint32_t shardID = 0; shardID < FsOverlay::kNumShards; ++shardID) {
-    // Log a DBG2 message every 10% done
+    // Log a INFO message every 10% done
     uint32_t progress = (10 * shardID) / FsOverlay::kNumShards;
     if (progress > progress10pct) {
-      auto fsck_path_msg =
-          folly::to<std::string>("fsck:", fs_->getLocalDir(), ": ");
-      auto fsck_scanned_msg = folly::to<std::string>(
-          "scan ",
-          progress,
-          "0% complete: ",
-          inodes_.size(),
-          " inodes scanned");
-      XLOG(INFO) << fsck_path_msg << fsck_scanned_msg;
+      XLOG(INFO) << "fsck:" << fs_->getLocalDir() << ": scan " << progress
+                 << "0% complete: " << inodes_.size() << " inodes scanned";
       if (auto callback = progressCallback) {
-        callback(fsck_scanned_msg);
+        callback(progress);
       }
       progress10pct = progress;
     }
-
+    if (auto callback = progressCallback) {
+      callback(10);
+    }
     FsOverlay::formatSubdirShardPath(shardID, subdir);
     auto subdirPath = fs_->getLocalDir() + PathComponentPiece{subdir};
 
     readInodeSubdir(subdirPath, shardID);
   }
-  XLOG(DBG1) << "fsck:" << fs_->getLocalDir() << ": scanned " << inodes_.size()
+  XLOG(INFO) << "fsck:" << fs_->getLocalDir() << ": scanned " << inodes_.size()
              << " inodes";
 }
 
