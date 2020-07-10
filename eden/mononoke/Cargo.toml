@@ -4,7 +4,7 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
+include = ["cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
 
 [[bin]]
 name = "aliasverify"
@@ -41,6 +41,10 @@ path = "cmds/idxdump.rs"
 [[bin]]
 name = "lfs_import"
 path = "cmds/lfs_import.rs"
+
+[[bin]]
+name = "manual_scrub"
+path = "cmds/manual_scrub/main.rs"
 
 [[bin]]
 name = "rechunker"
@@ -88,6 +92,7 @@ metaconfig_types = { path = "metaconfig/types" }
 mononoke_types = { path = "mononoke_types" }
 revset = { path = "revset" }
 scuba_ext = { path = "common/scuba_ext" }
+sql_ext = { path = "common/rust/sql_ext" }
 unodes = { path = "derived_data/unodes" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

@@ -906,6 +906,11 @@ function lfs_import {
   --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
 }
 
+function manual_scrub {
+  GLOG_minloglevel=5 "$MONONOKE_MANUAL_SCRUB" \
+  --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
+}
+
 function s_client {
     /usr/local/fbcode/platform007/bin/openssl s_client \
         -connect localhost:$MONONOKE_SOCKET \
