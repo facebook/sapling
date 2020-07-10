@@ -107,7 +107,7 @@ def updatemsg(repo, ui):
     if previousargs:
         continuecmd = "hg " + previousargs
     else:
-        continuecmd = "hg update " + repo.localvfs.read("updatestate")[:12]
+        continuecmd = "hg update " + repo.localvfs.readutf8("updatestate")[:12]
     abortcmd = updatecleanmsg(repo._activebookmark)
     helpmessage(ui, continuecmd, abortcmd)
 
