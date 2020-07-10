@@ -84,6 +84,7 @@ impl Healer {
                 healing_deadline.clone(),
                 blobstore_sync_queue_limit,
             )
+            .compat()
             .and_then(move |queue_entries: Vec<BlobstoreSyncQueueEntry>| {
                 let entries = queue_entries
                     .iter()
@@ -488,7 +489,7 @@ fn cleanup_after_healing(
 ) -> impl Future<Item = u64, Error = Error> {
     let n = entries.len() as u64;
     info!(ctx.logger(), "Deleting {} actioned queue entries", n);
-    sync_queue.del(ctx, entries).map(move |_| n)
+    sync_queue.del(ctx, entries).compat().map(move |_| n)
 }
 
 /// Write new queue items with a populated source blobstore for unhealed entries
@@ -518,7 +519,9 @@ fn requeue_partial_heal(
             }
         })
         .collect();
-    sync_queue.add_many(ctx, Box::new(new_entries.into_iter()))
+    sync_queue
+        .add_many(ctx, Box::new(new_entries.into_iter()))
+        .compat()
 }
 
 #[cfg(test)]
@@ -606,6 +609,7 @@ mod tests {
         fn len(&self, ctx: CoreContext, multiplex_id: MultiplexId) -> BoxFuture01<usize, Error> {
             let zero_date = DateTime::now();
             self.iter(ctx.clone(), None, multiplex_id, zero_date, 100)
+                .compat()
                 .and_then(|entries| {
                     if entries.len() >= 100 {
                         Err(format_err!("too many entries"))
@@ -1212,7 +1216,6 @@ mod tests {
         )];
         sync_queue
             .add_many(ctx.clone(), Box::new(entries.into_iter()))
-            .compat()
             .await?;
 
         let healer = Healer::new(1000, 10, sync_queue.clone(), stores, mp, None, false);
@@ -1268,7 +1271,6 @@ mod tests {
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         sync_queue
             .add_many(ctx.clone(), Box::new(entries.into_iter()))
-            .compat()
             .await?;
 
         // We aren't healing blobs for old_mp, so expect to only have 1 blob in each
@@ -1307,7 +1309,6 @@ mod tests {
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         sync_queue
             .add_many(ctx.clone(), Box::new(entries.into_iter()))
-            .compat()
             .await?;
 
         let healer = Healer::new(2, 10, sync_queue.clone(), stores, mp, None, false);
@@ -1338,7 +1339,6 @@ mod tests {
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         sync_queue
             .add_many(ctx.clone(), Box::new(entries.into_iter()))
-            .compat()
             .await?;
 
         let healer = Healer::new(20, 10, sync_queue.clone(), stores, mp, None, false);

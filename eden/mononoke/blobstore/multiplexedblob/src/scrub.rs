@@ -15,7 +15,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
+    future::{BoxFuture, FutureExt, TryFutureExt},
 };
 use futures_ext::FutureExt as _;
 use futures_old::future::{self, Future};
@@ -152,6 +152,7 @@ impl Blobstore for ScrubBlobstore {
                                 // and Error otherwise. Scrub does likewise.
                                 return queue
                                     .get(ctx, key)
+                                    .compat()
                                     .and_then(move |entries| {
                                         if entries.is_empty() {
                                             // No pending write for the key, it really is None
@@ -172,27 +173,32 @@ impl Blobstore for ScrubBlobstore {
                                     }
                                     Some(value) => value,
                                 };
-                                queue.get(ctx.clone(), key.clone()).map(move |entries| {
-                                    let mut needs_repair: HashMap<BlobstoreId, Arc<dyn Blobstore>> =
-                                        HashMap::new();
+                                queue
+                                    .get(ctx.clone(), key.clone())
+                                    .compat()
+                                    .map(move |entries| {
+                                        let mut needs_repair: HashMap<
+                                            BlobstoreId,
+                                            Arc<dyn Blobstore>,
+                                        > = HashMap::new();
 
-                                    for k in missing_reads.iter() {
-                                        match scrub_stores.get(k) {
-                                            Some(s) => {
-                                                // If key has no entries on the queue it needs repair.
-                                                // Don't check individual stores in entries as that is a race vs multiplexed_put().
-                                                //
-                                                // TODO compare timestamp vs original_timestamp to still repair on
-                                                // really old entries, will need schema change.
-                                                if entries.is_empty() {
-                                                    needs_repair.insert(*k, s.clone());
+                                        for k in missing_reads.iter() {
+                                            match scrub_stores.get(k) {
+                                                Some(s) => {
+                                                    // If key has no entries on the queue it needs repair.
+                                                    // Don't check individual stores in entries as that is a race vs multiplexed_put().
+                                                    //
+                                                    // TODO compare timestamp vs original_timestamp to still repair on
+                                                    // really old entries, will need schema change.
+                                                    if entries.is_empty() {
+                                                        needs_repair.insert(*k, s.clone());
+                                                    }
                                                 }
+                                                None => (),
                                             }
-                                            None => (),
                                         }
-                                    }
-                                    (needs_repair, value)
-                                })
+                                        (needs_repair, value)
+                                    })
                             }
                             _ => return future::err(error.into()).boxify().right_future(),
                         },

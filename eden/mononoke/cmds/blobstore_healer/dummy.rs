@@ -13,8 +13,6 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use context::CoreContext;
 use futures::future::{self, BoxFuture, FutureExt};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
-use futures_old::prelude::*;
 use metaconfig_types::MultiplexId;
 use mononoke_types::{BlobstoreBytes, DateTime};
 use slog::{info, Logger};
@@ -84,10 +82,10 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         &self,
         _ctx: CoreContext,
         entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
-    ) -> BoxFuture01<(), Error> {
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let entries: Vec<_> = entries.map(|e| format!("{:?}", e)).collect();
         info!(self.logger, "I would have written {}", entries.join(",\n"));
-        Ok(()).into_future().boxify()
+        future::ok(()).boxed()
     }
 
     fn iter(
@@ -97,7 +95,7 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
-    ) -> BoxFuture01<Vec<BlobstoreSyncQueueEntry>, Error> {
+    ) -> BoxFuture<'static, Result<Vec<BlobstoreSyncQueueEntry>, Error>> {
         self.inner
             .iter(ctx, key_like, multiplex_id, older_than, limit)
     }
@@ -106,17 +104,17 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
         &self,
         _ctx: CoreContext,
         entries: Vec<BlobstoreSyncQueueEntry>,
-    ) -> BoxFuture01<(), Error> {
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
         info!(self.logger, "I would have deleted {}", entries.join(",\n"));
-        Ok(()).into_future().boxify()
+        future::ok(()).boxed()
     }
 
     fn get(
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture01<Vec<BlobstoreSyncQueueEntry>, Error> {
+    ) -> BoxFuture<'static, Result<Vec<BlobstoreSyncQueueEntry>, Error>> {
         self.inner.get(ctx, key)
     }
 }

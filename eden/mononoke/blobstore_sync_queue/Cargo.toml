@@ -20,14 +20,13 @@ mononoke_types = { path = "../mononoke_types" }
 sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-futures = "0.1"
-tokio = "0.1"
+auto_impl = { git = "https://github.com/auto-impl-rs/auto_impl", rev = "43ad0ed49f67168b2971b271481e75afac589b24" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+tokio = { version = "=0.2.13", features = ["full"] }
 uuid = { version = "0.8.1", features = ["v4"] }
 
 [dev-dependencies]
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio-compat = "0.1"

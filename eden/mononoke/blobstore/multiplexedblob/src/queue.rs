@@ -11,10 +11,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
-};
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::future::Future;
 use metaconfig_types::{BlobstoreId, MultiplexId};
@@ -86,6 +83,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
                     operation_key,
                 ),
             )
+            .compat()
             .map(|_| ())
             .boxify()
     }
@@ -113,17 +111,12 @@ impl Blobstore for MultiplexedBlobstore {
                     // check synchronization queue. If it does not contain entries with this key
                     // it means it is true-none otherwise, only replica containing key has
                     // failed and we need to return error.
-                    queue
-                        .get(ctx, key)
-                        .and_then(|entries| {
-                            if entries.is_empty() {
-                                Ok(None)
-                            } else {
-                                Err(error)
-                            }
-                        })
-                        .compat()
-                        .await
+                    let entries = queue.get(ctx, key).await?;
+                    if entries.is_empty() {
+                        Ok(None)
+                    } else {
+                        Err(error)
+                    }
                 }
             }
         }
@@ -151,17 +144,12 @@ impl Blobstore for MultiplexedBlobstore {
                     if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
                         return Err(error);
                     }
-                    queue
-                        .get(ctx, key)
-                        .and_then(|entries| {
-                            if entries.is_empty() {
-                                Ok(false)
-                            } else {
-                                Err(error)
-                            }
-                        })
-                        .compat()
-                        .await
+                    let entries = queue.get(ctx, key).await?;
+                    if entries.is_empty() {
+                        Ok(false)
+                    } else {
+                        Err(error)
+                    }
                 }
             }
         }

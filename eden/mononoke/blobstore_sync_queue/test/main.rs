@@ -21,9 +21,7 @@ use sql_construct::SqlConstruct;
 use uuid::Uuid;
 
 #[fbinit::test]
-fn test_simple(fb: FacebookInit) -> Result<(), Error> {
-    let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-
+async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let queue = SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap();
     let bs0 = BlobstoreId::new(0);
@@ -48,53 +46,66 @@ fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     let entry4 = BlobstoreSyncQueueEntry::new(key0.clone(), bs1, mp, t2, op2);
 
     // add
-    assert!(rt.block_on(queue.add(ctx.clone(), entry0.clone())).is_ok());
-    assert!(rt.block_on(queue.add(ctx.clone(), entry1.clone())).is_ok());
-    assert!(rt.block_on(queue.add(ctx.clone(), entry2.clone())).is_ok());
-    assert!(rt.block_on(queue.add(ctx.clone(), entry3.clone())).is_ok());
-    assert!(rt.block_on(queue.add(ctx.clone(), entry4.clone())).is_ok());
+    assert!(queue.add(ctx.clone(), entry0.clone()).await.is_ok());
+    assert!(queue.add(ctx.clone(), entry1.clone()).await.is_ok());
+    assert!(queue.add(ctx.clone(), entry2.clone()).await.is_ok());
+    assert!(queue.add(ctx.clone(), entry3.clone()).await.is_ok());
+    assert!(queue.add(ctx.clone(), entry4.clone()).await.is_ok());
 
     // get
-    let entries1 = rt
-        .block_on(queue.get(ctx.clone(), key0.clone()))
+    let entries1 = queue
+        .get(ctx.clone(), key0.clone())
+        .await
         .expect("Get failed");
     assert_eq!(entries1.len(), 4);
     assert_eq!(entries1[0].operation_key, op0);
-    let entries2 = rt
-        .block_on(queue.get(ctx.clone(), key1.clone()))
+    let entries2 = queue
+        .get(ctx.clone(), key1.clone())
+        .await
         .expect("Get failed");
     assert_eq!(entries2.len(), 1);
     assert_eq!(entries2[0].operation_key, op1);
 
     // iter
-    let some_entries = rt
-        .block_on(queue.iter(ctx.clone(), None, mp, t1, 1))
+    let some_entries = queue
+        .iter(ctx.clone(), None, mp, t1, 1)
+        .await
         .expect("DateTime range iteration failed");
     assert_eq!(some_entries.len(), 2);
-    let some_entries = rt
-        .block_on(queue.iter(ctx.clone(), None, mp, t1, 2))
+    let some_entries = queue
+        .iter(ctx.clone(), None, mp, t1, 2)
+        .await
         .expect("DateTime range iteration failed");
     assert_eq!(some_entries.len(), 3);
-    let some_entries = rt
-        .block_on(queue.iter(ctx.clone(), None, mp, t0, 1))
+    let some_entries = queue
+        .iter(ctx.clone(), None, mp, t0, 1)
+        .await
         .expect("DateTime range iteration failed");
     assert_eq!(some_entries.len(), 2);
-    let some_entries = rt
-        .block_on(queue.iter(ctx.clone(), None, mp, t0, 100))
+    let some_entries = queue
+        .iter(ctx.clone(), None, mp, t0, 100)
+        .await
         .expect("DateTime range iteration failed");
     assert_eq!(some_entries.len(), 2);
 
     // delete
-    rt.block_on(queue.del(ctx.clone(), vec![entry0]))
+    queue
+        .del(ctx.clone(), vec![entry0])
+        .await
         .expect_err("Deleting entry without `id` should have failed");
-    rt.block_on(queue.del(ctx.clone(), entries1))
+    queue
+        .del(ctx.clone(), entries1)
+        .await
         .expect("Failed to remove entries1");
-    rt.block_on(queue.del(ctx.clone(), entries2))
+    queue
+        .del(ctx.clone(), entries2)
+        .await
         .expect("Failed to remove entries2");
 
     // iter
-    let entries = rt
-        .block_on(queue.iter(ctx.clone(), None, mp, t1, 100))
+    let entries = queue
+        .iter(ctx.clone(), None, mp, t1, 100)
+        .await
         .expect("Iterating over entries failed");
     assert_eq!(entries.len(), 0);
     Ok(())

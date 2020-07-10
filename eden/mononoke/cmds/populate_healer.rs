@@ -391,10 +391,7 @@ async fn populate_healer_queue(
                         OperationKey::gen(),
                     )
                 }));
-                queue
-                    .add_many(config.ctx.clone(), iterator_box)
-                    .compat()
-                    .await?;
+                queue.add_many(config.ctx.clone(), iterator_box).await?;
             }
 
             put_resume_state(&manifold, &config, state).await

@@ -24,7 +24,6 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     channel::oneshot,
-    compat::Future01CompatExt,
     future::{BoxFuture, Future, FutureExt as _, TryFutureExt},
     task::{Context, Poll},
 };
@@ -238,7 +237,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<(), Error> {
         id: None,
         operation_key: OperationKey::gen(),
     };
-    queue.add(ctx.clone(), entry).compat().await?;
+    queue.add(ctx.clone(), entry).await?;
 
     fut.await?;
 
@@ -434,7 +433,6 @@ async fn multiplexed(fb: FacebookInit) {
 
         match queue
             .get(ctx.clone(), k1.clone())
-            .compat()
             .await
             .expect("case 2 get failed")
             .as_slice()
@@ -498,7 +496,6 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<(), Error> {
 
         match queue
             .get(ctx.clone(), k3.clone())
-            .compat()
             .await
             .expect("test multiplexed_operation_keys, get failed")
             .as_slice()
@@ -561,13 +558,7 @@ async fn scrubbed(fb: FacebookInit) {
         bs1.tick(Some("bs1 failed"));
         put_fut.await.unwrap();
 
-        match queue
-            .get(ctx.clone(), k1.clone())
-            .compat()
-            .await
-            .unwrap()
-            .as_slice()
-        {
+        match queue.get(ctx.clone(), k1.clone()).await.unwrap().as_slice() {
             [entry] => assert_eq!(entry.blobstore_id, bid0, "Queue bad"),
             _ => panic!("only one entry expected"),
         }
@@ -636,18 +627,11 @@ async fn scrubbed(fb: FacebookInit) {
         let k1 = String::from("k1");
         let v1 = make_value("v1");
 
-        match queue
-            .get(ctx.clone(), k1.clone())
-            .compat()
-            .await
-            .unwrap()
-            .as_slice()
-        {
+        match queue.get(ctx.clone(), k1.clone()).await.unwrap().as_slice() {
             [entry] => {
                 assert_eq!(entry.blobstore_id, bid0, "Queue bad");
                 queue
                     .del(ctx.clone(), vec![entry.clone()])
-                    .compat()
                     .await
                     .expect("Could not delete scrub queue entry");
             }
