@@ -260,7 +260,7 @@ class remotefilelog(object):
         hg clients.
         """
         if node == nullid:
-            return ""
+            return b""
         if len(node) != 20:
             raise error.LookupError(node, self.filename, _("invalid revision input"))
 
