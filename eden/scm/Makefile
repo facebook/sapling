@@ -100,25 +100,16 @@ build:
 wheel:
 	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
 
-getdepshelper:
-ifeq ($(OS),Windows_NT)
-	mkdir ../../../../build/eden_scm
-	mklink ../../../../build/eden_scm build
-	mklink ../fbthrift/thrift ../../thrift
-	nklink ../fb303/fb303 ../../fb303
-	mkdir ../../common/rust
-	mklink ../../../rust-shed/shed ../../common/rust/shed
-else
-	mkdir -p ../../../../build/eden_scm
-	ln -sf ../../../../build/eden_scm build
-	ln -sf ../fbthrift/thrift ../../thrift
-	ln -sf ../fb303/fb303 ../../fb303
+getdepsbuild:
+	mkdir -p $(GETDEPS_BUILD_DIR)/eden_scm
+	ln -sf $(GETDEPS_BUILD_DIR)/eden_scm build
+	ln -sf $(GETDEPS_INSTALL_DIR)/fbthrift-source/thrift ../../thrift
+	ln -sf $(GETDEPS_INSTALL_DIR)/fb303-source/fb303 ../../fb303
 	mkdir -p ../../common/rust
-	ln -sf ../../../rust-shed/shed ../../common/rust/shed
-endif
-
-getdepsbuild: export GETDEPS_BUILD=1
-getdepsbuild: getdepshelper build
+	ln -sf $(GETDEPS_INSTALL_DIR)/rust-shed/shed ../../common/rust/shed
+	GETDEPS_BUILD=1 \
+		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
+		$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
 
 cleanbutpackages:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command
@@ -145,9 +136,8 @@ install: build
 install-home: build
 	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
-install-getdeps: export GETDEPS_BUILD=1
 install-getdeps: getdepsbuild
-	$(PYTHON) setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
+	GETDEPS_BUILD=1 $(PYTHON) setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
 
 check: tests
 
@@ -188,4 +178,4 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 
 # Packaging targets
 
-.PHONY: help all local local3 build cleanbutpackages clean install install-home install-getdeps getdepsbuild getdepshelper
+.PHONY: help all local local3 build cleanbutpackages clean install install-home install-getdeps getdepsbuild
