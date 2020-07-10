@@ -22,6 +22,7 @@
 #include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/store/TreeMetadata.h"
 
 using folly::ByteRange;
 using folly::IOBuf;
@@ -196,6 +197,56 @@ BlobMetadata LocalStore::getMetadataFromBlob(const Blob* blob) {
   Hash sha1 = Hash::sha1(blob->getContents());
   uint64_t size = blob->getSize();
   return BlobMetadata{sha1, size};
+}
+
+void LocalStore::putTreeMetadata(
+    const TreeMetadata& rawTreeMetadata,
+    const Tree& tree) {
+  // make sure that the tree entries are indexed by hash
+
+  if (std::holds_alternative<TreeMetadata::HashIndexedEntryMetadata>(
+          rawTreeMetadata.entries())) {
+    putNormalizedTreeMetadata(tree.getHash(), rawTreeMetadata);
+  } else if (
+      auto nameIndexedMetadata =
+          std::get_if<TreeMetadata::NameIndexedEntryMetadata>(
+              &rawTreeMetadata.entries())) {
+    TreeMetadata::HashIndexedEntryMetadata entries{};
+    entries.reserve(nameIndexedMetadata->size());
+    for (const auto& [name, metadata] : *nameIndexedMetadata) {
+      auto entryHash = tree.getEntryAt(PathComponentPiece{name}).getHash();
+      entries.push_back(std::make_pair(std::move(entryHash), metadata));
+    }
+    return putNormalizedTreeMetadata(tree.getHash(), TreeMetadata{entries});
+  } else {
+    throw std::domain_error{
+        "Unknown Entry Metadata type, unable to store metadata"};
+  }
+}
+
+void LocalStore::putNormalizedTreeMetadata(
+    const Hash& hash,
+    const TreeMetadata& treeMetadata) {
+  auto writeBatch = beginWrite();
+  // store metadata for each blob in the local store under their blob ids
+  for (const auto& [entryId, metadata] :
+       std::get<TreeMetadata::HashIndexedEntryMetadata>(
+           treeMetadata.entries())) {
+    SerializedBlobMetadata metadataBytes(metadata);
+    writeBatch->put(
+        KeySpace::BlobMetaDataFamily,
+        entryId.getBytes(),
+        metadataBytes.slice());
+  }
+
+  // store all metadata for tree in the local store under the tree id
+  auto buf = treeMetadata.serialize();
+  buf.coalesce();
+  writeBatch->put(
+      KeySpace::TreeMetaDataFamily,
+      hash.getBytes(),
+      folly::ByteRange(buf.data(), buf.length()));
+  writeBatch->flush();
 }
 
 void LocalStore::put(

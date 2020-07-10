@@ -13,6 +13,7 @@
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/store/MemoryLocalStore.h"
+#include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/TreeMetadata.h"
 #include "eden/fs/store/test/LocalStoreTest.h"
 
@@ -78,4 +79,44 @@ TEST_P(LocalStoreTest, testDeserializeClippedTreeMetadata) {
   EXPECT_THROW(
       TreeMetadata::deserialize(StoreResult(serializedBytes.toString())),
       std::invalid_argument);
+}
+
+TEST_P(LocalStoreTest, putTreeMetadata) {
+  Hash hash{"3a8f8eb91101860fd8484154885838bf322964d0"};
+  Hash childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
+
+  StringPiece childContents("blah\n");
+  auto childSha1 = Hash::sha1(folly::ByteRange{childContents});
+  auto size = childContents.size();
+
+  auto childBlobMetadata = BlobMetadata{childSha1, size};
+  TreeMetadata::HashIndexedEntryMetadata entryMetadata = {
+      std::make_pair(childHash, childBlobMetadata)};
+  auto treeMetadata = TreeMetadata{entryMetadata};
+
+  std::vector<TreeEntry> entries;
+  entries.emplace_back(childHash, childContents, TreeEntryType::REGULAR_FILE);
+  Tree tree{std::move(entries), hash};
+
+  store_->putTreeMetadata(treeMetadata, tree);
+
+  auto outChildResult = store_->getBlobMetadata(childHash).get();
+  ASSERT_TRUE(outChildResult);
+  EXPECT_EQ(childBlobMetadata.sha1, outChildResult.value().sha1);
+  EXPECT_EQ(childBlobMetadata.size, outChildResult.value().size);
+
+  auto outResult = store_->get(KeySpace::TreeMetaDataFamily, hash);
+
+  ASSERT_TRUE(outResult.isValid());
+
+  auto outTreeMetadata = TreeMetadata::deserialize(outResult);
+  auto outTreeEntryMetadata =
+      std::get<TreeMetadata::HashIndexedEntryMetadata>(treeMetadata.entries());
+
+  EXPECT_EQ(outTreeEntryMetadata.size(), outTreeEntryMetadata.size());
+
+  auto outEntryMetadata = outTreeEntryMetadata.front();
+  EXPECT_EQ(childHash, outEntryMetadata.first);
+  EXPECT_EQ(childBlobMetadata.sha1, outEntryMetadata.second.sha1);
+  EXPECT_EQ(childBlobMetadata.size, outEntryMetadata.second.size);
 }
