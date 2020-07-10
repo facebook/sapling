@@ -48,7 +48,7 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// committing the transaction will fail. The Bookmark should also not be Scratch.
     fn update(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
@@ -59,7 +59,7 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// transaction will fail. The resulting Bookmark will be PushDefault.
     fn create(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
@@ -69,7 +69,7 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// exists or not.
     fn force_set(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
@@ -78,27 +78,28 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// Deletes bookmark only if it currently points to `old_cs`.
     fn delete(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()>;
 
     /// Adds force_delete operation to the transaction set.
     /// Deletes bookmark unconditionally.
-    fn force_delete(&mut self, key: &BookmarkName, reason: BookmarkUpdateReason) -> Result<()>;
+    fn force_delete(&mut self, bookmark: &BookmarkName, reason: BookmarkUpdateReason)
+        -> Result<()>;
 
     /// Adds a scratch bookmark update operation to the transaction set.
     /// Updates the changeset referenced by the bookmark, if it is already a scratch bookmark.
     fn update_scratch(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
     ) -> Result<()>;
 
     /// Adds a scratch bookmark create operation to the transaction set.
     /// Creates a new bookmark, configured as scratch. It shuld not exist already.
-    fn create_scratch(&mut self, key: &BookmarkName, new_cs: ChangesetId) -> Result<()>;
+    fn create_scratch(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()>;
 
     /// Commits the transaction. Future succeeds if transaction has been
     /// successful, or errors if transaction has failed. Logical failure is indicated by

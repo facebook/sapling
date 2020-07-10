@@ -7,13 +7,12 @@
 
 #![deny(warnings)]
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{anyhow, bail, Error, Result};
 use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkTransaction,
     BookmarkTransactionError, BookmarkTransactionHook, BookmarkUpdateLog, BookmarkUpdateLogEntry,
     BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
 };
-use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::compat::Future01CompatExt;
 use futures::future::{self, BoxFuture, Future, FutureExt, TryFutureExt};
@@ -22,9 +21,9 @@ use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::{queries, Connection, Transaction as SqlTransaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
-use sql_ext::{SqlConnections, TransactionResult};
+use sql_ext::SqlConnections;
 use stats::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 const MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT: usize = 5;
@@ -620,147 +619,63 @@ impl BookmarkUpdateLog for SqlBookmarks {
     }
 }
 
-impl SqlBookmarks {
-    pub async fn write_to_txn(
-        &self,
-        ctx: CoreContext,
-        repoid: RepositoryId,
-        sql_txn: SqlTransaction,
-        bookmark: BookmarkName,
-        from_changeset_id: Option<ChangesetId>,
-        to_changeset_id: Option<ChangesetId>,
+struct NewUpdateLogEntry {
+    /// The old bookmarked changeset (if known)
+    old: Option<ChangesetId>,
+
+    /// The new bookmarked changeset (or None if the bookmark is being
+    /// deleted).
+    new: Option<ChangesetId>,
+
+    /// The reason for the update.
+    reason: BookmarkUpdateReason,
+}
+
+impl NewUpdateLogEntry {
+    fn new(
+        old: Option<ChangesetId>,
+        new: Option<ChangesetId>,
         reason: BookmarkUpdateReason,
-    ) -> Result<TransactionResult> {
-        let mut book_txn =
-            SqlBookmarksTransaction::new(ctx, self.write_connection.clone(), repoid.clone());
-
-        match (from_changeset_id, to_changeset_id) {
-            (Some(from_cs_id), Some(to_cs_id)) => {
-                book_txn.update(&bookmark, to_cs_id, from_cs_id, reason)?;
-            }
-            (Some(from_cs_id), None) => {
-                book_txn.delete(&bookmark, from_cs_id, reason)?;
-            }
-            (None, Some(to_cs_id)) => {
-                // Unfortunately we can't tell if a bookmark was created or force set.
-                // Because of that we have to always do force set.
-                book_txn.force_set(&bookmark, to_cs_id, reason)?;
-            }
-            (None, None) => {
-                return Err(Error::msg("unsupported bookmark move"));
-            }
-        };
-
-        book_txn.update_transaction(sql_txn).await
+    ) -> Result<NewUpdateLogEntry> {
+        Ok(NewUpdateLogEntry { old, new, reason })
     }
 }
 
-type RetryAttempt = usize;
-
-async fn conditional_retry_without_delay<V, Fut, RetryableFunc, DecisionFunc>(
-    func: RetryableFunc,
-    should_retry: DecisionFunc,
-) -> Result<(V, RetryAttempt), (BookmarkTransactionError, RetryAttempt)>
-where
-    V: Send + 'static,
-    Fut: Future<Output = Result<V, BookmarkTransactionError>>,
-    RetryableFunc: Fn(RetryAttempt) -> Fut + Send + 'static,
-    DecisionFunc: Fn(&BookmarkTransactionError, RetryAttempt) -> bool + Send + 'static,
-{
-    for attempt in 1.. {
-        match func(attempt).await {
-            Ok(res) => return Ok((res, attempt)),
-            Err(err) => {
-                if !should_retry(&err, attempt) {
-                    return Err((err, attempt));
-                }
-            }
-        }
-    }
-    unreachable!()
-}
-
-#[derive(Clone, Default)]
 struct SqlBookmarksTransactionPayload {
-    force_sets: HashMap<BookmarkName, (ChangesetId, BookmarkUpdateReason)>,
-    creates: HashMap<BookmarkName, (ChangesetId, BookmarkUpdateReason)>,
-    sets: HashMap<BookmarkName, (BookmarkSetData, BookmarkUpdateReason)>,
-    force_deletes: HashMap<BookmarkName, BookmarkUpdateReason>,
-    deletes: HashMap<BookmarkName, (ChangesetId, BookmarkUpdateReason)>,
-    infinitepush_sets: HashMap<BookmarkName, BookmarkSetData>,
-    infinitepush_creates: HashMap<BookmarkName, ChangesetId>,
+    /// The repository we are updating.
+    repo_id: RepositoryId,
+
+    /// Operations to force-set a bookmark to a changeset.
+    force_sets: HashMap<BookmarkName, ChangesetId>,
+
+    /// Operations to create a bookmark.
+    creates: HashMap<BookmarkName, (ChangesetId, BookmarkKind)>,
+
+    /// Operations to update a bookmark from an old id to a new id, provided
+    /// it has a matching kind.
+    updates: HashMap<BookmarkName, (ChangesetId, ChangesetId, &'static [BookmarkKind])>,
+
+    /// Operations to force-delete a bookmark.
+    force_deletes: HashSet<BookmarkName>,
+
+    /// Operations to delete a bookmark with an old id.
+    deletes: HashMap<BookmarkName, ChangesetId>,
+
+    /// Log entries to log. Scratch updates and creates are not included in
+    /// the log.
+    log: HashMap<BookmarkName, NewUpdateLogEntry>,
 }
 
 impl SqlBookmarksTransactionPayload {
-    pub fn log_rows(
-        &self,
-    ) -> HashMap<
-        BookmarkName,
-        (
-            Option<ChangesetId>,
-            Option<ChangesetId>,
-            BookmarkUpdateReason,
-        ),
-    > {
-        let mut log_rows = HashMap::new();
-
-        for (bookmark, (to_cs_id, reason)) in &self.force_sets {
-            log_rows.insert(bookmark.clone(), (None, Some(*to_cs_id), reason.clone()));
-        }
-
-        for (bookmark, (to_cs_id, reason)) in &self.creates {
-            log_rows.insert(bookmark.clone(), (None, Some(*to_cs_id), reason.clone()));
-        }
-
-        for (bookmark, (bookmark_set_data, reason)) in &self.sets {
-            let from_cs_id = bookmark_set_data.old_cs;
-            let to_cs_id = bookmark_set_data.new_cs;
-            log_rows.insert(
-                bookmark.clone(),
-                (Some(from_cs_id), Some(to_cs_id), reason.clone()),
-            );
-        }
-
-        for (bookmark, reason) in &self.force_deletes {
-            log_rows.insert(bookmark.clone(), (None, None, reason.clone()));
-        }
-
-        for (bookmark, (from_cs_id, reason)) in &self.deletes {
-            log_rows.insert(bookmark.clone(), (Some(*from_cs_id), None, reason.clone()));
-        }
-
-        log_rows
-    }
-
-    pub fn check_if_bookmark_already_used(&self, key: &BookmarkName) -> Result<()> {
-        if self.creates.contains_key(key)
-            || self.force_sets.contains_key(key)
-            || self.sets.contains_key(key)
-            || self.force_deletes.contains_key(key)
-            || self.deletes.contains_key(key)
-            || self.infinitepush_sets.contains_key(key)
-            || self.infinitepush_creates.contains_key(key)
-        {
-            bail!("{} bookmark was already used", key);
-        }
-        Ok(())
-    }
-}
-
-pub struct SqlBookmarksTransaction {
-    write_connection: Connection,
-    repo_id: RepositoryId,
-    ctx: CoreContext,
-    payload: SqlBookmarksTransactionPayload,
-}
-
-impl SqlBookmarksTransaction {
-    fn new(ctx: CoreContext, write_connection: Connection, repo_id: RepositoryId) -> Self {
-        Self {
-            write_connection,
+    fn new(repo_id: RepositoryId) -> Self {
+        SqlBookmarksTransactionPayload {
             repo_id,
-            ctx,
-            payload: SqlBookmarksTransactionPayload::default(),
+            force_sets: HashMap::new(),
+            creates: HashMap::new(),
+            updates: HashMap::new(),
+            force_deletes: HashSet::new(),
+            deletes: HashMap::new(),
+            log: HashMap::new(),
         }
     }
 
@@ -816,165 +731,104 @@ impl SqlBookmarksTransaction {
         Ok(sql_transaction)
     }
 
-    async fn find_next_update_log_id(
-        sql_transaction: SqlTransaction,
-    ) -> Result<(SqlTransaction, u64)> {
-        let (sql_transaction, max_id_entries) =
-            FindMaxBookmarkLogId::query_with_transaction(sql_transaction)
-                .compat()
-                .await?;
+    async fn find_next_update_log_id(txn: SqlTransaction) -> Result<(SqlTransaction, u64)> {
+        let (txn, max_id_entries) = FindMaxBookmarkLogId::query_with_transaction(txn)
+            .compat()
+            .await?;
 
-        let next_id = 1 + match &max_id_entries[..] {
-            [(None,)] => 0,
-            [(Some(max_existing),)] => *max_existing,
+        let next_id = match &max_id_entries[..] {
+            [(None,)] => 1,
+            [(Some(max_existing),)] => *max_existing + 1,
             _ => {
-                return Err(format_err!(
-                    "Should be impossible. FindMaxBookmarkLogId returned not a single entry: {:?}",
+                return Err(anyhow!(
+                    "FindMaxBookmarkLogId returned multiple entries: {:?}",
                     max_id_entries
                 ))
             }
         };
-        Ok((sql_transaction, next_id))
+        Ok((txn, next_id))
     }
 
-    async fn log_bookmark_moves(
-        repo_id: RepositoryId,
-        timestamp: Timestamp,
-        moves: HashMap<
-            BookmarkName,
-            (
-                Option<ChangesetId>,
-                Option<ChangesetId>,
-                BookmarkUpdateReason,
-            ),
-        >,
-        sql_transaction: SqlTransaction,
-    ) -> Result<SqlTransaction> {
-        let (mut sql_transaction, mut next_id) =
-            Self::find_next_update_log_id(sql_transaction).await?;
-        for (bookmark, (from_changeset_id, to_changeset_id, reason)) in moves {
-            let row = vec![(
+    async fn store_log(&self, txn: SqlTransaction) -> Result<SqlTransaction> {
+        let timestamp = Timestamp::now();
+        let (mut txn, mut next_id) = Self::find_next_update_log_id(txn).await?;
+        for (bookmark, log_entry) in self.log.iter() {
+            let data = [(
                 &next_id,
-                &repo_id,
-                &bookmark,
-                &from_changeset_id,
-                &to_changeset_id,
-                &reason,
+                &self.repo_id,
+                bookmark,
+                &log_entry.old,
+                &log_entry.new,
+                &log_entry.reason,
                 &timestamp,
             )];
-            let reason = reason.clone();
-            sql_transaction =
-                AddBookmarkLog::query_with_transaction(sql_transaction, row.as_slice())
-                    .compat()
-                    .await?
-                    .0;
-            sql_transaction =
-                Self::log_bundle_replay_data(next_id, reason, sql_transaction).await?;
+            txn = AddBookmarkLog::query_with_transaction(txn, &data[..])
+                .compat()
+                .await?
+                .0;
+            txn = Self::log_bundle_replay_data(next_id, log_entry.reason.clone(), txn).await?;
             next_id += 1;
         }
-        Ok(sql_transaction)
+        Ok(txn)
     }
 
-    async fn attempt_write(
-        transaction: SqlTransaction,
-        repo_id: RepositoryId,
-        payload: SqlBookmarksTransactionPayload,
+    async fn store_force_sets(
+        &self,
+        txn: SqlTransaction,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
-        // NOTE: Infinitepush updates do *not* go into log_rows. This is because the
-        // BookmarkUpdateLog is currently used for replays to Mercurial, and those updates should
-        // not be replayed (for Infinitepush, those updates are actually dispatched by the client
-        // to both destination).
-        let log_rows = payload.log_rows();
-
-        let SqlBookmarksTransactionPayload {
-            force_sets,
-            creates,
-            sets,
-            force_deletes,
-            deletes,
-            infinitepush_sets,
-            infinitepush_creates,
-        } = payload;
-
-        let force_set: Vec<_> = force_sets.clone().into_iter().collect();
-        let mut ref_rows = Vec::new();
-        for idx in 0..force_set.len() {
-            let (ref to_changeset_id, _) = force_set[idx].1;
-            ref_rows.push((&repo_id, &force_set[idx].0, to_changeset_id));
+        let mut data = Vec::new();
+        for (bookmark, cs_id) in self.force_sets.iter() {
+            data.push((&self.repo_id, bookmark, cs_id));
         }
-
-        let (txn, _) = ReplaceBookmarks::query_with_transaction(transaction, &ref_rows[..])
+        let (txn, _) = ReplaceBookmarks::query_with_transaction(txn, data.as_slice())
             .compat()
             .await?;
+        Ok(txn)
+    }
 
-        let mut ref_rows = Vec::new();
-
-        let creates_vec: Vec<_> = creates.clone().into_iter().collect();
-        for idx in 0..creates_vec.len() {
-            let (ref to_changeset_id, _) = creates_vec[idx].1;
-            ref_rows.push((
-                &repo_id,
-                &creates_vec[idx].0,
-                to_changeset_id,
-                &BookmarkKind::PullDefaultPublishing,
-            ))
+    async fn store_creates(
+        &self,
+        txn: SqlTransaction,
+    ) -> Result<SqlTransaction, BookmarkTransactionError> {
+        let mut data = Vec::new();
+        for (bookmark, &(ref cs_id, ref kind)) in self.creates.iter() {
+            data.push((&self.repo_id, bookmark, cs_id, kind))
         }
-
-        for (name, cs_id) in infinitepush_creates.iter() {
-            ref_rows.push((&repo_id, &name, cs_id, &BookmarkKind::Scratch));
-        }
-
-        let rows_to_insert = ref_rows.len() as u64;
-        let (mut txn, result) = InsertBookmarks::query_with_transaction(txn, &ref_rows[..])
+        let rows_to_insert = data.len() as u64;
+        let (txn, result) = InsertBookmarks::query_with_transaction(txn, data.as_slice())
             .compat()
             .await?;
-
         if result.affected_rows() != rows_to_insert {
             return Err(BookmarkTransactionError::LogicError);
         }
+        Ok(txn)
+    }
 
-        // Iterate over (BookmarkName, BookmarkSetData, *Allowed Kinds to update from)
-        // We allow up to 2 kinds to update from.
-        use BookmarkKind::*;
-
-        let sets_iter = sets
-            .into_iter()
-            .map(|(name, (data, _reason))| (name, data, vec![PullDefaultPublishing, Publishing]));
-
-        let infinitepush_sets_iter = infinitepush_sets
-            .into_iter()
-            .map(|(name, data)| (name, data, vec![Scratch]));
-
-        let updates_iter = sets_iter.chain(infinitepush_sets_iter);
-
-        for (
-            ref name,
-            BookmarkSetData {
-                ref new_cs,
-                ref old_cs,
-            },
-            ref kinds,
-        ) in updates_iter
-        {
-            if new_cs == old_cs {
-                // no-op update. If bookmark points to a correct update then
-                // let's continue the transaction, otherwise revert it
-                let (txn_, result) = SelectBookmark::query_with_transaction(txn, &repo_id, &name)
-                    .compat()
-                    .await?;
+    async fn store_updates(
+        &self,
+        mut txn: SqlTransaction,
+    ) -> Result<SqlTransaction, BookmarkTransactionError> {
+        for (bookmark, &(ref old_cs_id, ref new_cs_id, kinds)) in self.updates.iter() {
+            if new_cs_id == old_cs_id {
+                // This is a no-op update.  Check if the bookmark already
+                // points to the correct commit.  If it doesn't, abort the
+                // transaction.
+                let (txn_, result) =
+                    SelectBookmark::query_with_transaction(txn, &self.repo_id, bookmark)
+                        .compat()
+                        .await?;
                 txn = txn_;
-                let new_cs = new_cs.clone();
-                if result.get(0).map(|b| b.0) != Some(new_cs) {
+                if result.get(0).map(|row| row.0).as_ref() != Some(new_cs_id) {
                     return Err(BookmarkTransactionError::LogicError);
                 }
             } else {
                 let (txn_, result) = UpdateBookmark::query_with_transaction(
                     txn,
-                    &repo_id,
-                    &name,
-                    &old_cs,
-                    &new_cs,
-                    &kinds[..],
+                    &self.repo_id,
+                    bookmark,
+                    old_cs_id,
+                    new_cs_id,
+                    kinds,
                 )
                 .compat()
                 .await?;
@@ -984,105 +838,189 @@ impl SqlBookmarksTransaction {
                 }
             }
         }
+        Ok(txn)
+    }
 
-        for (name, _reason) in force_deletes {
-            let (txn_, _) = DeleteBookmark::query_with_transaction(txn, &repo_id, &name)
+    async fn store_force_deletes(
+        &self,
+        mut txn: SqlTransaction,
+    ) -> Result<SqlTransaction, BookmarkTransactionError> {
+        for bookmark in self.force_deletes.iter() {
+            let (txn_, _) = DeleteBookmark::query_with_transaction(txn, &self.repo_id, &bookmark)
                 .compat()
                 .await?;
             txn = txn_;
         }
-        for (name, (old_cs, _reason)) in deletes {
+        Ok(txn)
+    }
+
+    async fn store_deletes(
+        &self,
+        mut txn: SqlTransaction,
+    ) -> Result<SqlTransaction, BookmarkTransactionError> {
+        for (bookmark, old_cs_id) in self.deletes.iter() {
             let (txn_, result) =
-                DeleteBookmarkIf::query_with_transaction(txn, &repo_id, &name, &old_cs)
+                DeleteBookmarkIf::query_with_transaction(txn, &self.repo_id, bookmark, old_cs_id)
                     .compat()
                     .await?;
             txn = txn_;
-
             if result.affected_rows() != 1 {
                 return Err(BookmarkTransactionError::LogicError);
             }
         }
+        Ok(txn)
+    }
 
-        Self::log_bookmark_moves(repo_id, Timestamp::now(), log_rows, txn)
+    async fn attempt_write(
+        &self,
+        mut txn: SqlTransaction,
+    ) -> Result<SqlTransaction, BookmarkTransactionError> {
+        txn = self.store_force_sets(txn).await?;
+        txn = self.store_creates(txn).await?;
+        txn = self.store_updates(txn).await?;
+        txn = self.store_force_deletes(txn).await?;
+        txn = self.store_deletes(txn).await?;
+        txn = self
+            .store_log(txn)
             .await
-            .map_err(BookmarkTransactionError::RetryableError)
+            .map_err(BookmarkTransactionError::RetryableError)?;
+        Ok(txn)
+    }
+}
+
+pub struct SqlBookmarksTransaction {
+    write_connection: Connection,
+    ctx: CoreContext,
+
+    /// Bookmarks that have been seen already in this transaction.
+    seen: HashSet<BookmarkName>,
+
+    /// Transaction updates.  A separate struct so that they can be
+    /// moved into the future that will perform the database
+    /// updates.
+    payload: SqlBookmarksTransactionPayload,
+}
+
+impl SqlBookmarksTransaction {
+    fn new(ctx: CoreContext, write_connection: Connection, repo_id: RepositoryId) -> Self {
+        Self {
+            write_connection,
+            ctx,
+            seen: HashSet::new(),
+            payload: SqlBookmarksTransactionPayload::new(repo_id),
+        }
+    }
+
+    pub fn check_not_seen(&mut self, bookmark: &BookmarkName) -> Result<()> {
+        if !self.seen.insert(bookmark.clone()) {
+            return Err(anyhow!("{} bookmark was already used", bookmark));
+        }
+        Ok(())
     }
 }
 
 impl BookmarkTransaction for SqlBookmarksTransaction {
     fn update(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
-        self.payload.check_if_bookmark_already_used(key)?;
-        self.payload
-            .sets
-            .insert(key.clone(), (BookmarkSetData { new_cs, old_cs }, reason));
+        self.check_not_seen(bookmark)?;
+        self.payload.updates.insert(
+            bookmark.clone(),
+            (old_cs, new_cs, BookmarkKind::ALL_PUBLISHING),
+        );
+        self.payload.log.insert(
+            bookmark.clone(),
+            NewUpdateLogEntry::new(Some(old_cs), Some(new_cs), reason)?,
+        );
         Ok(())
     }
 
     fn create(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
-        self.payload.check_if_bookmark_already_used(key)?;
-        self.payload.creates.insert(key.clone(), (new_cs, reason));
+        self.check_not_seen(bookmark)?;
+        self.payload.creates.insert(
+            bookmark.clone(),
+            (new_cs, BookmarkKind::PullDefaultPublishing),
+        );
+        self.payload.log.insert(
+            bookmark.clone(),
+            NewUpdateLogEntry::new(None, Some(new_cs), reason)?,
+        );
         Ok(())
     }
 
     fn force_set(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
-        self.payload.check_if_bookmark_already_used(key)?;
-        self.payload
-            .force_sets
-            .insert(key.clone(), (new_cs, reason));
+        self.check_not_seen(bookmark)?;
+        self.payload.force_sets.insert(bookmark.clone(), new_cs);
+        self.payload.log.insert(
+            bookmark.clone(),
+            NewUpdateLogEntry::new(None, Some(new_cs), reason)?,
+        );
         Ok(())
     }
 
     fn delete(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
     ) -> Result<()> {
-        self.payload.check_if_bookmark_already_used(key)?;
-        self.payload.deletes.insert(key.clone(), (old_cs, reason));
+        self.check_not_seen(bookmark)?;
+        self.payload.deletes.insert(bookmark.clone(), old_cs);
+        self.payload.log.insert(
+            bookmark.clone(),
+            NewUpdateLogEntry::new(Some(old_cs), None, reason)?,
+        );
         Ok(())
     }
 
-    fn force_delete(&mut self, key: &BookmarkName, reason: BookmarkUpdateReason) -> Result<()> {
-        self.payload.check_if_bookmark_already_used(key)?;
-        self.payload.force_deletes.insert(key.clone(), reason);
+    fn force_delete(
+        &mut self,
+        bookmark: &BookmarkName,
+        reason: BookmarkUpdateReason,
+    ) -> Result<()> {
+        self.check_not_seen(bookmark)?;
+        self.payload.force_deletes.insert(bookmark.clone());
+        self.payload.log.insert(
+            bookmark.clone(),
+            NewUpdateLogEntry::new(None, None, reason)?,
+        );
         Ok(())
     }
 
     fn update_scratch(
         &mut self,
-        key: &BookmarkName,
+        bookmark: &BookmarkName,
         new_cs: ChangesetId,
         old_cs: ChangesetId,
     ) -> Result<()> {
-        self.payload.check_if_bookmark_already_used(key)?;
+        self.check_not_seen(bookmark)?;
         self.payload
-            .infinitepush_sets
-            .insert(key.clone(), BookmarkSetData { new_cs, old_cs });
+            .updates
+            .insert(bookmark.clone(), (old_cs, new_cs, &[BookmarkKind::Scratch]));
+        // Scratch bookmark updates are not logged.
         Ok(())
     }
 
-    fn create_scratch(&mut self, key: &BookmarkName, new_cs: ChangesetId) -> Result<()> {
-        self.payload.check_if_bookmark_already_used(key)?;
+    fn create_scratch(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()> {
+        self.check_not_seen(bookmark)?;
         self.payload
-            .infinitepush_creates
-            .insert(key.clone(), new_cs);
+            .creates
+            .insert(bookmark.clone(), (new_cs, BookmarkKind::Scratch));
+        // Scratch bookmark updates are not logged.
         Ok(())
     }
 
@@ -1097,7 +1035,6 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         txn_hook: BookmarkTransactionHook,
     ) -> BoxFuture<'static, Result<bool>> {
         let Self {
-            repo_id,
             ctx,
             payload,
             write_connection,
@@ -1107,97 +1044,73 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        let commit_fut = conditional_retry_without_delay(
-            move |_attempt| {
-                write_connection
-                    .start_transaction()
-                    .compat()
-                    .map_err(BookmarkTransactionError::Other)
-                    .and_then({
-                        cloned!(ctx, txn_hook);
-                        move |txn| txn_hook(ctx.clone(), txn)
-                    })
-                    .and_then({
-                        cloned!(payload);
-                        move |txn| Self::attempt_write(txn, repo_id, payload)
-                    })
-            },
-            |err, attempt| match err {
-                BookmarkTransactionError::RetryableError(_) => {
-                    attempt < MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT
-                }
-                _ => false,
-            },
-        );
+        async move {
+            let mut attempt = 0;
+            let result = loop {
+                attempt += 1;
 
-        commit_fut
-            .then(|result| match result {
-                Ok((transaction, attempts)) => {
+                let mut txn = write_connection.start_transaction().compat().await?;
+
+                txn = match txn_hook(ctx.clone(), txn).await {
+                    Ok(txn) => txn,
+                    Err(BookmarkTransactionError::RetryableError(_))
+                        if attempt < MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT =>
+                    {
+                        continue
+                    }
+                    err => break err,
+                };
+
+                match payload.attempt_write(txn).await {
+                    Err(BookmarkTransactionError::RetryableError(_))
+                        if attempt < MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT =>
+                    {
+                        continue
+                    }
+                    result => break result,
+                }
+            };
+
+            match result {
+                Ok(txn) => {
                     STATS::bookmarks_update_log_insert_success.add_value(1);
                     STATS::bookmarks_update_log_insert_success_attempt_count
-                        .add_value(attempts as i64);
-                    transaction
-                        .commit()
-                        .compat()
-                        .and_then(|()| future::ok(true))
-                        .left_future()
+                        .add_value(attempt as i64);
+                    txn.commit().compat().await?;
+                    Ok(true)
                 }
-                Err((BookmarkTransactionError::LogicError, attempts)) => {
+                Err(BookmarkTransactionError::LogicError) => {
                     // Logic error signifies that the transaction was rolled
                     // back, which likely means that bookmark has moved since
                     // our pushrebase finished. We need to retry the pushrebase
                     // Attempt count means one more than the number of `RetryableError`
                     // we hit before seeing this.
                     STATS::bookmarks_insert_logic_error.add_value(1);
-                    STATS::bookmarks_insert_logic_error_attempt_count.add_value(attempts as i64);
-                    future::ok(false).right_future()
+                    STATS::bookmarks_insert_logic_error_attempt_count.add_value(attempt as i64);
+                    Ok(false)
                 }
-                Err((BookmarkTransactionError::RetryableError(err), attempts)) => {
+                Err(BookmarkTransactionError::RetryableError(err)) => {
                     // Attempt count for `RetryableError` should always be equal
                     // to the MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT, and hitting
                     // this error here basically means that this number of attempts
                     // was not enough, or the error was misclassified
                     STATS::bookmarks_insert_retryable_error.add_value(1);
-                    STATS::bookmarks_insert_retryable_error_attempt_count
-                        .add_value(attempts as i64);
-                    future::err(err).right_future()
+                    STATS::bookmarks_insert_retryable_error_attempt_count.add_value(attempt as i64);
+                    Err(err)
                 }
-                Err((BookmarkTransactionError::Other(err), attempts)) => {
+                Err(BookmarkTransactionError::Other(err)) => {
                     // `Other` error captures what we consider an "infrastructure"
                     // error, e.g. xdb went down during this transaction.
                     // Attempt count > 1 means the before we hit this error,
                     // we hit `RetryableError` a attempt count - 1 times.
                     STATS::bookmarks_insert_other_error.add_value(1);
-                    STATS::bookmarks_insert_other_error_attempt_count.add_value(attempts as i64);
-                    future::err(err).right_future()
+                    STATS::bookmarks_insert_other_error_attempt_count.add_value(attempt as i64);
+                    Err(err)
                 }
-            })
-            .boxed()
-    }
-}
-
-impl SqlBookmarksTransaction {
-    pub async fn update_transaction(
-        self,
-        transaction: SqlTransaction,
-    ) -> Result<TransactionResult> {
-        self.ctx
-            .perf_counters()
-            .increment_counter(PerfCounterType::SqlWrites);
-
-        match Self::attempt_write(transaction, self.repo_id, self.payload).await {
-            Ok(r) => Ok(TransactionResult::Succeeded(r)),
-            Err(BookmarkTransactionError::LogicError) => Ok(TransactionResult::Failed),
-            Err(BookmarkTransactionError::RetryableError(err)) => Err(err),
-            Err(BookmarkTransactionError::Other(err)) => Err(err),
+            }
         }
+        .boxed()
     }
-}
-
-#[derive(Clone)]
-struct BookmarkSetData {
-    new_cs: ChangesetId,
-    old_cs: ChangesetId,
 }
 
 fn get_bundle_replay_data(
@@ -1229,33 +1142,6 @@ mod test {
     use quickcheck::quickcheck;
     use std::collections::{BTreeMap, HashSet};
     use tokio_compat::runtime::Runtime;
-
-    #[fbinit::compat_test]
-    async fn test_conditional_retry_without_delay(_fb: FacebookInit) -> Result<()> {
-        let fn_to_retry = move |attempt| {
-            if attempt < 3 {
-                future::err(BookmarkTransactionError::RetryableError(Error::msg(
-                    "fails on initial attempts",
-                )))
-            } else {
-                future::ok(())
-            }
-        };
-
-        let (_res, attempts) =
-            conditional_retry_without_delay(fn_to_retry, |_err, attempt| attempt < 4)
-                .await
-                .expect("should succeed after 3 attempts");
-        assert_eq!(attempts, 3);
-
-        let (_err, attempts) =
-            conditional_retry_without_delay(fn_to_retry, |_err, attempt| attempt < 1)
-                .await
-                .expect_err("retries shouldn't have been performed");
-        assert_eq!(attempts, 1);
-
-        Ok(())
-    }
 
     fn create_bookmark_name(book: &str) -> BookmarkName {
         BookmarkName::new(book.to_string()).unwrap()
