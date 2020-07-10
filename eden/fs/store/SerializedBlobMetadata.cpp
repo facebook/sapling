@@ -6,7 +6,14 @@
  */
 
 #include "SerializedBlobMetadata.h"
+
 #include <folly/Format.h>
+#include <folly/Range.h>
+#include <folly/lang/Bits.h>
+
+#include <eden/fs/model/Hash.h>
+#include <eden/fs/store/BlobMetadata.h>
+
 namespace facebook {
 namespace eden {
 
@@ -35,6 +42,10 @@ BlobMetadata SerializedBlobMetadata::parse(
         bytes.size()));
   }
 
+  return unslice(bytes);
+}
+
+BlobMetadata SerializedBlobMetadata::unslice(folly::ByteRange bytes) {
   uint64_t blobSizeBE;
   memcpy(&blobSizeBE, bytes.data(), sizeof(uint64_t));
   bytes.advance(sizeof(uint64_t));

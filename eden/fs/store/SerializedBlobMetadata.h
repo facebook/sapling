@@ -14,6 +14,8 @@
 namespace facebook {
 namespace eden {
 
+class TreeMetadata;
+
 class SerializedBlobMetadata {
  public:
   explicit SerializedBlobMetadata(const BlobMetadata& metadata);
@@ -22,10 +24,11 @@ class SerializedBlobMetadata {
 
   static BlobMetadata parse(Hash blobID, const StoreResult& result);
 
+  static constexpr size_t SIZE = sizeof(uint64_t) + Hash::RAW_SIZE;
+
  private:
   void serialize(const Hash& contentsHash, uint64_t blobSize);
-
-  static constexpr size_t SIZE = sizeof(uint64_t) + Hash::RAW_SIZE;
+  static BlobMetadata unslice(folly::ByteRange bytes);
 
   /**
    * The serialized data is stored as stored as:
@@ -33,6 +36,8 @@ class SerializedBlobMetadata {
    * - hash (20 bytes)
    */
   std::array<uint8_t, SIZE> data_;
+
+  friend class TreeMetadata;
 };
 } // namespace eden
 } // namespace facebook

@@ -94,6 +94,10 @@ class KeySpace {
   static constexpr KeySpaceRecord ScsProxyHashFamily{6,
                                                      "scsproxyhash",
                                                      Persistent{}};
+  static constexpr KeySpaceRecord TreeMetaDataFamily{
+      7,
+      "treemeta",
+      Ephemeral{&EdenConfig::localStoreTreeMetaSizeLimit}};
 
   static constexpr const KeySpaceRecord* kAll[] = {&BlobFamily,
                                                    &BlobMetaDataFamily,
@@ -101,7 +105,8 @@ class KeySpace {
                                                    &HgProxyHashFamily,
                                                    &HgCommitToTreeFamily,
                                                    &BlobSizeFamily,
-                                                   &ScsProxyHashFamily};
+                                                   &ScsProxyHashFamily,
+                                                   &TreeMetaDataFamily};
   static constexpr size_t kTotalCount = std::size(kAll);
 
  private:

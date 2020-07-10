@@ -270,6 +270,11 @@ class EdenConfig : private ConfigSettingManager {
                                                   3'000'000'000,
                                                   this};
 
+  ConfigSetting<uint64_t> localStoreTreeMetaSizeLimit{
+      "store:treemeta-size-limit",
+      1'000'000'000,
+      this};
+
   ConfigSetting<uint64_t> localStoreHgCommit2TreeSizeLimit{
       "store:hgcommit2tree-size-limit",
       20'000'000,
