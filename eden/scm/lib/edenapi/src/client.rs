@@ -124,6 +124,7 @@ impl Client {
         }
 
         let entries = stream::select_all(streams).boxed();
+        let stats = stats.err_into().boxed();
 
         Ok(Fetch {
             meta,

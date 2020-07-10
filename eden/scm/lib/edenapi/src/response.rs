@@ -12,7 +12,7 @@ use futures::prelude::*;
 use http::{HeaderMap, StatusCode, Version};
 use tokio::runtime::Runtime;
 
-use http_client::{AsyncResponse, Response, Stats, StatsFuture};
+use http_client::{AsyncResponse, Response, Stats};
 
 use crate::errors::EdenApiError;
 
@@ -25,6 +25,7 @@ const TW_CANARY_HEADER: &str = "x-tw-canary-id";
 /// A generic `Stream` of "entries" representing the deserialized content
 /// of a streaming response from the server.
 pub type Entries<T> = Pin<Box<dyn Stream<Item = Result<T, EdenApiError>> + Send + 'static>>;
+pub type StatsFuture = Pin<Box<dyn Future<Output = Result<Stats, EdenApiError>> + Send + 'static>>;
 
 /// The result of a data fetching operation, which may have involved
 /// several individual HTTP requests.
