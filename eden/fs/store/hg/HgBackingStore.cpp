@@ -28,6 +28,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/store/TreeMetadata.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
@@ -286,13 +287,40 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
   folly::stop_watch<std::chrono::milliseconds> watch;
 
+  auto treeMetadataFuture =
+      folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
+  if (metadataImporter_->metadataFetchingAvailable()) {
+    treeMetadataFuture = metadataImporter_->getTreeMetadata(edenTreeID);
+  }
   return fetchTreeFromHgCacheOrImporter(
              manifestNode, edenTreeID, path.copy(), commitHash)
-      .thenValue([stats = stats_, watch](auto&& result) {
+      .thenValue([this,
+                  watch,
+                  treeMetadataFuture = std::move(treeMetadataFuture)](
+                     std::unique_ptr<Tree>&& result) mutable {
         auto& currentThreadStats =
-            stats->getHgBackingStoreStatsForCurrentThread();
+            stats_->getHgBackingStoreStatsForCurrentThread();
         currentThreadStats.hgBackingStoreGetTree.addValue(
             watch.elapsed().count());
+        if (treeMetadataFuture.valid()) {
+          // metadata fetching will need the eden ids of each of the
+          // children of the the tree, to store the metadata for each of the
+          // children in the local store. Thus we make a copy of this and
+          // pass it along to metadata storage.
+          std::move(treeMetadataFuture)
+              .via(serverThreadPool_)
+              .thenValue(
+                  [localStore = localStore_, tree = *result](
+                      std::unique_ptr<TreeMetadata>&& treeMetadata) mutable {
+                    // note this may throw if the localStore has already been
+                    // closed
+                    localStore->putTreeMetadata(*treeMetadata, tree);
+                  })
+              .thenError([](auto&& error) {
+                XLOG(WARN) << "Error during metadata pre-fetching or storage: "
+                           << error.what();
+              });
+        }
         return std::move(result);
       });
 }
