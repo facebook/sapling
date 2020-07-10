@@ -32,6 +32,7 @@
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/store/hg/ScsProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
@@ -166,7 +167,8 @@ HgBackingStore::HgBackingStore(
     std::shared_ptr<LocalStore> localStore,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
-    std::shared_ptr<EdenStats> stats)
+    std::shared_ptr<EdenStats> stats,
+    MetadataImporterFactory metadataImporterFactory)
     : localStore_(std::move(localStore)),
       stats_(stats),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
@@ -195,6 +197,7 @@ HgBackingStore::HgBackingStore(
   const auto& options = importer.getOptions();
   initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;
+  metadataImporter_ = metadataImporterFactory(config_, repoName_, localStore_);
 }
 
 /**
@@ -215,6 +218,9 @@ HgBackingStore::HgBackingStore(
   const auto& options = importer->getOptions();
   initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;
+  metadataImporter_ =
+      MetadataImporter::getMetadataImporterFactory<DefaultMetadataImporter>()(
+          config_, repoName_, localStore_);
 }
 
 HgBackingStore::~HgBackingStore() {}

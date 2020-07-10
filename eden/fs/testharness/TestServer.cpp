@@ -12,6 +12,7 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/TempFile.h"
@@ -74,6 +75,7 @@ unique_ptr<EdenServer> TestServer::createServer(AbsolutePathPiece tmpDir) {
       SessionInfo{},
       std::move(privHelper),
       config,
+      MetadataImporter::getMetadataImporterFactory<DefaultMetadataImporter>(),
       "test server");
 }
 

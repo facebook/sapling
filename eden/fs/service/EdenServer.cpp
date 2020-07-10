@@ -50,6 +50,7 @@
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/SessionInfo.h"
@@ -327,9 +328,11 @@ EdenServer::EdenServer(
     SessionInfo sessionInfo,
     std::unique_ptr<PrivHelper> privHelper,
     std::shared_ptr<const EdenConfig> edenConfig,
+    MetadataImporterFactory metadataImporterFactory,
     std::string version)
     : originalCommandLine_{std::move(originalCommandLine)},
       edenDir_{edenConfig->edenDir.getValue()},
+      metadataImporterFactory_(std::move(metadataImporterFactory)),
       blobCache_{BlobCache::create(
           FLAGS_maximumBlobCacheSize,
           FLAGS_minimumBlobCacheEntryCount)},
@@ -1613,7 +1616,8 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         localStore_,
         serverState_->getThreadPool().get(),
         reloadableConfig,
-        getSharedStats());
+        getSharedStats(),
+        metadataImporterFactory_);
     return make_shared<HgQueuedBackingStore>(
         localStore_,
         getSharedStats(),

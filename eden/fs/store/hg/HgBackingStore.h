@@ -20,6 +20,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
+#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -53,7 +54,8 @@ class HgBackingStore : public BackingStore {
       std::shared_ptr<LocalStore> localStore,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
-      std::shared_ptr<EdenStats>);
+      std::shared_ptr<EdenStats> edenStats,
+      MetadataImporterFactory metadataImporter);
 
   /**
    * Create an HgBackingStore suitable for use in unit tests. It uses an inline
@@ -196,6 +198,8 @@ class HgBackingStore : public BackingStore {
 
   std::string repoName_;
   HgDatapackStore datapackStore_;
+
+  std::unique_ptr<MetadataImporter> metadataImporter_;
 
   // Track metrics for imports currently fetching data from hg
   mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;

@@ -7,6 +7,8 @@
 
 #include "eden/fs/service/EdenMain.h"
 
+#include <optional>
+
 #include <fb303/FollyLoggingHandler.h>
 #include <fb303/TFunctionStatHandler.h>
 #include <folly/Conv.h>
@@ -20,7 +22,7 @@
 #include <folly/stop_watch.h>
 #include <gflags/gflags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
-#include <optional>
+
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
@@ -30,6 +32,7 @@
 #include "eden/fs/service/EdenServiceHandler.h" // for kServiceName
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
+#include "eden/fs/store/hg/MetadataImporter.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/UserInfo.h"
@@ -118,6 +121,11 @@ std::string DefaultEdenMain::getLocalHostname() {
 
 void DefaultEdenMain::prepare(const EdenServer& /*server*/) {
   fb303::registerFollyLoggingOptionHandlers();
+}
+
+MetadataImporterFactory DefaultEdenMain::getMetadataImporterFactory() {
+  return MetadataImporter::getMetadataImporterFactory<
+      DefaultMetadataImporter>();
 }
 
 void DefaultEdenMain::runServer(const EdenServer& server) {
@@ -259,12 +267,14 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
 
     auto sessionInfo = makeSessionInfo(
         identity, main.getLocalHostname(), main.getEdenfsVersion());
+
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
         std::move(sessionInfo),
         std::move(privHelper),
         std::move(edenConfig),
+        main.getMetadataImporterFactory(),
         main.getEdenfsVersion());
 
     prepareFuture = server->prepare(startupLogger, !FLAGS_noWaitForMounts);
