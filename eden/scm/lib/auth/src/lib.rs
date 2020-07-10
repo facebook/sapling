@@ -89,12 +89,12 @@ impl AuthConfig {
                 Some(i) => (&key[..i], &key[i + 1..]),
                 None => continue,
             };
-            let value = config.get("auth", key).unwrap();
-
-            groups
-                .entry(group)
-                .or_insert_with(HashMap::new)
-                .insert(setting, value);
+            if let Some(value) = config.get("auth", key) {
+                groups
+                    .entry(group)
+                    .or_insert_with(HashMap::new)
+                    .insert(setting, value);
+            }
         }
 
         let groups = groups
