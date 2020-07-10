@@ -20,7 +20,7 @@ use anyhow::{format_err, Error};
 use cpython::*;
 use parking_lot::RwLock;
 
-use cpython_ext::{PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
+use cpython_ext::{ExtractInner, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
 use pyconfigparser::config;
 use revisionstore::{
     repack, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
@@ -93,7 +93,8 @@ fn repack_py(
     shared: bool,
     config: config,
 ) -> PyResult<PyNone> {
-    let stores = stores.map(|(content, metadata)| (content.to_inner(py), metadata.to_inner(py)));
+    let stores =
+        stores.map(|(content, metadata)| (content.extract_inner(py), metadata.extract_inner(py)));
 
     let kind = if full {
         RepackKind::Full
@@ -481,6 +482,14 @@ py_class!(pub class mutabledeltastore |py| {
     }
 });
 
+impl ExtractInner for mutabledeltastore {
+    type Inner = Arc<dyn HgIdMutableDeltaStore>;
+
+    fn extract_inner(&self, py: Python) -> Self::Inner {
+        self.store(py).clone()
+    }
+}
+
 impl HgIdDataStore for mutabledeltastore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         let gil = Python::acquire_gil();
@@ -565,6 +574,14 @@ py_class!(pub class mutablehistorystore |py| {
         store.get_missing_py(py, &mut keys.iter(py)?)
     }
 });
+
+impl ExtractInner for mutablehistorystore {
+    type Inner = Arc<dyn HgIdMutableHistoryStore>;
+
+    fn extract_inner(&self, py: Python) -> Self::Inner {
+        self.store(py).clone()
+    }
+}
 
 impl HgIdHistoryStore for mutablehistorystore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
@@ -763,8 +780,10 @@ py_class!(pub class pyremotestore |py| {
     }
 });
 
-impl pyremotestore {
-    fn into_inner(&self, py: Python) -> Arc<PyHgIdRemoteStore> {
+impl ExtractInner for pyremotestore {
+    type Inner = Arc<PyHgIdRemoteStore>;
+
+    fn extract_inner(&self, py: Python) -> Self::Inner {
         self.remote(py).clone()
     }
 }
@@ -773,7 +792,7 @@ py_class!(pub class contentstore |py| {
     data store: Arc<ContentStore>;
 
     def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore, memcache: Option<memcachestore>) -> PyResult<contentstore> {
-        let remotestore = remote.into_inner(py);
+        let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);
 
         let mut builder = ContentStoreBuilder::new(&config).remotestore(remotestore);
@@ -785,7 +804,7 @@ py_class!(pub class contentstore |py| {
         };
 
         builder = if let Some(memcache) = memcache {
-            builder.memcachestore(memcache.into_inner(py))
+            builder.memcachestore(memcache.extract_inner(py))
         } else {
             builder
         };
@@ -850,8 +869,10 @@ py_class!(pub class contentstore |py| {
     }
 });
 
-impl contentstore {
-    pub fn to_inner(&self, py: Python) -> Arc<ContentStore> {
+impl ExtractInner for contentstore {
+    type Inner = Arc<ContentStore>;
+
+    fn extract_inner(&self, py: Python) -> Self::Inner {
         self.store(py).clone()
     }
 }
@@ -860,7 +881,7 @@ py_class!(class metadatastore |py| {
     data store: Arc<MetadataStore>;
 
     def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore, memcache: Option<memcachestore>) -> PyResult<metadatastore> {
-        let remotestore = remote.into_inner(py);
+        let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);
 
         let mut builder = MetadataStoreBuilder::new(&config).remotestore(remotestore);
@@ -872,7 +893,7 @@ py_class!(class metadatastore |py| {
         };
 
         builder = if let Some(memcache) = memcache {
-            builder.memcachestore(memcache.into_inner(py))
+            builder.memcachestore(memcache.extract_inner(py))
         } else {
             builder
         };
@@ -905,8 +926,10 @@ py_class!(class metadatastore |py| {
     }
 });
 
-impl metadatastore {
-    pub fn to_inner(&self, py: Python) -> Arc<MetadataStore> {
+impl ExtractInner for metadatastore {
+    type Inner = Arc<MetadataStore>;
+
+    fn extract_inner(&self, py: Python) -> Self::Inner {
         self.store(py).clone()
     }
 }
@@ -921,8 +944,10 @@ py_class!(pub class memcachestore |py| {
     }
 });
 
-impl memcachestore {
-    fn into_inner(&self, py: Python) -> Arc<MemcacheStore> {
+impl ExtractInner for memcachestore {
+    type Inner = Arc<MemcacheStore>;
+
+    fn extract_inner(&self, py: Python) -> Self::Inner {
         self.memcache(py).clone()
     }
 }

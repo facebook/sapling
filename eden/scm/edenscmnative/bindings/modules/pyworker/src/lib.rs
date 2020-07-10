@@ -21,7 +21,7 @@ use bytes::Bytes;
 use cpython::*;
 use crossbeam::channel::{bounded, Receiver, Sender};
 
-use cpython_ext::{PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
+use cpython_ext::{ExtractInner, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
 use pyrevisionstore::contentstore;
 use revisionstore::{ContentStore, HgIdDataStore};
 use types::{HgId, Key, RepoPath, RepoPathBuf};
@@ -228,7 +228,7 @@ py_class!(class writerworker |py| {
     data inner: RefCell<Option<Worker<(usize, Vec<(RepoPathBuf, Option<UpdateFlag>)>), (RepoPathBuf, HgId, Option<UpdateFlag>)>>>;
 
     def __new__(_cls, contentstore: contentstore, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
-        let store = contentstore.to_inner(py);
+        let store = contentstore.extract_inner(py);
         let root = root.to_path_buf();
         let writer_state = WriterState::new(root, store).map_pyerr(py)?;
 
