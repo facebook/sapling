@@ -49,7 +49,8 @@ class HgDatapackStore {
       const RelativePath& path,
       const Hash& manifestId,
       const Hash& edenTreeId,
-      LocalStore::WriteBatch* writeBatch);
+      LocalStore::WriteBatch* writeBatch,
+      const std::optional<Hash>& commitHash);
 
   void refresh();
 

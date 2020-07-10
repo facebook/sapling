@@ -32,6 +32,7 @@
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/hg/ScsProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
@@ -247,16 +248,24 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     ObjectFetchContext& /*context*/,
     ImportPriority /* priority */) {
   HgProxyHash pathInfo(localStore_, id, "importTree");
+  std::optional<Hash> commitHash;
+  // note: if the parent of the tree was fetched with an old version of eden
+  // then the commit id will not be available
+  if (auto commitInfo = ScsProxyHash::load(localStore_, id, "importTree")) {
+    commitHash = commitInfo.value().commitHash();
+  }
   return importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
       id,
-      pathInfo.path());
+      pathInfo.path(),
+      commitHash);
 }
 
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
-    RelativePathPiece path) {
+    RelativePathPiece path,
+    const std::optional<Hash>& commitHash) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
              << manifestNode << " for path \"" << path << "\"";
 
@@ -270,7 +279,8 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
   folly::stop_watch<std::chrono::milliseconds> watch;
 
-  return fetchTreeFromHgCacheOrImporter(manifestNode, edenTreeID, path.copy())
+  return fetchTreeFromHgCacheOrImporter(
+             manifestNode, edenTreeID, path.copy(), commitHash)
       .thenValue([stats = stats_, watch](auto&& result) {
         auto& currentThreadStats =
             stats->getHgBackingStoreStatsForCurrentThread();
@@ -284,19 +294,20 @@ folly::Future<std::unique_ptr<Tree>>
 HgBackingStore::fetchTreeFromHgCacheOrImporter(
     Hash manifestNode,
     Hash edenTreeID,
-    RelativePath path) {
+    RelativePath path,
+    const std::optional<Hash>& commitId) {
   auto writeBatch = localStore_->beginWrite();
   try {
     if (auto tree = datapackStore_.getTree(
-            path, manifestNode, edenTreeID, writeBatch.get())) {
+            path, manifestNode, edenTreeID, writeBatch.get(), commitId)) {
       XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
                  << " from Rust hgcache";
       return folly::makeFuture(std::move(tree));
     }
     auto content = unionStoreGetWithRefresh(
         *unionStore_->wlock(), path.stringPiece(), manifestNode);
-    return folly::makeFuture(
-        processTree(content, manifestNode, edenTreeID, path, writeBatch.get()));
+    return folly::makeFuture(processTree(
+        content, manifestNode, edenTreeID, path, commitId, writeBatch.get()));
   } catch (const MissingKeyError&) {
     // Data for this tree was not present locally.
     // Fall through and fetch the data from the server below.
@@ -305,7 +316,11 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
       return folly::makeFuture<unique_ptr<Tree>>(ew);
     }
     return fetchTreeFromImporter(
-        manifestNode, edenTreeID, std::move(path), std::move(writeBatch));
+        manifestNode,
+        edenTreeID,
+        std::move(path),
+        commitId,
+        std::move(writeBatch));
   }
 }
 
@@ -313,6 +328,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     Hash manifestNode,
     Hash edenTreeID,
     RelativePath path,
+    std::optional<Hash> commitId,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
   return folly::via(
              importThreadPool_.get(),
@@ -332,13 +348,15 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                 ownedPath = std::move(path),
                 node = std::move(manifestNode),
                 treeID = std::move(edenTreeID),
-                batch = std::move(writeBatch)](folly::Try<folly::Unit> val) {
+                batch = std::move(writeBatch),
+                commitId = std::move(commitId)](folly::Try<folly::Unit> val) {
         val.value();
         // Now try loading it again
         unionStore_->wlock()->markForRefresh();
         auto content =
             unionStoreGet(*unionStore_->wlock(), ownedPath.stringPiece(), node);
-        return processTree(content, node, treeID, ownedPath, batch.get());
+        return processTree(
+            content, node, treeID, ownedPath, commitId, batch.get());
       });
 }
 
@@ -347,6 +365,7 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
     const Hash& manifestNode,
     const Hash& edenTreeID,
     RelativePathPiece path,
+    const std::optional<Hash>& commitHash,
     LocalStore::WriteBatch* writeBatch) {
   if (!content.content()) {
     // This generally shouldn't happen: the UnionDatapackStore throws on
@@ -411,6 +430,13 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
 
     auto proxyHash = HgProxyHash::store(
         path + RelativePathPiece(entryName), entryHash, writeBatch);
+    if (commitHash) {
+      ScsProxyHash::store(
+          proxyHash,
+          path + RelativePathPiece(entryName),
+          commitHash.value(),
+          writeBatch);
+    }
 
     entries.emplace_back(proxyHash, entryName, fileType);
 
@@ -436,7 +462,13 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
         // Record that we are at the root for this node
         RelativePathPiece path{};
         auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
-        auto futTree = importTreeImpl(manifestNode, proxyInfo.first, path);
+        // needs to write the scs proxy hash before the fetch so that it is
+        // available for the request
+        auto batch = localStore_->beginWrite();
+        ScsProxyHash::store(proxyInfo.first, path, commitId, batch.get());
+        batch->flush();
+        auto futTree =
+            importTreeImpl(manifestNode, proxyInfo.first, path, commitId);
         return std::move(futTree).thenValue(
             [batch = localStore_->beginWrite(),
              info = std::move(proxyInfo)](auto tree) {
@@ -444,7 +476,6 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
               // the root.
               HgProxyHash::store(info, batch.get());
               batch->flush();
-
               return tree;
             });
       });

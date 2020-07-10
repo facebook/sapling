@@ -18,6 +18,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/hg/ScsProxyHash.h"
 #include "eden/fs/utils/Bug.h"
 
 namespace facebook {
@@ -41,7 +42,8 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
 TreeEntry fromRawTreeEntry(
     RustTreeEntry entry,
     RelativePathPiece path,
-    LocalStore::WriteBatch* writeBatch) {
+    LocalStore::WriteBatch* writeBatch,
+    const std::optional<Hash>& commitHash) {
   std::optional<uint64_t> size;
   std::optional<Hash> contentSha1;
 
@@ -58,6 +60,9 @@ TreeEntry fromRawTreeEntry(
 
   auto fullPath = path + RelativePathPiece(name);
   auto proxyHash = HgProxyHash::store(fullPath, hash, writeBatch);
+  if (commitHash) {
+    ScsProxyHash::store(proxyHash, fullPath, commitHash.value(), writeBatch);
+  }
 
   return TreeEntry{
       proxyHash, name, fromRawTreeEntryType(entry.ttype), size, contentSha1};
@@ -67,11 +72,13 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
     const RustTree* tree,
     const Hash& edenTreeId,
     RelativePathPiece path,
-    LocalStore::WriteBatch* writeBatch) {
+    LocalStore::WriteBatch* writeBatch,
+    const std::optional<Hash>& commitHash) {
   std::vector<TreeEntry> entries;
 
   for (uintptr_t i = 0; i < tree->length; i++) {
-    auto entry = fromRawTreeEntry(tree->entries[i], path, writeBatch);
+    auto entry =
+        fromRawTreeEntry(tree->entries[i], path, writeBatch, commitHash);
     entries.push_back(entry);
   }
 
@@ -153,10 +160,14 @@ void HgDatapackStore::getBlobBatch(
 }
 
 std::unique_ptr<Tree> HgDatapackStore::getTree(
-    const RelativePath&,
-    const Hash&,
-    const Hash&,
-    LocalStore::WriteBatch*) {
+    const RelativePath& path,
+    const Hash& manifestId,
+    const Hash& edenTreeId,
+    LocalStore::WriteBatch* writeBatch,
+    const std::optional<Hash>& commitHash) {
+  if (auto tree = store_.getTree(manifestId.getBytes())) {
+    return fromRawTree(tree.get(), edenTreeId, path, writeBatch, commitHash);
+  }
   return nullptr;
 }
 
