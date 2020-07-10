@@ -163,11 +163,11 @@ ConstantStringRef unionStoreGetWithRefresh(
 
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
-    LocalStore* localStore,
+    std::shared_ptr<LocalStore> localStore,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<EdenStats> stats)
-    : localStore_(localStore),
+    : localStore_(std::move(localStore)),
       stats_(stats),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,
@@ -205,9 +205,9 @@ HgBackingStore::HgBackingStore(
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     HgImporter* importer,
-    LocalStore* localStore,
+    std::shared_ptr<LocalStore> localStore,
     std::shared_ptr<EdenStats> stats)
-    : localStore_{localStore},
+    : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
       serverThreadPool_{importThreadPool_.get()},
@@ -247,11 +247,12 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     const Hash& id,
     ObjectFetchContext& /*context*/,
     ImportPriority /* priority */) {
-  HgProxyHash pathInfo(localStore_, id, "importTree");
+  HgProxyHash pathInfo(localStore_.get(), id, "importTree");
   std::optional<Hash> commitHash;
   // note: if the parent of the tree was fetched with an old version of eden
   // then the commit id will not be available
-  if (auto commitInfo = ScsProxyHash::load(localStore_, id, "importTree")) {
+  if (auto commitInfo =
+          ScsProxyHash::load(localStore_.get(), id, "importTree")) {
     commitHash = commitInfo.value().commitHash();
   }
   return importTreeImpl(
@@ -518,7 +519,7 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
   folly::stop_watch<std::chrono::milliseconds> watch;
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
-  HgProxyHash hgInfo(localStore_, id, "importFileContents");
+  HgProxyHash hgInfo(localStore_.get(), id, "importFileContents");
 
   if (auto result = getBlobFromHgCache(id, hgInfo)) {
     stats_->getHgBackingStoreStatsForCurrentThread()
@@ -536,7 +537,7 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
 
 SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids) {
-  return HgProxyHash::getBatch(localStore_, ids)
+  return HgProxyHash::getBatch(localStore_.get(), ids)
       .via(importThreadPool_.get())
       .thenValue([&liveImportPrefetchWatches = liveImportPrefetchWatches_](
                      std::vector<HgProxyHash>&& hgPathHashes) {

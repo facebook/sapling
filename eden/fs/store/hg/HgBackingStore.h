@@ -47,14 +47,10 @@ class HgBackingStore : public BackingStore {
  public:
   /**
    * Create a new HgBackingStore.
-   *
-   * The LocalStore object is owned by the EdenServer (which also owns this
-   * HgBackingStore object).  It is guaranteed to be valid for the lifetime of
-   * the HgBackingStore object.
    */
   HgBackingStore(
       AbsolutePathPiece repository,
-      LocalStore* localStore,
+      std::shared_ptr<LocalStore> localStore,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<EdenStats>);
@@ -67,7 +63,7 @@ class HgBackingStore : public BackingStore {
   HgBackingStore(
       AbsolutePathPiece repository,
       HgImporter* importer,
-      LocalStore* localStore,
+      std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<EdenStats>);
 
   ~HgBackingStore() override;
@@ -180,7 +176,7 @@ class HgBackingStore : public BackingStore {
       const std::optional<Hash>& commitHash,
       LocalStore::WriteBatch* writeBatch);
 
-  LocalStore* localStore_{nullptr};
+  std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<EdenStats> stats_;
   // A set of threads owning HgImporter instances
   std::unique_ptr<folly::Executor> importThreadPool_;

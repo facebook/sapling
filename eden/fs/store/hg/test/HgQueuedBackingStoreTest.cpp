@@ -59,7 +59,7 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
   std::unique_ptr<HgBackingStore> backingStore{std::make_unique<HgBackingStore>(
       repo.path(),
       &importer,
-      localStore.get(),
+      localStore,
       stats)};
 
   std::unique_ptr<HgQueuedBackingStore> makeQueuedStore() {

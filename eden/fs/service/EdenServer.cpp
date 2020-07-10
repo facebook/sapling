@@ -1610,7 +1610,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         serverState_, &serverState_->getReloadableConfig());
     auto store = std::make_unique<HgBackingStore>(
         repoPath,
-        localStore_.get(),
+        localStore_,
         serverState_->getThreadPool().get(),
         reloadableConfig,
         getSharedStats());
