@@ -12,9 +12,12 @@ use cpython::*;
 use cpython_ext::{ExtractInner, PyNone, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use pyconfigparser::config;
+use pyrevisionstore::edenapistore;
+use revisionstore::EdenApiHgIdRemoteStore;
 
 use crate::pyext::EdenApiPyExt;
 use crate::stats::stats;
+use crate::util::to_repo_name;
 
 // Python wrapper around an EdenAPI client.
 //
@@ -88,6 +91,20 @@ py_class!(pub class client |py| {
             depth,
             progress,
         )
+    }
+
+    def filestore(&self, repo: String) -> PyResult<edenapistore> {
+        let repo = to_repo_name(py, &repo)?;
+        let edenapi = self.extract_inner(py);
+        let store = EdenApiHgIdRemoteStore::filestore(repo, edenapi);
+        edenapistore::new(py, Arc::new(store))
+    }
+
+    def treestore(&self, repo: String) -> PyResult<edenapistore> {
+        let repo = to_repo_name(py, &repo)?;
+        let edenapi = self.extract_inner(py);
+        let store = EdenApiHgIdRemoteStore::treestore(repo, edenapi);
+        edenapistore::new(py, Arc::new(store))
     }
 });
 

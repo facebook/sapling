@@ -24,10 +24,10 @@ use cpython_ext::{ExtractInner, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt
 use pyconfigparser::config;
 use revisionstore::{
     repack, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
-    DataPackVersion, Delta, HgIdDataStore, HgIdHistoryStore, HgIdMutableDeltaStore,
-    HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore, HistoryPackVersion,
-    IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore, IndexedlogRepair, LocalStore,
-    MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
+    DataPackVersion, Delta, EdenApiHgIdRemoteStore, HgIdDataStore, HgIdHistoryStore,
+    HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore,
+    HistoryPackVersion, IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore, IndexedlogRepair,
+    LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
     MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey,
 };
 use types::{Key, NodeInfo};
@@ -788,14 +788,49 @@ impl ExtractInner for pyremotestore {
     }
 }
 
+// Python wrapper around an EdenAPI-backed remote store.
+//
+// This type exists for the sole purpose of allowing an `EdenApiHgIdRemoteStore`
+// to be passed from Rust to Python and back into Rust. It cannot be created
+// by Python code and does not expose any functionality to Python.
+py_class!(pub class edenapistore |py| {
+    data remote: Arc<EdenApiHgIdRemoteStore>;
+});
+
+impl edenapistore {
+    pub fn new(py: Python, remote: Arc<EdenApiHgIdRemoteStore>) -> PyResult<Self> {
+        edenapistore::create_instance(py, remote)
+    }
+}
+
+impl ExtractInner for edenapistore {
+    type Inner = Arc<EdenApiHgIdRemoteStore>;
+
+    fn extract_inner(&self, py: Python) -> Self::Inner {
+        self.remote(py).clone()
+    }
+}
+
 py_class!(pub class contentstore |py| {
     data store: Arc<ContentStore>;
 
-    def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore, memcache: Option<memcachestore>) -> PyResult<contentstore> {
+    def __new__(_cls,
+        path: Option<PyPathBuf>,
+        config: config,
+        remote: pyremotestore,
+        memcache: Option<memcachestore>,
+        edenapi: Option<edenapistore> = None
+    ) -> PyResult<contentstore> {
         let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);
 
-        let mut builder = ContentStoreBuilder::new(&config).remotestore(remotestore);
+        let mut builder = ContentStoreBuilder::new(&config);
+
+        builder = if let Some(edenapi) = edenapi {
+            builder.remotestore(edenapi.extract_inner(py))
+        } else {
+            builder.remotestore(remotestore)
+        };
 
         builder = if let Some(path) = path {
             builder.local_path(path.as_path())
