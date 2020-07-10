@@ -33,7 +33,7 @@ define_stats! {
 }
 
 queries! {
-    read SelectBookmark(repo_id: RepositoryId, name: BookmarkName) -> (ChangesetId) {
+    pub(crate) read SelectBookmark(repo_id: RepositoryId, name: BookmarkName) -> (ChangesetId) {
         "SELECT changeset_id
          FROM bookmarks
          WHERE repo_id = {repo_id}

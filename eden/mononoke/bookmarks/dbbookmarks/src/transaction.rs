@@ -22,6 +22,8 @@ use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use crate::store::SelectBookmark;
+
 const MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT: usize = 5;
 
 define_stats! {
@@ -37,14 +39,6 @@ define_stats! {
 }
 
 queries! {
-    read SelectBookmark(repo_id: RepositoryId, name: BookmarkName) -> (ChangesetId) {
-        "SELECT changeset_id
-         FROM bookmarks
-         WHERE repo_id = {repo_id}
-           AND name = {name}
-         LIMIT 1"
-    }
-
     write ReplaceBookmarks(
         values: (repo_id: RepositoryId, name: BookmarkName, changeset_id: ChangesetId)
     ) {
