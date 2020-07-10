@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use cpython::*;
 
-use cpython_ext::{ExtractInner, PyNone, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{ExtractInner, ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use pyconfigparser::config;
 use pyrevisionstore::edenapistore;
@@ -108,10 +108,10 @@ py_class!(pub class client |py| {
     }
 });
 
-impl ExtractInner for client {
+impl ExtractInnerRef for client {
     type Inner = Arc<dyn EdenApi>;
 
-    fn extract_inner(&self, py: Python) -> Self::Inner {
-        self.inner(py).clone()
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.inner(py)
     }
 }

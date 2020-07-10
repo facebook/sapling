@@ -23,3 +23,24 @@ pub trait ExtractInner {
 
     fn extract_inner(&self, py: Python) -> Self::Inner;
 }
+
+/// Similar to `ExtractInner`, but returns a reference to the wrapped
+/// Rust object. Types that implement this trait will automatically
+/// implement `ExtractInner` if the inner type implements `Clone`.
+pub trait ExtractInnerRef {
+    type Inner;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner;
+}
+
+impl<T> ExtractInner for T
+where
+    T: ExtractInnerRef,
+    T::Inner: Clone + 'static,
+{
+    type Inner = <T as ExtractInnerRef>::Inner;
+
+    fn extract_inner(&self, py: Python) -> Self::Inner {
+        self.extract_inner_ref(py).clone()
+    }
+}

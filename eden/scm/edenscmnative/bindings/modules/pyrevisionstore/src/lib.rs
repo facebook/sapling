@@ -20,7 +20,9 @@ use anyhow::{format_err, Error};
 use cpython::*;
 use parking_lot::RwLock;
 
-use cpython_ext::{ExtractInner, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
+use cpython_ext::{
+    ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
+};
 use pyconfigparser::config;
 use revisionstore::{
     repack, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
@@ -482,11 +484,11 @@ py_class!(pub class mutabledeltastore |py| {
     }
 });
 
-impl ExtractInner for mutabledeltastore {
+impl ExtractInnerRef for mutabledeltastore {
     type Inner = Arc<dyn HgIdMutableDeltaStore>;
 
-    fn extract_inner(&self, py: Python) -> Self::Inner {
-        self.store(py).clone()
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.store(py)
     }
 }
 
@@ -575,11 +577,11 @@ py_class!(pub class mutablehistorystore |py| {
     }
 });
 
-impl ExtractInner for mutablehistorystore {
+impl ExtractInnerRef for mutablehistorystore {
     type Inner = Arc<dyn HgIdMutableHistoryStore>;
 
-    fn extract_inner(&self, py: Python) -> Self::Inner {
-        self.store(py).clone()
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.store(py)
     }
 }
 
@@ -780,11 +782,11 @@ py_class!(pub class pyremotestore |py| {
     }
 });
 
-impl ExtractInner for pyremotestore {
+impl ExtractInnerRef for pyremotestore {
     type Inner = Arc<PyHgIdRemoteStore>;
 
-    fn extract_inner(&self, py: Python) -> Self::Inner {
-        self.remote(py).clone()
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.remote(py)
     }
 }
 
@@ -803,11 +805,11 @@ impl edenapistore {
     }
 }
 
-impl ExtractInner for edenapistore {
+impl ExtractInnerRef for edenapistore {
     type Inner = Arc<EdenApiHgIdRemoteStore>;
 
-    fn extract_inner(&self, py: Python) -> Self::Inner {
-        self.remote(py).clone()
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.remote(py)
     }
 }
 
@@ -904,11 +906,11 @@ py_class!(pub class contentstore |py| {
     }
 });
 
-impl ExtractInner for contentstore {
+impl ExtractInnerRef for contentstore {
     type Inner = Arc<ContentStore>;
 
-    fn extract_inner(&self, py: Python) -> Self::Inner {
-        self.store(py).clone()
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.store(py)
     }
 }
 
@@ -961,11 +963,11 @@ py_class!(class metadatastore |py| {
     }
 });
 
-impl ExtractInner for metadatastore {
+impl ExtractInnerRef for metadatastore {
     type Inner = Arc<MetadataStore>;
 
-    fn extract_inner(&self, py: Python) -> Self::Inner {
-        self.store(py).clone()
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.store(py)
     }
 }
 
@@ -979,10 +981,10 @@ py_class!(pub class memcachestore |py| {
     }
 });
 
-impl ExtractInner for memcachestore {
+impl ExtractInnerRef for memcachestore {
     type Inner = Arc<MemcacheStore>;
 
-    fn extract_inner(&self, py: Python) -> Self::Inner {
-        self.memcache(py).clone()
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.memcache(py)
     }
 }
