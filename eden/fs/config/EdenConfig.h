@@ -233,6 +233,15 @@ class EdenConfig : private ConfigSettingManager {
                                                     this};
 
   /**
+   * Source Control Service (scs) tier
+   */
+  ConfigSetting<bool> useScs{"scs:use-mononoke-scs", false, this};
+
+  ConfigSetting<std::string> scsTierName{"scs:tier",
+                                         "mononoke-scs-server",
+                                         this};
+
+  /**
    * How often the on-disk config information should be checked for changes.
    */
   ConfigSetting<std::chrono::nanoseconds> configReloadInterval{
