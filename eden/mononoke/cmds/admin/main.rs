@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#![type_length_limit = "8000000"]
 #![deny(warnings)]
 #![feature(process_exitcode_placeholder)]
 
