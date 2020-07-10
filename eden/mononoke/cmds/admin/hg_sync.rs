@@ -13,7 +13,7 @@ use bookmarks::{BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason,
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
-use dbbookmarks::SqlBookmarks;
+use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::stream::StreamExt;
 use futures::{compat::Future01CompatExt, future};
@@ -136,7 +136,7 @@ async fn last_processed(
     ctx: &CoreContext,
     repo_id: RepositoryId,
     mutable_counters: &SqlMutableCounters,
-    bookmarks: &SqlBookmarks,
+    bookmarks: &dyn BookmarkUpdateLog,
 ) -> Result<(), Error> {
     match (
         sub_m.value_of(ARG_SET),
@@ -207,7 +207,6 @@ async fn last_processed(
                         .skip_over_bookmark_log_entries_with_reason(
                             ctx.clone(),
                             counter.try_into()?,
-                            repo_id,
                             BookmarkUpdateReason::Blobimport,
                         )
                         .await?;
@@ -256,7 +255,7 @@ async fn remains(
     ctx: &CoreContext,
     repo_id: RepositoryId,
     mutable_counters: &SqlMutableCounters,
-    bookmarks: &SqlBookmarks,
+    bookmarks: &dyn BookmarkUpdateLog,
 ) -> Result<(), Error> {
     let quiet = sub_m.is_present(ARG_QUIET);
     let without_blobimport = sub_m.is_present(ARG_WITHOUT_BLOBIMPORT);
@@ -278,7 +277,7 @@ async fn remains(
     };
 
     let remaining = bookmarks
-        .count_further_bookmark_log_entries(ctx.clone(), counter, repo_id, exclude_reason)
+        .count_further_bookmark_log_entries(ctx.clone(), counter, exclude_reason)
         .await
         .with_context(|| {
             format!(
@@ -309,7 +308,7 @@ async fn show(
     ctx: &CoreContext,
     repo: &BlobRepo,
     mutable_counters: &SqlMutableCounters,
-    bookmarks: &SqlBookmarks,
+    bookmarks: &dyn BookmarkUpdateLog,
 ) -> Result<(), Error> {
     let limit = args::get_u64(sub_m, "limit", 10);
 
@@ -326,7 +325,6 @@ async fn show(
     let mut entries = bookmarks.read_next_bookmark_log_entries(
         ctx.clone(),
         counter.try_into()?,
-        repo.get_repoid(),
         limit,
         Freshness::MostRecent,
     );
@@ -364,7 +362,7 @@ async fn fetch_bundle(
     sub_m: &ArgMatches<'_>,
     ctx: &CoreContext,
     repo: &BlobRepo,
-    bookmarks: &SqlBookmarks,
+    bookmarks: &dyn BookmarkUpdateLog,
 ) -> Result<(), Error> {
     let id = args::get_i64_opt(&sub_m, ARG_ID)
         .ok_or_else(|| format_err!("--{} is not specified", ARG_ID))?;
@@ -374,7 +372,7 @@ async fn fetch_bundle(
         .ok_or_else(|| format_err!("--{} is not specified", ARG_OUTPUT_FILE))?
         .into();
 
-    let log_entry = get_entry_by_id(ctx, repo.get_repoid(), bookmarks, id).await?;
+    let log_entry = get_entry_by_id(ctx, bookmarks, id).await?;
 
     let bundle_replay_data: BundleReplayData = log_entry
         .bundle_replay_data
@@ -397,7 +395,7 @@ async fn verify(
     ctx: &CoreContext,
     repo_id: RepositoryId,
     mutable_counters: &SqlMutableCounters,
-    bookmarks: &SqlBookmarks,
+    bookmarks: &dyn BookmarkUpdateLog,
 ) -> Result<(), Error> {
     let counter = mutable_counters
         .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
@@ -407,7 +405,7 @@ async fn verify(
         .try_into()?;
 
     let counts = bookmarks
-        .count_further_bookmark_log_entries_by_reason(ctx.clone(), counter, repo_id)
+        .count_further_bookmark_log_entries_by_reason(ctx.clone(), counter)
         .await?;
 
     let (blobimports, others): (
@@ -458,7 +456,7 @@ async fn inspect(
     sub_m: &ArgMatches<'_>,
     ctx: &CoreContext,
     repo: &BlobRepo,
-    bookmarks: &SqlBookmarks,
+    bookmarks: &dyn BookmarkUpdateLog,
 ) -> Result<(), Error> {
     async fn load_opt(
         ctx: &CoreContext,
@@ -479,7 +477,7 @@ async fn inspect(
     let id = args::get_i64_opt(&sub_m, ARG_ID)
         .ok_or_else(|| format_err!("--{} is not specified", ARG_ID))?;
 
-    let log_entry = get_entry_by_id(ctx, repo.get_repoid(), bookmarks, id).await?;
+    let log_entry = get_entry_by_id(ctx, bookmarks, id).await?;
 
     println!("Bookmark: {}", log_entry.bookmark_name);
 
@@ -514,18 +512,11 @@ async fn inspect(
 
 async fn get_entry_by_id(
     ctx: &CoreContext,
-    repo_id: RepositoryId,
-    bookmarks: &SqlBookmarks,
+    bookmarks: &dyn BookmarkUpdateLog,
     id: i64,
 ) -> Result<BookmarkUpdateLogEntry, Error> {
     let log_entry = bookmarks
-        .read_next_bookmark_log_entries(
-            ctx.clone(),
-            (id - 1).try_into()?,
-            repo_id,
-            1,
-            Freshness::MostRecent,
-        )
+        .read_next_bookmark_log_entries(ctx.clone(), (id - 1).try_into()?, 1, Freshness::MostRecent)
         .next()
         .await
         .ok_or_else(|| Error::msg("no log entries found"))??;
@@ -552,10 +543,11 @@ pub async fn subcommand_process_hg_sync<'a>(
         .await
         .context("While opening SqlMutableCounters")?;
 
-    let bookmarks = args::open_sql::<SqlBookmarks>(fb, &matches)
+    let bookmarks = args::open_sql::<SqlBookmarksBuilder>(fb, &matches)
         .compat()
         .await
-        .context("While opening SqlBookmarks")?;
+        .context("While opening SqlBookmarks")?
+        .with_repo_id(repo_id);
 
     let res = match sub_m.subcommand() {
         (HG_SYNC_LAST_PROCESSED, Some(sub_m)) => {

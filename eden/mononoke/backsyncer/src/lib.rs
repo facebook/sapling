@@ -302,7 +302,7 @@ where
         let to_cs_id = get_remapped_cs_id(to_sync_outcome)?;
 
         if from_cs_id != to_cs_id {
-            let mut bookmark_txn = bookmarks.create_transaction(ctx.clone(), target_repo_id);
+            let mut bookmark_txn = bookmarks.create_transaction(ctx.clone());
             debug!(
                 ctx.logger(),
                 "syncing bookmark {} to {:?}", bookmark, to_cs_id

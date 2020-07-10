@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -42,7 +42,6 @@ impl Cache {
     // NOTE: this function should be fast, as it is executed under a lock
     fn new(
         ctx: CoreContext,
-        repoid: RepositoryId,
         bookmarks: Arc<dyn Bookmarks>,
         expires: Instant,
         freshness: Freshness,
@@ -52,7 +51,6 @@ impl Cache {
                 bookmarks
                     .list(
                         ctx,
-                        repoid,
                         freshness,
                         &BookmarkPrefix::empty(),
                         BookmarkKind::ALL_PUBLISHING,
@@ -91,42 +89,42 @@ impl Cache {
 
 #[derive(Clone)]
 pub struct CachedBookmarks {
+    repo_id: RepositoryId,
     ttl: Duration,
-    caches: Arc<Mutex<HashMap<RepositoryId, Cache>>>,
+    cache: Arc<Mutex<Option<Cache>>>,
     bookmarks: Arc<dyn Bookmarks>,
 }
 
 impl CachedBookmarks {
-    pub fn new(bookmarks: Arc<dyn Bookmarks>, ttl: Duration) -> Self {
+    pub fn new(bookmarks: Arc<dyn Bookmarks>, ttl: Duration, repo_id: RepositoryId) -> Self {
         Self {
+            repo_id,
             ttl,
             bookmarks,
-            caches: Arc::new(Mutex::new(HashMap::new())),
+            cache: Arc::new(Mutex::new(None)),
         }
     }
 
-    /// Gets or creates a cache for specified respository
-    fn get_cache(&self, ctx: CoreContext, repoid: RepositoryId) -> Cache {
-        let mut caches = self.caches.lock().expect("lock poisoned");
+    /// Gets or creates the cache
+    fn cache(&self, ctx: CoreContext) -> Cache {
+        let mut cache = self.cache.lock().expect("lock poisoned");
         let now = Instant::now();
-        caches
-            .entry(repoid)
-            // create new cache if the old one has either expired or failed
-            .and_modify(|cache| {
+        match *cache {
+            Some(ref mut cache) => {
+                // create new cache if the old one has either expired or failed
                 let cache_failed = cache.is_failed();
                 let mut cache_hit = true;
                 if cache.expires <= now || cache_failed {
                     cache_hit = false;
                     *cache = Cache::new(
                         ctx.clone(),
-                        repoid,
                         self.bookmarks.clone(),
                         now + self.ttl,
                         // NOTE: We want freshness to behave as follows:
                         //  - if we are asking for maybe-stale bookmarks we
                         //    want to keep asking for this type of bookmarks
                         //  - if we had a write from the current machine,
-                        //    `purge_cache` will request bookmarks from the
+                        //    `purge` will request bookmarks from the
                         //    master region, but it might fail:
                         //    - if it fails we want to keep asking for fresh bookmarks
                         //    - if it succeeds the next request should go through a
@@ -139,52 +137,51 @@ impl CachedBookmarks {
                 }
 
                 if cache_hit {
-                    STATS::cached_bookmarks_hits.add_value(1, (repoid.id().to_string(),))
+                    STATS::cached_bookmarks_hits.add_value(1, (self.repo_id.id().to_string(),))
                 } else {
-                    STATS::cached_bookmarks_misses.add_value(1, (repoid.id().to_string(),))
+                    STATS::cached_bookmarks_misses.add_value(1, (self.repo_id.id().to_string(),))
                 }
-            })
-            // create new cache if there is no cache entry
-            .or_insert_with(|| {
-                Cache::new(
+
+                cache.clone()
+            }
+            None => {
+                // create new cache if there isn't one
+                let new_cache = Cache::new(
                     ctx,
-                    repoid,
                     self.bookmarks.clone(),
                     now + self.ttl,
                     Freshness::MaybeStale,
-                )
-            })
-            .clone()
+                );
+                *cache = Some(new_cache.clone());
+                new_cache
+            }
+        }
     }
 
-    /// Removes old cache entry and replaces whith new one which will go through master region
-    fn purge_cache(&self, ctx: CoreContext, repoid: RepositoryId) -> Cache {
-        let cache = Cache::new(
+    /// Removes old cache and replaces with a new one which will go through master region
+    fn purge(&self, ctx: CoreContext) -> Cache {
+        let new_cache = Cache::new(
             ctx,
-            repoid,
             self.bookmarks.clone(),
             Instant::now() + self.ttl,
             Freshness::MostRecent,
         );
-        {
-            let mut caches = self.caches.lock().expect("lock poisoned");
-            caches.insert(repoid, cache.clone());
-        }
-        cache
+        let mut cache = self.cache.lock().expect("lock poisoned");
+        *cache = Some(new_cache.clone());
+        new_cache
     }
 
     /// Answers a bookmark query from cache.
     fn list_from_publishing_cache(
         &self,
         ctx: CoreContext,
-        repoid: RepositoryId,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
         pagination: &BookmarkPagination,
         limit: u64,
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>> {
         let range = prefix.to_range().with_pagination(pagination.clone());
-        let cache = self.get_cache(ctx, repoid);
+        let cache = self.cache(ctx);
         let filter_kinds = if BookmarkKind::ALL_PUBLISHING
             .iter()
             .all(|kind| kinds.iter().any(|k| k == kind))
@@ -231,8 +228,7 @@ impl CachedBookmarks {
 
 struct CachedBookmarksTransaction {
     ctx: CoreContext,
-    repoid: RepositoryId,
-    caches: CachedBookmarks,
+    cache: CachedBookmarks,
     transaction: Box<dyn BookmarkTransaction>,
     dirty: bool,
 }
@@ -240,15 +236,13 @@ struct CachedBookmarksTransaction {
 impl CachedBookmarksTransaction {
     fn new(
         ctx: CoreContext,
-        repoid: RepositoryId,
-        caches: CachedBookmarks,
+        cache: CachedBookmarks,
         transaction: Box<dyn BookmarkTransaction>,
     ) -> Self {
         Self {
             ctx,
-            repoid,
+            cache,
             transaction,
-            caches,
             dirty: false,
         }
     }
@@ -258,7 +252,6 @@ impl Bookmarks for CachedBookmarks {
     fn list(
         &self,
         ctx: CoreContext,
-        repoid: RepositoryId,
         freshness: Freshness,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
@@ -271,25 +264,19 @@ impl Bookmarks for CachedBookmarks {
                 .all(|kind| BookmarkKind::ALL_PUBLISHING.iter().any(|k| k == kind))
             {
                 // All requested kinds are supported by the cache.
-                return self
-                    .list_from_publishing_cache(ctx, repoid, prefix, kinds, pagination, limit);
+                return self.list_from_publishing_cache(ctx, prefix, kinds, pagination, limit);
             }
         }
         // Bypass the cache as it cannot serve this request.
         self.bookmarks
-            .list(ctx, repoid, freshness, prefix, kinds, pagination, limit)
+            .list(ctx, freshness, prefix, kinds, pagination, limit)
     }
 
-    fn create_transaction(
-        &self,
-        ctx: CoreContext,
-        repoid: RepositoryId,
-    ) -> Box<dyn BookmarkTransaction> {
+    fn create_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
         Box::new(CachedBookmarksTransaction::new(
             ctx.clone(),
-            repoid,
             self.clone(),
-            self.bookmarks.create_transaction(ctx, repoid),
+            self.bookmarks.create_transaction(ctx),
         ))
     }
 
@@ -297,12 +284,11 @@ impl Bookmarks for CachedBookmarks {
         &self,
         ctx: CoreContext,
         bookmark: &BookmarkName,
-        repoid: RepositoryId,
     ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
         // NOTE: If you to implement a Freshness notion here and try to fetch from cache, be
         // mindful that not all bookmarks are cached, so a cache miss here does not necessarily
         // mean that the Bookmark does not exist.
-        self.bookmarks.get(ctx, bookmark, repoid)
+        self.bookmarks.get(ctx, bookmark)
     }
 }
 
@@ -385,8 +371,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
     fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
         let CachedBookmarksTransaction {
             transaction,
-            caches,
-            repoid,
+            cache,
             ctx,
             dirty,
         } = *self;
@@ -395,7 +380,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
             .commit()
             .map_ok(move |success| {
                 if success && dirty {
-                    caches.purge_cache(ctx, repoid);
+                    cache.purge(ctx);
                 }
                 success
             })
@@ -408,8 +393,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
     ) -> BoxFuture<'static, Result<bool>> {
         let CachedBookmarksTransaction {
             transaction,
-            caches,
-            repoid,
+            cache,
             ctx,
             dirty,
         } = *self;
@@ -418,7 +402,7 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
             .commit_with_hook(txn_hook)
             .map_ok(move |success| {
                 if success && dirty {
-                    caches.purge_cache(ctx, repoid);
+                    cache.purge(ctx);
                 }
                 success
             })
@@ -473,9 +457,8 @@ mod tests {
     fn create_dirty_transaction(
         bookmarks: &impl Bookmarks,
         ctx: CoreContext,
-        repoid: RepositoryId,
     ) -> Box<dyn BookmarkTransaction> {
-        let mut transaction = bookmarks.create_transaction(ctx.clone(), repoid);
+        let mut transaction = bookmarks.create_transaction(ctx.clone());
 
         // Dirty the transaction.
         transaction
@@ -494,7 +477,6 @@ mod tests {
             &self,
             _ctx: CoreContext,
             _name: &BookmarkName,
-            _repoid: RepositoryId,
         ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
             unimplemented!()
         }
@@ -502,7 +484,6 @@ mod tests {
         fn list(
             &self,
             _ctx: CoreContext,
-            _repo_id: RepositoryId,
             freshness: Freshness,
             prefix: &BookmarkPrefix,
             kinds: &[BookmarkKind],
@@ -529,11 +510,7 @@ mod tests {
                 .boxed()
         }
 
-        fn create_transaction(
-            &self,
-            _ctx: CoreContext,
-            _repoid: RepositoryId,
-        ) -> Box<dyn BookmarkTransaction> {
+        fn create_transaction(&self, _ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
             Box::new(MockTransaction)
         }
     }
@@ -543,7 +520,7 @@ mod tests {
     impl BookmarkTransaction for MockTransaction {
         fn update(
             &mut self,
-            _key: &BookmarkName,
+            _bookmark: &BookmarkName,
             _new_cs: ChangesetId,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
@@ -554,7 +531,7 @@ mod tests {
 
         fn create(
             &mut self,
-            _key: &BookmarkName,
+            _bookmark: &BookmarkName,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
             _bundle_replay: Option<&dyn BundleReplay>,
@@ -564,7 +541,7 @@ mod tests {
 
         fn force_set(
             &mut self,
-            _key: &BookmarkName,
+            _bookmark: &BookmarkName,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
             _bundle_replay: Option<&dyn BundleReplay>,
@@ -574,7 +551,7 @@ mod tests {
 
         fn delete(
             &mut self,
-            _key: &BookmarkName,
+            _bookmark: &BookmarkName,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
             _bundle_replay: Option<&dyn BundleReplay>,
@@ -584,7 +561,7 @@ mod tests {
 
         fn force_delete(
             &mut self,
-            _key: &BookmarkName,
+            _bookmark: &BookmarkName,
             _reason: BookmarkUpdateReason,
             _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
@@ -668,12 +645,12 @@ mod tests {
     fn test_cached_bookmarks(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
-        let repoid = RepositoryId::new(0);
+        let repo_id = RepositoryId::new(0);
 
         let (mock, requests) = MockBookmarks::create();
         let requests = requests.into_future();
 
-        let bookmarks = CachedBookmarks::new(Arc::new(mock), Duration::from_secs(3));
+        let bookmarks = CachedBookmarks::new(Arc::new(mock), Duration::from_secs(3), repo_id);
 
         let spawn_query = |prefix: &'static str, rt: &mut Runtime| {
             let (sender, receiver) = oneshot::channel();
@@ -681,7 +658,6 @@ mod tests {
             let fut = bookmarks
                 .list(
                     ctx.clone(),
-                    repoid,
                     Freshness::MaybeStale,
                     &BookmarkPrefix::new(prefix).unwrap(),
                     BookmarkKind::ALL_PUBLISHING,
@@ -731,14 +707,14 @@ mod tests {
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
 
         // Create a non dirty transaction and make sure that no requests go to master.
-        let transaction = bookmarks.create_transaction(ctx.clone(), repoid);
+        let transaction = bookmarks.create_transaction(ctx.clone());
         rt.block_on(transaction.commit().compat()).unwrap();
 
         let _ = spawn_query("c", &mut rt);
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
 
         // successfull transaction should redirect further requests to master
-        let transaction = create_dirty_transaction(&bookmarks, ctx.clone(), repoid);
+        let transaction = create_dirty_transaction(&bookmarks, ctx.clone());
         rt.block_on(transaction.commit().compat()).unwrap();
 
         let res = spawn_query("a", &mut rt);
@@ -850,7 +826,7 @@ mod tests {
         let (mock, requests) = MockBookmarks::create();
         let requests = requests.into_future();
 
-        let store = CachedBookmarks::new(Arc::new(mock), Duration::from_secs(100));
+        let store = CachedBookmarks::new(Arc::new(mock), Duration::from_secs(100), repo_id);
 
         let (sender, receiver) = oneshot::channel();
 
@@ -858,7 +834,6 @@ mod tests {
         let fut = store
             .list(
                 ctx,
-                repo_id,
                 query_freshness,
                 query_prefix,
                 query_kinds,

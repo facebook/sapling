@@ -161,7 +161,6 @@ impl BlobRepo {
         self.attribute_expected::<dyn Bookmarks>()
             .list(
                 ctx,
-                self.get_repoid(),
                 Freshness::MaybeStale,
                 &BookmarkPrefix::empty(),
                 BookmarkKind::ALL_PUBLISHING,
@@ -181,7 +180,6 @@ impl BlobRepo {
         self.attribute_expected::<dyn Bookmarks>()
             .list(
                 ctx,
-                self.get_repoid(),
                 Freshness::MaybeStale,
                 &BookmarkPrefix::empty(),
                 BookmarkKind::ALL_PUBLISHING,
@@ -202,7 +200,6 @@ impl BlobRepo {
         self.attribute_expected::<dyn Bookmarks>()
             .list(
                 ctx,
-                self.get_repoid(),
                 Freshness::MaybeStale,
                 prefix,
                 BookmarkKind::ALL,
@@ -248,7 +245,7 @@ impl BlobRepo {
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.attribute_expected::<dyn Bookmarks>()
-            .get(ctx, name, self.get_repoid())
+            .get(ctx, name)
             .compat()
             .boxify()
     }
@@ -305,14 +302,7 @@ impl BlobRepo {
     ) -> impl Stream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
     {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
-            .list_bookmark_log_entries(
-                ctx.clone(),
-                name,
-                self.get_repoid(),
-                max_rec,
-                offset,
-                freshness,
-            )
+            .list_bookmark_log_entries(ctx.clone(), name, max_rec, offset, freshness)
             .compat()
     }
 
@@ -324,7 +314,7 @@ impl BlobRepo {
         freshness: Freshness,
     ) -> impl Stream<Item = BookmarkUpdateLogEntry, Error = Error> {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
-            .read_next_bookmark_log_entries(ctx, id, self.get_repoid(), limit, freshness)
+            .read_next_bookmark_log_entries(ctx, id, limit, freshness)
             .compat()
     }
 
@@ -335,14 +325,14 @@ impl BlobRepo {
         exclude_reason: Option<BookmarkUpdateReason>,
     ) -> impl Future<Item = u64, Error = Error> {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
-            .count_further_bookmark_log_entries(ctx, id, self.get_repoid(), exclude_reason)
+            .count_further_bookmark_log_entries(ctx, id, exclude_reason)
             .compat()
     }
 
     pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
         STATS::update_bookmark_transaction.add_value(1);
         self.attribute_expected::<dyn Bookmarks>()
-            .create_transaction(ctx, self.get_repoid())
+            .create_transaction(ctx)
     }
 
     // Returns the generation number of a changeset

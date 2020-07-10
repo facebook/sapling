@@ -837,7 +837,6 @@ impl RepoContext {
             .attribute_expected::<dyn Bookmarks>()
             .list(
                 self.ctx.clone(),
-                blob_repo.get_repoid(),
                 Freshness::MaybeStale,
                 &prefix,
                 kinds,

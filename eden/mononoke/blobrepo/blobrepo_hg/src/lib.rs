@@ -329,7 +329,7 @@ impl BlobRepoHg for BlobRepo {
     ) -> BoxFuture<Option<HgChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.bookmarks()
-            .get(ctx.clone(), name, self.get_repoid())
+            .get(ctx.clone(), name)
             .compat()
             .and_then({
                 let repo = self.clone();
@@ -355,7 +355,6 @@ impl BlobRepoHg for BlobRepo {
             .bookmarks()
             .list(
                 ctx.clone(),
-                self.get_repoid(),
                 Freshness::MaybeStale,
                 &BookmarkPrefix::empty(),
                 &[BookmarkKind::PullDefaultPublishing][..],
@@ -378,7 +377,6 @@ impl BlobRepoHg for BlobRepo {
             .bookmarks()
             .list(
                 ctx.clone(),
-                self.get_repoid(),
                 Freshness::MaybeStale,
                 &BookmarkPrefix::empty(),
                 BookmarkKind::ALL_PUBLISHING,
@@ -402,7 +400,6 @@ impl BlobRepoHg for BlobRepo {
             .bookmarks()
             .list(
                 ctx.clone(),
-                self.get_repoid(),
                 Freshness::MaybeStale,
                 prefix,
                 BookmarkKind::ALL,

@@ -19,8 +19,7 @@ use futures::future::{self, BoxFuture, Future, FutureExt, TryFutureExt};
 use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
-use sql::{queries, Connection};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql::queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 
@@ -31,13 +30,6 @@ define_stats! {
     list: timeseries(Rate, Sum),
     list_maybe_stale: timeseries(Rate, Sum),
     get_bookmark: timeseries(Rate, Sum),
-}
-
-#[derive(Clone)]
-pub struct SqlBookmarks {
-    pub(crate) write_connection: Connection,
-    pub(crate) read_connection: Connection,
-    pub(crate) read_master_connection: Connection,
 }
 
 queries! {
@@ -194,21 +186,20 @@ queries! {
 
 }
 
-impl SqlConstruct for SqlBookmarks {
-    const LABEL: &'static str = "bookmarks";
+#[derive(Clone)]
+pub struct SqlBookmarks {
+    repo_id: RepositoryId,
+    pub(crate) connections: SqlConnections,
+}
 
-    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-bookmarks.sql");
-
-    fn from_sql_connections(connections: SqlConnections) -> Self {
+impl SqlBookmarks {
+    pub(crate) fn new(repo_id: RepositoryId, connections: SqlConnections) -> Self {
         Self {
-            write_connection: connections.write_connection,
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
+            repo_id,
+            connections,
         }
     }
 }
-
-impl SqlConstructFromMetadataDatabaseConfig for SqlBookmarks {}
 
 fn query_to_stream<F>(query: F) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>
 where
@@ -228,7 +219,6 @@ impl Bookmarks for SqlBookmarks {
     fn list(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         freshness: Freshness,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
@@ -240,23 +230,23 @@ impl Bookmarks for SqlBookmarks {
                 STATS::list_maybe_stale.add_value(1);
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsReplica);
-                &self.read_connection
+                &self.connections.read_connection
             }
             Freshness::MostRecent => {
                 STATS::list.add_value(1);
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
-                &self.read_master_connection
+                &self.connections.read_master_connection
             }
         };
 
         if prefix.is_empty() {
             match pagination {
                 BookmarkPagination::FromStart => {
-                    query_to_stream(SelectAll::query(&conn, &repo_id, &limit, kinds).compat())
+                    query_to_stream(SelectAll::query(&conn, &self.repo_id, &limit, kinds).compat())
                 }
                 BookmarkPagination::After(ref after) => query_to_stream(
-                    SelectAllAfter::query(&conn, &repo_id, after, &limit, kinds).compat(),
+                    SelectAllAfter::query(&conn, &self.repo_id, after, &limit, kinds).compat(),
                 ),
             }
         } else {
@@ -265,7 +255,7 @@ impl Bookmarks for SqlBookmarks {
                 BookmarkPagination::FromStart => query_to_stream(
                     SelectByPrefix::query(
                         &conn,
-                        &repo_id,
+                        &self.repo_id,
                         &prefix_like_pattern,
                         &"\\",
                         &limit,
@@ -276,7 +266,7 @@ impl Bookmarks for SqlBookmarks {
                 BookmarkPagination::After(ref after) => query_to_stream(
                     SelectByPrefixAfter::query(
                         &conn,
-                        &repo_id,
+                        &self.repo_id,
                         &prefix_like_pattern,
                         &"\\",
                         after,
@@ -293,26 +283,25 @@ impl Bookmarks for SqlBookmarks {
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
-        repo_id: RepositoryId,
     ) -> BoxFuture<'static, Result<Option<ChangesetId>>> {
         STATS::get_bookmark.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
-        SelectBookmark::query(&self.read_master_connection, &repo_id, &name)
-            .compat()
-            .map_ok(|rows| rows.into_iter().next().map(|row| row.0))
-            .boxed()
+        SelectBookmark::query(
+            &self.connections.read_master_connection,
+            &self.repo_id,
+            &name,
+        )
+        .compat()
+        .map_ok(|rows| rows.into_iter().next().map(|row| row.0))
+        .boxed()
     }
 
-    fn create_transaction(
-        &self,
-        ctx: CoreContext,
-        repo_id: RepositoryId,
-    ) -> Box<dyn BookmarkTransaction> {
+    fn create_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
         Box::new(SqlBookmarksTransaction::new(
             ctx,
-            self.write_connection.clone(),
-            repo_id.clone(),
+            self.connections.write_connection.clone(),
+            self.repo_id.clone(),
         ))
     }
 }
@@ -322,7 +311,6 @@ impl BookmarkUpdateLog for SqlBookmarks {
         &self,
         ctx: CoreContext,
         name: BookmarkName,
-        repo_id: RepositoryId,
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
@@ -330,22 +318,26 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let connection = if freshness == Freshness::MostRecent {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            &self.read_master_connection
+            &self.connections.read_master_connection
         } else {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsReplica);
-            &self.read_connection
+            &self.connections.read_connection
         };
 
         match offset {
-            Some(offset) => {
-                SelectBookmarkLogsWithOffset::query(&connection, &repo_id, &name, &max_rec, &offset)
-                    .compat()
-                    .map_ok(|rows| stream::iter(rows.into_iter().map(Ok)))
-                    .try_flatten_stream()
-                    .boxed()
-            }
-            None => SelectBookmarkLogs::query(&connection, &repo_id, &name, &max_rec)
+            Some(offset) => SelectBookmarkLogsWithOffset::query(
+                &connection,
+                &self.repo_id,
+                &name,
+                &max_rec,
+                &offset,
+            )
+            .compat()
+            .map_ok(|rows| stream::iter(rows.into_iter().map(Ok)))
+            .try_flatten_stream()
+            .boxed(),
+            None => SelectBookmarkLogs::query(&connection, &self.repo_id, &name, &max_rec)
                 .compat()
                 .map_ok(|rows| stream::iter(rows.into_iter().map(Ok)))
                 .try_flatten_stream()
@@ -357,23 +349,26 @@ impl BookmarkUpdateLog for SqlBookmarks {
         &self,
         ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
         maybe_exclude_reason: Option<BookmarkUpdateReason>,
     ) -> BoxFuture<'static, Result<u64>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let query = match maybe_exclude_reason {
             Some(ref r) => CountFurtherBookmarkLogEntriesWithoutReason::query(
-                &self.read_connection,
+                &self.connections.read_connection,
                 &id,
-                &repoid,
+                &self.repo_id,
                 &r,
             )
             .compat()
             .boxed(),
-            None => CountFurtherBookmarkLogEntries::query(&self.read_connection, &id, &repoid)
-                .compat()
-                .boxed(),
+            None => CountFurtherBookmarkLogEntries::query(
+                &self.connections.read_connection,
+                &id,
+                &self.repo_id,
+            )
+            .compat()
+            .boxed(),
         };
 
         query
@@ -398,110 +393,120 @@ impl BookmarkUpdateLog for SqlBookmarks {
         &self,
         ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
     ) -> BoxFuture<'static, Result<Vec<(BookmarkUpdateReason, u64)>>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        CountFurtherBookmarkLogEntriesByReason::query(&self.read_connection, &id, &repoid)
-            .compat()
-            .map_ok(|entries| entries.into_iter().collect())
-            .boxed()
+        CountFurtherBookmarkLogEntriesByReason::query(
+            &self.connections.read_connection,
+            &id,
+            &self.repo_id,
+        )
+        .compat()
+        .map_ok(|entries| entries.into_iter().collect())
+        .boxed()
     }
 
     fn skip_over_bookmark_log_entries_with_reason(
         &self,
         ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
         reason: BookmarkUpdateReason,
     ) -> BoxFuture<'static, Result<Option<u64>>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        SkipOverBookmarkLogEntriesWithReason::query(&self.read_connection, &id, &repoid, &reason)
-            .compat()
-            .map_ok(|entries| entries.first().map(|entry| entry.0))
-            .boxed()
+        SkipOverBookmarkLogEntriesWithReason::query(
+            &self.connections.read_connection,
+            &id,
+            &self.repo_id,
+            &reason,
+        )
+        .compat()
+        .map_ok(|entries| entries.first().map(|entry| entry.0))
+        .boxed()
     }
 
     fn read_next_bookmark_log_entries_same_bookmark_and_reason(
         &self,
         ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
         limit: u64,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        ReadNextBookmarkLogEntries::query(&self.read_connection, &id, &repoid, &limit)
-            .compat()
-            .map_ok(|entries| {
-                let homogenous_entries: Vec<_> = match entries.iter().nth(0).cloned() {
-                    Some(first_entry) => {
-                        // Note: types are explicit here to protect us from query behavior change
-                        //       when tuple items 2 or 5 become something else, and we still succeed
-                        //       compiling everything because of the type inference
-                        let first_name: &BookmarkName = &first_entry.2;
-                        let first_reason: &BookmarkUpdateReason = &first_entry.5;
-                        entries
-                            .into_iter()
-                            .take_while(|entry| {
-                                let name: &BookmarkName = &entry.2;
-                                let reason: &BookmarkUpdateReason = &entry.5;
-                                name == first_name && reason == first_reason
-                            })
-                            .collect()
-                    }
-                    None => entries.into_iter().collect(),
-                };
-                stream::iter(homogenous_entries.into_iter().map(Ok)).and_then(|entry| async move {
-                    let (
-                        id,
-                        repo_id,
-                        name,
-                        to_cs_id,
-                        from_cs_id,
-                        reason,
-                        timestamp,
-                        bundle_handle,
-                        commit_timestamps_json,
-                    ) = entry;
-                    let bundle_replay_data =
-                        RawBundleReplayData::maybe_new(bundle_handle, commit_timestamps_json)?;
-                    Ok(BookmarkUpdateLogEntry {
-                        id,
-                        repo_id,
-                        bookmark_name: name,
-                        to_changeset_id: to_cs_id,
-                        from_changeset_id: from_cs_id,
-                        reason,
-                        timestamp,
-                        bundle_replay_data,
-                    })
+        ReadNextBookmarkLogEntries::query(
+            &self.connections.read_connection,
+            &id,
+            &self.repo_id,
+            &limit,
+        )
+        .compat()
+        .map_ok(|entries| {
+            let homogenous_entries: Vec<_> = match entries.iter().nth(0).cloned() {
+                Some(first_entry) => {
+                    // Note: types are explicit here to protect us from query behavior change
+                    //       when tuple items 2 or 5 become something else, and we still succeed
+                    //       compiling everything because of the type inference
+                    let first_name: &BookmarkName = &first_entry.2;
+                    let first_reason: &BookmarkUpdateReason = &first_entry.5;
+                    entries
+                        .into_iter()
+                        .take_while(|entry| {
+                            let name: &BookmarkName = &entry.2;
+                            let reason: &BookmarkUpdateReason = &entry.5;
+                            name == first_name && reason == first_reason
+                        })
+                        .collect()
+                }
+                None => entries.into_iter().collect(),
+            };
+            stream::iter(homogenous_entries.into_iter().map(Ok)).and_then(|entry| async move {
+                let (
+                    id,
+                    repo_id,
+                    name,
+                    to_cs_id,
+                    from_cs_id,
+                    reason,
+                    timestamp,
+                    bundle_handle,
+                    commit_timestamps_json,
+                ) = entry;
+                let bundle_replay_data =
+                    RawBundleReplayData::maybe_new(bundle_handle, commit_timestamps_json)?;
+                Ok(BookmarkUpdateLogEntry {
+                    id,
+                    repo_id,
+                    bookmark_name: name,
+                    to_changeset_id: to_cs_id,
+                    from_changeset_id: from_cs_id,
+                    reason,
+                    timestamp,
+                    bundle_replay_data,
                 })
             })
-            .try_flatten_stream()
-            .boxed()
+        })
+        .try_flatten_stream()
+        .boxed()
     }
 
     fn read_next_bookmark_log_entries(
         &self,
         ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
         limit: u64,
         freshness: Freshness,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
         let connection = if freshness == Freshness::MostRecent {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            &self.read_master_connection
+            &self.connections.read_master_connection
         } else {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsReplica);
-            &self.read_connection
+            &self.connections.read_connection
         };
 
-        ReadNextBookmarkLogEntries::query(&connection, &id, &repoid, &limit)
+        ReadNextBookmarkLogEntries::query(&connection, &id, &self.repo_id, &limit)
             .compat()
             .map_ok(|entries| {
                 stream::iter(entries.into_iter().map(Ok)).and_then(|entry| async move {

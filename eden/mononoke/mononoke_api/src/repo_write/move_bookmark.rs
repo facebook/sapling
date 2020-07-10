@@ -59,7 +59,7 @@ impl RepoWriteContext {
         let old_target = self
             .blob_repo()
             .bookmarks()
-            .get(self.ctx().clone(), &bookmark, self.blob_repo().get_repoid())
+            .get(self.ctx().clone(), &bookmark)
             .await?;
 
         let action = if is_scratch_bookmark {

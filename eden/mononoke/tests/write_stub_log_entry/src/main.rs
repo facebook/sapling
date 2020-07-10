@@ -12,7 +12,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason, Bookmarks};
 use clap::{App, Arg, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
-use dbbookmarks::SqlBookmarks;
+use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::future::TryFutureExt;
 use futures_old::future::Future;
@@ -62,7 +62,8 @@ fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
 
     let repo_id = args::get_repo_id(fb, &matches).unwrap();
-    let fut = args::open_sql::<SqlBookmarks>(fb, &matches).and_then(move |bookmarks| {
+    let fut = args::open_sql::<SqlBookmarksBuilder>(fb, &matches).and_then(move |builder| {
+        let bookmarks = builder.with_repo_id(repo_id);
         let name = matches.value_of(BOOKMARK).unwrap().to_string();
         let reason = match matches.is_present(BLOBIMPORT) {
             true => BookmarkUpdateReason::Blobimport,
@@ -71,7 +72,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
         let bookmark = BookmarkName::new(name).unwrap();
 
-        let mut txn = bookmarks.create_transaction(ctx, repo_id);
+        let mut txn = bookmarks.create_transaction(ctx);
 
         match matches.subcommand() {
             (CREATE, Some(sub_m)) => {

@@ -194,13 +194,7 @@ async fn get_replay_stream<'a>(
 
             let entry = repo
                 .attribute_expected::<dyn BookmarkUpdateLog>()
-                .read_next_bookmark_log_entries(
-                    ctx.clone(),
-                    id - 1,
-                    repo.get_repoid(),
-                    1,
-                    Freshness::MostRecent,
-                )
+                .read_next_bookmark_log_entries(ctx.clone(), id - 1, 1, Freshness::MostRecent)
                 .next()
                 .await
                 .ok_or_else(|| format_err!("Entry with id {} does not exist", id))??;

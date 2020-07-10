@@ -668,12 +668,10 @@ where
     Route: 'static + Send + Clone,
 {
     // Build lookups
-    let repoid = *(&repo.get_repoid());
     let published_bookmarks = repo
         .bookmarks()
         .list(
             ctx.clone(),
-            repoid,
             Freshness::MostRecent,
             &BookmarkPrefix::empty(),
             BookmarkKind::ALL_PUBLISHING,

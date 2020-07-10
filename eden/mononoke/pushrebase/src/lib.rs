@@ -1302,7 +1302,7 @@ mod tests {
     use blobrepo_hg::BlobRepoHg;
     use blobrepo_override::DangerousOverride;
     use bookmarks::{BookmarkTransactionError, BookmarkUpdateLog, Bookmarks};
-    use dbbookmarks::SqlBookmarks;
+    use dbbookmarks::SqlBookmarksBuilder;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures::{
@@ -1491,7 +1491,9 @@ mod tests {
 
     // Initializes bookmarks and mutable_counters on the "same db" i.e. on the same
     // sqlite connection
-    async fn init_bookmarks_mutable_counters() -> Result<
+    async fn init_bookmarks_mutable_counters(
+        repo_id: RepositoryId,
+    ) -> Result<
         (
             Arc<dyn Bookmarks>,
             Arc<dyn BookmarkUpdateLog>,
@@ -1501,12 +1503,13 @@ mod tests {
     > {
         let con = SqliteConnection::open_in_memory()?;
         con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
-        con.execute_batch(SqlBookmarks::CREATION_QUERY)?;
+        con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
 
         let con = Connection::with_sqlite(con);
-        let bookmarks = Arc::new(SqlBookmarks::from_sql_connections(
-            SqlConnections::new_single(con.clone()),
-        ));
+        let bookmarks = Arc::new(
+            SqlBookmarksBuilder::from_sql_connections(SqlConnections::new_single(con.clone()))
+                .with_repo_id(repo_id),
+        );
         let mutable_counters = Arc::new(SqlMutableCounters::from_sql_connections(
             SqlConnections::new_single(con),
         ));
@@ -1587,15 +1590,15 @@ mod tests {
                 .commit()
                 .await?;
 
+            let repoid = repo.get_repoid();
             let (bookmarks, bookmark_update_log, mutable_counters) =
-                init_bookmarks_mutable_counters().await?;
+                init_bookmarks_mutable_counters(repoid).await?;
             let repo = repo
                 .dangerous_override(|_| bookmarks)
                 .dangerous_override(|_| bookmark_update_log);
 
             let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
 
-            let repoid = repo.get_repoid();
             let mut book = master_bookmark();
 
             bookmark(&ctx, &repo, book.bookmark.clone())

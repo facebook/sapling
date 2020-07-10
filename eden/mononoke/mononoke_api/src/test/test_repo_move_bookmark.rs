@@ -13,7 +13,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
 use tests_utils::drawdag::create_from_dag;
 
 use crate::repo::{Repo, RepoContext};
@@ -77,7 +77,6 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
         .list_bookmark_log_entries(
             ctx.clone(),
             BookmarkName::new("trunk")?,
-            RepositoryId::new(0),
             3,
             None,
             Freshness::MostRecent,

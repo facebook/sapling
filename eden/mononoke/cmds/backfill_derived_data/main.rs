@@ -493,7 +493,6 @@ async fn tail_one_iteration(
         .bookmarks()
         .list(
             ctx.clone(),
-            repo.get_repoid(),
             Freshness::MostRecent,
             &BookmarkPrefix::empty(),
             BookmarkKind::ALL_PUBLISHING,

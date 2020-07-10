@@ -20,7 +20,7 @@ use cacheblob::{
 };
 use changeset_info::ChangesetInfo;
 use changesets::{CachingChangesets, Changesets, SqlChangesets};
-use dbbookmarks::SqlBookmarks;
+use dbbookmarks::SqlBookmarksBuilder;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
@@ -323,7 +323,8 @@ impl TestRepoBuilder {
 
         let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
 
-        let bookmarks = Arc::new(SqlBookmarks::with_sqlite_in_memory()?);
+        let bookmarks =
+            Arc::new(SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repo_id));
 
         Ok(blobrepo_new(
             bookmarks.clone(),
@@ -404,7 +405,7 @@ pub fn new_memblob_with_sqlite_connection_with_id(
     con: SqliteConnection,
     repo_id: RepositoryId,
 ) -> Result<(BlobRepo, Connection)> {
-    con.execute_batch(SqlBookmarks::CREATION_QUERY)?;
+    con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
     con.execute_batch(SqlChangesets::CREATION_QUERY)?;
     con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
     con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
@@ -431,7 +432,9 @@ pub fn new_memblob_with_connection_with_id(
 
     let phases_factory = SqlPhasesFactory::from_sql_connections(sql_connections.clone());
 
-    let bookmarks = Arc::new(SqlBookmarks::from_sql_connections(sql_connections.clone()));
+    let bookmarks = Arc::new(
+        SqlBookmarksBuilder::from_sql_connections(sql_connections.clone()).with_repo_id(repo_id),
+    );
 
     Ok((
         blobrepo_new(
@@ -484,14 +487,15 @@ async fn new_development(
     let bookmarks = async {
         let sql_bookmarks = Arc::new(
             sql_factory
-                .open::<SqlBookmarks>()
+                .open::<SqlBookmarksBuilder>()
                 .compat()
                 .await
-                .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
+                .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?
+                .with_repo_id(repoid),
         );
 
         let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
-            Arc::new(CachedBookmarks::new(sql_bookmarks.clone(), ttl))
+            Arc::new(CachedBookmarks::new(sql_bookmarks.clone(), ttl, repoid))
         } else {
             sql_bookmarks.clone()
         };
@@ -627,7 +631,11 @@ async fn new_production(
 
     let filenodes_tier = sql_factory.tier_name_shardable::<NewFilenodesBuilder>()?;
     let filenodes_builder = sql_factory.open_shardable::<NewFilenodesBuilder>().compat();
-    let bookmarks = sql_factory.open::<SqlBookmarks>().compat();
+    let bookmarks = async {
+        let builder = sql_factory.open::<SqlBookmarksBuilder>().compat().await?;
+
+        Ok(builder.with_repo_id(repoid))
+    };
     let changesets = sql_factory.open::<SqlChangesets>().compat();
     let bonsai_git_mapping = async {
         let conn = sql_factory
@@ -688,7 +696,7 @@ async fn new_production(
     let (bookmarks, bookmark_update_log): (Arc<dyn Bookmarks>, Arc<dyn BookmarkUpdateLog>) =
         if let Some(ttl) = bookmarks_cache_ttl {
             (
-                Arc::new(CachedBookmarks::new(bookmarks.clone(), ttl)),
+                Arc::new(CachedBookmarks::new(bookmarks.clone(), ttl, repoid)),
                 bookmarks,
             )
         } else {

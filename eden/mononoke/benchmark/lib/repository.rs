@@ -20,7 +20,7 @@ use bonsai_hg_mapping::{
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore};
 use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
-use dbbookmarks::SqlBookmarks;
+use dbbookmarks::SqlBookmarksBuilder;
 use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
 use filenodes::{FilenodeInfo, FilenodeResult, Filenodes, PreparedFilenode};
@@ -125,13 +125,13 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         ))
     };
 
+    // Disable redaction check when executing benchmark reports
+    let repoid = RepositoryId::new(rand::random());
+
     // TODO:
     //  - add caching
     //  - add delay
-    let bookmarks = Arc::new(SqlBookmarks::with_sqlite_in_memory()?);
-
-    // Disable redaction check when executing benchmark reports
-    let repoid = RepositoryId::new(rand::random());
+    let bookmarks = Arc::new(SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repoid));
 
     let bonsai_git_mapping =
         Arc::new(SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(repoid));

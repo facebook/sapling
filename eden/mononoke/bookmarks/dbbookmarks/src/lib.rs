@@ -7,10 +7,11 @@
 
 #![deny(warnings)]
 
+pub mod builder;
 pub mod store;
 pub mod transaction;
 
-pub use crate::store::SqlBookmarks;
+pub use crate::builder::SqlBookmarksBuilder;
 
 #[cfg(test)]
 mod test {
@@ -37,12 +38,14 @@ mod test {
     #[fbinit::compat_test]
     async fn test_update_kind_compatibility(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let store = SqlBookmarks::with_sqlite_in_memory().unwrap();
+        let store = SqlBookmarksBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .with_repo_id(REPO_ZERO);
         let scratch_name = BookmarkName::new("book1").unwrap();
         let publishing_name = BookmarkName::new("book2").unwrap();
         let pull_default_name = BookmarkName::new("book3").unwrap();
 
-        let conn = store.write_connection.clone();
+        let conn = store.connections.write_connection.clone();
 
         let rows = vec![
             (
@@ -68,12 +71,12 @@ mod test {
         crate::transaction::insert_bookmarks(&conn, &rows[..]).await?;
 
         // Using 'create_scratch' to replace a non-scratch bookmark should fail.
-        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        let mut txn = store.create_transaction(ctx.clone());
         txn.create_scratch(&publishing_name, ONES_CSID)?;
         assert!(!txn.commit().await?);
 
         // Using 'create' to replace a scratch bookmark should fail.
-        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        let mut txn = store.create_transaction(ctx.clone());
         txn.create(
             &scratch_name,
             ONES_CSID,
@@ -83,17 +86,17 @@ mod test {
         assert!(!txn.commit().await?);
 
         // Using 'update_scratch' to update a publishing bookmark should fail.
-        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        let mut txn = store.create_transaction(ctx.clone());
         txn.update_scratch(&publishing_name, TWOS_CSID, ONES_CSID)?;
         assert!(!txn.commit().await?);
 
         // Using 'update_scratch' to update a pull-default bookmark should fail.
-        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        let mut txn = store.create_transaction(ctx.clone());
         txn.update_scratch(&pull_default_name, TWOS_CSID, ONES_CSID)?;
         assert!(!txn.commit().await?);
 
         // Using 'update' to update a publishing bookmark should succeed.
-        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        let mut txn = store.create_transaction(ctx.clone());
         txn.update(
             &publishing_name,
             TWOS_CSID,
@@ -104,7 +107,7 @@ mod test {
         assert!(txn.commit().await?);
 
         // Using 'update' to update a pull-default bookmark should succeed.
-        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        let mut txn = store.create_transaction(ctx.clone());
         txn.update(
             &pull_default_name,
             TWOS_CSID,
@@ -115,7 +118,7 @@ mod test {
         assert!(txn.commit().await?);
 
         // Using 'update' to update a scratch bookmark should fail.
-        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        let mut txn = store.create_transaction(ctx.clone());
         txn.update(
             &scratch_name,
             TWOS_CSID,
@@ -126,7 +129,7 @@ mod test {
         assert!(!txn.commit().await?);
 
         // Using 'update_scratch' to update a scratch bookmark should succeed.
-        let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
+        let mut txn = store.create_transaction(ctx.clone());
         txn.update_scratch(&scratch_name, TWOS_CSID, ONES_CSID)?;
         assert!(txn.commit().await?);
 
@@ -172,8 +175,10 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(123);
 
-        let store = SqlBookmarks::with_sqlite_in_memory().unwrap();
-        let conn = store.write_connection.clone();
+        let store = SqlBookmarksBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .with_repo_id(repo_id);
+        let conn = store.connections.write_connection.clone();
 
         let rows: Vec<_> = bookmarks
             .iter()
@@ -186,7 +191,6 @@ mod test {
         let response = store
             .list(
                 ctx,
-                repo_id,
                 query_freshness,
                 query_prefix,
                 query_kinds,

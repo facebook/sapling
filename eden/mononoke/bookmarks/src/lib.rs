@@ -12,7 +12,7 @@ use anyhow::Result;
 use context::CoreContext;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::ChangesetId;
 
 mod cache;
 mod log;
@@ -37,7 +37,6 @@ pub trait Bookmarks: Send + Sync + 'static {
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
-        repoid: RepositoryId,
     ) -> BoxFuture<'static, Result<Option<ChangesetId>>>;
 
     /// List bookmarks that match certain parameters.
@@ -58,7 +57,6 @@ pub trait Bookmarks: Send + Sync + 'static {
     fn list(
         &self,
         ctx: CoreContext,
-        repoid: RepositoryId,
         freshness: Freshness,
         prefix: &BookmarkPrefix,
         kinds: &[BookmarkKind],
@@ -67,9 +65,5 @@ pub trait Bookmarks: Send + Sync + 'static {
     ) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>;
 
     /// Create a transaction to modify bookmarks.
-    fn create_transaction(
-        &self,
-        ctx: CoreContext,
-        repoid: RepositoryId,
-    ) -> Box<dyn BookmarkTransaction>;
+    fn create_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction>;
 }

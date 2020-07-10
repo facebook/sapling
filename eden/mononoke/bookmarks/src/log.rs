@@ -47,7 +47,6 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         &self,
         ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
         limit: u64,
         freshness: Freshness,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;
@@ -58,7 +57,6 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         &self,
         ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
         limit: u64,
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>>;
 
@@ -67,7 +65,6 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         &self,
         _ctx: CoreContext,
         name: BookmarkName,
-        repo_id: RepositoryId,
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
@@ -79,7 +76,6 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         &self,
         _ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
         exclude_reason: Option<BookmarkUpdateReason>,
     ) -> BoxFuture<'static, Result<u64>>;
 
@@ -88,7 +84,6 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         &self,
         _ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
     ) -> BoxFuture<'static, Result<Vec<(BookmarkUpdateReason, u64)>>>;
 
     /// Find the last contiguous BookmarkUpdateLog entry matching the reason provided.
@@ -96,7 +91,6 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         &self,
         ctx: CoreContext,
         id: u64,
-        repoid: RepositoryId,
         reason: BookmarkUpdateReason,
     ) -> BoxFuture<'static, Result<Option<u64>>>;
 }

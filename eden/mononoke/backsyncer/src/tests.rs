@@ -17,7 +17,7 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::{rewrite_commit, upload_commits, CommitSyncOutcome, CommitSyncer};
-use dbbookmarks::SqlBookmarks;
+use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use fixtures::linear;
 use futures::{
@@ -851,12 +851,12 @@ async fn init_repos(
     bookmark_renamer_type: BookmarkRenamerType,
 ) -> Result<(CommitSyncer<SqlSyncedCommitMapping>, TargetRepoDbs), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let target_repo_dbs = init_dbs()?;
     let source_repo_id = RepositoryId::new(1);
     let source_repo = new_memblob_empty_with_id(None, source_repo_id)?;
     linear::initrepo(fb, &source_repo).await;
 
     let target_repo_id = RepositoryId::new(2);
+    let target_repo_dbs = init_dbs(target_repo_id)?;
     let target_repo = new_memblob_empty_with_id(None, target_repo_id)?;
     let bookmarks = target_repo_dbs.bookmarks.clone();
     let bookmark_update_log = target_repo_dbs.bookmark_update_log.clone();
@@ -1132,7 +1132,7 @@ async fn init_merged_repos(
     for idx in 0..num_repos {
         let repoid = RepositoryId::new(idx as i32);
         let small_repo = new_memblob_empty_with_id(None, repoid)?;
-        let small_repo_dbs = init_dbs()?;
+        let small_repo_dbs = init_dbs(repoid)?;
 
         let bookmarks = small_repo_dbs.bookmarks.clone();
         let bookmark_update_log = small_repo_dbs.bookmark_update_log.clone();
@@ -1482,13 +1482,15 @@ async fn move_bookmark(
     Ok(())
 }
 
-fn init_dbs() -> Result<TargetRepoDbs, Error> {
+fn init_dbs(repo_id: RepositoryId) -> Result<TargetRepoDbs, Error> {
     let con = SqliteConnection::open_in_memory()?;
     con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
-    con.execute_batch(SqlBookmarks::CREATION_QUERY)?;
+    con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
 
     let connections = SqlConnections::new_single(Connection::with_sqlite(con));
-    let bookmarks = Arc::new(SqlBookmarks::from_sql_connections(connections.clone()));
+    let bookmarks = Arc::new(
+        SqlBookmarksBuilder::from_sql_connections(connections.clone()).with_repo_id(repo_id),
+    );
     let counters = SqlMutableCounters::from_sql_connections(connections.clone());
 
     Ok(TargetRepoDbs {
