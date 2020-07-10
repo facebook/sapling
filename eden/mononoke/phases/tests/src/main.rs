@@ -36,13 +36,8 @@ fn delete_all_publishing_bookmarks(rt: &mut Runtime, ctx: CoreContext, repo: Blo
     let mut txn = repo.update_bookmark_transaction(ctx);
 
     for (bookmark, _) in bookmarks {
-        txn.force_delete(
-            bookmark.name(),
-            BookmarkUpdateReason::TestMove {
-                bundle_replay_data: None,
-            },
-        )
-        .unwrap();
+        txn.force_delete(bookmark.name(), BookmarkUpdateReason::TestMove, None)
+            .unwrap();
     }
 
     assert!(rt.block_on(txn.commit().compat()).unwrap());
@@ -60,14 +55,8 @@ fn set_bookmark(
         .unwrap()
         .unwrap();
     let mut txn = repo.update_bookmark_transaction(ctx);
-    txn.force_set(
-        &book,
-        head,
-        BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
-    )
-    .unwrap();
+    txn.force_set(&book, head, BookmarkUpdateReason::TestMove, None)
+        .unwrap();
 
     assert!(rt.block_on(txn.commit().compat()).unwrap());
 }

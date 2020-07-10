@@ -139,9 +139,8 @@ pub async fn set_bookmark(
     txn.force_set(
         &bookmark,
         bcs_id.unwrap(),
-        BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
+        BookmarkUpdateReason::TestMove,
+        None,
     )
     .unwrap();
     txn.commit().await.unwrap();
@@ -1647,9 +1646,8 @@ pub mod many_diamonds {
         txn.force_set(
             &BookmarkName::new("master").unwrap(),
             last_bcs_id,
-            BookmarkUpdateReason::TestMove {
-                bundle_replay_data: None,
-            },
+            BookmarkUpdateReason::TestMove,
+            None,
         )
         .unwrap();
         txn.commit().await.unwrap();

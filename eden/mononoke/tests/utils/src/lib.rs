@@ -301,13 +301,7 @@ impl UpdateBookmarkContext {
 
         let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
         let mut book_txn = self.repo.update_bookmark_transaction(self.ctx);
-        book_txn.force_set(
-            &bookmark,
-            cs_id,
-            BookmarkUpdateReason::TestMove {
-                bundle_replay_data: None,
-            },
-        )?;
+        book_txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)?;
         book_txn.commit().await?;
         Ok(bookmark)
     }
@@ -320,12 +314,7 @@ impl UpdateBookmarkContext {
         };
 
         let mut book_txn = self.repo.update_bookmark_transaction(self.ctx);
-        book_txn.force_delete(
-            &bookmark,
-            BookmarkUpdateReason::TestMove {
-                bundle_replay_data: None,
-            },
-        )?;
+        book_txn.force_delete(&bookmark, BookmarkUpdateReason::TestMove, None)?;
         book_txn.commit().await?;
         Ok(())
     }

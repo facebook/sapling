@@ -19,7 +19,7 @@ use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use mononoke_types::{ChangesetId, RepositoryId};
 use stats::prelude::*;
 
-use crate::log::BookmarkUpdateReason;
+use crate::log::{BookmarkUpdateReason, BundleReplay};
 use crate::transaction::{BookmarkTransaction, BookmarkTransactionHook};
 use crate::Bookmarks;
 
@@ -313,9 +313,11 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction.update(bookmark, new_cs, old_cs, reason)
+        self.transaction
+            .update(bookmark, new_cs, old_cs, reason, bundle_replay)
     }
 
     fn create(
@@ -323,9 +325,11 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction.create(bookmark, new_cs, reason)
+        self.transaction
+            .create(bookmark, new_cs, reason, bundle_replay)
     }
 
     fn force_set(
@@ -333,9 +337,11 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction.force_set(bookmark, new_cs, reason)
+        self.transaction
+            .force_set(bookmark, new_cs, reason, bundle_replay)
     }
 
     fn delete(
@@ -343,18 +349,22 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         bookmark: &BookmarkName,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction.delete(bookmark, old_cs, reason)
+        self.transaction
+            .delete(bookmark, old_cs, reason, bundle_replay)
     }
 
     fn force_delete(
         &mut self,
         bookmark: &BookmarkName,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.dirty = true;
-        self.transaction.force_delete(bookmark, reason)
+        self.transaction
+            .force_delete(bookmark, reason, bundle_replay)
     }
 
     fn update_scratch(
@@ -471,9 +481,8 @@ mod tests {
         transaction
             .force_delete(
                 &BookmarkName::new("".to_string()).unwrap(),
-                BookmarkUpdateReason::TestMove {
-                    bundle_replay_data: None,
-                },
+                BookmarkUpdateReason::TestMove,
+                None,
             )
             .unwrap();
 
@@ -538,6 +547,7 @@ mod tests {
             _new_cs: ChangesetId,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
+            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }
@@ -547,6 +557,7 @@ mod tests {
             _key: &BookmarkName,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
+            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }
@@ -556,6 +567,7 @@ mod tests {
             _key: &BookmarkName,
             _new_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
+            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }
@@ -565,6 +577,7 @@ mod tests {
             _key: &BookmarkName,
             _old_cs: ChangesetId,
             _reason: BookmarkUpdateReason,
+            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }
@@ -573,6 +586,7 @@ mod tests {
             &mut self,
             _key: &BookmarkName,
             _reason: BookmarkUpdateReason,
+            _bundle_replay: Option<&dyn BundleReplay>,
         ) -> Result<()> {
             Ok(())
         }

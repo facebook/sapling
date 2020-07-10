@@ -341,14 +341,16 @@ fn handle_set<'a>(
                                 &bookmark,
                                 new_bcs.get_changeset_id(),
                                 old_bcs_id,
-                                BookmarkUpdateReason::ManualMove
+                                BookmarkUpdateReason::ManualMove,
+                                None,
                             ));
                         }
                         None => {
                             try_boxfuture!(transaction.create(
                                 &bookmark,
                                 new_bcs.get_changeset_id(),
-                                BookmarkUpdateReason::ManualMove
+                                BookmarkUpdateReason::ManualMove,
+                                None,
                             ));
                         }
                     }
@@ -386,7 +388,8 @@ fn handle_delete<'a>(
                             try_boxfuture!(transaction.delete(
                                 &bookmark,
                                 bcs_id,
-                                BookmarkUpdateReason::ManualMove
+                                BookmarkUpdateReason::ManualMove,
+                                None,
                             ));
                             transaction
                                 .commit()

@@ -18,8 +18,7 @@ use bonsai_git_mapping::{
     extract_git_sha1_from_bonsai_extra, BonsaiGitMapping, BonsaiGitMappingEntry,
 };
 use bookmarks::{
-    BookmarkName, BookmarkTransaction, BookmarkTransactionHook, BookmarkUpdateReason,
-    BundleReplayData,
+    BookmarkName, BookmarkTransaction, BookmarkTransactionHook, BookmarkUpdateReason, BundleReplay,
 };
 use context::CoreContext;
 use futures::{
@@ -32,6 +31,7 @@ use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use maplit::hashset;
+use mercurial_bundle_replay_data::BundleReplayData;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
 use pushrebase::{self, PushrebaseHook};
@@ -187,9 +187,8 @@ async fn run_push(
         Some(bp) => Some(bp.part_id),
         None => None,
     };
-    let reason = BookmarkUpdateReason::Push {
-        bundle_replay_data: maybe_raw_bundle2_id.map(BundleReplayData::new),
-    };
+    let reason = BookmarkUpdateReason::Push;
+    let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
 
     let maybe_bookmark_push = match maybe_bookmark_push {
         Some(bookmark_push) => {
@@ -232,7 +231,15 @@ async fn run_push(
     let maybe_bookmark = maybe_bookmark_push.clone().map(|bp| bp.name);
     let maybe_bookmark_push = maybe_bookmark_push.map(BookmarkPush::PlainPush);
 
-    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push], txn_hook).await?;
+    save_bookmark_pushes_to_db(
+        ctx,
+        repo,
+        reason,
+        &bundle_replay_data,
+        vec![maybe_bookmark_push],
+        txn_hook,
+    )
+    .await?;
     let bookmark_ids = maybe_bookmark_id.into_iter().collect();
     log_commits_to_scribe(
         ctx,
@@ -492,9 +499,8 @@ async fn run_infinitepush(
     }
 
     let bookmark = if let Some(bookmark_push) = maybe_bookmark_push {
-        let reason = BookmarkUpdateReason::Push {
-            bundle_replay_data: maybe_raw_bundle2_id.map(BundleReplayData::new),
-        };
+        let reason = BookmarkUpdateReason::Push;
+        let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
         let maybe_bonsai_bookmark_push = filter_or_check_infinitepush_allowed(
             ctx,
             repo,
@@ -509,6 +515,7 @@ async fn run_infinitepush(
             ctx,
             repo,
             reason,
+            &bundle_replay_data,
             vec![maybe_bonsai_bookmark_push
                 .clone()
                 .map(BookmarkPush::Infinitepush)],
@@ -640,10 +647,9 @@ async fn run_bookmark_only_pushrebase(
     } = action;
 
     let part_id = bookmark_push.part_id;
-    let reason = BookmarkUpdateReason::Pushrebase {
-        // Since this a bookmark-only pushrebase, there are no changeset timestamps
-        bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
-    };
+    let reason = BookmarkUpdateReason::Pushrebase;
+    // Since this a bookmark-only pushrebase, there are no changeset timestamps
+    let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
 
     let bookmark_push = check_plain_bookmark_push_allowed(
         ctx,
@@ -670,7 +676,15 @@ async fn run_bookmark_only_pushrebase(
     }
 
     let maybe_bookmark_push = Some(BookmarkPush::PlainPush(bookmark_push));
-    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push], txn_hook).await?;
+    save_bookmark_pushes_to_db(
+        ctx,
+        repo,
+        reason,
+        &bundle_replay_data,
+        vec![maybe_bookmark_push],
+        txn_hook,
+    )
+    .await?;
     Ok(UnbundleBookmarkOnlyPushRebaseResponse {
         bookmark_push_part_id: part_id,
     })
@@ -776,11 +790,11 @@ async fn force_pushrebase(
     let maybe_target_bcs = bookmark_push.new.clone();
     let target_bcs = maybe_target_bcs
         .ok_or_else(|| Error::msg("new changeset is required for force pushrebase"))?;
-    let reason = BookmarkUpdateReason::Pushrebase {
-        bundle_replay_data: maybe_hg_replay_data
-            .as_ref()
-            .map(|hg_replay_data| hg_replay_data.get_raw_bundle2_id())
-            .map(BundleReplayData::new),
+    let reason = BookmarkUpdateReason::Pushrebase;
+    let bundle_replay_data = if let Some(hg_replay_data) = &maybe_hg_replay_data {
+        Some(hg_replay_data.to_bundle_replay_data(None).await?)
+    } else {
+        None
     };
 
     let maybe_bookmark_push = check_plain_bookmark_push_allowed(
@@ -795,7 +809,15 @@ async fn force_pushrebase(
     .await
     .map(|bp| Some(BookmarkPush::PlainPush(bp)))?;
 
-    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push], None).await?;
+    save_bookmark_pushes_to_db(
+        ctx,
+        repo,
+        reason,
+        &bundle_replay_data,
+        vec![maybe_bookmark_push],
+        None,
+    )
+    .await?;
 
     // Note that this push did not do any actual rebases, so we do not
     // need to provide any actual mapping, an empty Vec will do
@@ -807,6 +829,7 @@ async fn save_bookmark_pushes_to_db<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     reason: BookmarkUpdateReason,
+    bundle_replay_data: &'a Option<BundleReplayData>,
     bonsai_bookmark_pushes: Vec<Option<BookmarkPush<ChangesetId>>>,
     txn_hook: Option<BookmarkTransactionHook>,
 ) -> Result<(), Error> {
@@ -820,7 +843,7 @@ async fn save_bookmark_pushes_to_db<'a>(
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
     for bp in bonsai_bookmark_pushes.into_iter().flatten() {
-        add_bookmark_to_transaction(&mut txn, bp, reason.clone())?;
+        add_bookmark_to_transaction(&mut txn, bp, reason, bundle_replay_data)?;
     }
 
     let ok = if let Some(txn_hook) = txn_hook {
@@ -946,14 +969,20 @@ fn add_bookmark_to_transaction(
     txn: &mut Box<dyn BookmarkTransaction>,
     bookmark_push: BookmarkPush<ChangesetId>,
     reason: BookmarkUpdateReason,
+    bundle_replay_data: &Option<BundleReplayData>,
 ) -> Result<()> {
     match bookmark_push {
-        BookmarkPush::PlainPush(PlainBookmarkPush { new, old, name, .. }) => match (new, old) {
-            (Some(new), Some(old)) => txn.update(&name, new, old, reason),
-            (Some(new), None) => txn.create(&name, new, reason),
-            (None, Some(old)) => txn.delete(&name, old, reason),
-            _ => Ok(()),
-        },
+        BookmarkPush::PlainPush(PlainBookmarkPush { new, old, name, .. }) => {
+            let bundle_replay = bundle_replay_data
+                .as_ref()
+                .map(|data| data as &dyn BundleReplay);
+            match (new, old) {
+                (Some(new), Some(old)) => txn.update(&name, new, old, reason, bundle_replay),
+                (Some(new), None) => txn.create(&name, new, reason, bundle_replay),
+                (None, Some(old)) => txn.delete(&name, old, reason, bundle_replay),
+                _ => Ok(()),
+            }
+        }
         BookmarkPush::Infinitepush(InfiniteBookmarkPush { name, new, old, .. }) => match (new, old)
         {
             (new, Some(old)) => txn.update_scratch(&name, new, old),

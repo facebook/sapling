@@ -109,9 +109,8 @@ where
     txn.force_set(
         &bookmark_name,
         target_bcs.get_changeset_id(),
-        BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
+        BookmarkUpdateReason::TestMove,
+        None,
     )
     .unwrap();
     txn.commit().await.unwrap();

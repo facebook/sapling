@@ -23,7 +23,10 @@ pub use bookmarks_types::{
     Freshness,
 };
 pub use cache::CachedBookmarks;
-pub use log::{BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, BundleReplayData};
+pub use log::{
+    BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, BundleReplay,
+    RawBundleReplayData,
+};
 pub use transaction::{BookmarkTransaction, BookmarkTransactionError, BookmarkTransactionHook};
 
 pub trait Bookmarks: Send + Sync + 'static {

@@ -5,16 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::fmt;
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, Result};
 use bookmarks_types::{BookmarkName, Freshness};
 use context::CoreContext;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
-use mercurial_types::HgChangesetId;
-use mononoke_types::{ChangesetId, RawBundle2Id, RepositoryId, Timestamp};
+use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
 use sql::mysql_async::prelude::{ConvIr, FromValue};
 use sql::mysql_async::{FromValueError, Value};
 
@@ -30,13 +28,15 @@ pub struct BookmarkUpdateLogEntry {
     pub bookmark_name: BookmarkName,
     /// Previous position of bookmark if it's known. It might not be known if a bookmark was
     /// force set or if a bookmark didn't exist
-    pub to_changeset_id: Option<ChangesetId>,
-    /// New position of a bookmark. It can be None if the bookmark was deleted
     pub from_changeset_id: Option<ChangesetId>,
+    /// New position of a bookmark. It can be None if the bookmark was deleted
+    pub to_changeset_id: Option<ChangesetId>,
     /// Reason for a bookmark update
     pub reason: BookmarkUpdateReason,
     /// When update happened
     pub timestamp: Timestamp,
+    /// Raw bundle replay data
+    pub bundle_replay_data: Option<RawBundleReplayData>,
 }
 
 pub trait BookmarkUpdateLog: Send + Sync + 'static {
@@ -102,29 +102,29 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
 }
 
 /// Describes why a bookmark was moved
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BookmarkUpdateReason {
-    Pushrebase {
-        /// For now, let the bundle handle be not specified.
-        /// We may change it later
-        bundle_replay_data: Option<BundleReplayData>,
-    },
-    Push {
-        /// For now, let the bundle handle be not specified.
-        /// We may change it later
-        bundle_replay_data: Option<BundleReplayData>,
-    },
+    /// Bookmark was updated by a pushrebase.
+    Pushrebase,
+
+    /// Bookmark was update by a plain push.
+    Push,
+
+    /// Bookmark was updated by blobimport.
     Blobimport,
+
     /// Bookmark was moved manually i.e. via mononoke_admin tool
     ManualMove,
+
+    /// Bookmark was moved by test code.
+    ///
     /// Only used for tests, should never be used in production
-    TestMove {
-        bundle_replay_data: Option<BundleReplayData>,
-    },
-    /// Used during sync from a large repo into small repo.
-    Backsyncer {
-        bundle_replay_data: Option<BundleReplayData>,
-    },
+    TestMove,
+
+    /// Bookmark was moved during a back-sync from a large repo into a small repo.
+    Backsyncer,
+
+    /// Bookmark was moved during a sync from a small repo into a large repo.
     XRepoSync,
 }
 
@@ -133,85 +133,30 @@ impl std::fmt::Display for BookmarkUpdateReason {
         use BookmarkUpdateReason::*;
 
         let s = match self {
-            Pushrebase { .. } => "pushrebase",
-            Push { .. } => "push",
+            Pushrebase => "pushrebase",
+            Push => "push",
             Blobimport => "blobimport",
             ManualMove => "manualmove",
-            TestMove { .. } => "testmove",
-            Backsyncer { .. } => "backsyncer",
-            XRepoSync { .. } => "xreposync",
+            TestMove => "testmove",
+            Backsyncer => "backsyncer",
+            XRepoSync => "xreposync",
         };
         write!(f, "{}", s)
     }
 }
 
-impl BookmarkUpdateReason {
-    pub fn update_bundle_replay_data(
-        self,
-        bundle_replay_data: Option<BundleReplayData>,
-    ) -> Result<Self> {
-        use BookmarkUpdateReason::*;
-        match self {
-            Pushrebase { .. } => Ok(Pushrebase { bundle_replay_data }),
-            Push { .. } => Ok(Push { bundle_replay_data }),
-            Blobimport | ManualMove | XRepoSync => match bundle_replay_data {
-                Some(..) => bail!("internal error: bundle replay data can not be specified"),
-                None => Ok(self),
-            },
-            TestMove { .. } => Ok(TestMove { bundle_replay_data }),
-            Backsyncer { .. } => Ok(Backsyncer { bundle_replay_data }),
-        }
-    }
-
-    pub fn into_bundle_replay_data(self) -> Option<BundleReplayData> {
-        use BookmarkUpdateReason::*;
-        match self {
-            Pushrebase { bundle_replay_data }
-            | Push { bundle_replay_data }
-            | TestMove { bundle_replay_data }
-            | Backsyncer { bundle_replay_data } => bundle_replay_data,
-            Blobimport | ManualMove | XRepoSync => None,
-        }
-    }
-
-    pub fn get_bundle_replay_data(&self) -> Option<&BundleReplayData> {
-        use BookmarkUpdateReason::*;
-        match self {
-            Pushrebase {
-                ref bundle_replay_data,
-            }
-            | Push {
-                ref bundle_replay_data,
-            }
-            | TestMove {
-                ref bundle_replay_data,
-            }
-            | Backsyncer {
-                ref bundle_replay_data,
-            } => bundle_replay_data.as_ref(),
-            Blobimport | ManualMove | XRepoSync => None,
-        }
-    }
-}
-
 impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {
     fn new(v: Value) -> Result<Self, FromValueError> {
+        use BookmarkUpdateReason::*;
+
         match v {
-            Value::Bytes(ref b) if b == &b"pushrebase" => Ok(BookmarkUpdateReason::Pushrebase {
-                bundle_replay_data: None,
-            }),
-            Value::Bytes(ref b) if b == &b"push" => Ok(BookmarkUpdateReason::Push {
-                bundle_replay_data: None,
-            }),
-            Value::Bytes(ref b) if b == &b"blobimport" => Ok(BookmarkUpdateReason::Blobimport),
-            Value::Bytes(ref b) if b == &b"manualmove" => Ok(BookmarkUpdateReason::ManualMove),
-            Value::Bytes(ref b) if b == &b"testmove" => Ok(BookmarkUpdateReason::TestMove {
-                bundle_replay_data: None,
-            }),
-            Value::Bytes(ref b) if b == &b"backsyncer" => Ok(BookmarkUpdateReason::Backsyncer {
-                bundle_replay_data: None,
-            }),
-            Value::Bytes(ref b) if b == &b"xreposync" => Ok(BookmarkUpdateReason::XRepoSync),
+            Value::Bytes(ref b) if b == &b"pushrebase" => Ok(Pushrebase),
+            Value::Bytes(ref b) if b == &b"push" => Ok(Push),
+            Value::Bytes(ref b) if b == &b"blobimport" => Ok(Blobimport),
+            Value::Bytes(ref b) if b == &b"manualmove" => Ok(ManualMove),
+            Value::Bytes(ref b) if b == &b"testmove" => Ok(TestMove),
+            Value::Bytes(ref b) if b == &b"backsyncer" => Ok(Backsyncer),
+            Value::Bytes(ref b) if b == &b"xreposync" => Ok(XRepoSync),
             v => Err(FromValueError(v)),
         }
     }
@@ -231,35 +176,49 @@ impl FromValue for BookmarkUpdateReason {
 
 impl From<BookmarkUpdateReason> for Value {
     fn from(bookmark_update_reason: BookmarkUpdateReason) -> Self {
+        use BookmarkUpdateReason::*;
+
         match bookmark_update_reason {
-            BookmarkUpdateReason::Pushrebase { .. } => Value::Bytes(b"pushrebase".to_vec()),
-            BookmarkUpdateReason::Push { .. } => Value::Bytes(b"push".to_vec()),
-            BookmarkUpdateReason::Blobimport { .. } => Value::Bytes(b"blobimport".to_vec()),
-            BookmarkUpdateReason::ManualMove { .. } => Value::Bytes(b"manualmove".to_vec()),
-            BookmarkUpdateReason::TestMove { .. } => Value::Bytes(b"testmove".to_vec()),
-            BookmarkUpdateReason::Backsyncer { .. } => Value::Bytes(b"backsyncer".to_vec()),
-            BookmarkUpdateReason::XRepoSync { .. } => Value::Bytes(b"xreposync".to_vec()),
+            Pushrebase => Value::Bytes(b"pushrebase".to_vec()),
+            Push => Value::Bytes(b"push".to_vec()),
+            Blobimport => Value::Bytes(b"blobimport".to_vec()),
+            ManualMove => Value::Bytes(b"manualmove".to_vec()),
+            TestMove => Value::Bytes(b"testmove".to_vec()),
+            Backsyncer => Value::Bytes(b"backsyncer".to_vec()),
+            XRepoSync => Value::Bytes(b"xreposync".to_vec()),
         }
     }
 }
 
 /// Encapsulation of the data required to replay a Mercurial bundle.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct BundleReplayData {
+pub struct RawBundleReplayData {
     pub bundle_handle: String,
-    pub commit_timestamps: HashMap<HgChangesetId, Timestamp>,
+    pub commit_timestamps_json: String,
 }
 
-impl BundleReplayData {
-    pub fn new(raw_bundle2_id: RawBundle2Id) -> Self {
-        Self {
-            bundle_handle: raw_bundle2_id.to_hex().as_str().to_owned(),
-            commit_timestamps: HashMap::new(),
+impl RawBundleReplayData {
+    pub fn maybe_new(
+        bundle_handle: Option<String>,
+        commit_timestamps_json: Option<String>,
+    ) -> Result<Option<Self>> {
+        match (bundle_handle, commit_timestamps_json) {
+            (Some(bundle_handle), Some(commit_timestamps_json)) => Ok(Some(RawBundleReplayData {
+                bundle_handle,
+                commit_timestamps_json,
+            })),
+            (None, None) => Ok(None),
+            _ => Err(anyhow!("inconsistent replay data")),
         }
     }
+}
 
-    pub fn with_timestamps(mut self, commit_timestamps: HashMap<HgChangesetId, Timestamp>) -> Self {
-        self.commit_timestamps = commit_timestamps;
-        self
+pub trait BundleReplay: Sync {
+    fn to_raw(&self) -> Result<RawBundleReplayData>;
+}
+
+impl BundleReplay for RawBundleReplayData {
+    fn to_raw(&self) -> Result<RawBundleReplayData> {
+        Ok(self.clone())
     }
 }

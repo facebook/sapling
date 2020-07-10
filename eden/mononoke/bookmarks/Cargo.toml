@@ -9,7 +9,6 @@ include = ["src/**/*.rs"]
 [dependencies]
 bookmarks_types = { path = "bookmarks_types" }
 context = { path = "../server/context" }
-mercurial_types = { path = "../mercurial/types" }
 mononoke_types = { path = "../mononoke_types" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

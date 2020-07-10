@@ -16,6 +16,7 @@ context = { path = "../server/context" }
 derived_data = { path = "../derived_data" }
 derived_data_filenodes = { path = "../derived_data/filenodes" }
 manifest = { path = "../manifest" }
+mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }

@@ -16,6 +16,7 @@ cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
 hooks = { path = "../hooks" }
 hooks_content_stores = { path = "../hooks/content-stores" }
+mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data" }
 mercurial_bundles = { path = "../mercurial/bundles" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }

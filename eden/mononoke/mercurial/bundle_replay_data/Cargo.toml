@@ -1,0 +1,14 @@
+[package]
+name = "mercurial_bundle_replay_data"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+bookmarks = { path = "../../bookmarks" }
+mercurial_types = { path = "../types" }
+mononoke_types = { path = "../../mononoke_types" }
+anyhow = "1.0"
+serde_json = "1.0"

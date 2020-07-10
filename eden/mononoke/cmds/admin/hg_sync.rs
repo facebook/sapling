@@ -17,6 +17,7 @@ use dbbookmarks::SqlBookmarks;
 use fbinit::FacebookInit;
 use futures::stream::StreamExt;
 use futures::{compat::Future01CompatExt, future};
+use mercurial_bundle_replay_data::BundleReplayData;
 use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
@@ -375,16 +376,15 @@ async fn fetch_bundle(
 
     let log_entry = get_entry_by_id(ctx, repo.get_repoid(), bookmarks, id).await?;
 
-    let bundle_handle = &log_entry
-        .reason
-        .get_bundle_replay_data()
+    let bundle_replay_data: BundleReplayData = log_entry
+        .bundle_replay_data
         .ok_or_else(|| Error::msg("no bundle found"))?
-        .bundle_handle;
+        .try_into()?;
 
     save_bundle_to_file(
         &ctx,
         repo.blobstore(),
-        bundle_handle,
+        bundle_replay_data.bundle2_id,
         output_file,
         true, /* create */
     )

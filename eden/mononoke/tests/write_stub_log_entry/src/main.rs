@@ -66,9 +66,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         let name = matches.value_of(BOOKMARK).unwrap().to_string();
         let reason = match matches.is_present(BLOBIMPORT) {
             true => BookmarkUpdateReason::Blobimport,
-            false => BookmarkUpdateReason::TestMove {
-                bundle_replay_data: None,
-            },
+            false => BookmarkUpdateReason::TestMove,
         };
 
         let bookmark = BookmarkName::new(name).unwrap();
@@ -81,6 +79,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                     &bookmark,
                     ChangesetId::from_str(&sub_m.value_of(ID).unwrap().to_string()).unwrap(),
                     reason,
+                    None,
                 )
                 .unwrap();
             }
@@ -90,6 +89,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                     ChangesetId::from_str(&sub_m.value_of(TO_ID).unwrap().to_string()).unwrap(),
                     ChangesetId::from_str(&sub_m.value_of(FROM_ID).unwrap().to_string()).unwrap(),
                     reason,
+                    None,
                 )
                 .unwrap();
             }

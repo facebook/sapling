@@ -23,10 +23,8 @@ sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = 
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-serde_json = "1.0"
 
 [dev-dependencies]
-mercurial_types-mocks = { path = "../../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 ascii_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

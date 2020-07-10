@@ -30,7 +30,7 @@ use blobrepo_factory::ReadOnlyStorage;
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::{
     BookmarkTransactionError, BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason,
-    Bookmarks, Freshness,
+    Bookmarks, BundleReplay, Freshness,
 };
 use cloned::cloned;
 use context::CoreContext;
@@ -230,6 +230,7 @@ where
     debug!(ctx.logger(), "bookmark was renamed into {:?}", bookmark);
     let from_cs_id = log_entry.from_changeset_id;
     let to_cs_id = log_entry.to_changeset_id;
+    let bundle_replay_data = log_entry.bundle_replay_data;
 
     let get_commit_sync_outcome = |maybe_cs_id: Option<ChangesetId>| {
         cloned!(ctx);
@@ -306,31 +307,47 @@ where
                 ctx.logger(),
                 "syncing bookmark {} to {:?}", bookmark, to_cs_id
             );
-            let reason = BookmarkUpdateReason::Backsyncer {
-                bundle_replay_data: log_entry.reason.get_bundle_replay_data().cloned(),
-            };
 
+            let bundle_replay = bundle_replay_data
+                .as_ref()
+                .map(|data| data as &dyn BundleReplay);
             match (from_cs_id, to_cs_id) {
                 (Some(from), Some(to)) => {
                     debug!(
                         ctx.logger(),
                         "updating bookmark {:?} from {:?} to {:?}", bookmark, from, to
                     );
-                    bookmark_txn.update(&bookmark, to, from, reason)?;
+                    bookmark_txn.update(
+                        &bookmark,
+                        to,
+                        from,
+                        BookmarkUpdateReason::Backsyncer,
+                        bundle_replay,
+                    )?;
                 }
                 (Some(from), None) => {
                     debug!(
                         ctx.logger(),
                         "deleting bookmark {:?} with original position {:?}", bookmark, from
                     );
-                    bookmark_txn.delete(&bookmark, from, reason)?;
+                    bookmark_txn.delete(
+                        &bookmark,
+                        from,
+                        BookmarkUpdateReason::Backsyncer,
+                        bundle_replay,
+                    )?;
                 }
                 (None, Some(to)) => {
                     debug!(
                         ctx.logger(),
                         "creating bookmark {:?} to point to {:?}", bookmark, to
                     );
-                    bookmark_txn.create(&bookmark, to, reason)?;
+                    bookmark_txn.create(
+                        &bookmark,
+                        to,
+                        BookmarkUpdateReason::Backsyncer,
+                        bundle_replay,
+                    )?;
                 }
                 (None, None) => {
                     bail!("unexpected bookmark move");

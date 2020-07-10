@@ -53,7 +53,7 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData};
+use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -67,6 +67,7 @@ use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt, StreamExt as Futur
 use futures_old::{stream, Future, Stream};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
+use mercurial_bundle_replay_data::BundleReplayData;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::{
@@ -171,8 +172,25 @@ impl HgReplayData {
         self.cs_id_convertor = cs_id_convertor;
     }
 
-    pub fn get_raw_bundle2_id(&self) -> RawBundle2Id {
-        self.bundle2_id.clone()
+    pub async fn to_bundle_replay_data(
+        &self,
+        rebased_changesets: Option<&RebasedChangesets>,
+    ) -> Result<BundleReplayData> {
+        let bundle2_id = self.bundle2_id.clone();
+        if let Some(rebased_changesets) = rebased_changesets {
+            let timestamps = rebased_changesets.iter().map({
+                |(cs_id, (_, timestamp))| async move {
+                    let hg_cs_id = (self.cs_id_convertor)(*cs_id).compat().await?;
+                    Ok::<_, Error>((hg_cs_id, *timestamp))
+                }
+            });
+            let timestamps = try_join_all(timestamps).await?.into_iter().collect();
+            Ok(BundleReplayData::new_with_timestamps(
+                bundle2_id, timestamps,
+            ))
+        } else {
+            Ok(BundleReplayData::new(bundle2_id))
+        }
     }
 }
 
@@ -1220,14 +1238,35 @@ async fn try_move_bookmark(
     let bookmark_name = &bookmark.bookmark;
     let mut txn = repo.update_bookmark_transaction(ctx);
 
-    let reason = create_bookmark_update_reason(maybe_hg_replay_data, &rebased_changesets).await?;
+    let bundle_replay_data = match maybe_hg_replay_data {
+        Some(hg_replay_data) => Some(
+            hg_replay_data
+                .to_bundle_replay_data(Some(&rebased_changesets))
+                .await?,
+        ),
+        None => None,
+    };
+    let bundle_replay = bundle_replay_data
+        .as_ref()
+        .map(|data| data as &dyn BundleReplay);
 
     match old_value {
         Some(old_value) => {
-            txn.update(&bookmark_name, new_value, old_value, reason)?;
+            txn.update(
+                &bookmark_name,
+                new_value,
+                old_value,
+                BookmarkUpdateReason::Pushrebase,
+                bundle_replay,
+            )?;
         }
         None => {
-            txn.create(&bookmark_name, new_value, reason)?;
+            txn.create(
+                &bookmark_name,
+                new_value,
+                BookmarkUpdateReason::Pushrebase,
+                bundle_replay,
+            )?;
         }
     }
 
@@ -1253,42 +1292,6 @@ async fn try_move_bookmark(
     };
 
     Ok(ret)
-}
-
-async fn create_bookmark_update_reason(
-    maybe_hg_replay_data: &Option<HgReplayData>,
-    rebased_changesets: &RebasedChangesets,
-) -> Result<BookmarkUpdateReason, Error> {
-    let hg_replay_data = match maybe_hg_replay_data {
-        Some(hg_replay_data) => hg_replay_data,
-        None => {
-            return Ok(BookmarkUpdateReason::Pushrebase {
-                bundle_replay_data: None,
-            });
-        }
-    };
-
-    let HgReplayData {
-        bundle2_id,
-        cs_id_convertor,
-    } = hg_replay_data;
-
-    let bundle_replay_data = BundleReplayData::new(*bundle2_id);
-
-    let timestamps = rebased_changesets.iter().map({
-        |(id_old, (_, timestamp))| async move {
-            let hg_cs_id = cs_id_convertor(*id_old).compat().await?;
-            Result::<_, Error>::Ok((hg_cs_id, *timestamp))
-        }
-    });
-
-    let timestamps = try_join_all(timestamps).await?.into_iter().collect();
-
-    let reason = BookmarkUpdateReason::Pushrebase {
-        bundle_replay_data: Some(bundle_replay_data.with_timestamps(timestamps)),
-    };
-
-    Ok(reason)
 }
 
 #[cfg(test)]
@@ -1388,13 +1391,7 @@ mod tests {
             .ok_or(Error::msg(format_err!("Head not found: {:?}", cs_id)))?;
 
         let mut txn = repo.update_bookmark_transaction(ctx);
-        txn.force_set(
-            &book,
-            head,
-            BookmarkUpdateReason::TestMove {
-                bundle_replay_data: None,
-            },
-        )?;
+        txn.force_set(&book, head, BookmarkUpdateReason::TestMove, None)?;
         txn.commit().await?;
         Ok(())
     }

@@ -13,11 +13,12 @@ use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
 use bytes::Bytes;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
+use mercurial_bundle_replay_data::BundleReplayData;
 use mercurial_types::HgChangesetId;
-use mononoke_types::{hash::Blake2, ChangesetId, RawBundle2Id, Timestamp};
+use mononoke_types::{ChangesetId, RawBundle2Id, Timestamp};
 use slog::info;
 use std::collections::HashMap;
-use std::str::FromStr;
+use std::convert::TryInto;
 use std::time::Duration;
 use tokio::process::Command;
 
@@ -100,14 +101,12 @@ pub struct ReplaySpec<'a> {
 
 impl ReplaySpec<'static> {
     pub fn from_bookmark_update_log_entry(entry: BookmarkUpdateLogEntry) -> Result<Self, Error> {
-        let replay_data = entry
-            .reason
-            .into_bundle_replay_data()
-            .ok_or_else(|| format_err!("Entry has replay data"))?;
+        let replay_data: BundleReplayData = entry
+            .bundle_replay_data
+            .ok_or_else(|| format_err!("Entry has replay data"))?
+            .try_into()?;
 
-        let bundle = BundleHandle::blob(
-            Blake2::from_str(&replay_data.bundle_handle).map(RawBundle2Id::new)?,
-        );
+        let bundle = BundleHandle::blob(replay_data.bundle2_id);
 
         let target = entry
             .to_changeset_id
@@ -116,7 +115,7 @@ impl ReplaySpec<'static> {
         Ok(ReplaySpec {
             bundle,
             pushrebase_spec: PushrebaseSpec {
-                timestamps: replay_data.commit_timestamps,
+                timestamps: replay_data.timestamps,
                 onto: entry.bookmark_name,
                 onto_rev: entry.from_changeset_id.map(OntoRev::Bonsai),
                 target: Target::bonsai(target),

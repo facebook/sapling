@@ -1469,19 +1469,12 @@ async fn move_bookmark(
                 bookmark,
                 bcs_id,
                 prev_bcs_id,
-                BookmarkUpdateReason::TestMove {
-                    bundle_replay_data: None,
-                },
+                BookmarkUpdateReason::TestMove,
+                None,
             )?;
         }
         None => {
-            txn.create(
-                bookmark,
-                bcs_id,
-                BookmarkUpdateReason::TestMove {
-                    bundle_replay_data: None,
-                },
-            )?;
+            txn.create(bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)?;
         }
     }
 

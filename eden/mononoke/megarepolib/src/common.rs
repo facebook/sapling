@@ -99,7 +99,7 @@ async fn create_bookmark(
         "Setting bookmark {:?} to point to {:?}", bookmark, bcs_id
     );
     let mut transaction = repo.update_bookmark_transaction(ctx.clone());
-    transaction.force_set(&bookmark, bcs_id, BookmarkUpdateReason::ManualMove)?;
+    transaction.force_set(&bookmark, bcs_id, BookmarkUpdateReason::ManualMove, None)?;
 
     let commit_result = transaction.commit().await?;
 

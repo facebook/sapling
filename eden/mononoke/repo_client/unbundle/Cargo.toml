@@ -22,6 +22,7 @@ globalrev_pushrebase_hook = { path = "../../bonsai_globalrev_mapping/globalrev_p
 hooks = { path = "../../hooks" }
 limits = { path = "../../../../configerator/structs/scm/mononoke/loadshedding" }
 live_commit_sync_config = { path = "../../commit_rewriting/live_commit_sync_config" }
+mercurial_bundle_replay_data = { path = "../../mercurial/bundle_replay_data" }
 mercurial_bundles = { path = "../../mercurial/bundles" }
 mercurial_mutation = { path = "../../mercurial/mutation" }
 mercurial_revlog = { path = "../../mercurial/revlog" }

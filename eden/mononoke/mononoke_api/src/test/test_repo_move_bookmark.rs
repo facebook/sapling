@@ -34,9 +34,8 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     txn.force_set(
         &BookmarkName::new("trunk")?,
         changesets["C"],
-        BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
+        BookmarkUpdateReason::TestMove,
+        None,
     )?;
     txn.commit().await?;
 
@@ -90,24 +89,9 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     assert_eq!(
         entries,
         vec![
-            (
-                Some(changesets["G"]),
-                BookmarkUpdateReason::Pushrebase {
-                    bundle_replay_data: None
-                },
-            ),
-            (
-                Some(changesets["E"]),
-                BookmarkUpdateReason::Pushrebase {
-                    bundle_replay_data: None
-                },
-            ),
-            (
-                Some(changesets["C"]),
-                BookmarkUpdateReason::TestMove {
-                    bundle_replay_data: None
-                },
-            ),
+            (Some(changesets["G"]), BookmarkUpdateReason::Pushrebase),
+            (Some(changesets["E"]), BookmarkUpdateReason::Pushrebase),
+            (Some(changesets["C"]), BookmarkUpdateReason::TestMove),
         ]
     );
 

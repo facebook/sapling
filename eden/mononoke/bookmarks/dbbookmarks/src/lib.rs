@@ -7,11 +7,11 @@
 
 #![deny(warnings)]
 
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::{anyhow, Error, Result};
 use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkTransaction,
     BookmarkTransactionError, BookmarkTransactionHook, BookmarkUpdateLog, BookmarkUpdateLogEntry,
-    BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
+    BookmarkUpdateReason, Bookmarks, BundleReplay, Freshness, RawBundleReplayData,
 };
 use context::{CoreContext, PerfCounterType};
 use futures::compat::Future01CompatExt;
@@ -545,21 +545,20 @@ impl BookmarkUpdateLog for SqlBookmarks {
                         reason,
                         timestamp,
                         bundle_handle,
-                        commit_timestamps,
+                        commit_timestamps_json,
                     ) = entry;
-                    get_bundle_replay_data(bundle_handle, commit_timestamps).and_then(
-                        |replay_data| {
-                            Ok(BookmarkUpdateLogEntry {
-                                id,
-                                repo_id,
-                                bookmark_name: name,
-                                to_changeset_id: to_cs_id,
-                                from_changeset_id: from_cs_id,
-                                reason: reason.update_bundle_replay_data(replay_data)?,
-                                timestamp,
-                            })
-                        },
-                    )
+                    let bundle_replay_data =
+                        RawBundleReplayData::maybe_new(bundle_handle, commit_timestamps_json)?;
+                    Ok(BookmarkUpdateLogEntry {
+                        id,
+                        repo_id,
+                        bookmark_name: name,
+                        to_changeset_id: to_cs_id,
+                        from_changeset_id: from_cs_id,
+                        reason,
+                        timestamp,
+                        bundle_replay_data,
+                    })
                 })
             })
             .try_flatten_stream()
@@ -597,21 +596,20 @@ impl BookmarkUpdateLog for SqlBookmarks {
                         reason,
                         timestamp,
                         bundle_handle,
-                        commit_timestamps,
+                        commit_timestamps_json,
                     ) = entry;
-                    get_bundle_replay_data(bundle_handle, commit_timestamps).and_then(
-                        |replay_data| {
-                            Ok(BookmarkUpdateLogEntry {
-                                id,
-                                repo_id,
-                                bookmark_name: name,
-                                to_changeset_id: to_cs_id,
-                                from_changeset_id: from_cs_id,
-                                reason: reason.update_bundle_replay_data(replay_data)?,
-                                timestamp,
-                            })
-                        },
-                    )
+                    let bundle_replay_data =
+                        RawBundleReplayData::maybe_new(bundle_handle, commit_timestamps_json)?;
+                    Ok(BookmarkUpdateLogEntry {
+                        id,
+                        repo_id,
+                        bookmark_name: name,
+                        to_changeset_id: to_cs_id,
+                        from_changeset_id: from_cs_id,
+                        reason,
+                        timestamp,
+                        bundle_replay_data,
+                    })
                 })
             })
             .try_flatten_stream()
@@ -629,6 +627,9 @@ struct NewUpdateLogEntry {
 
     /// The reason for the update.
     reason: BookmarkUpdateReason,
+
+    /// Bundle replay information if this update is replayable.
+    bundle_replay_data: Option<RawBundleReplayData>,
 }
 
 impl NewUpdateLogEntry {
@@ -636,8 +637,14 @@ impl NewUpdateLogEntry {
         old: Option<ChangesetId>,
         new: Option<ChangesetId>,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<NewUpdateLogEntry> {
-        Ok(NewUpdateLogEntry { old, new, reason })
+        Ok(NewUpdateLogEntry {
+            old,
+            new,
+            reason,
+            bundle_replay_data: bundle_replay.map(BundleReplay::to_raw).transpose()?,
+        })
     }
 }
 
@@ -679,58 +686,6 @@ impl SqlBookmarksTransactionPayload {
         }
     }
 
-    async fn log_bundle_replay_data(
-        id: u64,
-        reason: BookmarkUpdateReason,
-        sql_transaction: SqlTransaction,
-    ) -> Result<SqlTransaction> {
-        use BookmarkUpdateReason::*;
-        let sql_transaction = match reason {
-            Pushrebase {
-                bundle_replay_data: Some(bundle_replay_data),
-            }
-            | Push {
-                bundle_replay_data: Some(bundle_replay_data),
-            }
-            | TestMove {
-                bundle_replay_data: Some(bundle_replay_data),
-            }
-            | Backsyncer {
-                bundle_replay_data: Some(bundle_replay_data),
-            } => {
-                let BundleReplayData {
-                    bundle_handle,
-                    commit_timestamps,
-                } = bundle_replay_data;
-                let commit_timestamps = serde_json::to_string(&commit_timestamps)?;
-
-                AddBundleReplayData::query_with_transaction(
-                    sql_transaction,
-                    &[(&id, &bundle_handle, &commit_timestamps)],
-                )
-                .compat()
-                .await?
-                .0
-            }
-            Pushrebase {
-                bundle_replay_data: None,
-            }
-            | Push {
-                bundle_replay_data: None,
-            }
-            | TestMove {
-                bundle_replay_data: None,
-            }
-            | Backsyncer {
-                bundle_replay_data: None,
-            }
-            | ManualMove
-            | Blobimport
-            | XRepoSync => sql_transaction,
-        };
-        Ok(sql_transaction)
-    }
-
     async fn find_next_update_log_id(txn: SqlTransaction) -> Result<(SqlTransaction, u64)> {
         let (txn, max_id_entries) = FindMaxBookmarkLogId::query_with_transaction(txn)
             .compat()
@@ -766,7 +721,15 @@ impl SqlBookmarksTransactionPayload {
                 .compat()
                 .await?
                 .0;
-            txn = Self::log_bundle_replay_data(next_id, log_entry.reason.clone(), txn).await?;
+            if let Some(data) = &log_entry.bundle_replay_data {
+                txn = AddBundleReplayData::query_with_transaction(
+                    txn,
+                    &[(&next_id, &data.bundle_handle, &data.commit_timestamps_json)],
+                )
+                .compat()
+                .await?
+                .0;
+            }
             next_id += 1;
         }
         Ok(txn)
@@ -926,6 +889,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         new_cs: ChangesetId,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.check_not_seen(bookmark)?;
         self.payload.updates.insert(
@@ -934,7 +898,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         );
         self.payload.log.insert(
             bookmark.clone(),
-            NewUpdateLogEntry::new(Some(old_cs), Some(new_cs), reason)?,
+            NewUpdateLogEntry::new(Some(old_cs), Some(new_cs), reason, bundle_replay)?,
         );
         Ok(())
     }
@@ -944,6 +908,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.check_not_seen(bookmark)?;
         self.payload.creates.insert(
@@ -952,7 +917,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         );
         self.payload.log.insert(
             bookmark.clone(),
-            NewUpdateLogEntry::new(None, Some(new_cs), reason)?,
+            NewUpdateLogEntry::new(None, Some(new_cs), reason, bundle_replay)?,
         );
         Ok(())
     }
@@ -962,12 +927,13 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         bookmark: &BookmarkName,
         new_cs: ChangesetId,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.check_not_seen(bookmark)?;
         self.payload.force_sets.insert(bookmark.clone(), new_cs);
         self.payload.log.insert(
             bookmark.clone(),
-            NewUpdateLogEntry::new(None, Some(new_cs), reason)?,
+            NewUpdateLogEntry::new(None, Some(new_cs), reason, bundle_replay)?,
         );
         Ok(())
     }
@@ -977,12 +943,13 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         bookmark: &BookmarkName,
         old_cs: ChangesetId,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.check_not_seen(bookmark)?;
         self.payload.deletes.insert(bookmark.clone(), old_cs);
         self.payload.log.insert(
             bookmark.clone(),
-            NewUpdateLogEntry::new(Some(old_cs), None, reason)?,
+            NewUpdateLogEntry::new(Some(old_cs), None, reason, bundle_replay)?,
         );
         Ok(())
     }
@@ -991,12 +958,13 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         &mut self,
         bookmark: &BookmarkName,
         reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
     ) -> Result<()> {
         self.check_not_seen(bookmark)?;
         self.payload.force_deletes.insert(bookmark.clone());
         self.payload.log.insert(
             bookmark.clone(),
-            NewUpdateLogEntry::new(None, None, reason)?,
+            NewUpdateLogEntry::new(None, None, reason, bundle_replay)?,
         );
         Ok(())
     }
@@ -1113,23 +1081,6 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
     }
 }
 
-fn get_bundle_replay_data(
-    bundle_handle: Option<String>,
-    commit_timestamps: Option<String>,
-) -> Result<Option<BundleReplayData>> {
-    match (bundle_handle, commit_timestamps) {
-        (Some(bundle_handle), Some(commit_timestamps)) => {
-            let replay_data = BundleReplayData {
-                bundle_handle,
-                commit_timestamps: serde_json::from_str(&commit_timestamps)?,
-            };
-            Ok(Some(replay_data))
-        }
-        (None, None) => Ok(None),
-        _ => bail!("inconsistent replay data"),
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -1149,10 +1100,6 @@ mod test {
 
     #[fbinit::compat_test]
     async fn test_update_kind_compatibility(fb: FacebookInit) -> Result<()> {
-        let data = BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        };
-
         let ctx = CoreContext::test_mock(fb);
         let store = SqlBookmarks::with_sqlite_in_memory().unwrap();
         let scratch_name = create_bookmark_name("book1");
@@ -1191,7 +1138,12 @@ mod test {
 
         // Using 'create' to replace a scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.create(&scratch_name, ONES_CSID, data.clone())?;
+        txn.create(
+            &scratch_name,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+            None,
+        )?;
         assert!(!txn.commit().await?);
 
         // Using 'update_scratch' to update a publishing bookmark should fail.
@@ -1206,17 +1158,35 @@ mod test {
 
         // Using 'update' to update a publishing bookmark should succeed.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update(&publishing_name, TWOS_CSID, ONES_CSID, data.clone())?;
+        txn.update(
+            &publishing_name,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+            None,
+        )?;
         assert!(txn.commit().await?);
 
         // Using 'update' to update a pull-default bookmark should succeed.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update(&pull_default_name, TWOS_CSID, ONES_CSID, data.clone())?;
+        txn.update(
+            &pull_default_name,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+            None,
+        )?;
         assert!(txn.commit().await?);
 
         // Using 'update' to update a scratch bookmark should fail.
         let mut txn = store.create_transaction(ctx.clone(), REPO_ZERO);
-        txn.update(&scratch_name, TWOS_CSID, ONES_CSID, data.clone())?;
+        txn.update(
+            &scratch_name,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+            None,
+        )?;
         assert!(!txn.commit().await?);
 
         // Using 'update_scratch' to update a scratch bookmark should succeed.

@@ -879,9 +879,8 @@ fn test_file_hooks_with_blob_store(fb: FacebookInit) {
             txn.force_set(
                 &BookmarkName::new("master").unwrap(),
                 bcs_id,
-                BookmarkUpdateReason::TestMove {
-                    bundle_replay_data: None,
-                },
+                BookmarkUpdateReason::TestMove,
+                None,
             )
             .unwrap();
             txn.commit().await.unwrap();

@@ -83,14 +83,8 @@ async fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(
-        &bookmark,
-        bcs_id,
-        BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
-    )
-    .unwrap();
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+        .unwrap();
     txn.commit().await.unwrap();
     bcs_id
 }
@@ -124,14 +118,8 @@ async fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(
-        &bookmark,
-        bcs_id,
-        BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
-    )
-    .unwrap();
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+        .unwrap();
     txn.commit().await.unwrap();
     bcs_id
 }
@@ -334,14 +322,8 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(
-        &bookmark,
-        bcs_id,
-        BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
-    )
-    .unwrap();
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+        .unwrap();
     txn.commit().await.unwrap();
     bcs_id
 }
@@ -543,14 +525,8 @@ async fn megarepo_copy_file(
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(
-        &bookmark,
-        bcs_id,
-        BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
-    )
-    .unwrap();
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+        .unwrap();
     txn.commit().await.unwrap();
     bcs_id
 }
@@ -912,14 +888,8 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
         .unwrap();
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
-    txn.force_set(
-        &bookmark,
-        bcs_id,
-        BookmarkUpdateReason::TestMove {
-            bundle_replay_data: None,
-        },
-    )
-    .unwrap();
+    txn.force_set(&bookmark, bcs_id, BookmarkUpdateReason::TestMove, None)
+        .unwrap();
     txn.commit().await.unwrap();
 
     bcs_id
