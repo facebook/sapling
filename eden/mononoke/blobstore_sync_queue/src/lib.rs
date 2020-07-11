@@ -416,7 +416,6 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         _ctx: CoreContext,
         entries: Vec<BlobstoreSyncQueueEntry>,
     ) -> BoxFuture<'static, Result<(), Error>> {
-        STATS::dels.add_value(1);
         cloned!(self.write_connection);
 
         async move {
