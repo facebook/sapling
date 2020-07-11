@@ -45,6 +45,8 @@ from . import (
     pycompat,
     registrar,
     scmutil,
+    templatekw,
+    templater,
     ui as uimod,
     uiconfig,
     util,
@@ -1048,6 +1050,8 @@ def _dispatch(req):
         ):
             encoding.outputencoding = options["outputencoding"]
         i18n.init()
+        templater.init(lui)
+        templatekw.init(lui)
 
         if options["config"] != req.earlyoptions["config"]:
             raise error.Abort(_("option --config may not be abbreviated!"))

@@ -33,7 +33,7 @@ from . import (
     scmutil,
     templatefilters,
     templatekw,
-    templateold,
+    templatenew,
     util,
 )
 from .i18n import _
@@ -1533,7 +1533,7 @@ class engine(object):
 engines = {"default": engine}
 
 
-_builtinmapfiles = templateold.builtinmapfiles
+_builtinmapfiles = templatenew.builtinmapfiles
 
 _builtinprefix = "map-cmdline."
 
@@ -1771,6 +1771,17 @@ def loadfunction(ui, extname, registrarobj):
     """
     for name, func in pycompat.iteritems(registrarobj._table):
         funcs[name] = func
+
+
+def init(ui):
+    """Update default templates"""
+    global _builtinmapfiles
+
+    if ui.configbool("experimental", "template-new-builtin"):
+        from . import templatenew as templatefixtures
+    else:
+        from . import templateold as templatefixtures
+    _builtinmapfiles = templatefixtures.builtinmapfiles
 
 
 # tell hggettext to extract docstrings from these functions:

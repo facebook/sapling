@@ -23,7 +23,7 @@ from . import (
     pycompat,
     registrar,
     scmutil,
-    templateold as templatefixtures,
+    templatenew as templatefixtures,
     util,
 )
 from .i18n import _
@@ -292,12 +292,18 @@ def getrenamedfn(repo, endrev=None):
 
 def getlogcolumns():
     """Return a dict of log column labels"""
-    _ = pycompat.identity  # temporarily disable gettext
-    # i18n: column positioning for "hg log"
     columns = templatefixtures.logcolumns
+
+    # callsite wants 'changeset' to exist as a dict key.
+    def normalize(name):
+        if name == "commit":
+            return "changeset"
+        else:
+            return name
+
     return dict(
         zip(
-            [s.split(":", 1)[0] for s in columns.splitlines()],
+            [normalize(s.split(":", 1)[0]) for s in columns.splitlines()],
             i18n._(columns).splitlines(True),
         )
     )
@@ -920,6 +926,18 @@ def loadkeyword(ui, extname, registrarobj):
     """
     for name, func in pycompat.iteritems(registrarobj._table):
         keywords[name] = func
+
+
+def init(ui):
+    """Update default templates"""
+    global templatefixtures, defaulttempl
+
+    if ui.configbool("experimental", "template-new-builtin"):
+        from . import templatenew as templatefixtures
+    else:
+        from . import templateold as templatefixtures
+
+    defaulttempl = templatefixtures.defaulttempl
 
 
 # tell hggettext to extract docstrings from these functions:

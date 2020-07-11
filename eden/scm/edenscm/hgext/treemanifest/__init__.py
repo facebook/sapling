@@ -440,6 +440,9 @@ def stripmanifest(orig, repo, striprev, tr, files):
 
 
 def reposetup(ui, repo):
+    # Update "{manifest}" again since it might be rewritten by templatekw.init.
+    templatekw.defaulttempl["manifest"] = "{node}"
+
     if not isinstance(repo, localrepo.localrepository):
         return
 
