@@ -260,8 +260,7 @@ async fn schedule_healing(
         let now = DateTime::now().into_chrono();
         let healing_deadline = DateTime::new(now - heal_min_age);
         let (last_batch_was_full_size, deleted_rows) = multiplex_healer
-            .heal(ctx.clone(), healing_deadline)
-            .compat()
+            .heal(ctx, healing_deadline)
             .await
             .context("While healing")?;
 

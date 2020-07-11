@@ -8,16 +8,11 @@
 use super::*;
 
 use anyhow::format_err;
-use assert_matches::assert_matches;
 use blobstore::BlobstoreGetData;
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
-};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
+use futures::future::{BoxFuture, FutureExt};
 use sql_construct::SqlConstruct;
 use std::{iter::FromIterator, sync::Mutex};
 
@@ -81,22 +76,31 @@ impl Blobstore for PutFailingEagerMemblob {
 }
 
 trait BlobstoreSyncQueueExt {
-    fn len(&self, ctx: CoreContext, multiplex_id: MultiplexId) -> BoxFuture01<usize, Error>;
+    fn len<'out>(
+        &'out self,
+        ctx: &'out CoreContext,
+        multiplex_id: MultiplexId,
+    ) -> BoxFuture<'out, Result<usize>>;
 }
 
 impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueueExt for Q {
-    fn len(&self, ctx: CoreContext, multiplex_id: MultiplexId) -> BoxFuture01<usize, Error> {
+    fn len<'out>(
+        &'out self,
+        ctx: &'out CoreContext,
+        multiplex_id: MultiplexId,
+    ) -> BoxFuture<'out, Result<usize>> {
         let zero_date = DateTime::now();
-        self.iter(ctx.clone(), None, multiplex_id, zero_date, 100)
-            .compat()
-            .and_then(|entries| {
-                if entries.len() >= 100 {
-                    Err(format_err!("too many entries"))
-                } else {
-                    Ok(entries.len())
-                }
-            })
-            .boxify()
+        async move {
+            let entries = self
+                .iter(ctx.clone(), None, multiplex_id, zero_date, 100)
+                .await?;
+            if entries.len() >= 100 {
+                Err(format_err!("too many entries"))
+            } else {
+                Ok(entries.len())
+            }
+        }
+        .boxed()
     }
 }
 
@@ -130,16 +134,17 @@ fn put_value(ctx: &CoreContext, store: Option<&Arc<dyn Blobstore>>, key: &str, v
     store.map(|s| s.put(ctx.clone(), key.to_string(), make_value(value)));
 }
 
-async fn test_fetch_blob_missing_all(fb: FacebookInit) -> Result<(), Error> {
+#[fbinit::test]
+async fn fetch_blob_missing_all(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(3);
-    let fut = fetch_blob(
-        ctx.clone(),
-        stores,
-        "specialk".to_string(),
-        HashSet::from_iter(bids.into_iter()),
-    );
-    let r = fut.compat().await;
+    let r = fetch_blob(
+        &ctx,
+        stores.as_ref(),
+        "specialk",
+        &HashSet::from_iter(bids.into_iter()),
+    )
+    .await;
     let msg = r.err().and_then(|e| e.source().map(ToString::to_string));
     assert_eq!(
         Some("None of the blobstores to fetch responded".to_string()),
@@ -149,12 +154,7 @@ async fn test_fetch_blob_missing_all(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-fn fetch_blob_missing_all(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_fetch_blob_missing_all(fb))
-}
-
-async fn test_heal_blob_missing_all_stores(fb: FacebookInit) -> Result<(), Error> {
+async fn heal_blob_missing_all_stores(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
@@ -167,16 +167,17 @@ async fn test_heal_blob_missing_all_stores(fb: FacebookInit) -> Result<(), Error
         BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    let fut = heal_blob(
-        ctx.clone(),
-        sync_queue.clone(),
-        stores.clone(),
+    let r = heal_blob(
+        &ctx,
+        sync_queue.as_ref(),
+        stores.as_ref(),
         healing_deadline,
         "specialk".to_string(),
         mp,
         &entries,
-    );
-    let r = fut.compat().await;
+    )
+    .expect("Expected entries to heal")
+    .await;
     let msg = r.err().and_then(|e| e.source().map(ToString::to_string));
     assert_eq!(
         Some("None of the blobstores to fetch responded".to_string()),
@@ -184,7 +185,7 @@ async fn test_heal_blob_missing_all_stores(fb: FacebookInit) -> Result<(), Error
     );
     assert_eq!(
         0,
-        sync_queue.len(ctx, mp).compat().await?,
+        sync_queue.len(&ctx, mp).await?,
         "Should be nothing on queue as deletion step won't run"
     );
     assert_eq!(
@@ -206,14 +207,7 @@ async fn test_heal_blob_missing_all_stores(fb: FacebookInit) -> Result<(), Error
 }
 
 #[fbinit::test]
-fn heal_blob_missing_all_stores(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_heal_blob_missing_all_stores(fb))
-}
-
-async fn test_heal_blob_where_queue_and_stores_match_on_missing(
-    fb: FacebookInit,
-) -> Result<(), Error> {
+async fn heal_blob_where_queue_and_stores_match_on_missing(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
     put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
@@ -229,18 +223,18 @@ async fn test_heal_blob_where_queue_and_stores_match_on_missing(
         BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    let fut = heal_blob(
-        ctx.clone(),
-        sync_queue.clone(),
-        stores.clone(),
+    let r = heal_blob(
+        &ctx,
+        sync_queue.as_ref(),
+        stores.as_ref(),
         healing_deadline,
         "specialk".to_string(),
         mp,
         &entries,
-    );
-    let r = fut.compat().await;
+    )
+    .expect("expecting to delete entries")
+    .await;
     assert!(r.is_ok());
-    assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
     assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
     assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
     assert_eq!(
@@ -250,42 +244,32 @@ async fn test_heal_blob_where_queue_and_stores_match_on_missing(
     );
     assert_eq!(
         0,
-        sync_queue.len(ctx, mp).compat().await?,
+        sync_queue.len(&ctx, mp).await?,
         "expecting 0 entries to write to queue for reheal as we just healed the last one"
     );
     Ok(())
 }
 
 #[fbinit::test]
-fn heal_blob_where_queue_and_stores_match_on_missing(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_heal_blob_where_queue_and_stores_match_on_missing(fb))
-}
-
-async fn test_fetch_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
+async fn fetch_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(3);
     put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
     put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
     put_value(&ctx, stores.get(&bids[2]), "specialk", "specialv");
-    let fut = fetch_blob(
-        ctx.clone(),
-        stores,
-        "specialk".to_string(),
-        HashSet::from_iter(bids.into_iter()),
-    );
-    let r = fut.compat().await;
+    let r = fetch_blob(
+        &ctx,
+        stores.as_ref(),
+        "specialk",
+        &HashSet::from_iter(bids.into_iter()),
+    )
+    .await;
     let foundv = r.ok().unwrap().blob;
     assert_eq!(make_value("specialv"), foundv);
     Ok(())
 }
 
 #[fbinit::test]
-fn fetch_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_fetch_blob_missing_none(fb))
-}
-
 async fn test_heal_blob_entry_too_recent(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
@@ -302,19 +286,17 @@ async fn test_heal_blob_entry_too_recent(fb: FacebookInit) -> Result<(), Error> 
         BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    let fut = heal_blob(
-        ctx.clone(),
-        sync_queue.clone(),
-        stores,
+    let r = heal_blob(
+        &ctx,
+        sync_queue.as_ref(),
+        stores.as_ref(),
         healing_deadline,
         "specialk".to_string(),
         mp,
         &entries,
     );
-    let r = fut.compat().await;
-    assert!(r.is_ok());
-    assert_eq!(None, r.unwrap(), "expecting that no entries processed");
-    assert_eq!(0, sync_queue.len(ctx, mp).compat().await?);
+    assert!(r.is_none(), "expecting that no entries processed");
+    assert_eq!(0, sync_queue.len(&ctx, mp).await?);
     assert_eq!(0, underlying_stores.get(&bids[0]).unwrap().len());
     assert_eq!(0, underlying_stores.get(&bids[1]).unwrap().len());
     assert_eq!(0, underlying_stores.get(&bids[2]).unwrap().len());
@@ -322,12 +304,7 @@ async fn test_heal_blob_entry_too_recent(fb: FacebookInit) -> Result<(), Error> 
 }
 
 #[fbinit::test]
-fn heal_blob_entry_too_recent(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_heal_blob_entry_too_recent(fb))
-}
-
-async fn test_heal_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
+async fn heal_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
     put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
@@ -344,19 +321,19 @@ async fn test_heal_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
         BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    let fut = heal_blob(
-        ctx.clone(),
-        sync_queue.clone(),
-        stores,
+    let r = heal_blob(
+        &ctx,
+        sync_queue.as_ref(),
+        stores.as_ref(),
         healing_deadline,
         "specialk".to_string(),
         mp,
         &entries,
-    );
-    let r = fut.compat().await;
+    )
+    .expect("expecting to delete entries")
+    .await;
     assert!(r.is_ok());
-    assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
-    assert_eq!(0, sync_queue.len(ctx, mp).compat().await?);
+    assert_eq!(0, sync_queue.len(&ctx, mp).await?);
     assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
     assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
     assert_eq!(1, underlying_stores.get(&bids[2]).unwrap().len());
@@ -364,11 +341,6 @@ async fn test_heal_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-fn heal_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_heal_blob_missing_none(fb))
-}
-
 async fn test_heal_blob_only_unknown_queue_entry(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(2);
@@ -387,21 +359,21 @@ async fn test_heal_blob_only_unknown_queue_entry(fb: FacebookInit) -> Result<(),
         op0,
     )];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    let fut = heal_blob(
-        ctx.clone(),
-        sync_queue.clone(),
-        stores,
+    let r = heal_blob(
+        &ctx,
+        sync_queue.as_ref(),
+        stores.as_ref(),
         healing_deadline,
         "specialk".to_string(),
         mp,
         &entries,
-    );
-    let r = fut.compat().await;
+    )
+    .expect("expecting to delete entries")
+    .await;
     assert!(r.is_ok());
-    assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
     assert_eq!(
         1,
-        sync_queue.len(ctx, mp).compat().await?,
+        sync_queue.len(&ctx, mp).await?,
         "expecting 1 new entries on queue"
     );
     assert_eq!(
@@ -413,12 +385,7 @@ async fn test_heal_blob_only_unknown_queue_entry(fb: FacebookInit) -> Result<(),
 }
 
 #[fbinit::test]
-fn heal_blob_only_unknown_queue_entry(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_heal_blob_only_unknown_queue_entry(fb))
-}
-
-async fn test_heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<(), Error> {
+async fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(2);
     let (bids_from_different_config, _, _) = make_empty_stores(5);
@@ -439,19 +406,19 @@ async fn test_heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<(),
         ),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    let fut = heal_blob(
-        ctx.clone(),
-        sync_queue.clone(),
-        stores,
+    let r = heal_blob(
+        &ctx,
+        sync_queue.as_ref(),
+        stores.as_ref(),
         healing_deadline,
         "specialk".to_string(),
         mp,
         &entries,
-    );
-    let r = fut.compat().await;
+    )
+    .expect("expecting to delete entries")
+    .await;
     assert!(r.is_ok());
-    assert_matches!(r?, Some(_), "expecting to delete entries");
-    assert_eq!(3, sync_queue.len(ctx, mp).compat().await?, "expecting 3 new entries on queue, i.e. all sources for known stores, plus the unknown store");
+    assert_eq!(3, sync_queue.len(&ctx, mp).await?, "expecting 3 new entries on queue, i.e. all sources for known stores, plus the unknown store");
     assert_eq!(
         1,
         underlying_stores.get(&bids[1]).unwrap().len(),
@@ -461,22 +428,17 @@ async fn test_heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<(),
 }
 
 #[fbinit::test]
-fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_heal_blob_some_unknown_queue_entry(fb))
-}
-
-async fn test_fetch_blob_missing_some(fb: FacebookInit) -> Result<(), Error> {
+async fn fetch_blob_missing_some(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(3);
     put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-    let fut = fetch_blob(
-        ctx.clone(),
-        stores,
-        "specialk".to_string(),
-        HashSet::from_iter(bids.clone().into_iter()),
-    );
-    let r = fut.compat().await;
+    let r = fetch_blob(
+        &ctx,
+        stores.as_ref(),
+        "specialk",
+        &HashSet::from_iter(bids.clone().into_iter()),
+    )
+    .await;
     let mut fetch_data: FetchData = r.ok().unwrap();
     assert_eq!(make_value("specialv"), fetch_data.blob);
     fetch_data.good_sources.sort();
@@ -487,12 +449,7 @@ async fn test_fetch_blob_missing_some(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-fn fetch_blob_missing_some(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_fetch_blob_missing_some(fb))
-}
-
-async fn test_heal_blob_where_queue_and_stores_mismatch_on_missing(
+async fn heal_blob_where_queue_and_stores_mismatch_on_missing(
     fb: FacebookInit,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
@@ -510,18 +467,18 @@ async fn test_heal_blob_where_queue_and_stores_mismatch_on_missing(
         BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    let fut = heal_blob(
-        ctx.clone(),
-        sync_queue.clone(),
-        stores.clone(),
+    let r = heal_blob(
+        &ctx,
+        sync_queue.as_ref(),
+        stores.as_ref(),
         healing_deadline,
         "specialk".to_string(),
         mp,
         &entries,
-    );
-    let r = fut.compat().await;
+    )
+    .expect("expecting to delete entries")
+    .await;
     assert!(r.is_ok());
-    assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
     assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
     assert_eq!(
         1,
@@ -535,21 +492,14 @@ async fn test_heal_blob_where_queue_and_stores_mismatch_on_missing(
     );
     assert_eq!(
         0,
-        sync_queue.len(ctx, mp).compat().await?,
+        sync_queue.len(&ctx, mp).await?,
         "expecting 0 entries to write to queue for reheal as all heal puts succeeded"
     );
     Ok(())
 }
 
 #[fbinit::test]
-fn heal_blob_where_queue_and_stores_mismatch_on_missing(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_heal_blob_where_queue_and_stores_mismatch_on_missing(
-        fb,
-    ))
-}
-
-async fn test_heal_blob_where_store_and_queue_match_all_put_fails(
+async fn heal_blob_where_store_and_queue_match_all_put_fails(
     fb: FacebookInit,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
@@ -568,18 +518,18 @@ async fn test_heal_blob_where_store_and_queue_match_all_put_fails(
     ];
     underlying_stores.get(&bids[2]).unwrap().fail_puts();
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    let fut = heal_blob(
-        ctx.clone(),
-        sync_queue.clone(),
-        stores.clone(),
+    let r = heal_blob(
+        &ctx,
+        sync_queue.as_ref(),
+        stores.as_ref(),
         healing_deadline,
         "specialk".to_string(),
         mp,
         &entries,
-    );
-    let r = fut.compat().await;
+    )
+    .expect("expecting to delete entries")
+    .await;
     assert!(r.is_ok());
-    assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
     assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
     assert_eq!(
         1,
@@ -598,19 +548,14 @@ async fn test_heal_blob_where_store_and_queue_match_all_put_fails(
     );
     assert_eq!(
         2,
-        sync_queue.len(ctx, mp).compat().await?,
+        sync_queue.len(&ctx, mp).await?,
         "expecting 2 known good entries to write to queue for reheal as there was a put failure"
     );
     Ok(())
 }
 
 #[fbinit::test]
-fn heal_blob_where_store_and_queue_match_all_put_fails(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_heal_blob_where_store_and_queue_match_all_put_fails(fb))
-}
-
-async fn test_heal_blob_where_store_and_queue_mismatch_some_put_fails(
+async fn heal_blob_where_store_and_queue_mismatch_some_put_fails(
     fb: FacebookInit,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
@@ -629,18 +574,18 @@ async fn test_heal_blob_where_store_and_queue_mismatch_some_put_fails(
     ];
     underlying_stores.get(&bids[1]).unwrap().fail_puts();
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    let fut = heal_blob(
-        ctx.clone(),
-        sync_queue.clone(),
-        stores.clone(),
+    let r = heal_blob(
+        &ctx,
+        sync_queue.as_ref(),
+        stores.as_ref(),
         healing_deadline,
         "specialk".to_string(),
         mp,
         &entries,
-    );
-    let r = fut.compat().await;
+    )
+    .expect("Expecting entries to heal")
+    .await;
     assert!(r.is_ok());
-    assert_matches!(r.unwrap(), Some(_), "expecting to delete entries");
     assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
     assert_eq!(
         1,
@@ -659,20 +604,14 @@ async fn test_heal_blob_where_store_and_queue_mismatch_some_put_fails(
     );
     assert_eq!(
         2,
-        sync_queue.len(ctx, mp).compat().await?,
+        sync_queue.len(&ctx, mp).await?,
         "expecting 2 known good entries to write to queue for reheal as there was a put failure"
     );
     Ok(())
 }
 
 #[fbinit::test]
-fn heal_blob_where_store_and_queue_mismatch_some_put_fails(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(test_heal_blob_where_store_and_queue_mismatch_some_put_fails(fb))
-}
-
-#[fbinit::compat_test]
-async fn test_healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
+async fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(2);
     put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
@@ -697,12 +636,12 @@ async fn test_healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(),
 
     let healer = Healer::new(1000, 10, sync_queue.clone(), stores, mp, None, false);
 
-    healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+    healer.heal(&ctx, DateTime::now()).await?;
 
     // Insert to the second blobstore failed, there should be an entry in the queue
     assert_eq!(
         1,
-        sync_queue.len(ctx.clone(), mp).compat().await?,
+        sync_queue.len(&ctx, mp).await?,
         "expecting an entry that should be rehealed"
     );
 
@@ -710,17 +649,17 @@ async fn test_healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(),
     // should have an entry.
     underlying_stores.get(&bids[1]).unwrap().unfail_puts();
 
-    healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+    healer.heal(&ctx, DateTime::now()).await?;
     assert_eq!(
         0,
-        sync_queue.len(ctx.clone(), mp).compat().await?,
+        sync_queue.len(&ctx, mp).await?,
         "expecting everything to be healed"
     );
     assert_eq!(
         underlying_stores
             .get(&bids[1])
             .unwrap()
-            .get(ctx.clone(), "specialk".to_string())
+            .get(ctx, "specialk".to_string())
             .await?,
         Some(BlobstoreGetData::from_bytes(Bytes::from("specialv"))),
     );
@@ -728,8 +667,8 @@ async fn test_healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(),
     Ok(())
 }
 
-#[fbinit::compat_test]
-async fn test_healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<(), Error> {
+#[fbinit::test]
+async fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(2);
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
@@ -753,10 +692,10 @@ async fn test_healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<
     // We aren't healing blobs for old_mp, so expect to only have 1 blob in each
     // blobstore at the end of the test.
     let healer = Healer::new(1000, 10, sync_queue.clone(), stores, mp, None, false);
-    healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+    healer.heal(&ctx, DateTime::now()).await?;
 
-    assert_eq!(0, sync_queue.len(ctx.clone(), mp).compat().await?);
-    assert_eq!(1, sync_queue.len(ctx.clone(), old_mp).compat().await?);
+    assert_eq!(0, sync_queue.len(&ctx, mp).await?);
+    assert_eq!(1, sync_queue.len(&ctx, old_mp).await?);
 
     assert_eq!(1, underlying_stores.get(&bids[0]).unwrap().len());
     assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
@@ -764,8 +703,8 @@ async fn test_healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<
     Ok(())
 }
 
-#[fbinit::compat_test]
-async fn test_healer_heal_complete_batch(fb: FacebookInit) -> Result<(), Error> {
+#[fbinit::test]
+async fn healer_heal_complete_batch(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(2);
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
@@ -788,14 +727,14 @@ async fn test_healer_heal_complete_batch(fb: FacebookInit) -> Result<(), Error> 
         .add_many(ctx.clone(), Box::new(entries.into_iter()))
         .await?;
 
-    let healer = Healer::new(2, 10, sync_queue.clone(), stores, mp, None, false);
-    let (complete_batch, _) = healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+    let healer = Healer::new(2, 10, sync_queue, stores, mp, None, false);
+    let (complete_batch, _) = healer.heal(&ctx, DateTime::now()).await?;
     assert!(complete_batch);
     Ok(())
 }
 
-#[fbinit::compat_test]
-async fn test_healer_heal_incomplete_batch(fb: FacebookInit) -> Result<(), Error> {
+#[fbinit::test]
+async fn healer_heal_incomplete_batch(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(2);
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
@@ -818,8 +757,8 @@ async fn test_healer_heal_incomplete_batch(fb: FacebookInit) -> Result<(), Error
         .add_many(ctx.clone(), Box::new(entries.into_iter()))
         .await?;
 
-    let healer = Healer::new(20, 10, sync_queue.clone(), stores, mp, None, false);
-    let (complete_batch, _) = healer.heal(ctx.clone(), DateTime::now()).compat().await?;
+    let healer = Healer::new(20, 10, sync_queue, stores, mp, None, false);
+    let (complete_batch, _) = healer.heal(&ctx, DateTime::now()).await?;
     assert!(!complete_batch);
     Ok(())
 }
