@@ -7,10 +7,9 @@
 
 //! Utilities for parsing requests from JSON.
 //!
-//! This crate provides the ability to create various EdenAPI request
 //! This module provides the ability to create various EdenAPI request
 //! types from human-editable JSON. This is primarily useful for testing
-//! debugging, since it provides a conventient way for a developer to
+//! debugging, since it provides a convenient way for a developer to
 //! create ad-hoc requests. Some of the EdenAPI testing tools accept
 //! requests in this format.
 //!
@@ -18,7 +17,7 @@
 //! we are explicitly not using their `Deserialize` implementations
 //! since the format used here does not correspond exactly to the actual
 //! representation used in production. (For examples, hashes are
-//! represented as hexademical strings rather than as byte arrays.)
+//! represented as hexadecimal strings rather than as byte arrays.)
 
 use std::convert::TryFrom;
 use std::str::FromStr;
@@ -34,7 +33,8 @@ use crate::tree::CompleteTreeRequest;
 
 /// Parse a `DataRequest` from JSON.
 ///
-/// The request is represented as a JSON array of path/filenode pairs.
+/// The request is represented as a JSON object containing a "keys" field
+/// consisting of an array of path/filenode pairs.
 ///
 /// Example request:
 ///
@@ -112,7 +112,7 @@ pub fn parse_history_req(value: &Value) -> Result<HistoryRequest> {
 ///     ],
 ///     "depth": 1
 /// }
-///     ```
+/// ```
 ///
 pub fn parse_tree_req(value: &Value) -> Result<CompleteTreeRequest> {
     let obj = value.as_object().context("input must be a JSON object")?;
