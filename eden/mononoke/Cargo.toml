@@ -4,7 +4,11 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
+include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
+
+[[bin]]
+name = "admin"
+path = "cmds/admin/main.rs"
 
 [[bin]]
 name = "aliasverify"
@@ -72,36 +76,53 @@ blobrepo_utils = { path = "blobrepo_utils" }
 blobstore = { path = "blobstore" }
 blobstore_factory = { path = "blobstore/factory" }
 bonsai_globalrev_mapping = { path = "bonsai_globalrev_mapping" }
+bookmark_renaming = { path = "commit_rewriting/bookmark_renaming" }
 bookmarks = { path = "bookmarks" }
 bulkops = { path = "bulkops" }
 cacheblob = { path = "blobstore/cacheblob" }
+changeset_fetcher = { path = "blobrepo/changeset_fetcher" }
 changesets = { path = "changesets" }
 cmdlib = { path = "cmdlib" }
 context = { path = "server/context" }
+cross_repo_sync = { path = "commit_rewriting/cross_repo_sync" }
+dbbookmarks = { path = "bookmarks/dbbookmarks" }
 deleted_files_manifest = { path = "derived_data/deleted_files_manifest" }
 derived_data = { path = "derived_data" }
 derived_data_utils = { path = "derived_data/utils" }
 fastlog = { path = "derived_data/fastlog" }
+filenodes = { path = "filenodes" }
 filestore = { path = "filestore" }
 fsnodes = { path = "derived_data/fsnodes" }
+git_types = { path = "git/git_types" }
 lfs_import_lib = { path = "lfs_import_lib" }
 manifest = { path = "manifest" }
+mercurial_bundle_replay_data = { path = "mercurial/bundle_replay_data" }
 mercurial_revlog = { path = "mercurial/revlog" }
 mercurial_types = { path = "mercurial/types" }
 metaconfig_types = { path = "metaconfig/types" }
+mononoke_hg_sync_job_helper_lib = { path = "mononoke_hg_sync_job_helper_lib" }
 mononoke_types = { path = "mononoke_types" }
+movers = { path = "commit_rewriting/movers" }
+mutable_counters = { path = "mutable_counters" }
+prefixblob = { path = "blobstore/prefixblob" }
+redactedblobstore = { path = "blobstore/redactedblobstore" }
 revset = { path = "revset" }
 scuba_ext = { path = "common/scuba_ext" }
+skiplist = { path = "reachabilityindex/skiplist" }
 sql_ext = { path = "common/rust/sql_ext" }
+synced_commit_mapping = { path = "commit_rewriting/synced_commit_mapping" }
 unodes = { path = "derived_data/unodes" }
+xdiff = { path = "../scm/lib/xdiff" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 ascii = "1.0"
 async-trait = "0.1.29"
@@ -115,14 +136,20 @@ itertools = "0.8"
 rand = { version = "0.7", features = ["small_rng"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
+serde_json = "1.0"
 sha2 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
+thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"
+tokio-old = { package = "tokio", version = "0.1" }
+tokio-timer = "0.2"
+tokio-util = "0.2"
 toml = "=0.5.6"
 
 [dev-dependencies]
 fixtures = { path = "tests/fixtures" }
+sql_construct = { path = "common/sql_construct" }
 tests_utils = { path = "tests/utils" }
 maplit = "1.0"
 
@@ -246,6 +273,7 @@ members = [
     "microwave/builder",
     "microwave/if",
     "mononoke_api",
+    "mononoke_hg_sync_job_helper_lib",
     "mononoke_types",
     "mononoke_types/if",
     "mononoke_types/mocks",
