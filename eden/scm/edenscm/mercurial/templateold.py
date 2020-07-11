@@ -260,3 +260,36 @@ builtinmapfiles = {
         [],
     ),
 }
+
+
+logcolumns = (
+    "bookmark:    %s\n"
+    "branch:      %s\n"
+    "changeset:   %s\n"
+    "copies:      %s\n"
+    "date:        %s\n"
+    "extra:       %s=%s\n"
+    "files+:      %s\n"
+    "files-:      %s\n"
+    "files:       %s\n"
+    "manifest:    %s\n"
+    "obsolete:    %s\n"
+    "parent:      %s\n"
+    "phase:       %s\n"
+    "summary:     %s\n"
+    "user:        %s\n"
+)
+
+
+defaulttempl = {
+    "parent": "{rev}:{node|formatnode} ",
+    "manifest": "{rev}:{node|formatnode}",
+    "file_copy": "{name} ({source})",
+    "envvar": "{key}={value}",
+    "extra": "{key}={value|stringescape}",
+    "nodechange": "{oldnode|short} -> "
+    '{join(newnodes % "{newnode|short}", ", ")|nonempty}\n',
+}
+
+# filecopy is preserved for compatibility reasons
+defaulttempl["filecopy"] = defaulttempl["file_copy"]

@@ -23,6 +23,7 @@ from . import (
     pycompat,
     registrar,
     scmutil,
+    templateold as templatefixtures,
     util,
 )
 from .i18n import _
@@ -293,23 +294,7 @@ def getlogcolumns():
     """Return a dict of log column labels"""
     _ = pycompat.identity  # temporarily disable gettext
     # i18n: column positioning for "hg log"
-    columns = _(
-        "bookmark:    %s\n"
-        "branch:      %s\n"
-        "changeset:   %s\n"
-        "copies:      %s\n"
-        "date:        %s\n"
-        "extra:       %s=%s\n"
-        "files+:      %s\n"
-        "files-:      %s\n"
-        "files:       %s\n"
-        "manifest:    %s\n"
-        "obsolete:    %s\n"
-        "parent:      %s\n"
-        "phase:       %s\n"
-        "summary:     %s\n"
-        "user:        %s\n"
-    )
+    columns = templatefixtures.logcolumns
     return dict(
         zip(
             [s.split(":", 1)[0] for s in columns.splitlines()],
@@ -319,17 +304,7 @@ def getlogcolumns():
 
 
 # default templates internally used for rendering of lists
-defaulttempl = {
-    "parent": "{rev}:{node|formatnode} ",
-    "manifest": "{rev}:{node|formatnode}",
-    "file_copy": "{name} ({source})",
-    "envvar": "{key}={value}",
-    "extra": "{key}={value|stringescape}",
-    "nodechange": "{oldnode|short} -> "
-    '{join(newnodes % "{newnode|short}", ", ")|nonempty}\n',
-}
-# filecopy is preserved for compatibility reasons
-defaulttempl["filecopy"] = defaulttempl["file_copy"]
+defaulttempl = templatefixtures.defaulttempl
 
 # keywords are callables like:
 # fn(repo, ctx, templ, cache, revcache, **args)
