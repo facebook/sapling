@@ -4,7 +4,7 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
+include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_filestore.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
 
 [[bin]]
 name = "admin"
@@ -21,6 +21,10 @@ path = "cmds/backfill_derived_data/main.rs"
 [[bin]]
 name = "backfill_git_mapping"
 path = "cmds/backfill_git_mapping.rs"
+
+[[bin]]
+name = "benchmark_filestore"
+path = "cmds/benchmark_filestore.rs"
 
 [[bin]]
 name = "benchmark_storage_config"
@@ -96,6 +100,7 @@ fsnodes = { path = "derived_data/fsnodes" }
 git_types = { path = "git/git_types" }
 lfs_import_lib = { path = "lfs_import_lib" }
 manifest = { path = "manifest" }
+memblob = { path = "blobstore/memblob" }
 mercurial_bundle_replay_data = { path = "mercurial/bundle_replay_data" }
 mercurial_revlog = { path = "mercurial/revlog" }
 mercurial_types = { path = "mercurial/types" }
@@ -110,9 +115,12 @@ revset = { path = "revset" }
 scuba_ext = { path = "common/scuba_ext" }
 skiplist = { path = "reachabilityindex/skiplist" }
 sql_ext = { path = "common/rust/sql_ext" }
+sqlblob = { path = "blobstore/sqlblob" }
 synced_commit_mapping = { path = "commit_rewriting/synced_commit_mapping" }
+throttledblob = { path = "blobstore/throttledblob" }
 unodes = { path = "derived_data/unodes" }
 xdiff = { path = "../scm/lib/xdiff" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

@@ -10,7 +10,7 @@
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use bytes::{Bytes, BytesMut};
-use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
+use cacheblob::new_memcache_blobstore_no_lease;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
@@ -22,9 +22,7 @@ use futures::{
 };
 use futures_old::Stream;
 use futures_stats::{FutureStats, TimedFutureExt};
-use manifoldblob::ThriftManifoldBlob;
 use mononoke_types::{ContentMetadata, MononokeId};
-use prefixblob::PrefixBlobstore;
 use rand::Rng;
 use sql_ext::facebook::ReadConnectionType;
 use sqlblob::Sqlblob;
@@ -187,11 +185,22 @@ async fn get_blob<'a>(
 ) -> Result<Arc<dyn Blobstore>, Error> {
     let blob: Arc<dyn Blobstore> = match matches.subcommand() {
         (CMD_MANIFOLD, Some(sub)) => {
-            let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
-            let manifold =
-                ThriftManifoldBlob::new(fb, bucket, None).map_err(|e| -> Error { e.into() })?;
-            let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
-            Arc::new(blobstore)
+            #[cfg(fbcode_build)]
+            {
+                use manifoldblob::ThriftManifoldBlob;
+                use prefixblob::PrefixBlobstore;
+
+                let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
+                let manifold =
+                    ThriftManifoldBlob::new(fb, bucket, None).map_err(|e| -> Error { e.into() })?;
+                let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
+                Arc::new(blobstore)
+            }
+            #[cfg(not(fbcode_build))]
+            {
+                let _ = sub;
+                unimplemented!("Accessing Manifold is not implemented in non fbcode builds");
+            }
         }
         (CMD_MEMORY, Some(_)) => Arc::new(memblob::LazyMemblob::new()),
         (CMD_XDB, Some(sub)) => {
@@ -236,19 +245,31 @@ async fn get_blob<'a>(
 
     let blob: Arc<dyn Blobstore> = match matches.value_of(ARG_CACHELIB_SIZE) {
         Some(size) => {
-            let cache_size_bytes = size.parse()?;
-            cachelib::init_cache_once(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
+            #[cfg(fbcode_build)]
+            {
+                use cacheblob::new_cachelib_blobstore_no_lease;
 
-            let presence_pool =
-                cachelib::get_or_create_pool("presence", cachelib::get_available_space()? / 20)?;
-            let blob_pool =
-                cachelib::get_or_create_pool("blobs", cachelib::get_available_space()?)?;
+                let cache_size_bytes = size.parse()?;
+                cachelib::init_cache_once(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
 
-            Arc::new(new_cachelib_blobstore_no_lease(
-                blob,
-                Arc::new(blob_pool),
-                Arc::new(presence_pool),
-            ))
+                let presence_pool = cachelib::get_or_create_pool(
+                    "presence",
+                    cachelib::get_available_space()? / 20,
+                )?;
+                let blob_pool =
+                    cachelib::get_or_create_pool("blobs", cachelib::get_available_space()?)?;
+
+                Arc::new(new_cachelib_blobstore_no_lease(
+                    blob,
+                    Arc::new(blob_pool),
+                    Arc::new(presence_pool),
+                ))
+            }
+            #[cfg(not(fbcode_build))]
+            {
+                let _ = size;
+                unimplemented!("Using cachelib is not implemented for non fbcode build");
+            }
         }
         None => blob,
     };
