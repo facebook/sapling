@@ -11,11 +11,12 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt as NewFutureExt, TryFutureExt},
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{try_join, FutureExt as NewFutureExt, TryFutureExt},
+    stream, StreamExt, TryStreamExt,
 };
 use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::{loop_fn, ok, Loop};
+use futures_old::future::ok;
 use futures_old::prelude::*;
 use futures_old::stream::iter_ok;
 use std::collections::HashMap;
@@ -87,7 +88,12 @@ pub async fn subcommand_skiplist<'a>(
             let repo = args::open_repo(fb, &logger, &matches);
             repo.join(sql_changesets)
                 .and_then(move |(repo, sql_changesets)| {
-                    build_skiplist_index(ctx, repo, key, logger, sql_changesets, rebuild)
+                    async move {
+                        build_skiplist_index(&ctx, &repo, key, &logger, &sql_changesets, rebuild)
+                            .await
+                    }
+                    .boxed()
+                    .compat()
                 })
                 .from_err()
                 .boxify()
@@ -126,130 +132,104 @@ pub async fn subcommand_skiplist<'a>(
     .await
 }
 
-fn build_skiplist_index<S: ToString>(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn build_skiplist_index<'a, S: ToString>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     key: S,
-    logger: Logger,
-    sql_changesets: SqlChangesets,
+    logger: &'a Logger,
+    sql_changesets: &'a SqlChangesets,
     force_full_rebuild: bool,
-) -> BoxFuture<(), Error> {
+) -> Result<(), Error> {
     let blobstore = repo.get_blobstore();
     // skiplist will jump up to 2^9 changesets
     let skiplist_depth = 10;
     // Index all changesets
     let max_index_depth = 20000000000;
     let key = key.to_string();
-    let maybe_skiplist_fut = if force_full_rebuild {
-        ok(None).right_future()
+    let maybe_skiplist = if force_full_rebuild {
+        None
     } else {
-        read_skiplist_index(ctx.clone(), repo.clone(), key.clone(), logger.clone()).left_future()
+        read_skiplist_index(ctx.clone(), repo.clone(), key.clone(), logger.clone())
+            .compat()
+            .await?
     };
 
-    let cs_fetcher_skiplist = maybe_skiplist_fut.and_then({
-        cloned!(ctx, logger, repo);
-        move |maybe_skiplist| {
-            let changeset_fetcher = repo.get_changeset_fetcher();
-            match maybe_skiplist {
-                Some(skiplist) => {
-                    info!(
-                        logger,
-                        "skiplist graph has {} entries",
-                        skiplist.indexed_node_count()
-                    );
-                    ok((changeset_fetcher, skiplist)).left_future()
-                }
-                None => {
-                    info!(logger, "creating a skiplist from scratch");
-                    let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
-
-                    fetch_all_changesets(ctx.clone(), repo.get_repoid(), Arc::new(sql_changesets))
-                        .map({
-                            move |fetched_changesets| {
-                                let fetched_changesets: HashMap<_, _> = fetched_changesets
-                                    .into_iter()
-                                    .map(|cs_entry| (cs_entry.cs_id, cs_entry))
-                                    .collect();
-                                let cs_fetcher: Arc<dyn ChangesetFetcher> =
-                                    Arc::new(InMemoryChangesetFetcher {
-                                        fetched_changesets: Arc::new(fetched_changesets),
-                                        inner: changeset_fetcher,
-                                    });
-                                cs_fetcher
-                            }
-                        })
-                        .map(move |fetcher| (fetcher, skiplist_index))
-                        .right_future()
-                }
-            }
-        }
-    });
-
-    repo.get_bonsai_heads_maybe_stale(ctx.clone())
-        .collect()
-        .join(cs_fetcher_skiplist)
-        .and_then({
-            cloned!(ctx);
-            move |(heads, (cs_fetcher, skiplist_index))| {
-                loop_fn(
-                    (heads.into_iter(), skiplist_index),
-                    move |(mut heads, skiplist_index)| match heads.next() {
-                        Some(head) => {
-                            cloned!(ctx, cs_fetcher);
-                            let f = async move {
-                                skiplist_index
-                                    .add_node(&ctx, &cs_fetcher, head, max_index_depth)
-                                    .await?;
-                                Ok(skiplist_index)
-                            }
-                            .boxed()
-                            .compat();
-
-                            f.map(move |skiplist_index| Loop::Continue((heads, skiplist_index)))
-                                .boxify()
-                        }
-                        None => ok(Loop::Break(skiplist_index)).boxify(),
-                    },
-                )
-            }
-        })
-        .inspect({
-            cloned!(logger);
-            move |skiplist_index| {
+    let changeset_fetcher = repo.get_changeset_fetcher();
+    let cs_fetcher_skiplist_func = async {
+        match maybe_skiplist {
+            Some(skiplist) => {
                 info!(
                     logger,
-                    "build {} skiplist nodes",
-                    skiplist_index.indexed_node_count()
+                    "skiplist graph has {} entries",
+                    skiplist.indexed_node_count()
                 );
+                Ok((changeset_fetcher, skiplist))
             }
-        })
-        .map(|skiplist_index| {
-            // We store only latest skip entry (i.e. entry with the longest jump)
-            // This saves us storage space
-            let mut thrift_merge_graph = HashMap::new();
-            for (cs_id, skiplist_node_type) in skiplist_index.get_all_skip_edges() {
-                let skiplist_node_type = if let SkiplistNodeType::SkipEdges(skip_edges) =
-                    skiplist_node_type
-                {
-                    SkiplistNodeType::SkipEdges(skip_edges.last().cloned().into_iter().collect())
-                } else {
-                    skiplist_node_type
-                };
+            None => {
+                info!(logger, "creating a skiplist from scratch");
+                let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
 
-                thrift_merge_graph.insert(cs_id.into_thrift(), skiplist_node_type.to_thrift());
+                let fetched_changesets = fetch_all_changesets(
+                    ctx.clone(),
+                    repo.get_repoid(),
+                    Arc::new(sql_changesets.clone()),
+                )
+                .compat()
+                .await?;
+
+                let fetched_changesets: HashMap<_, _> = fetched_changesets
+                    .into_iter()
+                    .map(|cs_entry| (cs_entry.cs_id, cs_entry))
+                    .collect();
+                let cs_fetcher: Arc<dyn ChangesetFetcher> = Arc::new(InMemoryChangesetFetcher {
+                    fetched_changesets: Arc::new(fetched_changesets),
+                    inner: changeset_fetcher,
+                });
+
+                Ok((cs_fetcher, skiplist_index))
             }
-            compact_protocol::serialize(&thrift_merge_graph)
+        }
+    };
+
+    let heads = repo
+        .get_bonsai_heads_maybe_stale(ctx.clone())
+        .compat()
+        .try_collect::<Vec<_>>();
+
+    let (heads, (cs_fetcher, skiplist_index)) = try_join(heads, cs_fetcher_skiplist_func).await?;
+
+    stream::iter(heads)
+        .map(Ok)
+        .try_for_each_concurrent(100, |head| {
+            skiplist_index.add_node(&ctx, &cs_fetcher, head, max_index_depth)
         })
-        .and_then({
-            cloned!(ctx);
-            move |bytes| {
-                debug!(logger, "storing {} bytes", bytes.len());
-                blobstore
-                    .put(ctx, key, BlobstoreBytes::from_bytes(bytes))
-                    .compat()
-            }
-        })
-        .boxify()
+        .await?;
+
+    info!(
+        logger,
+        "build {} skiplist nodes",
+        skiplist_index.indexed_node_count()
+    );
+
+    // We store only latest skip entry (i.e. entry with the longest jump)
+    // This saves us storage space
+    let mut thrift_merge_graph = HashMap::new();
+    for (cs_id, skiplist_node_type) in skiplist_index.get_all_skip_edges() {
+        let skiplist_node_type = if let SkiplistNodeType::SkipEdges(skip_edges) = skiplist_node_type
+        {
+            SkiplistNodeType::SkipEdges(skip_edges.last().cloned().into_iter().collect())
+        } else {
+            skiplist_node_type
+        };
+
+        thrift_merge_graph.insert(cs_id.into_thrift(), skiplist_node_type.to_thrift());
+    }
+    let bytes = compact_protocol::serialize(&thrift_merge_graph);
+
+    debug!(logger, "storing {} bytes", bytes.len());
+    blobstore
+        .put(ctx.clone(), key, BlobstoreBytes::from_bytes(bytes))
+        .await
 }
 
 fn read_skiplist_index<S: ToString>(
