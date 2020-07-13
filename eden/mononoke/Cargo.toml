@@ -4,7 +4,7 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_filestore.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
+include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_filestore.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/blobimport.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
 
 [[bin]]
 name = "admin"
@@ -29,6 +29,10 @@ path = "cmds/benchmark_filestore.rs"
 [[bin]]
 name = "benchmark_storage_config"
 path = "cmds/benchmark_storage_config/main.rs"
+
+[[bin]]
+name = "blobimport"
+path = "cmds/blobimport.rs"
 
 [[bin]]
 name = "bonsai_verify"
@@ -72,6 +76,7 @@ path = "cmds/upload_globalrevs.rs"
 
 [dependencies]
 blame = { path = "derived_data/blame" }
+blobimport_lib = { path = "blobimport_lib" }
 blobrepo = { path = "blobrepo" }
 blobrepo_factory = { path = "blobrepo/factory" }
 blobrepo_hg = { path = "blobrepo/blobrepo_hg" }
@@ -92,6 +97,7 @@ cross_repo_sync = { path = "commit_rewriting/cross_repo_sync" }
 dbbookmarks = { path = "bookmarks/dbbookmarks" }
 deleted_files_manifest = { path = "derived_data/deleted_files_manifest" }
 derived_data = { path = "derived_data" }
+derived_data_filenodes = { path = "derived_data/filenodes" }
 derived_data_utils = { path = "derived_data/utils" }
 fastlog = { path = "derived_data/fastlog" }
 filenodes = { path = "filenodes" }

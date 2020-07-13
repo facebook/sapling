@@ -11,7 +11,6 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use ascii::AsciiString;
 use blobimport_lib;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
-use bytes::Bytes;
 use clap::{App, Arg, ArgMatches};
 use cmdlib::{
     args,
@@ -27,8 +26,7 @@ use futures::{
     compat::Future01CompatExt,
     future::{try_join3, FutureExt, TryFutureExt},
 };
-use manifold::{ObjectMeta, PayloadDesc, StoredObject};
-use manifold_thrift::thrift::{self, manifold_thrift_new, RequestContext};
+#[cfg(fbcode_build)]
 use mercurial_revlog::revlog::RevIdx;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use slog::{error, info, warn, Logger};
@@ -148,12 +146,17 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
     Ok(res)
 }
 
+#[cfg(fbcode_build)]
 async fn update_manifold_key(
     fb: FacebookInit,
     latest_imported_rev: RevIdx,
     manifold_key: String,
     manifold_bucket: String,
-) -> Result<(), Error> {
+) -> Result<()> {
+    use bytes::Bytes;
+    use manifold::{ObjectMeta, PayloadDesc, StoredObject};
+    use manifold_thrift::thrift::{self, manifold_thrift_new, RequestContext};
+
     let next_revision_to_import = latest_imported_rev.as_u32() + 1;
     let context = RequestContext {
         bucketName: manifold_bucket,
@@ -179,7 +182,7 @@ async fn run_blobimport<'a>(
     ctx: &CoreContext,
     logger: &Logger,
     matches: &'a ArgMatches<'a>,
-) -> Result<(), Error> {
+) -> Result<()> {
     let revlogrepo_path = matches
         .value_of("INPUT")
         .expect("input is not specified")
@@ -310,27 +313,29 @@ async fn run_blobimport<'a>(
         .import()
         .await?;
 
-        async move {
-            match maybe_latest_imported_rev {
-                Some(latest_imported_rev) => {
-                    info!(
-                        ctx.logger(),
-                        "latest imported revision {}",
-                        latest_imported_rev.as_u32()
-                    );
+        match maybe_latest_imported_rev {
+            Some(latest_imported_rev) => {
+                info!(
+                    ctx.logger(),
+                    "latest imported revision {}",
+                    latest_imported_rev.as_u32()
+                );
+                #[cfg(fbcode_build)]
+                {
                     if let Some((manifold_key, bucket)) = manifold_key_bucket {
-                        update_manifold_key(fb, latest_imported_rev, manifold_key, bucket).await
-                    } else {
-                        Ok(())
+                        update_manifold_key(fb, latest_imported_rev, manifold_key, bucket).await?
                     }
                 }
-                None => {
-                    info!(ctx.logger(), "didn't import any commits");
-                    Ok(())
+                #[cfg(not(fbcode_build))]
+                {
+                    assert!(
+                        manifold_key_bucket.is_none(),
+                        "Using Manifold is not supported in non fbcode builds"
+                    );
                 }
             }
-        }
-        .await?;
+            None => info!(ctx.logger(), "didn't import any commits"),
+        };
         upload_and_show_trace(ctx.clone())
             .compat()
             .map(|_| ())
