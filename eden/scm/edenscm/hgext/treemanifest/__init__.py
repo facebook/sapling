@@ -456,9 +456,7 @@ def reposetup(ui, repo):
 
 
 def clientreposetup(repo):
-    repo.name = repo.ui.config("remotefilelog", "reponame")
-    if not repo.name:
-        raise error.Abort(_("remotefilelog.reponame must be configured"))
+    repo.name = repo.ui.config("remotefilelog", "reponame", "unknown")
 
     repo.ui.setconfig("verify", "skipmanifests", "True")
 
@@ -719,7 +717,7 @@ def setuptreestores(repo, mfl):
         return
 
     if not util.safehasattr(repo, "name"):
-        repo.name = ui.config("remotefilelog", "reponame")
+        repo.name = ui.config("remotefilelog", "reponame", "unknown")
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
     _prunesharedpacks(repo, packpath)
 

@@ -77,7 +77,7 @@ Validate dynamic config
   > key=valueX
   > EOF
   $ echo "%include $TESTTMP/input_hgrc" >> .hg/hgrc
-  $ hg status --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True --config configs.testdynamicconfigsubset=input_hgrc
+  $ hg status --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True --config configs.testdynamicconfigsubset=input_hgrc --config configs.legacylist=section.key,section2.key2
   Config mismatch: section2.key2 has 'value2' (dynamic) vs 'None' (file)
   Config mismatch: section.key has 'value' (dynamic) vs 'valueX' (file)
   Config mismatch: section2.key2 has 'value2' (dynamic) vs 'None' (file)
@@ -148,7 +148,7 @@ Verify we load and verify dynamicconfigs during clone
   > [foo]
   > bar=True
   > EOF
-  $ hg clone ssh://user@dummy/server client2 --configfile $TESTTMP/good_hgrc --config configs.testdynamicconfigsubset=good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True
+  $ hg clone ssh://user@dummy/server client2 --configfile $TESTTMP/good_hgrc --config configs.testdynamicconfigsubset=good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True --config configs.legacylist=foo.bar
   Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   no changes found
   Hook ran!
@@ -168,7 +168,7 @@ Verify unicode characters in configs can be logged to our sampling extension
   > [foo]
   > bar = Å
   > EOF
-  $ hg -R client2 log -q -r . --configfile $TESTTMP/good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchsampling=1 --config extensions.sampling= --config sampling.filepath=$TESTTMP/sampling.log --config sampling.key.config_mismatch=mismatches --config configs.testdynamicconfigsubset=good_hgrc
+  $ hg -R client2 log -q -r . --configfile $TESTTMP/good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchsampling=1 --config extensions.sampling= --config sampling.filepath=$TESTTMP/sampling.log --config sampling.key.config_mismatch=mismatches --config configs.testdynamicconfigsubset=good_hgrc --config configs.legacylist=foo.bar,
   -1:000000000000
   $ cat $TESTTMP/sampling.log
   {"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00{"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00 (no-eol) (esc)

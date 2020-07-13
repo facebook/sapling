@@ -147,11 +147,11 @@ py_class!(pub class config |py| {
         &self,
         superset_source: String,
         subset_sources: Vec<String>,
-        allow_list: Vec<(String, String)>
+        legacy_list: Vec<(String, String)>
     ) -> PyResult<Vec<(Str, Str, Option<Str>, Option<Str>)>> {
-        let allow_list = HashSet::from_iter(allow_list.iter().map(|v| (v.0.as_ref(), v.1.as_ref())));
+        let legacy_list = HashSet::from_iter(legacy_list.iter().map(|v| (v.0.as_ref(), v.1.as_ref())));
 
-        let results = self.cfg(py).borrow_mut().ensure_location_supersets(superset_source, subset_sources, allow_list);
+        let results = self.cfg(py).borrow_mut().ensure_location_supersets(superset_source, subset_sources, legacy_list);
         if results.is_empty() {
             return Ok(vec![]);
         }

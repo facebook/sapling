@@ -426,7 +426,7 @@ impl ConfigSet {
         &mut self,
         superset_location: String,
         subset_locations: Vec<String>,
-        allow_list: HashSet<(&str, &str)>,
+        legacy_list: HashSet<(&str, &str)>,
     ) -> SupersetVerification {
         let mut result = SupersetVerification::new();
 
@@ -435,7 +435,7 @@ impl ConfigSet {
 
         for (sname, section) in self.sections.iter_mut() {
             for (kname, values) in section.items.iter_mut() {
-                if allow_list.contains(&(sname.as_ref(), kname.as_ref())) {
+                if !legacy_list.contains(&(sname.as_ref(), kname.as_ref())) {
                     continue;
                 }
 
@@ -1123,6 +1123,14 @@ space_list=value1.a value1.b
             );
         }
 
+        let legacy_list = vec![
+            ("section1", "key1"),
+            ("section2", "key2"),
+            ("section3", "key3"),
+        ]
+        .into_iter()
+        .collect::<HashSet<_>>();
+
         set(&mut cfg, "section1", "key1", "value1", "subset1");
         set(&mut cfg, "section2", "key2", "value2", "subset2");
 
@@ -1134,7 +1142,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
-            HashSet::new(),
+            legacy_list.clone(),
         );
         assert!(result.is_empty());
 
@@ -1145,7 +1153,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
-            HashSet::new(),
+            legacy_list.clone(),
         );
         assert_eq!(
             result.missing,
@@ -1161,7 +1169,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string()],
-            HashSet::new(),
+            legacy_list.clone(),
         );
         assert!(result.is_empty());
 
@@ -1174,7 +1182,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
-            HashSet::new(),
+            legacy_list.clone(),
         );
         assert_eq!(
             result.extra,
@@ -1197,7 +1205,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
-            HashSet::new(),
+            legacy_list.clone(),
         );
         assert_eq!(
             result.mismatched,
@@ -1224,7 +1232,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset2".to_string()],
-            HashSet::new(),
+            legacy_list.clone(),
         );
         assert!(result.is_empty());
         assert_eq!(

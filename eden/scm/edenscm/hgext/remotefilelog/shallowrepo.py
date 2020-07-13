@@ -25,7 +25,7 @@ def wraprepo(repo):
     class shallowrepository(repo.__class__):
         @util.propertycache
         def name(self):
-            return self.ui.config("remotefilelog", "reponame", "")
+            return self.ui.config("remotefilelog", "reponame", "unknown")
 
         @util.propertycache
         def fallbackpath(self):
