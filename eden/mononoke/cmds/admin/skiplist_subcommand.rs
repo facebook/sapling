@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use bulkops::fetch_all_public_changesets;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use fbinit::FacebookInit;
@@ -18,17 +19,16 @@ use futures::{
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::ok;
 use futures_old::prelude::*;
-use futures_old::stream::iter_ok;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use changeset_fetcher::ChangesetFetcher;
-use changesets::{ChangesetEntry, Changesets, SqlChangesets};
+use changesets::{ChangesetEntry, SqlChangesets};
 use cmdlib::args;
 use context::CoreContext;
-use mononoke_types::{BlobstoreBytes, ChangesetId, Generation, RepositoryId};
+use mononoke_types::{BlobstoreBytes, ChangesetId, Generation};
 use skiplist::{deserialize_skiplist_index, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, info, Logger};
 
@@ -169,12 +169,13 @@ async fn build_skiplist_index<'a, S: ToString>(
                 info!(logger, "creating a skiplist from scratch");
                 let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
 
-                let fetched_changesets = fetch_all_changesets(
-                    ctx.clone(),
+                let fetched_changesets = fetch_all_public_changesets(
+                    &ctx,
                     repo.get_repoid(),
-                    Arc::new(sql_changesets.clone()),
+                    &sql_changesets,
+                    repo.get_phases().get_sql_phases(),
                 )
-                .compat()
+                .try_collect::<Vec<_>>()
                 .await?;
 
                 let fetched_changesets: HashMap<_, _> = fetched_changesets
@@ -257,44 +258,6 @@ fn read_skiplist_index<S: ToString>(
             None => ok(None).right_future(),
         })
         .boxify()
-}
-
-fn fetch_all_changesets(
-    ctx: CoreContext,
-    repo_id: RepositoryId,
-    sqlchangesets: Arc<SqlChangesets>,
-) -> impl Future<Item = Vec<ChangesetEntry>, Error = Error> {
-    let num_sql_fetches = 10000;
-    sqlchangesets
-        .get_changesets_ids_bounds(repo_id.clone())
-        .map(move |(maybe_lower_bound, maybe_upper_bound)| {
-            let lower_bound = maybe_lower_bound.expect("changesets table is empty");
-            let upper_bound = maybe_upper_bound.expect("changesets table is empty");
-            let step = (upper_bound - lower_bound) / num_sql_fetches;
-            let step = ::std::cmp::max(100, step);
-
-            iter_ok(
-                (lower_bound..upper_bound)
-                    .step_by(step as usize)
-                    .map(move |i| (i, i + step)),
-            )
-        })
-        .flatten_stream()
-        .and_then(move |(lower_bound, upper_bound)| {
-            sqlchangesets
-                .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
-                .collect()
-                .and_then({
-                    cloned!(ctx, sqlchangesets);
-                    move |ids| {
-                        sqlchangesets
-                            .get_many(ctx, repo_id, ids)
-                            .map(|v| iter_ok(v.into_iter()))
-                    }
-                })
-        })
-        .flatten()
-        .collect()
 }
 
 #[derive(Clone)]
