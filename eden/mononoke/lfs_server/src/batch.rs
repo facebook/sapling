@@ -6,8 +6,10 @@
  */
 
 use anyhow::{Context, Error};
-use futures::future::TryFutureExt;
-use futures_util::{future::try_join_all, pin_mut, select, try_join, FutureExt};
+use futures::{
+    future::{self, FutureExt, TryFutureExt},
+    pin_mut, select,
+};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use gotham_ext::{
@@ -22,6 +24,7 @@ use serde::Deserialize;
 use slog::debug;
 use stats::prelude::*;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use time_ext::DurationExt;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -32,6 +35,7 @@ use lfs_protocol::{
     ResponseBatch, ResponseObject, Transfer,
 };
 use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
+use time_window_counter::GlobalTimeWindowCounterBuilder;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
@@ -183,35 +187,74 @@ async fn resolve_internal_object(
     }
 }
 
+async fn increment_and_fetch_object_popularity(
+    ctx: &RepositoryRequestContext,
+    oid: &Sha256,
+) -> Result<Option<u64>, Error> {
+    let category = match ctx.config.object_popularity_category() {
+        Some(category) => category,
+        None => {
+            return Ok(None);
+        }
+    };
+
+    let key = format!("{}/{}", ctx.repo.name(), oid);
+    let window = 20;
+    let ctr = GlobalTimeWindowCounterBuilder::build(ctx.ctx.fb, category, &key, window, window);
+
+    ctr.bump(1.0);
+    let v = ctr.get(window).await? as i64;
+    let v = v.try_into()?;
+    Ok(Some(v))
+}
+
 async fn internal_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
 ) -> Result<HashMap<RequestObject, ObjectAction>, Error> {
     let futs = objects.iter().map(|object| async move {
-        let content_id = resolve_internal_object(ctx, object.oid.0.into()).await?;
-        Result::<_, Error>::Ok((content_id, object.oid))
+        let oid = object.oid.0.into();
+
+        let (content_id, allow_consistent_routing) =
+            future::join(resolve_internal_object(ctx, oid), async {
+                let popularity = increment_and_fetch_object_popularity(ctx, &oid).await;
+                let threshold = ctx.config.object_popularity_threshold();
+
+                match (popularity, threshold) {
+                    (Ok(Some(popularity)), Some(threshold)) => popularity <= threshold,
+                    _ => true,
+                }
+            })
+            .await;
+
+        let content_id = content_id?;
+
+        Result::<_, Error>::Ok((content_id, object.oid, allow_consistent_routing))
     });
 
-    let content_ids = try_join_all(futs).await?;
+    let content_ids = future::try_join_all(futs).await?;
 
     let ret: Result<HashMap<RequestObject, ObjectAction>, _> = objects
         .iter()
         .zip(content_ids.into_iter())
-        .filter_map(|(obj, content_and_oid)| match content_and_oid {
-            // Map the objects we have locally into an action routing to a Mononoke LFS server.
-            (Some(content_id), oid) => {
-                let uri = if ctx.config.enable_consistent_routing() {
-                    ctx.uri_builder
-                        .consistent_download_uri(&content_id, oid.0.into())
-                } else {
-                    ctx.uri_builder.download_uri(&content_id)
-                };
+        .filter_map(
+            |(obj, (content_id, oid, allow_consistent_routing))| match content_id {
+                // Map the objects we have locally into an action routing to a Mononoke LFS server.
+                Some(content_id) => {
+                    let uri = if allow_consistent_routing && ctx.config.enable_consistent_routing()
+                    {
+                        ctx.uri_builder
+                            .consistent_download_uri(&content_id, oid.0.into())
+                    } else {
+                        ctx.uri_builder.download_uri(&content_id)
+                    };
 
-                let action = uri.map(ObjectAction::new).map(|action| (*obj, action));
-                Some(action)
-            }
-            (None, _) => None,
-        })
+                    let action = uri.map(ObjectAction::new).map(|action| (*obj, action));
+                    Some(action)
+                }
+                None => None,
+            },
+        )
         .collect();
 
     Ok(ret.context(ErrorKind::GenerateDownloadUrisError)?)
@@ -284,10 +327,11 @@ async fn batch_upload(
     ctx: &RepositoryRequestContext,
     batch: RequestBatch,
 ) -> Result<ResponseBatch, Error> {
-    let (upstream, internal) = try_join!(
+    let (upstream, internal) = future::try_join(
         upstream_objects(ctx, &batch.objects),
         internal_objects(ctx, &batch.objects),
-    )?;
+    )
+    .await?;
 
     let objects = batch_upload_response_objects(
         &ctx.uri_builder,

@@ -32,6 +32,12 @@ pub struct RawServerConfig {
     pub throttle_limits: Vec<RawLimit>,
     pub acl_check: bool,
     pub enforce_acl_check: bool,
+    /// SCS counter category to use for blob popularity.
+    pub object_popularity_category: Option<String>,
+    /// Objects requested more than object_popularity_threshold recently (look at batch.rs for the
+    /// time window) will not be consistently-routed. This ensures the full pool of servers can be
+    /// used to serve very popular blobs.
+    pub object_popularity_threshold: Option<u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -105,6 +111,8 @@ impl Default for RawServerConfig {
             throttle_limits: vec![],
             acl_check: false,
             enforce_acl_check: false,
+            object_popularity_category: None,
+            object_popularity_threshold: None,
         }
     }
 }
@@ -135,6 +143,12 @@ impl ServerConfig {
     }
     pub fn enforce_acl_check(&self) -> bool {
         self.raw_server_config.enforce_acl_check
+    }
+    pub fn object_popularity_category(&self) -> Option<&str> {
+        self.raw_server_config.object_popularity_category.as_deref()
+    }
+    pub fn object_popularity_threshold(&self) -> Option<u64> {
+        self.raw_server_config.object_popularity_threshold
     }
 }
 
