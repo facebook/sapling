@@ -83,7 +83,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
   }
 
   auto proxyHashesTry =
-      HgProxyHash::getBatch(localStore_.get(), hashes).wait().getTry();
+      HgProxyHash::getBatch(localStore_.get(), hashes).wait().result();
 
   if (proxyHashesTry.hasException()) {
     // TODO(zeyi): We should change HgProxyHash::getBatch to make it return
