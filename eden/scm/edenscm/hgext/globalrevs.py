@@ -295,10 +295,15 @@ def _lookupglobalrev(repo, grev):
     tonode = cl.node
     ui = repo.ui
 
-    def matchglobalrev(rev):
+    def getglobalrev_and_svnrev(rev):
         commitextra = changelogrevision(rev).extra
         globalrev = _getglobalrev(ui, commitextra)
         svnrev = _getsvnrev(commitextra)
+
+        return (globalrev, svnrev)
+
+    def matchglobalrev(rev):
+        globalrev, svnrev = getglobalrev_and_svnrev(rev)
 
         def isequal(strrev, rev):
             return strrev is not None and int(strrev) == rev
@@ -313,7 +318,20 @@ def _lookupglobalrev(repo, grev):
         if hgnode:
             return [hgnode]
 
+    for rev in repo.revs("head()"):
+        globalrev, svnrev = getglobalrev_and_svnrev(rev)
+        globalrev = globalrev or svnrev
+        if globalrev:
+            globalrev = int(globalrev)
+            if grev <= globalrev:
+                break
+    else:
+        # grev is bigger than every head.
+        # That means that `grev` is not in the repo and we can exit early
+        return []
+
     matchedrevs = []
+
     for rev in repo.revs("reverse(all())"):
         # While using fast lookup, we have already searched the indexed commits
         # upto lastrev and therefore, we can safely say that there is no commit
