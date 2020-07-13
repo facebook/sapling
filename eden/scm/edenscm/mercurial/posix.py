@@ -662,7 +662,8 @@ if pycompat.isdarwin:
         """
 
         try:
-            return encoding.asciilower(path)  # exception for non-ASCII
+            bytepath = pycompat.encodeutf8(path)
+            return pycompat.decodeutf8(encoding.asciilower(bytepath))  # exception for non-ASCII
         except UnicodeDecodeError:
             return normcasefallback(path)
 
@@ -672,7 +673,7 @@ if pycompat.isdarwin:
         try:
             # unicodedata.normalize expects a unicode string, so don't use
             # pycompat.decodeutf8() here because it would return bytes in py2.
-            u = path.decode("utf-8")
+            u = pycompat.ensureunicode(path)
         except UnicodeDecodeError:
             # OS X percent-encodes any bytes that aren't valid utf-8
             s = ""
