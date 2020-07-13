@@ -44,11 +44,29 @@
   * Remapped ChangesetId(Blake2(f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062)) => ChangesetId(Blake2(4c9a9394cb65d5b57286d866bb012a0a4553ea05ba82755c0ed9e977e51d0da0)) (glob)
   * Remapped ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb)) => ChangesetId(Blake2(cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f)) (glob)
 
-# Set master (gitimport does not do this yet)
+# Set master (repo_import does not do this yet)
   $ mononoke_admin bookmarks set master cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f)) (glob)
   * Current position of BookmarkName { bookmark: "master" } is None (glob)
+
+# Check if we derived all the types
+  $ mononoke_admin derived-data exists changeset_info master 2> /dev/null
+  Derived: cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f
+  $ mononoke_admin derived-data exists blame master 2> /dev/null
+  Derived: cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f
+  $ mononoke_admin derived-data exists deleted_manifest master 2> /dev/null
+  Derived: cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f
+  $ mononoke_admin derived-data exists fastlog master 2> /dev/null
+  Derived: cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f
+  $ mononoke_admin derived-data exists filenodes master 2> /dev/null
+  Derived: cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f
+  $ mononoke_admin derived-data exists fsnodes master 2> /dev/null
+  Derived: cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f
+  $ mononoke_admin derived-data exists hgchangesets master 2> /dev/null
+  Derived: cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f
+  $ mononoke_admin derived-data exists unodes master 2> /dev/null
+  Derived: cf29a57c1ba299f835ea2546e26c8eb8fd5b981067162579924b58000306e96f
 
 # Start Mononoke
   $ mononoke

@@ -11,6 +11,7 @@ blobrepo = { path = "../blobrepo" }
 cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
 cross_repo_sync = { path = "../commit_rewriting/cross_repo_sync" }
+derived_data_utils = { path = "../derived_data/utils" }
 import_tools = { path = "../git/import_tools" }
 mercurial_types = { path = "../mercurial/types" }
 mononoke_types = { path = "../mononoke_types" }

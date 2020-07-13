@@ -12,11 +12,16 @@ use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use cross_repo_sync::rewrite_commit;
+use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
+use futures::{
+    compat::Future01CompatExt,
+    future::TryFutureExt,
+    stream::{self, StreamExt, TryStreamExt},
+};
 use import_tools::{GitimportPreferences, GitimportTarget};
 use mercurial_types::MPath;
-use mononoke_types::ChangesetId;
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use movers::DefaultAction;
 use slog::info;
 use std::collections::HashMap;
@@ -30,7 +35,7 @@ async fn rewrite_file_paths(
     repo: &BlobRepo,
     path: &Path,
     prefix: &str,
-) -> Result<(), Error> {
+) -> Result<Vec<BonsaiChangeset>, Error> {
     let prefs = GitimportPreferences::default();
     let target = GitimportTarget::FullRepo;
     let import_map = import_tools::gitimport(ctx, repo, path, target, prefs).await?;
@@ -67,7 +72,37 @@ async fn rewrite_file_paths(
     save_bonsai_changesets(bonsai_changesets.clone(), ctx.clone(), repo.clone())
         .compat()
         .await?;
-    Ok(())
+    Ok(bonsai_changesets)
+}
+
+async fn derive_bonsais(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    shifted_bcs: &[BonsaiChangeset],
+) -> Result<(), Error> {
+    let derived_data_types = &repo.get_derived_data_config().derived_data_types;
+
+    let len = derived_data_types.len();
+    let mut derived_utils = vec![];
+    for ty in derived_data_types {
+        let utils = derived_data_utils(repo.clone(), ty)?;
+        derived_utils.push(utils);
+    }
+
+    stream::iter(derived_utils)
+        .map(Ok)
+        .try_for_each_concurrent(len, |derived_util| async move {
+            for bcs in shifted_bcs {
+                let csid = bcs.get_changeset_id();
+                derived_util
+                    .derive(ctx.clone(), repo.clone(), csid)
+                    .compat()
+                    .map_ok(|_| ())
+                    .await?;
+            }
+            Result::<(), Error>::Ok(())
+        })
+        .await
 }
 
 #[fbinit::main]
@@ -102,10 +137,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     block_execute(
         async {
             let repo = repo.compat().await?;
-            rewrite_file_paths(&ctx, &repo, &path, &prefix).await
+            let shifted_bcs = rewrite_file_paths(&ctx, &repo, &path, &prefix).await?;
+            derive_bonsais(&ctx, &repo, &shifted_bcs).await
         },
         fb,
-        "gitimport",
+        "repo_import",
         &logger,
         &matches,
         cmdlib::monitoring::AliveService,
