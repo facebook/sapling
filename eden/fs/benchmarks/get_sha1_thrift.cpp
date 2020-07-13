@@ -78,9 +78,10 @@ int main(int argc, char** argv) {
               &eventBase,
               folly::SocketAddress::makeFromPath(
                   socket_path.string<std::string>()));
-          auto channel = folly::to_shared_ptr(
-              apache::thrift::HeaderClientChannel::newChannel(socket));
-          auto client = std::make_unique<EdenServiceAsyncClient>(channel);
+          auto channel = apache::thrift::HeaderClientChannel::newChannel(
+              std::move(socket));
+          auto client =
+              std::make_unique<EdenServiceAsyncClient>(std::move(channel));
 
           gate.wait();
           for (auto j = 0; j < samples_per_thread; ++j) {
