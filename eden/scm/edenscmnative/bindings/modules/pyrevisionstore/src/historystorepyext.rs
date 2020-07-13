@@ -42,7 +42,7 @@ pub trait HgIdMutableHistoryStorePyExt: HgIdHistoryStorePyExt {
         linknode: &PyBytes,
         copyfrom: Option<&PyPathBuf>,
     ) -> PyResult<PyObject>;
-    fn flush_py(&self, py: Python) -> PyResult<Option<PyPathBuf>>;
+    fn flush_py(&self, py: Python) -> PyResult<Option<Vec<PyPathBuf>>>;
 }
 
 pub trait RemoteHistoryStorePyExt: RemoteHistoryStore {
@@ -191,9 +191,12 @@ impl<T: HgIdMutableHistoryStore + ?Sized> HgIdMutableHistoryStorePyExt for T {
         Ok(Python::None(py))
     }
 
-    fn flush_py(&self, py: Python) -> PyResult<Option<PyPathBuf>> {
+    fn flush_py(&self, py: Python) -> PyResult<Option<Vec<PyPathBuf>>> {
         let opt = py.allow_threads(|| self.flush()).map_pyerr(py)?;
-        let opt = opt.map(|path| path.try_into()).transpose().map_pyerr(py)?;
+        let opt = opt
+            .map(|path| path.into_iter().map(|p| p.try_into()).collect())
+            .transpose()
+            .map_pyerr(py)?;
         Ok(opt)
     }
 }

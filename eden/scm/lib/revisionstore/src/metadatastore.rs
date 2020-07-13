@@ -65,7 +65,7 @@ impl MetadataStore {
         }
     }
 
-    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<Option<PathBuf>> {
+    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
         match location {
             RepackLocation::Local => self.flush(),
             RepackLocation::Shared => self.shared_mutablehistorystore.flush(),
@@ -117,7 +117,7 @@ impl HgIdMutableHistoryStore for MetadataStore {
             .add(key, info)
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         self.local_mutablehistorystore
             .as_ref()
             .ok_or_else(|| format_err!("flushing a non-local MetadataStore is not allowed"))?
@@ -181,11 +181,15 @@ impl<'a> MetadataStoreBuilder<'a> {
     pub fn build(self) -> Result<MetadataStore> {
         let _local_path = get_local_path(&self.local_path, &self.suffix)?;
         let cache_path = get_cache_path(self.config, &self.suffix)?;
+        let max_pending: u64 = self
+            .config
+            .get_or("packs", "maxhistorypending", || 10000000)?;
 
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
         let shared_pack_store = Arc::new(MutableHistoryPackStore::new(
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
+            max_pending,
         )?);
         let mut historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
             UnionHgIdHistoryStore::new();
@@ -213,6 +217,7 @@ impl<'a> MetadataStoreBuilder<'a> {
                 let local_pack_store = Arc::new(MutableHistoryPackStore::new(
                     get_packs_path(&local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
+                    max_pending,
                 )?);
                 historystore.add(local_pack_store.clone());
 

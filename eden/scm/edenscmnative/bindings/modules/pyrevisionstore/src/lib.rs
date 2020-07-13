@@ -561,7 +561,7 @@ py_class!(pub class mutablehistorystore |py| {
         store.add_py(py, &name, node, p1, p2, linknode, copyfrom.as_ref())
     }
 
-    def flush(&self) -> PyResult<Option<PyPathBuf>> {
+    def flush(&self) -> PyResult<Option<Vec<PyPathBuf>>> {
         let store = self.store(py);
         store.flush_py(py)
     }
@@ -611,7 +611,7 @@ impl HgIdMutableHistoryStore for mutablehistorystore {
         self.store(py).add(key, info)
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -952,7 +952,7 @@ py_class!(class metadatastore |py| {
         store.add_py(py, &name, node, p1, p2, linknode, copyfrom.as_ref())
     }
 
-    def flush(&self) -> PyResult<Option<PyPathBuf>> {
+    def flush(&self) -> PyResult<Option<Vec<PyPathBuf>>> {
         let store = self.store(py);
         store.flush_py(py)
     }

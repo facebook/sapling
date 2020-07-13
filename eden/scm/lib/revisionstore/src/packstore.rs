@@ -12,7 +12,10 @@ use std::{
     fs::read_dir,
     io::ErrorKind,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
 };
 
@@ -432,10 +435,17 @@ struct MutableHistoryPackStoreInner {
 /// A `MutableHistoryPackStore` allows both reading and writing to history packfiles.
 pub struct MutableHistoryPackStore {
     inner: MutableHistoryPackStoreInner,
+    pending: AtomicU64,
+    result_packs: Arc<Mutex<Vec<PathBuf>>>,
+    max_pending: u64,
 }
 
 impl MutableHistoryPackStore {
-    pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Result<Self> {
+    pub fn new(
+        pack_dir: impl AsRef<Path>,
+        corruption_policy: CorruptionPolicy,
+        max_pending: u64,
+    ) -> Result<Self> {
         let pack_store = Arc::new(HistoryPackStore::new(pack_dir.as_ref(), corruption_policy));
         let mutable_pack = Arc::new(MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?);
         let mut union_store: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
@@ -449,7 +459,23 @@ impl MutableHistoryPackStore {
                 mutable_pack,
                 union_store,
             },
+            pending: AtomicU64::new(0),
+            result_packs: Arc::new(Mutex::new(Vec::new())),
+            max_pending,
         })
+    }
+
+    fn inner_flush(&self) -> Result<()> {
+        self.pending.store(0, Ordering::SeqCst);
+        if let Some(paths) = self.inner.mutable_pack.flush()? {
+            let mut result_packs = self.result_packs.lock();
+            for path in paths {
+                let histpack = HistoryPack::new(path.as_path())?;
+                self.inner.pack_store.add_pack(histpack);
+                result_packs.push(path);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -467,18 +493,21 @@ impl LocalStore for MutableHistoryPackStore {
 
 impl HgIdMutableHistoryStore for MutableHistoryPackStore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
-        self.inner.mutable_pack.add(key, info)
+        self.inner.mutable_pack.add(key, info)?;
+        let pending = self.pending.fetch_add(1, Ordering::SeqCst) + 1;
+        if pending >= self.max_pending {
+            self.inner_flush()?;
+        }
+        Ok(())
     }
 
     /// Flush the current mutable historypack to disk and add it to the `PackStore`.
-    fn flush(&self) -> Result<Option<PathBuf>> {
-        if let Some(path) = self.inner.mutable_pack.flush()? {
-            let histpack = HistoryPack::new(path.as_path())?;
-            self.inner.pack_store.add_pack(histpack);
-            Ok(Some(path))
-        } else {
-            Ok(None)
-        }
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        self.inner_flush()?;
+        let mut packs = self.result_packs.lock();
+        let result = std::mem::take(&mut *packs);
+
+        Ok(if result.len() > 0 { Some(result) } else { None })
     }
 }
 
@@ -825,7 +854,7 @@ mod tests {
     #[test]
     fn test_histpack_add_get() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000)?;
 
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let nodes = get_nodes(&mut rng);
@@ -843,7 +872,7 @@ mod tests {
     #[test]
     fn test_histpack_add_flush_get() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000)?;
 
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let nodes = get_nodes(&mut rng);
@@ -852,6 +881,27 @@ mod tests {
         }
 
         packstore.flush()?;
+
+        for (key, info) in nodes {
+            let nodeinfo = packstore.get_node_info(&key)?.unwrap();
+            assert_eq!(nodeinfo, info);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_histpack_auto_flush() -> Result<()> {
+        let tempdir = TempDir::new()?;
+        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 0)?;
+
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let nodes = get_nodes(&mut rng);
+        for (key, info) in &nodes {
+            packstore.add(key, info)?;
+        }
+
+        let packs = packstore.flush().unwrap().unwrap();
+        assert_eq!(packs.len(), 3);
 
         for (key, info) in nodes {
             let nodeinfo = packstore.get_node_info(&key)?.unwrap();
@@ -871,7 +921,7 @@ mod tests {
     #[test]
     fn test_histpack_flush_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+        let packstore = MutableHistoryPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000)?;
         packstore.flush()?;
         Ok(())
     }

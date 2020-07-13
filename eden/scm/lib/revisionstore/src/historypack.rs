@@ -473,7 +473,7 @@ pub mod tests {
             mutpack.add(key.clone(), info.clone()).unwrap();
         }
 
-        let path = mutpack.flush().unwrap().unwrap();
+        let path = &mutpack.flush().unwrap().unwrap()[0];
 
         HistoryPack::new(&path).unwrap()
     }
@@ -588,7 +588,7 @@ pub mod tests {
             mutpack.add(key.clone(), info.clone()).unwrap();
         }
 
-        let path = mutpack.flush().unwrap().unwrap();
+        let path = &mutpack.flush().unwrap().unwrap()[0];
         let pack_path = path.with_extension("histpack");
 
         let mut buf = Vec::new();

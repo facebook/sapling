@@ -248,7 +248,7 @@ impl HgIdMutableHistoryStore for IndexedLogHgIdHistoryStore {
         entry.write_to_log(&mut inner.log)
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         self.inner.write().unwrap().log.flush()?;
         Ok(None)
     }

@@ -147,12 +147,15 @@ impl HgIdMutableHistoryStore for MutableHistoryPack {
         Ok(())
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         let mut guard = self.inner.lock();
         let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
 
-        old_inner.close_pack()
+        Ok(match old_inner.close_pack()? {
+            Some(pack) => Some(vec![pack]),
+            None => Some(vec![]),
+        })
     }
 }
 
@@ -391,7 +394,7 @@ mod tests {
         for (key, info) in entries.iter() {
             muthistorypack.add(&key, &info).unwrap();
         }
-        let path = muthistorypack.flush().unwrap().unwrap();
+        let path = &muthistorypack.flush().unwrap().unwrap()[0];
         let pack = HistoryPack::new(&path).unwrap();
 
         let actual_order = pack
@@ -435,7 +438,7 @@ mod tests {
         let tempdir = tempdir().unwrap();
         let muthistorypack =
             MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
-        assert_eq!(muthistorypack.flush().unwrap(), None);
+        assert_eq!(muthistorypack.flush().unwrap().unwrap().len(), 0);
         drop(muthistorypack);
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }

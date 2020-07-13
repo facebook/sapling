@@ -50,8 +50,8 @@ mod tests {
         let work = mutablehistorypack.and_then(move |historypack| historypack.close());
         let mut runtime = Runtime::new().unwrap();
 
-        let historypackpath = runtime.block_on(work).unwrap();
-        assert_eq!(historypackpath, None);
+        let historypackpath = runtime.block_on(work).unwrap().unwrap();
+        assert!(historypackpath.is_empty());
     }
 
     #[test]
@@ -77,7 +77,7 @@ mod tests {
         });
         let mut runtime = Runtime::new().unwrap();
 
-        let historypackpath = runtime.block_on(work).unwrap().unwrap();
+        let historypackpath = runtime.block_on(work).unwrap().unwrap()[0].clone();
         let path = historypackpath.with_extension("histpack");
 
         let pack = HistoryPack::new(&path).unwrap();

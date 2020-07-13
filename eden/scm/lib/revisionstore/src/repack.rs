@@ -6,6 +6,7 @@
  */
 
 use std::{
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
     sync::Arc,
@@ -386,10 +387,14 @@ fn repack_histpack_to_metadatastore(
         return Err(RepackFailure::Total(errors).into());
     }
 
-    let new_pack = store.commit_pending(location)?;
+    let new_packs = store
+        .commit_pending(location)?
+        .unwrap_or_else(|| vec![])
+        .into_iter()
+        .collect::<HashSet<PathBuf>>();
 
     for path in repacked {
-        if Some(&path) != new_pack.as_ref() {
+        if !new_packs.contains(&path) {
             match HistoryPack::new(&path) {
                 Ok(pack) => pack.delete()?,
                 Err(_) => continue,

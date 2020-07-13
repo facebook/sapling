@@ -74,7 +74,7 @@ class histpacktestsbase(object):
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             packer.add(filename, node, p1, p2, linknode, copyfrom)
 
-        path = packer.flush()
+        path = packer.flush()[0]
         return self.historypackreader(path)
 
     def testAddSingle(self):

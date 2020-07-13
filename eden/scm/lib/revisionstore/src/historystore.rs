@@ -20,7 +20,7 @@ pub trait HgIdHistoryStore: LocalStore + Send + Sync {
 
 pub trait HgIdMutableHistoryStore: HgIdHistoryStore + Send + Sync {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()>;
-    fn flush(&self) -> Result<Option<PathBuf>>;
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>>;
 
     fn add_entry(&self, entry: &HistoryEntry) -> Result<()> {
         self.add(&entry.key, &entry.nodeinfo)
@@ -53,7 +53,7 @@ impl<T: HgIdMutableHistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync>
         T::add(self, key, info)
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         T::flush(self)
     }
 }

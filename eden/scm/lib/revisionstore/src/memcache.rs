@@ -114,7 +114,7 @@ impl HgIdMutableHistoryStore for MemcacheStore {
         Ok(())
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         Ok(None)
     }
 }

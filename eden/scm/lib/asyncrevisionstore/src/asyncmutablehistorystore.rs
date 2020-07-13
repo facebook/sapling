@@ -67,7 +67,7 @@ impl<T: HgIdMutableHistoryStore + Send> AsyncHgIdMutableHistoryStore<T> {
 
     /// Close the store. Once this Future finishes, all the added `NodeInfo` becomes visible to
     /// other processes.
-    pub fn close(mut self) -> impl Future<Item = Option<PathBuf>, Error = Error> + Send {
+    pub fn close(mut self) -> impl Future<Item = Option<Vec<PathBuf>>, Error = Error> + Send {
         poll_fn({
             move || {
                 blocking(|| {
