@@ -302,7 +302,9 @@ impl Repo {
     fn report_bookmark_missing_from_cache(&self, ctx: &CoreContext, bookmark: &BookmarkName) {
         error!(
             ctx.logger(),
-            "Monitored bookmark does not exist in the cache: {}", bookmark
+            "Monitored bookmark does not exist in the cache: {}, repo: {}",
+            bookmark,
+            self.blob_repo.name()
         );
 
         STATS::missing_from_cache.set_value(
