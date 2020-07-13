@@ -1,0 +1,55 @@
+name: Mononoke Mac
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  build:
+    runs-on: macOS-latest
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_10.3.app/Contents/Developer
+    steps:
+    - uses: actions/checkout@v1
+    - name: Check space
+      run: df -h
+    - name: Install Rust Stable
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        default: true
+        profile: minimal
+    - name: Build dependencies
+      run: python3 build/fbcode_builder/getdeps.py build --only-deps --src-dir=. mononoke
+    - name: Build mononoke
+      run: python3 build/fbcode_builder/getdeps.py build --no-deps --src-dir=. mononoke
+    - name: Check space
+      run: df -h
+    - name: Test mononoke
+      run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
+    - name: Check space
+      run: df -h
+    - name: Install Rust Beta
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: beta
+        default: true
+        profile: minimal
+    - name: Test mononoke with beta toolchain
+      run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
+      continue-on-error: true
+    - name: Install Rust Nightly
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        default: true
+        profile: minimal
+    - name: Test mononoke with nightly toolchain
+      run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
+      continue-on-error: true
+    - name: Check space
+      run: df -h

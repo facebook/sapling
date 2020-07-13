@@ -1,0 +1,40 @@
+# NOTE: Make sure you don't start any variables with HG_ here: the HG test
+# runner will strip those out...
+
+MONONOKE_BINS = {
+    "EDENAPI_SERVER": "edenapi_server",
+    "LFS_SERVER": "lfs_server",
+    "MONONOKE_ADMIN": "admin",
+    "MONONOKE_ALIAS_VERIFY": "aliasverify",
+    "MONONOKE_BACKFILL_DERIVED_DATA": "backfill_derived_data",
+    "MONONOKE_BACKFILL_GIT_MAPPING": "backfill_git_mapping",
+    "MONONOKE_BENCHMARK_FILESTORE": "benchmark_filestore",
+    "MONONOKE_BLOBIMPORT": "blobimport",
+    "MONONOKE_BLOBSTORE_HEALER": "blobstore_healer",
+    "MONONOKE_BONSAI_VERIFY": "bonsai_verify",
+    "MONONOKE_FASTREPLAY": "fastreplay",
+    "MONONOKE_GITIMPORT": "gitimport",
+    "MONONOKE_HGCLI": "hgcli",
+    "MONONOKE_HOOK_TAILER": "hook_tailer",
+    "MONONOKE_LFS_IMPORT": "lfs_import",
+    "MONONOKE_MANUAL_SCRUB": "manual_scrub",
+    "MONONOKE_MICROWAVE_BUILDER": "builder",
+    "MONONOKE_RECHUNKER": "rechunker",
+    "MONONOKE_REPO_IMPORT": "repo_import",
+    "MONONOKE_SERVER": "mononoke",
+    "MONONOKE_UNBUNDLE_REPLAY": "unbundle_replay",
+    "MONONOKE_WALKER": "walker",
+    "WRITE_STUB_LOG_ENTRY": "write_stub_log_entry",
+}
+
+EDENSCM_BINS = {
+    "BINARY_HG": "hg",
+}
+
+OSS_DEPS = {
+    "BINARY_HGPYTHON": "python2.7",
+    "DUMMYSSH": "//eden/mononoke/tests/integration/dummyssh.sh",
+    "RUN_TESTS_LIBRARY": "//eden/scm/tests",
+    "TEST_FIXTURES": "//eden/mononoke/tests/integration",
+    "TEST_ROOT_PUBLIC": "//eden/mononoke/tests/integration",
+}

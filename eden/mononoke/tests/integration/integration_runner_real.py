@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List, NamedTuple, Set
+from typing import Any, Dict, List, NamedTuple, Optional, Set
 
 import click
 
@@ -113,8 +113,8 @@ def public_test_root(manifest_env: ManifestEnv) -> str:
     return manifest_env["TEST_ROOT_PUBLIC"]
 
 
-def facebook_test_root(manifest_env: ManifestEnv) -> str:
-    return manifest_env["TEST_ROOT_FACEBOOK"]
+def facebook_test_root(manifest_env: ManifestEnv) -> Optional[str]:
+    return manifest_env.get("TEST_ROOT_FACEBOOK")
 
 
 def maybe_use_local_test_paths(manifest_env: ManifestEnv):
@@ -200,10 +200,16 @@ def _hg_runner(
 
 def hg_runner_public(manifest_env: Env, *args, **kwargs):
     _hg_runner(public_test_root(manifest_env), manifest_env, *args, **kwargs)
+    return True
 
 
 def hg_runner_facebook(manifest_env: Env, *args, **kwargs):
-    _hg_runner(facebook_test_root(manifest_env), manifest_env, *args, **kwargs)
+    fb_root = facebook_test_root(manifest_env)
+    if fb_root is None:
+        return False
+    else:
+        _hg_runner(fb_root, manifest_env, *args, **kwargs)
+        return True
 
 
 def discover_tests(manifest_env: Env, mysql: bool):
@@ -211,11 +217,11 @@ def discover_tests(manifest_env: Env, mysql: bool):
 
     for runner in [hg_runner_public, hg_runner_facebook]:
         with tempfile.NamedTemporaryFile(mode="rb") as f:
-            runner(manifest_env, ["--list-tests", "--xunit", f.name], {}, quiet=True)
-            xml = ET.parse(f)
-            suite = xml.getroot()
-            for child in suite:
-                all_tests.append(child.get("name"))
+            if runner(manifest_env, ["--list-tests", "--xunit", f.name], {}, quiet=True):
+                xml = ET.parse(f)
+                suite = xml.getroot()
+                for child in suite:
+                    all_tests.append(child.get("name"))
 
     if mysql:
         all_tests = [t for t in all_tests if t in EPHEMERAL_DB_ALLOWLIST]
@@ -267,9 +273,10 @@ def run_tests(
     missing_tests = []
 
     for t in tests:
+        fb_root = facebook_test_root(manifest_env)
         if os.path.isfile(os.path.join(public_test_root(manifest_env), t)):
             public_tests.append(t)
-        elif os.path.isfile(os.path.join(facebook_test_root(manifest_env), t)):
+        elif fb_root is not None and os.path.isfile(os.path.join(fb_root, t)):
             facebook_tests.append(t)
         else:
             missing_tests.append(t)
@@ -384,7 +391,9 @@ def run(
         verbose,
         debug,
         keep_tmpdir,
-        disable_all_network_access=not mysql,  # NOTE: We need network to talk to MySQL
+        disable_all_network_access=(
+            not mysql and "DISABLE_ALL_NETWORK_ACCESS" in manifest_env
+        ),  # NOTE: We need network to talk to MySQL
     )
 
     selected_tests: List[str] = []
