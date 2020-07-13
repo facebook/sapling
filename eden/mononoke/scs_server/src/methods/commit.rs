@@ -5,14 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
+use std::sync::Arc;
 
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::{future, try_join};
-use mononoke_api::{unified_diff, ChangesetSpecifier, CopyInfo, MononokePath, UnifiedDiffMode};
+use mononoke_api::{
+    unified_diff, ChangesetContext, ChangesetId, ChangesetSpecifier, CopyInfo, MononokeError,
+    MononokePath, UnifiedDiffMode,
+};
 use source_control as thrift;
 
 use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
@@ -407,32 +410,49 @@ impl SourceControlServiceImpl {
             }
             _ => None,
         };
-        let ids = bookmarks.iter().map(|(_name, cs_id)| *cs_id).collect();
-        let id_mapping = map_commit_identities(&repo, ids, &params.identity_schemes).await?;
+
+        async fn filter_descendant(
+            changeset: Arc<ChangesetContext>,
+            bookmark: (String, ChangesetId),
+        ) -> Result<Option<(String, ChangesetId)>, MononokeError> {
+            if changeset.is_ancestor_of(bookmark.1).await? {
+                Ok(Some(bookmark))
+            } else {
+                Ok(None)
+            }
+        }
+
         let bookmarks = stream::iter(bookmarks)
             .map({
-                let changeset = &changeset;
-                move |(name, cs_id)| async move {
-                    Ok::<_, errors::ServiceError>(
-                        changeset
-                            .is_ancestor_of(cs_id)
-                            .await?
-                            .then_some((name, cs_id)),
-                    )
+                // Wrap `changeset` in `Arc` so that cloning it to send to
+                // the tasks is cheap.
+                let changeset = Arc::new(changeset);
+                move |bookmark| {
+                    let changeset = changeset.clone();
+                    async move {
+                        tokio::task::spawn(filter_descendant(changeset, bookmark))
+                            .await
+                            .map_err(anyhow::Error::from)?
+                    }
                 }
             })
-            .buffered(100)
-            .try_filter_map({
-                let id_mapping = &id_mapping;
-                move |bookmark| async move {
-                    Ok(bookmark.map(|(name, cs_id)| match id_mapping.get(&cs_id) {
-                        Some(ids) => (name, ids.clone()),
-                        None => (name, BTreeMap::new()),
-                    }))
+            .buffered(20)
+            .try_fold(Vec::new(), |mut bookmarks, maybe_bookmark| async move {
+                if let Some(bookmark) = maybe_bookmark {
+                    bookmarks.push(bookmark);
                 }
+                Ok(bookmarks)
             })
-            .try_collect()
             .await?;
+
+        let ids = bookmarks.iter().map(|(_name, cs_id)| *cs_id).collect();
+        let id_mapping = map_commit_identities(&repo, ids, &params.identity_schemes).await?;
+
+        let bookmarks = bookmarks
+            .into_iter()
+            .map(|(name, cs_id)| (name, id_mapping.get(&cs_id).cloned().unwrap_or_default()))
+            .collect();
+
         Ok(thrift::CommitListDescendantBookmarksResponse {
             bookmarks,
             continue_after,
