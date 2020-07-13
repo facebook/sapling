@@ -9,13 +9,14 @@
 #![feature(never_type)]
 
 mod dummy;
+#[cfg(fbcode_build)]
+mod facebook;
 mod healer;
 
 use anyhow::{bail, format_err, Context, Error, Result};
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
-use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
 use clap::{value_t, App, Arg};
 use cmdlib::{
@@ -30,21 +31,18 @@ use healer::Healer;
 use lazy_static::lazy_static;
 use metaconfig_types::{BlobConfig, DatabaseConfig, LocalDatabaseConfig, StorageConfig};
 use mononoke_types::DateTime;
-use slog::{info, o, warn};
+use slog::{info, o};
 use sql::Connection;
 use sql_construct::SqlConstructFromDatabaseConfig;
-use sql_ext::facebook::myrouter_ready;
 use sql_ext::{
-    facebook::MysqlOptions,
+    facebook::{myrouter_ready, MysqlOptions},
     open_sqlite_path,
     replication::{LaggableCollectionMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
 };
-use sql_facebook::{myrouter, raw};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-const CONFIGERATOR_REGIONS_CONFIG: &str = "myrouter/regions.json";
 const QUIET_ARG: &'static str = "quiet";
 const ITER_LIMIT_ARG: &'static str = "iteration-limit";
 const HEAL_MIN_AGE_ARG: &'static str = "heal-min-age-secs";
@@ -53,50 +51,6 @@ const HEAL_CONCURRENCY_ARG: &str = "heal-concurrency";
 lazy_static! {
     /// Minimal age of entry to consider if it has to be healed
     static ref DEFAULT_ENTRY_HEALING_MIN_AGE: ChronoDuration = ChronoDuration::minutes(2);
-}
-
-async fn open_mysql_raw_replicas(
-    fb: FacebookInit,
-    ctx: &CoreContext,
-    tier: &str,
-    regions: Arc<Vec<String>>,
-) -> Result<Vec<(String, Connection)>, Error> {
-    let raw_conns = regions.iter().cloned().map({
-        move |region| async move {
-            let mut conn_builder = raw::Builder::new(tier, raw::InstanceRequirement::ReplicaOnly);
-            conn_builder.role_override("scriptro");
-            conn_builder.explicit_region(&region);
-
-            let conn = match conn_builder.build(fb).compat().await {
-                Ok(c) =>
-                    Some(Connection::Mysql(c)),
-                Err(_e) => {
-                    warn!(ctx.logger(),
-                        "Could not connect to a replica in {}, likely that region does not have one.", region);
-                    None
-                }
-            };
-
-            (region, conn)
-        }
-    });
-
-    let filtered: Vec<_> = future::join_all(raw_conns)
-        .await
-        .into_iter()
-        .filter_map(|(region, conn)| match conn {
-            Some(conn) => Some((region, conn)),
-            None => None,
-        })
-        .collect::<Vec<_>>();
-
-    info!(
-        ctx.logger(),
-        "Monitoring regions: {:?}",
-        filtered.iter().map(|(r, _)| r).collect::<Vec<_>>()
-    );
-
-    Ok(filtered)
 }
 
 async fn maybe_schedule_healer_for_storage(
@@ -182,29 +136,14 @@ async fn maybe_schedule_healer_for_storage(
             vec![("sqlite_region".to_string(), Connection::with_sqlite(c))]
         }
         DatabaseConfig::Remote(remote) => {
-            let db_address = remote.db_address;
-            let regions = ConfigStore::configerator(fb, None, None, Duration::from_secs(5))?
-                .get_config_handle::<Vec<String>>(CONFIGERATOR_REGIONS_CONFIG.to_owned())?
-                .get();
-            info!(ctx.logger(), "Discovered regions: {:?}", *regions);
-            if let Some(myrouter_port) = mysql_options.myrouter_port {
-                let mut conn_builder = myrouter::Builder::new();
-                conn_builder
-                    .service_type(myrouter::ServiceType::SLAVE)
-                    .locality(myrouter::DbLocality::EXPLICIT)
-                    .tier(db_address, None)
-                    .port(myrouter_port);
-
-                regions
-                    .iter()
-                    .map(|region| {
-                        conn_builder.explicit_region(region.clone());
-                        let conn: Connection = conn_builder.build_read_only().into();
-                        (region.clone(), conn)
-                    })
-                    .collect::<Vec<_>>()
-            } else {
-                open_mysql_raw_replicas(fb, ctx, &db_address, regions).await?
+            #[cfg(fbcode_build)]
+            {
+                facebook::open_remote_db(fb, &ctx, remote, mysql_options).await?
+            }
+            #[cfg(not(fbcode_build))]
+            {
+                let _ = remote;
+                unimplemented!("Remote DB is not yet implemented for non fbcode builds");
             }
         }
     };

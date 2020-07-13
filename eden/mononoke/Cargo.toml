@@ -4,7 +4,7 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_filestore.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/blobimport.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
+include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_filestore.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/blobimport.rs", "cmds/blobstore_healer/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
 
 [[bin]]
 name = "admin"
@@ -33,6 +33,10 @@ path = "cmds/benchmark_storage_config/main.rs"
 [[bin]]
 name = "blobimport"
 path = "cmds/blobimport.rs"
+
+[[bin]]
+name = "blobstore_healer"
+path = "cmds/blobstore_healer/main.rs"
 
 [[bin]]
 name = "bonsai_verify"
@@ -84,6 +88,7 @@ blobrepo_override = { path = "blobrepo/override" }
 blobrepo_utils = { path = "blobrepo_utils" }
 blobstore = { path = "blobstore" }
 blobstore_factory = { path = "blobstore/factory" }
+blobstore_sync_queue = { path = "blobstore_sync_queue" }
 bonsai_globalrev_mapping = { path = "bonsai_globalrev_mapping" }
 bookmark_renaming = { path = "commit_rewriting/bookmark_renaming" }
 bookmarks = { path = "bookmarks" }
@@ -120,12 +125,14 @@ redactedblobstore = { path = "blobstore/redactedblobstore" }
 revset = { path = "revset" }
 scuba_ext = { path = "common/scuba_ext" }
 skiplist = { path = "reachabilityindex/skiplist" }
+sql_construct = { path = "common/sql_construct" }
 sql_ext = { path = "common/rust/sql_ext" }
 sqlblob = { path = "blobstore/sqlblob" }
 synced_commit_mapping = { path = "commit_rewriting/synced_commit_mapping" }
 throttledblob = { path = "blobstore/throttledblob" }
 unodes = { path = "derived_data/unodes" }
 xdiff = { path = "../scm/lib/xdiff" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -134,6 +141,7 @@ fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master"
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -141,12 +149,14 @@ anyhow = "1.0"
 ascii = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 clap = "2.33"
 criterion = "0.3"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 itertools = "0.8"
+lazy_static = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
@@ -163,7 +173,6 @@ toml = "=0.5.6"
 
 [dev-dependencies]
 fixtures = { path = "tests/fixtures" }
-sql_construct = { path = "common/sql_construct" }
 tests_utils = { path = "tests/utils" }
 maplit = "1.0"
 
