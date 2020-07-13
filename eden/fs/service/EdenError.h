@@ -33,8 +33,8 @@ EdenError newEdenError(
     Args&&... args) {
   auto e = EdenError{ensureValidUtf8(folly::to<std::string>(
       std::forward<Arg1>(msg), std::forward<Args>(args)...))};
-  e.set_errorCode(errorCode);
-  e.set_errorType(errorType);
+  e.errorCode_ref() = errorCode;
+  e.errorType_ref() = errorType;
   return e;
 }
 
@@ -54,7 +54,7 @@ EdenError
 newEdenError(EdenErrorType errorType, folly::StringPiece msg, Args&&... args) {
   auto e = EdenError{ensureValidUtf8(
       folly::to<std::string>(msg, std::forward<Args>(args)...))};
-  e.set_errorType(errorType);
+  e.errorType_ref() = errorType;
   return e;
 }
 
