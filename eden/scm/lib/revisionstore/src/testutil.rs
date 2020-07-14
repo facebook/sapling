@@ -176,14 +176,32 @@ impl LocalStore for FakeRemoteHistoryStore {
     }
 }
 
+#[derive(Default)]
 pub struct FakeEdenApi {
     files: HashMap<Key, Bytes>,
     trees: HashMap<Key, Bytes>,
+    history: HashMap<Key, NodeInfo>,
 }
 
 impl FakeEdenApi {
-    pub fn new(files: HashMap<Key, Bytes>, trees: HashMap<Key, Bytes>) -> Arc<Self> {
-        Arc::new(Self { files, trees })
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn files(self, files: HashMap<Key, Bytes>) -> Self {
+        Self { files, ..self }
+    }
+
+    pub fn trees(self, trees: HashMap<Key, Bytes>) -> Self {
+        Self { trees, ..self }
+    }
+
+    pub fn history(self, history: HashMap<Key, NodeInfo>) -> Self {
+        Self { history, ..self }
+    }
+
+    pub fn into_arc(self) -> Arc<Self> {
+        Arc::new(self)
     }
 
     fn get(map: &HashMap<Key, Bytes>, keys: Vec<Key>) -> Result<Fetch<DataEntry>, EdenApiError> {
@@ -222,11 +240,23 @@ impl EdenApi for FakeEdenApi {
     async fn history(
         &self,
         _repo: RepoName,
-        _keys: Vec<Key>,
+        keys: Vec<Key>,
         _length: Option<u32>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<HistoryEntry>, EdenApiError> {
-        unimplemented!()
+        let entries = keys
+            .into_iter()
+            .map(|key| {
+                let nodeinfo = self.history.get(&key).context("Not found")?.clone();
+                Ok(HistoryEntry { key, nodeinfo })
+            })
+            .collect::<Vec<_>>();
+
+        Ok(Fetch {
+            meta: vec![ResponseMeta::default()],
+            entries: Box::pin(stream::iter(entries)),
+            stats: Box::pin(future::ok(Stats::default())),
+        })
     }
 
     async fn trees(

@@ -122,7 +122,7 @@ mod tests {
         let files = hashmap! { k.clone() => d.data.clone() };
         let trees = HashMap::new();
 
-        let client = FakeEdenApi::new(files, trees);
+        let client = FakeEdenApi::new().files(files).trees(trees).into_arc();
         let remote_files = EdenApiRemoteStore::<File>::new("repo".parse()?, client.clone());
         let remote_trees = EdenApiRemoteStore::<Tree>::new("repo".parse()?, client.clone());
 
@@ -160,7 +160,7 @@ mod tests {
         let files = HashMap::new();
         let trees = hashmap! { k.clone() => d.data.clone() };
 
-        let client = FakeEdenApi::new(files, trees);
+        let client = FakeEdenApi::new().files(files).trees(trees).into_arc();
         let remote_files = EdenApiRemoteStore::<File>::new("repo".parse()?, client.clone());
         let remote_trees = EdenApiRemoteStore::<Tree>::new("repo".parse()?, client.clone());
 
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn test_missing() -> Result<()> {
         // Set up empty EdenApi remote store.
-        let client = FakeEdenApi::new(HashMap::new(), HashMap::new());
+        let client = FakeEdenApi::new().into_arc();
         let remote = EdenApiRemoteStore::<File>::new("repo".parse()?, client);
 
         // Set up local mutable store.

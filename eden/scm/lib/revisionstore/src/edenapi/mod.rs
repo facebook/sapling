@@ -23,8 +23,10 @@ use crate::{
 };
 
 mod data;
+mod history;
 
 use data::EdenApiDataStore;
+use history::EdenApiHistoryStore;
 
 /// Convenience aliases for file and tree stores.
 pub type EdenApiFileStore = EdenApiRemoteStore<File>;
@@ -74,7 +76,23 @@ impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
     }
 }
 
-impl<T: EdenApiStoreKind> HgIdRemoteStore for EdenApiRemoteStore<T> {
+impl HgIdRemoteStore for EdenApiRemoteStore<File> {
+    fn datastore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableDeltaStore>,
+    ) -> Arc<dyn RemoteDataStore> {
+        Arc::new(EdenApiDataStore::new(self, store))
+    }
+
+    fn historystore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableHistoryStore>,
+    ) -> Arc<dyn RemoteHistoryStore> {
+        Arc::new(EdenApiHistoryStore::new(self, store))
+    }
+}
+
+impl HgIdRemoteStore for EdenApiRemoteStore<Tree> {
     fn datastore(
         self: Arc<Self>,
         store: Arc<dyn HgIdMutableDeltaStore>,
@@ -86,7 +104,7 @@ impl<T: EdenApiStoreKind> HgIdRemoteStore for EdenApiRemoteStore<T> {
         self: Arc<Self>,
         _store: Arc<dyn HgIdMutableHistoryStore>,
     ) -> Arc<dyn RemoteHistoryStore> {
-        unimplemented!()
+        unimplemented!("EdenAPI does not support fetching tree history")
     }
 }
 
