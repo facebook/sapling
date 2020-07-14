@@ -7,11 +7,11 @@
 
 #pragma once
 
+#include <benchmark/benchmark.h>
+#include <folly/init/Init.h>
 #include <stdint.h>
 #include <algorithm>
-#include <condition_variable>
 #include <limits>
-#include <mutex>
 
 namespace facebook {
 namespace eden {
@@ -65,3 +65,13 @@ StatAccumulator measureClockOverhead() noexcept;
 
 } // namespace eden
 } // namespace facebook
+
+#define EDEN_BENCHMARK_MAIN()                                 \
+  int main(int argc, char** argv) {                           \
+    ::benchmark::Initialize(&argc, argv);                     \
+    folly::init(&argc, &argv);                                \
+    if (::benchmark::ReportUnrecognizedArguments(argc, argv)) \
+      return 1;                                               \
+    ::benchmark::RunSpecifiedBenchmarks();                    \
+  }                                                           \
+  int main(int, char**)
