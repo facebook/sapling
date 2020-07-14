@@ -43,6 +43,7 @@ types = { path = "../types" }
 util = { path = "../util" }
 
 [dev-dependencies]
+maplit = "1.0"
 rand_chacha = "0.2"
 quickcheck = "0.9"
 types = { path = "../types", default-features = false, features = ["for-tests"] }

@@ -176,13 +176,31 @@ impl LocalStore for FakeRemoteHistoryStore {
     }
 }
 
-struct FakeEdenApi {
-    map: HashMap<Key, Bytes>,
+pub struct FakeEdenApi {
+    files: HashMap<Key, Bytes>,
+    trees: HashMap<Key, Bytes>,
 }
 
 impl FakeEdenApi {
-    pub fn new(map: HashMap<Key, Bytes>) -> FakeEdenApi {
-        Self { map }
+    pub fn new(files: HashMap<Key, Bytes>, trees: HashMap<Key, Bytes>) -> Arc<Self> {
+        Arc::new(Self { files, trees })
+    }
+
+    fn get(map: &HashMap<Key, Bytes>, keys: Vec<Key>) -> Result<Fetch<DataEntry>, EdenApiError> {
+        let entries = keys
+            .into_iter()
+            .map(|key| {
+                let data = map.get(&key).context("Not found")?.clone();
+                let parents = Parents::default();
+                Ok(DataEntry::new(key, data, parents))
+            })
+            .collect::<Vec<_>>();
+
+        Ok(Fetch {
+            meta: vec![ResponseMeta::default()],
+            entries: Box::pin(stream::iter(entries)),
+            stats: Box::pin(future::ok(Stats::default())),
+        })
     }
 }
 
@@ -198,20 +216,7 @@ impl EdenApi for FakeEdenApi {
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError> {
-        let entries = keys
-            .into_iter()
-            .map(|key| {
-                let data = self.map.get(&key).context("Not found")?.clone();
-                let parents = Parents::default();
-                Ok(DataEntry::new(key, data, parents))
-            })
-            .collect::<Vec<_>>();
-
-        Ok(Fetch {
-            meta: vec![ResponseMeta::default()],
-            entries: Box::pin(stream::iter(entries)),
-            stats: Box::pin(future::ok(Stats::default())),
-        })
+        Self::get(&self.files, keys)
     }
 
     async fn history(
@@ -227,10 +232,10 @@ impl EdenApi for FakeEdenApi {
     async fn trees(
         &self,
         _repo: RepoName,
-        _keys: Vec<Key>,
+        keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError> {
-        unimplemented!()
+        Self::get(&self.trees, keys)
     }
 
     async fn complete_trees(
@@ -244,10 +249,6 @@ impl EdenApi for FakeEdenApi {
     ) -> Result<Fetch<DataEntry>, EdenApiError> {
         unimplemented!()
     }
-}
-
-pub fn fake_edenapi(map: HashMap<Key, Bytes>) -> Arc<dyn EdenApi> {
-    Arc::new(FakeEdenApi::new(map))
 }
 
 pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {

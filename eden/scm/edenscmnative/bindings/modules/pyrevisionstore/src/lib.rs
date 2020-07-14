@@ -26,7 +26,7 @@ use cpython_ext::{
 use pyconfigparser::config;
 use revisionstore::{
     repack, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
-    DataPackVersion, Delta, EdenApiHgIdRemoteStore, HgIdDataStore, HgIdHistoryStore,
+    DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore, HgIdHistoryStore,
     HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore,
     HistoryPackVersion, IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore, IndexedlogRepair,
     LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
@@ -790,23 +790,46 @@ impl ExtractInnerRef for pyremotestore {
     }
 }
 
-// Python wrapper around an EdenAPI-backed remote store.
+// Python wrapper around an EdenAPI-backed remote store for files.
 //
-// This type exists for the sole purpose of allowing an `EdenApiHgIdRemoteStore`
+// This type exists for the sole purpose of allowing an `EdenApiFileStore`
 // to be passed from Rust to Python and back into Rust. It cannot be created
 // by Python code and does not expose any functionality to Python.
-py_class!(pub class edenapistore |py| {
-    data remote: Arc<EdenApiHgIdRemoteStore>;
+py_class!(pub class edenapifilestore |py| {
+    data remote: Arc<EdenApiFileStore>;
 });
 
-impl edenapistore {
-    pub fn new(py: Python, remote: Arc<EdenApiHgIdRemoteStore>) -> PyResult<Self> {
-        edenapistore::create_instance(py, remote)
+impl edenapifilestore {
+    pub fn new(py: Python, remote: Arc<EdenApiFileStore>) -> PyResult<Self> {
+        edenapifilestore::create_instance(py, remote)
     }
 }
 
-impl ExtractInnerRef for edenapistore {
-    type Inner = Arc<EdenApiHgIdRemoteStore>;
+impl ExtractInnerRef for edenapifilestore {
+    type Inner = Arc<EdenApiFileStore>;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.remote(py)
+    }
+}
+
+// Python wrapper around an EdenAPI-backed remote store for trees.
+//
+// This type exists for the sole purpose of allowing an `EdenApiTreeStore`
+// to be passed from Rust to Python and back into Rust. It cannot be created
+// by Python code and does not expose any functionality to Python.
+py_class!(pub class edenapitreestore |py| {
+    data remote: Arc<EdenApiTreeStore>;
+});
+
+impl edenapitreestore {
+    pub fn new(py: Python, remote: Arc<EdenApiTreeStore>) -> PyResult<Self> {
+        edenapitreestore::create_instance(py, remote)
+    }
+}
+
+impl ExtractInnerRef for edenapitreestore {
+    type Inner = Arc<EdenApiTreeStore>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.remote(py)
@@ -821,7 +844,7 @@ py_class!(pub class contentstore |py| {
         config: config,
         remote: pyremotestore,
         memcache: Option<memcachestore>,
-        edenapi: Option<edenapistore> = None
+        edenapi: Option<edenapifilestore> = None
     ) -> PyResult<contentstore> {
         let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);

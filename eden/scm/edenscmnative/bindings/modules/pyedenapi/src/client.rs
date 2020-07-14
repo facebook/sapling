@@ -12,8 +12,8 @@ use cpython::*;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use pyconfigparser::config;
-use pyrevisionstore::edenapistore;
-use revisionstore::EdenApiHgIdRemoteStore;
+use pyrevisionstore::{edenapifilestore, edenapitreestore};
+use revisionstore::{EdenApiFileStore, EdenApiTreeStore};
 
 use crate::pyext::EdenApiPyExt;
 use crate::stats::stats;
@@ -93,18 +93,18 @@ py_class!(pub class client |py| {
         )
     }
 
-    def filestore(&self, repo: String) -> PyResult<edenapistore> {
+    def filestore(&self, repo: String) -> PyResult<edenapifilestore> {
         let repo = to_repo_name(py, &repo)?;
         let edenapi = self.extract_inner(py);
-        let store = EdenApiHgIdRemoteStore::filestore(repo, edenapi);
-        edenapistore::new(py, Arc::new(store))
+        let store = EdenApiFileStore::new(repo, edenapi);
+        edenapifilestore::new(py, store)
     }
 
-    def treestore(&self, repo: String) -> PyResult<edenapistore> {
+    def treestore(&self, repo: String) -> PyResult<edenapitreestore> {
         let repo = to_repo_name(py, &repo)?;
         let edenapi = self.extract_inner(py);
-        let store = EdenApiHgIdRemoteStore::treestore(repo, edenapi);
-        edenapistore::new(py, Arc::new(store))
+        let store = EdenApiTreeStore::new(repo, edenapi);
+        edenapitreestore::new(py, store)
     }
 });
 

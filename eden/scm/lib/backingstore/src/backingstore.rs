@@ -16,8 +16,8 @@ use log::warn;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
 use revisionstore::{
-    ContentStore, ContentStoreBuilder, EdenApiHgIdRemoteStore, HgIdDataStore, LocalStore,
-    MemcacheStore, RemoteDataStore, StoreKey,
+    ContentStore, ContentStoreBuilder, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore,
+    LocalStore, MemcacheStore, RemoteDataStore, StoreKey,
 };
 use std::path::Path;
 use std::sync::Arc;
@@ -58,12 +58,8 @@ impl BackingStore {
         let (blobstore, treestore) = if use_edenapi {
             let edenapi = EdenApiBuilder::from_config(&config)?.build()?;
             let edenapi: Arc<dyn EdenApi> = Arc::new(edenapi);
-            let fileremotestore = Arc::new(EdenApiHgIdRemoteStore::filestore(
-                repo_name.clone(),
-                edenapi.clone(),
-            ));
-            let treeremotestore = Arc::new(EdenApiHgIdRemoteStore::treestore(repo_name, edenapi));
-
+            let fileremotestore = EdenApiFileStore::new(repo_name.clone(), edenapi.clone());
+            let treeremotestore = EdenApiTreeStore::new(repo_name, edenapi);
             (
                 blobstore.remotestore(fileremotestore).build()?,
                 treestore.remotestore(treeremotestore).build()?,

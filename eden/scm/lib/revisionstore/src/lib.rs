@@ -124,7 +124,6 @@
 
 mod contentstore;
 mod dataindex;
-mod edenapi;
 #[cfg(all(fbcode_build, target_os = "linux"))]
 mod facebook;
 mod fanouttable;
@@ -144,6 +143,7 @@ mod util;
 pub mod c_api;
 pub mod datapack;
 pub mod datastore;
+pub mod edenapi;
 pub mod error;
 pub mod historypack;
 pub mod historystore;
@@ -163,7 +163,7 @@ pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
 pub use crate::datastore::{
     ContentDataStore, ContentMetadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore,
 };
-pub use crate::edenapi::EdenApiHgIdRemoteStore;
+pub use crate::edenapi::{EdenApiFileStore, EdenApiRemoteStore, EdenApiTreeStore};
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
 pub use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore};
 pub use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
