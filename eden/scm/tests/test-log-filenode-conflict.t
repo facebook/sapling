@@ -162,12 +162,12 @@ Create a repo with one file X. Delete and recreate a few times.
   o  A
   
   log via G:
-  o    G
-  :\
-  : o  C
-  : |
-  : o  B
-  :/
+  o  G
+  :
+  o  C
+  |
+  o  B
+  |
   o  A
   
 (incorrect: D, E disappeared in "log via E" and "log via G"; F disappeared in "log via G")

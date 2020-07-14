@@ -18,7 +18,7 @@ import bindings
 
 from . import encoding, error, mdiff, revlog, util, visibility
 from .i18n import _
-from .node import bbin, bin, hex, nullid
+from .node import bbin, bin, hex, nullid, nullrev
 from .pycompat import decodeutf8, encodeutf8, iteritems, range
 from .thirdparty import attr
 
@@ -430,7 +430,26 @@ class changelog(revlog.revlog):
         return self._nodecache
 
     def reachableroots(self, minroot, heads, roots, includepath=False):
-        return self.index.reachableroots2(minroot, heads, roots, includepath)
+        if self.userust("reachableroots"):
+            tonodes = self.tonodes
+            headnodes = tonodes(heads)
+            rootnodes = tonodes(roots)
+            dag = self.dag
+            # special case: null::X -> ::X
+            if len(rootnodes) == 0 and nullrev in roots:
+                nodes = dag.ancestors(headnodes)
+            else:
+                nodes = dag.range(rootnodes, headnodes)
+            if not includepath:
+                nodes = nodes & rootnodes
+                # The old code path with includepath=False filters "roots"
+                # out. Emulate that filtering by headsancestors.
+                # It has subtle differences, though. See
+                # test-log-filenode-conflict.t change of this commit.
+                nodes = dag.headsancestors(nodes)
+            return list(self.torevs(nodes))
+        else:
+            return self.index.reachableroots2(minroot, heads, roots, includepath)
 
     def heads(self, start=None, stop=None):
         raise error.ProgrammingError(
