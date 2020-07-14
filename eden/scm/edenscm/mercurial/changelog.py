@@ -472,7 +472,14 @@ class changelog(revlog.revlog):
         heads in a consistent way, then discovery can just use references as
         heads isntead.
         """
-        return self.index.headrevs()
+        if self.userust("rawheadrevs"):
+            dag = self.dag
+            heads = dag.headsancestors(dag.all())
+            # Be compatible with C index headrevs: Return in ASC order.
+            revs = self.torevs(heads)
+            return list(revs.iterasc())
+        else:
+            return self.index.headrevs()
 
     def strip(self, *args, **kwargs):
         super(changelog, self).strip(*args, **kwargs)
