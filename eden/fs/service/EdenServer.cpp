@@ -1093,7 +1093,7 @@ bool EdenServer::performCleanup() {
   while (!shutdownFuture.isReady()) {
     mainEventBase_->loopOnce();
   }
-  auto&& shutdownResult = shutdownFuture.getTry();
+  auto&& shutdownResult = shutdownFuture.result();
 #ifndef _WIN32
   shutdownSuccess = !shutdownResult.hasException();
 

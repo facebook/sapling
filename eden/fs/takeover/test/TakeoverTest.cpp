@@ -138,7 +138,7 @@ folly::Try<TakeoverData> runTakeover(
     // This should generally only happen if we timed out.
     throw std::runtime_error("future is not ready");
   }
-  return std::move(future.getTry());
+  return std::move(future.result());
 }
 
 void checkExpectedFile(int fd, AbsolutePathPiece path) {
