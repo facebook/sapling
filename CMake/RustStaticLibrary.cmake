@@ -101,7 +101,7 @@ function(rust_static_library TARGET)
 
   set(cargo_cmd cargo)
   if(WIN32)
-    set(cargo_cmd cargo.bat)
+    set(cargo_cmd cargo.exe)
   endif()
 
   set(cargo_flags build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
@@ -158,7 +158,7 @@ function(rust_executable TARGET)
 
   set(cargo_cmd cargo)
   if(WIN32)
-    set(cargo_cmd cargo.bat)
+    set(cargo_cmd cargo.exe)
   endif()
 
   set(cargo_flags build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
