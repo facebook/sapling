@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#![type_length_limit = "4522397"]
 use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use clap::Arg;

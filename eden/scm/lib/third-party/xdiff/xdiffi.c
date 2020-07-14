@@ -332,7 +332,7 @@ int xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	xdalgoenv_t xenv;
 	diffdata_t dd1, dd2;
 
-	if (xdl_prepare_env(mf1, mf2, xpp, xe) < 0) {
+	if (xdl_prepare_env_vendored(mf1, mf2, xpp, xe) < 0) {
 
 		return -1;
 	}
@@ -344,7 +344,7 @@ int xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	ndiags = xe->xdf1.nreff + xe->xdf2.nreff + 3;
 	if (!(kvd = (int64_t *) xdl_malloc((2 * ndiags + 2) * sizeof(int64_t)))) {
 
-		xdl_free_env(xe);
+		xdl_free_env_vendored(xe);
 		return -1;
 	}
 	kvdf = kvd;
@@ -352,7 +352,7 @@ int xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	kvdf += xe->xdf2.nreff + 1;
 	kvdb += xe->xdf2.nreff + 1;
 
-	xenv.mxcost = xdl_bogosqrt(ndiags);
+	xenv.mxcost = xdl_bogosqrt_vendored(ndiags);
 	if (xenv.mxcost < XDL_MAX_COST_MIN)
 		xenv.mxcost = XDL_MAX_COST_MIN;
 	xenv.snake_cnt = XDL_SNAKE_CNT;
@@ -371,7 +371,7 @@ int xdl_do_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 			 kvdf, kvdb, (xpp->flags & XDF_NEED_MINIMAL) != 0, &xenv) < 0) {
 
 		xdl_free(kvd);
-		xdl_free_env(xe);
+		xdl_free_env_vendored(xe);
 		return -1;
 	}
 
@@ -401,7 +401,7 @@ static xdchange_t *xdl_add_change(xdchange_t *xscr, int64_t i1, int64_t i2, int6
 static int recs_match(xrecord_t *rec1, xrecord_t *rec2)
 {
 	return (rec1->ha == rec2->ha &&
-		xdl_recmatch(rec1->ptr, rec1->size,
+		xdl_recmatch_vendored(rec1->ptr, rec1->size,
 			     rec2->ptr, rec2->size));
 }
 
@@ -1114,17 +1114,17 @@ int xdl_diff_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	    xdl_change_compact_vendored(&xe.xdf2, &xe.xdf1, xpp->flags) < 0 ||
 	    xdl_build_script_vendored(&xe, &xscr) < 0) {
 
-		xdl_free_env(&xe);
+		xdl_free_env_vendored(&xe);
 		return -1;
 	}
 
 	if (xdl_call_hunk_func(&xe, xscr, ecb, xecfg) < 0) {
 		xdl_free_script_vendored(xscr);
-		xdl_free_env(&xe);
+		xdl_free_env_vendored(&xe);
 		return -1;
 	}
 	xdl_free_script_vendored(xscr);
-	xdl_free_env(&xe);
+	xdl_free_env_vendored(&xe);
 
 	return 0;
 }

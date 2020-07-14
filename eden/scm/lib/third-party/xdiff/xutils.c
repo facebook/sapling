@@ -27,7 +27,7 @@
 
 
 
-int64_t xdl_bogosqrt(int64_t n) {
+int64_t xdl_bogosqrt_vendored(int64_t n) {
 	int64_t i;
 
 	/*
@@ -53,7 +53,7 @@ int64_t xdl_mmfile_size_vendored(mmfile_t *mmf)
 }
 
 
-int xdl_cha_init(chastore_t *cha, int64_t isize, int64_t icount) {
+int xdl_cha_init_vendored(chastore_t *cha, int64_t isize, int64_t icount) {
 
 	cha->head = cha->tail = NULL;
 	cha->isize = isize;
@@ -65,7 +65,7 @@ int xdl_cha_init(chastore_t *cha, int64_t isize, int64_t icount) {
 }
 
 
-void xdl_cha_free(chastore_t *cha) {
+void xdl_cha_free_vendored(chastore_t *cha) {
 	chanode_t *cur, *tmp;
 
 	for (cur = cha->head; (tmp = cur) != NULL;) {
@@ -75,7 +75,7 @@ void xdl_cha_free(chastore_t *cha) {
 }
 
 
-void *xdl_cha_alloc(chastore_t *cha) {
+void *xdl_cha_alloc_vendored(chastore_t *cha) {
 	chanode_t *ancur;
 	void *data;
 
@@ -100,7 +100,7 @@ void *xdl_cha_alloc(chastore_t *cha) {
 	return data;
 }
 
-int64_t xdl_guess_lines(mmfile_t *mf, int64_t sample) {
+int64_t xdl_guess_lines_vendored(mmfile_t *mf, int64_t sample) {
 	int64_t nl = 0, size, tsize = 0;
 	char const *data, *cur, *top;
 
@@ -121,14 +121,14 @@ int64_t xdl_guess_lines(mmfile_t *mf, int64_t sample) {
 	return nl + 1;
 }
 
-int xdl_recmatch(const char *l1, int64_t s1, const char *l2, int64_t s2)
+int xdl_recmatch_vendored(const char *l1, int64_t s1, const char *l2, int64_t s2)
 {
 	if (s1 == s2 && !memcmp(l1, l2, s1))
 		return 1;
 	return 0;
 }
 
-uint64_t xdl_hash_record(char const **data, char const *top) {
+uint64_t xdl_hash_record_vendored(char const **data, char const *top) {
 	uint64_t ha = 5381;
 	char const *ptr = *data;
 
@@ -141,7 +141,7 @@ uint64_t xdl_hash_record(char const **data, char const *top) {
 	return ha;
 }
 
-unsigned int xdl_hashbits(int64_t size) {
+unsigned int xdl_hashbits_vendored(int64_t size) {
 	int64_t val = 1;
 	unsigned int bits = 0;
 

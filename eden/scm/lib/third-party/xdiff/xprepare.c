@@ -70,16 +70,16 @@ static int xdl_optimize_ctxs(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xdf2
 static int xdl_init_classifier(xdlclassifier_t *cf, int64_t size, int64_t flags) {
 	cf->flags = flags;
 
-	cf->hbits = xdl_hashbits(size);
+	cf->hbits = xdl_hashbits_vendored(size);
 	cf->hsize = ((uint64_t)1) << cf->hbits;
 
-	if (xdl_cha_init(&cf->ncha, sizeof(xdlclass_t), size / 4 + 1) < 0) {
+	if (xdl_cha_init_vendored(&cf->ncha, sizeof(xdlclass_t), size / 4 + 1) < 0) {
 
 		return -1;
 	}
 	if (!(cf->rchash = (xdlclass_t **) xdl_malloc(cf->hsize * sizeof(xdlclass_t *)))) {
 
-		xdl_cha_free(&cf->ncha);
+		xdl_cha_free_vendored(&cf->ncha);
 		return -1;
 	}
 	memset(cf->rchash, 0, cf->hsize * sizeof(xdlclass_t *));
@@ -88,7 +88,7 @@ static int xdl_init_classifier(xdlclassifier_t *cf, int64_t size, int64_t flags)
 	if (!(cf->rcrecs = (xdlclass_t **) xdl_malloc(cf->alloc * sizeof(xdlclass_t *)))) {
 
 		xdl_free(cf->rchash);
-		xdl_cha_free(&cf->ncha);
+		xdl_cha_free_vendored(&cf->ncha);
 		return -1;
 	}
 
@@ -102,7 +102,7 @@ static void xdl_free_classifier(xdlclassifier_t *cf) {
 
 	xdl_free(cf->rcrecs);
 	xdl_free(cf->rchash);
-	xdl_cha_free(&cf->ncha);
+	xdl_cha_free_vendored(&cf->ncha);
 }
 
 
@@ -117,12 +117,12 @@ static int xdl_classify_record(unsigned int pass, xdlclassifier_t *cf, xrecord_t
 	hi = (long) XDL_HASHLONG(rec->ha, cf->hbits);
 	for (rcrec = cf->rchash[hi]; rcrec; rcrec = rcrec->next)
 		if (rcrec->ha == rec->ha &&
-				xdl_recmatch(rcrec->line, rcrec->size,
+				xdl_recmatch_vendored(rcrec->line, rcrec->size,
 					rec->ptr, rec->size))
 			break;
 
 	if (!rcrec) {
-		if (!(rcrec = xdl_cha_alloc(&cf->ncha))) {
+		if (!(rcrec = xdl_cha_alloc_vendored(&cf->ncha))) {
 
 			return -1;
 		}
@@ -256,13 +256,13 @@ static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, int64_t narec,
 	rhash = NULL;
 	recs = NULL;
 
-	if (xdl_cha_init(&xdf->rcha, sizeof(xrecord_t), narec / 4 + 1) < 0)
+	if (xdl_cha_init_vendored(&xdf->rcha, sizeof(xrecord_t), narec / 4 + 1) < 0)
 		goto abort;
 	if (!(recs = (xrecord_t **) xdl_malloc(narec * sizeof(xrecord_t *))))
 		goto abort;
 
 	{
-		hbits = xdl_hashbits(narec);
+		hbits = xdl_hashbits_vendored(narec);
 		hsize = ((uint64_t)1) << hbits;
 		if (!(rhash = (xrecord_t **) xdl_malloc(hsize * sizeof(xrecord_t *))))
 			goto abort;
@@ -273,14 +273,14 @@ static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, int64_t narec,
 	if ((cur = blk = xdl_mmfile_first_vendored(mf, &bsize)) != NULL) {
 		for (top = blk + bsize; cur < top; ) {
 			prev = cur;
-			hav = xdl_hash_record(&cur, top);
+			hav = xdl_hash_record_vendored(&cur, top);
 			if (nrec >= narec) {
 				narec *= 2;
 				if (!(rrecs = (xrecord_t **) xdl_realloc(recs, narec * sizeof(xrecord_t *))))
 					goto abort;
 				recs = rrecs;
 			}
-			if (!(crec = xdl_cha_alloc(&xdf->rcha)))
+			if (!(crec = xdl_cha_alloc_vendored(&xdf->rcha)))
 				goto abort;
 			crec->ptr = prev;
 			crec->size = (long) (cur - prev);
@@ -320,7 +320,7 @@ abort:
 	xdl_free(rchg);
 	xdl_free(rhash);
 	xdl_free(recs);
-	xdl_cha_free(&xdf->rcha);
+	xdl_cha_free_vendored(&xdf->rcha);
 	return -1;
 }
 
@@ -332,13 +332,13 @@ static void xdl_free_ctx(xdfile_t *xdf) {
 	xdl_free(xdf->rchg - 1);
 	xdl_free(xdf->ha);
 	xdl_free(xdf->recs);
-	xdl_cha_free(&xdf->rcha);
+	xdl_cha_free_vendored(&xdf->rcha);
 }
 
 /* Reserved lines for trimming, to leave room for shifting */
 #define TRIM_RESERVED_LINES 100
 
-int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
+int xdl_prepare_env_vendored(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		    xdfenv_t *xe) {
 	int64_t enl1, enl2, sample;
 	mmfile_t tmf1, tmf2;
@@ -348,8 +348,8 @@ int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 
 	sample = XDL_GUESS_NLINES1;
 
-	enl1 = xdl_guess_lines(mf1, sample) + 1;
-	enl2 = xdl_guess_lines(mf2, sample) + 1;
+	enl1 = xdl_guess_lines_vendored(mf1, sample) + 1;
+	enl2 = xdl_guess_lines_vendored(mf2, sample) + 1;
 
 	if (xdl_init_classifier(&cf, enl1 + enl2 + 1, xpp->flags) < 0)
 		return -1;
@@ -381,7 +381,7 @@ int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 }
 
 
-void xdl_free_env(xdfenv_t *xe) {
+void xdl_free_env_vendored(xdfenv_t *xe) {
 
 	xdl_free_ctx(&xe->xdf2);
 	xdl_free_ctx(&xe->xdf1);
@@ -465,7 +465,7 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 	dis1 = dis;
 	dis2 = dis1 + xdf1->nrec + 1;
 
-	if ((mlim = xdl_bogosqrt(xdf1->nrec)) > XDL_MAX_EQLIMIT)
+	if ((mlim = xdl_bogosqrt_vendored(xdf1->nrec)) > XDL_MAX_EQLIMIT)
 		mlim = XDL_MAX_EQLIMIT;
 	for (i = xdf1->dstart, recs = &xdf1->recs[xdf1->dstart]; i <= xdf1->dend; i++, recs++) {
 		rcrec = cf->rcrecs[(*recs)->ha];
@@ -473,7 +473,7 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 		dis1[i] = (nm == 0) ? 0: (nm >= mlim) ? 2: 1;
 	}
 
-	if ((mlim = xdl_bogosqrt(xdf2->nrec)) > XDL_MAX_EQLIMIT)
+	if ((mlim = xdl_bogosqrt_vendored(xdf2->nrec)) > XDL_MAX_EQLIMIT)
 		mlim = XDL_MAX_EQLIMIT;
 	for (i = xdf2->dstart, recs = &xdf2->recs[xdf2->dstart]; i <= xdf2->dend; i++, recs++) {
 		rcrec = cf->rcrecs[(*recs)->ha];
