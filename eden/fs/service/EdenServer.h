@@ -658,10 +658,8 @@ class EdenServer : private TakeoverHandler {
       "check_lock_validity"};
   PeriodicFnTask<&EdenServer::flushStatsNow> flushStatsTask_{this,
                                                              "flush_stats"};
-#ifndef _WIN32
   PeriodicFnTask<&EdenServer::reportMemoryStats> memoryStatsTask_{this,
                                                                   "mem_stats"};
-#endif
   PeriodicFnTask<&EdenServer::manageLocalStore> localStoreTask_{this,
                                                                 "local_store"};
 

@@ -24,6 +24,7 @@
 #endif
 
 #ifdef _WIN32
+#include <psapi.h> // @manual
 #include "eden/fs/win/utils/stub.h" // @manual
 #endif
 
@@ -51,6 +52,29 @@ optional<MemoryStats> readMemoryStatsApple() {
   return ms;
 }
 #endif
+
+#ifdef _WIN32
+optional<MemoryStats> readMemoryStatsWin() {
+  HANDLE proc = GetCurrentProcess();
+  PROCESS_MEMORY_COUNTERS memoryCounters{};
+
+  if (!GetProcessMemoryInfo(proc, &memoryCounters, sizeof(memoryCounters))) {
+    return std::nullopt;
+  }
+
+  MEMORYSTATUSEX memStatus{};
+  memStatus.dwLength = sizeof(memStatus);
+  if (!GlobalMemoryStatusEx(&memStatus)) {
+    return std::nullopt;
+  }
+
+  MemoryStats ms;
+  ms.vsize = memStatus.ullTotalVirtual - memStatus.ullAvailVirtual;
+  ms.resident = memoryCounters.WorkingSetSize;
+
+  return ms;
+}
+#endif
 } // namespace
 
 namespace facebook {
@@ -61,7 +85,7 @@ optional<MemoryStats> readMemoryStats() {
 #ifdef __APPLE__
   return readMemoryStatsApple();
 #elif _WIN32
-  NOT_IMPLEMENTED();
+  return readMemoryStatsWin();
 #else
   return readStatmFile("/proc/self/statm");
 #endif
@@ -101,7 +125,6 @@ optional<MemoryStats> parseStatmFile(StringPiece data, size_t pageSize) {
 
   return stats;
 }
-#endif
 
 std::string& trim(std::string& str, const std::string& delim) {
   str.erase(0, str.find_first_not_of(delim));
@@ -122,7 +145,6 @@ std::pair<std::string, std::string> getKeyValuePair(
   return result;
 }
 
-#ifndef _WIN32
 std::vector<std::unordered_map<std::string, std::string>> parseProcSmaps(
     std::istream& input) {
   std::vector<std::unordered_map<std::string, std::string>> entryList;
@@ -170,9 +192,9 @@ std::vector<std::unordered_map<std::string, std::string>> loadProcSmaps(
   return std::vector<std::unordered_map<std::string, std::string>>();
 }
 
-std::optional<uint64_t> calculatePrivateBytes(
+std::optional<size_t> calculatePrivateBytes(
     std::vector<std::unordered_map<std::string, std::string>> smapsListOfMaps) {
-  uint64_t count{0};
+  size_t count{0};
   for (auto currentMap : smapsListOfMaps) {
     auto iter = currentMap.find("Private_Dirty");
     if (iter != currentMap.end()) {
@@ -201,10 +223,8 @@ std::optional<uint64_t> calculatePrivateBytes(
 }
 #endif
 
-std::optional<uint64_t> calculatePrivateBytes() {
-#ifdef _WIN32
-  NOT_IMPLEMENTED();
-#else
+std::optional<size_t> calculatePrivateBytes() {
+#ifndef _WIN32
   try {
     std::ifstream input(kLinuxProcSmapsPath.data());
     return calculatePrivateBytes(parseProcSmaps(input));
@@ -212,6 +232,8 @@ std::optional<uint64_t> calculatePrivateBytes() {
     XLOG(WARN) << "Failed to parse file " << kLinuxProcSmapsPath << ex.what();
     return std::nullopt;
   }
+#else
+  return std::nullopt;
 #endif
 }
 } // namespace proc_util

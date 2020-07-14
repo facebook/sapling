@@ -601,10 +601,8 @@ void EdenServer::startPeriodicTasks() {
   // the time series & histogram buckets
   flushStatsTask_.updateInterval(1s, /*splay=*/false);
 
-#ifndef _WIN32
   // Report memory usage stats once every 30 seconds
   memoryStatsTask_.updateInterval(30s);
-#endif
   auto config = serverState_->getReloadableConfig().getEdenConfig();
   updatePeriodicTaskIntervals(*config);
 
@@ -1836,7 +1834,6 @@ void EdenServer::flushStatsNow() {
 }
 
 void EdenServer::reportMemoryStats() {
-#ifndef _WIN32
   constexpr folly::StringPiece kRssBytes{"memory_vm_rss_bytes"};
 
   auto memoryStats = facebook::eden::proc_util::readMemoryStats();
@@ -1852,9 +1849,6 @@ void EdenServer::reportMemoryStats() {
     fb303::ServiceData::get()->addStatValue(
         kRssBytes, memoryStats->resident, fb303::AVG);
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServer::manageLocalStore() {

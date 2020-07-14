@@ -46,6 +46,15 @@ struct MemoryStats {
 std::optional<MemoryStats> readMemoryStats();
 
 /**
+ * Calculate the private bytes used by the eden process. The calculation
+ * is done by loading, parsing and summing values in /proc/self/smaps file.
+ * @return memory usage in bytes or 0 if the value could not be determined.
+ * On non-linux platforms, 0 will be returned.
+ */
+std::optional<size_t> calculatePrivateBytes();
+
+#ifndef _WIN32
+/**
  * Read a /proc/<pid>/statm file and return the results as a MemoryStats object.
  *
  * Returns std::nullopt if an error occurs reading or parsing the data.
@@ -101,20 +110,14 @@ std::vector<std::unordered_map<std::string, std::string>> loadProcSmaps(
     folly::StringPiece procSmapsPath);
 
 /**
- * Calculate the private bytes used by the eden process. The calculation
- * is done by loading, parsing and summing values in /proc/self/smaps file.
- * @return memory usage in bytes or 0 if the value could not be determined.
- * On non-linux platforms, 0 will be returned.
- */
-std::optional<uint64_t> calculatePrivateBytes();
-
-/**
  * Calculate the private byte count based on passed vector of maps.
  * Intended for use by calculatePrivateBytes().
  * @see parseProcSmaps to create the map.
  */
-std::optional<uint64_t> calculatePrivateBytes(
+std::optional<size_t> calculatePrivateBytes(
     std::vector<std::unordered_map<std::string, std::string>> smapsListOfMaps);
+
+#endif
 
 } // namespace proc_util
 } // namespace eden
