@@ -120,6 +120,8 @@ Configs:
     ``remotefilelog.userustpackstore`` use the Rust PackStore.
 
     ``remotefilelog.cachekey`` cache key prefix to use.
+
+    ``edenapi.url`` URL of the EdenAPI server.
 """
 from __future__ import absolute_import
 
@@ -128,6 +130,7 @@ import time
 import traceback
 from contextlib import contextmanager
 
+from bindings import edenapi
 from edenscm.mercurial import (
     archival,
     bundle2,
@@ -202,6 +205,7 @@ configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
 configitem("remotefilelog", "getpackversion", default=1)
 configitem("remotefilelog", "commitsperrepack", default=100)
+configitem("edenapi", "url", default=None)
 
 testedwith = "ships-with-fb-hgext"
 
@@ -377,6 +381,10 @@ def setupclient(ui, repo):
 
     shallowrepo.wraprepo(repo)
     repo.store = shallowstore.wrapstore(repo.store)
+
+    repo.edenapi = None
+    if ui.config("edenapi", "url"):
+        repo.edenapi = edenapi.client(ui._rcfg._rcfg)
 
 
 clientonetime = False
