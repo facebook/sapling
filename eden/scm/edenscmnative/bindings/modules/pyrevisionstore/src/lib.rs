@@ -940,11 +940,23 @@ impl ExtractInnerRef for contentstore {
 py_class!(class metadatastore |py| {
     data store: Arc<MetadataStore>;
 
-    def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore, memcache: Option<memcachestore>) -> PyResult<metadatastore> {
+    def __new__(_cls,
+        path: Option<PyPathBuf>,
+        config: config,
+        remote: pyremotestore,
+        memcache: Option<memcachestore>,
+        edenapi: Option<edenapifilestore> = None
+    ) -> PyResult<metadatastore> {
         let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);
 
-        let mut builder = MetadataStoreBuilder::new(&config).remotestore(remotestore);
+        let mut builder = MetadataStoreBuilder::new(&config);
+
+        builder = if let Some(edenapi) = edenapi {
+            builder.remotestore(edenapi.extract_inner(py))
+        } else {
+            builder.remotestore(remotestore)
+        };
 
         builder = if let Some(path) = path {
             builder.local_path(path.as_path())
