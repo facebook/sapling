@@ -390,6 +390,11 @@ def dispatch(req):
     else:
         ferr = util.stderr
 
+    # uiconfig tracks what dynamicconfigs have been generated to avoid duplicate
+    # work. Let's clear it during initial dispatch so we ensure chg doesn't
+    # accidentally keep it permanently loaded.
+    uiconfig.bggenerated.clear()
+
     try:
         if not req.ui:
             req.ui = uimod.ui.load()

@@ -554,6 +554,16 @@ def parselist(value):
         return value
 
 
+# Tracks which dynamicconfig paths have been background generated so we can
+# avoid spawning the generator twice. Ideally this wouldn't be necessary, or at
+# least we should be able to tie the "have we kicked off this generation" to the
+# repo object that the config belongs to. Unfortunately, Mercurial loads configs
+# before the repo object is even created, so there's not a nice place to record
+# what we've already generated for this command. Hence the awkward global
+# variable.
+bggenerated = set()
+
+
 def loaddynamicconfig(ui, path):
     if ui.configbool("configs", "loaddynamicconfig"):
         sharedpathfile = os.path.join(path, "sharedpath")
@@ -609,7 +619,13 @@ def loaddynamicconfig(ui, path):
                 # debugdynamicconfig kicking itself off, or doing it via
                 # commands spawned from the telemetry wrapper.
                 env["HG_DEBUGDYNAMICCONFIG"] = "1"
-                runbgcommand(["hg", "--cwd", path, "debugdynamicconfig"], env)
+                # Avoid triggering background generation twice for the same
+                # path. This often happens because the ui config is loaded
+                # twice, once during dispatch before the repo is instantiated,
+                # and once during repo instantiation.
+                if path not in bggenerated:
+                    bggenerated.add(path)
+                    runbgcommand(["hg", "--cwd", path, "debugdynamicconfig"], env)
 
 
 def logages(ui, configpath, cachepath):
