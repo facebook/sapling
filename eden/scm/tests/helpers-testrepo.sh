@@ -36,22 +36,16 @@ cat >> "$HGRCPATH" << EOF
 evolution = createmarkers
 EOF
 
-# Use the system hg environment if the bundled hg can't read the repository with
-# no warning nor error.
-if [ -n "`hg files --cwd "$TESTDIR/" 2>&1 >/dev/null`" ]; then
-    testrepohgenv () {
-        syshgenv
-    }
-else
-    testrepohgenv () {
-        # No need to do anything in this case.
-        :
-    }
-fi
+# Unconditionally use the system hg to avoid auto migration logic from
+# the in-repo hg.
+testrepohgenv () {
+    syshgenv
+}
 
 testrepohg () {
     (
         testrepohgenv
-        exec hg "$@"
+        # Silent potential stderr like "remove: served by Mononoke".
+        exec hg "$@" 2>/dev/null
     )
 }
