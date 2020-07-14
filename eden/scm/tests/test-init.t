@@ -28,6 +28,7 @@ creating 'local'
   dotencode
   fncache
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate
@@ -64,6 +65,7 @@ creating repo with format.usestore=false
   $ hg --config format.usestore=false init old
   $ checknewrepo old
   generaldelta
+  lz4revlog
   revlogv1
   treestate
 
@@ -74,6 +76,7 @@ creating repo with format.usefncache=false
   store created
   00changelog.i created
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate
@@ -86,6 +89,7 @@ creating repo with format.dotencode=false
   00changelog.i created
   fncache
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate
@@ -98,6 +102,7 @@ creating repo with format.dotencode=false
   00changelog.i created
   dotencode
   fncache
+  lz4revlog
   revlogv1
   store
   treestate
@@ -211,6 +216,7 @@ creating 'local/sub/repo'
   dotencode
   fncache
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate
@@ -230,6 +236,7 @@ init should (for consistency with clone) expand the url
   dotencode
   fncache
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate
@@ -245,6 +252,7 @@ verify that clone also expand urls
   dotencode
   fncache
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate

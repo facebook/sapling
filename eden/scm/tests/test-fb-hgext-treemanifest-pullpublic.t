@@ -28,7 +28,7 @@ Clone it
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2385},
+                        read : { bytes : 2405},
                         write : { bytes : 1045}}}}
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
@@ -76,7 +76,7 @@ Pull exactly up to d into the client
   adding file changes
   added 2 changesets with 0 changes to 0 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1115},
+                        read : { bytes : 1125},
                         write : { bytes : 732}}}}
 
 Test error message about MissingNodesError

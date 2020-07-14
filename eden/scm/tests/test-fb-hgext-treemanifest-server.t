@@ -218,7 +218,7 @@ Test stripping trees
   $ hg debugindex .hg/store/meta/subdir/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
-       1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
+       1        44      55      0       2 126c4ddee02e bc0c2c938b92 000000000000
   $ hg debugstrip -r tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugindex .hg/store/00manifesttree.i
@@ -243,17 +243,17 @@ Test stripping merge commits where filelogs arent affected
   $ hg debugindex .hg/store/meta/subdir/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
-       1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
-       2        98      54      0       3 abeda9251d1d bc0c2c938b92 000000000000
-       3       152      54      2       4 d1018f351d1e abeda9251d1d 126c4ddee02e
+       1        44      55      0       2 126c4ddee02e bc0c2c938b92 000000000000
+       2        99      55      0       3 abeda9251d1d bc0c2c938b92 000000000000
+       3       154      55      2       4 d1018f351d1e abeda9251d1d 126c4ddee02e
 - Verify rev 3 (from the merge commit) is gone after the strip
   $ hg debugstrip -r tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugindex .hg/store/meta/subdir/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
-       1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
-       2        98      54      0       3 abeda9251d1d bc0c2c938b92 000000000000
+       1        44      55      0       2 126c4ddee02e bc0c2c938b92 000000000000
+       2        99      55      0       3 abeda9251d1d bc0c2c938b92 000000000000
   $ hg debugstrip -qr 'children(.^)'
   $ rm -rf .hg
   $ cp -R $TESTTMP/backup.hg .hg

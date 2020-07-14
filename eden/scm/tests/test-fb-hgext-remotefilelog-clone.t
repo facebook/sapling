@@ -28,6 +28,7 @@
   dotencode
   fncache
   generaldelta
+  lz4revlog
   remotefilelog
   revlogv1
   store
@@ -58,6 +59,7 @@
   dotencode
   fncache
   generaldelta
+  lz4revlog
   remotefilelog
   revlogv1
   store
@@ -106,6 +108,7 @@ check its contents separately.
   dotencode
   fncache
   generaldelta
+  lz4revlog
   remotefilelog
   revlogv1
   store

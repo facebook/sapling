@@ -39,7 +39,7 @@ Test with the merge on 3 having the rename on the local parent
   $ hg debugindex bar
      rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
        0         0      77  .....       2 d35118874825 000000000000 000000000000 (re)
-       1        77      76  .....       3 5345f5ab8abd 000000000000 d35118874825 (re)
+       1        77      80      0       3 5345f5ab8abd 000000000000 d35118874825
 #endif
 
   $ hg debugrename bar
@@ -94,9 +94,9 @@ This should use bar@rev2 as the ancestor:
   $ hg debugindex bar
      rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
        0         0      77  .....       2 d35118874825 000000000000 000000000000 (re)
-       1        77      76  .....       3 5345f5ab8abd 000000000000 d35118874825 (re)
-       2       153       7  .....       4 ff4b45017382 d35118874825 000000000000 (re)
-       3       160      13  .....       5 3701b4893544 ff4b45017382 5345f5ab8abd (re)
+       1        77      80      0       3 5345f5ab8abd 000000000000 d35118874825
+       2       157       7     -1       4 ff4b45017382 d35118874825 000000000000
+       3       164      13     -1       5 3701b4893544 ff4b45017382 5345f5ab8abd
 #endif
 
 Same thing, but with the merge on 3 having the rename
@@ -129,7 +129,7 @@ on the remote parent:
   $ hg debugindex bar
      rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
        0         0      77  .....       2 d35118874825 000000000000 000000000000 (re)
-       1        77      76  .....       3 5345f5ab8abd 000000000000 d35118874825 (re)
+       1        77      80      0       3 5345f5ab8abd 000000000000 d35118874825
 #endif
 
   $ hg debugrename bar
@@ -184,9 +184,9 @@ This should use bar@rev2 as the ancestor:
   $ hg debugindex bar
      rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
        0         0      77  .....       2 d35118874825 000000000000 000000000000 (re)
-       1        77      76  .....       3 5345f5ab8abd 000000000000 d35118874825 (re)
-       2       153       7  .....       4 ff4b45017382 d35118874825 000000000000 (re)
-       3       160      13  .....       5 3701b4893544 ff4b45017382 5345f5ab8abd (re)
+       1        77      80      0       3 5345f5ab8abd 000000000000 d35118874825
+       2       157       7     -1       4 ff4b45017382 d35118874825 000000000000
+       3       164      13     -1       5 3701b4893544 ff4b45017382 5345f5ab8abd
 #endif
 
   $ cd ..

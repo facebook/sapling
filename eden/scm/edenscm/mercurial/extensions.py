@@ -88,6 +88,7 @@ DEFAULT_EXTENSIONS = {
     "debugshell",
     "errorredirect",
     "githelp",
+    "lz4revlog",
     "mergedriver",
     "progressfile",
     "sampling",

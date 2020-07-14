@@ -9,6 +9,7 @@ A new repository uses zlib storage, which doesn't need a requirement
   dotencode
   fncache
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate
@@ -16,8 +17,7 @@ A new repository uses zlib storage, which doesn't need a requirement
   $ touch foo
   $ hg -q commit -A -m 'initial commit with a lot of repeated repeated repeated text to trigger compression'
   $ hg debugrevlog -c | grep 0x78
-      0x78 (x)  :   1 (100.00%)
-      0x78 (x)  : 110 (100.00%)
+  [1]
 
   $ cd ..
 
@@ -49,6 +49,7 @@ A requirement specifying an unknown compression engine results in bail
   exp-compression-zstd
   fncache
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate
@@ -57,8 +58,7 @@ A requirement specifying an unknown compression engine results in bail
   $ hg -q commit -A -m 'initial commit with a lot of repeated repeated repeated text'
 
   $ hg debugrevlog -c | grep 0x28
-      0x28      :  1 (100.00%)
-      0x28      : 98 (100.00%)
+  [1]
 
   $ cd ..
 
@@ -73,12 +73,12 @@ with that engine or a requirement
   dotencode
   fncache
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate
 
   $ hg debugrevlog -c | grep 0x78
-      0x78 (x)  :   2 (100.00%)
-      0x78 (x)  : 199 (100.00%)
+  [1]
 
 #endif

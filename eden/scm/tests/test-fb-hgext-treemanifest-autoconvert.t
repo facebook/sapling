@@ -23,7 +23,7 @@
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 1983},
+                        read : { bytes : 2003},
                         write : { bytes : 1018}}}}
   $ cd client
   $ cat >> .hg/hgrc <<EOF
@@ -49,7 +49,7 @@ Test auto creating trees for merge commit
   adding file changes
   added 2 changesets with 0 changes to 0 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1126},
+                        read : { bytes : 1136},
                         write : { bytes : 709}}}}
   $ hg manifest -r tip
   fetching tree '' 13532a59874531175abc845749c0491b36effb18, found via 92f4ca0e667c
@@ -60,7 +60,7 @@ Test auto creating trees for merge commit
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 872},
+                        read : { bytes : 882},
                         write : { bytes : 222}}}}
   $ hg debughistorypack $TESTTMP/hgcache/master/packs/manifests/*.histidx
   

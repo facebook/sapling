@@ -270,6 +270,7 @@ Test extension help:
        errorredirect
                      redirect error message
        githelp       try mapping git commands to Mercurial commands
+       lz4revlog     store revlog deltas using lz4 compression
        mergedriver   custom merge drivers for autoresolved files
        progressfile  allows users to have JSON progress bar information written
                      to a path
@@ -340,7 +341,6 @@ Test extension help:
        logginghelper
                      this extension logs different pieces of information that
                      will be used
-       lz4revlog     store revlog deltas using lz4 compression
        memcommit     make commits without a working copy
        morestatus    make status give a bit more context
        myparent

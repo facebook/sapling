@@ -40,7 +40,7 @@
   $ hg clone ssh://user@dummy/master client --noupdate
   streaming all changes
   5 files to transfer, * of data (glob)
-  transferred 1.94 KB in * seconds (*) (glob)
+  transferred 2.01 KB in 0.0 seconds (1.97 MB/sec)
   searching for changes
   no changes found
   $ cd client

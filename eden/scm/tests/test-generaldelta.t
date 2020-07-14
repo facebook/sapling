@@ -107,22 +107,22 @@ delta coming from the server base delta server are not recompressed.
 #if common-zlib
   $ hg -R repo debugindex -m
      rev    offset  length   base linkrev nodeid       p1           p2
-       0         0     104      0       0 cef96823c800 000000000000 000000000000
-       1       104      57      0       1 58ab9a8d541d cef96823c800 000000000000
-       2       161      57      0       2 134fdc6fd680 cef96823c800 000000000000
-       3       218     104      3       3 723508934dad cef96823c800 000000000000
+       0         0     136      0       0 cef96823c800 000000000000 000000000000
+       1       136      57      0       1 58ab9a8d541d cef96823c800 000000000000
+       2       193      57      0       2 134fdc6fd680 cef96823c800 000000000000
+       3       250     136      3       3 723508934dad cef96823c800 000000000000
   $ hg -R usegd debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0     104     -1       0 cef96823c800 000000000000 000000000000
-       1       104      57      0       1 58ab9a8d541d cef96823c800 000000000000
-       2       161      57      1       2 134fdc6fd680 cef96823c800 000000000000
-       3       218      57      0       3 723508934dad cef96823c800 000000000000
+       0         0     136     -1       0 cef96823c800 000000000000 000000000000
+       1       136      57      0       1 58ab9a8d541d cef96823c800 000000000000
+       2       193      57      1       2 134fdc6fd680 cef96823c800 000000000000
+       3       250      57      0       3 723508934dad cef96823c800 000000000000
   $ hg -R full debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0     104     -1       0 cef96823c800 000000000000 000000000000
-       1       104      57      0       1 58ab9a8d541d cef96823c800 000000000000
-       2       161      57      0       2 134fdc6fd680 cef96823c800 000000000000
-       3       218      57      0       3 723508934dad cef96823c800 000000000000
+       0         0     136     -1       0 cef96823c800 000000000000 000000000000
+       1       136      57      0       1 58ab9a8d541d cef96823c800 000000000000
+       2       193      57      0       2 134fdc6fd680 cef96823c800 000000000000
+       3       250      57      0       3 723508934dad cef96823c800 000000000000
 #endif
 
 Test format.aggressivemergedeltas
@@ -145,9 +145,9 @@ Test format.aggressivemergedeltas
 #if common-zlib
   $ hg debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      59     -1       0 8dde941edb6e 000000000000 000000000000
-       1        59      61      0       1 315c023f341d 000000000000 000000000000
-       2       120      65      1       2 2ab389a983eb 315c023f341d 8dde941edb6e
+       0         0      75     -1       0 8dde941edb6e 000000000000 000000000000
+       1        75      69      0       1 315c023f341d 000000000000 000000000000
+       2       144      80      1       2 2ab389a983eb 315c023f341d 8dde941edb6e
 #endif
 
   $ hg debugstrip -q -r .
@@ -159,9 +159,9 @@ Test format.aggressivemergedeltas
 #if common-zlib
   $ hg debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      59     -1       0 8dde941edb6e 000000000000 000000000000
-       1        59      61      0       1 315c023f341d 000000000000 000000000000
-       2       120      62      0       2 2ab389a983eb 315c023f341d 8dde941edb6e
+       0         0      75     -1       0 8dde941edb6e 000000000000 000000000000
+       1        75      69      0       1 315c023f341d 000000000000 000000000000
+       2       144      68      0       2 2ab389a983eb 315c023f341d 8dde941edb6e
 #endif
 
 Test that strip bundle use bundle2

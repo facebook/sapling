@@ -250,19 +250,19 @@ packed1 is produced properly
 
   $ hg -R test debugcreatestreamclonebundle packed.hg
   writing * bytes for 7 files (glob)
-  bundle requirements: generaldelta, revlogv1
+  bundle requirements: generaldelta, lz4revlog, revlogv1
 
 #if common-zlib
   $ f -B 64 --size --sha1 --hexdump packed.hg
-  packed.hg: size=2844, sha1=a6e24597a941d54d2f7bf6ac4f1364d1b3a0058a
+  packed.hg: size=2799, sha1=10fe38eb3815c6a1ffbcec08867c2b64d5a021b3
   0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 07 00 00 |HGS1UN..........|
-  0010: 00 00 00 00 0a 68 00 16 67 65 6e 65 72 61 6c 64 |.....h..generald|
-  0020: 65 6c 74 61 2c 72 65 76 6c 6f 67 76 31 00 64 61 |elta,revlogv1.da|
-  0030: 74 61 2f 61 64 69 66 66 65 72 65 6e 74 66 69 6c |ta/adifferentfil|
+  0010: 00 00 00 00 0a 31 00 20 67 65 6e 65 72 61 6c 64 |.....1. generald|
+  0020: 65 6c 74 61 2c 6c 7a 34 72 65 76 6c 6f 67 2c 72 |elta,lz4revlog,r|
+  0030: 65 76 6c 6f 67 76 31 00 64 61 74 61 2f 61 64 69 |evlogv1.data/adi|
 #endif
 
   $ hg debugbundle --spec packed.hg
-  none-packed1;requirements%3Dgeneraldelta%2Crevlogv1
+  none-packed1;requirements%3Dgeneraldelta%2Clz4revlog%2Crevlogv1
 
 generaldelta requirement is not listed in stream clone bundles unless used
 
@@ -273,17 +273,17 @@ generaldelta requirement is not listed in stream clone bundles unless used
   $ cd ..
   $ hg -R testnongd debugcreatestreamclonebundle packednongd.hg
   writing 301 bytes for 4 files
-  bundle requirements: revlogv1
+  bundle requirements: lz4revlog, revlogv1
 
   $ f -B 64 --size --sha1 --hexdump packednongd.hg
-  packednongd.hg: size=399, sha1=6388d5d4129a9a8ad86c17e8df26055dd2787cde
+  packednongd.hg: size=409, sha1=46b7cfc1514a962c7d13c00ffc26d7fe2128c36c
   0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 04 00 00 |HGS1UN..........|
-  0010: 00 00 00 00 01 2d 00 09 72 65 76 6c 6f 67 76 31 |.....-..revlogv1|
-  0020: 00 64 61 74 61 2f 66 6f 6f 2e 69 00 36 34 0a 00 |.data/foo.i.64..|
-  0030: 01 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0010: 00 00 00 00 01 2d 00 13 6c 7a 34 72 65 76 6c 6f |.....-..lz4revlo|
+  0020: 67 2c 72 65 76 6c 6f 67 76 31 00 64 61 74 61 2f |g,revlogv1.data/|
+  0030: 66 6f 6f 2e 69 00 36 34 0a 00 01 00 01 00 00 00 |foo.i.64........|
 
   $ hg debugbundle --spec packednongd.hg
-  none-packed1;requirements%3Drevlogv1
+  none-packed1;requirements%3Dlz4revlog%2Crevlogv1
 
 Unpacking packed1 bundles with "hg unbundle" isn't allowed
 
@@ -327,7 +327,7 @@ transaction)
   7 files to transfer, * of data (glob)
   pretxnopen: 000000000000
   pretxnclose: aa35859c02ea
-  transferred 2.60 KB in *.* seconds (* */sec) (glob)
+  transferred 2.55 KB in 0.0 seconds (2.49 MB/sec)
   txnclose: aa35859c02ea
 
 (for safety, confirm visibility of streamclone-ed changes by another

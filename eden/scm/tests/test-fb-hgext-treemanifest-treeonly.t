@@ -372,12 +372,12 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
        1        50      50     -1       1 7e265a5dc522 5fbe397e5ac6 000000000000
-       2       100      62      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
+       2       100      63      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
   $ hg debugindex .hg/store/00manifesttree.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
        1        50      50     -1       1 7e265a5dc522 5fbe397e5ac6 000000000000
-       2       100      62      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
+       2       100      63      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
 - Verify the manifest data is accessible
   $ hg log -r tip --stat
   changeset:   2:dad1be784127
@@ -488,10 +488,10 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
   remote: added 4 changesets with 4 changes to 2 files
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg --cwd ../master debugindex .hg/store/00manifesttree.i | tail -4
-       4       223      55      1       4 14bce01d0d73 7e265a5dc522 000000000000
-       5       278      61      4       5 5f15f80c2b54 14bce01d0d73 000000000000
-       6       339      80     -1       6 13c9facfa409 5f15f80c2b54 000000000000
-       7       419      60      6       7 c760d8ba4646 13c9facfa409 000000000000
+       4       224      55      1       4 14bce01d0d73 7e265a5dc522 000000000000
+       5       279      61      4       5 5f15f80c2b54 14bce01d0d73 000000000000
+       6       340      93     -1       6 13c9facfa409 5f15f80c2b54 000000000000
+       7       433      61      6       7 c760d8ba4646 13c9facfa409 000000000000
   $ hg --cwd ../master debugindex .hg/store/meta/subdir/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000

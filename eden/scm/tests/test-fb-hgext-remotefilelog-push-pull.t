@@ -19,11 +19,11 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
-                        read : { bytes : 1519},
+                        read : { bytes : 1539},
                         write : { bytes : 830}}}}
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 904},
+                        read : { bytes : 914},
                         write : { bytes : 683}}}}
 
 We should see the remotefilelog capability here, which advertises that
@@ -51,7 +51,7 @@ the server supports our custom getfiles method.
   adding file changes
   added 1 changesets with 0 changes to 0 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1020},
+                        read : { bytes : 1030},
                         write : { bytes : 660}}}}
 
   $ hg up
@@ -59,7 +59,7 @@ the server supports our custom getfiles method.
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 1,
                         getpack : { calls : 1,  revs : 1},
-                        read : { bytes : 615},
+                        read : { bytes : 625},
                         write : { bytes : 147}}}}
 
   $ cat y
@@ -87,7 +87,7 @@ the server supports our custom getfiles method.
   added 3 changesets with 4 changes to 3 files
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 3,  revs : 3},
-                        read : { bytes : 1383},
+                        read : { bytes : 1403},
                         write : { bytes : 337}}}}
 
 # pull from shallow to shallow (ssh)
@@ -103,11 +103,11 @@ the server supports our custom getfiles method.
   added 3 changesets with 4 changes to 3 files
   remote: { metrics : { ssh : { connections : 1,
   remote:                       getpack : { calls : 1,  revs : 1},
-  remote:                       read : { bytes : 615},
+  remote:                       read : { bytes : 625},
   remote:                       write : { bytes : 147}}}}
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
-                        read : { bytes : 2883},
+                        read : { bytes : 2903},
                         write : { bytes : 807}}}}
 
   $ hg up
@@ -133,7 +133,7 @@ the server supports our custom getfiles method.
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 603},
+                        read : { bytes : 613},
                         write : { bytes : 1033}}}}
 
   $ cd ../shallow2
@@ -166,7 +166,7 @@ the server supports our custom getfiles method.
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 2 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 580},
+                        read : { bytes : 590},
                         write : { bytes : 1496}}}}
 
   $ cd ../master
@@ -206,11 +206,11 @@ the server supports our custom getfiles method.
   $ hginit multimf-master
   $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 519},
+                        read : { bytes : 529},
                         write : { bytes : 602}}}}
   $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow2 -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 560},
+                        read : { bytes : 570},
                         write : { bytes : 602}}}}
   $ cd multimf-shallow
   $ echo a > a
@@ -249,7 +249,7 @@ the server supports our custom getfiles method.
   adding file changes
   added 5 changesets with 4 changes to 3 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 2952},
+                        read : { bytes : 2962},
                         write : { bytes : 701}}}}
 
   $ hg up -q 'desc(c22)'

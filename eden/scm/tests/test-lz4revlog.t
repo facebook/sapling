@@ -29,6 +29,7 @@ regular clone of an existing zlib repo should still use zlib
   dotencode
   fncache
   generaldelta
+  lz4revlog
   revlogv1
   store
   treestate

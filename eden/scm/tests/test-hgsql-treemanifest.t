@@ -294,5 +294,5 @@ Test that trees are written in linkrev order
        0         0      44     -1       0 a0c8bcbbb45c 000000000000 000000000000
        1        44      44     -1       1 23226e7a252c 000000000000 000000000000
        2        88      44     -1       2 86d7088ee657 000000000000 000000000000
-       3       132      54      2       3 6c51dc0bfc37 a0c8bcbbb45c 86d7088ee657
-       4       186      55      3       4 d2c02f8cb06c 6c51dc0bfc37 23226e7a252c
+       3       132      55      2       3 6c51dc0bfc37 a0c8bcbbb45c 86d7088ee657
+       4       187      55      3       4 d2c02f8cb06c 6c51dc0bfc37 23226e7a252c

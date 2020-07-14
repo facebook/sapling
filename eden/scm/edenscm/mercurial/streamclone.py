@@ -88,6 +88,10 @@ def canperformstreamclone(pullop, bailifbundle2supported=False):
                 _("warning: stream clone requested but server has them " "disabled\n")
             )
             return False, None
+        # This option is used by Mononoke tests.
+        if repo.ui.configbool("ui", "disable-stream-clone"):
+            repo.ui.warn(_("warning: stream clone is disabled\n"))
+            return False, None
 
         streamreqs = set(streamreqs.split(","))
         # Server requires something we don't support. Bail.

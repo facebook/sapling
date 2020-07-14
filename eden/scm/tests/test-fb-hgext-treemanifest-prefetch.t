@@ -37,15 +37,15 @@
 
   $ hgcloneshallow ssh://user@dummy/master client
   streaming all changes
-  3 files to transfer, 746 bytes of data
-  transferred 746 bytes in * seconds (*) (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  3 files to transfer, 752 bytes of data
+  transferred 752 bytes in 0.0 seconds (734 KB/sec)
   searching for changes
   no changes found
   updating to branch default
   fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
   3 trees fetched over * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
 
   $ cd master
 

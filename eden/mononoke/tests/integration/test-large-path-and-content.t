@@ -53,10 +53,9 @@ blobimport and start mononoke
 pull on repo2
 
   $ cd $TESTTMP/repo2
-  $ hgmn pull
+  $ hgmn pull --config ui.disable-stream-clone=true
   pulling from ssh://user@dummy/repo
-  warning: stream clone requested but client is missing requirements: lz4revlog
-  (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
+  warning: stream clone is disabled
   requesting all changes
   adding changesets
   adding manifests
@@ -105,10 +104,9 @@ push one more long path from repo2
 pull on repo3
 
   $ cd $TESTTMP/repo3
-  $ hgmn pull
+  $ hgmn pull --config ui.disable-stream-clone=true
   pulling from ssh://user@dummy/repo
-  warning: stream clone requested but client is missing requirements: lz4revlog
-  (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
+  warning: stream clone is disabled
   requesting all changes
   adding changesets
   adding manifests

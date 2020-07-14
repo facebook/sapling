@@ -53,9 +53,8 @@ Pull from Mononoke
   $ setconfig remotefilelog.fetchpacks=True
   $ setconfig remotefilelog.getpackversion=2
   $ setconfig extensions.pushrebase=
-  $ hgmn pull -q
-  warning: stream clone requested but client is missing requirements: lz4revlog
-  (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
+  $ hgmn pull -q --config ui.disable-stream-clone=true
+  warning: stream clone is disabled
 
 Make sure that cache is empty
   $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
@@ -78,9 +77,8 @@ Then make sure update succeeds
   $ cd $TESTTMP/repo3
   $ setconfig remotefilelog.fetchpacks=True
   $ setconfig remotefilelog.getpackversion=2
-  $ hgmn pull -q
-  warning: stream clone requested but client is missing requirements: lz4revlog
-  (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
+  $ hgmn pull -q --config ui.disable-stream-clone=true
+  warning: stream clone is disabled
   $ hgmn prefetch -r 0 -r 3 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command
   $ hg up --config paths.default=badpath 0

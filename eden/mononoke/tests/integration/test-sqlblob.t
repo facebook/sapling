@@ -205,7 +205,7 @@ to create a fileblob bookmark
 #     test-bookmark             0:3903775176ed
 
 Do a streaming clone of the repo
-  $ hgmn clone -U --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true --config extensions.lz4revlog=
+  $ hgmn clone -U --stream ssh://user@dummy/repo repo-streamclone --config extensions.treemanifest= --config remotefilelog.reponame=master --shallow --config treemanifest.treeonly=true
   fetching changelog
   2 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (* bytes/sec) (glob)

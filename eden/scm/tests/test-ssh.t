@@ -46,7 +46,7 @@ clone remote via stream
   $ hg clone --stream ssh://user@dummy/remote local-stream
   streaming all changes
   5 files to transfer, * of data (glob)
-  transferred 392 bytes in 0.0 seconds (383 KB/sec)
+  transferred 398 bytes in 0.0 seconds (389 KB/sec)
   searching for changes
   no changes found
   updating to branch default
@@ -66,7 +66,7 @@ clone bookmarks via stream
   $ hg clone --stream ssh://user@dummy/local-stream stream2
   streaming all changes
   5 files to transfer, * of data (glob)
-  transferred 392 bytes in 0.0 seconds (383 KB/sec)
+  transferred 398 bytes in 0.0 seconds (389 KB/sec)
   searching for changes
   no changes found
   updating to branch default
@@ -447,8 +447,8 @@ debug output
   running .* ".*/dummyssh" ['"]user@dummy['"] ('|")hg -R remote serve --stdio('|") (re)
   sending hello command
   sending between command
-  remote: 398
-  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch streamreqs=generaldelta,revlogv1 stream_option $USUAL_BUNDLE2_CAPS$ unbundle=HG10GZ,HG10BZ,HG10UN
+  remote: 408
+  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch streamreqs=generaldelta,lz4revlog,revlogv1 stream_option $USUAL_BUNDLE2_CAPS$ unbundle=HG10GZ,HG10BZ,HG10UN
   remote: 1
   query 1; heads
   sending batch command
