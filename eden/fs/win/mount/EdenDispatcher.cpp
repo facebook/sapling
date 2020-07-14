@@ -11,11 +11,12 @@
 #include <folly/logging/xlog.h>
 #include "ProjectedFSLib.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/model/Blob.h"
-#include "eden/fs/model/Tree.h"
+#include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/EdenError.h"
+#include "eden/fs/utils/SystemError.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
-#include "eden/fs/win/store/WinStore.h"
 #include "eden/fs/win/utils/StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
 
@@ -37,8 +38,7 @@ struct PrjAlignedBufferDeleter {
 constexpr uint32_t kMinChunkSize = 512 * 1024; // 512 KB
 constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MB
 
-EdenDispatcher::EdenDispatcher(EdenMount& mount)
-    : mount_{mount}, winStore_{mount} {
+EdenDispatcher::EdenDispatcher(EdenMount& mount) : mount_{mount} {
   XLOGF(
       INFO,
       "Creating Dispatcher mount (0x{:x}) root ({}) dispatcher (0x{:x})",
@@ -196,12 +196,21 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
 HRESULT
 EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
-    const std::wstring_view path{callbackData.FilePathName};
-    if (!winStore_.checkFileName(path)) {
-      return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-    }
+    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
 
-    return S_OK;
+    return getMount()
+        .getInode(relPath)
+        .thenValue([](const InodePtr) { return S_OK; })
+        .thenError(
+            folly::tag_t<std::system_error>{},
+            [](const std::system_error& ex) {
+              if (isEnoent(ex)) {
+                return folly::makeFuture(
+                    HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+              }
+              return folly::makeFuture<HRESULT>(ex);
+            })
+        .get();
   } catch (const std::exception&) {
     return exceptionToHResult();
   }
@@ -217,33 +226,33 @@ EdenDispatcher::getFileData(
     uint64_t byteOffset,
     uint32_t length) noexcept {
   try {
+    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
+
+    auto content = getMount().readFile(relPath);
+    const auto iobuf = folly::IOBuf::wrapBuffer(content.data(), content.size());
+
     //
     // We should return file data which is smaller than
     // our kMaxChunkSize and meets the memory alignment requirements
     // of the virtualization instance's storage device.
     //
-    auto blob = winStore_.getBlob(callbackData.FilePathName);
-    if (!blob) {
-      return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-    }
 
-    const folly::IOBuf& iobuf = blob->getContents();
     //
     // Assuming that it will not be a chain of IOBUFs.
     // TODO: The following assert fails - need to dig more into IOBuf.
     // assert(iobuf.next() == nullptr);
     //
 
-    if (iobuf.length() <= kMinChunkSize) {
+    if (iobuf->length() <= kMinChunkSize) {
       //
       // If the file is small - copy the whole file in one shot.
       //
       return readSingleFileChunk(
           callbackData.NamespaceVirtualizationContext,
           callbackData.DataStreamId,
-          iobuf,
+          *iobuf,
           /*startOffset=*/0,
-          /*writeLength=*/iobuf.length());
+          /*writeLength=*/iobuf->length());
 
     } else if (length <= kMaxChunkSize) {
       //
@@ -252,7 +261,7 @@ EdenDispatcher::getFileData(
       return readSingleFileChunk(
           callbackData.NamespaceVirtualizationContext,
           callbackData.DataStreamId,
-          iobuf,
+          *iobuf,
           /*startOffset=*/byteOffset,
           /*writeLength=*/length);
     } else {
@@ -278,7 +287,7 @@ EdenDispatcher::getFileData(
       return readMultipleFileChunks(
           callbackData.NamespaceVirtualizationContext,
           callbackData.DataStreamId,
-          iobuf,
+          *iobuf,
           /*startOffset=*/startOffset,
           /*length=*/length,
           /*chunkSize=*/chunkSize);

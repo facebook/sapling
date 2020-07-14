@@ -13,10 +13,6 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 
-#ifdef _WIN32
-#include "eden/fs/win/store/WinStore.h" // @manual
-#endif
-
 namespace facebook {
 namespace eden {
 
@@ -35,6 +31,7 @@ class RenameLock;
 class Tree;
 class TreeEntry;
 class TreeInodeDebugInfo;
+struct FileMetadata;
 enum class InvalidationRequired : bool;
 
 constexpr folly::StringPiece kDotEdenName{".eden"};

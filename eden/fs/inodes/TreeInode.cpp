@@ -45,7 +45,7 @@
 
 #ifdef _WIN32
 #include "eden/fs/inodes/win/DirList.h" // @manual
-#include "eden/fs/win/store/WinStore.h" // @manual
+#include "eden/fs/win/mount/Enumerator.h" // @manual
 #include "eden/fs/win/utils/StringConv.h" // @manual
 #else
 #include <folly/FileUtil.h>

@@ -38,7 +38,6 @@
 #else
 #include "eden/fs/inodes/win/DirList.h" // @manual
 #include "eden/fs/win/mount/FsChannel.h" // @manual
-#include "eden/fs/win/store/WinStore.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
 
@@ -84,6 +83,7 @@ class ServerState;
 class Tree;
 class TreePrefetchLease;
 class UnboundedQueueExecutor;
+struct FileMetadata;
 
 class RenameLock;
 class SharedRenameLock;

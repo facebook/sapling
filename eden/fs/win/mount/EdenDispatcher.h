@@ -15,7 +15,6 @@
 #include <map>
 #include <string>
 #include "eden/fs/win/mount/Enumerator.h"
-#include "eden/fs/win/store/WinStore.h"
 #include "eden/fs/win/utils/Guid.h"
 #include "folly/Synchronized.h"
 
@@ -94,8 +93,6 @@ class EdenDispatcher {
   EdenMount& getMount() {
     return mount_;
   }
-
-  WinStore winStore_;
 
   //
   //  This will have a list of currently active enumeration sessions

@@ -9,7 +9,6 @@
 
 #include <ProjectedFSLib.h>
 #include "eden/fs/win/mount/Enumerator.h"
-#include "eden/fs/win/store/WinStore.h"
 
 namespace facebook {
 namespace eden {

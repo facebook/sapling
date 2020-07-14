@@ -7,16 +7,54 @@
 
 #pragma once
 
-#include "folly/portability/Windows.h"
-
 #include <string>
 #include <vector>
+#include "eden/fs/model/Hash.h"
 
 namespace facebook {
 namespace eden {
 
-class WinStore;
-struct FileMetadata;
+struct FileMetadata {
+  //
+  // File name : final component
+  //
+  std::wstring name;
+
+  //
+  // isDirectory will be set only for the directories
+  // For files it will be ignored
+  //
+  bool isDirectory{false};
+
+  //
+  // File size. For directories it will ignored
+  //
+  size_t size{0};
+
+  //
+  // This is the hash we use to fetch Tree and Blob. When working
+  // with mercurial it is hg proxy hash.
+  //
+  Hash hash{};
+
+  FileMetadata(std::wstring name, bool isDir, size_t size)
+      : name(std::move(name)), isDirectory(isDir), size(size) {}
+
+  FileMetadata(std::wstring name, bool isDir, size_t size, const Hash& hash)
+      : name(std::move(name)), isDirectory(isDir), size(size), hash{hash} {}
+
+  FileMetadata() = default;
+
+  bool operator==(const FileMetadata& other) const {
+    return (
+        (name == other.name) && (isDirectory == other.isDirectory) &&
+        (size == other.size) && (hash == other.hash));
+  }
+
+  bool operator!=(const FileMetadata& other) const {
+    return !(*this == other);
+  }
+};
 
 class Enumerator {
  public:
