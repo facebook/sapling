@@ -437,7 +437,7 @@ class uihunk(patchnode):
             changedlinestr = changedline.prettystr()
             if changedline.applied:
                 hunklinelist.append(changedlinestr)
-            elif changedlinestr[0] == b"-":
+            elif changedlinestr[0:1] == b"-":
                 hunklinelist.append(b" " + changedlinestr[1:])
 
         fp.write(b"".join(self.before + hunklinelist + self.after))
@@ -485,14 +485,14 @@ class uihunk(patchnode):
         for line in self.changedlines:
             text = line.linetext
             if line.applied:
-                if text[0] == "+":
+                if text[0:1] == b"+":
                     dels.append(text[1:])
-                elif text[0] == "-":
+                elif text[0:1] == b"-":
                     adds.append(text[1:])
-            elif text[0] == "+":
+            elif text[0:1] == b"+":
                 dels.append(text[1:])
                 adds.append(text[1:])
-        hunk = ["-%s" % l for l in dels] + ["+%s" % l for l in adds]
+        hunk = [b"-%s" % l for l in dels] + [b"+%s" % l for l in adds]
         h = self._hunk
         return patchmod.recordhunk(
             h.header, h.toline, h.fromline, h.proc, h.before, hunk, h.after

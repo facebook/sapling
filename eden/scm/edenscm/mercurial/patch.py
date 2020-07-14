@@ -1052,8 +1052,8 @@ class recordhunk(object):
         that, swap fromline/toline and +/- signs while keep other things
         unchanged.
         """
-        m = {"+": "-", "-": "+", "\\": "\\"}
-        hunk = ["%s%s" % (m[l[0:1]], l[1:]) for l in self.hunk]
+        m = {b"+": b"-", b"-": b"+", b"\\": b"\\"}
+        hunk = [b"%s%s" % (m[l[0:1]], l[1:]) for l in self.hunk]
         return recordhunk(
             self.header,
             self.toline,
