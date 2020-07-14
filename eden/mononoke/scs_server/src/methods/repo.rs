@@ -125,11 +125,7 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoListBookmarksParams,
     ) -> Result<thrift::RepoListBookmarksResponse, errors::ServiceError> {
-        let limit = match check_range_and_convert(
-            "limit",
-            params.limit,
-            0..=source_control::REPO_LIST_BOOKMARKS_MAX_LIMIT,
-        )? {
+        let limit = match check_range_and_convert("limit", params.limit, 0..=10000)? {
             0 => None,
             limit => Some(limit),
         };
