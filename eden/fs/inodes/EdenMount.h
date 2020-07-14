@@ -682,15 +682,6 @@ class EdenMount {
   // ProjectedFs Asynchronous Callback Handling:
   // (https://docs.microsoft.com/en-us/windows/win32/projfs/asynchronous-callback-handling).
 
-  /**
-   * fetchFileInfo is mainly used by the ProjectedFS to fetch the file metadata.
-   * The size field contains the size from the backing repo and not the current
-   * file size. If the file is materialized then ProjectedFS will have the
-   * current file size.
-   */
-  FOLLY_NODISCARD bool fetchFileInfo(
-      const RelativePathPiece path,
-      FileMetadata& metadata);
   /*
    * readFile returns the file contents of the file. It gets the contents of the
    * file from the backing store if it's not materialized. If the file is

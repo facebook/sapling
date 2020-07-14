@@ -1489,54 +1489,6 @@ EdenMountCancelled::EdenMountCancelled()
     : std::runtime_error{"EdenMount was unmounted during initialization"} {}
 
 #ifdef _WIN32
-FOLLY_NODISCARD bool EdenMount::fetchFileInfo(
-    const RelativePathPiece path,
-    FileMetadata& metadata) {
-  TreeInodePtr treeInode = getRootInode();
-  auto parent = path.dirname();
-
-  try {
-    auto child = getInode(path).get();
-    if (child->isDir()) {
-      treeInode = child.asTreePtr();
-      metadata.isDirectory = true;
-    } else {
-      auto fileInode = child.asFilePtr();
-      metadata.isDirectory = false;
-      auto optHash = fileInode->getBlobHash();
-      if (optHash.has_value()) {
-        metadata.size =
-            getObjectStore()
-                ->getBlobSize(
-                    optHash.value(), ObjectFetchContext::getNullContext())
-                .get();
-      } else {
-        // This function is designed to handle ProjectedFS requests, and will
-        // return 0 size for materialized files. The ProjectedFS, by it's design
-        // will not request the info for materialized files. And if it does the
-        // size info will be overwritten by ProjectedFs from its cache.
-        metadata.size = 0;
-      }
-    }
-
-    auto path = child->getPath();
-    if (path.has_value()) {
-      // Ensure that the OS has a record of the canonical file name,
-      // and not just whatever case was used to lookup the file
-      metadata.name = edenToWinPath(path.value().stringPiece());
-    }
-
-    return true;
-
-  } catch (const std::system_error& ex) {
-    if (ex.code().value() == ENOENT) {
-      return false;
-    }
-    throw;
-  }
-  return false;
-}
-
 std::string EdenMount::readFile(const RelativePathPiece path) {
   auto inode = getInode(path).get();
   auto fileInode = inode.asFilePtr();

@@ -15,6 +15,7 @@
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/EdenError.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
 #include "eden/fs/win/utils/StringConv.h"
@@ -153,11 +154,37 @@ HRESULT EdenDispatcher::getEnumerationData(
 HRESULT
 EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
-    PRJ_PLACEHOLDER_INFO placeholderInfo = {};
-    FileMetadata metadata = {};
     auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
 
-    if (!mount_.fetchFileInfo(relPath.piece(), metadata)) {
+    auto metadata =
+        getMount()
+            .getInode(relPath)
+            .thenValue(
+                [](const InodePtr inode)
+                    -> folly::Future<std::optional<FileMetadata>> {
+                  return inode->stat(ObjectFetchContext::getNullContext())
+                      .thenValue([inode =
+                                      std::move(inode)](struct stat&& stat) {
+                        // Ensure that the OS has a record of the canonical file
+                        // name, and not just whatever case was used to lookup
+                        // the file
+                        auto path =
+                            edenToWinPath(inode->getPath()->stringPiece());
+                        return FileMetadata(path, inode->isDir(), stat.st_size);
+                      });
+                })
+            .thenError(
+                folly::tag_t<std::system_error>{},
+                [](const std::system_error& ex)
+                    -> folly::Future<std::optional<FileMetadata>> {
+                  if (isEnoent(ex)) {
+                    return folly::makeFuture(std::nullopt);
+                  }
+                  return folly::makeFuture<std::optional<FileMetadata>>(ex);
+                })
+            .get();
+
+    if (!metadata) {
       XLOGF(DBG6, "{} : File not Found", relPath);
       return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     }
@@ -165,17 +192,18 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
     XLOGF(
         DBG6,
         "Found {} {} size= {} process {}",
-        wideToMultibyteString(metadata.name),
-        metadata.isDirectory ? "Dir" : "File",
-        metadata.size,
+        wideToMultibyteString(metadata->name),
+        metadata->isDirectory ? "Dir" : "File",
+        metadata->size,
         wideToMultibyteString(callbackData.TriggeringProcessImageFileName));
 
-    placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDirectory;
-    placeholderInfo.FileBasicInfo.FileSize = metadata.size;
+    PRJ_PLACEHOLDER_INFO placeholderInfo = {};
+    placeholderInfo.FileBasicInfo.IsDirectory = metadata->isDirectory;
+    placeholderInfo.FileBasicInfo.FileSize = metadata->size;
 
     HRESULT result = PrjWritePlaceholderInfo(
         callbackData.NamespaceVirtualizationContext,
-        metadata.name.c_str(),
+        metadata->name.c_str(),
         &placeholderInfo,
         sizeof(placeholderInfo));
     if (FAILED(result)) {
