@@ -779,6 +779,22 @@ class changelog(revlog.revlog):
         else:
             return super(changelog, self).children(node)
 
+    def descendants(self, revs):
+        """Return ((revs::) - roots(revs)) in revs."""
+        if self.userust("descendants"):
+            dag = self.dag
+            # nullrev special case.
+            if nullrev in revs:
+                result = dag.all()
+            else:
+                nodes = self.tonodes(revs)
+                result = dag.descendants(nodes) - dag.roots(nodes)
+            for rev in self.torevs(result).iterasc():
+                yield rev
+        else:
+            for rev in super(changelog, self).descendants(revs):
+                yield rev
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]

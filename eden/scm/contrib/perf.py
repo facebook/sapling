@@ -1001,23 +1001,6 @@ def perflog(ui, repo, rev=None, **opts):
     fm.end()
 
 
-@command("perfmoonwalk", formatteropts)
-def perfmoonwalk(ui, repo, **opts):
-    """benchmark walking the changelog backwards
-
-    This also loads the changelog data for each revision in the changelog.
-    """
-    timer, fm = gettimer(ui, opts)
-
-    def moonwalk():
-        for i in xrange(len(repo), -1, -1):
-            ctx = repo[i]
-            ctx.branch()  # read changelog data (in addition to the index)
-
-    timer(moonwalk)
-    fm.end()
-
-
 @command("perftemplating", formatteropts)
 def perftemplating(ui, repo, rev=None, **opts):
     if rev is None:
