@@ -18,9 +18,7 @@ use crate::errors::EdenApiError;
 /// A valididated repo name.
 ///
 /// Presently, this is just a simple wrapper around a string that performs basic
-/// sanitization by ensuring that the name consists of only ASCII alphanumeric
-/// characters or underscores. (Sanitization is required since the repo name
-/// will be used as part of a URL.)
+/// sanitization by ensuring that the name consists of only ASCII characters.
 ///
 /// In the future, the representation may change (e.g., it might become an enum
 /// of all supported repos, or it might validate the name against a configured
@@ -33,7 +31,7 @@ impl FromStr for RepoName {
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
         let name = match name.as_ascii_str() {
-            Ok(name) if name.chars().all(|ch| ch.is_alphanumeric() || ch == '_') => name,
+            Ok(name) => name,
             _ => return Err(EdenApiError::InvalidRepoName(name.into())),
         };
         Ok(RepoName(name.to_ascii_string()))
@@ -69,7 +67,7 @@ mod tests {
         assert_eq!(valid.as_ref(), "valid_name");
         assert_eq!(format!("{}", &valid), "valid_name");
 
-        assert!(RepoName::from_str("invalid_name?foo=bar").is_err());
+        assert!(RepoName::from_str("invalid_name?foo=bar").is_ok());
         assert!(RepoName::from_str("\u{1F980}").is_err());
     }
 }
