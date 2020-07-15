@@ -218,7 +218,9 @@ def _scmquerylookupglobalrev(orig, repo, rev):
             if hghash:
                 matchedrevs.append(bin(hghash))
             return matchedrevs
-        except Exception:
-            pass
+        except Exception as exc:
+            repo.ui.warn(
+                _("failed to lookup globalrev %s from scmquery: %s\n") % (rev, exc)
+            )
 
     return orig(repo, rev)
