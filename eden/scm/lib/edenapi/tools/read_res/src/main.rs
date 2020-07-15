@@ -45,6 +45,8 @@ enum DataArgs {
 struct DataLsArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
 }
 
 #[derive(Debug, StructOpt)]
@@ -58,6 +60,8 @@ struct DataCatArgs {
     path: String,
     #[structopt(long, short, help = "Node hash of desired data entry")]
     hgid: String,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
 }
 
 #[derive(Debug, StructOpt)]
@@ -65,6 +69,8 @@ struct DataCatArgs {
 struct DataCheckArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
 }
 
 #[derive(Debug, StructOpt)]
@@ -79,6 +85,8 @@ enum HistoryArgs {
 struct HistLsArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
 }
 
 #[derive(Debug, StructOpt)]
@@ -90,6 +98,8 @@ struct HistShowArgs {
     file: Option<String>,
     #[structopt(long, short, help = "Only show number of entries per file")]
     count: bool,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
 }
 
 fn main() -> Result<()> {
@@ -108,7 +118,7 @@ fn cmd_data(args: DataArgs) -> Result<()> {
 }
 
 fn cmd_data_ls(args: DataLsArgs) -> Result<()> {
-    let entries: Vec<DataEntry> = read_input(args.input)?;
+    let entries: Vec<DataEntry> = read_input(args.input, args.limit)?;
     for entry in entries {
         println!("{}", entry.key());
     }
@@ -120,7 +130,7 @@ fn cmd_data_cat(args: DataCatArgs) -> Result<()> {
     let hgid = args.hgid.parse()?;
     let key = Key::new(path, hgid);
 
-    let entries: Vec<DataEntry> = read_input(args.input)?;
+    let entries: Vec<DataEntry> = read_input(args.input, args.limit)?;
     let entry = entries
         .into_iter()
         .find(|entry| entry.key() == &key)
@@ -130,7 +140,7 @@ fn cmd_data_cat(args: DataCatArgs) -> Result<()> {
 }
 
 fn cmd_data_check(args: DataCheckArgs) -> Result<()> {
-    let entries: Vec<DataEntry> = read_input(args.input)?;
+    let entries: Vec<DataEntry> = read_input(args.input, args.limit)?;
     for entry in entries {
         match entry.data() {
             Ok(_) => {}
@@ -156,7 +166,7 @@ fn cmd_history(args: HistoryArgs) -> Result<()> {
 }
 
 fn cmd_history_ls(args: HistLsArgs) -> Result<()> {
-    let chunks: Vec<HistoryResponseChunk> = read_input(args.input)?;
+    let chunks: Vec<HistoryResponseChunk> = read_input(args.input, args.limit)?;
     // Deduplicate and sort paths.
     let mut paths = BTreeSet::new();
     for chunk in chunks {
@@ -169,7 +179,7 @@ fn cmd_history_ls(args: HistLsArgs) -> Result<()> {
 }
 
 fn cmd_history_show(args: HistShowArgs) -> Result<()> {
-    let chunks: Vec<HistoryResponseChunk> = read_input(args.input)?;
+    let chunks: Vec<HistoryResponseChunk> = read_input(args.input, args.limit)?;
     let map = make_history_map(chunks);
     match args.file {
         Some(ref path) => match map.get(path) {
@@ -220,19 +230,21 @@ fn print_history(path: &str, entries: &[WireHistoryEntry], counts_only: bool) {
     }
 }
 
-fn read_input<T: DeserializeOwned>(path: Option<PathBuf>) -> Result<Vec<T>> {
+fn read_input<T: DeserializeOwned>(path: Option<PathBuf>, limit: Option<usize>) -> Result<Vec<T>> {
     Ok(match path {
         Some(path) => {
             eprintln!("Reading from file: {:?}", &path);
             let file = File::open(&path)?;
             Deserializer::from_reader(file)
                 .into_iter()
+                .take(limit.unwrap_or(usize::MAX))
                 .collect::<Result<Vec<_>, _>>()?
         }
         None => {
             eprintln!("Reading from stdin");
             Deserializer::from_reader(stdin())
                 .into_iter()
+                .take(limit.unwrap_or(usize::MAX))
                 .collect::<Result<Vec<_>, _>>()?
         }
     })
