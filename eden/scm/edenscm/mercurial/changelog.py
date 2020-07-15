@@ -795,6 +795,17 @@ class changelog(revlog.revlog):
             for rev in super(changelog, self).descendants(revs):
                 yield rev
 
+    def findcommonmissing(self, common, heads):
+        """Return (torevs(::common), (::heads) - (::common))"""
+        if self.userust("findcommonmissing"):
+            # "::heads - ::common" is "heads % common", aka. the "only"
+            # operation.
+            onlyheads, commonancestors = self.dag.onlyboth(heads, common)
+            # commonancestors can be large, do not convert to list
+            return self.torevs(commonancestors), list(onlyheads.iterrev())
+        else:
+            return super(changelog, self).findcommonmissing(common, heads)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
