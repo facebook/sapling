@@ -806,6 +806,15 @@ class changelog(revlog.revlog):
         else:
             return super(changelog, self).findcommonmissing(common, heads)
 
+    def isancestor(self, a, b):
+        """Test if a (in node) is an ancestor of b (in node)"""
+        if self.userust("isancestor"):
+            if a == nullid or b == nullid:
+                return False
+            return self.dag.isancestor(a, b)
+        else:
+            return super(changelog, self).isancestor(a, b)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]

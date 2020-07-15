@@ -459,9 +459,10 @@ class remotefilectx(context.filectx):
             return linknode in self._repo.changelog.nodemap
         if not revs:
             return False
+        cl = self._repo.changelog
+        if not cl.hasnode(linknode):
+            return False
         try:
-            # Use the C fastpath to check if the given linknode is correct.
-            cl = self._repo.changelog
             return any(cl.isancestor(linknode, cl.node(r)) for r in revs)
         except error.LookupError:
             # The linknode read from the blob may have been stripped or
