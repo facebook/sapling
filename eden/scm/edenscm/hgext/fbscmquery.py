@@ -77,10 +77,10 @@ def mirrornode(ctx, mapping, args):
         client = graphql.Client(repo=mapping["repo"])
         return client.getmirroredrev(reponame, "hg", torepo, totype, node)
     except arcconfig.ArcConfigError:
-        mapping["repo"].ui.warn(_("couldn't read .arcconfig or .arcrc"))
+        mapping["repo"].ui.warn(_("couldn't read .arcconfig or .arcrc\n"))
         return ""
     except graphql.ClientError as e:
-        mapping["repo"].ui.warn(_x(str(e.msg) + "\n"))
+        mapping["repo"].ui.warn(_x(str(e.message) + "\n"))
         return ""
 
 
