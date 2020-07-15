@@ -18,7 +18,7 @@ import bindings
 
 from . import encoding, error, mdiff, revlog, util, visibility
 from .i18n import _
-from .node import bbin, bin, hex, nullid, nullrev
+from .node import bbin, bin, hex, nullid, nullrev, wdirid, wdirrev
 from .pycompat import decodeutf8, encodeutf8, iteritems, range
 from .thirdparty import attr
 
@@ -491,12 +491,27 @@ class changelog(revlog.revlog):
 
     def rev(self, node):
         """filtered version of revlog.rev"""
+        if self.userust("rev"):
+            if node == wdirid:
+                raise error.WdirUnsupported
+            try:
+                return self.idmap.node2id(node)
+            except error.RustError:
+                raise error.LookupError(node, self.indexfile, _("no node"))
         r = super(changelog, self).rev(node)
         return r
 
     def node(self, rev):
         """filtered version of revlog.node"""
-        return super(changelog, self).node(rev)
+        if self.userust("node"):
+            if rev == wdirrev:
+                raise error.WdirUnsupported
+            try:
+                return self.idmap.id2node(rev)
+            except error.RustError:
+                raise IndexError("revlog index out of range")
+        else:
+            return super(changelog, self).node(rev)
 
     def linkrev(self, rev):
         """filtered version of revlog.linkrev"""
