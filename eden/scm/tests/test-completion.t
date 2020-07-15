@@ -388,7 +388,7 @@ Show all commands + options
   debugdirstate: nodates, datesort, json
   debugdiscovery: old, nonheads, rev, ssh, remotecmd, insecure
   debugdrawdag: print
-  debugdynamicconfig: 
+  debugdynamicconfig: canary
   debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, get-file-size, fetch-tree
   debugedenrunpostupdatehook: 
   debugexistingcasecollisions: rev

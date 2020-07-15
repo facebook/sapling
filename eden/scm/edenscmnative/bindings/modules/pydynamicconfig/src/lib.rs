@@ -45,7 +45,7 @@ fn applydynamicconfig(
 ) -> PyResult<PyNone> {
     let dyn_cfg = Generator::new(repo_name, shared_path.to_path_buf())
         .map_pyerr(py)?
-        .execute()
+        .execute(None)
         .map_pyerr(py)?;
     for section in dyn_cfg.sections() {
         for key in dyn_cfg.keys(section.clone()).iter_mut() {
@@ -71,7 +71,7 @@ fn generatedynamicconfig(
 ) -> PyResult<PyNone> {
     let config = Generator::new(repo_name, shared_path.to_path_buf())
         .map_pyerr(py)?
-        .execute()
+        .execute(None)
         .map_pyerr(py)?;
     let config_str = config.to_string();
     let config_str = format!(

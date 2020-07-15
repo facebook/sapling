@@ -268,18 +268,22 @@ impl Generator {
         Ok(())
     }
 
-    pub fn execute(mut self) -> Result<ConfigSet> {
+    pub fn execute(mut self, canary_remote: Option<String>) -> Result<ConfigSet> {
         if std::env::var("HG_TEST_DYNAMICCONFIG").is_ok() {
-            self._execute(test_rules)?;
+            self._execute(test_rules, canary_remote)?;
         } else {
             #[cfg(feature = "fb")]
-            self._execute(fb::fb_rules)?;
+            self._execute(fb::fb_rules, canary_remote)?;
         }
         Ok(self.config)
     }
 
-    fn _execute(&mut self, mut rules: impl FnMut(&mut Generator) -> Result<()>) -> Result<()> {
-        (rules)(self)
+    fn _execute(
+        &mut self,
+        mut rules: impl FnMut(&mut Generator, Option<String>) -> Result<()>,
+        canary_remote: Option<String>,
+    ) -> Result<()> {
+        (rules)(self, canary_remote)
     }
 }
 
@@ -332,7 +336,7 @@ fn get_hg_group(tiers: &HashSet<String>, shard: u8) -> HgGroup {
 }
 
 /// Rules used in our integration test environment
-fn test_rules(gen: &mut Generator) -> Result<()> {
+fn test_rules(gen: &mut Generator, _canary_remote: Option<String>) -> Result<()> {
     if let Ok(path) = std::env::var("HG_TEST_DYNAMICCONFIG") {
         let hgrc = std::fs::read_to_string(path).unwrap();
         gen.load_hgrc(hgrc).unwrap();
@@ -356,7 +360,7 @@ pub(crate) mod tests {
         let shard = 10;
         generator.set_inputs(tiers, group, shard);
 
-        fn test_rules(gen: &mut Generator) -> Result<()> {
+        fn test_rules(gen: &mut Generator, _canary_remote: Option<String>) -> Result<()> {
             if gen.in_tiers(&["in_tier1"]) {
                 gen.set_config("tier_section", "tier_key", "in_tier1");
             }
@@ -386,7 +390,7 @@ key=value",
             Ok(())
         }
 
-        generator._execute(test_rules).unwrap();
+        generator._execute(test_rules, None).unwrap();
         let config_str = generator.config.to_string();
 
         assert_eq!(
