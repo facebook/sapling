@@ -745,6 +745,17 @@ class changelog(revlog.revlog):
             # Strip the p1, p2 header
             return text[40:]
 
+    def nodesbetween(self, roots, heads):
+        """Calculate (roots::heads, roots & (roots::heads), heads & (roots::heads))"""
+        if self.userust("nodesbetween"):
+            result = self.dag.range(roots, heads)
+            roots = roots & result
+            heads = heads & result
+            # Return in ASC order to be compatible with the old logic.
+            return list(result.iterrev()), list(roots.iterrev()), list(heads.iterrev())
+        else:
+            return super(changelog, self).nodesbetween(roots, heads)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
