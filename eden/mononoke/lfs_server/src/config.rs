@@ -65,7 +65,7 @@ impl TryFrom<&RawLimit> for Limit {
 
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
-    raw_server_config: RawServerConfig,
+    pub raw_server_config: RawServerConfig,
     throttle_limits: Vec<Limit>,
 }
 

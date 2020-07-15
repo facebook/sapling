@@ -53,6 +53,7 @@ mod download;
 mod errors;
 mod lfs_server_context;
 mod middleware;
+mod popularity;
 mod service;
 mod upload;
 #[macro_use]

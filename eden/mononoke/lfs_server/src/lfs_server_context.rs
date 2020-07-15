@@ -483,6 +483,7 @@ mod test {
         repo: BlobRepo,
         self_uri: String,
         upstream_uri: Option<String>,
+        config: ServerConfig,
     }
 
     impl TestContextBuilder {
@@ -496,12 +497,18 @@ mod test {
             self
         }
 
+        pub fn config(mut self, config: ServerConfig) -> Self {
+            self.config = config;
+            self
+        }
+
         pub fn build(self) -> Result<RepositoryRequestContext, Error> {
             let Self {
                 fb,
                 repo,
                 self_uri,
                 upstream_uri,
+                config,
             } = self;
 
             let uri_builder = uri_builder(&self_uri, upstream_uri.as_deref())?;
@@ -509,7 +516,7 @@ mod test {
             Ok(RepositoryRequestContext {
                 ctx: CoreContext::test_mock(fb),
                 repo,
-                config: Arc::new(ServerConfig::default()),
+                config: Arc::new(config),
                 uri_builder,
                 always_wait_for_upstream: false,
                 max_upload_size: None,
@@ -525,6 +532,7 @@ mod test {
                 repo: TestRepoBuilder::new().build()?,
                 self_uri: "http://foo.com/".to_string(),
                 upstream_uri: Some("http://bar.com".to_string()),
+                config: ServerConfig::default(),
             })
         }
     }

@@ -24,4 +24,4 @@ pub trait GlobalTimeWindowCounter {
     fn bump(&self, value: f64);
 }
 
-pub struct GlobalTimeWindowCounterBuilder {}
+pub struct GlobalTimeWindowCounterBuilder;

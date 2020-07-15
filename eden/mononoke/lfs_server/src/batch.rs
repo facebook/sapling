@@ -24,8 +24,8 @@ use serde::Deserialize;
 use slog::debug;
 use stats::prelude::*;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use time_ext::DurationExt;
+use time_window_counter::GlobalTimeWindowCounterBuilder;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
 use filestore::Alias;
@@ -35,11 +35,11 @@ use lfs_protocol::{
     ResponseBatch, ResponseObject, Transfer,
 };
 use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
-use time_window_counter::GlobalTimeWindowCounterBuilder;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
 use crate::middleware::{LfsMethod, RequestContext, ScubaKey, ScubaMiddlewareState};
+use crate::popularity::allow_consistent_routing;
 
 define_stats! {
     prefix ="mononoke.lfs.batch";
@@ -187,27 +187,6 @@ async fn resolve_internal_object(
     }
 }
 
-async fn increment_and_fetch_object_popularity(
-    ctx: &RepositoryRequestContext,
-    oid: &Sha256,
-) -> Result<Option<u64>, Error> {
-    let category = match ctx.config.object_popularity_category() {
-        Some(category) => category,
-        None => {
-            return Ok(None);
-        }
-    };
-
-    let key = format!("{}/{}", ctx.repo.name(), oid);
-    let window = 20;
-    let ctr = GlobalTimeWindowCounterBuilder::build(ctx.ctx.fb, category, &key, window, window);
-
-    ctr.bump(1.0);
-    let v = ctr.get(window).await? as i64;
-    let v = v.try_into()?;
-    Ok(Some(v))
-}
-
 async fn internal_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
@@ -215,17 +194,11 @@ async fn internal_objects(
     let futs = objects.iter().map(|object| async move {
         let oid = object.oid.0.into();
 
-        let (content_id, allow_consistent_routing) =
-            future::join(resolve_internal_object(ctx, oid), async {
-                let popularity = increment_and_fetch_object_popularity(ctx, &oid).await;
-                let threshold = ctx.config.object_popularity_threshold();
-
-                match (popularity, threshold) {
-                    (Ok(Some(popularity)), Some(threshold)) => popularity <= threshold,
-                    _ => true,
-                }
-            })
-            .await;
+        let (content_id, allow_consistent_routing) = future::join(
+            resolve_internal_object(ctx, oid),
+            allow_consistent_routing(ctx, oid, GlobalTimeWindowCounterBuilder),
+        )
+        .await;
 
         let content_id = content_id?;
 
