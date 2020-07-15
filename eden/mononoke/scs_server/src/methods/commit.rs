@@ -380,7 +380,11 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitListDescendantBookmarksParams,
     ) -> Result<thrift::CommitListDescendantBookmarksResponse, errors::ServiceError> {
-        let limit = match check_range_and_convert("limit", params.limit, 0..=10000)? {
+        let limit = match check_range_and_convert(
+            "limit",
+            params.limit,
+            0..=source_control::COMMIT_LIST_DESCENDANT_BOOKMARKS_MAX_LIMIT,
+        )? {
             0 => None,
             limit => Some(limit),
         };
