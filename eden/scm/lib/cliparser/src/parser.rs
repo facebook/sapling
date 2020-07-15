@@ -53,6 +53,7 @@ pub enum Value {
     Str(String),
     Int(i64),
     List(Vec<String>),
+    OptStr(Option<String>),
 }
 
 impl Value {
@@ -62,7 +63,7 @@ impl Value {
             None => {
                 return Err(ParseError::OptionRequiresArgument {
                     option_name: "".to_string(),
-                })
+                });
             }
         };
 
@@ -70,6 +71,10 @@ impl Value {
             Value::Bool(_) | Value::OptBool() => unreachable!(),
             Value::Str(ref mut s) => {
                 *s = token.to_string();
+                Ok(())
+            }
+            Value::OptStr(ref mut s) => {
+                *s = Some(token.to_string());
                 Ok(())
             }
             Value::Int(ref mut i) => {
@@ -101,6 +106,10 @@ impl ToPyObject for Value {
             Value::Str(s) => Str::from(Bytes::from(s.to_string()))
                 .to_py_object(py)
                 .into_object(),
+            Value::OptStr(s) => s
+                .as_ref()
+                .map(|s| Str::from(s.to_string()))
+                .to_py_object(py),
             Value::Int(i) => i.to_py_object(py).into_object(),
             Value::List(vec) => {
                 let collection: Vec<Str> = vec
@@ -153,6 +162,18 @@ impl From<Value> for String {
     }
 }
 
+impl From<Value> for Option<String> {
+    fn from(v: Value) -> Self {
+        match v {
+            Value::OptStr(s) => s,
+            _ => panic!(
+                "programming error:  {:?} was converted to Option<String>",
+                v
+            ),
+        }
+    }
+}
+
 impl From<Value> for bool {
     fn from(v: Value) -> Self {
         match v {
@@ -192,6 +213,12 @@ impl From<&str> for Value {
 impl From<String> for Value {
     fn from(v: String) -> Self {
         Value::Str(v)
+    }
+}
+
+impl From<Option<String>> for Value {
+    fn from(v: Option<String>) -> Self {
+        Value::OptStr(v)
     }
 }
 
@@ -1335,5 +1362,21 @@ mod tests {
             .unwrap();
         let foo: String = parsed.pick("no-foo");
         assert_eq!(foo, "bar");
+    }
+
+    #[test]
+    fn test_parse_option_string_value() {
+        let flags = vec![(' ', "opt_str", "an optional string", Value::OptStr(None)).into()];
+        let parser = ParseOptions::new().flags(flags).into_parser();
+
+        let args: Vec<&str> = Default::default();
+        let parsed = parser.parse_args(&args).unwrap();
+        assert_eq!(parsed.pick::<Option<String>>("opt_str"), None);
+
+        let parsed = parser.parse_args(&vec!["--opt_str", "foo"]).unwrap();
+        assert_eq!(
+            parsed.pick::<Option<String>>("opt_str"),
+            Some("foo".to_string())
+        );
     }
 }
