@@ -305,6 +305,7 @@ coreconfigitem("experimental", "rust-commits", default=util.istest())
 coreconfigitem("experimental", "rust-commits:index2", default=True)
 coreconfigitem("experimental", "rust-commits:rawheadrevs", default=True)
 coreconfigitem("experimental", "rust-commits:reachableroots", default=True)
+coreconfigitem("experimental", "rust-commits:revision", default=True)
 
 coreconfigitem("experimental", "single-head-per-branch", default=False)
 coreconfigitem("experimental", "spacemovesdown", default=False)

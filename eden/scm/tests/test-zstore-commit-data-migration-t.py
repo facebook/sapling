@@ -10,6 +10,10 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh.setmodernconfig()
 
+# Incompatible with full RustIndex
+
+sh % "setconfig experimental.rust-commits:revision=off"
+
 # Test turning zstore-commit-data on and off
 
 sh % "setconfig format.use-zstore-commit-data=off"

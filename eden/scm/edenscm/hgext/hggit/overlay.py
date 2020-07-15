@@ -403,7 +403,7 @@ try:
             if dir:
                 raise RuntimeError("hggit doesn't support treemanifests")
             if node == nullid:
-                return manifest.manifestctx()
+                return manifest.memmanifestctx(self)
             return overlaymanifestctx(self._repo, node)
 
 

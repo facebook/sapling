@@ -143,7 +143,6 @@ perfstatus
   $ hg perflrucache
   $ hg perfmanifest 2
   $ hg perfmergecalculate -r 3
-  $ hg perfmoonwalk
   $ hg perfnodelookup 2
   $ hg perfpathcopies 1 2
   $ hg perfrawfiles 2

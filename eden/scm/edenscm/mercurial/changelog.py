@@ -711,6 +711,18 @@ class changelog(revlog.revlog):
         return node
 
     def revision(self, nodeorrev, _df=None, raw=False):
+        if self.userust("revision"):
+            if nodeorrev in {nullid, nullrev}:
+                return b""
+            if isinstance(nodeorrev, int):
+                node = self.node(nodeorrev)
+            else:
+                node = nodeorrev
+            text = self.inner.getcommitrawtext(node)
+            if text is None:
+                raise error.LookupError(node, self.indexfile, _("no node"))
+            return text
+
         # type: (Union[int, bytes], Optional[IO], bool) -> bytes
         # "revision" is the single API that reads `.d` from revlog.
         # Use zstore if possible.

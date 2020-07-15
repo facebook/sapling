@@ -46,7 +46,7 @@ from . import (
     visibility,
 )
 from .i18n import _
-from .node import nullid
+from .node import nullid, nullrev
 
 
 class bundlerevlog(revlog.revlog):
@@ -60,7 +60,9 @@ class bundlerevlog(revlog.revlog):
         # check revision against repotiprev.
         opener = vfsmod.readonlyvfs(opener)
         # bundlechangelog might have called revlog.revlog.__init__ already.
+        # avoid re-init the revlog.
         if not util.safehasattr(self, "opener"):
+            index2 = indexfile.startswith("00changelog")
             revlog.revlog.__init__(self, opener, indexfile, index2=index2)
         inner = getattr(self, "inner", None)
         index2 = getattr(self, "index2", None)
@@ -215,6 +217,21 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
         # manifest and filelog classes.
 
         return changelog.changelog.revision(self, nodeorrev, raw=True)
+
+    def revision(self, nodeorrev, raw=False):
+        if self.userust("revision"):
+            if nodeorrev in {nullid, nullrev}:
+                return b""
+            if isinstance(nodeorrev, int):
+                node = self.node(nodeorrev)
+            else:
+                node = nodeorrev
+            text = self.inner.getcommitrawtext(node)
+            if text is None:
+                raise error.LookupError(node, self.indexfile, _("no node"))
+            return text
+        else:
+            return super(bundlechangelog, self).revision(nodeorrev, raw)
 
     def _loadvisibleheads(self, opener):
         return visibility.bundlevisibleheads(opener)
