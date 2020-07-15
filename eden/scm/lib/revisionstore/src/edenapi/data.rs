@@ -76,17 +76,13 @@ impl<T: EdenApiStoreKind> RemoteDataStore for EdenApiDataStore<T> {
 
 impl<T: EdenApiStoreKind> HgIdDataStore for EdenApiDataStore<T> {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self.store.get(key),
-            Err(_) => Ok(None),
-        }
+        self.prefetch(&[StoreKey::hgid(key.clone())])?;
+        self.store.get(key)
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self.store.get_meta(key),
-            Err(_) => Ok(None),
-        }
+        self.prefetch(&[StoreKey::hgid(key.clone())])?;
+        self.store.get_meta(key)
     }
 }
 
@@ -130,9 +126,8 @@ mod tests {
         let tmp = TempDir::new()?;
         let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
 
-        // Set up `EdenApiDataStore`.
+        // Set up `EdenApiDataStore<File>`.
         let edenapi_files = remote_files.datastore(local.clone());
-        let edenapi_trees = remote_trees.datastore(local.clone());
 
         // Attempt fetch.
         let data = edenapi_files.get(&k)?.expect("data not found");
@@ -146,7 +141,14 @@ mod tests {
         assert_eq!(&data, &d.data);
         assert_eq!(meta.size, Some(d.data.len() as u64));
 
-        // Check that the same key cannot be accessed via the tree store.
+        // Using the same mock client, set up a store for trees.
+        // Need to use a new local store since otherwise the key
+        // would still be present locally from the previous fetch.
+        let tmp = TempDir::new()?;
+        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
+        let edenapi_trees = remote_trees.datastore(local.clone());
+
+        // Check that the same key is not fetched by the tree store.
         assert_eq!(edenapi_trees.get(&k)?, None);
 
         Ok(())
@@ -168,8 +170,7 @@ mod tests {
         let tmp = TempDir::new()?;
         let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
 
-        // Set up `EdenApiDataStore`.
-        let edenapi_files = remote_files.datastore(local.clone());
+        // Set up `EdenApiDataStore<Tree>`.
         let edenapi_trees = remote_trees.datastore(local.clone());
 
         // Attempt fetch.
@@ -184,7 +185,14 @@ mod tests {
         assert_eq!(&data, &d.data);
         assert_eq!(meta.size, Some(d.data.len() as u64));
 
-        // Check that the same key cannot be accessed via the file store.
+        // Using the same mock client, set up a store for files.
+        // Need to use a new local store since otherwise the key
+        // would still be present locally from the previous fetch.
+        let tmp = TempDir::new()?;
+        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
+        let edenapi_files = remote_files.datastore(local);
+
+        // Check that the same key is not fetched by the files store.
         assert_eq!(edenapi_files.get(&k)?, None);
 
         Ok(())

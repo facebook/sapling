@@ -75,10 +75,8 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
 
 impl HgIdHistoryStore for EdenApiHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self.store.get_node_info(key),
-            Err(_) => Ok(None),
-        }
+        self.prefetch(&[StoreKey::hgid(key.clone())])?;
+        self.store.get_node_info(key)
     }
 }
 

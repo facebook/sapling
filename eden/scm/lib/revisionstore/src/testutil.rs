@@ -7,7 +7,7 @@
 
 use std::{collections::HashMap, path::Path, sync::Arc};
 
-use anyhow::{Context, Error, Result};
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::prelude::*;
@@ -207,10 +207,10 @@ impl FakeEdenApi {
     fn get(map: &HashMap<Key, Bytes>, keys: Vec<Key>) -> Result<Fetch<DataEntry>, EdenApiError> {
         let entries = keys
             .into_iter()
-            .map(|key| {
-                let data = map.get(&key).context("Not found")?.clone();
+            .filter_map(|key| {
+                let data = map.get(&key)?.clone();
                 let parents = Parents::default();
-                Ok(DataEntry::new(key, data, parents))
+                Some(Ok(DataEntry::new(key, data, parents)))
             })
             .collect::<Vec<_>>();
 
@@ -246,9 +246,9 @@ impl EdenApi for FakeEdenApi {
     ) -> Result<Fetch<HistoryEntry>, EdenApiError> {
         let entries = keys
             .into_iter()
-            .map(|key| {
-                let nodeinfo = self.history.get(&key).context("Not found")?.clone();
-                Ok(HistoryEntry { key, nodeinfo })
+            .filter_map(|key| {
+                let nodeinfo = self.history.get(&key)?.clone();
+                Some(Ok(HistoryEntry { key, nodeinfo }))
             })
             .collect::<Vec<_>>();
 
