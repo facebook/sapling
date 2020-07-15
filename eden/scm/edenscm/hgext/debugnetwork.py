@@ -21,7 +21,16 @@
 import os
 import socket
 
-from edenscm.mercurial import cmdutil, error, hg, progress, registrar, sshpeer, util
+from edenscm.mercurial import (
+    cmdutil,
+    error,
+    hg,
+    progress,
+    pycompat,
+    registrar,
+    sshpeer,
+    util,
+)
 from edenscm.mercurial.i18n import _
 
 
@@ -89,7 +98,7 @@ def checksshcommand(ui, url, opts):
     starttime = util.timer()
     res = ui.system(cmd, blockedtag="debugnetwork", environ=sshenv)
     endtime = util.timer()
-    hostname = ui.popbuffer().strip()
+    hostname = pycompat.decodeutf8(ui.popbufferbytes()).strip()
     if res == 0:
         ui.status(
             _("Connected ok: %s\n") % util.timecount(endtime - starttime),
@@ -165,26 +174,26 @@ def checkhgspeed(ui, url, opts):
         latencies = []
         with progress.spinner(ui, "testing connection latency"):
             for i in range(count):
-                pipeo.write("upload 1\n")
+                pipeo.write(b"upload 1\n")
                 pipeo.flush()
                 l = pipei.readline()
-                if l != "upload bytes 1\n":
+                if l != b"upload bytes 1\n":
                     raise error.Abort("invalid response from server: %r" % l)
                 starttime = util.timer()
-                pipeo.write("\n")
+                pipeo.write(b"\n")
                 pipeo.flush()
                 l = pipei.readline()
                 endtime = util.timer()
-                if l != "upload complete\n":
+                if l != b"upload complete\n":
                     raise error.Abort("invalid response from server: %r" % l)
                 latencies.append(endtime - starttime)
         return latencies
 
     def downloadtest(description, bytecount):
-        pipeo.write("download %s\n" % bytecount)
+        pipeo.write(b"download %i\n" % bytecount)
         pipeo.flush()
         l = pipei.readline()
-        if not l or not l.startswith("download bytes"):
+        if not l or not l.startswith(b"download bytes"):
             raise error.Abort("invalid response from server: %r" % l)
         bytecount = int(l.split()[2])
         with progress.bar(
@@ -199,16 +208,16 @@ def checkhgspeed(ui, url, opts):
                 remaining -= len(data)
                 prog.value = bytecount - remaining
             l = pipei.readline()
-            if not l or not l.startswith("download complete"):
+            if not l or not l.startswith(b"download complete"):
                 raise error.Abort("invalid response from server: %r" % l)
             endtime = util.timer()
         return endtime - starttime
 
     def uploadtest(description, bytecount):
-        pipeo.write("upload %s\n" % bytecount)
+        pipeo.write(b"upload %i\n" % bytecount)
         pipeo.flush()
         l = pipei.readline()
-        if not l or not l.startswith("upload bytes"):
+        if not l or not l.startswith(b"upload bytes"):
             raise error.Abort("invalid response from server: %r" % l)
         bytecount = int(l.split()[2])
         with progress.bar(
@@ -223,7 +232,7 @@ def checkhgspeed(ui, url, opts):
                 prog.value = bytecount - remaining
             pipeo.flush()
             l = pipei.readline()
-            if not l or not l.startswith("upload complete"):
+            if not l or not l.startswith(b"upload complete"):
                 raise error.Abort("invalid response from server: %r" % l)
             endtime = util.timer()
         return endtime - starttime
@@ -268,7 +277,8 @@ def checkhgspeed(ui, url, opts):
             testtime = testfunc(testname, bytecount)
             printresult("(round 2) %sed" % testname, bytecount, testtime)
         return True
-    except Exception:
+    except Exception as e:
+        ui.warn(_("error testing speed: %s\n") % e)
         return False
 
 
