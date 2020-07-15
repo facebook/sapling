@@ -771,6 +771,14 @@ class changelog(revlog.revlog):
         else:
             return super(changelog, self).nodesbetween(roots, heads)
 
+    def children(self, node):
+        """Return children(node)"""
+        if self.userust("children"):
+            nodes = self.dag.children([node])
+            return list(nodes)
+        else:
+            return super(changelog, self).children(node)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
