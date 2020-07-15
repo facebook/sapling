@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Cow;
+use taggederror::FilteredAnyhow;
 use thiserror::Error;
 use thrift_types::edenfs as eden;
 
@@ -49,7 +50,7 @@ pub struct Abort(pub Cow<'static, str>);
 /// Print an error suitable for end-user consumption.
 ///
 /// This function adds `hg:` or `abort:` to error messages.
-pub fn print_error(err: &anyhow::Error, io: &mut crate::io::IO) {
+pub fn print_error(err: &anyhow::Error, io: &mut crate::io::IO, args: &[String]) {
     use cliparser::parser::ParseError;
     if err.downcast_ref::<configparser::Error>().is_some() {
         let _ = io.write_err(format!("hg: parse error: {}\n", err));
@@ -69,7 +70,14 @@ pub fn print_error(err: &anyhow::Error, io: &mut crate::io::IO) {
         let _ = io.write_err(format!("abort: {}\n", e.message));
         let _ = io.flush();
     } else {
-        let _ = io.write_err(format!("abort: {}\n", err));
+        if args.iter().any(|v| v == "--traceback") {
+            let _ = io.write_err(format!(
+                "abort: {:?}\n",
+                FilteredAnyhow::new(err).separate_tags()
+            ));
+        } else {
+            let _ = io.write_err(format!("abort: {}\n", FilteredAnyhow::new(err)));
+        }
     }
 }
 
@@ -98,7 +106,7 @@ mod tests {
         let mut io = crate::io::IO::new(tin, tout, Some(terr));
 
         // Call print_error with error and in-memory IO stream
-        print_error(&error, &mut io);
+        print_error(&error, &mut io, &[] as &[String]);
 
         // Make sure error message is formatted correctly.
         if let Some(actual_error_wrapped) = &io.error {

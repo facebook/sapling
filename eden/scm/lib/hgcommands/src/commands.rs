@@ -14,7 +14,9 @@ use clidispatch::{
 };
 use cliparser::define_flags;
 use filetime::{set_file_mtime, FileTime};
+use taggederror::{AnyhowExt, CommonMetadata, Fault, Tagged};
 use tempfile::tempfile_in;
+use thiserror::Error;
 
 use blackbox::{event::Event, json, SessionId};
 use dynamicconfig::Generator;
@@ -77,6 +79,11 @@ pub fn table() -> CommandTable {
         debugdynamicconfig,
         "debugdynamicconfig",
         "generate the dynamic configuration",
+    );
+    table.register(
+        debugthrowrustexception,
+        "debugthrowrustexception",
+        "cause an error to be returned from rust",
     );
 
     table
@@ -187,8 +194,8 @@ pub fn dump_trace(opts: DumpTraceOpts, io: &mut IO, _repo: Repo) -> Result<u8> {
             // Blackbox uses milliseconds. HgTime uses seconds.
             let ratio = 1000;
             blackbox.session_ids_by_pattern(&json!({"start": {
-                "timestamp_ms": ["range", range.start.unixtime.saturating_mul(ratio), range.end.unixtime.saturating_mul(ratio)]
-            }})).into_iter().collect()
+                 "timestamp_ms": ["range", range.start.unixtime.saturating_mul(ratio), range.end.unixtime.saturating_mul(ratio)]
+             }})).into_iter().collect()
         } else {
             return Err(
                 errors::Abort("both --time-range and --session-id are invalid".into()).into(),
@@ -330,4 +337,25 @@ pub fn debugdynamicconfig(opts: DebugDynamicConfigOpts, _io: &mut IO, repo: Repo
         fs::write(hgrc_path, config_str)?;
     }
     Ok(0)
+}
+
+#[derive(Debug, Error)]
+#[error("intentional error for debugging with message '{0}'")]
+struct IntentionalError(String);
+
+impl Tagged for IntentionalError {
+    fn metadata(&self) -> CommonMetadata {
+        // CommonMetadata::new::<Self>() attaches typename, .transience attaches transience
+        CommonMetadata::new::<Self>()
+    }
+}
+
+fn intentional_error() -> Result<u8> {
+    // .tagged() method on taggederror::Tagged trait attaches metadata and wraps in anyhow::Error
+    Err(IntentionalError(String::from("intentional_error")).tagged())?
+}
+
+pub fn debugthrowrustexception(_opts: NoOpts, _io: &mut IO, _repo: Repo) -> Result<u8> {
+    // Add additional metadata via AnyhowExt trait to an anyhow::Error or anyhow::Result
+    Ok(intentional_error().mark_fault(Fault::User)?)
 }

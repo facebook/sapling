@@ -379,7 +379,7 @@ impl ParseOptions {
         Parser::from_options(self)
     }
 
-    pub fn parse_args(self, args: &Vec<impl AsRef<str>>) -> Result<ParseOutput, ParseError> {
+    pub fn parse_args(self, args: &[impl AsRef<str>]) -> Result<ParseOutput, ParseError> {
         self.into_parser().parse_args(args)
     }
 }
@@ -431,7 +431,7 @@ impl Parser {
     /// use std::env;
     /// use cliparser::parser::*;
     ///
-    /// let env_args = env::args().collect();
+    /// let env_args: Vec<String> = env::args().collect();
     ///
     /// let flags: Vec<Flag> = vec![
     ///     ('q', "quiet", "silence the output", false)
@@ -443,7 +443,7 @@ impl Parser {
     /// ```
     ///
     /// parse_args will clean arguments such that they can be properly parsed by Parser#_parse
-    pub fn parse_args(&self, args: &Vec<impl AsRef<str>>) -> Result<ParseOutput, ParseError> {
+    pub fn parse_args(&self, args: &[impl AsRef<str>]) -> Result<ParseOutput, ParseError> {
         let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
 
         let mut first_arg_index = args.len();

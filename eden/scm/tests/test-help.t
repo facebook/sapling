@@ -1065,6 +1065,8 @@ Test list of internal help commands
                  show set of successors for revision
    debugtemplate
                  parse and apply a template
+   debugthrowrustexception
+                 cause an error to be returned from rust
    debugtreestate
                  manage treestate
    debugupdatecaches

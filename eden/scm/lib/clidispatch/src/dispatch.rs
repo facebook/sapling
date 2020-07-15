@@ -77,7 +77,7 @@ fn last_chance_to_abort(opts: &HgGlobalOpts) -> Result<()> {
     Ok(())
 }
 
-fn early_parse(args: &Vec<String>) -> Result<ParseOutput, ParseError> {
+fn early_parse(args: &[String]) -> Result<ParseOutput, ParseError> {
     ParseOptions::new()
         .ignore_prefix(true)
         .early_parse(true)
@@ -140,8 +140,8 @@ fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
     Ok(())
 }
 
-pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) -> Result<u8> {
-    let early_result = early_parse(&args)?;
+pub fn dispatch(command_table: &CommandTable, args: &[String], io: &mut IO) -> Result<u8> {
+    let early_result = early_parse(args)?;
     let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
 
     if !global_opts.cwd.is_empty() {

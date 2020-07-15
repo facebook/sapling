@@ -79,7 +79,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
         let _guard = span.enter();
         let table = commands::table();
 
-        let exit_code = match dispatch::dispatch(&table, args[1..].to_vec(), io) {
+        let exit_code = match dispatch::dispatch(&table, &args[1..], io) {
             Ok(ret) => ret as i32,
             Err(err) => {
                 let should_fallback = if err.downcast_ref::<errors::FallbackToPython>().is_some() {
@@ -97,7 +97,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
                 };
 
                 if !should_fallback {
-                    errors::print_error(&err, io);
+                    errors::print_error(&err, io, &args[1..]);
                     return 255;
                 }
 
