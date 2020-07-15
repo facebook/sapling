@@ -36,10 +36,9 @@ impl BackingStore {
         config.load_user();
         config.load_hgrc(hg.join("hgrc"), "repository");
 
-        let repo_name: RepoName = config
+        let repo_name: Option<RepoName> = config
             .get_opt("remotefilelog", "reponame")
-            .context("Invalid repo name")?
-            .context("No repo name specified in remotefilelog.reponame")?;
+            .context("Invalid repo name")?;
 
         let store_path = hg.join("store");
         let mut blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
@@ -55,7 +54,8 @@ impl BackingStore {
             Err(e) => warn!("couldn't initialize Memcache: {}", e),
         }
 
-        let (blobstore, treestore) = if use_edenapi {
+        let (blobstore, treestore) = if use_edenapi && repo_name.is_some() {
+            let repo_name = repo_name.unwrap();
             let edenapi = EdenApiBuilder::from_config(&config)?.build()?;
             let edenapi: Arc<dyn EdenApi> = Arc::new(edenapi);
             let fileremotestore = EdenApiFileStore::new(repo_name.clone(), edenapi.clone());
