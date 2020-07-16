@@ -13,10 +13,12 @@
 //! watch.
 use anyhow::*;
 use serde::*;
+use sha2::{Digest, Sha256};
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str;
 use structopt::StructOpt;
 
 // Take care with the full path to the utility so that we are not so easily
@@ -500,6 +502,15 @@ fn disable_trashcan(mount_point: &str) -> Result<()> {
     Ok(())
 }
 
+/// Hash the subdirectory of mount point. In practice this is used to avoid
+/// an error with APFS volume name constraints.
+fn encode_canonicalized_path<P: AsRef<Path>>(mount_point: P) -> String {
+    format!(
+        "{:x}",
+        Sha256::digest(mount_point.as_ref().to_str().unwrap().as_bytes())
+    )
+}
+
 /// Encode a mount point as a volume name.
 /// The story here is that diskutil allows any user to create an APFS
 /// volume, but requires root privs to mount it into the VFS.
@@ -509,7 +520,14 @@ fn disable_trashcan(mount_point: &str) -> Result<()> {
 /// We will only mount volumes that have that encoded name, at the
 /// location encoded by their name and refuse to mount anything else.
 fn encode_mount_point_as_volume_name<P: AsRef<Path>>(mount_point: P) -> String {
-    format!("edenfs:{}", mount_point.as_ref().display())
+    let full_volume_name = format!("edenfs:{}", mount_point.as_ref().display());
+
+    if full_volume_name.chars().count() > 127 {
+        let hashed_mount = encode_canonicalized_path(&mount_point);
+        return format!("edenfs:{}", hashed_mount);
+    }
+
+    full_volume_name
 }
 
 fn unmount_scratch(mount_point: &str, force: bool, mount_table: &MountTable) -> Result<()> {
