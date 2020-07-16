@@ -1137,23 +1137,10 @@ def manifestmerge(
         ret = copies.mergecopies(repo, wctx, p2, pa)
         copy, movewithdir, diverge, renamedelete, dirmove = ret
 
-    untracked = set()
-    normalize = lambda f: f
-    # Avoid circular imports
-    from . import context
-
-    if isinstance(wctx, context.workingctx):
-        normalize = repo.dirstate.normalize
-        status = wctx.status(listunknown=True)
-        untracked.update(normalize(f) for f in status.unknown)
-
     boolbm = pycompat.bytestr(bool(branchmerge))
     boolf = pycompat.bytestr(bool(force))
     boolm = pycompat.bytestr(bool(matcher))
     sparsematch = getattr(repo, "sparsematch", None)
-    ignore = repo.dirstate._ignore
-    checkpathconfig = repo.ui.configbool("experimental", "merge.checkpathconflicts")
-
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(" branchmerge: %s, force: %s, partial: %s\n" % (boolbm, boolf, boolm))
     repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
@@ -1341,22 +1328,17 @@ def manifestmerge(
                 #   y         y           y      |   merge
                 #
                 # Checking whether the files are different is expensive, so we
-                # don't do that when we can avoid it. If we know there's no
-                # untracked file in the way, let's just overwrite it.
-                normf = normalize(f)
-                if not checkpathconfig and normf not in untracked and not ignore(normf):
-                    actions[f] = ("g", (fl2, False), "remote created")
+                # don't do that when we can avoid it.
+                if not force:
+                    actions[f] = ("c", (fl2,), "remote created")
+                elif not branchmerge:
+                    actions[f] = ("c", (fl2,), "remote created")
                 else:
-                    if not force:
-                        actions[f] = ("c", (fl2,), "remote created")
-                    elif not branchmerge:
-                        actions[f] = ("c", (fl2,), "remote created")
-                    else:
-                        actions[f] = (
-                            "cm",
-                            (fl2, pa.node()),
-                            "remote created, get or merge",
-                        )
+                    actions[f] = (
+                        "cm",
+                        (fl2, pa.node()),
+                        "remote created, get or merge",
+                    )
             elif n2 != ma[f]:
                 df = None
                 for d in dirmove:

@@ -119,8 +119,9 @@ attack ../test
   ../test
   $ mkdir ../test
   $ echo data > ../test/file
-  $ hg update -Cr3 2>/dev/null
-  [1]
+  $ hg update -Cr3
+  abort: path contains illegal component: ../test
+  [255]
   $ cat ../test/file
   data
 
@@ -128,8 +129,9 @@ attack /tmp/test
 
   $ hg manifest -r4
   /tmp/test
-  $ hg update -Cr4 2>/dev/null
-  [1]
+  $ hg update -Cr4
+  abort: path contains illegal component: /tmp/test
+  [255]
 
 Test symlink traversal on merge:
 --------------------------------
