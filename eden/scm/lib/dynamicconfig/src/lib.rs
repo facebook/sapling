@@ -129,6 +129,7 @@ pub struct Generator {
     config: ConfigSet,
     platform: Platform,
     domain: Domain,
+    hostname: String,
 }
 
 impl Generator {
@@ -145,7 +146,12 @@ impl Generator {
             HashSet::new()
         };
 
-        let shard = get_shard(&hostname::get()?.to_string_lossy());
+        let hostname = hostname::get()?
+            .to_string_lossy()
+            .to_string()
+            .to_lowercase();
+
+        let shard = get_shard(&hostname);
         let user_shard = get_shard(&user_name);
 
         let group = get_hg_group(&tiers, shard);
@@ -168,6 +174,7 @@ impl Generator {
             config: ConfigSet::new(),
             platform,
             domain,
+            hostname,
         })
     }
 
@@ -247,6 +254,11 @@ impl Generator {
     #[allow(dead_code)]
     pub(crate) fn domain(&self) -> Domain {
         self.domain
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn hostname(&self) -> &str {
+        &self.hostname
     }
 
     pub(crate) fn set_config(
