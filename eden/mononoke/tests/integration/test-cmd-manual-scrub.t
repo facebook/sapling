@@ -32,13 +32,13 @@ Failure time - this key will not exist
   [1]
 
 Success time - these keys will exist and be scrubbed
-  $ manual_scrub --storage-config-name blobstore <<EOF
+  $ manual_scrub --storage-config-name blobstore <<EOF | sort
   > repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   > repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
   > repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
   > EOF
-  repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   repo0000.content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f
+  repo0000.hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b
   repo0000.hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d
 
 Demostrate that a key exists
