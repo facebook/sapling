@@ -19,7 +19,7 @@ use structopt::StructOpt;
 use tokio::prelude::*;
 
 use configparser::config::{ConfigSet, Options};
-use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback, RepoName};
+use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback};
 use edenapi_types::{json::FromJson, CompleteTreeRequest, DataRequest, HistoryRequest};
 
 const DEFAULT_CONFIG_FILE: &str = ".hgrc.edenapi";
@@ -53,7 +53,7 @@ struct Args {
 }
 
 struct Setup<R> {
-    repo: RepoName,
+    repo: String,
     client: Client,
     requests: Vec<R>,
 }
@@ -61,14 +61,10 @@ struct Setup<R> {
 impl<R: FromJson + Debug> Setup<R> {
     /// Common set up for all subcommands.
     fn from_args(args: Args) -> Result<Self> {
-        let repo = args.repo.parse()?;
-        let client = init_client(args.config)?;
-        let requests: Vec<R> = read_requests()?;
-
         Ok(Self {
-            repo,
-            client,
-            requests,
+            repo: args.repo,
+            client: init_client(args.config)?,
+            requests: read_requests()?,
         })
     }
 }

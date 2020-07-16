@@ -8,10 +8,10 @@
 use crate::remotestore::FakeRemoteStore;
 use crate::treecontentstore::TreeContentStore;
 use crate::utils::key_from_path_node_slice;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
-use edenapi::{Builder as EdenApiBuilder, EdenApi, RepoName};
+use edenapi::{Builder as EdenApiBuilder, EdenApi};
 use log::warn;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
@@ -36,10 +36,6 @@ impl BackingStore {
         config.load_user();
         config.load_hgrc(hg.join("hgrc"), "repository");
 
-        let repo_name: Option<RepoName> = config
-            .get_opt("remotefilelog", "reponame")
-            .context("Invalid repo name")?;
-
         let store_path = hg.join("store");
         let mut blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
         let treestore = ContentStoreBuilder::new(&config)
@@ -54,21 +50,21 @@ impl BackingStore {
             Err(e) => warn!("couldn't initialize Memcache: {}", e),
         }
 
-        let (blobstore, treestore) = if use_edenapi && repo_name.is_some() {
-            let repo_name = repo_name.unwrap();
-            let edenapi = EdenApiBuilder::from_config(&config)?.build()?;
-            let edenapi: Arc<dyn EdenApi> = Arc::new(edenapi);
-            let fileremotestore = EdenApiFileStore::new(repo_name.clone(), edenapi.clone());
-            let treeremotestore = EdenApiTreeStore::new(repo_name, edenapi);
-            (
-                blobstore.remotestore(fileremotestore).build()?,
-                treestore.remotestore(treeremotestore).build()?,
-            )
-        } else {
-            (
+        let (blobstore, treestore) = match config.get_opt::<String>("remotefilelog", "reponame")? {
+            Some(repo) if use_edenapi => {
+                let edenapi = EdenApiBuilder::from_config(&config)?.build()?;
+                let edenapi: Arc<dyn EdenApi> = Arc::new(edenapi);
+                let fileremotestore = EdenApiFileStore::new(repo.clone(), edenapi.clone());
+                let treeremotestore = EdenApiTreeStore::new(repo, edenapi);
+                (
+                    blobstore.remotestore(fileremotestore).build()?,
+                    treestore.remotestore(treeremotestore).build()?,
+                )
+            }
+            _ => (
                 blobstore.remotestore(Arc::new(FakeRemoteStore)).build()?,
                 treestore.remotestore(Arc::new(FakeRemoteStore)).build()?,
-            )
+            ),
         };
 
         Ok(Self {

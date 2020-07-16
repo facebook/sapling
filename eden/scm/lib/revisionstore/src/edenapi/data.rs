@@ -119,8 +119,8 @@ mod tests {
         let trees = HashMap::new();
 
         let client = FakeEdenApi::new().files(files).trees(trees).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo".parse()?, client.clone());
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo".parse()?, client.clone());
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone());
+        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client.clone());
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -163,8 +163,8 @@ mod tests {
         let trees = hashmap! { k.clone() => d.data.clone() };
 
         let client = FakeEdenApi::new().files(files).trees(trees).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo".parse()?, client.clone());
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo".parse()?, client.clone());
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone());
+        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client.clone());
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -202,7 +202,7 @@ mod tests {
     fn test_missing() -> Result<()> {
         // Set up empty EdenApi remote store.
         let client = FakeEdenApi::new().into_arc();
-        let remote = EdenApiRemoteStore::<File>::new("repo".parse()?, client);
+        let remote = EdenApiRemoteStore::<File>::new("repo", client);
 
         // Set up local mutable store.
         let tmp = TempDir::new()?;

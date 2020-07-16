@@ -19,7 +19,6 @@ edenapi_types = { path = "types" }
 http_client = { path = "../http_client" }
 types = { path = "../types" }
 anyhow = "1.0"
-ascii = "1.0"
 async-trait = "0.1.29"
 atty = "0.2"
 dirs = "2.0"
@@ -29,6 +28,7 @@ http = "0.2"
 indicatif = { version = "0.14", features = ["with_rayon"] }
 itertools = "0.8"
 log = { version = "0.4.8", features = ["kv_unstable"] }
+percent-encoding = "2.1"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = "1.0"

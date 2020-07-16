@@ -13,7 +13,7 @@ use bytes::Bytes;
 use futures::prelude::*;
 
 use configparser::config::ConfigSet;
-use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, RepoName, ResponseMeta, Stats};
+use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
 use edenapi_types::{DataEntry, HistoryEntry};
 use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
 
@@ -230,7 +230,7 @@ impl EdenApi for FakeEdenApi {
 
     async fn files(
         &self,
-        _repo: RepoName,
+        _repo: String,
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError> {
@@ -239,7 +239,7 @@ impl EdenApi for FakeEdenApi {
 
     async fn history(
         &self,
-        _repo: RepoName,
+        _repo: String,
         keys: Vec<Key>,
         _length: Option<u32>,
         _progress: Option<ProgressCallback>,
@@ -261,7 +261,7 @@ impl EdenApi for FakeEdenApi {
 
     async fn trees(
         &self,
-        _repo: RepoName,
+        _repo: String,
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError> {
@@ -270,7 +270,7 @@ impl EdenApi for FakeEdenApi {
 
     async fn complete_trees(
         &self,
-        _repo: RepoName,
+        _repo: String,
         _rootdir: RepoPathBuf,
         _mfnodes: Vec<HgId>,
         _basemfnodes: Vec<HgId>,

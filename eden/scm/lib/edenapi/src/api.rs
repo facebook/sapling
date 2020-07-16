@@ -12,7 +12,6 @@ use http_client::Progress;
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::errors::EdenApiError;
-use crate::name::RepoName;
 use crate::response::{Fetch, ResponseMeta};
 
 pub type ProgressCallback = Box<dyn FnMut(Progress) + Send + 'static>;
@@ -23,14 +22,14 @@ pub trait EdenApi: Send + Sync + 'static {
 
     async fn files(
         &self,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError>;
 
     async fn history(
         &self,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         length: Option<u32>,
         progress: Option<ProgressCallback>,
@@ -38,14 +37,14 @@ pub trait EdenApi: Send + Sync + 'static {
 
     async fn trees(
         &self,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError>;
 
     async fn complete_trees(
         &self,
-        repo: RepoName,
+        repo: String,
         rootdir: RepoPathBuf,
         mfnodes: Vec<HgId>,
         basemfnodes: Vec<HgId>,

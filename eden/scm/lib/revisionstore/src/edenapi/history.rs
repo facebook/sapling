@@ -113,7 +113,7 @@ mod tests {
         let history = hashmap! { k.clone() => n.clone() };
 
         let client = FakeEdenApi::new().history(history).into_arc();
-        let remote = EdenApiRemoteStore::<File>::new("repo".parse()?, client.clone());
+        let remote = EdenApiRemoteStore::<File>::new("repo", client.clone());
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -137,7 +137,7 @@ mod tests {
     #[should_panic]
     fn test_tree_history() {
         let client = FakeEdenApi::new().into_arc();
-        let remote = EdenApiRemoteStore::<Tree>::new("repo".parse().unwrap(), client.clone());
+        let remote = EdenApiRemoteStore::<Tree>::new("repo", client.clone());
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new().unwrap();

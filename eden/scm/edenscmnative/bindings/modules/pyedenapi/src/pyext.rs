@@ -18,9 +18,7 @@ use edenapi_types::{DataEntry, HistoryEntry};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
 use crate::stats::stats;
-use crate::util::{
-    as_deltastore, as_historystore, to_hgids, to_keys, to_path, to_repo_name, wrap_callback,
-};
+use crate::util::{as_deltastore, as_historystore, to_hgids, to_keys, to_path, wrap_callback};
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
 ///
@@ -41,7 +39,6 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         progress: Option<PyObject>,
     ) -> PyResult<stats> {
-        let repo = to_repo_name(py, &repo)?;
         let keys = to_keys(py, &keys)?;
         let store = as_deltastore(py, store)?;
         let progress = progress.map(wrap_callback);
@@ -68,7 +65,6 @@ pub trait EdenApiPyExt: EdenApi {
         length: Option<u32>,
         progress: Option<PyObject>,
     ) -> PyResult<stats> {
-        let repo = to_repo_name(py, &repo)?;
         let keys = to_keys(py, &keys)?;
         let store = as_historystore(py, store)?;
         let progress = progress.map(wrap_callback);
@@ -94,7 +90,6 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         progress: Option<PyObject>,
     ) -> PyResult<stats> {
-        let repo = to_repo_name(py, &repo)?;
         let keys = to_keys(py, &keys)?;
         let store = as_deltastore(py, store)?;
         let progress = progress.map(wrap_callback);
@@ -123,7 +118,6 @@ pub trait EdenApiPyExt: EdenApi {
         depth: Option<usize>,
         progress: Option<PyObject>,
     ) -> PyResult<stats> {
-        let repo = to_repo_name(py, &repo)?;
         let rootdir = to_path(py, &rootdir)?;
         let mfnodes = to_hgids(py, mfnodes);
         let basemfnodes = to_hgids(py, basemfnodes);

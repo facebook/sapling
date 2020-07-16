@@ -10,6 +10,7 @@ use std::iter::FromIterator;
 use async_trait::async_trait;
 use futures::prelude::*;
 use itertools::Itertools;
+use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
@@ -22,8 +23,11 @@ use types::{HgId, Key, RepoPathBuf};
 use crate::api::{EdenApi, ProgressCallback};
 use crate::builder::{ClientCreds, Config};
 use crate::errors::EdenApiError;
-use crate::name::RepoName;
 use crate::response::{Fetch, ResponseMeta};
+
+/// All non-alphanumeric characters (except hypens, underscores, and periods)
+/// found in the repo's name will be percent-encoded before being used in URLs.
+const RESERVED_CHARS: &AsciiSet = &NON_ALPHANUMERIC.remove(b'_').remove(b'-').remove(b'.');
 
 mod paths {
     pub const HEALTH_CHECK: &str = "health_check";
@@ -48,10 +52,13 @@ impl Client {
     }
 
     /// Append a repo name and endpoint path onto the server's base URL.
-    fn url(&self, path: &str, repo: Option<&RepoName>) -> Result<Url, EdenApiError> {
+    fn url(&self, path: &str, repo: Option<&str>) -> Result<Url, EdenApiError> {
         let url = &self.config.server_url;
         Ok(match repo {
-            Some(repo) => url.join(&format!("{}/", repo))?.join(path)?,
+            Some(repo) => url
+                // Repo name must be sanitized since it can be set by the user.
+                .join(&format!("{}/", utf8_percent_encode(repo, RESERVED_CHARS)))?
+                .join(path)?,
             None => url.join(path)?,
         })
     }
@@ -145,7 +152,7 @@ impl EdenApi for Client {
 
     async fn files(
         &self,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError> {
@@ -163,7 +170,7 @@ impl EdenApi for Client {
 
     async fn history(
         &self,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         length: Option<u32>,
         progress: Option<ProgressCallback>,
@@ -200,7 +207,7 @@ impl EdenApi for Client {
 
     async fn trees(
         &self,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError> {
@@ -218,7 +225,7 @@ impl EdenApi for Client {
 
     async fn complete_trees(
         &self,
-        repo: RepoName,
+        repo: String,
         rootdir: RepoPathBuf,
         mfnodes: Vec<HgId>,
         basemfnodes: Vec<HgId>,
@@ -255,5 +262,28 @@ fn split_into_batches(
             .map(Vec::from_iter)
             .collect(),
         None => vec![keys.into_iter().collect()],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+
+    use crate::builder::Builder;
+
+    #[test]
+    fn test_url_escaping() -> Result<()> {
+        let base_url = "https://example.com".parse()?;
+        let client = Builder::new().server_url(base_url).build()?;
+
+        let repo = "repo_-. !@#$% foo \u{1f4a9} bar";
+        let path = "path";
+
+        let url = client.url(path, Some(repo))?.into_string();
+        let expected =
+            "https://example.com/repo_-.%20%21%40%23%24%25%20foo%20%F0%9F%92%A9%20bar/path";
+        assert_eq!(&url, &expected);
+
+        Ok(())
     }
 }

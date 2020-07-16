@@ -17,7 +17,6 @@ use revisionstore::{EdenApiFileStore, EdenApiTreeStore};
 
 use crate::pyext::EdenApiPyExt;
 use crate::stats::stats;
-use crate::util::to_repo_name;
 
 // Python wrapper around an EdenAPI client.
 //
@@ -94,14 +93,12 @@ py_class!(pub class client |py| {
     }
 
     def filestore(&self, repo: String) -> PyResult<edenapifilestore> {
-        let repo = to_repo_name(py, &repo)?;
         let edenapi = self.extract_inner(py);
         let store = EdenApiFileStore::new(repo, edenapi);
         edenapifilestore::new(py, store)
     }
 
     def treestore(&self, repo: String) -> PyResult<edenapitreestore> {
-        let repo = to_repo_name(py, &repo)?;
         let edenapi = self.extract_inner(py);
         let store = EdenApiTreeStore::new(repo, edenapi);
         edenapitreestore::new(py, store)

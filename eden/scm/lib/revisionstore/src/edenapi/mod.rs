@@ -11,7 +11,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 
-use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, RepoName};
+use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback};
 use edenapi_types::DataEntry;
 use types::Key;
 
@@ -42,7 +42,7 @@ pub type EdenApiTreeStore = EdenApiRemoteStore<Tree>;
 /// mutable store.
 pub struct EdenApiRemoteStore<T> {
     client: Arc<dyn EdenApi>,
-    repo: RepoName,
+    repo: String,
     _phantom: PhantomData<T>,
 }
 
@@ -67,10 +67,10 @@ impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
     /// ```rust,ignore
     /// let store = EdenApiStore::<File>::new(repo, edenapi);
     /// ```
-    pub fn new(repo: RepoName, client: Arc<dyn EdenApi>) -> Arc<Self> {
+    pub fn new(repo: impl ToString, client: Arc<dyn EdenApi>) -> Arc<Self> {
         Arc::new(Self {
             client,
-            repo,
+            repo: repo.to_string(),
             _phantom: PhantomData,
         })
     }
@@ -120,7 +120,7 @@ pub enum Tree {}
 pub trait EdenApiStoreKind: Send + Sync + 'static {
     async fn prefetch(
         client: Arc<dyn EdenApi>,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError>;
@@ -130,7 +130,7 @@ pub trait EdenApiStoreKind: Send + Sync + 'static {
 impl EdenApiStoreKind for File {
     async fn prefetch(
         client: Arc<dyn EdenApi>,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError> {
@@ -142,7 +142,7 @@ impl EdenApiStoreKind for File {
 impl EdenApiStoreKind for Tree {
     async fn prefetch(
         client: Arc<dyn EdenApi>,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError> {

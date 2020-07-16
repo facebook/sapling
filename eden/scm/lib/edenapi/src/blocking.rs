@@ -13,7 +13,6 @@ use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::{EdenApi, ProgressCallback};
 use crate::errors::EdenApiError;
-use crate::name::RepoName;
 use crate::response::{BlockingFetch, ResponseMeta};
 
 pub trait EdenApiBlocking: EdenApi {
@@ -24,7 +23,7 @@ pub trait EdenApiBlocking: EdenApi {
 
     fn files_blocking(
         &self,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<BlockingFetch<DataEntry>, EdenApiError> {
@@ -33,7 +32,7 @@ pub trait EdenApiBlocking: EdenApi {
 
     fn history_blocking(
         &self,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         length: Option<u32>,
         progress: Option<ProgressCallback>,
@@ -43,7 +42,7 @@ pub trait EdenApiBlocking: EdenApi {
 
     fn trees_blocking(
         &self,
-        repo: RepoName,
+        repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<BlockingFetch<DataEntry>, EdenApiError> {
@@ -52,7 +51,7 @@ pub trait EdenApiBlocking: EdenApi {
 
     fn complete_trees_blocking(
         &self,
-        repo: RepoName,
+        repo: String,
         rootdir: RepoPathBuf,
         mfnodes: Vec<HgId>,
         basemfnodes: Vec<HgId>,

@@ -10,14 +10,10 @@ use std::sync::Arc;
 use cpython::*;
 
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
-use edenapi::{Progress, ProgressCallback, RepoName};
+use edenapi::{Progress, ProgressCallback};
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use types::{HgId, Key, RepoPathBuf};
-
-pub fn to_repo_name(py: Python, repo: &str) -> PyResult<RepoName> {
-    repo.parse().map_pyerr(py)
-}
 
 pub fn to_path(py: Python, name: &PyPath) -> PyResult<RepoPathBuf> {
     name.to_repo_path()

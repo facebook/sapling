@@ -11,8 +11,6 @@ use http_client::{CertOrKeyMissing, HttpClientError};
 
 #[derive(Debug, Error)]
 pub enum EdenApiError {
-    #[error("Invalid repo name: {0}")]
-    InvalidRepoName(String),
     #[error("Failed to serialize request: {0}")]
     RequestSerializationFailed(#[source] serde_cbor::Error),
     #[error("Empty request")]
