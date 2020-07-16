@@ -16,6 +16,7 @@ mercurial_types = { path = "../mercurial/types" }
 mononoke_api = { path = "../mononoke_api" }
 mononoke_types = { path = "../mononoke_types" }
 permission_checker = { path = "../permission_checker" }
+revisionstore_types = { path = "../../scm/lib/revisionstore/types" }
 types = { path = "../../scm/lib/types" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

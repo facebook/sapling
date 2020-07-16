@@ -12,6 +12,7 @@ use serde_derive::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use thiserror::Error;
 
+use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
 /// Tombstone string that replaces the content of redacted files.
@@ -66,27 +67,23 @@ pub struct InvalidHgId {
 /// Structure representing source control data (typically either file content
 /// or a tree entry) on the wire. Includes the information required to add the
 /// data to a mutable store, along with the parents for hash validation.
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-    Serialize,
-    Deserialize
-)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct DataEntry {
     key: Key,
     data: Bytes,
     parents: Parents,
+    metadata: Metadata,
 }
 
 impl DataEntry {
-    pub fn new(key: Key, data: Bytes, parents: Parents) -> Self {
-        Self { key, data, parents }
+    pub fn new(key: Key, data: Bytes, parents: Parents, metadata: Metadata) -> Self {
+        Self {
+            key,
+            data,
+            parents,
+            metadata,
+        }
     }
 
     pub fn key(&self) -> &Key {
@@ -132,6 +129,11 @@ impl DataEntry {
     /// Get this entry's data without verifying the hgid hash.
     pub fn data_unchecked(&self) -> Bytes {
         self.data.clone()
+    }
+
+    /// Get this entry's metadata.
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
     }
 }
 

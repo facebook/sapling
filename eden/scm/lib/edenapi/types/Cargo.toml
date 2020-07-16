@@ -10,6 +10,7 @@ default = ["for-tests"]
 for-tests = []
 
 [dependencies]
+revisionstore_types = { path = "../../revisionstore/types" }
 types = { path = "../../types" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }

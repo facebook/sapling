@@ -56,18 +56,12 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
     fn flush(&self) -> Result<Option<PathBuf>>;
 
     fn add_entry(&self, entry: &DataEntry) -> Result<()> {
-        let key = entry.key().clone();
-        let data = entry.data()?;
-        let metadata = Metadata {
-            size: Some(data.len() as u64),
-            flags: None,
-        };
         let delta = Delta {
-            data,
+            data: entry.data()?,
             base: None,
-            key,
+            key: entry.key().clone(),
         };
-        self.add(&delta, &metadata)
+        self.add(&delta, entry.metadata())
     }
 }
 
