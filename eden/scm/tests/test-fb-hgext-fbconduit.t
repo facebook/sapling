@@ -250,6 +250,9 @@ globalrevs.
 fallback to the slow lookup path.
 
   $ hg up -q m5000
+  failed to lookup globalrev 5000 from scmquery: No JSON object could be decoded
+  failed to lookup globalrev 5000 from scmquery: No JSON object could be decoded
+  failed to lookup globalrev 5000 from scmquery: No JSON object could be decoded
 
 - Fix the conduit configurations so that we can mock ScmQuery lookups.
 
