@@ -403,7 +403,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
                 // NOTE: This is a no-op, but it's here to ensure permit is still in scope at this
                 // point (which it should: if it doesn't, then that means we unconditionally released
                 // the semaphore before doing the get, and that's wrong).
-                scopeguard::defer! { drop(permit); };
+                scopeguard::defer! { drop(permit) };
 
                 // Now, actually go the underlying blobstore.
                 let res = inner.blobstore.get(ctx.clone(), key.clone()).await?;
@@ -458,7 +458,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
                     SemaphoreAcquisition::Acquired(permit) => permit,
                 };
 
-                scopeguard::defer! { drop(permit); };
+                scopeguard::defer! { drop(permit) };
 
                 let res = inner
                     .blobstore

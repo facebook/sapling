@@ -1,0 +1,80 @@
+name: Mononoke Integration Tests Linux
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  tests:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+    - name: Check space
+      run: df -h
+    - name: Clean space as per https://github.com/actions/virtual-environments/issues/709
+      run: sudo rm -rf "/usr/local/share/boost" && sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+    - name: Check space
+      run: df -h
+    - name: Install Rust Stable
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        default: true
+        profile: minimal
+    - name: Install Python 2.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: '2.7'
+    - name: Install system deps
+      run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive eden_scm
+    - name: Build eden_scm dependencies
+      run: >-
+        python3 build/fbcode_builder/getdeps.py build
+        --allow-system-packages
+        --scratch-path /tmp/build
+        --only-deps
+        --src-dir=.
+        eden_scm
+    - name: Build eden_scm
+      run: >-
+        python3 build/fbcode_builder/getdeps.py build
+        --allow-system-packages
+        --scratch-path /tmp/build
+        --no-deps
+        --src-dir=.
+        eden_scm
+    - name: Build mononoke dependencies
+      run: >-
+        python3 build/fbcode_builder/getdeps.py build
+        --scratch-path /tmp/build
+        --only-deps
+        --src-dir=.
+        mononoke
+    - name: Build mononoke
+      run: >-
+        python3 build/fbcode_builder/getdeps.py build
+        --scratch-path /tmp/build
+        --no-deps
+        --src-dir=.
+        mononoke
+    - name: Install Python 3.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install click
+    - name: Check space
+      run: df -h
+    - name: Run Monononke integration tests
+      run: |
+        for dir in /tmp/build/installed/python-click-*/lib/fb-py-libs/python-click/click; do
+            export PYTHONPATH="${dir}${PYTHONPATH:+:${PYTHONPATH}}"
+        done
+        python3 eden/mononoke/tests/integration/run_tests_getdeps.py /tmp/build/installed /tmp/build/build/mononoke_integration_test
+      continue-on-error: true

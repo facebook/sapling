@@ -159,7 +159,7 @@ impl FilenodesReader {
         }
 
         let permit = self.shards.acquire_filenodes(&path, filenode).await;
-        scopeguard::defer! { drop(permit); };
+        scopeguard::defer! { drop(permit) };
 
         // Now that we acquired the permit, check our cache again, in case the previous permit
         // owner just filed the cache with the filenode we're looking for.
@@ -251,7 +251,7 @@ impl FilenodesReader {
         }
 
         let permit = self.shards.acquire_history(&path).await;
-        scopeguard::defer! { drop(permit); };
+        scopeguard::defer! { drop(permit) };
 
         // See above for rationale here.
         if let Some(cached) = self.local_cache.get(&key) {

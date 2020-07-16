@@ -102,11 +102,11 @@ wheel:
 
 getdepsbuild:
 	mkdir -p $(GETDEPS_BUILD_DIR)/eden_scm
-	ln -sf $(GETDEPS_BUILD_DIR)/eden_scm build
-	ln -sf $(GETDEPS_INSTALL_DIR)/fbthrift-source/thrift ../../thrift
-	ln -sf $(GETDEPS_INSTALL_DIR)/fb303-source/fb303 ../../fb303
+	ln -sfn $(GETDEPS_BUILD_DIR)/eden_scm build
+	ln -sfn $(GETDEPS_INSTALL_DIR)/fbthrift-source/thrift ../../thrift
+	ln -sfn $(GETDEPS_INSTALL_DIR)/fb303-source/fb303 ../../fb303
 	mkdir -p ../../common/rust
-	ln -sf $(GETDEPS_INSTALL_DIR)/rust-shed/shed ../../common/rust/shed
+	ln -sfn $(GETDEPS_INSTALL_DIR)/rust-shed/source/shed ../../common/rust/shed
 	GETDEPS_BUILD=1 \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
 		$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)

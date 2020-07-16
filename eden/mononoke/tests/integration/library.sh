@@ -524,7 +524,7 @@ function setup_mononoke_storage_config {
   local blobstorename="$2"
   local blobstorepath="$TESTTMP/$blobstorename"
 
-  if [[ -v MULTIPLEXED ]]; then
+  if [[ -n "${MULTIPLEXED:-}" ]]; then
     cat >> common/storage.toml <<CONFIG
 $(db_config "$blobstorename")
 
@@ -537,7 +537,7 @@ CONFIG
     local i
     for ((i=0; i<=MULTIPLEXED; i++)); do
       mkdir -p "$blobstorepath/$i"
-      if [[ -v PACK_BLOB && $i -le "$PACK_BLOB" ]]; then
+      if [[ -n "${PACK_BLOB:-}" && $i -le "$PACK_BLOB" ]]; then
         echo "  { blobstore_id = $i, blobstore = { pack = { blobstore = { $underlyingstorage = { path = \"$blobstorepath/$i\" } } } } }," >> common/storage.toml
       else
         echo "  { blobstore_id = $i, blobstore = { $underlyingstorage = { path = \"$blobstorepath/$i\" } } }," >> common/storage.toml
@@ -615,25 +615,25 @@ enabled=${ENABLED:-true}
 hash_validation_percentage=100
 CONFIG
 
-if [[ -v HGSQL_NAME ]]; then
+if [[ -n "${HGSQL_NAME:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 hgsql_name="$HGSQL_NAME"
 CONFIG
 fi
 
-if [[ ! -v NO_BOOKMARKS_CACHE ]]; then
+if [[ -z "${NO_BOOKMARKS_CACHE:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 bookmarks_cache_ttl=2000
 CONFIG
 fi
 
-if [[ -v READ_ONLY_REPO ]]; then
+if [[ -n "${READ_ONLY_REPO:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 readonly=true
 CONFIG
 fi
 
-if [[ -v SCUBA_LOGGING_PATH ]]; then
+if [[ -n "${SCUBA_LOGGING_PATH:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 scuba_local_path="$SCUBA_LOGGING_PATH"
 CONFIG
@@ -649,7 +649,7 @@ storage_config = "$storageconfig"
 
 CONFIG
 
-if [[ -v FILESTORE ]]; then
+if [[ -n "${FILESTORE:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [filestore]
 chunk_size = ${FILESTORE_CHUNK_SIZE:-10}
@@ -657,25 +657,25 @@ concurrency = 24
 CONFIG
 fi
 
-if [[ -v REDACTION_DISABLED ]]; then
+if [[ -n "${REDACTION_DISABLED:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 redaction=false
 CONFIG
 fi
 
-if [[ -v LIST_KEYS_PATTERNS_MAX ]]; then
+if [[ -n "${LIST_KEYS_PATTERNS_MAX:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 list_keys_patterns_max=$LIST_KEYS_PATTERNS_MAX
 CONFIG
 fi
 
-if [[ -v WIREPROTO_LOGGING_PATH ]]; then
+if [[ -n "${WIREPROTO_LOGGING_PATH:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [wireproto_logging]
 local_path="$WIREPROTO_LOGGING_PATH"
 CONFIG
 
-  if [[ -v WIREPROTO_LOGGING_BLOBSTORE ]]; then
+  if [[ -n "${WIREPROTO_LOGGING_BLOBSTORE:-}" ]]; then
     cat >> "repos/$reponame/server.toml" <<CONFIG
 storage_config="traffic_replay_blobstore"
 remote_arg_size_threshold=0
@@ -690,7 +690,7 @@ CONFIG
 fi
 # path = "$TESTTMP/traffic-replay-blobstore"
 
-if [[ -v ONLY_FAST_FORWARD_BOOKMARK ]]; then
+if [[ -n "${ONLY_FAST_FORWARD_BOOKMARK:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [[bookmarks]]
 name="$ONLY_FAST_FORWARD_BOOKMARK"
@@ -698,7 +698,7 @@ only_fast_forward=true
 CONFIG
 fi
 
-if [[ -v ONLY_FAST_FORWARD_BOOKMARK_REGEX ]]; then
+if [[ -n "${ONLY_FAST_FORWARD_BOOKMARK_REGEX:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [[bookmarks]]
 regex="$ONLY_FAST_FORWARD_BOOKMARK_REGEX"
@@ -711,25 +711,25 @@ fi
 forbid_p2_root_rebases=false
 CONFIG
 
-if [[ -v COMMIT_SCRIBE_CATEGORY ]]; then
+if [[ -n "${COMMIT_SCRIBE_CATEGORY:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 commit_scribe_category = "$COMMIT_SCRIBE_CATEGORY"
 CONFIG
 fi
 
-if [[ -v ALLOW_CASEFOLDING ]]; then
+if [[ -n "${ALLOW_CASEFOLDING:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 casefolding_check=false
 CONFIG
 fi
 
-if [[ -v BLOCK_MERGES ]]; then
+if [[ -n "${BLOCK_MERGES:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 block_merges=true
 CONFIG
 fi
 
-if [[ -v PUSHREBASE_REWRITE_DATES ]]; then
+if [[ -n "${PUSHREBASE_REWRITE_DATES:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 rewritedates=true
 CONFIG
@@ -739,19 +739,19 @@ rewritedates=false
 CONFIG
 fi
 
-if [[ -v EMIT_OBSMARKERS ]]; then
+if [[ -n "${EMIT_OBSMARKERS:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 emit_obsmarkers=true
 CONFIG
 fi
 
-if [[ -v ASSIGN_GLOBALREVS ]]; then
+if [[ -n "${ASSIGN_GLOBALREVS:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 assign_globalrevs=true
 CONFIG
 fi
 
-if [[ -v POPULATE_GIT_MAPPING ]]; then
+if [[ -n "${POPULATE_GIT_MAPPING:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 populate_git_mapping=true
 CONFIG
@@ -763,14 +763,14 @@ fi
 disable_acl_checker=true
 CONFIG
 
-if [[ -v ENABLE_PRESERVE_BUNDLE2 ]]; then
+if [[ -n "${ENABLE_PRESERVE_BUNDLE2:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [bundle2_replay_params]
 preserve_raw_bundle2 = true
 CONFIG
 fi
 
-if [[ -v DISALLOW_NON_PUSHREBASE ]]; then
+if [[ -n "${DISALLOW_NON_PUSHREBASE:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [push]
 pure_push_allowed = false
@@ -782,19 +782,19 @@ pure_push_allowed = true
 CONFIG
 fi
 
-if [[ -v COMMIT_SCRIBE_CATEGORY ]]; then
+if [[ -n "${COMMIT_SCRIBE_CATEGORY:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 commit_scribe_category = "$COMMIT_SCRIBE_CATEGORY"
 CONFIG
 fi
 
-if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
+if [[ -n "${CACHE_WARMUP_BOOKMARK:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [cache_warmup]
 bookmark="$CACHE_WARMUP_BOOKMARK"
 CONFIG
 
-  if [[ -v CACHE_WARMUP_MICROWAVE ]]; then
+  if [[ -n "${CACHE_WARMUP_MICROWAVE:-}" ]]; then
     cat >> "repos/$reponame/server.toml" <<CONFIG
 microwave_preload = true
 CONFIG
@@ -802,7 +802,7 @@ CONFIG
 fi
 
 
-if [[ -v LFS_THRESHOLD ]]; then
+if [[ -n "${LFS_THRESHOLD:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [lfs]
 threshold=$LFS_THRESHOLD
@@ -813,7 +813,7 @@ fi
 
 write_infinitepush_config "$reponame"
 
-if [[ -v ENABLED_DERIVED_DATA ]]; then
+if [[ -n "${ENABLED_DERIVED_DATA:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [derived_data_config]
 derived_data_types = $ENABLED_DERIVED_DATA
@@ -828,13 +828,13 @@ fi
 
 function write_infinitepush_config {
   local reponame="$1"
-  if [[ -v INFINITEPUSH_ALLOW_WRITES ]] || \
-     [[ -v INFINITEPUSH_NAMESPACE_REGEX ]] || \
-     [[ -v INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE ]] || \
-     [[ -v INFINITEPUSH_POPULATE_REVERSE_FILLER_QUEUE ]];
+  if [[ -n "${INFINITEPUSH_ALLOW_WRITES:-}" ]] || \
+     [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]] || \
+     [[ -n "${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-}" ]] || \
+     [[ -n "${INFINITEPUSH_POPULATE_REVERSE_FILLER_QUEUE:-}" ]];
   then
     namespace=""
-    if [[ -v INFINITEPUSH_NAMESPACE_REGEX ]]; then
+    if [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]]; then
       namespace="namespace_pattern=\"$INFINITEPUSH_NAMESPACE_REGEX\""
     fi
 
