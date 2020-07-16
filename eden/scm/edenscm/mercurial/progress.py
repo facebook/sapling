@@ -186,6 +186,7 @@ class baserenderer(object):
         if not self.printed:
             return
         self._writeprogress("\r%s\r" % (" " * self.width()))
+        self._bar._ui.ferr.flush()
 
     def complete(self):
         if not self.printed:
