@@ -17,6 +17,7 @@ from edenscm.mercurial import (
     pathutil,
     perftrace,
     progress,
+    pycompat,
     url as urlmod,
     util,
     vfs as vfsmod,
@@ -116,7 +117,9 @@ class _gitlfsremote(object):
         """
         self.ui.log("lfs_url", lfs_url=self.baseurl)
         objects = [{"oid": p.oid(), "size": p.size()} for p in pointers]
-        requestdata = json.dumps({"objects": objects, "operation": action})
+        requestdata = pycompat.encodeutf8(
+            json.dumps({"objects": objects, "operation": action})
+        )
         batchreq = util.urlreq.request(
             "%s/objects/batch" % self.baseurl, data=requestdata
         )
