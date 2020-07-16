@@ -1544,7 +1544,7 @@ def wraprepo(repo):
                 start = 0
                 chunk = 0
                 datalen = len(data1)
-                chunkcount = datalen / maxrowsize
+                chunkcount = datalen // maxrowsize
                 if datalen % maxrowsize != 0 or datalen == 0:
                     chunkcount += 1
 
