@@ -31,7 +31,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "generatedynamicconfig",
         py_fn!(
             py,
-            generatedynamicconfig(repo_name: String, shared_path: PyPathBuf)
+            generatedynamicconfig(config: config, repo_name: String, shared_path: PyPathBuf)
         ),
     )?;
     Ok(m)
@@ -43,7 +43,8 @@ fn applydynamicconfig(
     repo_name: String,
     shared_path: PyPathBuf,
 ) -> PyResult<PyNone> {
-    let dyn_cfg = Generator::new(repo_name, shared_path.to_path_buf())
+    let user_name = get_user_name(py, &config);
+    let dyn_cfg = Generator::new(repo_name, shared_path.to_path_buf(), user_name)
         .map_pyerr(py)?
         .execute(None)
         .map_pyerr(py)?;
@@ -66,10 +67,12 @@ fn applydynamicconfig(
 
 fn generatedynamicconfig(
     py: Python,
+    config: config,
     repo_name: String,
     shared_path: PyPathBuf,
 ) -> PyResult<PyNone> {
-    let config = Generator::new(repo_name, shared_path.to_path_buf())
+    let user_name = get_user_name(py, &config);
+    let config = Generator::new(repo_name, shared_path.to_path_buf(), user_name)
         .map_pyerr(py)?
         .execute(None)
         .map_pyerr(py)?;
@@ -82,4 +85,12 @@ fn generatedynamicconfig(
 
     fs::write(shared_path.as_path().join("hgrc.dynamic"), config_str).map_pyerr(py)?;
     Ok(PyNone)
+}
+
+fn get_user_name(py: Python, config: &config) -> String {
+    config
+        .get(py, "ui".to_string(), "username".to_string())
+        .unwrap_or(None)
+        .and_then(|s| s.to_string(py).map(|s| Some(s.to_string())).unwrap_or(None))
+        .unwrap_or_else(|| "".to_string())
 }

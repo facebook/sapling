@@ -125,13 +125,14 @@ pub struct Generator {
     repo: Repo,
     group: HgGroup,
     shard: u8,
+    user_shard: u8,
     config: ConfigSet,
     platform: Platform,
     domain: Domain,
 }
 
 impl Generator {
-    pub fn new(repo_name: String, repo_path: PathBuf) -> Result<Self> {
+    pub fn new(repo_name: String, repo_path: PathBuf, user_name: String) -> Result<Self> {
         let repo = Repo::from_str(&repo_name)?;
 
         let tiers: HashSet<String> = if Path::new("/etc/smc.tiers").exists() {
@@ -144,7 +145,8 @@ impl Generator {
             HashSet::new()
         };
 
-        let shard = get_shard()?;
+        let shard = get_shard(&hostname::get()?.to_string_lossy());
+        let user_shard = get_shard(&user_name);
 
         let group = get_hg_group(&tiers, shard);
 
@@ -162,6 +164,7 @@ impl Generator {
             repo,
             group,
             shard,
+            user_shard,
             config: ConfigSet::new(),
             platform,
             domain,
@@ -214,6 +217,11 @@ impl Generator {
     #[allow(dead_code)]
     pub(crate) fn in_shard(&self, shard: u8) -> bool {
         self.shard < shard
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn in_user_shard(&self, shard: u8) -> bool {
+        self.user_shard < shard
     }
 
     #[allow(dead_code)]
@@ -287,11 +295,10 @@ impl Generator {
     }
 }
 
-fn get_shard() -> Result<u8> {
-    let hostname = hostname::get()?;
+fn get_shard(input: &str) -> u8 {
     let mut hasher = DefaultHasher::new();
-    hostname.hash(&mut hasher);
-    Ok((hasher.finish() % 100).try_into().unwrap())
+    input.hash(&mut hasher);
+    (hasher.finish() % 100).try_into().unwrap()
 }
 
 pub(crate) fn get_platform() -> Platform {
@@ -353,7 +360,9 @@ pub(crate) mod tests {
     #[test]
     fn test_basic() {
         let repo_name = "test_repo";
-        let mut generator = Generator::new(repo_name.to_string(), PathBuf::new()).unwrap();
+        let username = "username";
+        let mut generator =
+            Generator::new(repo_name.to_string(), PathBuf::new(), username.to_string()).unwrap();
 
         let tiers = HashSet::from_iter(["in_tier1", "in_tier2"].iter().map(|s| s.to_string()));
         let group = HgGroup::Alpha;
@@ -372,6 +381,12 @@ pub(crate) mod tests {
             }
             if gen.in_shard(75) {
                 gen.set_config("shard_section", "shard_key2", "in_shard75");
+            }
+            if !gen.in_user_shard(1) {
+                gen.set_config("user_shard_section", "user_shard_key", "not_in_shard1");
+            }
+            if gen.in_user_shard(80) {
+                gen.set_config("user_shard_section", "user_shard_key2", "in_shard80");
             }
             if !gen.in_group(HgGroup::Dev) {
                 gen.set_config("group_section", "group_key", "not_in_dev");
@@ -402,6 +417,10 @@ tier_key2=not_in_tier3
 [shard_section]
 shard_key=not_in_shard1
 shard_key2=in_shard75
+
+[user_shard_section]
+user_shard_key=not_in_shard1
+user_shard_key2=in_shard80
 
 [group_section]
 group_key=not_in_dev

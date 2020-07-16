@@ -724,4 +724,4 @@ def applydynamicconfig(ui, reponame, sharedpath):
 
 def generatedynamicconfig(ui, reponame, sharedpath):
     if ui.configbool("configs", "loaddynamicconfig"):
-        dynamicconfig.generatedynamicconfig(reponame, sharedpath)
+        dynamicconfig.generatedynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
