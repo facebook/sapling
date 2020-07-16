@@ -344,7 +344,7 @@ class state_update(object):
                 "watchman '%s' event has failed: %s",
                 cmd,
                 str(ex),
-                type=exctypename,
+                exception_type=exctypename,
             )
             return False
 

@@ -59,7 +59,7 @@ def _handlecommandexception(orig, ui):
         "hgerrors",
         "exception has occurred: %s",
         warning,
-        type=exctypename,
+        exception_type=exctypename,
         traceback=trace,
     )
 
