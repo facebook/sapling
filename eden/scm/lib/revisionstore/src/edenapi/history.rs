@@ -9,8 +9,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use futures::prelude::*;
-use parking_lot::Mutex;
-use tokio::runtime::Runtime;
 
 use types::{Key, NodeInfo};
 
@@ -34,7 +32,6 @@ use super::{hgid_keys, EdenApiRemoteStore, File};
 pub(super) struct EdenApiHistoryStore {
     remote: Arc<EdenApiRemoteStore<File>>,
     store: Arc<dyn HgIdMutableHistoryStore>,
-    runtime: Mutex<Runtime>,
 }
 
 impl EdenApiHistoryStore {
@@ -42,15 +39,7 @@ impl EdenApiHistoryStore {
         remote: Arc<EdenApiRemoteStore<File>>,
         store: Arc<dyn HgIdMutableHistoryStore>,
     ) -> Self {
-        // XXX: The interface of the `HgIdRemoteStore` trait does not allow
-        // construction of the underlying stores to fail, so if the runtime
-        // does fail to start all we can do is panic.
-        let runtime = Mutex::new(Runtime::new().expect("Failed to start Tokio runtime"));
-        Self {
-            remote,
-            store,
-            runtime,
-        }
+        Self { remote, store }
     }
 }
 
@@ -68,7 +57,7 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
             Ok(())
         };
 
-        let mut rt = self.runtime.lock();
+        let mut rt = self.remote.runtime.lock();
         rt.block_on(fetch)
     }
 }
@@ -113,7 +102,7 @@ mod tests {
         let history = hashmap! { k.clone() => n.clone() };
 
         let client = FakeEdenApi::new().history(history).into_arc();
-        let remote = EdenApiRemoteStore::<File>::new("repo", client.clone());
+        let remote = EdenApiRemoteStore::<File>::new("repo", client.clone())?;
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -137,7 +126,7 @@ mod tests {
     #[should_panic]
     fn test_tree_history() {
         let client = FakeEdenApi::new().into_arc();
-        let remote = EdenApiRemoteStore::<Tree>::new("repo", client.clone());
+        let remote = EdenApiRemoteStore::<Tree>::new("repo", client.clone()).unwrap();
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new().unwrap();

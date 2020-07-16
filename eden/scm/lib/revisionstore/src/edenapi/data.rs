@@ -9,8 +9,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use futures::prelude::*;
-use parking_lot::Mutex;
-use tokio::runtime::Runtime;
 
 use types::Key;
 
@@ -30,7 +28,6 @@ use super::{hgid_keys, EdenApiRemoteStore, EdenApiStoreKind};
 pub(super) struct EdenApiDataStore<T> {
     remote: Arc<EdenApiRemoteStore<T>>,
     store: Arc<dyn HgIdMutableDeltaStore>,
-    runtime: Mutex<Runtime>,
 }
 
 impl<T: EdenApiStoreKind> EdenApiDataStore<T> {
@@ -38,15 +35,7 @@ impl<T: EdenApiStoreKind> EdenApiDataStore<T> {
         remote: Arc<EdenApiRemoteStore<T>>,
         store: Arc<dyn HgIdMutableDeltaStore>,
     ) -> Self {
-        // XXX: The interface of the `HgIdRemoteStore` trait does not allow
-        // construction of the underlying stores to fail, so if the runtime
-        // does fail to start all we can do is panic.
-        let runtime = Mutex::new(Runtime::new().expect("Failed to start Tokio runtime"));
-        Self {
-            remote,
-            store,
-            runtime,
-        }
+        Self { remote, store }
     }
 }
 
@@ -64,7 +53,7 @@ impl<T: EdenApiStoreKind> RemoteDataStore for EdenApiDataStore<T> {
             Ok(())
         };
 
-        let mut rt = self.runtime.lock();
+        let mut rt = self.remote.runtime.lock();
         rt.block_on(fetch)
     }
 
@@ -119,8 +108,8 @@ mod tests {
         let trees = HashMap::new();
 
         let client = FakeEdenApi::new().files(files).trees(trees).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone());
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client.clone());
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone())?;
+        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client.clone())?;
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -163,8 +152,8 @@ mod tests {
         let trees = hashmap! { k.clone() => d.data.clone() };
 
         let client = FakeEdenApi::new().files(files).trees(trees).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone());
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client.clone());
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone())?;
+        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client.clone())?;
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -202,7 +191,7 @@ mod tests {
     fn test_missing() -> Result<()> {
         // Set up empty EdenApi remote store.
         let client = FakeEdenApi::new().into_arc();
-        let remote = EdenApiRemoteStore::<File>::new("repo", client);
+        let remote = EdenApiRemoteStore::<File>::new("repo", client)?;
 
         // Set up local mutable store.
         let tmp = TempDir::new()?;
