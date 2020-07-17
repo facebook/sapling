@@ -6,7 +6,8 @@
 
 import unittest
 
-from ..top import Process, format_cmd, format_duration, format_mount
+from ..top import Process, format_duration, format_mount
+from ..util import format_cmd
 
 
 class TopTest(unittest.TestCase):

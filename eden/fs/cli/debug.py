@@ -46,10 +46,10 @@ from fb303_core import BaseService
 from thrift.protocol.TSimpleJSONProtocol import TSimpleJSONProtocolFactory
 from thrift.util import Serializer
 
-from . import cmd_util, stats_print, subcmd as subcmd_mod, ui as ui_mod
+from . import cmd_util, stats_print, subcmd as subcmd_mod, tabulate, ui as ui_mod
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
-from .util import split_inodes_by_operation_type
+from .util import format_cmd, split_inodes_by_operation_type
 
 
 MB = 1024 ** 2
@@ -166,6 +166,86 @@ class TreeCmd(Subcmd):
             )
 
         return 0
+
+
+class Process:
+    def __init__(self, pid, cmd):
+        self.pid = pid
+        self.cmd = format_cmd(cmd)
+        self.fetch_count = 0
+
+    def set_fetchs(self, fetch_counts):
+        self.fetch_count = fetch_counts
+
+
+@debug_cmd("processfetch", "List processes and fetch counts")
+class ProcessFetchCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "-s",
+            "--short-cmdline",
+            action="store_true",
+            default=False,
+            help="Show commands without arguments, otherwise show the entire cmdlines",
+        )
+        parser.add_argument(
+            "-a",
+            "--all-processes",
+            action="store_true",
+            default=False,
+            help="Default option only lists recent processes. This option shows all"
+            "processes from the beginning of this EdenFS. Old cmdlines might be unavailable",
+        )
+
+    def run(self, args: argparse.Namespace):
+        processes: Dict[int, Process()] = {}
+
+        header = ["PID", "FETCH COUNT", "CMD"]
+        rows = []
+
+        eden = cmd_util.get_eden_instance(args)
+        with eden.get_thrift_client() as client:
+
+            # Get the data in the past 16 seconds. All data is collected only within
+            # this period except that fetchCountsByPid is from the beginning of start
+            counts = client.getAccessCounts(16)
+
+            for _, accesses in counts.accessesByMount.items():
+                # Get recent process accesses
+                for pid, _ in accesses.accessCountsByPid.items():
+                    cmd = counts.cmdsByPid.get(pid, b"<unknown>")
+                    processes[pid] = Process(pid, cmd)
+
+                # When querying older versions of EdenFS fetchCountsByPid will be None
+                fetch_counts_by_pid = accesses.fetchCountsByPid or {}
+
+                # Set fetch counts for recent processes
+                for pid, fetch_counts in fetch_counts_by_pid.items():
+                    if pid not in processes:
+                        if not args.all_processes:
+                            continue
+                        else:
+                            cmd = counts.cmdsByPid.get(pid, b"<unknown>")
+                            processes[pid] = Process(pid, cmd)
+
+                    processes[pid].set_fetchs(fetch_counts)
+
+        sorted_processes = sorted(
+            processes.items(), key=lambda x: x[1].fetch_count, reverse=True
+        )
+
+        for (pid, process) in sorted_processes:
+            if process.fetch_count:
+                row: Dict[str, str] = {}
+                cmd = process.cmd
+                if args.short_cmdline:
+                    cmd = cmd.split()[0]
+                row["PID"] = pid
+                row["FETCH COUNT"] = process.fetch_count
+                row["CMD"] = cmd
+                rows.append(row)
+
+        print(tabulate.tabulate(header, rows))
 
 
 @debug_cmd("blob", "Show eden's data for a source control blob")

@@ -9,8 +9,6 @@ import collections
 import copy
 import datetime
 import os
-import re
-import shlex
 import socket
 import time
 from enum import Enum
@@ -20,6 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from facebook.eden.ttypes import AccessCounts
 
 from . import cmd_util
+from .util import format_cmd
 
 
 class State(Enum):
@@ -115,24 +114,6 @@ def format_time(elapsed, modulos, suffixes):
 
     last_suffix = suffixes[-1]
     return f"{elapsed}{last_suffix}"
-
-
-def format_cmd(cmd):
-    args = os.fsdecode(cmd)
-
-    # remove trailing null which would cause the command to show up with an
-    # exta empty string on the end
-    args = re.sub("\x00$", "", args)
-
-    args = args.split("\x00")
-
-    # Focus on just the basename as the paths can be quite long
-    cmd = args[0]
-    if os.path.isabs(cmd):
-        cmd = os.path.basename(cmd)
-
-    # Show cmdline args too, if they exist
-    return " ".join(shlex.quote(p) for p in [cmd] + args[1:])
 
 
 COLUMN_FORMATTING = Row(
