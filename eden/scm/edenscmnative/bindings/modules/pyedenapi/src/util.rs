@@ -10,7 +10,7 @@ use std::sync::Arc;
 use cpython::*;
 
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
-use edenapi::{Progress, ProgressCallback};
+use edenapi::{Progress, ProgressCallback, ResponseMeta};
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use types::{HgId, Key, RepoPathBuf};
@@ -60,4 +60,16 @@ pub fn as_deltastore(py: Python, store: PyObject) -> PyResult<Arc<dyn HgIdMutabl
 
 pub fn as_historystore(py: Python, store: PyObject) -> PyResult<Arc<dyn HgIdMutableHistoryStore>> {
     Ok(store.extract::<mutablehistorystore>(py)?.extract_inner(py))
+}
+
+pub fn meta_to_dict(py: Python, meta: &ResponseMeta) -> PyResult<PyDict> {
+    let dict = PyDict::new(py);
+    dict.set_item(py, "version", format!("{:?}", &meta.version))?;
+    dict.set_item(py, "status", meta.status.as_u16())?;
+    dict.set_item(py, "server", &meta.server)?;
+    dict.set_item(py, "request_id", &meta.request_id)?;
+    dict.set_item(py, "tw_task_handle", &meta.tw_task_handle)?;
+    dict.set_item(py, "tw_task_version", &meta.tw_task_version)?;
+    dict.set_item(py, "tw_canary_id", &meta.tw_canary_id)?;
+    Ok(dict)
 }

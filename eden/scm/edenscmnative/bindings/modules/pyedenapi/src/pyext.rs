@@ -12,13 +12,15 @@ use cpython::*;
 use futures::prelude::*;
 use tokio::runtime::Runtime;
 
-use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
 use edenapi_types::{DataEntry, HistoryEntry};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
 use crate::stats::stats;
-use crate::util::{as_deltastore, as_historystore, to_hgids, to_keys, to_path, wrap_callback};
+use crate::util::{
+    as_deltastore, as_historystore, meta_to_dict, to_hgids, to_keys, to_path, wrap_callback,
+};
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
 ///
@@ -26,9 +28,9 @@ use crate::util::{as_deltastore, as_historystore, to_hgids, to_keys, to_path, wr
 /// the methods inside a `py_class!` macro invocation is that tools like
 /// `rustfmt` can still parse the code.
 pub trait EdenApiPyExt: EdenApi {
-    fn health_py(&self, py: Python) -> PyResult<PyNone> {
-        let _ = self.health_blocking().map_pyerr(py)?;
-        Ok(PyNone)
+    fn health_py(&self, py: Python) -> PyResult<PyDict> {
+        let meta = self.health_blocking().map_pyerr(py)?;
+        meta_to_dict(py, &meta)
     }
 
     fn files_py(

@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use cpython::*;
 
-use cpython_ext::{ExtractInner, ExtractInnerRef, PyNone, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use pyconfigparser::config;
 use pyrevisionstore::{edenapifilestore, edenapitreestore};
@@ -35,7 +35,7 @@ py_class!(pub class client |py| {
         client::create_instance(py, Arc::new(inner))
     }
 
-    def health(&self) -> PyResult<PyNone> {
+    def health(&self) -> PyResult<PyDict> {
         self.inner(py).clone().health_py(py)
     }
 
