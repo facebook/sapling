@@ -20,12 +20,20 @@ try:
     # Used by :run_tests binary target
     import libfb.py.pathutils as pathutils
 
-    hgpath = pathutils.get_build_rule_output_path(
-        "//eden/scm:hg", pathutils.BuildRuleTypes.SH_BINARY
-    )
-    pythonbinpath = pathutils.get_build_rule_output_path(
-        "//eden/scm:hgpython", pathutils.BuildRuleTypes.SH_BINARY
-    )
+    if "-py3" in sys.argv[0]:
+        hgpath = pathutils.get_build_rule_output_path(
+            "//eden/scm:hg-py3", pathutils.BuildRuleTypes.SH_BINARY
+        )
+        pythonbinpath = pathutils.get_build_rule_output_path(
+            "//eden/scm:hgpython-py3", pathutils.BuildRuleTypes.SH_BINARY
+        )
+    else:
+        hgpath = pathutils.get_build_rule_output_path(
+            "//eden/scm:hg", pathutils.BuildRuleTypes.SH_BINARY
+        )
+        pythonbinpath = pathutils.get_build_rule_output_path(
+            "//eden/scm:hgpython", pathutils.BuildRuleTypes.SH_BINARY
+        )
     watchman = pathutils.get_build_rule_output_path(
         "//watchman:watchman", pathutils.BuildRuleTypes.CXX_BINARY
     )
