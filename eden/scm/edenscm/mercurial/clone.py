@@ -49,7 +49,7 @@ def shallowclone(source, repo):
 
         # Fetch selected remote bookmarks.
         repo.ui.status(_("fetching selected remote bookmarks\n"))
-        remote = repo.ui.paths.getname(repo.ui.paths.getpath(source).rawloc)
+        remote = bookmod.remotenameforurl(repo.ui, repo.ui.paths.getpath(source).rawloc)
         assert remote is not None
         repo.pull(
             source, bookmarknames=bookmod.selectivepullbookmarknames(repo, remote)

@@ -4769,7 +4769,9 @@ def pull(ui, repo, source="default", **opts):
             # pull is unaffected (pulls everything instead of just
             # selectivepull bookmarks)
             if revs:
-                remotename = ui.paths.getname(other.url())  # ex. 'default' or 'remote'
+                remotename = bookmarks.remotenameforurl(
+                    ui, other.url()
+                )  # ex. 'default' or 'remote'
                 # Include selective pull bookmarks automatically.
                 implicitbookmarks.update(
                     bookmarks.selectivepullbookmarknames(repo, remotename)

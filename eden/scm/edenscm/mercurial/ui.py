@@ -1863,13 +1863,18 @@ class paths(util.sortdict):
             except ValueError:
                 raise error.RepoError(_("repository %s does not exist") % name)
 
-    def getname(self, rawloc):
+    def getname(self, rawloc, forremotenames=False):
         # type: (str) -> Optional[str]
         """Return name from a raw location.
 
         If this function is about to return $name, and
         'remotenames.rename.$name' config exists, return the value of that
         config instead.
+
+        If 'forremotenames' is True, normalize 'default-push' to 'default'.
+        This is only used by 'bookmarks.remotenameforurl' so we never write
+        'default-push' as a remote name. If you're setting this flag, consider
+        using 'bookmarks.remotenameforurl' instead.
 
         Return `None` if path is unknown.
         """
@@ -1891,6 +1896,11 @@ class paths(util.sortdict):
 
         # XXX: Remove this normalization if Mononoke is rolled out to all.
         if result in {"infinitepush", "infinitepushbookmark"}:
+            result = "default"
+
+        # Do not use 'default-push' as a remote name. Normalize it to
+        # 'default'.
+        if forremotenames and result == "default-push":
             result = "default"
 
         if result:

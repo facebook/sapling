@@ -405,7 +405,7 @@ def checktoomanynames(repo, source="default"):
     threshold += len(selected)
     if count < threshold:
         return
-    defaultname = ui.paths.getname(ui.paths.getpath(source).rawloc)
+    defaultname = bookmod.remotenameforurl(ui, ui.paths.getpath(source).rawloc)
     if not defaultname:
         return
     ui.write(_("repo has too many (%s) remote bookmarks\n") % count)

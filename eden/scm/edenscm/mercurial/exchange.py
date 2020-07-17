@@ -1723,7 +1723,9 @@ def _pullbookmarks(pullop):
 
     # Update important remotenames (ex. remote/master) listed by selectivepull
     # unconditionally.
-    remotename = ui.paths.getname(pullop.remote.url())  # ex. 'default' or 'remote'
+    remotename = bookmod.remotenameforurl(
+        ui, pullop.remote.url()
+    )  # ex. 'default' or 'remote'
     if remotename is not None:
         importantnames = bookmod.selectivepullbookmarknames(repo, remotename)
         remotebookmarks = pullop.remotebookmarks

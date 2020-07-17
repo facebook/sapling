@@ -1369,6 +1369,11 @@ def splitremotename(remote):
     return remote, name
 
 
+def remotenameforurl(ui, url):
+    """Convert an URL to a remote name"""
+    return ui.paths.getname(url, forremotenames=True)
+
+
 def _trackaccessedbookmarks(ui):
     return ui.configbool("remotenames", "selectivepullaccessedbookmarks")
 

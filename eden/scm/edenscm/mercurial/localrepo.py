@@ -950,8 +950,8 @@ class localrepository(object):
 
             # Update remotenames.
             if remotenamechanges:
-                remotename = self.ui.paths.getname(
-                    remote.url()
+                remotename = bookmarks.remotenameforurl(
+                    self.ui, remote.url()
                 )  # ex. 'default' or 'remote'
                 bookmarks.saveremotenames(
                     self, {remotename: remotenamechanges}, override=False
