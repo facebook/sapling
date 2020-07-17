@@ -46,9 +46,10 @@ impl Builder {
             .parse::<Url>()
             .map_err(ConfigError::InvalidUrl)?;
 
-        let client_creds = AuthConfig::new(&config)
+        let (client_creds, ca_bundle) = AuthConfig::new(&config)
             .auth_for_url(&server_url)
-            .and_then(|auth| ClientCreds::from_options(auth.cert, auth.key));
+            .map(|auth| (ClientCreds::from_options(auth.cert, auth.key), auth.cacerts))
+            .unwrap_or_default();
 
         let max_files = config
             .get_opt("edenapi", "maxfiles")
@@ -65,7 +66,7 @@ impl Builder {
         Ok(Self {
             server_url: Some(server_url),
             client_creds,
-            ca_bundle: None,
+            ca_bundle,
             max_files,
             max_trees,
             max_history,
