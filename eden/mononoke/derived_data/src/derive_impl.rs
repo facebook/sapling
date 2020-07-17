@@ -323,6 +323,12 @@ where
             }
             None => {
                 if leased || ignored {
+                    // Get a new context for derivation. This means derivation won't count against
+                    // the original context's perf counters, but there will still be logs to Scuba
+                    // there to indicate that derivation occcurs. It lets us capture exact perf
+                    // counters for derivation and log those to the derived data table in Scuba.
+                    let ctx = ctx.clone_and_reset();
+
                     let deriver = async {
                         let derived =
                             Derived::derive_from_parents(ctx.clone(), repo.clone(), bcs, parents)
@@ -457,6 +463,8 @@ fn log_derivation_end<Derived>(
         .clone()
         .add_future_stats(&stats)
         .log_with_msg(tag, msg.clone());
+
+    ctx.perf_counters().insert_perf_counters(derived_data_scuba);
 
     derived_data_scuba
         .add_future_stats(&stats)

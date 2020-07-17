@@ -40,6 +40,8 @@ impl CoreContext {
         session.new_context(logger, ScubaSampleBuilder::with_discard())
     }
 
+    /// Create a new CoreContext, with a reset LoggingContainer. This is useful to reset perf
+    /// counters. The existing CoreContext is unaffected.
     pub fn clone_and_reset(&self) -> Self {
         self.session
             .new_context(self.logger().clone(), self.scuba().clone())
