@@ -187,7 +187,7 @@ class chgcmdserver(commandserver.server):
             _newchgui(ui, channeledsystem(fin, fout), self.attachio), repo, fin, fout
         )
         self.clientsock = sock
-        self._oldios = []  # original (self.ch, ui.fp, fd) before "attachio"
+        self._ioattached = False
         self.baseaddress = baseaddress
 
     def cleanup(self):
@@ -195,7 +195,6 @@ class chgcmdserver(commandserver.server):
         # dispatch._runcatch() does not flush outputs if exception is not
         # handled by dispatch._dispatch()
         self.ui.flush()
-        self._restoreio()
 
     def attachio(self):
         # type: () -> None
@@ -210,7 +209,7 @@ class chgcmdserver(commandserver.server):
 
         ui = self.ui
         ui.flush()
-        first = self._saveio()
+        first = not self._ioattached
         for fd, (cn, fn, mode) in zip(clientfds, _iochannels):
             assert fd > 0
             fp = getattr(ui, fn)
@@ -241,34 +240,7 @@ class chgcmdserver(commandserver.server):
             setattr(self, cn, newfp)
 
         self.cresult.write(struct.pack(">i", len(clientfds)))
-
-    def _saveio(self):
-        # type: () -> bool
-        if self._oldios:
-            return False
-        ui = self.ui
-        for cn, fn, _mode in _iochannels:
-            ch = getattr(self, cn)
-            fp = getattr(ui, fn)
-            fd = os.dup(fp.fileno())
-            self._oldios.append((ch, fp, fd))
-        return True
-
-    def _restoreio(self):
-        # type: () -> None
-        ui = self.ui
-        for (ch, fp, fd), (cn, fn, _mode) in zip(self._oldios, _iochannels):
-            newfp = getattr(ui, fn)
-            # close newfp while it's associated with client; otherwise it
-            # would be closed when newfp is deleted
-            if newfp is not fp:
-                newfp.close()
-            # restore original fd: fp is open again
-            os.dup2(fd, fp.fileno())
-            os.close(fd)
-            setattr(self, cn, ch)
-            setattr(ui, fn, fp)
-        del self._oldios[:]
+        self._ioattached = True
 
     def chdir(self):
         # type: () -> None
