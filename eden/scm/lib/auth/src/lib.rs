@@ -21,6 +21,7 @@ pub struct Auth {
     pub prefix: String,
     pub cert: Option<PathBuf>,
     pub key: Option<PathBuf>,
+    pub cacerts: Option<PathBuf>,
     pub username: Option<String>,
     pub schemes: Vec<String>,
     pub priority: i32,
@@ -39,6 +40,7 @@ impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
 
         let cert = settings.get("cert").map(expand_path);
         let key = settings.get("key").map(expand_path);
+        let cacerts = settings.get("cacerts").map(expand_path);
         let username = settings.get("username").map(|s| s.to_string());
 
         let schemes = settings
@@ -57,6 +59,7 @@ impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
             prefix,
             cert,
             key,
+            cacerts,
             username,
             schemes,
             priority,
@@ -200,6 +203,7 @@ mod test {
              foo.prefix = foo.com\n\
              foo.cert = /foo/cert\n\
              foo.key = /foo/key\n\
+             foo.cacerts = /foo/cacerts\n\
              bar.prefix = bar.com\n\
              bar.cert = /bar/cert\n\
              bar.key = /bar/key\n\
@@ -222,6 +226,7 @@ mod test {
                 prefix: "foo.com".into(),
                 cert: Some("/foo/cert".into()),
                 key: Some("/foo/key".into()),
+                cacerts: Some("/foo/cacerts".into()),
                 username: Some("user".into()),
                 schemes: vec!["http".into(), "https".into()],
                 priority: 1,
@@ -234,6 +239,7 @@ mod test {
                 prefix: "bar.com".into(),
                 cert: Some("/bar/cert".into()),
                 key: Some("/bar/key".into()),
+                cacerts: None,
                 username: None,
                 schemes: vec!["https".into()],
                 priority: 0,
