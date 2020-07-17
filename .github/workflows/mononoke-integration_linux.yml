@@ -22,7 +22,7 @@ jobs:
     - name: Install Rust Stable
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: 1.44.0
         default: true
         profile: minimal
     - name: Install Python 2.7
@@ -50,6 +50,7 @@ jobs:
     - name: Build mononoke dependencies
       run: >-
         python3 build/fbcode_builder/getdeps.py build
+        --allow-system-packages
         --scratch-path /tmp/build
         --only-deps
         --src-dir=.
@@ -57,6 +58,7 @@ jobs:
     - name: Build mononoke
       run: >-
         python3 build/fbcode_builder/getdeps.py build
+        --allow-system-packages
         --scratch-path /tmp/build
         --no-deps
         --src-dir=.

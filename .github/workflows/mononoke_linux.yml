@@ -22,17 +22,19 @@ jobs:
     - name: Install Rust Stable
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: 1.44.0
         default: true
         profile: minimal
+    - name: Install system deps
+      run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive mononoke
     - name: Build dependencies
-      run: python3 build/fbcode_builder/getdeps.py build --only-deps --src-dir=. mononoke
+      run: python3 build/fbcode_builder/getdeps.py build --allow-system-packages --only-deps --src-dir=. mononoke
     - name: Build mononoke
-      run: python3 build/fbcode_builder/getdeps.py build --no-deps --src-dir=. mononoke
+      run: python3 build/fbcode_builder/getdeps.py build --allow-system-packages --no-deps --src-dir=. mononoke
     - name: Check space
       run: df -h
     - name: Test mononoke
-      run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
+      run: python3 build/fbcode_builder/getdeps.py test --allow-system-packages --src-dir=. mononoke
     - name: Check space
       run: df -h
     - name: Install Rust Beta
@@ -42,7 +44,7 @@ jobs:
         default: true
         profile: minimal
     - name: Test mononoke with beta toolchain
-      run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
+      run: python3 build/fbcode_builder/getdeps.py test --allow-system-packages --src-dir=. mononoke
       continue-on-error: true
     - name: Install Rust Nightly
       uses: actions-rs/toolchain@v1
@@ -51,7 +53,7 @@ jobs:
         default: true
         profile: minimal
     - name: Test mononoke with nightly toolchain
-      run: python3 build/fbcode_builder/getdeps.py test --src-dir=. mononoke
+      run: python3 build/fbcode_builder/getdeps.py test --allow-system-packages --src-dir=. mononoke
       continue-on-error: true
     - name: Check space
       run: df -h
