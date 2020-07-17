@@ -1,0 +1,8 @@
+# Test Certificates
+
+ * Update configuration in openssl.cnf to add new values / attributes, etc.
+ * Run the following command to update certificates:
+
+```
+./gencerts.sh openssl.cnf
+```
