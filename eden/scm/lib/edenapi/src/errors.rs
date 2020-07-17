@@ -33,6 +33,6 @@ pub enum ConfigError {
     MissingUrl,
     #[error("Invalid server URL: {0}")]
     InvalidUrl(#[source] url::ParseError),
-    #[error("Config value is malformed: {0}")]
-    Malformed(#[source] anyhow::Error),
+    #[error("Config field '{0}' is malformed")]
+    Malformed(String, #[source] anyhow::Error),
 }

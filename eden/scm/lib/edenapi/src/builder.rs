@@ -41,7 +41,7 @@ impl Builder {
     pub fn from_config(config: &ConfigSet) -> Result<Self, EdenApiError> {
         let server_url = config
             .get_opt::<String>("edenapi", "url")
-            .map_err(ConfigError::Malformed)?
+            .map_err(|e| ConfigError::Malformed("edenapi.url".into(), e))?
             .ok_or(ConfigError::MissingUrl)?
             .parse::<Url>()
             .map_err(ConfigError::InvalidUrl)?;
@@ -53,15 +53,15 @@ impl Builder {
 
         let max_files = config
             .get_opt("edenapi", "maxfiles")
-            .map_err(ConfigError::Malformed)?;
+            .map_err(|e| ConfigError::Malformed("edenapi.maxfiles".into(), e))?;
 
         let max_trees = config
             .get_opt("edenapi", "maxtrees")
-            .map_err(ConfigError::Malformed)?;
+            .map_err(|e| ConfigError::Malformed("edenapi.maxtrees".into(), e))?;
 
         let max_history = config
             .get_opt("edenapi", "maxhistory")
-            .map_err(ConfigError::Malformed)?;
+            .map_err(|e| ConfigError::Malformed("edenapi.maxhistory".into(), e))?;
 
         Ok(Self {
             server_url: Some(server_url),
