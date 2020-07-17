@@ -646,3 +646,7 @@ def format_cmd(cmd):
 
     # Show cmdline args too, if they exist
     return " ".join(shlex.quote(p) for p in [cmd] + args[1:])
+
+
+def format_mount(mount):
+    return os.fsdecode(os.path.basename(mount))

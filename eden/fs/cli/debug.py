@@ -49,7 +49,7 @@ from thrift.util import Serializer
 from . import cmd_util, stats_print, subcmd as subcmd_mod, tabulate, ui as ui_mod
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
-from .util import format_cmd, split_inodes_by_operation_type
+from .util import format_cmd, format_mount, split_inodes_by_operation_type
 
 
 MB = 1024 ** 2
@@ -169,10 +169,11 @@ class TreeCmd(Subcmd):
 
 
 class Process:
-    def __init__(self, pid, cmd):
+    def __init__(self, pid, cmd, mount):
         self.pid = pid
         self.cmd = format_cmd(cmd)
         self.fetch_count = 0
+        self.mount = format_mount(mount)
 
     def set_fetchs(self, fetch_counts):
         self.fetch_count = fetch_counts
@@ -193,14 +194,23 @@ class ProcessFetchCmd(Subcmd):
             "--all-processes",
             action="store_true",
             default=False,
-            help="Default option only lists recent processes. This option shows all"
+            help="Default option only lists recent processes. This option shows all "
             "processes from the beginning of this EdenFS. Old cmdlines might be unavailable",
         )
+        parser.add_argument(
+            "-m",
+            "--mount",
+            action="store_true",
+            default=False,
+            help="Show mount base name for each process",
+        )
 
-    def run(self, args: argparse.Namespace):
+    def run(self, args: argparse.Namespace) -> int:
         processes: Dict[int, Process()] = {}
 
         header = ["PID", "FETCH COUNT", "CMD"]
+        if args.mount:
+            header.insert(1, "MOUNT")
         rows = []
 
         eden = cmd_util.get_eden_instance(args)
@@ -210,11 +220,11 @@ class ProcessFetchCmd(Subcmd):
             # this period except that fetchCountsByPid is from the beginning of start
             counts = client.getAccessCounts(16)
 
-            for _, accesses in counts.accessesByMount.items():
+            for mount, accesses in counts.accessesByMount.items():
                 # Get recent process accesses
                 for pid, _ in accesses.accessCountsByPid.items():
                     cmd = counts.cmdsByPid.get(pid, b"<unknown>")
-                    processes[pid] = Process(pid, cmd)
+                    processes[pid] = Process(pid, cmd, mount)
 
                 # When querying older versions of EdenFS fetchCountsByPid will be None
                 fetch_counts_by_pid = accesses.fetchCountsByPid or {}
@@ -226,7 +236,7 @@ class ProcessFetchCmd(Subcmd):
                             continue
                         else:
                             cmd = counts.cmdsByPid.get(pid, b"<unknown>")
-                            processes[pid] = Process(pid, cmd)
+                            processes[pid] = Process(pid, cmd, mount)
 
                     processes[pid].set_fetchs(fetch_counts)
 
@@ -243,9 +253,12 @@ class ProcessFetchCmd(Subcmd):
                 row["PID"] = pid
                 row["FETCH COUNT"] = process.fetch_count
                 row["CMD"] = cmd
+                if args.mount:
+                    row["MOUNT"] = process.mount
                 rows.append(row)
 
         print(tabulate.tabulate(header, rows))
+        return 0
 
 
 @debug_cmd("blob", "Show eden's data for a source control blob")

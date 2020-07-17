@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from facebook.eden.ttypes import AccessCounts
 
 from . import cmd_util
-from .util import format_cmd
+from .util import format_cmd, format_mount
 
 
 class State(Enum):
@@ -86,10 +86,6 @@ COLUMN_REVERSE_SORT = Row(
     fuse_last_access=True,
     command=False,
 )
-
-
-def format_mount(mount):
-    return os.fsdecode(os.path.basename(mount))
 
 
 def format_duration(duration):
