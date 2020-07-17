@@ -1265,6 +1265,9 @@ def transition(repo, ui):
 
 
 def _writesingleremotename(fd, remote, nametype, name, node):
+    # Do not write 'default-push' names. See https://fburl.com/1rft34i8.
+    if remote == "default-push":
+        return
     remotename = joinremotename(remote, name)
     fd.write(pycompat.encodeutf8("%s %s %s\n" % (node, nametype, remotename)))
 
@@ -1312,6 +1315,10 @@ def _readremotenamesfrom(vfs, filename):
                     )
 
             remote, rname = splitremotename(name)
+
+            # Ignore 'default-push' names. See https://fburl.com/1rft34i8.
+            if remote == "default-push":
+                continue
 
             # skip old data that didn't write the name (only wrote the alias)
             if not rname:
