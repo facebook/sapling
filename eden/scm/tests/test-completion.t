@@ -92,6 +92,7 @@ Show debug commands if there are no other candidates
   debugbuilddag
   debugbundle
   debugcapabilities
+  debugcauserusterror
   debugcheckcasecollisions
   debugcheckoutidentifier
   debugcheckstate
@@ -372,6 +373,7 @@ Show all commands + options
   debugbuilddag: mergeable-file, overwritten-file, new-file
   debugbundle: all, part-type, spec
   debugcapabilities: 
+  debugcauserusterror: 
   debugcheckcasecollisions: rev
   debugcheckoutidentifier: 
   debugcheckstate: 

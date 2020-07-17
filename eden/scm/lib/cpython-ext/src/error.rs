@@ -7,12 +7,14 @@
 
 //! Integrate cpython with anyhow
 
+use std::collections::BTreeMap;
+use std::fmt;
+
 pub use anyhow::{Error, Result};
 use cpython::{exc, FromPyObject, ObjectProtocol, PyClone, PyList, PyModule, PyResult, Python};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use std::collections::BTreeMap;
-use std::fmt;
+use taggederror::{AnyhowExt, CommonMetadata, TaggedError};
 
 /// Extends the `Result` type to allow conversion to `PyResult` from a native
 /// Rust result.
@@ -71,7 +73,8 @@ pub trait AnyhowResultExt<T> {
     fn into_anyhow_result(self) -> Result<T>;
 }
 
-pub type AnyhowErrorIntoPyErrFunc = fn(Python, &anyhow::Error) -> Option<cpython::PyErr>;
+pub type AnyhowErrorIntoPyErrFunc =
+    fn(Python, &anyhow::Error, CommonMetadata) -> Option<cpython::PyErr>;
 
 lazy_static! {
     static ref INTO_PYERR_FUNC_LIST: Mutex<BTreeMap<&'static str, AnyhowErrorIntoPyErrFunc>> =
@@ -93,11 +96,15 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
         self.map_err(|e| {
             let e: anyhow::Error = e.into();
             let mut e = &e;
+            let metadata = e.common_metadata();
             loop {
                 if let Some(e) = e.downcast_ref::<PyErr>() {
                     return e.inner.clone_ref(py);
                 } else if let Some(inner) = e.downcast_ref::<anyhow::Error>() {
                     e = inner;
+                    continue;
+                } else if let Some(inner) = e.downcast_ref::<TaggedError>() {
+                    e = &inner.source;
                     continue;
                 } else if let Some(e) = e.downcast_ref::<std::io::Error>() {
                     let errno = match e.raw_os_error() {
@@ -136,7 +143,7 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
                 }
 
                 for func in INTO_PYERR_FUNC_LIST.lock().values() {
-                    if let Some(err) = (func)(py, e) {
+                    if let Some(err) = (func)(py, e, metadata) {
                         return err;
                     }
                 }

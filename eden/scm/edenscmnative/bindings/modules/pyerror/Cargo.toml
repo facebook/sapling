@@ -9,4 +9,5 @@ cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 indexedlog = { path = "../../../../lib/indexedlog" }
 metalog = { path = "../../../../lib/metalog" }
 revisionstore = { path = "../../../../lib/revisionstore" }
+taggederror = { path = "../../../../lib/taggederror" }
 treestate = { path = "../../../../lib/treestate" }

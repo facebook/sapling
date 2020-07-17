@@ -28,6 +28,8 @@ import sys
 import tempfile
 import time
 
+import bindings
+
 from .. import (
     bookmarks,
     bundle2,
@@ -3613,3 +3615,9 @@ def debugreadauthforuri(ui, _repo, uri, user=None):
             ui.write(_x("auth.%s.%s=%s\n") % (auth, k, v))
     else:
         ui.warn(_("no match found\n"))
+
+
+@command("debugthrowrustexception", [], "")
+def debugthrowrustexception(ui, _repo):
+    """cause an error to be returned from rust and propagated to python"""
+    bindings.error.throwrustexception()

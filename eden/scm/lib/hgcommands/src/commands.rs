@@ -14,9 +14,8 @@ use clidispatch::{
 };
 use cliparser::define_flags;
 use filetime::{set_file_mtime, FileTime};
-use taggederror::{AnyhowExt, CommonMetadata, Fault, Tagged};
+use taggederror::{intentional_error, AnyhowExt, Fault};
 use tempfile::tempfile_in;
-use thiserror::Error;
 
 use blackbox::{event::Event, json, SessionId};
 use dynamicconfig::Generator;
@@ -81,9 +80,9 @@ pub fn table() -> CommandTable {
         "generate the dynamic configuration",
     );
     table.register(
-        debugthrowrustexception,
-        "debugthrowrustexception",
-        "cause an error to be returned from rust",
+        debugcauserusterror,
+        "debugcauserusterror",
+        "cause an error to be generated in rust for testing error handling",
     );
 
     table
@@ -345,23 +344,7 @@ pub fn debugdynamicconfig(opts: DebugDynamicConfigOpts, _io: &mut IO, repo: Repo
     Ok(0)
 }
 
-#[derive(Debug, Error)]
-#[error("intentional error for debugging with message '{0}'")]
-struct IntentionalError(String);
-
-impl Tagged for IntentionalError {
-    fn metadata(&self) -> CommonMetadata {
-        // CommonMetadata::new::<Self>() attaches typename, .transience attaches transience
-        CommonMetadata::new::<Self>()
-    }
-}
-
-fn intentional_error() -> Result<u8> {
-    // .tagged() method on taggederror::Tagged trait attaches metadata and wraps in anyhow::Error
-    Err(IntentionalError(String::from("intentional_error")).tagged())?
-}
-
-pub fn debugthrowrustexception(_opts: NoOpts, _io: &mut IO, _repo: Repo) -> Result<u8> {
+pub fn debugcauserusterror(_opts: NoOpts, _io: &mut IO, _repo: Repo) -> Result<u8> {
     // Add additional metadata via AnyhowExt trait to an anyhow::Error or anyhow::Result
-    Ok(intentional_error().mark_fault(Fault::User)?)
+    Ok(intentional_error().with_fault(Fault::Request)?)
 }

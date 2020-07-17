@@ -208,6 +208,12 @@ def callcatch(ui, func):
         ui.warn(_("  %s\n\n") % str(inst).replace("\n", "\n  "))
         ui.warn(_("(this usually happens after hard reboot or system crash)\n"))
         ui.warn(_("(try '@prog@ doctor' to attempt to fix it)\n"))
+    except error.RustError as inst:
+        if ui.config("ui", "traceback") and inst.args[0].has_metadata():
+            fault = inst.args[0].fault()
+            typename = inst.args[0].typename()
+            ui.warn(_("error has type name %s and fault %s\n") % (typename, fault))
+        raise
     except error.RevisionstoreError as inst:
         ui.warn(_("%s\n") % inst, error=_("abort"))
     except error.NonUTF8PathError as inst:

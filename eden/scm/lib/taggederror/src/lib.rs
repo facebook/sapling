@@ -13,16 +13,16 @@ use thiserror::Error;
 
 /// Error Fault
 ///
-/// If present, indicates that the fault originated Upstream (User), Downstream
+/// If present, indicates that the fault originated Upstream (Request), Downstream
 /// (Dependency), or Internal to the system in question.  
 #[derive(Copy, Clone, Hash, Debug)]
 #[repr(u8)]
 pub enum Fault {
-    /// The error is the fault of the user, or some external part of the
+    /// The error is the fault of the request, or some external part of the
     /// system that calls into this one. For instance, invalid command line
-    /// arguments are a user error, even if the binary is being invoked by an
-    /// automated system.
-    User,
+    /// arguments are a request error, even if the binary is being invoked by
+    /// an automated system.
+    Request,
 
     /// The error is the fault of something internal to the system that
     /// produced the error. Generally speaking, this means a bug / programming
@@ -31,18 +31,18 @@ pub enum Fault {
 
     /// The error is the fault of one of our dependencies, or any other system
     /// we call into. The developer should decide on a case-by-case basis
-    /// whether to mark "user errors" reported by a dependency as Dependency,
-    /// Internal, or User. If there's any doubt, mark it as Dependency, or
+    /// whether to mark "request errors" reported by a dependency as Dependency,
+    /// Internal, or Request. If there's any doubt, mark it as Dependency, or
     /// leave the Fault untagged.
     Dependency,
 }
 
 impl Display for Fault {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        match self {
-            &Fault::User => write!(f, "error is marked as user's fault"),
-            &Fault::Internal => write!(f, "error is marked as an internal issue"),
-            &Fault::Dependency => write!(f, "error is marked as a dependency issue"),
+        match *self {
+            Fault::Request => write!(f, "error is request issue"),
+            Fault::Internal => write!(f, "error is internal issue"),
+            Fault::Dependency => write!(f, "error is dependency issue"),
         }
     }
 }
@@ -54,7 +54,7 @@ pub struct TypeName(pub &'static str);
 
 impl Display for TypeName {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "error is marked with typename {:?}", self.0)
+        write!(f, "error has type name {:?}", self.0)
     }
 }
 
@@ -68,14 +68,14 @@ impl TypeName {
 /// Common error metadata
 pub struct CommonMetadata {
     pub fault: Option<Fault>,
-    pub typename: Option<TypeName>,
+    pub type_name: Option<TypeName>,
 }
 
 impl Display for CommonMetadata {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         let mut prev = false;
-        if let Some(typename) = self.typename {
-            write!(f, "{}", typename)?;
+        if let Some(type_name) = self.type_name {
+            write!(f, "{}", type_name)?;
             prev = true;
         }
         if let Some(fault) = self.fault {
@@ -96,7 +96,7 @@ impl Default for CommonMetadata {
     fn default() -> Self {
         CommonMetadata {
             fault: None,
-            typename: None,
+            type_name: None,
         }
     }
 }
@@ -105,47 +105,51 @@ impl CommonMetadata {
     pub fn new<T>() -> Self {
         CommonMetadata {
             fault: None,
-            typename: Some(TypeName::new::<T>()),
+            type_name: Some(TypeName::new::<T>()),
         }
     }
 
-    pub fn fault(mut self, fault: Fault) -> Self {
+    pub fn with_fault(mut self, fault: Fault) -> Self {
         self.fault = Some(fault);
         self
     }
 
-    pub fn typename(mut self, typename: TypeName) -> Self {
-        self.typename = Some(typename);
+    pub fn with_type_name(mut self, type_name: TypeName) -> Self {
+        self.type_name = Some(type_name);
         self
     }
 
     /// Returns true if all CommonMetadata fields are filled, such that
     /// traversing the error tree will not provide any additional information.
     pub fn complete(&self) -> bool {
-        self.fault.is_some() && self.typename.is_some()
+        self.fault.is_some() && self.type_name.is_some()
+    }
+
+    pub fn empty(&self) -> bool {
+        self.fault.is_none() && self.type_name.is_none()
     }
 
     pub fn merge(&mut self, other: &CommonMetadata) {
         self.fault = self.fault.or(other.fault);
-        self.typename = self.typename.or(other.typename);
+        self.type_name = self.type_name.or(other.type_name);
     }
 }
 
 pub trait AnyhowExt {
-    fn mark_fault(self, fault: Fault) -> Self;
-    fn mark_typename(self, typename: TypeName) -> Self;
+    fn with_fault(self, fault: Fault) -> Self;
+    fn with_type_name(self, type_name: TypeName) -> Self;
 
     /// Traverse the error / context tree and assemble all CommonMetadata
     fn common_metadata(&self) -> CommonMetadata;
 }
 
 impl AnyhowExt for anyhow::Error {
-    fn mark_fault(self, fault: Fault) -> Self {
-        TaggedError::new(self, CommonMetadata::default().fault(fault)).wrapped()
+    fn with_fault(self, fault: Fault) -> Self {
+        TaggedError::new(self, CommonMetadata::default().with_fault(fault)).wrapped()
     }
 
-    fn mark_typename(self, typename: TypeName) -> Self {
-        TaggedError::new(self, CommonMetadata::default().typename(typename)).wrapped()
+    fn with_type_name(self, typename: TypeName) -> Self {
+        TaggedError::new(self, CommonMetadata::default().with_type_name(typename)).wrapped()
     }
 
     fn common_metadata(&self) -> CommonMetadata {
@@ -165,12 +169,12 @@ impl AnyhowExt for anyhow::Error {
 }
 
 impl<T> AnyhowExt for anyhow::Result<T> {
-    fn mark_fault(self, fault: Fault) -> Self {
-        self.map_err(|e| e.mark_fault(fault))
+    fn with_fault(self, fault: Fault) -> Self {
+        self.map_err(|e| e.with_fault(fault))
     }
 
-    fn mark_typename(self, typename: TypeName) -> Self {
-        self.map_err(|e| e.mark_typename(typename))
+    fn with_type_name(self, typename: TypeName) -> Self {
+        self.map_err(|e| e.with_type_name(typename))
     }
 
     fn common_metadata(&self) -> CommonMetadata {
@@ -217,6 +221,22 @@ pub trait Tagged: Error + Send + Sync + Sized + 'static {
     fn metadata(&self) -> CommonMetadata {
         CommonMetadata::new::<Self>()
     }
+}
+
+#[derive(Debug, Error)]
+#[error("intentional error for debugging with message '{0}'")]
+struct IntentionalError(String);
+
+impl Tagged for IntentionalError {
+    fn metadata(&self) -> CommonMetadata {
+        // CommonMetadata::new::<Self>() attaches typename
+        CommonMetadata::new::<Self>()
+    }
+}
+
+pub fn intentional_error() -> anyhow::Result<u8> {
+    // .tagged() method on taggederror::Tagged trait attaches metadata and wraps in anyhow::Error
+    Err(IntentionalError(String::from("intentional_error")).tagged()).into()
 }
 
 /// Controls how metadata is handled when formatting a FilteredAnyhow.
@@ -299,7 +319,7 @@ impl<'a> Display for FilteredAnyhow<'a> {
             }
 
             if self.mode == PrintMode::SeparateTags {
-                write!(f, "\n\nTags: ")?;
+                write!(f, "\n\nerror tags: ")?;
                 write!(f, "{}", self.err.common_metadata())?;
             }
         }
@@ -344,7 +364,7 @@ impl<'a> Debug for FilteredAnyhow<'a> {
         }
 
         if self.mode == PrintMode::SeparateTags {
-            write!(f, "\n\nTags: ")?;
+            write!(f, "\n\nerror tags: ")?;
             write!(f, "{}", self.err.common_metadata())?;
         }
 

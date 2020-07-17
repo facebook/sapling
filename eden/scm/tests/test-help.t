@@ -940,6 +940,9 @@ Test list of internal help commands
    debugbundle   lists the contents of a bundle
    debugcapabilities
                  lists the capabilities of a remote peer
+   debugcauserusterror
+                 cause an error to be generated in rust for testing error
+                 handling
    debugcheckcasecollisions
                  check for case collisions against a commit
    debugcheckoutidentifier
@@ -1066,7 +1069,8 @@ Test list of internal help commands
    debugtemplate
                  parse and apply a template
    debugthrowrustexception
-                 cause an error to be returned from rust
+                 cause an error to be returned from rust and propagated to
+                 python
    debugtreestate
                  manage treestate
    debugupdatecaches
