@@ -24,9 +24,9 @@ class TabulateTest(unittest.TestCase):
         self.assertEqual(
             output,
             f"""\
-A     B   C    {eol}
+A     B   C{eol}
 a_1   b_1 see_1{eol}
-a_two b_2 c_2  {eol}""",
+a_two b_2 c_2{eol}""",
         )
 
     def test_tabulate_header_labels(self):
@@ -45,7 +45,7 @@ a_two b_2 c_2  {eol}""",
         self.assertEqual(
             output,
             f"""\
-Col1  bee C    {eol}
+Col1  bee C{eol}
 a_1   b_1 see_1{eol}
-a_two b_2 c_2  {eol}""",
+a_two b_2 c_2{eol}""",
         )

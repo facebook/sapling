@@ -46,7 +46,9 @@ def tabulate(
         format_string += "{:<%d}" % col_width
 
     output = format_string.format(*[label(name) for name in headers])
+    output = output = output.rstrip(" ")
     for row in rows:
         output += "\n"
         output += format_string.format(*[field(row, name) for name in headers])
+        output = output.rstrip(" ")
     return output
