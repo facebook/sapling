@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use crate::strip;
 use crate::AppendCommits;
 use crate::HgCommit;
 use crate::ReadCommitText;
+use crate::StripCommits;
 use anyhow::bail;
 use anyhow::Result;
 use dag::ops::DagAddHeads;
@@ -84,6 +86,15 @@ impl AppendCommits for MemHgCommits {
 impl ReadCommitText for MemHgCommits {
     fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         Ok(self.commits.get(vertex).cloned())
+    }
+}
+
+impl StripCommits for MemHgCommits {
+    fn strip_commits(&mut self, set: Set) -> Result<()> {
+        let mut new = Self::new()?;
+        strip::migrate_commits(self, &mut new, set)?;
+        *self = new;
+        Ok(())
     }
 }
 

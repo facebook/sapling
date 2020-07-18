@@ -29,11 +29,19 @@ use hgcommits::HgCommits;
 use hgcommits::MemHgCommits;
 use hgcommits::ReadCommitText;
 use hgcommits::RevlogCommits;
+use hgcommits::StripCommits;
 use std::cell::RefCell;
 
 /// A combination of other traits: commit read/write + DAG algorithms.
 pub trait Commits:
-    ReadCommitText + AppendCommits + DagAlgorithm + IdConvert + PrefixLookup + ToIdSet + ToSet
+    ReadCommitText
+    + StripCommits
+    + AppendCommits
+    + DagAlgorithm
+    + IdConvert
+    + PrefixLookup
+    + ToIdSet
+    + ToSet
 {
 }
 
@@ -63,6 +71,15 @@ py_class!(pub class commits |py| {
         let heads = masterheads.into_iter().map(|h| h.data(py).to_vec().into()).collect::<Vec<_>>();
         let mut inner = self.inner(py).borrow_mut();
         inner.flush(&heads).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    /// Strip commits. ONLY used to make LEGACY TESTS running.
+    /// Fails if called in a non-test environment.
+    /// New tests should avoid depending on `strip`.
+    def strip(&self, set: Names) -> PyResult<PyNone> {
+        let mut inner = self.inner(py).borrow_mut();
+        inner.strip_commits(set.0).map_pyerr(py)?;
         Ok(PyNone)
     }
 

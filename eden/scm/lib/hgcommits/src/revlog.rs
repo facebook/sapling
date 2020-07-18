@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use crate::strip;
 use crate::AppendCommits;
 use crate::HgCommit;
 use crate::ReadCommitText;
+use crate::StripCommits;
 use anyhow::Result;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
@@ -21,11 +23,14 @@ use dag::Set;
 use dag::Vertex;
 use minibytes::Bytes;
 use revlogindex::RevlogIndex;
+use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
 
 /// HG commits stored on disk using the revlog format.
 pub struct RevlogCommits {
     revlog: RevlogIndex,
+    dir: PathBuf,
 }
 
 impl RevlogCommits {
@@ -33,7 +38,10 @@ impl RevlogCommits {
         let index_path = dir.join("00changelog.i");
         let nodemap_path = dir.join("00changelog.nodemap");
         let revlog = RevlogIndex::new(&index_path, &nodemap_path)?;
-        Ok(Self { revlog })
+        Ok(Self {
+            revlog,
+            dir: dir.to_path_buf(),
+        })
     }
 }
 
@@ -62,6 +70,20 @@ impl ReadCommitText for RevlogCommits {
             Some(id) => Ok(Some(self.revlog.raw_data(id.0 as u32)?)),
             None => Ok(None),
         }
+    }
+}
+
+impl StripCommits for RevlogCommits {
+    fn strip_commits(&mut self, set: Set) -> Result<()> {
+        let old_dir = &self.dir;
+        let new_dir = old_dir.join("strip");
+        let _ = fs::create_dir(&new_dir);
+        let mut new = Self::new(&new_dir)?;
+        strip::migrate_commits(self, &mut new, set)?;
+        drop(new);
+        strip::racy_unsafe_move_files(&new_dir, old_dir)?;
+        *self = Self::new(old_dir)?;
+        Ok(())
     }
 }
 

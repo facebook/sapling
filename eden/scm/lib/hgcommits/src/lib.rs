@@ -39,7 +39,9 @@ pub struct HgCommit {
 mod hgsha1commits;
 mod memhgcommits;
 mod revlog;
+mod strip;
 
 pub use hgsha1commits::HgCommits;
 pub use memhgcommits::MemHgCommits;
 pub use revlog::RevlogCommits;
+pub use strip::StripCommits;

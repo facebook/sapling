@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use crate::strip;
 use crate::AppendCommits;
 use crate::HgCommit;
 use crate::ReadCommitText;
+use crate::StripCommits;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
@@ -29,20 +31,25 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 use zstore::Id20;
 use zstore::Zstore;
 
 /// Commits using the HG SHA1 hash function. Stored on disk.
 pub struct HgCommits {
     commits: Zstore,
+    commits_path: PathBuf,
     dag: Dag,
+    dag_path: PathBuf,
 }
 
 impl HgCommits {
     pub fn new(dag_path: &Path, commits_path: &Path) -> Result<Self> {
         let result = Self {
             dag: Dag::open(dag_path)?,
+            dag_path: dag_path.to_path_buf(),
             commits: Zstore::open(commits_path)?,
+            commits_path: commits_path.to_path_buf(),
         };
         Ok(result)
     }
@@ -124,6 +131,19 @@ impl ReadCommitText for HgCommits {
             Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
             None => Ok(None),
         }
+    }
+}
+
+impl StripCommits for HgCommits {
+    fn strip_commits(&mut self, set: Set) -> Result<()> {
+        let old_path = &self.dag_path;
+        let new_path = self.dag_path.join("strip");
+        let mut new = Self::new(&new_path, &self.commits_path)?;
+        strip::migrate_commits(self, &mut new, set)?;
+        drop(new);
+        strip::racy_unsafe_move_files(&new_path, &self.dag_path)?;
+        *self = Self::new(&old_path, &self.commits_path)?;
+        Ok(())
     }
 }
 
