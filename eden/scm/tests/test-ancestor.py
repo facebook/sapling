@@ -252,25 +252,24 @@ def test_gca():
     for i, (dag, tests) in enumerate(dagtests):
         repo = hg.repository(u, "gca%d" % i, create=1)
         cl = repo.changelog
-        if not util.safehasattr(cl.index, "ancestors"):
-            # C version not available
-            return
-
+        torevs = cl.torevs
+        tonodes = cl.tonodes
         debugcommands.debugbuilddag(u, repo, dag)
         # Compare the results of the Python and C versions. This does not
         # include choosing a winner when more than one gca exists -- we make
         # sure both return exactly the same set of gcas.
         # Also compare against expected results, if available.
+
         for a in cl:
             for b in cl:
-                cgcas = sorted(cl.index.ancestors(a, b))
+                rsgcas = sorted(torevs(cl.dag.gcaall(tonodes([a, b]))))
                 pygcas = sorted(ancestor.ancestors(cl.parentrevs, a, b))
                 expected = None
                 if (a, b) in tests:
                     expected = tests[(a, b)]
-                if cgcas != pygcas or (expected and cgcas != expected):
+                if rsgcas != pygcas or (expected and rsgcas != expected):
                     print("test_gca: for dag %s, gcas for %d, %d:" % (dag, a, b))
-                    print("  C returned:      %s" % cgcas)
+                    print("  Rust returned:   %s" % rsgcas)
                     print("  Python returned: %s" % pygcas)
                     if expected:
                         print("  expected:        %s" % expected)

@@ -884,6 +884,23 @@ class changelog(revlog.revlog):
         else:
             return super(changelog, self)._partialmatch(hexprefix)
 
+    def ancestors(self, revs, stoprev=0, inclusive=False):
+        """Return ::revs (in revs) if inclusive is True.
+
+        If inclusive is False, return ::parents(revs).
+        If stoprev is not zero, filter the result.
+        stoprev is ignored in the Rust implementation.
+        """
+        if self.userust("ancestors"):
+            nodes = self.tonodes(revs)
+            dag = self.dag
+            if not inclusive:
+                nodes = dag.parents(nodes)
+            ancestornodes = dag.ancestors(nodes)
+            return self.torevs(ancestornodes)
+        else:
+            return super(changelog, self).ancestors(revs, stoprev, inclusive)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
