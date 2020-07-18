@@ -382,6 +382,41 @@ class changelog(revlog.revlog):
             return None
         return inner.dagalgo()
 
+    def dageval(self, func, extraenv=None):
+        """Evaluate func with the current DAG context.
+
+        Example:
+
+            cl.dageval(lambda: roots(ancestors([x])))
+
+        is equivalent to:
+
+            dag = cl.dag
+            dag.roots(dag.ancestors([x]))
+
+        'extraenv' is optionally a dict. It sets extra names. For example,
+        providing revset-like functions like `draft`, `public`, `bookmarks`.
+        """
+        env = dict(func.func_globals)
+        dag = self.dag
+        for name in func.func_code.co_names:
+            # name is potentially a string used by LOAD_GLOBAL bytecode.
+            if extraenv is not None and name in extraenv:
+                # Provided by 'extraenv'.
+                env[name] = extraenv[name]
+            else:
+                # Provided by 'dag'.
+                value = getattr(dag, name, None)
+                if value is not None:
+                    env[name] = value
+        code = func.func_code
+        argdefs = func.func_defaults
+        freevars = func.func_closure
+        # Create a new function that uses the same logic except for different
+        # env (globals).
+        newfunc = type(func)(code, env, argdefs, freevars)
+        return newfunc()
+
     @property
     def idmap(self):
         """Get the IdMap. Require rust-commit."""
