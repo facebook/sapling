@@ -830,6 +830,10 @@ class changelog(revlog.revlog):
         else:
             return super(changelog, self).ancestor(a, b)
 
+    def descendant(self, start, end):
+        """Test if start (in rev) is an ancestor of end (in rev)"""
+        return self.isancestor(self.node(start), self.node(end))
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
