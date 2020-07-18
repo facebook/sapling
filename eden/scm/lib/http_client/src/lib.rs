@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! A simple HTTP client built on top of libcurl.
+//! An async-compatible HTTP client built on top of libcurl.
 
 #![deny(warnings)]
 

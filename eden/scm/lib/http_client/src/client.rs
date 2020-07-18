@@ -28,7 +28,7 @@ pub type ResponseStream =
 pub type StatsFuture =
     Pin<Box<dyn Future<Output = Result<Stats, HttpClientError>> + Send + 'static>>;
 
-/// A simple callback-oriented HTTP client.
+/// An async-compatible HTTP client powered by libcurl.
 ///
 /// Essentially a more ergonomic API for working with
 /// libcurl's multi interface. See URL for details:
