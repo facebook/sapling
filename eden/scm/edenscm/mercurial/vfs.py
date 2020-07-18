@@ -735,8 +735,6 @@ class backgroundfilecloser(object):
         maxqueue = ui.configint("worker", "backgroundclosemaxqueue")
         threadcount = ui.configint("worker", "backgroundclosethreadcount")
 
-        ui.debug("starting %d threads for background file closing\n" % threadcount)
-
         self._queue = util.queue(maxsize=maxqueue)
         self._running = True
 

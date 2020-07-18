@@ -67,7 +67,6 @@ Clone with background file closing enabled
   streaming all changes
   sending stream_out_option command
   1028 files to transfer, * of data (glob)
-  starting 4 threads for background file closing
   transferred * in * seconds (*) (glob)
   query 1; heads
   sending batch command

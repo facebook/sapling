@@ -81,52 +81,53 @@ Criss cross merging
   
 
   $ hg merge -v --debug --tool internal:dump 5 --config merge.preferancestor='!'
-  note: using 0f6b37dbe527 as ancestor of 6373bbfdae1d and e673248094b1
-        alternatively, use --config merge.preferancestor=d1d156401c1b
+  note: using d1d156401c1b as ancestor of 6373bbfdae1d and e673248094b1
+        alternatively, use --config merge.preferancestor=0f6b37dbe527
     searching for copies back to rev 3
     unmatched files in local:
      d2/f4
-    unmatched files in other:
-     d1/f3
-     d1/f4
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      src: 'd1/f4' -> dst: 'd2/f4' 
     checking for directory renames
      discovered dir src: 'd1/' -> dst: 'd2/'
-     pending file src: 'd1/f3' -> dst: 'd2/f3'
-     pending file src: 'd1/f4' -> dst: 'd2/f4'
   resolving manifests
    branchmerge: True, force: False, partial: False
-   ancestor: 0f6b37dbe527, local: 6373bbfdae1d+, remote: e673248094b1
-   preserving d2/f4 for resolve of d2/f4
-   preserving f2 for resolve of f2
-   f1: remote is newer -> g
-  getting f1
-   d2/f3: local directory rename - get from d1/f3 -> dg
-  getting d1/f3 to d2/f3
-   d2/f4: local directory rename, both created -> m (premerge)
-   f2: versions differ -> m (premerge)
-  picked tool ':dump' for f2 (binary False symlink False changedelete False)
-  merging f2
-  my f2@6373bbfdae1d+ other f2@e673248094b1 ancestor f2@0f6b37dbe527
-   f2: versions differ -> m (merge)
-  picked tool ':dump' for f2 (binary False symlink False changedelete False)
-  my f2@6373bbfdae1d+ other f2@e673248094b1 ancestor f2@0f6b37dbe527
-  3 files updated, 0 files merged, 0 files removed, 1 files unresolved
+   ancestor: d1d156401c1b, local: 6373bbfdae1d+, remote: e673248094b1
+   preserving f1 for resolve of f1
+   f1: versions differ -> m (premerge)
+  picked tool ':dump' for f1 (binary False symlink False changedelete False)
+  merging f1
+  my f1@6373bbfdae1d+ other f1@e673248094b1 ancestor f1@d1d156401c1b
+   f1: versions differ -> m (merge)
+  picked tool ':dump' for f1 (binary False symlink False changedelete False)
+  my f1@6373bbfdae1d+ other f1@e673248094b1 ancestor f1@d1d156401c1b
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
   $ f --dump --recurse *
-  d2: directory with 2 files
-  d2/f3:
-  >>>
-  0 base
-  <<<
+  d2: directory with 1 files
   d2/f4:
   >>>
   0 base
   <<<
   f1:
+  >>>
+  1 first change
+  <<<
+  f1.base:
+  >>>
+  0 base
+  <<<
+  f1.local:
+  >>>
+  1 first change
+  <<<
+  f1.orig:
+  >>>
+  1 first change
+  <<<
+  f1.other:
   >>>
   5 second change
   <<<
@@ -134,32 +135,14 @@ Criss cross merging
   >>>
   6 second change
   <<<
-  f2.base:
-  >>>
-  0 base
-  <<<
-  f2.local:
-  >>>
-  6 second change
-  <<<
-  f2.orig:
-  >>>
-  6 second change
-  <<<
-  f2.other:
-  >>>
-  2 first change
-  <<<
 
   $ hg up -qC .
   $ hg merge -v --tool internal:dump 5 --config merge.preferancestor="null 40663881 3b08d"
-  note: using 0f6b37dbe527 as ancestor of 6373bbfdae1d and e673248094b1
-        alternatively, use --config merge.preferancestor=d1d156401c1b
+  note: using d1d156401c1b as ancestor of 6373bbfdae1d and e673248094b1
+        alternatively, use --config merge.preferancestor=0f6b37dbe527
   resolving manifests
-  getting f1
-  getting d1/f3 to d2/f3
-  merging f2
-  3 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  merging f1
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
@@ -436,16 +419,16 @@ http://stackoverflow.com/questions/9350005/how-do-i-specify-a-merge-base-to-use-
   $ hg commit -qm cb
 
   $ hg merge --config merge.preferancestor='!'
-  note: using 70008a2163f6 as ancestor of 0d355fdef312 and 4b8b546a3eef
-        alternatively, use --config merge.preferancestor=b211bbc6eb3c
+  note: using b211bbc6eb3c as ancestor of 0d355fdef312 and 4b8b546a3eef
+        alternatively, use --config merge.preferancestor=70008a2163f6
   merging x
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cat x
   a
-  c
   b
   c
+  b
 
   $ hg up -qC .
 

@@ -815,6 +815,21 @@ class changelog(revlog.revlog):
         else:
             return super(changelog, self).isancestor(a, b)
 
+    def ancestor(self, a, b):
+        """Return the common ancestor, or nullid if there are no common
+        ancestors.
+
+        Common ancestors are defined as heads(::a & ::b).
+
+        When there are multiple common ancestors, a "random" one is returned.
+        """
+        if self.userust("ancestor"):
+            if nullid == a or nullid == b:
+                return nullid
+            return self.dag.gcaone([a, b]) or nullid
+        else:
+            return super(changelog, self).ancestor(a, b)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
