@@ -3822,44 +3822,44 @@ pub mod server {
 ///     ) -> impl Future<Item = Out> {...}
 pub mod mock {
     pub struct BaseService<'mock> {
-        pub getStatus: base_service::getStatus<'mock>,
-        pub getName: base_service::getName<'mock>,
-        pub getVersion: base_service::getVersion<'mock>,
-        pub getStatusDetails: base_service::getStatusDetails<'mock>,
-        pub getCounters: base_service::getCounters<'mock>,
-        pub getRegexCounters: base_service::getRegexCounters<'mock>,
-        pub getSelectedCounters: base_service::getSelectedCounters<'mock>,
-        pub getCounter: base_service::getCounter<'mock>,
-        pub getExportedValues: base_service::getExportedValues<'mock>,
-        pub getSelectedExportedValues: base_service::getSelectedExportedValues<'mock>,
-        pub getRegexExportedValues: base_service::getRegexExportedValues<'mock>,
-        pub getExportedValue: base_service::getExportedValue<'mock>,
-        pub setOption: base_service::setOption<'mock>,
-        pub getOption: base_service::getOption<'mock>,
-        pub getOptions: base_service::getOptions<'mock>,
-        pub aliveSince: base_service::aliveSince<'mock>,
+        pub getStatus: r#impl::base_service::getStatus<'mock>,
+        pub getName: r#impl::base_service::getName<'mock>,
+        pub getVersion: r#impl::base_service::getVersion<'mock>,
+        pub getStatusDetails: r#impl::base_service::getStatusDetails<'mock>,
+        pub getCounters: r#impl::base_service::getCounters<'mock>,
+        pub getRegexCounters: r#impl::base_service::getRegexCounters<'mock>,
+        pub getSelectedCounters: r#impl::base_service::getSelectedCounters<'mock>,
+        pub getCounter: r#impl::base_service::getCounter<'mock>,
+        pub getExportedValues: r#impl::base_service::getExportedValues<'mock>,
+        pub getSelectedExportedValues: r#impl::base_service::getSelectedExportedValues<'mock>,
+        pub getRegexExportedValues: r#impl::base_service::getRegexExportedValues<'mock>,
+        pub getExportedValue: r#impl::base_service::getExportedValue<'mock>,
+        pub setOption: r#impl::base_service::setOption<'mock>,
+        pub getOption: r#impl::base_service::getOption<'mock>,
+        pub getOptions: r#impl::base_service::getOptions<'mock>,
+        pub aliveSince: r#impl::base_service::aliveSince<'mock>,
         _marker: ::std::marker::PhantomData<&'mock ()>,
     }
 
     impl dyn super::client::BaseService {
         pub fn mock<'mock>() -> BaseService<'mock> {
             BaseService {
-                getStatus: base_service::getStatus::unimplemented(),
-                getName: base_service::getName::unimplemented(),
-                getVersion: base_service::getVersion::unimplemented(),
-                getStatusDetails: base_service::getStatusDetails::unimplemented(),
-                getCounters: base_service::getCounters::unimplemented(),
-                getRegexCounters: base_service::getRegexCounters::unimplemented(),
-                getSelectedCounters: base_service::getSelectedCounters::unimplemented(),
-                getCounter: base_service::getCounter::unimplemented(),
-                getExportedValues: base_service::getExportedValues::unimplemented(),
-                getSelectedExportedValues: base_service::getSelectedExportedValues::unimplemented(),
-                getRegexExportedValues: base_service::getRegexExportedValues::unimplemented(),
-                getExportedValue: base_service::getExportedValue::unimplemented(),
-                setOption: base_service::setOption::unimplemented(),
-                getOption: base_service::getOption::unimplemented(),
-                getOptions: base_service::getOptions::unimplemented(),
-                aliveSince: base_service::aliveSince::unimplemented(),
+                getStatus: r#impl::base_service::getStatus::unimplemented(),
+                getName: r#impl::base_service::getName::unimplemented(),
+                getVersion: r#impl::base_service::getVersion::unimplemented(),
+                getStatusDetails: r#impl::base_service::getStatusDetails::unimplemented(),
+                getCounters: r#impl::base_service::getCounters::unimplemented(),
+                getRegexCounters: r#impl::base_service::getRegexCounters::unimplemented(),
+                getSelectedCounters: r#impl::base_service::getSelectedCounters::unimplemented(),
+                getCounter: r#impl::base_service::getCounter::unimplemented(),
+                getExportedValues: r#impl::base_service::getExportedValues::unimplemented(),
+                getSelectedExportedValues: r#impl::base_service::getSelectedExportedValues::unimplemented(),
+                getRegexExportedValues: r#impl::base_service::getRegexExportedValues::unimplemented(),
+                getExportedValue: r#impl::base_service::getExportedValue::unimplemented(),
+                setOption: r#impl::base_service::setOption::unimplemented(),
+                getOption: r#impl::base_service::getOption::unimplemented(),
+                getOptions: r#impl::base_service::getOptions::unimplemented(),
+                aliveSince: r#impl::base_service::aliveSince::unimplemented(),
                 _marker: ::std::marker::PhantomData,
             }
         }
@@ -3990,629 +3990,631 @@ pub mod mock {
         }
     }
 
-    mod base_service {
+    mod r#impl {
+        pub mod base_service {
 
-        pub struct getStatus<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    crate::types::fb303_status,
-                    crate::errors::base_service::GetStatusError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+            pub struct getStatus<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        crate::types::fb303_status,
+                        crate::errors::base_service::GetStatusError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
+            }
 
-        impl<'mock> getStatus<'mock> {
-            pub fn unimplemented() -> Self {
-                getStatus {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getStatus",
-                    ))),
+            impl<'mock> getStatus<'mock> {
+                pub fn unimplemented() -> Self {
+                    getStatus {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getStatus",
+                        ))),
+                    }
+                }
+
+                pub fn ret(&self, value: crate::types::fb303_status) {
+                    self.mock(move || value.clone());
+                }
+
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::fb303_status + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
+
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetStatusError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::fb303_status) {
-                self.mock(move || value.clone());
+            pub struct getName<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::base_service::GetNameError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::fb303_status + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getName<'mock> {
+                pub fn unimplemented() -> Self {
+                    getName {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getName",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetStatusError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getName<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::base_service::GetNameError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getName<'mock> {
-            pub fn unimplemented() -> Self {
-                getName {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getName",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetNameError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move || value.clone());
+            pub struct getVersion<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::base_service::GetVersionError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getVersion<'mock> {
+                pub fn unimplemented() -> Self {
+                    getVersion {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getVersion",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetNameError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getVersion<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::base_service::GetVersionError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getVersion<'mock> {
-            pub fn unimplemented() -> Self {
-                getVersion {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getVersion",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetVersionError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move || value.clone());
+            pub struct getStatusDetails<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::base_service::GetStatusDetailsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getStatusDetails<'mock> {
+                pub fn unimplemented() -> Self {
+                    getStatusDetails {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getStatusDetails",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetVersionError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getStatusDetails<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::base_service::GetStatusDetailsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getStatusDetails<'mock> {
-            pub fn unimplemented() -> Self {
-                getStatusDetails {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getStatusDetails",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetStatusDetailsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move || value.clone());
+            pub struct getCounters<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
+                        crate::errors::base_service::GetCountersError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getCounters<'mock> {
+                pub fn unimplemented() -> Self {
+                    getCounters {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getCounters",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetStatusDetailsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getCounters<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
-                    crate::errors::base_service::GetCountersError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getCounters<'mock> {
-            pub fn unimplemented() -> Self {
-                getCounters {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getCounters",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetCountersError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>) {
-                self.mock(move || value.clone());
+            pub struct getRegexCounters<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                        ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
+                        crate::errors::base_service::GetRegexCountersError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getRegexCounters<'mock> {
+                pub fn unimplemented() -> Self {
+                    getRegexCounters {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getRegexCounters",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetCountersError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>) {
+                    self.mock(move |_: ::std::string::String| value.clone());
+                }
 
-        pub struct getRegexCounters<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
-                    ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
-                    crate::errors::base_service::GetRegexCountersError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |regex| ::std::result::Result::Ok(mock(regex)));
+                }
 
-        impl<'mock> getRegexCounters<'mock> {
-            pub fn unimplemented() -> Self {
-                getRegexCounters {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getRegexCounters",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetRegexCountersError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>) {
-                self.mock(move |_: ::std::string::String| value.clone());
+            pub struct getSelectedCounters<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::result::Result<
+                        ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
+                        crate::errors::base_service::GetSelectedCountersError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |regex| ::std::result::Result::Ok(mock(regex)));
-            }
+            impl<'mock> getSelectedCounters<'mock> {
+                pub fn unimplemented() -> Self {
+                    getSelectedCounters {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::vec::Vec<::std::string::String>| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getSelectedCounters",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetRegexCountersError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>) {
+                    self.mock(move |_: ::std::vec::Vec<::std::string::String>| value.clone());
+                }
 
-        pub struct getSelectedCounters<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::result::Result<
-                    ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
-                    crate::errors::base_service::GetSelectedCountersError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |keys| ::std::result::Result::Ok(mock(keys)));
+                }
 
-        impl<'mock> getSelectedCounters<'mock> {
-            pub fn unimplemented() -> Self {
-                getSelectedCounters {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::vec::Vec<::std::string::String>| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getSelectedCounters",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetSelectedCountersError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::vec::Vec<::std::string::String>| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>) {
-                self.mock(move |_: ::std::vec::Vec<::std::string::String>| value.clone());
+            pub struct getCounter<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                        ::std::primitive::i64,
+                        crate::errors::base_service::GetCounterError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |keys| ::std::result::Result::Ok(mock(keys)));
-            }
+            impl<'mock> getCounter<'mock> {
+                pub fn unimplemented() -> Self {
+                    getCounter {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getCounter",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetSelectedCountersError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::vec::Vec<::std::string::String>| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::primitive::i64) {
+                    self.mock(move |_: ::std::string::String| value.clone());
+                }
 
-        pub struct getCounter<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
-                    ::std::primitive::i64,
-                    crate::errors::base_service::GetCounterError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |key| ::std::result::Result::Ok(mock(key)));
+                }
 
-        impl<'mock> getCounter<'mock> {
-            pub fn unimplemented() -> Self {
-                getCounter {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getCounter",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetCounterError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::primitive::i64) {
-                self.mock(move |_: ::std::string::String| value.clone());
+            pub struct getExportedValues<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
+                        crate::errors::base_service::GetExportedValuesError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |key| ::std::result::Result::Ok(mock(key)));
-            }
+            impl<'mock> getExportedValues<'mock> {
+                pub fn unimplemented() -> Self {
+                    getExportedValues {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getExportedValues",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetCounterError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getExportedValues<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
-                    crate::errors::base_service::GetExportedValuesError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getExportedValues<'mock> {
-            pub fn unimplemented() -> Self {
-                getExportedValues {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getExportedValues",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetExportedValuesError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
-                self.mock(move || value.clone());
+            pub struct getSelectedExportedValues<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::result::Result<
+                        ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
+                        crate::errors::base_service::GetSelectedExportedValuesError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getSelectedExportedValues<'mock> {
+                pub fn unimplemented() -> Self {
+                    getSelectedExportedValues {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::vec::Vec<::std::string::String>| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getSelectedExportedValues",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetExportedValuesError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
+                    self.mock(move |_: ::std::vec::Vec<::std::string::String>| value.clone());
+                }
 
-        pub struct getSelectedExportedValues<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::result::Result<
-                    ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
-                    crate::errors::base_service::GetSelectedExportedValuesError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |keys| ::std::result::Result::Ok(mock(keys)));
+                }
 
-        impl<'mock> getSelectedExportedValues<'mock> {
-            pub fn unimplemented() -> Self {
-                getSelectedExportedValues {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::vec::Vec<::std::string::String>| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getSelectedExportedValues",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetSelectedExportedValuesError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::vec::Vec<::std::string::String>| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
-                self.mock(move |_: ::std::vec::Vec<::std::string::String>| value.clone());
+            pub struct getRegexExportedValues<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                        ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
+                        crate::errors::base_service::GetRegexExportedValuesError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::vec::Vec<::std::string::String>) -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |keys| ::std::result::Result::Ok(mock(keys)));
-            }
+            impl<'mock> getRegexExportedValues<'mock> {
+                pub fn unimplemented() -> Self {
+                    getRegexExportedValues {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getRegexExportedValues",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetSelectedExportedValuesError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::vec::Vec<::std::string::String>| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
+                    self.mock(move |_: ::std::string::String| value.clone());
+                }
 
-        pub struct getRegexExportedValues<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
-                    ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
-                    crate::errors::base_service::GetRegexExportedValuesError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |regex| ::std::result::Result::Ok(mock(regex)));
+                }
 
-        impl<'mock> getRegexExportedValues<'mock> {
-            pub fn unimplemented() -> Self {
-                getRegexExportedValues {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getRegexExportedValues",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetRegexExportedValuesError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
-                self.mock(move |_: ::std::string::String| value.clone());
+            pub struct getExportedValue<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::base_service::GetExportedValueError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |regex| ::std::result::Result::Ok(mock(regex)));
-            }
+            impl<'mock> getExportedValue<'mock> {
+                pub fn unimplemented() -> Self {
+                    getExportedValue {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getExportedValue",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetRegexExportedValuesError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move |_: ::std::string::String| value.clone());
+                }
 
-        pub struct getExportedValue<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::base_service::GetExportedValueError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |key| ::std::result::Result::Ok(mock(key)));
+                }
 
-        impl<'mock> getExportedValue<'mock> {
-            pub fn unimplemented() -> Self {
-                getExportedValue {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getExportedValue",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetExportedValueError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move |_: ::std::string::String| value.clone());
+            pub struct setOption<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::string::String, ::std::string::String) -> ::std::result::Result<
+                        (),
+                        crate::errors::base_service::SetOptionError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |key| ::std::result::Result::Ok(mock(key)));
-            }
+            impl<'mock> setOption<'mock> {
+                pub fn unimplemented() -> Self {
+                    setOption {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String, _: ::std::string::String| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "setOption",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetExportedValueError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: ::std::string::String, _: ::std::string::String| value.clone());
+                }
 
-        pub struct setOption<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::string::String, ::std::string::String) -> ::std::result::Result<
-                    (),
-                    crate::errors::base_service::SetOptionError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String, ::std::string::String) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |key, value| ::std::result::Result::Ok(mock(key, value)));
+                }
 
-        impl<'mock> setOption<'mock> {
-            pub fn unimplemented() -> Self {
-                setOption {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String, _: ::std::string::String| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "setOption",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::SetOptionError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::string::String, _: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: ::std::string::String, _: ::std::string::String| value.clone());
+            pub struct getOption<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::base_service::GetOptionError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String, ::std::string::String) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |key, value| ::std::result::Result::Ok(mock(key, value)));
-            }
+            impl<'mock> getOption<'mock> {
+                pub fn unimplemented() -> Self {
+                    getOption {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getOption",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::SetOptionError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::string::String, _: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move |_: ::std::string::String| value.clone());
+                }
 
-        pub struct getOption<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::base_service::GetOptionError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |key| ::std::result::Result::Ok(mock(key)));
+                }
 
-        impl<'mock> getOption<'mock> {
-            pub fn unimplemented() -> Self {
-                getOption {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getOption",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetOptionError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move |_: ::std::string::String| value.clone());
+            pub struct getOptions<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
+                        crate::errors::base_service::GetOptionsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |key| ::std::result::Result::Ok(mock(key)));
-            }
+            impl<'mock> getOptions<'mock> {
+                pub fn unimplemented() -> Self {
+                    getOptions {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "getOptions",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetOptionError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getOptions<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::collections::BTreeMap<::std::string::String, ::std::string::String>,
-                    crate::errors::base_service::GetOptionsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getOptions<'mock> {
-            pub fn unimplemented() -> Self {
-                getOptions {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "getOptions",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::GetOptionsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::collections::BTreeMap<::std::string::String, ::std::string::String>) {
-                self.mock(move || value.clone());
+            pub struct aliveSince<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::primitive::i64,
+                        crate::errors::base_service::AliveSinceError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::collections::BTreeMap<::std::string::String, ::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
-
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::GetOptionsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
-
-        pub struct aliveSince<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::primitive::i64,
-                    crate::errors::base_service::AliveSinceError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
-
-        impl<'mock> aliveSince<'mock> {
-            pub fn unimplemented() -> Self {
-                aliveSince {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "BaseService",
-                        "aliveSince",
-                    ))),
+            impl<'mock> aliveSince<'mock> {
+                pub fn unimplemented() -> Self {
+                    aliveSince {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "BaseService",
+                            "aliveSince",
+                        ))),
+                    }
                 }
-            }
 
-            pub fn ret(&self, value: ::std::primitive::i64) {
-                self.mock(move || value.clone());
-            }
+                pub fn ret(&self, value: ::std::primitive::i64) {
+                    self.mock(move || value.clone());
+                }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::base_service::AliveSinceError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::base_service::AliveSinceError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
+                }
             }
         }
     }

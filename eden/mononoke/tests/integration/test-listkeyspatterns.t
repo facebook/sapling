@@ -25,14 +25,12 @@ setup client repo
 
 make a few commits on the server
   $ cd $TESTTMP/repo-hg
-  $ hg debugdrawdag <<EOF
+  $ hg debugdrawdag <<'EOF'
   > C E G
   > | | |
   > B D F
   >  \|/
   >   A
-  >   |
-  >   0
   > EOF
 
 create bookmarks

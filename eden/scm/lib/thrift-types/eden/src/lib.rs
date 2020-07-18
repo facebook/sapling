@@ -16665,55 +16665,55 @@ pub mod server {
 pub mod mock {
     pub struct EdenService<'mock> {
         pub parent: fb303_core::mock::BaseService<'mock>,
-        pub listMounts: eden_service::listMounts<'mock>,
-        pub mount: eden_service::mount<'mock>,
-        pub unmount: eden_service::unmount<'mock>,
-        pub checkOutRevision: eden_service::checkOutRevision<'mock>,
-        pub resetParentCommits: eden_service::resetParentCommits<'mock>,
-        pub getSHA1: eden_service::getSHA1<'mock>,
-        pub getBindMounts: eden_service::getBindMounts<'mock>,
-        pub addBindMount: eden_service::addBindMount<'mock>,
-        pub removeBindMount: eden_service::removeBindMount<'mock>,
-        pub getCurrentJournalPosition: eden_service::getCurrentJournalPosition<'mock>,
-        pub getFilesChangedSince: eden_service::getFilesChangedSince<'mock>,
-        pub setJournalMemoryLimit: eden_service::setJournalMemoryLimit<'mock>,
-        pub getJournalMemoryLimit: eden_service::getJournalMemoryLimit<'mock>,
-        pub flushJournal: eden_service::flushJournal<'mock>,
-        pub debugGetRawJournal: eden_service::debugGetRawJournal<'mock>,
-        pub getEntryInformation: eden_service::getEntryInformation<'mock>,
-        pub getFileInformation: eden_service::getFileInformation<'mock>,
-        pub glob: eden_service::glob<'mock>,
-        pub globFiles: eden_service::globFiles<'mock>,
-        pub chown: eden_service::chown<'mock>,
-        pub getScmStatusV2: eden_service::getScmStatusV2<'mock>,
-        pub getScmStatus: eden_service::getScmStatus<'mock>,
-        pub getScmStatusBetweenRevisions: eden_service::getScmStatusBetweenRevisions<'mock>,
-        pub getManifestEntry: eden_service::getManifestEntry<'mock>,
-        pub getDaemonInfo: eden_service::getDaemonInfo<'mock>,
-        pub getPid: eden_service::getPid<'mock>,
-        pub initiateShutdown: eden_service::initiateShutdown<'mock>,
-        pub getConfig: eden_service::getConfig<'mock>,
-        pub reloadConfig: eden_service::reloadConfig<'mock>,
-        pub debugGetScmTree: eden_service::debugGetScmTree<'mock>,
-        pub debugGetScmBlob: eden_service::debugGetScmBlob<'mock>,
-        pub debugGetScmBlobMetadata: eden_service::debugGetScmBlobMetadata<'mock>,
-        pub debugInodeStatus: eden_service::debugInodeStatus<'mock>,
-        pub debugOutstandingFuseCalls: eden_service::debugOutstandingFuseCalls<'mock>,
-        pub debugGetInodePath: eden_service::debugGetInodePath<'mock>,
-        pub getAccessCounts: eden_service::getAccessCounts<'mock>,
-        pub clearAndCompactLocalStore: eden_service::clearAndCompactLocalStore<'mock>,
-        pub debugClearLocalStoreCaches: eden_service::debugClearLocalStoreCaches<'mock>,
-        pub debugCompactLocalStorage: eden_service::debugCompactLocalStorage<'mock>,
-        pub unloadInodeForPath: eden_service::unloadInodeForPath<'mock>,
-        pub flushStatsNow: eden_service::flushStatsNow<'mock>,
-        pub invalidateKernelInodeCache: eden_service::invalidateKernelInodeCache<'mock>,
-        pub getStatInfo: eden_service::getStatInfo<'mock>,
-        pub enableTracing: eden_service::enableTracing<'mock>,
-        pub disableTracing: eden_service::disableTracing<'mock>,
-        pub getTracePoints: eden_service::getTracePoints<'mock>,
-        pub injectFault: eden_service::injectFault<'mock>,
-        pub removeFault: eden_service::removeFault<'mock>,
-        pub unblockFault: eden_service::unblockFault<'mock>,
+        pub listMounts: r#impl::eden_service::listMounts<'mock>,
+        pub mount: r#impl::eden_service::mount<'mock>,
+        pub unmount: r#impl::eden_service::unmount<'mock>,
+        pub checkOutRevision: r#impl::eden_service::checkOutRevision<'mock>,
+        pub resetParentCommits: r#impl::eden_service::resetParentCommits<'mock>,
+        pub getSHA1: r#impl::eden_service::getSHA1<'mock>,
+        pub getBindMounts: r#impl::eden_service::getBindMounts<'mock>,
+        pub addBindMount: r#impl::eden_service::addBindMount<'mock>,
+        pub removeBindMount: r#impl::eden_service::removeBindMount<'mock>,
+        pub getCurrentJournalPosition: r#impl::eden_service::getCurrentJournalPosition<'mock>,
+        pub getFilesChangedSince: r#impl::eden_service::getFilesChangedSince<'mock>,
+        pub setJournalMemoryLimit: r#impl::eden_service::setJournalMemoryLimit<'mock>,
+        pub getJournalMemoryLimit: r#impl::eden_service::getJournalMemoryLimit<'mock>,
+        pub flushJournal: r#impl::eden_service::flushJournal<'mock>,
+        pub debugGetRawJournal: r#impl::eden_service::debugGetRawJournal<'mock>,
+        pub getEntryInformation: r#impl::eden_service::getEntryInformation<'mock>,
+        pub getFileInformation: r#impl::eden_service::getFileInformation<'mock>,
+        pub glob: r#impl::eden_service::glob<'mock>,
+        pub globFiles: r#impl::eden_service::globFiles<'mock>,
+        pub chown: r#impl::eden_service::chown<'mock>,
+        pub getScmStatusV2: r#impl::eden_service::getScmStatusV2<'mock>,
+        pub getScmStatus: r#impl::eden_service::getScmStatus<'mock>,
+        pub getScmStatusBetweenRevisions: r#impl::eden_service::getScmStatusBetweenRevisions<'mock>,
+        pub getManifestEntry: r#impl::eden_service::getManifestEntry<'mock>,
+        pub getDaemonInfo: r#impl::eden_service::getDaemonInfo<'mock>,
+        pub getPid: r#impl::eden_service::getPid<'mock>,
+        pub initiateShutdown: r#impl::eden_service::initiateShutdown<'mock>,
+        pub getConfig: r#impl::eden_service::getConfig<'mock>,
+        pub reloadConfig: r#impl::eden_service::reloadConfig<'mock>,
+        pub debugGetScmTree: r#impl::eden_service::debugGetScmTree<'mock>,
+        pub debugGetScmBlob: r#impl::eden_service::debugGetScmBlob<'mock>,
+        pub debugGetScmBlobMetadata: r#impl::eden_service::debugGetScmBlobMetadata<'mock>,
+        pub debugInodeStatus: r#impl::eden_service::debugInodeStatus<'mock>,
+        pub debugOutstandingFuseCalls: r#impl::eden_service::debugOutstandingFuseCalls<'mock>,
+        pub debugGetInodePath: r#impl::eden_service::debugGetInodePath<'mock>,
+        pub getAccessCounts: r#impl::eden_service::getAccessCounts<'mock>,
+        pub clearAndCompactLocalStore: r#impl::eden_service::clearAndCompactLocalStore<'mock>,
+        pub debugClearLocalStoreCaches: r#impl::eden_service::debugClearLocalStoreCaches<'mock>,
+        pub debugCompactLocalStorage: r#impl::eden_service::debugCompactLocalStorage<'mock>,
+        pub unloadInodeForPath: r#impl::eden_service::unloadInodeForPath<'mock>,
+        pub flushStatsNow: r#impl::eden_service::flushStatsNow<'mock>,
+        pub invalidateKernelInodeCache: r#impl::eden_service::invalidateKernelInodeCache<'mock>,
+        pub getStatInfo: r#impl::eden_service::getStatInfo<'mock>,
+        pub enableTracing: r#impl::eden_service::enableTracing<'mock>,
+        pub disableTracing: r#impl::eden_service::disableTracing<'mock>,
+        pub getTracePoints: r#impl::eden_service::getTracePoints<'mock>,
+        pub injectFault: r#impl::eden_service::injectFault<'mock>,
+        pub removeFault: r#impl::eden_service::removeFault<'mock>,
+        pub unblockFault: r#impl::eden_service::unblockFault<'mock>,
         _marker: ::std::marker::PhantomData<&'mock ()>,
     }
 
@@ -16721,55 +16721,55 @@ pub mod mock {
         pub fn mock<'mock>() -> EdenService<'mock> {
             EdenService {
                 parent: fb303_core::client::BaseService::mock(),
-                listMounts: eden_service::listMounts::unimplemented(),
-                mount: eden_service::mount::unimplemented(),
-                unmount: eden_service::unmount::unimplemented(),
-                checkOutRevision: eden_service::checkOutRevision::unimplemented(),
-                resetParentCommits: eden_service::resetParentCommits::unimplemented(),
-                getSHA1: eden_service::getSHA1::unimplemented(),
-                getBindMounts: eden_service::getBindMounts::unimplemented(),
-                addBindMount: eden_service::addBindMount::unimplemented(),
-                removeBindMount: eden_service::removeBindMount::unimplemented(),
-                getCurrentJournalPosition: eden_service::getCurrentJournalPosition::unimplemented(),
-                getFilesChangedSince: eden_service::getFilesChangedSince::unimplemented(),
-                setJournalMemoryLimit: eden_service::setJournalMemoryLimit::unimplemented(),
-                getJournalMemoryLimit: eden_service::getJournalMemoryLimit::unimplemented(),
-                flushJournal: eden_service::flushJournal::unimplemented(),
-                debugGetRawJournal: eden_service::debugGetRawJournal::unimplemented(),
-                getEntryInformation: eden_service::getEntryInformation::unimplemented(),
-                getFileInformation: eden_service::getFileInformation::unimplemented(),
-                glob: eden_service::glob::unimplemented(),
-                globFiles: eden_service::globFiles::unimplemented(),
-                chown: eden_service::chown::unimplemented(),
-                getScmStatusV2: eden_service::getScmStatusV2::unimplemented(),
-                getScmStatus: eden_service::getScmStatus::unimplemented(),
-                getScmStatusBetweenRevisions: eden_service::getScmStatusBetweenRevisions::unimplemented(),
-                getManifestEntry: eden_service::getManifestEntry::unimplemented(),
-                getDaemonInfo: eden_service::getDaemonInfo::unimplemented(),
-                getPid: eden_service::getPid::unimplemented(),
-                initiateShutdown: eden_service::initiateShutdown::unimplemented(),
-                getConfig: eden_service::getConfig::unimplemented(),
-                reloadConfig: eden_service::reloadConfig::unimplemented(),
-                debugGetScmTree: eden_service::debugGetScmTree::unimplemented(),
-                debugGetScmBlob: eden_service::debugGetScmBlob::unimplemented(),
-                debugGetScmBlobMetadata: eden_service::debugGetScmBlobMetadata::unimplemented(),
-                debugInodeStatus: eden_service::debugInodeStatus::unimplemented(),
-                debugOutstandingFuseCalls: eden_service::debugOutstandingFuseCalls::unimplemented(),
-                debugGetInodePath: eden_service::debugGetInodePath::unimplemented(),
-                getAccessCounts: eden_service::getAccessCounts::unimplemented(),
-                clearAndCompactLocalStore: eden_service::clearAndCompactLocalStore::unimplemented(),
-                debugClearLocalStoreCaches: eden_service::debugClearLocalStoreCaches::unimplemented(),
-                debugCompactLocalStorage: eden_service::debugCompactLocalStorage::unimplemented(),
-                unloadInodeForPath: eden_service::unloadInodeForPath::unimplemented(),
-                flushStatsNow: eden_service::flushStatsNow::unimplemented(),
-                invalidateKernelInodeCache: eden_service::invalidateKernelInodeCache::unimplemented(),
-                getStatInfo: eden_service::getStatInfo::unimplemented(),
-                enableTracing: eden_service::enableTracing::unimplemented(),
-                disableTracing: eden_service::disableTracing::unimplemented(),
-                getTracePoints: eden_service::getTracePoints::unimplemented(),
-                injectFault: eden_service::injectFault::unimplemented(),
-                removeFault: eden_service::removeFault::unimplemented(),
-                unblockFault: eden_service::unblockFault::unimplemented(),
+                listMounts: r#impl::eden_service::listMounts::unimplemented(),
+                mount: r#impl::eden_service::mount::unimplemented(),
+                unmount: r#impl::eden_service::unmount::unimplemented(),
+                checkOutRevision: r#impl::eden_service::checkOutRevision::unimplemented(),
+                resetParentCommits: r#impl::eden_service::resetParentCommits::unimplemented(),
+                getSHA1: r#impl::eden_service::getSHA1::unimplemented(),
+                getBindMounts: r#impl::eden_service::getBindMounts::unimplemented(),
+                addBindMount: r#impl::eden_service::addBindMount::unimplemented(),
+                removeBindMount: r#impl::eden_service::removeBindMount::unimplemented(),
+                getCurrentJournalPosition: r#impl::eden_service::getCurrentJournalPosition::unimplemented(),
+                getFilesChangedSince: r#impl::eden_service::getFilesChangedSince::unimplemented(),
+                setJournalMemoryLimit: r#impl::eden_service::setJournalMemoryLimit::unimplemented(),
+                getJournalMemoryLimit: r#impl::eden_service::getJournalMemoryLimit::unimplemented(),
+                flushJournal: r#impl::eden_service::flushJournal::unimplemented(),
+                debugGetRawJournal: r#impl::eden_service::debugGetRawJournal::unimplemented(),
+                getEntryInformation: r#impl::eden_service::getEntryInformation::unimplemented(),
+                getFileInformation: r#impl::eden_service::getFileInformation::unimplemented(),
+                glob: r#impl::eden_service::glob::unimplemented(),
+                globFiles: r#impl::eden_service::globFiles::unimplemented(),
+                chown: r#impl::eden_service::chown::unimplemented(),
+                getScmStatusV2: r#impl::eden_service::getScmStatusV2::unimplemented(),
+                getScmStatus: r#impl::eden_service::getScmStatus::unimplemented(),
+                getScmStatusBetweenRevisions: r#impl::eden_service::getScmStatusBetweenRevisions::unimplemented(),
+                getManifestEntry: r#impl::eden_service::getManifestEntry::unimplemented(),
+                getDaemonInfo: r#impl::eden_service::getDaemonInfo::unimplemented(),
+                getPid: r#impl::eden_service::getPid::unimplemented(),
+                initiateShutdown: r#impl::eden_service::initiateShutdown::unimplemented(),
+                getConfig: r#impl::eden_service::getConfig::unimplemented(),
+                reloadConfig: r#impl::eden_service::reloadConfig::unimplemented(),
+                debugGetScmTree: r#impl::eden_service::debugGetScmTree::unimplemented(),
+                debugGetScmBlob: r#impl::eden_service::debugGetScmBlob::unimplemented(),
+                debugGetScmBlobMetadata: r#impl::eden_service::debugGetScmBlobMetadata::unimplemented(),
+                debugInodeStatus: r#impl::eden_service::debugInodeStatus::unimplemented(),
+                debugOutstandingFuseCalls: r#impl::eden_service::debugOutstandingFuseCalls::unimplemented(),
+                debugGetInodePath: r#impl::eden_service::debugGetInodePath::unimplemented(),
+                getAccessCounts: r#impl::eden_service::getAccessCounts::unimplemented(),
+                clearAndCompactLocalStore: r#impl::eden_service::clearAndCompactLocalStore::unimplemented(),
+                debugClearLocalStoreCaches: r#impl::eden_service::debugClearLocalStoreCaches::unimplemented(),
+                debugCompactLocalStorage: r#impl::eden_service::debugCompactLocalStorage::unimplemented(),
+                unloadInodeForPath: r#impl::eden_service::unloadInodeForPath::unimplemented(),
+                flushStatsNow: r#impl::eden_service::flushStatsNow::unimplemented(),
+                invalidateKernelInodeCache: r#impl::eden_service::invalidateKernelInodeCache::unimplemented(),
+                getStatInfo: r#impl::eden_service::getStatInfo::unimplemented(),
+                enableTracing: r#impl::eden_service::enableTracing::unimplemented(),
+                disableTracing: r#impl::eden_service::disableTracing::unimplemented(),
+                getTracePoints: r#impl::eden_service::getTracePoints::unimplemented(),
+                injectFault: r#impl::eden_service::injectFault::unimplemented(),
+                removeFault: r#impl::eden_service::removeFault::unimplemented(),
+                unblockFault: r#impl::eden_service::unblockFault::unimplemented(),
                 _marker: ::std::marker::PhantomData,
             }
         }
@@ -17197,1916 +17197,1918 @@ pub mod mock {
         }
     }
 
-    mod eden_service {
+    mod r#impl {
+        pub mod eden_service {
 
-        pub struct listMounts<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::MountInfo>,
-                    crate::errors::eden_service::ListMountsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+            pub struct listMounts<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::MountInfo>,
+                        crate::errors::eden_service::ListMountsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
+            }
 
-        impl<'mock> listMounts<'mock> {
-            pub fn unimplemented() -> Self {
-                listMounts {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "listMounts",
-                    ))),
+            impl<'mock> listMounts<'mock> {
+                pub fn unimplemented() -> Self {
+                    listMounts {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "listMounts",
+                        ))),
+                    }
+                }
+
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::MountInfo>) {
+                    self.mock(move || value.clone());
+                }
+
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::vec::Vec<crate::types::MountInfo> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
+
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::ListMountsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::MountInfo>) {
-                self.mock(move || value.clone());
+            pub struct mount<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::MountArgument) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::MountError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::vec::Vec<crate::types::MountInfo> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> mount<'mock> {
+                pub fn unimplemented() -> Self {
+                    mount {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::MountArgument| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "mount",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::ListMountsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::MountArgument| value.clone());
+                }
 
-        pub struct mount<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::MountArgument) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::MountError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::MountArgument) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |info| ::std::result::Result::Ok(mock(info)));
+                }
 
-        impl<'mock> mount<'mock> {
-            pub fn unimplemented() -> Self {
-                mount {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::MountArgument| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "mount",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::MountError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::MountArgument| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::MountArgument| value.clone());
+            pub struct unmount<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::UnmountError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::MountArgument) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |info| ::std::result::Result::Ok(mock(info)));
-            }
+            impl<'mock> unmount<'mock> {
+                pub fn unimplemented() -> Self {
+                    unmount {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "unmount",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::MountError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::MountArgument| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString| value.clone());
+                }
 
-        pub struct unmount<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::UnmountError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
+                }
 
-        impl<'mock> unmount<'mock> {
-            pub fn unimplemented() -> Self {
-                unmount {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "unmount",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::UnmountError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::PathString| value.clone());
+            pub struct checkOutRevision<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::CheckoutMode) -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::CheckoutConflict>,
+                        crate::errors::eden_service::CheckOutRevisionError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
-            }
+            impl<'mock> checkOutRevision<'mock> {
+                pub fn unimplemented() -> Self {
+                    checkOutRevision {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::CheckoutMode| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "checkOutRevision",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::UnmountError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::CheckoutConflict>) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::CheckoutMode| value.clone());
+                }
 
-        pub struct checkOutRevision<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::CheckoutMode) -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::CheckoutConflict>,
-                    crate::errors::eden_service::CheckOutRevisionError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::CheckoutMode) -> ::std::vec::Vec<crate::types::CheckoutConflict> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, snapshotHash, checkoutMode| ::std::result::Result::Ok(mock(mountPoint, snapshotHash, checkoutMode)));
+                }
 
-        impl<'mock> checkOutRevision<'mock> {
-            pub fn unimplemented() -> Self {
-                checkOutRevision {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::CheckoutMode| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "checkOutRevision",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::CheckOutRevisionError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::CheckoutMode| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::CheckoutConflict>) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::CheckoutMode| value.clone());
+            pub struct resetParentCommits<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::WorkingDirectoryParents) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::ResetParentCommitsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::CheckoutMode) -> ::std::vec::Vec<crate::types::CheckoutConflict> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, snapshotHash, checkoutMode| ::std::result::Result::Ok(mock(mountPoint, snapshotHash, checkoutMode)));
-            }
+            impl<'mock> resetParentCommits<'mock> {
+                pub fn unimplemented() -> Self {
+                    resetParentCommits {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::WorkingDirectoryParents| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "resetParentCommits",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::CheckOutRevisionError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::CheckoutMode| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::WorkingDirectoryParents| value.clone());
+                }
 
-        pub struct resetParentCommits<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::WorkingDirectoryParents) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::ResetParentCommitsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::WorkingDirectoryParents) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, parents| ::std::result::Result::Ok(mock(mountPoint, parents)));
+                }
 
-        impl<'mock> resetParentCommits<'mock> {
-            pub fn unimplemented() -> Self {
-                resetParentCommits {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::WorkingDirectoryParents| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "resetParentCommits",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::ResetParentCommitsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::WorkingDirectoryParents| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::WorkingDirectoryParents| value.clone());
+            pub struct getSHA1<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::SHA1Result>,
+                        crate::errors::eden_service::GetSHA1Error,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::WorkingDirectoryParents) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, parents| ::std::result::Result::Ok(mock(mountPoint, parents)));
-            }
+            impl<'mock> getSHA1<'mock> {
+                pub fn unimplemented() -> Self {
+                    getSHA1 {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getSHA1",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::ResetParentCommitsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::WorkingDirectoryParents| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::SHA1Result>) {
+                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| value.clone());
+                }
 
-        pub struct getSHA1<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::SHA1Result>,
-                    crate::errors::eden_service::GetSHA1Error,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::vec::Vec<crate::types::SHA1Result> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, paths| ::std::result::Result::Ok(mock(mountPoint, paths)));
+                }
 
-        impl<'mock> getSHA1<'mock> {
-            pub fn unimplemented() -> Self {
-                getSHA1 {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getSHA1",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetSHA1Error>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::SHA1Result>) {
-                self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| value.clone());
+            pub struct getBindMounts<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::PathString>,
+                        crate::errors::eden_service::GetBindMountsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::vec::Vec<crate::types::SHA1Result> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, paths| ::std::result::Result::Ok(mock(mountPoint, paths)));
-            }
+            impl<'mock> getBindMounts<'mock> {
+                pub fn unimplemented() -> Self {
+                    getBindMounts {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getBindMounts",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetSHA1Error>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::PathString>) {
+                    self.mock(move |_: crate::types::PathString| value.clone());
+                }
 
-        pub struct getBindMounts<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::PathString>,
-                    crate::errors::eden_service::GetBindMountsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> ::std::vec::Vec<crate::types::PathString> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
+                }
 
-        impl<'mock> getBindMounts<'mock> {
-            pub fn unimplemented() -> Self {
-                getBindMounts {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getBindMounts",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetBindMountsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::PathString>) {
-                self.mock(move |_: crate::types::PathString| value.clone());
+            pub struct addBindMount<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::AddBindMountError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> ::std::vec::Vec<crate::types::PathString> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
-            }
+            impl<'mock> addBindMount<'mock> {
+                pub fn unimplemented() -> Self {
+                    addBindMount {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString, _: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "addBindMount",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetBindMountsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString, _: crate::types::PathString| value.clone());
+                }
 
-        pub struct addBindMount<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::AddBindMountError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, repoPath, targetPath| ::std::result::Result::Ok(mock(mountPoint, repoPath, targetPath)));
+                }
 
-        impl<'mock> addBindMount<'mock> {
-            pub fn unimplemented() -> Self {
-                addBindMount {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString, _: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "addBindMount",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::AddBindMountError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::PathString, _: crate::types::PathString| value.clone());
+            pub struct removeBindMount<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::RemoveBindMountError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, repoPath, targetPath| ::std::result::Result::Ok(mock(mountPoint, repoPath, targetPath)));
-            }
+            impl<'mock> removeBindMount<'mock> {
+                pub fn unimplemented() -> Self {
+                    removeBindMount {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "removeBindMount",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::AddBindMountError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
+                }
 
-        pub struct removeBindMount<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::RemoveBindMountError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, repoPath| ::std::result::Result::Ok(mock(mountPoint, repoPath)));
+                }
 
-        impl<'mock> removeBindMount<'mock> {
-            pub fn unimplemented() -> Self {
-                removeBindMount {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "removeBindMount",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::RemoveBindMountError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
+            pub struct getCurrentJournalPosition<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
+                        crate::types::JournalPosition,
+                        crate::errors::eden_service::GetCurrentJournalPositionError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, repoPath| ::std::result::Result::Ok(mock(mountPoint, repoPath)));
-            }
+            impl<'mock> getCurrentJournalPosition<'mock> {
+                pub fn unimplemented() -> Self {
+                    getCurrentJournalPosition {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getCurrentJournalPosition",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::RemoveBindMountError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::JournalPosition) {
+                    self.mock(move |_: crate::types::PathString| value.clone());
+                }
 
-        pub struct getCurrentJournalPosition<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
-                    crate::types::JournalPosition,
-                    crate::errors::eden_service::GetCurrentJournalPositionError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> crate::types::JournalPosition + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
+                }
 
-        impl<'mock> getCurrentJournalPosition<'mock> {
-            pub fn unimplemented() -> Self {
-                getCurrentJournalPosition {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getCurrentJournalPosition",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetCurrentJournalPositionError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::JournalPosition) {
-                self.mock(move |_: crate::types::PathString| value.clone());
+            pub struct getFilesChangedSince<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::JournalPosition) -> ::std::result::Result<
+                        crate::types::FileDelta,
+                        crate::errors::eden_service::GetFilesChangedSinceError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> crate::types::JournalPosition + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
-            }
+            impl<'mock> getFilesChangedSince<'mock> {
+                pub fn unimplemented() -> Self {
+                    getFilesChangedSince {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::JournalPosition| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getFilesChangedSince",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetCurrentJournalPositionError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::FileDelta) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::JournalPosition| value.clone());
+                }
 
-        pub struct getFilesChangedSince<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::JournalPosition) -> ::std::result::Result<
-                    crate::types::FileDelta,
-                    crate::errors::eden_service::GetFilesChangedSinceError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::JournalPosition) -> crate::types::FileDelta + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, fromPosition| ::std::result::Result::Ok(mock(mountPoint, fromPosition)));
+                }
 
-        impl<'mock> getFilesChangedSince<'mock> {
-            pub fn unimplemented() -> Self {
-                getFilesChangedSince {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::JournalPosition| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getFilesChangedSince",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetFilesChangedSinceError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::JournalPosition| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::FileDelta) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::JournalPosition| value.clone());
+            pub struct setJournalMemoryLimit<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i64) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::SetJournalMemoryLimitError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::JournalPosition) -> crate::types::FileDelta + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, fromPosition| ::std::result::Result::Ok(mock(mountPoint, fromPosition)));
-            }
+            impl<'mock> setJournalMemoryLimit<'mock> {
+                pub fn unimplemented() -> Self {
+                    setJournalMemoryLimit {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::primitive::i64| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "setJournalMemoryLimit",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetFilesChangedSinceError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::JournalPosition| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString, _: ::std::primitive::i64| value.clone());
+                }
 
-        pub struct setJournalMemoryLimit<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i64) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::SetJournalMemoryLimitError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i64) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, limit| ::std::result::Result::Ok(mock(mountPoint, limit)));
+                }
 
-        impl<'mock> setJournalMemoryLimit<'mock> {
-            pub fn unimplemented() -> Self {
-                setJournalMemoryLimit {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::primitive::i64| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "setJournalMemoryLimit",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::SetJournalMemoryLimitError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::primitive::i64| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::PathString, _: ::std::primitive::i64| value.clone());
+            pub struct getJournalMemoryLimit<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
+                        ::std::primitive::i64,
+                        crate::errors::eden_service::GetJournalMemoryLimitError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i64) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, limit| ::std::result::Result::Ok(mock(mountPoint, limit)));
-            }
+            impl<'mock> getJournalMemoryLimit<'mock> {
+                pub fn unimplemented() -> Self {
+                    getJournalMemoryLimit {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getJournalMemoryLimit",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::SetJournalMemoryLimitError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::primitive::i64| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::primitive::i64) {
+                    self.mock(move |_: crate::types::PathString| value.clone());
+                }
 
-        pub struct getJournalMemoryLimit<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
-                    ::std::primitive::i64,
-                    crate::errors::eden_service::GetJournalMemoryLimitError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
+                }
 
-        impl<'mock> getJournalMemoryLimit<'mock> {
-            pub fn unimplemented() -> Self {
-                getJournalMemoryLimit {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getJournalMemoryLimit",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetJournalMemoryLimitError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::primitive::i64) {
-                self.mock(move |_: crate::types::PathString| value.clone());
+            pub struct flushJournal<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::FlushJournalError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
-            }
+            impl<'mock> flushJournal<'mock> {
+                pub fn unimplemented() -> Self {
+                    flushJournal {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "flushJournal",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetJournalMemoryLimitError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString| value.clone());
+                }
 
-        pub struct flushJournal<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::FlushJournalError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
+                }
 
-        impl<'mock> flushJournal<'mock> {
-            pub fn unimplemented() -> Self {
-                flushJournal {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "flushJournal",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::FlushJournalError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::PathString| value.clone());
+            pub struct debugGetRawJournal<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::DebugGetRawJournalParams) -> ::std::result::Result<
+                        crate::types::DebugGetRawJournalResponse,
+                        crate::errors::eden_service::DebugGetRawJournalError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
-            }
+            impl<'mock> debugGetRawJournal<'mock> {
+                pub fn unimplemented() -> Self {
+                    debugGetRawJournal {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::DebugGetRawJournalParams| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "debugGetRawJournal",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::FlushJournalError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::DebugGetRawJournalResponse) {
+                    self.mock(move |_: crate::types::DebugGetRawJournalParams| value.clone());
+                }
 
-        pub struct debugGetRawJournal<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::DebugGetRawJournalParams) -> ::std::result::Result<
-                    crate::types::DebugGetRawJournalResponse,
-                    crate::errors::eden_service::DebugGetRawJournalError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::DebugGetRawJournalParams) -> crate::types::DebugGetRawJournalResponse + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |params| ::std::result::Result::Ok(mock(params)));
+                }
 
-        impl<'mock> debugGetRawJournal<'mock> {
-            pub fn unimplemented() -> Self {
-                debugGetRawJournal {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::DebugGetRawJournalParams| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "debugGetRawJournal",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DebugGetRawJournalError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::DebugGetRawJournalParams| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::DebugGetRawJournalResponse) {
-                self.mock(move |_: crate::types::DebugGetRawJournalParams| value.clone());
+            pub struct getEntryInformation<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::EntryInformationOrError>,
+                        crate::errors::eden_service::GetEntryInformationError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::DebugGetRawJournalParams) -> crate::types::DebugGetRawJournalResponse + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |params| ::std::result::Result::Ok(mock(params)));
-            }
+            impl<'mock> getEntryInformation<'mock> {
+                pub fn unimplemented() -> Self {
+                    getEntryInformation {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getEntryInformation",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DebugGetRawJournalError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::DebugGetRawJournalParams| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::EntryInformationOrError>) {
+                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| value.clone());
+                }
 
-        pub struct getEntryInformation<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::EntryInformationOrError>,
-                    crate::errors::eden_service::GetEntryInformationError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::vec::Vec<crate::types::EntryInformationOrError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, paths| ::std::result::Result::Ok(mock(mountPoint, paths)));
+                }
 
-        impl<'mock> getEntryInformation<'mock> {
-            pub fn unimplemented() -> Self {
-                getEntryInformation {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getEntryInformation",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetEntryInformationError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::EntryInformationOrError>) {
-                self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| value.clone());
+            pub struct getFileInformation<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::FileInformationOrError>,
+                        crate::errors::eden_service::GetFileInformationError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::vec::Vec<crate::types::EntryInformationOrError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, paths| ::std::result::Result::Ok(mock(mountPoint, paths)));
-            }
+            impl<'mock> getFileInformation<'mock> {
+                pub fn unimplemented() -> Self {
+                    getFileInformation {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getFileInformation",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetEntryInformationError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::FileInformationOrError>) {
+                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| value.clone());
+                }
 
-        pub struct getFileInformation<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::FileInformationOrError>,
-                    crate::errors::eden_service::GetFileInformationError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::vec::Vec<crate::types::FileInformationOrError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, paths| ::std::result::Result::Ok(mock(mountPoint, paths)));
+                }
 
-        impl<'mock> getFileInformation<'mock> {
-            pub fn unimplemented() -> Self {
-                getFileInformation {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getFileInformation",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetFileInformationError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::FileInformationOrError>) {
-                self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| value.clone());
+            pub struct glob<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<::std::string::String>) -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::PathString>,
+                        crate::errors::eden_service::GlobError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<crate::types::PathString>) -> ::std::vec::Vec<crate::types::FileInformationOrError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, paths| ::std::result::Result::Ok(mock(mountPoint, paths)));
-            }
+            impl<'mock> glob<'mock> {
+                pub fn unimplemented() -> Self {
+                    glob {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<::std::string::String>| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "glob",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetFileInformationError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<crate::types::PathString>| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::PathString>) {
+                    self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<::std::string::String>| value.clone());
+                }
 
-        pub struct glob<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<::std::string::String>) -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::PathString>,
-                    crate::errors::eden_service::GlobError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<::std::string::String>) -> ::std::vec::Vec<crate::types::PathString> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, globs| ::std::result::Result::Ok(mock(mountPoint, globs)));
+                }
 
-        impl<'mock> glob<'mock> {
-            pub fn unimplemented() -> Self {
-                glob {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::vec::Vec<::std::string::String>| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "glob",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GlobError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<::std::string::String>| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::PathString>) {
-                self.mock(move |_: crate::types::PathString, _: ::std::vec::Vec<::std::string::String>| value.clone());
+            pub struct globFiles<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::GlobParams) -> ::std::result::Result<
+                        crate::types::Glob,
+                        crate::errors::eden_service::GlobFilesError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::vec::Vec<::std::string::String>) -> ::std::vec::Vec<crate::types::PathString> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, globs| ::std::result::Result::Ok(mock(mountPoint, globs)));
-            }
+            impl<'mock> globFiles<'mock> {
+                pub fn unimplemented() -> Self {
+                    globFiles {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::GlobParams| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "globFiles",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GlobError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::vec::Vec<::std::string::String>| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::Glob) {
+                    self.mock(move |_: crate::types::GlobParams| value.clone());
+                }
 
-        pub struct globFiles<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::GlobParams) -> ::std::result::Result<
-                    crate::types::Glob,
-                    crate::errors::eden_service::GlobFilesError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::GlobParams) -> crate::types::Glob + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |params| ::std::result::Result::Ok(mock(params)));
+                }
 
-        impl<'mock> globFiles<'mock> {
-            pub fn unimplemented() -> Self {
-                globFiles {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::GlobParams| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "globFiles",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GlobFilesError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::GlobParams| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::Glob) {
-                self.mock(move |_: crate::types::GlobParams| value.clone());
+            pub struct chown<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i32, ::std::primitive::i32) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::ChownError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::GlobParams) -> crate::types::Glob + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |params| ::std::result::Result::Ok(mock(params)));
-            }
+            impl<'mock> chown<'mock> {
+                pub fn unimplemented() -> Self {
+                    chown {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::primitive::i32, _: ::std::primitive::i32| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "chown",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GlobFilesError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::GlobParams| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString, _: ::std::primitive::i32, _: ::std::primitive::i32| value.clone());
+                }
 
-        pub struct chown<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i32, ::std::primitive::i32) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::ChownError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i32, ::std::primitive::i32) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, uid, gid| ::std::result::Result::Ok(mock(mountPoint, uid, gid)));
+                }
 
-        impl<'mock> chown<'mock> {
-            pub fn unimplemented() -> Self {
-                chown {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::primitive::i32, _: ::std::primitive::i32| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "chown",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::ChownError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::primitive::i32, _: ::std::primitive::i32| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::PathString, _: ::std::primitive::i32, _: ::std::primitive::i32| value.clone());
+            pub struct getScmStatusV2<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::GetScmStatusParams) -> ::std::result::Result<
+                        crate::types::GetScmStatusResult,
+                        crate::errors::eden_service::GetScmStatusV2Error,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i32, ::std::primitive::i32) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, uid, gid| ::std::result::Result::Ok(mock(mountPoint, uid, gid)));
-            }
+            impl<'mock> getScmStatusV2<'mock> {
+                pub fn unimplemented() -> Self {
+                    getScmStatusV2 {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::GetScmStatusParams| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getScmStatusV2",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::ChownError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::primitive::i32, _: ::std::primitive::i32| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::GetScmStatusResult) {
+                    self.mock(move |_: crate::types::GetScmStatusParams| value.clone());
+                }
 
-        pub struct getScmStatusV2<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::GetScmStatusParams) -> ::std::result::Result<
-                    crate::types::GetScmStatusResult,
-                    crate::errors::eden_service::GetScmStatusV2Error,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::GetScmStatusParams) -> crate::types::GetScmStatusResult + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |params| ::std::result::Result::Ok(mock(params)));
+                }
 
-        impl<'mock> getScmStatusV2<'mock> {
-            pub fn unimplemented() -> Self {
-                getScmStatusV2 {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::GetScmStatusParams| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getScmStatusV2",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetScmStatusV2Error>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::GetScmStatusParams| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::GetScmStatusResult) {
-                self.mock(move |_: crate::types::GetScmStatusParams| value.clone());
+            pub struct getScmStatus<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::primitive::bool, crate::types::BinaryHash) -> ::std::result::Result<
+                        crate::types::ScmStatus,
+                        crate::errors::eden_service::GetScmStatusError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::GetScmStatusParams) -> crate::types::GetScmStatusResult + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |params| ::std::result::Result::Ok(mock(params)));
-            }
+            impl<'mock> getScmStatus<'mock> {
+                pub fn unimplemented() -> Self {
+                    getScmStatus {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::primitive::bool, _: crate::types::BinaryHash| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getScmStatus",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetScmStatusV2Error>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::GetScmStatusParams| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::ScmStatus) {
+                    self.mock(move |_: crate::types::PathString, _: ::std::primitive::bool, _: crate::types::BinaryHash| value.clone());
+                }
 
-        pub struct getScmStatus<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, ::std::primitive::bool, crate::types::BinaryHash) -> ::std::result::Result<
-                    crate::types::ScmStatus,
-                    crate::errors::eden_service::GetScmStatusError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::primitive::bool, crate::types::BinaryHash) -> crate::types::ScmStatus + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, listIgnored, commit| ::std::result::Result::Ok(mock(mountPoint, listIgnored, commit)));
+                }
 
-        impl<'mock> getScmStatus<'mock> {
-            pub fn unimplemented() -> Self {
-                getScmStatus {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::primitive::bool, _: crate::types::BinaryHash| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getScmStatus",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetScmStatusError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::primitive::bool, _: crate::types::BinaryHash| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::ScmStatus) {
-                self.mock(move |_: crate::types::PathString, _: ::std::primitive::bool, _: crate::types::BinaryHash| value.clone());
+            pub struct getScmStatusBetweenRevisions<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::BinaryHash) -> ::std::result::Result<
+                        crate::types::ScmStatus,
+                        crate::errors::eden_service::GetScmStatusBetweenRevisionsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::primitive::bool, crate::types::BinaryHash) -> crate::types::ScmStatus + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, listIgnored, commit| ::std::result::Result::Ok(mock(mountPoint, listIgnored, commit)));
-            }
+            impl<'mock> getScmStatusBetweenRevisions<'mock> {
+                pub fn unimplemented() -> Self {
+                    getScmStatusBetweenRevisions {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::BinaryHash| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getScmStatusBetweenRevisions",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetScmStatusError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::primitive::bool, _: crate::types::BinaryHash| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::ScmStatus) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::BinaryHash| value.clone());
+                }
 
-        pub struct getScmStatusBetweenRevisions<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::BinaryHash) -> ::std::result::Result<
-                    crate::types::ScmStatus,
-                    crate::errors::eden_service::GetScmStatusBetweenRevisionsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::BinaryHash) -> crate::types::ScmStatus + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, oldHash, newHash| ::std::result::Result::Ok(mock(mountPoint, oldHash, newHash)));
+                }
 
-        impl<'mock> getScmStatusBetweenRevisions<'mock> {
-            pub fn unimplemented() -> Self {
-                getScmStatusBetweenRevisions {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::BinaryHash| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getScmStatusBetweenRevisions",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetScmStatusBetweenRevisionsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::BinaryHash| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::ScmStatus) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::BinaryHash| value.clone());
+            pub struct getManifestEntry<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
+                        crate::types::ManifestEntry,
+                        crate::errors::eden_service::GetManifestEntryError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::BinaryHash) -> crate::types::ScmStatus + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, oldHash, newHash| ::std::result::Result::Ok(mock(mountPoint, oldHash, newHash)));
-            }
+            impl<'mock> getManifestEntry<'mock> {
+                pub fn unimplemented() -> Self {
+                    getManifestEntry {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getManifestEntry",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetScmStatusBetweenRevisionsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: crate::types::BinaryHash| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::ManifestEntry) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
+                }
 
-        pub struct getManifestEntry<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
-                    crate::types::ManifestEntry,
-                    crate::errors::eden_service::GetManifestEntryError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> crate::types::ManifestEntry + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, relativePath| ::std::result::Result::Ok(mock(mountPoint, relativePath)));
+                }
 
-        impl<'mock> getManifestEntry<'mock> {
-            pub fn unimplemented() -> Self {
-                getManifestEntry {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getManifestEntry",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetManifestEntryError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::ManifestEntry) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
+            pub struct getDaemonInfo<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        crate::types::DaemonInfo,
+                        crate::errors::eden_service::GetDaemonInfoError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> crate::types::ManifestEntry + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, relativePath| ::std::result::Result::Ok(mock(mountPoint, relativePath)));
-            }
+            impl<'mock> getDaemonInfo<'mock> {
+                pub fn unimplemented() -> Self {
+                    getDaemonInfo {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getDaemonInfo",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetManifestEntryError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::DaemonInfo) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getDaemonInfo<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    crate::types::DaemonInfo,
-                    crate::errors::eden_service::GetDaemonInfoError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::DaemonInfo + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getDaemonInfo<'mock> {
-            pub fn unimplemented() -> Self {
-                getDaemonInfo {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getDaemonInfo",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetDaemonInfoError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::DaemonInfo) {
-                self.mock(move || value.clone());
+            pub struct getPid<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::primitive::i64,
+                        crate::errors::eden_service::GetPidError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::DaemonInfo + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getPid<'mock> {
+                pub fn unimplemented() -> Self {
+                    getPid {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getPid",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetDaemonInfoError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::primitive::i64) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getPid<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::primitive::i64,
-                    crate::errors::eden_service::GetPidError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getPid<'mock> {
-            pub fn unimplemented() -> Self {
-                getPid {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getPid",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetPidError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::primitive::i64) {
-                self.mock(move || value.clone());
+            pub struct initiateShutdown<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::InitiateShutdownError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> initiateShutdown<'mock> {
+                pub fn unimplemented() -> Self {
+                    initiateShutdown {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "initiateShutdown",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetPidError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: ::std::string::String| value.clone());
+                }
 
-        pub struct initiateShutdown<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::InitiateShutdownError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |reason| ::std::result::Result::Ok(mock(reason)));
+                }
 
-        impl<'mock> initiateShutdown<'mock> {
-            pub fn unimplemented() -> Self {
-                initiateShutdown {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "initiateShutdown",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::InitiateShutdownError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: ::std::string::String| value.clone());
+            pub struct getConfig<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::GetConfigParams) -> ::std::result::Result<
+                        eden_config::types::EdenConfigData,
+                        crate::errors::eden_service::GetConfigError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |reason| ::std::result::Result::Ok(mock(reason)));
-            }
+            impl<'mock> getConfig<'mock> {
+                pub fn unimplemented() -> Self {
+                    getConfig {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::GetConfigParams| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getConfig",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::InitiateShutdownError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: eden_config::types::EdenConfigData) {
+                    self.mock(move |_: crate::types::GetConfigParams| value.clone());
+                }
 
-        pub struct getConfig<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::GetConfigParams) -> ::std::result::Result<
-                    eden_config::types::EdenConfigData,
-                    crate::errors::eden_service::GetConfigError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::GetConfigParams) -> eden_config::types::EdenConfigData + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |params| ::std::result::Result::Ok(mock(params)));
+                }
 
-        impl<'mock> getConfig<'mock> {
-            pub fn unimplemented() -> Self {
-                getConfig {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::GetConfigParams| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getConfig",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetConfigError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::GetConfigParams| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: eden_config::types::EdenConfigData) {
-                self.mock(move |_: crate::types::GetConfigParams| value.clone());
+            pub struct reloadConfig<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::ReloadConfigError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::GetConfigParams) -> eden_config::types::EdenConfigData + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |params| ::std::result::Result::Ok(mock(params)));
-            }
+            impl<'mock> reloadConfig<'mock> {
+                pub fn unimplemented() -> Self {
+                    reloadConfig {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "reloadConfig",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetConfigError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::GetConfigParams| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct reloadConfig<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::ReloadConfigError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> reloadConfig<'mock> {
-            pub fn unimplemented() -> Self {
-                reloadConfig {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "reloadConfig",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::ReloadConfigError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move || value.clone());
+            pub struct debugGetScmTree<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::ScmTreeEntry>,
+                        crate::errors::eden_service::DebugGetScmTreeError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> debugGetScmTree<'mock> {
+                pub fn unimplemented() -> Self {
+                    debugGetScmTree {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "debugGetScmTree",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::ReloadConfigError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::ScmTreeEntry>) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| value.clone());
+                }
 
-        pub struct debugGetScmTree<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::ScmTreeEntry>,
-                    crate::errors::eden_service::DebugGetScmTreeError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::vec::Vec<crate::types::ScmTreeEntry> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, id, localStoreOnly| ::std::result::Result::Ok(mock(mountPoint, id, localStoreOnly)));
+                }
 
-        impl<'mock> debugGetScmTree<'mock> {
-            pub fn unimplemented() -> Self {
-                debugGetScmTree {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "debugGetScmTree",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DebugGetScmTreeError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::ScmTreeEntry>) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| value.clone());
+            pub struct debugGetScmBlob<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::result::Result<
+                        ::std::vec::Vec<::std::primitive::u8>,
+                        crate::errors::eden_service::DebugGetScmBlobError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::vec::Vec<crate::types::ScmTreeEntry> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, id, localStoreOnly| ::std::result::Result::Ok(mock(mountPoint, id, localStoreOnly)));
-            }
+            impl<'mock> debugGetScmBlob<'mock> {
+                pub fn unimplemented() -> Self {
+                    debugGetScmBlob {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "debugGetScmBlob",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DebugGetScmTreeError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<::std::primitive::u8>) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| value.clone());
+                }
 
-        pub struct debugGetScmBlob<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::result::Result<
-                    ::std::vec::Vec<::std::primitive::u8>,
-                    crate::errors::eden_service::DebugGetScmBlobError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::vec::Vec<::std::primitive::u8> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, id, localStoreOnly| ::std::result::Result::Ok(mock(mountPoint, id, localStoreOnly)));
+                }
 
-        impl<'mock> debugGetScmBlob<'mock> {
-            pub fn unimplemented() -> Self {
-                debugGetScmBlob {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "debugGetScmBlob",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DebugGetScmBlobError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<::std::primitive::u8>) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| value.clone());
+            pub struct debugGetScmBlobMetadata<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::result::Result<
+                        crate::types::ScmBlobMetadata,
+                        crate::errors::eden_service::DebugGetScmBlobMetadataError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::vec::Vec<::std::primitive::u8> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, id, localStoreOnly| ::std::result::Result::Ok(mock(mountPoint, id, localStoreOnly)));
-            }
+            impl<'mock> debugGetScmBlobMetadata<'mock> {
+                pub fn unimplemented() -> Self {
+                    debugGetScmBlobMetadata {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "debugGetScmBlobMetadata",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DebugGetScmBlobError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::ScmBlobMetadata) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| value.clone());
+                }
 
-        pub struct debugGetScmBlobMetadata<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> ::std::result::Result<
-                    crate::types::ScmBlobMetadata,
-                    crate::errors::eden_service::DebugGetScmBlobMetadataError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> crate::types::ScmBlobMetadata + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, id, localStoreOnly| ::std::result::Result::Ok(mock(mountPoint, id, localStoreOnly)));
+                }
 
-        impl<'mock> debugGetScmBlobMetadata<'mock> {
-            pub fn unimplemented() -> Self {
-                debugGetScmBlobMetadata {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "debugGetScmBlobMetadata",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DebugGetScmBlobMetadataError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::ScmBlobMetadata) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| value.clone());
+            pub struct debugInodeStatus<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::TreeInodeDebugInfo>,
+                        crate::errors::eden_service::DebugInodeStatusError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::BinaryHash, ::std::primitive::bool) -> crate::types::ScmBlobMetadata + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, id, localStoreOnly| ::std::result::Result::Ok(mock(mountPoint, id, localStoreOnly)));
-            }
+            impl<'mock> debugInodeStatus<'mock> {
+                pub fn unimplemented() -> Self {
+                    debugInodeStatus {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "debugInodeStatus",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DebugGetScmBlobMetadataError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::BinaryHash, _: ::std::primitive::bool| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::TreeInodeDebugInfo>) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
+                }
 
-        pub struct debugInodeStatus<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::TreeInodeDebugInfo>,
-                    crate::errors::eden_service::DebugInodeStatusError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::vec::Vec<crate::types::TreeInodeDebugInfo> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, path| ::std::result::Result::Ok(mock(mountPoint, path)));
+                }
 
-        impl<'mock> debugInodeStatus<'mock> {
-            pub fn unimplemented() -> Self {
-                debugInodeStatus {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "debugInodeStatus",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DebugInodeStatusError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::TreeInodeDebugInfo>) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
+            pub struct debugOutstandingFuseCalls<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::FuseCall>,
+                        crate::errors::eden_service::DebugOutstandingFuseCallsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::vec::Vec<crate::types::TreeInodeDebugInfo> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, path| ::std::result::Result::Ok(mock(mountPoint, path)));
-            }
+            impl<'mock> debugOutstandingFuseCalls<'mock> {
+                pub fn unimplemented() -> Self {
+                    debugOutstandingFuseCalls {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "debugOutstandingFuseCalls",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DebugInodeStatusError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::FuseCall>) {
+                    self.mock(move |_: crate::types::PathString| value.clone());
+                }
 
-        pub struct debugOutstandingFuseCalls<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::FuseCall>,
-                    crate::errors::eden_service::DebugOutstandingFuseCallsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> ::std::vec::Vec<crate::types::FuseCall> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
+                }
 
-        impl<'mock> debugOutstandingFuseCalls<'mock> {
-            pub fn unimplemented() -> Self {
-                debugOutstandingFuseCalls {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "debugOutstandingFuseCalls",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DebugOutstandingFuseCallsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::FuseCall>) {
-                self.mock(move |_: crate::types::PathString| value.clone());
+            pub struct debugGetInodePath<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i64) -> ::std::result::Result<
+                        crate::types::InodePathDebugInfo,
+                        crate::errors::eden_service::DebugGetInodePathError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> ::std::vec::Vec<crate::types::FuseCall> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint| ::std::result::Result::Ok(mock(mountPoint)));
-            }
+            impl<'mock> debugGetInodePath<'mock> {
+                pub fn unimplemented() -> Self {
+                    debugGetInodePath {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::primitive::i64| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "debugGetInodePath",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DebugOutstandingFuseCallsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::InodePathDebugInfo) {
+                    self.mock(move |_: crate::types::PathString, _: ::std::primitive::i64| value.clone());
+                }
 
-        pub struct debugGetInodePath<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i64) -> ::std::result::Result<
-                    crate::types::InodePathDebugInfo,
-                    crate::errors::eden_service::DebugGetInodePathError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i64) -> crate::types::InodePathDebugInfo + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, inodeNumber| ::std::result::Result::Ok(mock(mountPoint, inodeNumber)));
+                }
 
-        impl<'mock> debugGetInodePath<'mock> {
-            pub fn unimplemented() -> Self {
-                debugGetInodePath {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: ::std::primitive::i64| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "debugGetInodePath",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DebugGetInodePathError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::primitive::i64| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::InodePathDebugInfo) {
-                self.mock(move |_: crate::types::PathString, _: ::std::primitive::i64| value.clone());
+            pub struct getAccessCounts<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::primitive::i64) -> ::std::result::Result<
+                        crate::types::GetAccessCountsResult,
+                        crate::errors::eden_service::GetAccessCountsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i64) -> crate::types::InodePathDebugInfo + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, inodeNumber| ::std::result::Result::Ok(mock(mountPoint, inodeNumber)));
-            }
+            impl<'mock> getAccessCounts<'mock> {
+                pub fn unimplemented() -> Self {
+                    getAccessCounts {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::primitive::i64| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getAccessCounts",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DebugGetInodePathError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: ::std::primitive::i64| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::GetAccessCountsResult) {
+                    self.mock(move |_: ::std::primitive::i64| value.clone());
+                }
 
-        pub struct getAccessCounts<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::primitive::i64) -> ::std::result::Result<
-                    crate::types::GetAccessCountsResult,
-                    crate::errors::eden_service::GetAccessCountsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::primitive::i64) -> crate::types::GetAccessCountsResult + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |duration| ::std::result::Result::Ok(mock(duration)));
+                }
 
-        impl<'mock> getAccessCounts<'mock> {
-            pub fn unimplemented() -> Self {
-                getAccessCounts {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::primitive::i64| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getAccessCounts",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetAccessCountsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::primitive::i64| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::GetAccessCountsResult) {
-                self.mock(move |_: ::std::primitive::i64| value.clone());
+            pub struct clearAndCompactLocalStore<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::ClearAndCompactLocalStoreError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::primitive::i64) -> crate::types::GetAccessCountsResult + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |duration| ::std::result::Result::Ok(mock(duration)));
-            }
+            impl<'mock> clearAndCompactLocalStore<'mock> {
+                pub fn unimplemented() -> Self {
+                    clearAndCompactLocalStore {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "clearAndCompactLocalStore",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetAccessCountsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::primitive::i64| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct clearAndCompactLocalStore<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::ClearAndCompactLocalStoreError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> clearAndCompactLocalStore<'mock> {
-            pub fn unimplemented() -> Self {
-                clearAndCompactLocalStore {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "clearAndCompactLocalStore",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::ClearAndCompactLocalStoreError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move || value.clone());
+            pub struct debugClearLocalStoreCaches<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::DebugClearLocalStoreCachesError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> debugClearLocalStoreCaches<'mock> {
+                pub fn unimplemented() -> Self {
+                    debugClearLocalStoreCaches {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "debugClearLocalStoreCaches",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::ClearAndCompactLocalStoreError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct debugClearLocalStoreCaches<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::DebugClearLocalStoreCachesError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> debugClearLocalStoreCaches<'mock> {
-            pub fn unimplemented() -> Self {
-                debugClearLocalStoreCaches {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "debugClearLocalStoreCaches",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DebugClearLocalStoreCachesError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move || value.clone());
+            pub struct debugCompactLocalStorage<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::DebugCompactLocalStorageError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> debugCompactLocalStorage<'mock> {
+                pub fn unimplemented() -> Self {
+                    debugCompactLocalStorage {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "debugCompactLocalStorage",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DebugClearLocalStoreCachesError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct debugCompactLocalStorage<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::DebugCompactLocalStorageError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> debugCompactLocalStorage<'mock> {
-            pub fn unimplemented() -> Self {
-                debugCompactLocalStorage {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "debugCompactLocalStorage",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DebugCompactLocalStorageError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move || value.clone());
+            pub struct unloadInodeForPath<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, crate::types::TimeSpec) -> ::std::result::Result<
+                        ::std::primitive::i64,
+                        crate::errors::eden_service::UnloadInodeForPathError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> unloadInodeForPath<'mock> {
+                pub fn unimplemented() -> Self {
+                    unloadInodeForPath {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString, _: crate::types::TimeSpec| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "unloadInodeForPath",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DebugCompactLocalStorageError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::primitive::i64) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString, _: crate::types::TimeSpec| value.clone());
+                }
 
-        pub struct unloadInodeForPath<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, crate::types::TimeSpec) -> ::std::result::Result<
-                    ::std::primitive::i64,
-                    crate::errors::eden_service::UnloadInodeForPathError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, crate::types::TimeSpec) -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, path, age| ::std::result::Result::Ok(mock(mountPoint, path, age)));
+                }
 
-        impl<'mock> unloadInodeForPath<'mock> {
-            pub fn unimplemented() -> Self {
-                unloadInodeForPath {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString, _: crate::types::TimeSpec| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "unloadInodeForPath",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::UnloadInodeForPathError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString, _: crate::types::TimeSpec| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::primitive::i64) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::PathString, _: crate::types::TimeSpec| value.clone());
+            pub struct flushStatsNow<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::FlushStatsNowError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, crate::types::TimeSpec) -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, path, age| ::std::result::Result::Ok(mock(mountPoint, path, age)));
-            }
+            impl<'mock> flushStatsNow<'mock> {
+                pub fn unimplemented() -> Self {
+                    flushStatsNow {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "flushStatsNow",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::UnloadInodeForPathError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString, _: crate::types::TimeSpec| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct flushStatsNow<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::FlushStatsNowError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> flushStatsNow<'mock> {
-            pub fn unimplemented() -> Self {
-                flushStatsNow {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "flushStatsNow",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::FlushStatsNowError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move || value.clone());
+            pub struct invalidateKernelInodeCache<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::InvalidateKernelInodeCacheError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> invalidateKernelInodeCache<'mock> {
+                pub fn unimplemented() -> Self {
+                    invalidateKernelInodeCache {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "invalidateKernelInodeCache",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::FlushStatsNowError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
+                }
 
-        pub struct invalidateKernelInodeCache<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::InvalidateKernelInodeCacheError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPoint, path| ::std::result::Result::Ok(mock(mountPoint, path)));
+                }
 
-        impl<'mock> invalidateKernelInodeCache<'mock> {
-            pub fn unimplemented() -> Self {
-                invalidateKernelInodeCache {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "invalidateKernelInodeCache",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::InvalidateKernelInodeCacheError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
+            pub struct getStatInfo<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        crate::types::InternalStats,
+                        crate::errors::eden_service::GetStatInfoError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |mountPoint, path| ::std::result::Result::Ok(mock(mountPoint, path)));
-            }
+            impl<'mock> getStatInfo<'mock> {
+                pub fn unimplemented() -> Self {
+                    getStatInfo {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getStatInfo",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::InvalidateKernelInodeCacheError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::InternalStats) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getStatInfo<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    crate::types::InternalStats,
-                    crate::errors::eden_service::GetStatInfoError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::InternalStats + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getStatInfo<'mock> {
-            pub fn unimplemented() -> Self {
-                getStatInfo {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getStatInfo",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetStatInfoError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::InternalStats) {
-                self.mock(move || value.clone());
+            pub struct enableTracing<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::EnableTracingError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::InternalStats + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> enableTracing<'mock> {
+                pub fn unimplemented() -> Self {
+                    enableTracing {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "enableTracing",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetStatInfoError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct enableTracing<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::EnableTracingError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> enableTracing<'mock> {
-            pub fn unimplemented() -> Self {
-                enableTracing {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "enableTracing",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::EnableTracingError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move || value.clone());
+            pub struct disableTracing<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::DisableTracingError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> disableTracing<'mock> {
+                pub fn unimplemented() -> Self {
+                    disableTracing {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "disableTracing",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::EnableTracingError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct disableTracing<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::DisableTracingError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> disableTracing<'mock> {
-            pub fn unimplemented() -> Self {
-                disableTracing {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "disableTracing",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::DisableTracingError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move || value.clone());
+            pub struct getTracePoints<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::vec::Vec<crate::types::TracePoint>,
+                        crate::errors::eden_service::GetTracePointsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getTracePoints<'mock> {
+                pub fn unimplemented() -> Self {
+                    getTracePoints {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "getTracePoints",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::DisableTracingError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<crate::types::TracePoint>) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getTracePoints<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::vec::Vec<crate::types::TracePoint>,
-                    crate::errors::eden_service::GetTracePointsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::vec::Vec<crate::types::TracePoint> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getTracePoints<'mock> {
-            pub fn unimplemented() -> Self {
-                getTracePoints {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "getTracePoints",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::GetTracePointsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<crate::types::TracePoint>) {
-                self.mock(move || value.clone());
+            pub struct injectFault<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::FaultDefinition) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::InjectFaultError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::vec::Vec<crate::types::TracePoint> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> injectFault<'mock> {
+                pub fn unimplemented() -> Self {
+                    injectFault {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::FaultDefinition| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "injectFault",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::GetTracePointsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::FaultDefinition| value.clone());
+                }
 
-        pub struct injectFault<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::FaultDefinition) -> ::std::result::Result<
-                    (),
-                    crate::errors::eden_service::InjectFaultError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::FaultDefinition) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |fault| ::std::result::Result::Ok(mock(fault)));
+                }
 
-        impl<'mock> injectFault<'mock> {
-            pub fn unimplemented() -> Self {
-                injectFault {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::FaultDefinition| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "injectFault",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::InjectFaultError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::FaultDefinition| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::FaultDefinition| value.clone());
+            pub struct removeFault<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::RemoveFaultArg) -> ::std::result::Result<
+                        ::std::primitive::bool,
+                        crate::errors::eden_service::RemoveFaultError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::FaultDefinition) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |fault| ::std::result::Result::Ok(mock(fault)));
-            }
+            impl<'mock> removeFault<'mock> {
+                pub fn unimplemented() -> Self {
+                    removeFault {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::RemoveFaultArg| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "removeFault",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::InjectFaultError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::FaultDefinition| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::primitive::bool) {
+                    self.mock(move |_: crate::types::RemoveFaultArg| value.clone());
+                }
 
-        pub struct removeFault<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::RemoveFaultArg) -> ::std::result::Result<
-                    ::std::primitive::bool,
-                    crate::errors::eden_service::RemoveFaultError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::RemoveFaultArg) -> ::std::primitive::bool + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |fault| ::std::result::Result::Ok(mock(fault)));
+                }
 
-        impl<'mock> removeFault<'mock> {
-            pub fn unimplemented() -> Self {
-                removeFault {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::RemoveFaultArg| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "removeFault",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::RemoveFaultError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::RemoveFaultArg| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::primitive::bool) {
-                self.mock(move |_: crate::types::RemoveFaultArg| value.clone());
+            pub struct unblockFault<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::UnblockFaultArg) -> ::std::result::Result<
+                        ::std::primitive::i64,
+                        crate::errors::eden_service::UnblockFaultError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::RemoveFaultArg) -> ::std::primitive::bool + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |fault| ::std::result::Result::Ok(mock(fault)));
-            }
-
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::RemoveFaultError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::RemoveFaultArg| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
-
-        pub struct unblockFault<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::UnblockFaultArg) -> ::std::result::Result<
-                    ::std::primitive::i64,
-                    crate::errors::eden_service::UnblockFaultError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
-
-        impl<'mock> unblockFault<'mock> {
-            pub fn unimplemented() -> Self {
-                unblockFault {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::UnblockFaultArg| panic!(
-                        "{}::{} is not mocked",
-                        "EdenService",
-                        "unblockFault",
-                    ))),
+            impl<'mock> unblockFault<'mock> {
+                pub fn unimplemented() -> Self {
+                    unblockFault {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::UnblockFaultArg| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "unblockFault",
+                        ))),
+                    }
                 }
-            }
 
-            pub fn ret(&self, value: ::std::primitive::i64) {
-                self.mock(move |_: crate::types::UnblockFaultArg| value.clone());
-            }
+                pub fn ret(&self, value: ::std::primitive::i64) {
+                    self.mock(move |_: crate::types::UnblockFaultArg| value.clone());
+                }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::UnblockFaultArg) -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |info| ::std::result::Result::Ok(mock(info)));
-            }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::UnblockFaultArg) -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |info| ::std::result::Result::Ok(mock(info)));
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::eden_service::UnblockFaultError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::UnblockFaultArg| ::std::result::Result::Err(exception.clone().into()));
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::UnblockFaultError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::UnblockFaultArg| ::std::result::Result::Err(exception.clone().into()));
+                }
             }
         }
     }

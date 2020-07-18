@@ -3836,21 +3836,21 @@ pub mod server {
 pub mod mock {
     pub struct FacebookService<'mock> {
         pub parent: fb303_core::mock::BaseService<'mock>,
-        pub getRegexCountersCompressed: facebook_service::getRegexCountersCompressed<'mock>,
-        pub getCountersCompressed: facebook_service::getCountersCompressed<'mock>,
-        pub getCpuProfile: facebook_service::getCpuProfile<'mock>,
-        pub getCpuProfileWithOptions: facebook_service::getCpuProfileWithOptions<'mock>,
-        pub getHeapProfile: facebook_service::getHeapProfile<'mock>,
-        pub getWallTimeProfile: facebook_service::getWallTimeProfile<'mock>,
-        pub getMemoryUsage: facebook_service::getMemoryUsage<'mock>,
-        pub getLoad: facebook_service::getLoad<'mock>,
-        pub getPid: facebook_service::getPid<'mock>,
-        pub getCommandLine: facebook_service::getCommandLine<'mock>,
-        pub reinitialize: facebook_service::reinitialize<'mock>,
-        pub shutdown: facebook_service::shutdown<'mock>,
-        pub translateFrames: facebook_service::translateFrames<'mock>,
-        pub getPcapLoggingConfig: facebook_service::getPcapLoggingConfig<'mock>,
-        pub setPcapLoggingConfig: facebook_service::setPcapLoggingConfig<'mock>,
+        pub getRegexCountersCompressed: r#impl::facebook_service::getRegexCountersCompressed<'mock>,
+        pub getCountersCompressed: r#impl::facebook_service::getCountersCompressed<'mock>,
+        pub getCpuProfile: r#impl::facebook_service::getCpuProfile<'mock>,
+        pub getCpuProfileWithOptions: r#impl::facebook_service::getCpuProfileWithOptions<'mock>,
+        pub getHeapProfile: r#impl::facebook_service::getHeapProfile<'mock>,
+        pub getWallTimeProfile: r#impl::facebook_service::getWallTimeProfile<'mock>,
+        pub getMemoryUsage: r#impl::facebook_service::getMemoryUsage<'mock>,
+        pub getLoad: r#impl::facebook_service::getLoad<'mock>,
+        pub getPid: r#impl::facebook_service::getPid<'mock>,
+        pub getCommandLine: r#impl::facebook_service::getCommandLine<'mock>,
+        pub reinitialize: r#impl::facebook_service::reinitialize<'mock>,
+        pub shutdown: r#impl::facebook_service::shutdown<'mock>,
+        pub translateFrames: r#impl::facebook_service::translateFrames<'mock>,
+        pub getPcapLoggingConfig: r#impl::facebook_service::getPcapLoggingConfig<'mock>,
+        pub setPcapLoggingConfig: r#impl::facebook_service::setPcapLoggingConfig<'mock>,
         _marker: ::std::marker::PhantomData<&'mock ()>,
     }
 
@@ -3858,21 +3858,21 @@ pub mod mock {
         pub fn mock<'mock>() -> FacebookService<'mock> {
             FacebookService {
                 parent: fb303_core::client::BaseService::mock(),
-                getRegexCountersCompressed: facebook_service::getRegexCountersCompressed::unimplemented(),
-                getCountersCompressed: facebook_service::getCountersCompressed::unimplemented(),
-                getCpuProfile: facebook_service::getCpuProfile::unimplemented(),
-                getCpuProfileWithOptions: facebook_service::getCpuProfileWithOptions::unimplemented(),
-                getHeapProfile: facebook_service::getHeapProfile::unimplemented(),
-                getWallTimeProfile: facebook_service::getWallTimeProfile::unimplemented(),
-                getMemoryUsage: facebook_service::getMemoryUsage::unimplemented(),
-                getLoad: facebook_service::getLoad::unimplemented(),
-                getPid: facebook_service::getPid::unimplemented(),
-                getCommandLine: facebook_service::getCommandLine::unimplemented(),
-                reinitialize: facebook_service::reinitialize::unimplemented(),
-                shutdown: facebook_service::shutdown::unimplemented(),
-                translateFrames: facebook_service::translateFrames::unimplemented(),
-                getPcapLoggingConfig: facebook_service::getPcapLoggingConfig::unimplemented(),
-                setPcapLoggingConfig: facebook_service::setPcapLoggingConfig::unimplemented(),
+                getRegexCountersCompressed: r#impl::facebook_service::getRegexCountersCompressed::unimplemented(),
+                getCountersCompressed: r#impl::facebook_service::getCountersCompressed::unimplemented(),
+                getCpuProfile: r#impl::facebook_service::getCpuProfile::unimplemented(),
+                getCpuProfileWithOptions: r#impl::facebook_service::getCpuProfileWithOptions::unimplemented(),
+                getHeapProfile: r#impl::facebook_service::getHeapProfile::unimplemented(),
+                getWallTimeProfile: r#impl::facebook_service::getWallTimeProfile::unimplemented(),
+                getMemoryUsage: r#impl::facebook_service::getMemoryUsage::unimplemented(),
+                getLoad: r#impl::facebook_service::getLoad::unimplemented(),
+                getPid: r#impl::facebook_service::getPid::unimplemented(),
+                getCommandLine: r#impl::facebook_service::getCommandLine::unimplemented(),
+                reinitialize: r#impl::facebook_service::reinitialize::unimplemented(),
+                shutdown: r#impl::facebook_service::shutdown::unimplemented(),
+                translateFrames: r#impl::facebook_service::translateFrames::unimplemented(),
+                getPcapLoggingConfig: r#impl::facebook_service::getPcapLoggingConfig::unimplemented(),
+                setPcapLoggingConfig: r#impl::facebook_service::setPcapLoggingConfig::unimplemented(),
                 _marker: ::std::marker::PhantomData,
             }
         }
@@ -4002,590 +4002,592 @@ pub mod mock {
         }
     }
 
-    mod facebook_service {
+    mod r#impl {
+        pub mod facebook_service {
 
-        pub struct getRegexCountersCompressed<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
-                    ::std::vec::Vec<::std::primitive::u8>,
-                    crate::errors::facebook_service::GetRegexCountersCompressedError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+            pub struct getRegexCountersCompressed<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::string::String) -> ::std::result::Result<
+                        ::std::vec::Vec<::std::primitive::u8>,
+                        crate::errors::facebook_service::GetRegexCountersCompressedError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
+            }
 
-        impl<'mock> getRegexCountersCompressed<'mock> {
-            pub fn unimplemented() -> Self {
-                getRegexCountersCompressed {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getRegexCountersCompressed",
-                    ))),
+            impl<'mock> getRegexCountersCompressed<'mock> {
+                pub fn unimplemented() -> Self {
+                    getRegexCountersCompressed {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::string::String| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getRegexCountersCompressed",
+                        ))),
+                    }
+                }
+
+                pub fn ret(&self, value: ::std::vec::Vec<::std::primitive::u8>) {
+                    self.mock(move |_: ::std::string::String| value.clone());
+                }
+
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::vec::Vec<::std::primitive::u8> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |regex| ::std::result::Result::Ok(mock(regex)));
+                }
+
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetRegexCountersCompressedError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<::std::primitive::u8>) {
-                self.mock(move |_: ::std::string::String| value.clone());
+            pub struct getCountersCompressed<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::vec::Vec<::std::primitive::u8>,
+                        crate::errors::facebook_service::GetCountersCompressedError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::string::String) -> ::std::vec::Vec<::std::primitive::u8> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |regex| ::std::result::Result::Ok(mock(regex)));
-            }
+            impl<'mock> getCountersCompressed<'mock> {
+                pub fn unimplemented() -> Self {
+                    getCountersCompressed {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getCountersCompressed",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetRegexCountersCompressedError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::string::String| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<::std::primitive::u8>) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getCountersCompressed<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::vec::Vec<::std::primitive::u8>,
-                    crate::errors::facebook_service::GetCountersCompressedError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::vec::Vec<::std::primitive::u8> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getCountersCompressed<'mock> {
-            pub fn unimplemented() -> Self {
-                getCountersCompressed {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getCountersCompressed",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetCountersCompressedError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<::std::primitive::u8>) {
-                self.mock(move || value.clone());
+            pub struct getCpuProfile<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::primitive::i32) -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::facebook_service::GetCpuProfileError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::vec::Vec<::std::primitive::u8> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getCpuProfile<'mock> {
+                pub fn unimplemented() -> Self {
+                    getCpuProfile {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::primitive::i32| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getCpuProfile",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetCountersCompressedError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move |_: ::std::primitive::i32| value.clone());
+                }
 
-        pub struct getCpuProfile<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::primitive::i32) -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::facebook_service::GetCpuProfileError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::primitive::i32) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |profileDurationInSec| ::std::result::Result::Ok(mock(profileDurationInSec)));
+                }
 
-        impl<'mock> getCpuProfile<'mock> {
-            pub fn unimplemented() -> Self {
-                getCpuProfile {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::primitive::i32| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getCpuProfile",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetCpuProfileError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::primitive::i32| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move |_: ::std::primitive::i32| value.clone());
+            pub struct getCpuProfileWithOptions<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::CpuProfileOptions) -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::facebook_service::GetCpuProfileWithOptionsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::primitive::i32) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |profileDurationInSec| ::std::result::Result::Ok(mock(profileDurationInSec)));
-            }
+            impl<'mock> getCpuProfileWithOptions<'mock> {
+                pub fn unimplemented() -> Self {
+                    getCpuProfileWithOptions {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::CpuProfileOptions| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getCpuProfileWithOptions",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetCpuProfileError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::primitive::i32| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move |_: crate::types::CpuProfileOptions| value.clone());
+                }
 
-        pub struct getCpuProfileWithOptions<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::CpuProfileOptions) -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::facebook_service::GetCpuProfileWithOptionsError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::CpuProfileOptions) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |options| ::std::result::Result::Ok(mock(options)));
+                }
 
-        impl<'mock> getCpuProfileWithOptions<'mock> {
-            pub fn unimplemented() -> Self {
-                getCpuProfileWithOptions {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::CpuProfileOptions| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getCpuProfileWithOptions",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetCpuProfileWithOptionsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::CpuProfileOptions| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move |_: crate::types::CpuProfileOptions| value.clone());
+            pub struct getHeapProfile<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::primitive::i32) -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::facebook_service::GetHeapProfileError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::CpuProfileOptions) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |options| ::std::result::Result::Ok(mock(options)));
-            }
+            impl<'mock> getHeapProfile<'mock> {
+                pub fn unimplemented() -> Self {
+                    getHeapProfile {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::primitive::i32| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getHeapProfile",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetCpuProfileWithOptionsError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::CpuProfileOptions| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move |_: ::std::primitive::i32| value.clone());
+                }
 
-        pub struct getHeapProfile<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::primitive::i32) -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::facebook_service::GetHeapProfileError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::primitive::i32) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |profileDurationInSec| ::std::result::Result::Ok(mock(profileDurationInSec)));
+                }
 
-        impl<'mock> getHeapProfile<'mock> {
-            pub fn unimplemented() -> Self {
-                getHeapProfile {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::primitive::i32| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getHeapProfile",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetHeapProfileError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::primitive::i32| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move |_: ::std::primitive::i32| value.clone());
+            pub struct getWallTimeProfile<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::primitive::i32) -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::facebook_service::GetWallTimeProfileError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::primitive::i32) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |profileDurationInSec| ::std::result::Result::Ok(mock(profileDurationInSec)));
-            }
+            impl<'mock> getWallTimeProfile<'mock> {
+                pub fn unimplemented() -> Self {
+                    getWallTimeProfile {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::primitive::i32| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getWallTimeProfile",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetHeapProfileError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::primitive::i32| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move |_: ::std::primitive::i32| value.clone());
+                }
 
-        pub struct getWallTimeProfile<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::primitive::i32) -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::facebook_service::GetWallTimeProfileError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::primitive::i32) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |profileDurationInSec| ::std::result::Result::Ok(mock(profileDurationInSec)));
+                }
 
-        impl<'mock> getWallTimeProfile<'mock> {
-            pub fn unimplemented() -> Self {
-                getWallTimeProfile {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::primitive::i32| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getWallTimeProfile",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetWallTimeProfileError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::primitive::i32| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move |_: ::std::primitive::i32| value.clone());
+            pub struct getMemoryUsage<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::primitive::i64,
+                        crate::errors::facebook_service::GetMemoryUsageError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::primitive::i32) -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |profileDurationInSec| ::std::result::Result::Ok(mock(profileDurationInSec)));
-            }
+            impl<'mock> getMemoryUsage<'mock> {
+                pub fn unimplemented() -> Self {
+                    getMemoryUsage {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getMemoryUsage",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetWallTimeProfileError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::primitive::i32| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::primitive::i64) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getMemoryUsage<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::primitive::i64,
-                    crate::errors::facebook_service::GetMemoryUsageError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getMemoryUsage<'mock> {
-            pub fn unimplemented() -> Self {
-                getMemoryUsage {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getMemoryUsage",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetMemoryUsageError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::primitive::i64) {
-                self.mock(move || value.clone());
+            pub struct getLoad<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::primitive::f64,
+                        crate::errors::facebook_service::GetLoadError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getLoad<'mock> {
+                pub fn unimplemented() -> Self {
+                    getLoad {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getLoad",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetMemoryUsageError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::primitive::f64) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getLoad<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::primitive::f64,
-                    crate::errors::facebook_service::GetLoadError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::f64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getLoad<'mock> {
-            pub fn unimplemented() -> Self {
-                getLoad {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getLoad",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetLoadError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::primitive::f64) {
-                self.mock(move || value.clone());
+            pub struct getPid<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::primitive::i64,
+                        crate::errors::facebook_service::GetPidError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::f64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getPid<'mock> {
+                pub fn unimplemented() -> Self {
+                    getPid {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getPid",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetLoadError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::primitive::i64) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getPid<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::primitive::i64,
-                    crate::errors::facebook_service::GetPidError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getPid<'mock> {
-            pub fn unimplemented() -> Self {
-                getPid {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getPid",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetPidError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::primitive::i64) {
-                self.mock(move || value.clone());
+            pub struct getCommandLine<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        ::std::string::String,
+                        crate::errors::facebook_service::GetCommandLineError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::primitive::i64 + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> getCommandLine<'mock> {
+                pub fn unimplemented() -> Self {
+                    getCommandLine {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getCommandLine",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetPidError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::string::String) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getCommandLine<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    ::std::string::String,
-                    crate::errors::facebook_service::GetCommandLineError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getCommandLine<'mock> {
-            pub fn unimplemented() -> Self {
-                getCommandLine {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getCommandLine",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetCommandLineError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::string::String) {
-                self.mock(move || value.clone());
+            pub struct reinitialize<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::facebook_service::ReinitializeError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> ::std::string::String + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> reinitialize<'mock> {
+                pub fn unimplemented() -> Self {
+                    reinitialize {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "reinitialize",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetCommandLineError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct reinitialize<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    (),
-                    crate::errors::facebook_service::ReinitializeError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> reinitialize<'mock> {
-            pub fn unimplemented() -> Self {
-                reinitialize {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "reinitialize",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::ReinitializeError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move || value.clone());
+            pub struct shutdown<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::facebook_service::ShutdownError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> shutdown<'mock> {
+                pub fn unimplemented() -> Self {
+                    shutdown {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "shutdown",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::ReinitializeError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct shutdown<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    (),
-                    crate::errors::facebook_service::ShutdownError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> shutdown<'mock> {
-            pub fn unimplemented() -> Self {
-                shutdown {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "shutdown",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::ShutdownError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move || value.clone());
+            pub struct translateFrames<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(::std::vec::Vec<::std::primitive::i64>) -> ::std::result::Result<
+                        ::std::vec::Vec<::std::string::String>,
+                        crate::errors::facebook_service::TranslateFramesError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
+            impl<'mock> translateFrames<'mock> {
+                pub fn unimplemented() -> Self {
+                    translateFrames {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::vec::Vec<::std::primitive::i64>| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "translateFrames",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::ShutdownError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: ::std::vec::Vec<::std::string::String>) {
+                    self.mock(move |_: ::std::vec::Vec<::std::primitive::i64>| value.clone());
+                }
 
-        pub struct translateFrames<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(::std::vec::Vec<::std::primitive::i64>) -> ::std::result::Result<
-                    ::std::vec::Vec<::std::string::String>,
-                    crate::errors::facebook_service::TranslateFramesError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::vec::Vec<::std::primitive::i64>) -> ::std::vec::Vec<::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |pointers| ::std::result::Result::Ok(mock(pointers)));
+                }
 
-        impl<'mock> translateFrames<'mock> {
-            pub fn unimplemented() -> Self {
-                translateFrames {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: ::std::vec::Vec<::std::primitive::i64>| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "translateFrames",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::TranslateFramesError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: ::std::vec::Vec<::std::primitive::i64>| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: ::std::vec::Vec<::std::string::String>) {
-                self.mock(move |_: ::std::vec::Vec<::std::primitive::i64>| value.clone());
+            pub struct getPcapLoggingConfig<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        crate::types::PcapLoggingConfig,
+                        crate::errors::facebook_service::GetPcapLoggingConfigError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(::std::vec::Vec<::std::primitive::i64>) -> ::std::vec::Vec<::std::string::String> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |pointers| ::std::result::Result::Ok(mock(pointers)));
-            }
+            impl<'mock> getPcapLoggingConfig<'mock> {
+                pub fn unimplemented() -> Self {
+                    getPcapLoggingConfig {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "getPcapLoggingConfig",
+                        ))),
+                    }
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::TranslateFramesError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: ::std::vec::Vec<::std::primitive::i64>| ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
+                pub fn ret(&self, value: crate::types::PcapLoggingConfig) {
+                    self.mock(move || value.clone());
+                }
 
-        pub struct getPcapLoggingConfig<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut() -> ::std::result::Result<
-                    crate::types::PcapLoggingConfig,
-                    crate::errors::facebook_service::GetPcapLoggingConfigError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::PcapLoggingConfig + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
 
-        impl<'mock> getPcapLoggingConfig<'mock> {
-            pub fn unimplemented() -> Self {
-                getPcapLoggingConfig {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "getPcapLoggingConfig",
-                    ))),
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::GetPcapLoggingConfigError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
-            pub fn ret(&self, value: crate::types::PcapLoggingConfig) {
-                self.mock(move || value.clone());
+            pub struct setPcapLoggingConfig<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PcapLoggingConfig) -> ::std::result::Result<
+                        (),
+                        crate::errors::facebook_service::SetPcapLoggingConfigError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
             }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::PcapLoggingConfig + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
-            }
-
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::GetPcapLoggingConfigError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
-            }
-        }
-
-        pub struct setPcapLoggingConfig<'mock> {
-            pub(super) closure: ::std::sync::Mutex<::std::boxed::Box<
-                dyn ::std::ops::FnMut(crate::types::PcapLoggingConfig) -> ::std::result::Result<
-                    (),
-                    crate::errors::facebook_service::SetPcapLoggingConfigError,
-                > + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            >>,
-        }
-
-        impl<'mock> setPcapLoggingConfig<'mock> {
-            pub fn unimplemented() -> Self {
-                setPcapLoggingConfig {
-                    closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PcapLoggingConfig| panic!(
-                        "{}::{} is not mocked",
-                        "FacebookService",
-                        "setPcapLoggingConfig",
-                    ))),
+            impl<'mock> setPcapLoggingConfig<'mock> {
+                pub fn unimplemented() -> Self {
+                    setPcapLoggingConfig {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PcapLoggingConfig| panic!(
+                            "{}::{} is not mocked",
+                            "FacebookService",
+                            "setPcapLoggingConfig",
+                        ))),
+                    }
                 }
-            }
 
-            pub fn ret(&self, value: ()) {
-                self.mock(move |_: crate::types::PcapLoggingConfig| value.clone());
-            }
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PcapLoggingConfig| value.clone());
+                }
 
-            pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PcapLoggingConfig) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |config| ::std::result::Result::Ok(mock(config)));
-            }
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PcapLoggingConfig) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |config| ::std::result::Result::Ok(mock(config)));
+                }
 
-            pub fn throw<E>(&self, exception: E)
-            where
-                E: ::std::convert::Into<crate::errors::facebook_service::SetPcapLoggingConfigError>,
-                E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
-            {
-                let mut closure = self.closure.lock().unwrap();
-                *closure = ::std::boxed::Box::new(move |_: crate::types::PcapLoggingConfig| ::std::result::Result::Err(exception.clone().into()));
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::facebook_service::SetPcapLoggingConfigError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PcapLoggingConfig| ::std::result::Result::Err(exception.clone().into()));
+                }
             }
         }
     }

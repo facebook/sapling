@@ -57,9 +57,13 @@ with options
   ]
 
 test template keywords and functions which require changectx:
+(The Rust layer does not special handle the wdir commit hash so shortest does
+not "work" here.  In the future we want to change virtual commits handling to
+use normal (non-special-cased) in-memory-only commits in the Rust DAG instead
+of special casing them in various APIs (ex. partialmatch))
 
   $ hg id -T '{rev} {node|shortest}\n'
-  2147483647 ffff
+  2147483647 ffffffffffffffffffffffffffffffffffffffff
   $ hg id -T '{parents % "{rev} {node|shortest} {desc}\n"}'
   0 cb9a a
 

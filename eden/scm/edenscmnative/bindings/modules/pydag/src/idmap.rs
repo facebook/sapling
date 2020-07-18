@@ -44,14 +44,18 @@ py_class!(pub class idmap |py| {
     }
 
     /// Lookup nodes by hex prefix.
-    def hexprefixmatch(&self, prefix: PyBytes, limit: usize = 5) -> PyResult<Vec<PyBytes>> {
-        let prefix = prefix.data(py);
+    def hexprefixmatch(&self, prefix: PyObject, limit: usize = 5) -> PyResult<Vec<PyBytes>> {
+        let prefix: Vec<u8> = if let Ok(bytes) = prefix.extract::<PyBytes>(py) {
+            bytes.data(py).to_vec()
+        } else {
+            prefix.extract::<String>(py)?.as_bytes().to_vec()
+        };
         if !prefix.iter().all(|&b| (b >= b'0' && b <= b'9') || (b >= b'a' && b <= b'f')) {
             // Invalid hex prefix. Pretend nothing matches.
             return Ok(Vec::new())
         }
         let nodes = self.map(py)
-            .vertexes_by_hex_prefix(prefix, limit)
+            .vertexes_by_hex_prefix(&prefix, limit)
             .map_pyerr(py)?
             .into_iter()
             .map(|s| PyBytes::new(py, s.as_ref()))

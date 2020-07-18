@@ -3244,7 +3244,7 @@ sh % "hg log -r 0 -T '{shortest(node, \"not an int\")}\\n'" == r"""
     hg: parse error: shortest() expects an integer minlength
     [255]"""
 
-sh % "hg log -r 'wdir()' -T '{node|shortest}\\n'" == "ffff"
+sh % "hg log -r 'wdir()' -T '{node|shortest}\\n'" == "ffffffffffffffffffffffffffffffffffffffff"
 
 sh % "cd .."
 

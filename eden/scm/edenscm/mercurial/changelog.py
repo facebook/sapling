@@ -834,6 +834,21 @@ class changelog(revlog.revlog):
         """Test if start (in rev) is an ancestor of end (in rev)"""
         return self.isancestor(self.node(start), self.node(end))
 
+    def _partialmatch(self, hexprefix):
+        if self.userust("partialmatch"):
+            matched = self.idmap.hexprefixmatch(hexprefix)
+            if len(matched) > 1:
+                # TODO: Add hints about possible matches.
+                raise error.LookupError(
+                    hexprefix, self.indexfile, _("ambiguous identifier")
+                )
+            elif len(matched) == 1:
+                return matched[0]
+            else:
+                return None
+        else:
+            return super(changelog, self)._partialmatch(hexprefix)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
