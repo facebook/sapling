@@ -68,68 +68,68 @@
   summary:     a
   
 
-  $ teststrip 4 4
+  $ teststrip 'desc(e)' 'desc(e)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % before update 4, strip 4
+  % before update desc(e), strip desc(e)
   changeset:   4:443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % after update 4, strip 4
+  % after update desc(e), strip desc(e)
   changeset:   3:65bd5f99a4a3
   parent:      1:ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
   
-  $ teststrip 4 3
+  $ teststrip 'desc(e)' 'desc(d)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % before update 4, strip 3
+  % before update desc(e), strip desc(d)
   changeset:   4:443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % after update 4, strip 3
+  % after update desc(e), strip desc(d)
   changeset:   1:ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  $ teststrip 1 4
+  $ teststrip 'desc(b)' 'desc(e)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % before update 1, strip 4
+  % before update desc(b), strip desc(e)
   changeset:   1:ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  % after update 1, strip 4
+  % after update desc(b), strip desc(e)
   changeset:   1:ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  $ teststrip 4 2
+  $ teststrip 'desc(e)' 'desc(c)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % before update 4, strip 2
+  % before update desc(e), strip desc(c)
   changeset:   4:443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
-  % after update 4, strip 2
+  % after update desc(e), strip desc(c)
   changeset:   3:443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
-  $ teststrip 4 1
+  $ teststrip 'desc(c)' 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % before update 4, strip 1
+  % before update desc(c), strip desc(b)
   changeset:   4:264128213d29
   parent:      1:ef3a871183d7
   user:        test
@@ -137,16 +137,16 @@
   summary:     c
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  % after update 4, strip 1
+  % after update desc(c), strip desc(b)
   changeset:   0:9ab35a2d17cb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
-  $ teststrip null 4
+  $ teststrip null 'desc(c)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  % before update null, strip 4
-  % after update null, strip 4
+  % before update null, strip desc(c)
+  % after update null, strip desc(c)
 
   $ hg log
   changeset:   4:264128213d29
@@ -388,7 +388,7 @@ Failed hook while applying "saveheads" bundle.
 
 2 different branches: 2 strips
 
-  $ hg debugstrip 2 4
+  $ hg debugstrip 'desc(c)' 'desc(e)'
   $ hg log -G
   o  changeset:   2:65bd5f99a4a3
   |  user:        test
@@ -409,7 +409,7 @@ Failed hook while applying "saveheads" bundle.
 
 2 different branches and a common ancestor: 1 strip
 
-  $ hg debugstrip 'desc(b)' "2|4"
+  $ hg debugstrip 'desc(b)' "desc(c)|desc(e)"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ restore
 
