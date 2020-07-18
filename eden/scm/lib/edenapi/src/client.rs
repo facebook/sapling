@@ -63,13 +63,16 @@ impl Client {
         })
     }
 
-    /// Configure a request to use the client's configured TLS credentials.
-    fn configure_tls(&self, mut req: Request) -> Result<Request, EdenApiError> {
+    /// Add configured values to a request.
+    fn configure(&self, mut req: Request) -> Result<Request, EdenApiError> {
         if let Some(ClientCreds { cert, key }) = &self.config.client_creds {
             req = req.creds(cert, key)?;
         }
         if let Some(ca) = &self.config.ca_bundle {
             req = req.cainfo(ca)?;
+        }
+        for (k, v) in &self.config.headers {
+            req = req.header(k, v);
         }
         Ok(req)
     }
@@ -94,7 +97,7 @@ impl Client {
             .into_iter()
             .map(|keys| {
                 let req = make_req(keys);
-                self.configure_tls(Request::post(url.clone()))?
+                self.configure(Request::post(url.clone()))?
                     .cbor(&req)
                     .map_err(EdenApiError::RequestSerializationFailed)
             })
@@ -145,7 +148,7 @@ impl Client {
 impl EdenApi for Client {
     async fn health(&self) -> Result<ResponseMeta, EdenApiError> {
         let url = self.url(paths::HEALTH_CHECK, None)?;
-        let req = self.configure_tls(Request::get(url))?;
+        let req = self.configure(Request::get(url))?;
         let res = req.send_async().await?;
         Ok(ResponseMeta::from(&res))
     }
@@ -241,7 +244,7 @@ impl EdenApi for Client {
         };
 
         let req = self
-            .configure_tls(Request::post(url))?
+            .configure(Request::post(url))?
             .cbor(&tree_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 

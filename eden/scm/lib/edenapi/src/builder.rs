@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::path::{Path, PathBuf};
 
+use anyhow::{Context, Error};
 use url::Url;
 
 use auth::AuthConfig;
@@ -22,6 +24,7 @@ pub struct Builder {
     server_url: Option<Url>,
     client_creds: Option<ClientCreds>,
     ca_bundle: Option<PathBuf>,
+    headers: Vec<(String, String)>,
     max_files: Option<usize>,
     max_trees: Option<usize>,
     max_history: Option<usize>,
@@ -51,6 +54,14 @@ impl Builder {
             .map(|auth| (ClientCreds::from_options(auth.cert, auth.key), auth.cacerts))
             .unwrap_or_default();
 
+        let headers = config
+            .get_opt::<String>("edenapi", "headers")
+            .map_err(|e| ConfigError::Malformed("edenapi.headers".into(), e))?
+            .map(parse_headers)
+            .transpose()
+            .map_err(|e| ConfigError::Malformed("edenapi.headers".into(), e))?
+            .unwrap_or_default();
+
         let max_files = config
             .get_opt("edenapi", "maxfiles")
             .map_err(|e| ConfigError::Malformed("edenapi.maxfiles".into(), e))?;
@@ -67,6 +78,7 @@ impl Builder {
             server_url: Some(server_url),
             client_creds,
             ca_bundle,
+            headers,
             max_files,
             max_trees,
             max_history,
@@ -95,6 +107,12 @@ impl Builder {
     /// Primarily used in tests.
     pub fn ca_bundle(mut self, ca: impl AsRef<Path>) -> Self {
         self.ca_bundle = Some(ca.as_ref().into());
+        self
+    }
+
+    /// Extra HTTP headers that should be sent with each request.
+    pub fn headers(mut self, headers: Vec<(String, String)>) -> Self {
+        self.headers = headers;
         self
     }
 
@@ -144,6 +162,7 @@ pub(crate) struct Config {
     pub(crate) server_url: Url,
     pub(crate) client_creds: Option<ClientCreds>,
     pub(crate) ca_bundle: Option<PathBuf>,
+    pub(crate) headers: Vec<(String, String)>,
     pub(crate) max_files: Option<usize>,
     pub(crate) max_trees: Option<usize>,
     pub(crate) max_history: Option<usize>,
@@ -157,6 +176,7 @@ impl TryFrom<Builder> for Config {
             server_url,
             client_creds,
             ca_bundle,
+            headers,
             max_files,
             max_trees,
             max_history,
@@ -174,9 +194,18 @@ impl TryFrom<Builder> for Config {
             server_url,
             client_creds,
             ca_bundle,
+            headers,
             max_files,
             max_trees,
             max_history,
         })
     }
+}
+
+/// Parse headers from a JSON object.
+fn parse_headers(headers: impl AsRef<str>) -> Result<Vec<(String, String)>, Error> {
+    let headers = headers.as_ref();
+    let map: HashMap<&str, &str> =
+        serde_json::from_str(headers).context(format!("Not a valid JSON object: {:?}", headers))?;
+    Ok(map.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
 }
