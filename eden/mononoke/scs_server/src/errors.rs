@@ -161,6 +161,16 @@ pub(crate) fn tree_not_found(tree: String) -> thrift::RequestError {
     }
 }
 
+pub(crate) fn limit_too_low(limit: usize) -> thrift::RequestError {
+    thrift::RequestError {
+        kind: thrift::RequestErrorKind::INVALID_REQUEST,
+        reason: format!(
+            "the limit param value of {} is not enough for the method to make any progress",
+            limit,
+        ),
+    }
+}
+
 pub(crate) fn diff_input_too_big(total_size: u64) -> thrift::RequestError {
     thrift::RequestError {
             kind: thrift::RequestErrorKind::INVALID_REQUEST_INPUT_TOO_BIG,

@@ -551,6 +551,7 @@ impl Repo {
 pub struct Stack {
     pub draft: Vec<ChangesetId>,
     pub public: Vec<ChangesetId>,
+    pub leftover_heads: Vec<ChangesetId>,
 }
 
 /// A context object representing a query to a particular repo.
@@ -858,6 +859,9 @@ impl RepoContext {
     /// Algo is designed to minimize number of db queries.
     /// Missing changesets are skipped.
     /// Changesets are returned in topological order (requested heads first)
+    ///
+    /// When the limit is reached returns the heads of which children were not processed to allow
+    /// for continuation of the processing.
     pub async fn stack(
         &self,
         changesets: Vec<ChangesetId>,
@@ -891,7 +895,11 @@ impl RepoContext {
             let parents: Vec<_> = self
                 .blob_repo()
                 .get_changesets_object()
-                .get_many(self.ctx.clone(), self.blob_repo().get_repoid(), queue)
+                .get_many(
+                    self.ctx.clone(),
+                    self.blob_repo().get_repoid(),
+                    queue.clone(),
+                )
                 .compat()
                 .await?
                 .into_iter()
@@ -914,20 +922,24 @@ impl RepoContext {
                 .into_iter()
                 .partition(|cs_id| public_phases.contains(cs_id));
 
-            // update queue and level
-            queue = new_draft.clone();
-
             // respect the limit
             if draft.len() + new_draft.len() > limit {
                 break;
             }
+
+            // update queue and level
+            queue = new_draft.clone();
 
             // update draft & public
             public.extend(new_public.into_iter());
             draft.extend(new_draft.into_iter());
         }
 
-        Ok(Stack { draft, public })
+        Ok(Stack {
+            draft,
+            public,
+            leftover_heads: queue,
+        })
     }
 
     /// Get a Tree by id.  Returns `None` if the tree doesn't exist.

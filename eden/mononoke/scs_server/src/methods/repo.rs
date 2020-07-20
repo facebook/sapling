@@ -11,7 +11,7 @@ use std::convert::{identity, TryFrom};
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, Local};
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future::try_join, future::try_join_all};
+use futures::{compat::Future01CompatExt, future::try_join_all, try_join};
 use futures_old::stream::Stream;
 use futures_util::stream::FuturesOrdered;
 use futures_util::TryStreamExt;
@@ -371,7 +371,7 @@ impl SourceControlServiceImpl {
         let stack = repo.stack(heads_ids, limit).await?;
 
         // resolve draft changesets & public changesets
-        let (draft_commits, public_parents) = try_join(
+        let (draft_commits, public_parents, leftover_heads) = try_join!(
             try_join_all(
                 stack
                     .draft
@@ -384,16 +384,26 @@ impl SourceControlServiceImpl {
                     .into_iter()
                     .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id))),
             ),
-        )
-        .await?;
+            try_join_all(
+                stack
+                    .leftover_heads
+                    .into_iter()
+                    .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id))),
+            ),
+        )?;
+
+        if draft_commits.len() <= params.heads.len() && !leftover_heads.is_empty() {
+            Err(errors::limit_too_low(limit))?;
+        }
 
         // generate response
         match (
             draft_commits.into_iter().collect::<Option<Vec<_>>>(),
             public_parents.into_iter().collect::<Option<Vec<_>>>(),
+            leftover_heads.into_iter().collect::<Option<Vec<_>>>(),
         ) {
-            (Some(draft_commits), Some(public_parents)) => {
-                let (draft_commits, public_parents) = try_join(
+            (Some(draft_commits), Some(public_parents), Some(leftover_heads)) => {
+                let (draft_commits, public_parents, leftover_heads) = try_join!(
                     try_join_all(
                         draft_commits
                             .into_iter()
@@ -404,11 +414,12 @@ impl SourceControlServiceImpl {
                             .into_iter()
                             .map(|cs| (cs, &params.identity_schemes).into_response()),
                     ),
-                )
-                .await?;
+                    (leftover_heads, &params.identity_schemes).into_response(),
+                )?;
                 Ok(thrift::RepoStackInfoResponse {
                     draft_commits,
                     public_parents,
+                    leftover_heads,
                 })
             }
             _ => Err(
