@@ -549,8 +549,8 @@ impl Repo {
 
 #[derive(Default)]
 pub struct Stack {
-    pub draft: HashSet<ChangesetId>,
-    pub public: HashSet<ChangesetId>,
+    pub draft: Vec<ChangesetId>,
+    pub public: Vec<ChangesetId>,
 }
 
 /// A context object representing a query to a particular repo.
@@ -857,6 +857,7 @@ impl RepoContext {
     /// Limit constrains the number of draft commits returned.
     /// Algo is designed to minimize number of db queries.
     /// Missing changesets are skipped.
+    /// Changesets are returned in topological order (requested heads first)
     pub async fn stack(
         &self,
         changesets: Vec<ChangesetId>,
@@ -878,7 +879,7 @@ impl RepoContext {
             .await?;
 
         // partition
-        let (mut public, mut draft): (HashSet<_>, HashSet<_>) = changesets
+        let (mut public, mut draft): (Vec<_>, Vec<_>) = changesets
             .into_iter()
             .partition(|cs_id| public_phases.contains(cs_id));
 

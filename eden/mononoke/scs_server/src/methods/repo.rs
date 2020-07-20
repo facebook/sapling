@@ -329,6 +329,7 @@ impl SourceControlServiceImpl {
     ///
     /// Returns the IDs of the changeset in the requested identity schemes.
     /// Draft nodes and first public roots.
+    /// The changesets are returned in topological order.
     ///
     /// Best effort: missing changesets are skipped,
     ///              building stack up to provided limit.
