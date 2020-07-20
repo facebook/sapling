@@ -166,6 +166,7 @@ Show debug commands if there are no other candidates
   debugstrip
   debugsuccessorssets
   debugtemplate
+  debugthrowexception
   debugthrowrustexception
   debugtreestate
   debugupdatecaches
@@ -446,6 +447,7 @@ Show all commands + options
   debugstrip: rev, force, no-backup, keep, bookmark
   debugsuccessorssets: closest
   debugtemplate: rev, define
+  debugthrowexception: 
   debugthrowrustexception: 
   debugtreestate: 
   debugupdatecaches: 

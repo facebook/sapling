@@ -3621,3 +3621,9 @@ def debugreadauthforuri(ui, _repo, uri, user=None):
 def debugthrowrustexception(ui, _repo):
     """cause an error to be returned from rust and propagated to python"""
     bindings.error.throwrustexception()
+
+
+@command("debugthrowexception", [], "")
+def debugthrowexception(ui, _repo):
+    """cause an intentional exception to be raised in the command"""
+    raise error.IntentionalError("intentional failure in debugthrowexception")

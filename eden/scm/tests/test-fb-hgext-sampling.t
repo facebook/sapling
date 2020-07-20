@@ -108,7 +108,6 @@ Test env-var logging:
   >>> import json, pprint
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read().strip("\0").split("\0")
-  >>> alldata = {}
   >>> for jsonstr in data:
   ...     entry = json.loads(jsonstr)
   ...     if entry["category"] == "env_vars":
@@ -120,6 +119,48 @@ Test env-var logging:
 
 Test exception logging:
   $ setconfig sampling.key.exceptions=exceptions
+
+  $ > $LOGDIR/samplingpath.txt
+  $ hg debugthrowrustexception 2>&1 | egrep -v '^  '
+  \*\* Mercurial Distributed SCM * has crashed: (glob)
+  atexit handler executed
+  Traceback (most recent call last):
+  *RustError: intentional error for debugging with message 'intentional_error' (glob)
+  >>> import json, pprint
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read().strip("\0").split("\0")
+  >>> for jsonstr in data:
+  ...     entry = json.loads(jsonstr)
+  ...     if entry["category"] == "exceptions":
+  ...         for k in sorted(entry["data"].keys()):
+  ...             print("%s: %s" % (k, entry["data"][k]))
+  exception_msg: intentional error for debugging with message 'intentional_error'
+  exception_type: RustError
+  fault: None
+  metrics_type: exceptions
+  rust_error_type: taggederror::IntentionalError
+
+  $ > $LOGDIR/samplingpath.txt
+  $ hg debugthrowexception 2>&1 | egrep -v '^  '
+  \*\* Mercurial Distributed SCM * has crashed: (glob)
+  atexit handler executed
+  Traceback (most recent call last):
+  *IntentionalError: intentional failure in debugthrowexception (glob)
+  >>> import json, pprint
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read().strip("\0").split("\0")
+  >>> for jsonstr in data:
+  ...     entry = json.loads(jsonstr)
+  ...     if entry["category"] == "exceptions":
+  ...         for k in sorted(entry["data"].keys()):
+  ...             print("%s: %s" % (k, entry["data"][k]))
+  exception_msg: intentional failure in debugthrowexception
+  exception_type: IntentionalError
+  fault: request
+  metrics_type: exceptions
+  rust_error_type: None
+
+  $ > $LOGDIR/samplingpath.txt
   $ enable rebase histedit
   $ hg rebase
   abort: nothing to rebase
@@ -133,7 +174,6 @@ Note: Errors raised by the dispatch logic aren't logged here:
   >>> import json, pprint
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read().strip("\0").split("\0")
-  >>> alldata = {}
   >>> for jsonstr in data:
   ...     entry = json.loads(jsonstr)
   ...     if entry["category"] == "exceptions":
@@ -141,7 +181,9 @@ Note: Errors raised by the dispatch logic aren't logged here:
   ...             print("%s: %s" % (k, entry["data"][k]))
   exception_msg: nothing to rebase
   exception_type: NoMergeDestAbort
+  fault: None
   metrics_type: exceptions
+  rust_error_type: None
 
 Test ui.metrics.gauge API
   $ cat > $TESTTMP/a.py << EOF
@@ -208,4 +250,3 @@ Invalid format strings don't crash Mercurial
   category: invalid
     metrics_type=invalid
     msg=invalid format %s %s single
-

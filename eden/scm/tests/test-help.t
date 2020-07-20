@@ -1068,6 +1068,8 @@ Test list of internal help commands
                  show set of successors for revision
    debugtemplate
                  parse and apply a template
+   debugthrowexception
+                 cause an intentional exception to be raised in the command
    debugthrowrustexception
                  cause an error to be returned from rust and propagated to
                  python

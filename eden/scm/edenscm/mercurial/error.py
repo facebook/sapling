@@ -18,6 +18,8 @@ imports.
 
 from __future__ import absolute_import
 
+import enum
+
 import bindings
 
 # Do not import anything but pycompat here, please
@@ -47,9 +49,9 @@ class Hint(object):
     pass remaining arguments to the exception class.
     """
 
-    def __init__(self, *args, **kw):
-        self.hint = kw.pop(r"hint", None)
-        super(Hint, self).__init__(*args, **kw)
+    def __init__(self, *args, **kwargs):
+        self.hint = kwargs.pop(r"hint", None)
+        super(Hint, self).__init__(*args, **kwargs)
 
 
 class Context(object):
@@ -81,15 +83,30 @@ class Context(object):
 
 
 class Component(object):
-    """Mix-in to privide component identity of an error
+    """Mix-in to provide component identity of an error
 
     This should come before Exception in the inheritance list to consume the
     component name and pass the remaining arguments to the exception class.
     """
 
-    def __init__(self, *args, **kw):
-        self.component = kw.pop(r"component", None)
-        super(Component, self).__init__(*args, **kw)
+    def __init__(self, *args, **kwargs):
+        self.component = kwargs.pop(r"component", None)
+        super(Component, self).__init__(*args, **kwargs)
+
+
+class Fault(enum.Enum):
+    Request = "request"
+    Internal = "internal"
+    Dependency = "dependency"
+
+
+class Tagged(object):
+    """Mix-in to provide metadata tags for an error"""
+
+    def __init__(self, *args, **kwargs):
+        # Explicitly passed value overrides class default
+        self.fault = Fault(kwargs.pop(r"fault", getattr(self.__class__, "fault", None)))
+        super(Tagged, self).__init__(*args, **kwargs)
 
 
 class RevlogError(Hint, Context, Exception):
@@ -365,6 +382,13 @@ class ProgrammingError(Hint, Context, RuntimeError):
     """Raised if a mercurial (core or extension) developer made a mistake"""
 
     __bytes__ = _tobytes
+
+
+class IntentionalError(Tagged, Hint, Context, RuntimeError):
+    """Raised intentionally to test error handling"""
+
+    __bytes__ = _tobytes
+    fault = Fault.Request
 
 
 class ForeignImportError(ProgrammingError):

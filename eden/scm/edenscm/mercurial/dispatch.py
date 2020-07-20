@@ -944,7 +944,29 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
 
 def _log_exception(lui, e):
     try:
-        lui.log("exceptions", exception_type=type(e).__name__, exception_msg=str(e))
+        typename = None
+        fault = None
+
+        # Extract Rust metadata
+        try:
+            rustmetadata = e.args[0]
+            typename = rustmetadata.typename()
+            fault = rustmetadata.fault()
+        except (IndexError, AttributeError):
+            pass
+
+        # Extract Python metadata
+        if isinstance(e, error.Tagged):
+            fault = e.fault.value
+
+        lui.log(
+            "exceptions",
+            exception_type=type(e).__name__,
+            exception_msg=str(e),
+            fault=fault,
+            rust_error_type=typename,
+        )
+
     except Exception:
         pass
 
