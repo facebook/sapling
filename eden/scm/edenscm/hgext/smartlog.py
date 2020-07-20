@@ -76,6 +76,11 @@ hiddenchanges = 0
 # Remove unsupported --limit option.
 logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem("smartlog", "collapse-obsolete", default=True)
+
 
 def _drawendinglines(orig, lines, extra, edgemap, seen):
     # if we are going to have only one single column, draw the missing '|'s
