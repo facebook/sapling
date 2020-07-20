@@ -27,7 +27,7 @@ class FakeEdenFS(typing.ContextManager[int]):
         home_dir: pathlib.Path,
         extra_arguments: typing.Optional[typing.Sequence[str]] = None,
     ) -> "FakeEdenFS":
-        command: typing.List[str] = [  # pyre-ignore[9]: T38947910
+        command: typing.List[str] = [
             FindExe.FAKE_EDENFS,
             "--configPath",
             str(home_dir / ".edenrc"),
@@ -50,7 +50,7 @@ class FakeEdenFS(typing.ContextManager[int]):
         home_dir: pathlib.Path,
         extra_arguments: typing.Optional[typing.Sequence[str]] = None,
     ) -> "FakeEdenFS":
-        command: typing.List[str] = [  # pyre-ignore[9]: T38947910
+        command: typing.List[str] = [
             FindExe.EDEN_CLI,
             "--config-dir",
             str(eden_dir),

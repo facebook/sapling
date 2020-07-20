@@ -60,6 +60,7 @@ def setup_hg_dir(checkout: EdenCheckout, commit_id: str) -> None:
     (checkout_hg_dir / "branch").write_text("default\n")
 
     # Write the parents to the dirstate file.
+    # pyre-fixme[22]: The cast is redundant.
     with typing.cast(BinaryIO, (checkout_hg_dir / "dirstate").open("wb")) as f:
         parents = (binascii.unhexlify(commit_id), b"\x00" * 20)
         tuples_dict: Dict[str, Tuple[str, int, int]] = {}

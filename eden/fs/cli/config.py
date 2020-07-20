@@ -340,7 +340,7 @@ class EdenInstance:
         data: Dict[str, Mapping[str, str]] = {}
         for section in parser.sections():
             data[section] = parser.get_section_str_to_any(section)
-        toml.dump(data, file)  # pyre-ignore[T39129461]
+        toml.dump(data, file)
 
     def get_mount_paths(self) -> List[str]:
         """Return the paths of the set mount points stored in config.json"""

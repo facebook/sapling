@@ -458,7 +458,6 @@ class EdenConfigParserTest(unittest.TestCase):
         parser.read_dict({"test_section": {"a": "a value"}})
         with self.assertRaises(configparser.NoSectionError) as expectation:
             parser.get_section_str_to_str("not_test_section")
-        # pyre-fixme[16]: `NoSectionError` has no attribute `section`.
         section: str = expectation.exception.section
         self.assertEqual(section, "not_test_section")
 

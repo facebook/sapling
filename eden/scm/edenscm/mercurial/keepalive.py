@@ -483,6 +483,7 @@ class HTTPResponse(httplib.HTTPResponse):
 
         return "".join(parts)
 
+    # pyre-fixme[14]: `readline` overrides method defined in `IOBase` inconsistently.
     def readline(self, size=-1):
         # type: (int) -> bytes
         # Fast path for a line is already available in read buffer.

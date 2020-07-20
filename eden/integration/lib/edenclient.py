@@ -235,7 +235,7 @@ class EdenFS(object):
         )
 
     def get_extra_daemon_args(self) -> List[str]:
-        extra_daemon_args: List[str] = [  # pyre-ignore[9]: T38947910
+        extra_daemon_args: List[str] = [
             # Defaulting to 8 import processes is excessive when the test
             # framework runs tests on each CPU core.
             "--num_hg_import_threads",
@@ -277,10 +277,7 @@ class EdenFS(object):
             raise Exception("cannot start an already-running eden client")
 
         args = self.get_eden_cli_args(
-            "daemon",
-            "--daemon-binary",
-            FindExe.EDEN_DAEMON,  # pyre-ignore[6]: T38947910
-            "--foreground",
+            "daemon", "--daemon-binary", FindExe.EDEN_DAEMON, "--foreground"
         )
 
         extra_daemon_args = self.get_extra_daemon_args()
@@ -399,7 +396,6 @@ class EdenFS(object):
         daemon.  Attempts to access files or directories inside the mount will fail with
         an ENOTCONN error after this.
         """
-        # pyre-ignore[9]: T38947910
         cmd: List[str] = [FindExe.TAKEOVER_TOOL, "--edenDir", str(self._eden_dir)]
         self.run_takeover_tool(cmd)
 
@@ -409,7 +405,6 @@ class EdenFS(object):
         output is as expected. Right now, this is used as a sanity check to
         make sure we don't crash.
         """
-        # pyre-ignore[9]: T38947910
         cmd: List[str] = [
             FindExe.TAKEOVER_TOOL,
             "--edenDir",
@@ -426,7 +421,6 @@ class EdenFS(object):
         so the subprocess call will throw, and we expect the old process
         to recover
         """
-        # pyre-ignore[9]: T38947910
         cmd: List[str] = [
             FindExe.TAKEOVER_TOOL,
             "--edenDir",

@@ -74,11 +74,6 @@ def listdir(path, stat=False, skip=None):
 
 
 if not pycompat.iswindows:
-    # pyre-fixme[9]: posixfile has type `Type[posixfile]`; used as `(file:
-    #  Union[_PathLike[Any], bytes, int, str], mode: str = ..., buffering: int = ...,
-    #  encoding: Optional[str] = ..., errors: Optional[str] = ..., newline:
-    #  Optional[str] = ..., closefd: bool = ..., opener: Optional[(str, int) -> int] =
-    #  ...) -> IO[Any]`.
     posixfile = open
 
     _SCM_RIGHTS = 0x01
@@ -114,6 +109,8 @@ if not pycompat.iswindows:
             (u"cmsg_len", _cmsg_len_t),
             (u"cmsg_level", ctypes.c_int),
             (u"cmsg_type", ctypes.c_int),
+            # pyre-fixme[6]: `*` is not supported for operand types
+            #  `Type[ctypes.c_ubyte]` and `int`.
             (u"cmsg_data", ctypes.c_ubyte * 0),
         ]
 

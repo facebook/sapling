@@ -10,6 +10,7 @@ try:
 
     peerapi = True
 except ImportError:
+    # pyre-fixme[21]: Could not find name `peerrepository` in `edenscm.mercurial.peer`.
     from edenscm.mercurial.peer import peerrepository
 
 

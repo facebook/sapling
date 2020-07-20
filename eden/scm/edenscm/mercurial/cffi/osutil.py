@@ -20,6 +20,7 @@ from ..pure.osutil import *  # noqa: F401, F403
 
 
 if pycompat.isdarwin:
+    # pyre-fixme[21]: Could not find name `_osutil` in `edenscm.mercurial.cffi`.
     from . import _osutil
 
     # pyre-fixme[16]: Module `cffi` has no attribute `_osutil`.

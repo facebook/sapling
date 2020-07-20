@@ -1895,6 +1895,8 @@ class atomictempfile(BinaryIO):
         # type: () -> atomictempfile
         return self
 
+    # pyre-fixme[14]: `__exit__` overrides method defined in `IO` inconsistently.
+    # pyre-fixme[14]: `__exit__` overrides method defined in `IO` inconsistently.
     def __exit__(
         self,
         exctype,  # type: Optional[Type[BaseException]]
@@ -1970,6 +1972,7 @@ class atomictempfile(BinaryIO):
         # type: () -> bool
         return self._fp.writable()
 
+    # pyre-fixme[15]: `write` overrides method defined in `IO` inconsistently.
     def write(self, s):
         # type: (bytes) -> None
         return self._fp.write(s)

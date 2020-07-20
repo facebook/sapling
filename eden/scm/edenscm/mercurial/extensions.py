@@ -840,6 +840,7 @@ def _disabledhelp(path):
 def disabled():
     """find disabled extensions from hgext. returns a dict of {name: desc}"""
     try:
+        # pyre-fixme[21]: Could not find name `__index__` in `edenscm.hgext`.
         from edenscm.hgext import __index__
 
         return dict(

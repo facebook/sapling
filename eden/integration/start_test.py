@@ -136,7 +136,7 @@ class StartWithRepoTest(testcase.EdenRepoTest):
 class DirectInvokeTest(testcase.IntegrationTestCase):
     def test_eden_cmd_arg(self) -> None:
         """Directly invoking edenfs with an edenfsctl subcommand should fail."""
-        cmd: List[str] = [FindExe.EDEN_DAEMON, "restart"]  # pyre-ignore[9]: T38947910
+        cmd: List[str] = [FindExe.EDEN_DAEMON, "restart"]
         out = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertNotEqual(out.returncode, 0)
         self.assertEqual(b"", out.stdout)
@@ -168,7 +168,7 @@ class StartFakeEdenFSTestBase(ServiceTestCaseBase):
         eden_dir: Optional[pathlib.Path] = None,
         extra_args: Optional[Sequence[str]] = None,
     ) -> subprocess.CompletedProcess:
-        start_cmd = self._get_base_eden_args(eden_dir) + [  # pyre-ignore[6]: T38947910
+        start_cmd = self._get_base_eden_args(eden_dir) + [
             "start",
             "--daemon-binary",
             FindExe.FAKE_EDENFS,
@@ -197,11 +197,7 @@ class StartFakeEdenFSTestBase(ServiceTestCaseBase):
         extra_args: Optional[Sequence[str]] = None,
     ) -> None:
         base_args = self._get_base_eden_args(eden_dir)
-        start_cmd = base_args + [  # pyre-ignore[6]: T38947910
-            "start",
-            "--daemon-binary",
-            FindExe.FAKE_EDENFS,
-        ]
+        start_cmd = base_args + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
         if extra_args:
             start_cmd.extend(extra_args)
         subprocess.check_call(start_cmd)
@@ -324,8 +320,8 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
             config_dir_args = ["--config-dir", str(input_path)]
         else:
             config_dir_args = []
-        eden_cli: str = FindExe.EDEN_CLI  # pyre-ignore[9]: T38947910
-        fake_edenfs: str = FindExe.FAKE_EDENFS  # pyre-ignore[9]: T38947910
+        eden_cli: str = FindExe.EDEN_CLI
+        fake_edenfs: str = FindExe.FAKE_EDENFS
         base_args = [eden_cli] + self.get_required_eden_cli_args() + config_dir_args
         start_cmd = base_args + ["start", "--daemon-binary", fake_edenfs]
         stop_cmd = base_args + ["stop"]
@@ -391,7 +387,7 @@ def run_eden_start_with_real_daemon(
         env["EDEN_EXPERIMENTAL_SYSTEMD"] = "1"
     else:
         env.pop("EDEN_EXPERIMENTAL_SYSTEMD", None)
-    eden_cli_args: List[str] = [  # pyre-ignore[9]: T38947910
+    eden_cli_args: List[str] = [
         FindExe.EDEN_CLI,
         "--config-dir",
         str(eden_dir),
@@ -401,7 +397,7 @@ def run_eden_start_with_real_daemon(
         str(home_dir),
     ]
 
-    start_cmd: List[str] = eden_cli_args + [  # pyre-ignore[6]: T38947910
+    start_cmd: List[str] = eden_cli_args + [
         "start",
         "--daemon-binary",
         FindExe.EDEN_DAEMON,

@@ -1807,7 +1807,6 @@ class revlog(object):
         if not data:
             return b"", data
 
-        # pyre-fixme[16]: Callable `_compressor` has no attribute `compress`.
         compressed = self._compressor.compress(data)
 
         if compressed:

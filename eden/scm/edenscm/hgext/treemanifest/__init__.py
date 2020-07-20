@@ -211,6 +211,7 @@ from ..remotefilelog.repack import domaintenancerepack, repacklockvfs
 try:
     from itertools import zip_longest
 except ImportError:
+    # pyre-fixme[21]: Could not find name `izip_longest` in `itertools`.
     from itertools import izip_longest as zip_longest
 
 

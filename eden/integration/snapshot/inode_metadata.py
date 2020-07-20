@@ -120,6 +120,7 @@ def update_ownership(metadata_path: Path, uid: int, gid: int) -> None:
     """Update an Eden inode metadata table file, replacing the UID and GID fields
     for all inodes with the specified values.
     """
+    # pyre-fixme[22]: The cast is redundant.
     with typing.cast(BinaryIO, metadata_path.open("rb")) as input_file:
         header = MdvHeader.read(input_file)
 
@@ -161,7 +162,6 @@ def update_ownership(metadata_path: Path, uid: int, gid: int) -> None:
                 pass
             raise
         finally:
-            # pyre-fixme[25]: Assertion will always fail.
             if tmp_file is not None:
                 tmp_file.close()
 

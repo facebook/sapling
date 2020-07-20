@@ -50,7 +50,6 @@ class HgRepository(repobase.Repository):
             k: v for k, v in os.environ.items() if not k.startswith("HG")
         }
         self.hg_environment["HGPLAIN"] = "1"
-        # pyre-ignore[6]: T38947910
         self.hg_environment["HG_REAL_BIN"] = FindExe.HG_REAL
         self.hg_environment["NOSCMLOG"] = "1"
         # Set HGRCPATH to make sure we aren't affected by the local system's
@@ -59,7 +58,7 @@ class HgRepository(repobase.Repository):
             self.hg_environment["HGRCPATH"] = system_hgrc
         else:
             self.hg_environment["HGRCPATH"] = ""
-        self.hg_bin = FindExe.HG  # pyre-ignore[8]: T38947910
+        self.hg_bin = FindExe.HG
 
     @classmethod
     def get_system_hgrc_contents(cls) -> str:

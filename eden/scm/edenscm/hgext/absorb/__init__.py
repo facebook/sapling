@@ -47,6 +47,8 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, range
+
+# pyre-fixme[21]: Could not find name `linelog` in `edenscmnative`.
 from edenscmnative import linelog
 
 

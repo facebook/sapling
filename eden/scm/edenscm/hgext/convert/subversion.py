@@ -44,9 +44,17 @@ NoRepo = common.NoRepo
 try:
     # pyre-fixme[21]: Could not find `svn`.
     import svn
+
+    # pyre-fixme[21]: Could not find module `svn.client`.
     import svn.client
+
+    # pyre-fixme[21]: Could not find module `svn.core`.
     import svn.core
+
+    # pyre-fixme[21]: Could not find module `svn.ra`.
     import svn.ra
+
+    # pyre-fixme[21]: Could not find module `svn.delta`.
     import svn.delta
     from . import transport
     import warnings

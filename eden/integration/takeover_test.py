@@ -334,11 +334,7 @@ class TakeoverTest(testcase.EdenRepoTest):
 
         print("Restarting eden: %r" % (restart_cmd,))
         return pexpect.spawn(
-            # pyre-ignore[6]: T38947910
-            restart_cmd[0],
-            restart_cmd[1:],
-            logfile=sys.stdout.buffer,
-            timeout=5,
+            restart_cmd[0], restart_cmd[1:], logfile=sys.stdout.buffer, timeout=5
         )
 
     def assert_restart_fails_with_in_progress_graceful_restart(

@@ -28,7 +28,7 @@ class GitRepository(repobase.Repository):
 
     def __init__(self, path: str, temp_mgr: Optional[TempFileManager] = None) -> None:
         super().__init__(path)
-        self.git_bin = FindExe.GIT  # pyre-ignore[8]: T38947910
+        self.git_bin = FindExe.GIT
         self.temp_mgr = temp_mgr or TempFileManager("gitrepo")
 
     def git(

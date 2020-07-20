@@ -23,7 +23,11 @@ from __future__ import absolute_import
 
 # pyre-fixme[21]: Could not find `svn`.
 import svn.client
+
+# pyre-fixme[21]: Could not find module `svn.core`.
 import svn.core
+
+# pyre-fixme[21]: Could not find module `svn.ra`.
 import svn.ra
 from edenscm.mercurial import util
 

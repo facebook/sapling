@@ -68,6 +68,7 @@ except (AttributeError, ImportError):
     pass
 
 try:
+    # pyre-fixme[21]: Could not find name `ignore` in `edenscm.mercurial`.
     from edenscm.mercurial import ignore
 
     # pyre-fixme[16]: Module `mercurial` has no attribute `ignore`.

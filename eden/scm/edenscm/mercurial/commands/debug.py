@@ -3079,6 +3079,7 @@ def debugssl(ui, repo, source=None, **opts):
     else:
         raise error.Abort(_("only https and ssh connections are supported"))
 
+    # pyre-fixme[21]: Could not find name `win32` in `edenscm.mercurial.commands`.
     from . import win32
 
     s = ssl.wrap_socket(

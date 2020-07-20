@@ -15,6 +15,8 @@ from __future__ import absolute_import
 import struct
 
 from ..pure.bdiff import *  # noqa: F403, F401
+
+# pyre-fixme[21]: Could not find name `_bdiff` in `edenscm.mercurial.cffi`.
 from . import _bdiff
 
 

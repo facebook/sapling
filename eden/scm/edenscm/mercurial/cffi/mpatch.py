@@ -13,6 +13,8 @@
 from __future__ import absolute_import
 
 from ..pure.mpatch import *  # noqa: F401, F403
+
+# pyre-fixme[21]: Could not find name `_mpatch` in `edenscm.mercurial.cffi`.
 from . import _mpatch
 
 

@@ -354,6 +354,9 @@ class HgServer(object):
         # Return True to indicate that we should continue serving
         return True
 
+    # pyre-fixme[56]: While applying decorator
+    #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
+    #  param but got `(self: HgServer, request: Request) -> None`.
     @cmd(CMD_MANIFEST)
     def cmd_manifest(self, request):
         # type: (Request) -> None
@@ -391,6 +394,9 @@ class HgServer(object):
         self.debug("sending manifest for revision %r", rev_name)
         self.dump_manifest(rev_name, request)
 
+    # pyre-fixme[56]: While applying decorator
+    #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
+    #  param but got `(self: HgServer, request: Request) -> None`.
     @cmd(CMD_OLD_CAT_FILE)
     def cmd_old_cat_file(self, request):
         # type: (Request) -> None
@@ -418,6 +424,9 @@ class HgServer(object):
         contents = self.get_file(path, rev_hash)
         self.send_chunk(request, contents)
 
+    # pyre-fixme[56]: While applying decorator
+    #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
+    #  param but got `(self: HgServer, request: Request) -> None`.
     @cmd(CMD_CAT_FILE)
     def cmd_cat_file(self, request):
         # type: (Request) -> None
@@ -449,6 +458,9 @@ class HgServer(object):
         length_data = struct.pack(">Q", len(contents))
         self.send_chunk(request, contents, length_data)
 
+    # pyre-fixme[56]: While applying decorator
+    #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
+    #  param but got `(self: HgServer, request: Request) -> None`.
     @cmd(CMD_GET_FILE_SIZE)
     def cmd_get_file_size(self, request):
         # type: (Request) -> None
@@ -475,6 +487,9 @@ class HgServer(object):
         data = struct.pack(">Q", size)
         self.send_chunk(request, data)
 
+    # pyre-fixme[56]: While applying decorator
+    #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
+    #  param but got `(self: HgServer, request: Request) -> None`.
     @cmd(CMD_MANIFEST_NODE_FOR_COMMIT)
     def cmd_manifest_node_for_commit(self, request):
         # type: (Request) -> None
@@ -506,6 +521,9 @@ class HgServer(object):
 
         self.send_chunk(request, node)
 
+    # pyre-fixme[56]: While applying decorator
+    #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
+    #  param but got `(self: HgServer, request: Request) -> None`.
     @cmd(CMD_FETCH_TREE)
     def cmd_fetch_tree(self, request):
         # type: (Request) -> None
@@ -738,6 +756,9 @@ class HgServer(object):
                 )
             raise ResetRepoError(e)
 
+    # pyre-fixme[56]: While applying decorator
+    #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
+    #  param but got `(self: HgServer, request: Request) -> None`.
     @cmd(CMD_PREFETCH_FILES)
     def prefetch_files(self, request):
         # type: (Request) -> None
@@ -896,6 +917,23 @@ def runedenimporthelper(repo, **opts):
         return 0
 
 
+# pyre-fixme[56]: Argument `[("", "in-fd", "", edenscm.mercurial.i18n._("Use the
+#  specified file descriptor to receive commands, rather than reading on stdin"),
+#  edenscm.mercurial.i18n._("FILENO")), ("", "out-fd", "",
+#  edenscm.mercurial.i18n._("Use the specified file descriptor to send command output,
+#  rather than writing to stdout"), edenscm.mercurial.i18n._("FILENO")), ("",
+#  "manifest", "", edenscm.mercurial.i18n._("Dump the binary manifest data for the
+#  specified revision."), edenscm.mercurial.i18n._("REVISION")), ("",
+#  "get-manifest-node", "", edenscm.mercurial.i18n._("Print the manifest node ID for
+#  the specified revision."), edenscm.mercurial.i18n._("REVISION")), ("", "cat-file",
+#  "", edenscm.mercurial.i18n._("Dump the file contents for the specified file at the
+#  given file revision"), edenscm.mercurial.i18n._("PATH:REV")), ("", "get-file-size",
+#  "", edenscm.mercurial.i18n._("Get the file size for the specified file at the given
+#  file revision"), edenscm.mercurial.i18n._("PATH:REV")), ("", "fetch-tree", "",
+#  edenscm.mercurial.i18n._("Fetch treemanifest data for the specified path at the
+#  given manifest node"), edenscm.mercurial.i18n._("PATH:REV"))]` to decorator factory
+#  `edenscm.mercurial.commands.cmdtable.command` could not be resolved in a global
+#  scope.
 @command(
     "debugedenimporthelper",
     [
@@ -1009,6 +1047,9 @@ def eden_import_helper(ui, repo, *repo_args, **opts):
             repo.close()
 
 
+# pyre-fixme[56]: Argument `[]` to decorator factory
+#  `edenscm.mercurial.commands.cmdtable.command` could not be resolved in a global
+#  scope.
 @command("debugedenrunpostupdatehook", [])
 def edenrunpostupdatehook(ui, repo):
     # type: (ui.ui, localrepo.localrepository) -> None

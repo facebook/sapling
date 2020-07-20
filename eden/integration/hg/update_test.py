@@ -456,6 +456,8 @@ class UpdateTest(EdenHgTestCase):
             p1.join()
             p2.join()
 
+    # pyre-fixme[56]: Argument `"SANDCASTLE" in os.environ` to decorator factory
+    #  `unittest.skipIf` could not be resolved in a global scope.
     @unittest.skipIf(
         "SANDCASTLE" in os.environ,
         "This test seems to leave behind unkillable processes "

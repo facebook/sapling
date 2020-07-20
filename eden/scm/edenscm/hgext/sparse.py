@@ -488,11 +488,10 @@ def _trackdirstatesizes(lui, repo):
     dirstatesize = None
     try:
         # Eden and flat dirstate.
-        # pyre-fixme[16]: Callable `_map` has no attribute `_map`.
         dirstatesize = len(dirstate._map._map)
     except AttributeError:
         # Treestate and treedirstate.
-        dirstatesize = len(dirstate._map)  # pyre-fixme[6]
+        dirstatesize = len(dirstate._map)
     if dirstatesize is not None:
         lui.log("dirstate_size", dirstate_size=dirstatesize)
         if (
@@ -2173,7 +2172,6 @@ def unincludesubcmd(ui, repo, *pats, **opts):
 
 
 for c in deletesubcmd, excludesubcmd, includesubcmd, unexcludesubcmd, unincludesubcmd:
-    # pyre-fixme[16]: `Optional` has no attribute `__iadd__`.
     c.__doc__ += """\n
 The effects of adding or deleting an include or exclude rule are applied
 immediately. If applying the new rule would cause a file with pending

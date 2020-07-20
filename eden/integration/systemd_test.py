@@ -32,12 +32,12 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
 
     # TODO(T33122320): Delete this test when systemd is properly integrated.
     def test_eden_start_with_systemd_disabled_does_not_say_systemd_mode_is_enabled(
-        self
+        self,
     ) -> None:
         self.unsetenv("EDEN_EXPERIMENTAL_SYSTEMD")
 
         def test(start_args: typing.List[str]) -> None:
-            eden_cli: str = FindExe.EDEN_CLI  # pyre-ignore[9]: T38947910
+            eden_cli: str = FindExe.EDEN_CLI
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
                     eden_cli,
@@ -59,14 +59,11 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
                 start_process.wait()
 
         test(start_args=["--", "--allowRoot"])
-        # pyre-ignore[6]: T38947910
         test(start_args=["--daemon-binary", FindExe.FAKE_EDENFS])
 
     def test_eden_start_starts_systemd_service(self) -> None:
         subprocess.check_call(
-            self.get_edenfsctl_cmd()
-            # pyre-ignore[6]: T38947910
-            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
+            self.get_edenfsctl_cmd() + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
         )
         self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
 
@@ -74,7 +71,7 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
         self.assert_systemd_service_is_stopped(eden_dir=self.eden_dir)
         subprocess.call(
             self.get_edenfsctl_cmd()
-            + [  # pyre-ignore[6]: T38947910
+            + [
                 "start",
                 "--daemon-binary",
                 FindExe.FAKE_EDENFS,
@@ -85,7 +82,7 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
         self.assert_systemd_service_is_failed(eden_dir=self.eden_dir)
 
     def test_eden_start_reports_service_failure_if_edenfs_fails_during_startup(
-        self
+        self,
     ) -> None:
         start_process = self.spawn_start_with_fake_edenfs(
             extra_args=["--", "--failDuringStartup"]
@@ -166,14 +163,13 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
         return pexpect_spawn(
             FindExe.EDEN_CLI,
             self.get_required_eden_cli_args()
-            # pyre-ignore[6]: T38947910
-            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS] + list(extra_args),
+            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
+            + list(extra_args),
             encoding="utf-8",
             logfile=sys.stderr,
         )
 
     def get_edenfsctl_cmd(self) -> typing.List[str]:
-        # pyre-ignore[6,7]: T38947910
         return [FindExe.EDEN_CLI] + self.get_required_eden_cli_args()
 
     def get_required_eden_cli_args(self) -> typing.List[str]:
@@ -190,7 +186,6 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
         config_d = self.etc_eden_dir / "config.d"
         config_d.mkdir()
         with open(config_d / "systemd.toml", "w") as config_file:
-            # pyre-ignore[6]: T39129461
             toml.dump(config, config_file)
 
     def spoof_user_name(self, user_name: str) -> None:

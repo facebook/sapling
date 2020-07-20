@@ -587,7 +587,6 @@ def split_inodes_by_operation_type(
             file_size=n.fileSize,
         )
         for tree in inode_results
-        # pyre-fixme[10]: Name `tree` is used but not defined.
         for n in tree.entries
         if n.loaded and stat.S_IFMT(n.mode) == stat.S_IFREG
     ]

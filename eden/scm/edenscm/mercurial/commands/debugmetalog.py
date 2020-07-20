@@ -14,6 +14,10 @@ from ..node import bin, hex, short
 from .cmdtable import command
 
 
+# pyre-fixme[56]: Argument `[("t", "time-range", [],
+#  edenscm.mercurial.i18n._("select time range"), edenscm.mercurial.i18n._("TIME"))]`
+#  to decorator factory `edenscm.mercurial.commands.cmdtable.command` could not be
+#  resolved in a global scope.
 @command("debugmetalog", [("t", "time-range", [], _("select time range"), _("TIME"))])
 def debugmetalog(ui, repo, **opts):
     # type: (...) -> None

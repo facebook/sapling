@@ -161,7 +161,6 @@ class SystemdServiceTest(ServiceTestCaseBase):
             systemd = self.make_temporary_systemd_user_service_manager()
             self.systemd = systemd
             systemd.enable_runtime_unit_from_file(
-                # pyre-ignore[6]: T38947910
                 unit_file=pathlib.Path(FindExe.SYSTEMD_FB_EDENFS_SERVICE)
             )
             for name, value in systemd.extra_env.items():

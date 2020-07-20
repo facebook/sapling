@@ -413,7 +413,6 @@ def _transient_managed_systemd_user_service_manager(
     """Create an isolated systemd instance using 'systemd-run systemd'."""
 
     child_systemd_service = parent_systemd.systemd_run(
-        # pyre-ignore[6]: T38947910
         command=[FindExe.SYSTEMD, "--user", "--unit=basic.target"],
         properties={
             "Description": f"Eden test systemd user service manager "
@@ -483,11 +482,9 @@ class _TransientUnmanagedSystemdUserServiceManager:
         # HACK(strager): Work around 'systemd --user' refusing to start if the
         # system is not managed by systemd.
         env["LD_PRELOAD"] = str(
-            # pyre-ignore[6]: T38947910
             pathlib.Path(FindExe.FORCE_SD_BOOTED).resolve(strict=True)
         )
         process = subprocess.Popen(
-            # pyre-ignore[6]: T38947910
             [
                 "timeout",
                 f"{self.__lifetime_duration}s",

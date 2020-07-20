@@ -878,7 +878,6 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(1, exit_code)
 
     def test_remount_checkouts(self) -> None:
-        # pyre-ignore[20]: T31414181
         exit_code, out, mounts = self._test_remount_checkouts(dry_run=False)
         self.assertEqual(
             f"""\
@@ -895,7 +894,6 @@ Remounting {mounts[1]}...<green>fixed<reset>
         self.assertEqual(exit_code, 0)
 
     def test_remount_checkouts_old_edenfs(self) -> None:
-        # pyre-ignore[20]: T31414181
         exit_code, out, mounts = self._test_remount_checkouts(
             dry_run=False, old_edenfs=True
         )
@@ -914,7 +912,6 @@ Remounting {mounts[1]}...<green>fixed<reset>
         self.assertEqual(exit_code, 0)
 
     def test_remount_checkouts_dry_run(self) -> None:
-        # pyre-ignore[20]: T31414181
         exit_code, out, mounts = self._test_remount_checkouts(
             dry_run=True, old_edenfs=True
         )
@@ -933,6 +930,8 @@ Would remount {mounts[1]}
         self.assertEqual(exit_code, 1)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    # pyre-fixme[56]: Argument `set()` to decorator factory `unittest.mock.patch`
+    #  could not be resolved in a global scope.
     @patch(
         "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
     )
