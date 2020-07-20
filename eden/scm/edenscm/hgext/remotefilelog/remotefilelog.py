@@ -474,6 +474,11 @@ class remotefileslog(filelog.fileslog):
 
         return self._memcachestore
 
+    def edenapistore(self, repo):
+        if repo.edenapi is not None and repo.ui.configbool("remotefilelog", "http"):
+            return repo.edenapi.filestore(repo.name)
+        return None
+
     def makesharedonlyruststore(self, repo):
         """Build non-local stores.
 
@@ -488,14 +493,23 @@ class remotefileslog(filelog.fileslog):
             fileserverclient.getpackclient(repo)
         )
         memcachestore = self.memcachestore(repo)
+        edenapistore = self.edenapistore(repo)
 
         mask = os.umask(0o002)
         try:
             sharedonlycontentstore = revisionstore.contentstore(
-                None, repo.ui._rcfg._rcfg, sharedonlyremotestore, memcachestore
+                None,
+                repo.ui._rcfg._rcfg,
+                sharedonlyremotestore,
+                memcachestore,
+                edenapistore,
             )
             sharedonlymetadatastore = revisionstore.metadatastore(
-                None, repo.ui._rcfg._rcfg, sharedonlyremotestore, memcachestore
+                None,
+                repo.ui._rcfg._rcfg,
+                sharedonlyremotestore,
+                memcachestore,
+                edenapistore,
             )
         finally:
             os.umask(mask)
@@ -506,14 +520,23 @@ class remotefileslog(filelog.fileslog):
         remotestore = revisionstore.pyremotestore(fileserverclient.getpackclient(repo))
 
         memcachestore = self.memcachestore(repo)
+        edenapistore = self.edenapistore(repo)
 
         mask = os.umask(0o002)
         try:
             self.contentstore = revisionstore.contentstore(
-                repo.svfs.vfs.base, repo.ui._rcfg._rcfg, remotestore, memcachestore
+                repo.svfs.vfs.base,
+                repo.ui._rcfg._rcfg,
+                remotestore,
+                memcachestore,
+                edenapistore,
             )
             self.metadatastore = revisionstore.metadatastore(
-                repo.svfs.vfs.base, repo.ui._rcfg._rcfg, remotestore, memcachestore
+                repo.svfs.vfs.base,
+                repo.ui._rcfg._rcfg,
+                remotestore,
+                memcachestore,
+                edenapistore,
             )
         finally:
             os.umask(mask)

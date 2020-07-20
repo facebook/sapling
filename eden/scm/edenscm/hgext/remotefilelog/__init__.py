@@ -122,6 +122,8 @@ Configs:
     ``remotefilelog.cachekey`` cache key prefix to use.
 
     ``edenapi.url`` URL of the EdenAPI server.
+
+    ``remotefilelog.http`` use HTTP (EdenAPI) instead of SSH to fetch data.
 """
 from __future__ import absolute_import
 
@@ -205,6 +207,7 @@ configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
 configitem("remotefilelog", "getpackversion", default=1)
 configitem("remotefilelog", "commitsperrepack", default=100)
+configitem("remotefilelog", "http", default=False)
 configitem("edenapi", "url", default=None)
 
 testedwith = "ships-with-fb-hgext"
