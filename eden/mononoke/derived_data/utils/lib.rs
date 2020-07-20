@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#![type_length_limit = "4522397"]
-
-use anyhow::{anyhow, format_err, Error};
+use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blame::{BlameRoot, BlameRootMapping};
 use blobrepo::BlobRepo;
@@ -19,7 +17,8 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
-    BonsaiDerived, BonsaiDerivedMapping, DeriveError, Mode as DeriveMode, RegenerateMapping,
+    derive_impl::derive_impl, BonsaiDerived, BonsaiDerivedMapping, DeriveError, Mode as DeriveMode,
+    RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
@@ -28,7 +27,7 @@ use futures::{
     compat::Future01CompatExt,
     future::ready,
     stream::{self, futures_unordered::FuturesUnordered},
-    Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+    Future, StreamExt, TryStreamExt,
 };
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{future, stream as stream_old, Future as OldFuture, Stream};
@@ -151,23 +150,14 @@ where
         repo: BlobRepo,
         csid: ChangesetId,
     ) -> BoxFuture<String, Error> {
-        // We call batch_derive so that we can pass
+        // We call derive_impl directly so that we can pass
         // `self.mapping` there. This will allow us to
         // e.g. regenerate derived data for the commit
         // even if it was already generated (see RegenerateMapping call).
-
-        let mode = self.mode;
-        let mapping = self.mapping.clone();
-        async move {
-            let res = M::Value::batch_derive(&ctx, &repo, vec![csid], &mapping, mode).await?;
-            let val = res
-                .get(&csid)
-                .ok_or(anyhow!("internal derived data error"))?;
-            Ok(format!("{:?}", val))
-        }
-        .boxed()
-        .compat()
-        .boxify()
+        derive_impl::<M::Value, _>(ctx, repo, self.mapping.clone(), csid, self.mode)
+            .map(|result| format!("{:?}", result))
+            .from_err()
+            .boxify()
     }
 
     /// !!!!This function is dangerous and should be used with care!!!!
@@ -204,30 +194,37 @@ where
             });
         let memblobstore = memblobstore.expect("memblobstore should have been updated");
 
-        {
-            cloned!(ctx, repo, in_memory_mapping);
-            async move {
-                M::Value::batch_derive(&ctx, &repo, csids, &in_memory_mapping, DeriveMode::Unsafe)
-                    .await
-            }
-        }
-        .boxed()
-        .compat()
-        .from_err()
-        .and_then({
-            cloned!(ctx, memblobstore);
-            move |_| memblobstore.persist(ctx)
-        })
-        .and_then(move |_| {
-            let buffer = in_memory_mapping.into_buffer();
-            let buffer = buffer.lock().unwrap();
-            let mut futs = vec![];
-            for (cs_id, value) in buffer.iter() {
-                futs.push(orig_mapping.put(ctx.clone(), *cs_id, value.clone()));
-            }
-            stream_old::futures_unordered(futs).for_each(|_| Ok(()))
-        })
-        .boxify()
+        stream_old::iter_ok(csids)
+            .for_each({
+                cloned!(ctx, in_memory_mapping, repo);
+                move |csid| {
+                    // create new context so each derivation would have its own trace
+                    let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
+                    derive_impl::<M::Value, _>(
+                        ctx.clone(),
+                        repo.clone(),
+                        in_memory_mapping.clone(),
+                        csid,
+                        DeriveMode::Unsafe,
+                    )
+                    .map(|_| ())
+                    .from_err()
+                }
+            })
+            .and_then({
+                cloned!(ctx, memblobstore);
+                move |_| memblobstore.persist(ctx)
+            })
+            .and_then(move |_| {
+                let buffer = in_memory_mapping.into_buffer();
+                let buffer = buffer.lock().unwrap();
+                let mut futs = vec![];
+                for (cs_id, value) in buffer.iter() {
+                    futs.push(orig_mapping.put(ctx.clone(), *cs_id, value.clone()));
+                }
+                stream_old::futures_unordered(futs).for_each(|_| Ok(()))
+            })
+            .boxify()
     }
 
     fn pending(
