@@ -340,6 +340,13 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::RepoStackInfoResponse, errors::ServiceError> {
         let repo = self.repo(ctx, &repo).await?;
 
+        // Check the limit
+        let limit = check_range_and_convert(
+            "limit",
+            params.limit,
+            0..=thrift::consts::REPO_STACK_INFO_MAX_LIMIT,
+        )?;
+
         // parse changeset specifiers from params
         let head_specifiers = params
             .heads
@@ -360,7 +367,7 @@ impl SourceControlServiceImpl {
         .collect::<Vec<_>>();
 
         // get stack
-        let stack = repo.stack(heads_ids, params.limit as usize).await?;
+        let stack = repo.stack(heads_ids, limit).await?;
 
         // resolve draft changesets & public changesets
         let (draft_commits, public_parents) = try_join(
