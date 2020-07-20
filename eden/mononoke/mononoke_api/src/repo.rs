@@ -854,7 +854,7 @@ impl RepoContext {
 
     /// Get a stack for the list of heads (up to the first public commit).
     ///
-    /// Limit represents the max depth to go into the stacks.
+    /// Limit constrains the number of draft commits returned.
     /// Algo is designed to minimize number of db queries.
     /// Missing changesets are skipped.
     pub async fn stack(
@@ -885,9 +885,7 @@ impl RepoContext {
         // initialize the queue
         let mut queue: Vec<_> = draft.iter().cloned().collect();
 
-        let mut level: usize = 1;
-
-        while !queue.is_empty() && level < limit {
+        while !queue.is_empty() {
             // get the unique parents for all changesets in the queue & skip visited & update visited
             let parents: Vec<_> = self
                 .blob_repo()
@@ -917,7 +915,11 @@ impl RepoContext {
 
             // update queue and level
             queue = new_draft.clone();
-            level = level + 1;
+
+            // respect the limit
+            if draft.len() + new_draft.len() > limit {
+                break;
+            }
 
             // update draft & public
             public.extend(new_public.into_iter());
