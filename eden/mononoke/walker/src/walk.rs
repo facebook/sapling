@@ -37,6 +37,7 @@ use scuba_ext::ScubaSampleBuilder;
 use slog::warn;
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Debug,
     iter::{IntoIterator, Iterator},
     sync::Arc,
 };
@@ -71,8 +72,8 @@ impl OutgoingEdge {
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[error("Could not step to {0:?}")]
-    NotTraversable(OutgoingEdge),
+    #[error("Could not step to {0:?} via {1}")]
+    NotTraversable(OutgoingEdge, String),
 }
 
 pub trait WalkVisitor<VOut, Route> {
@@ -665,7 +666,7 @@ pub fn walk_exact<V, VOut, Route>(
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
     VOut: 'static + Send,
-    Route: 'static + Send + Clone,
+    Route: 'static + Send + Clone + Debug,
 {
     // Build lookups
     let published_bookmarks = repo
@@ -689,7 +690,7 @@ where
         .map_ok(move |published_bookmarks| {
             let published_bookmarks = Arc::new(published_bookmarks);
             bounded_traversal_stream(scheduled_max, walk_roots, {
-                move |(via, walk_item)| {
+                move |(via, walk_item): (Option<Route>, OutgoingEdge)| {
                     let ctx = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item);
                     cloned!(
                         error_as_data_node_types,
@@ -753,7 +754,7 @@ async fn walk_one<V, VOut, Route>(
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
     VOut: 'static + Send,
-    Route: 'static + Send + Clone,
+    Route: 'static + Send + Clone + Debug,
 {
     let logger = ctx.logger().clone();
 
@@ -833,7 +834,7 @@ where
         Ok(s) => Ok(s),
         Err(e) => {
             // Log to scuba regardless
-            add_node_to_scuba(None, &walk_item.target, &mut scuba);
+            add_node_to_scuba(None, None, &walk_item.target, &mut scuba);
             scuba
                 .add(EDGE_TYPE, edge_label.to_str())
                 .add(CHECK_TYPE, "step")
@@ -846,7 +847,7 @@ where
                 {
                     warn!(
                         logger,
-                        "Could not step to {:?}, due to: {:?}", &walk_item, e
+                        "Could not step to {:?}, due to: {:?} via {:?}", &walk_item, e, via
                     );
                     Ok(StepOutput(
                         NodeData::ErrorAsData(walk_item.target.clone()),
@@ -860,7 +861,7 @@ where
             }
         }
     }
-    .with_context(|| ErrorKind::NotTraversable(walk_item.clone()))?;
+    .with_context(|| ErrorKind::NotTraversable(walk_item.clone(), format!("{:?}", via)))?;
 
     match step_output {
         StepOutput(node_data, children) => {

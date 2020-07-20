@@ -66,6 +66,9 @@ pub const REPO: &'static str = "repo";
 const SRC_NODE_KEY: &'static str = "src_node_key";
 const SRC_NODE_TYPE: &'static str = "src_node_type";
 const SRC_NODE_PATH: &'static str = "src_node_path";
+const VIA_NODE_KEY: &'static str = "via_node_key";
+const VIA_NODE_TYPE: &'static str = "via_node_type";
+const VIA_NODE_PATH: &'static str = "via_node_path";
 
 define_stats! {
     prefix = "mononoke.walker.validate";
@@ -79,9 +82,26 @@ pub const DEFAULT_CHECK_TYPES: &[CheckType] = &[
     CheckType::HgLinkNodePopulated,
 ];
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct FailureInfo {
+    // Where we stepped from, useful for immediate reproductions with --walk-root
+    source_node: Option<Node>,
+    // What the check thinks is an interesting node on the route to here (e.g. the affected changeset)
+    via_node: Option<Node>,
+}
+
+impl FailureInfo {
+    fn new(source_node: Option<Node>, via_node: Option<Node>) -> Self {
+        Self {
+            source_node,
+            via_node,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum CheckStatus {
-    Fail,
+    Fail(FailureInfo),
     Pass,
 }
 
@@ -151,21 +171,52 @@ impl ValidatingVisitor {
     }
 }
 
-fn check_bonsai_phase_is_public(node_data: Option<&NodeData>) -> CheckStatus {
-    match node_data {
-        Some(NodeData::BonsaiPhaseMapping(Some(Phase::Public))) => CheckStatus::Pass,
-        _ => CheckStatus::Fail,
+fn check_bonsai_phase_is_public(
+    node: &Node,
+    node_data: Option<&NodeData>,
+    route: Option<&ValidateRoute>,
+) -> CheckStatus {
+    match (&node, &node_data) {
+        (
+            Node::BonsaiPhaseMapping(_cs_id),
+            Some(NodeData::BonsaiPhaseMapping(Some(Phase::Public))),
+        ) => CheckStatus::Pass,
+        (
+            Node::BonsaiPhaseMapping(non_public_cs_id),
+            Some(NodeData::BonsaiPhaseMapping(_phase)),
+        ) => {
+            let via = route.and_then(|r| {
+                for n in r.via.iter().rev() {
+                    match n {
+                        Node::HgChangeset(_via_hg_cs_id) => return Some(n.clone()),
+                        Node::BonsaiChangeset(via_cs_id) => {
+                            // Check for most recent non-identical changesethg
+                            if via_cs_id != non_public_cs_id {
+                                return Some(n.clone());
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+                return None;
+            });
+            CheckStatus::Fail(FailureInfo::new(route.map(|r| r.src_node.clone()), via))
+        }
+        _ => CheckStatus::Fail(FailureInfo::new(route.map(|r| r.src_node.clone()), None)),
     }
 }
 
-fn check_linknode_populated(outgoing: &[OutgoingEdge]) -> CheckStatus {
+fn check_linknode_populated(
+    outgoing: &[OutgoingEdge],
+    route: Option<&ValidateRoute>,
+) -> CheckStatus {
     if outgoing
         .iter()
         .any(|e| e.label == EdgeType::HgLinkNodeToHgChangeset)
     {
         CheckStatus::Pass
     } else {
-        CheckStatus::Fail
+        CheckStatus::Fail(FailureInfo::new(route.map(|r| r.src_node.clone()), None))
     }
 }
 
@@ -177,16 +228,53 @@ struct CheckStats {
 }
 
 struct CheckData {
-    source_node: Option<Node>,
     checked: Vec<CheckOutput>,
     stats: CheckStats,
 }
 
-impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for ValidatingVisitor {
+#[derive(Clone, Debug)]
+struct ValidateRoute {
+    src_node: Node,
+    via: Vec<Node>,
+}
+
+impl ValidateRoute {
+    // Keep memory usage bounded
+    const MAX_VIA: usize = 2;
+
+    fn next_route(route: Option<Self>, node: Node) -> Self {
+        let mut next_via = match route {
+            Some(Self {
+                src_node: _src_node,
+                mut via,
+            }) => {
+                if via.len() > ValidateRoute::MAX_VIA {
+                    via.remove(0);
+                }
+                via
+            }
+            None => vec![],
+        };
+
+        // Only track changesets for the via information
+        match node {
+            Node::HgChangeset(_) | Node::BonsaiChangeset(_) => next_via.push(node.clone()),
+            _ => (),
+        };
+        Self {
+            src_node: node,
+            via: next_via,
+        }
+    }
+}
+
+impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
+    for ValidatingVisitor
+{
     fn start_step(
         &self,
         ctx: CoreContext,
-        route: Option<&Node>,
+        route: Option<&ValidateRoute>,
         step: &OutgoingEdge,
     ) -> CoreContext {
         self.inner.start_step(ctx, route.map(|_| &()), step)
@@ -197,11 +285,11 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
         ctx: &CoreContext,
         resolved: OutgoingEdge,
         node_data: Option<NodeData>,
-        route: Option<Node>,
+        route: Option<ValidateRoute>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
         (Node, Option<CheckData>, Option<StepStats>),
-        Node,
+        ValidateRoute,
         Vec<OutgoingEdge>,
     ) {
         let checks_to_do: Option<&HashSet<_>> =
@@ -215,12 +303,14 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
                 set.iter().filter_map(|check| {
                     // Lets check!
                     let status = match check {
-                        CheckType::BonsaiChangesetPhaseIsPublic => {
-                            check_bonsai_phase_is_public(node_data.as_ref())
-                        }
+                        CheckType::BonsaiChangesetPhaseIsPublic => check_bonsai_phase_is_public(
+                            &resolved.target,
+                            node_data.as_ref(),
+                            route.as_ref(),
+                        ),
                         CheckType::HgLinkNodePopulated => {
                             num_edges += outgoing.len() as u64;
-                            check_linknode_populated(&outgoing)
+                            check_linknode_populated(&outgoing, route.as_ref())
                         }
                     };
                     if status == CheckStatus::Pass {
@@ -255,7 +345,6 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
                 None
             } else {
                 Some(CheckData {
-                    source_node: route,
                     checked,
                     stats: CheckStats {
                         pass,
@@ -266,8 +355,8 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
             },
             opt_stats,
         );
-        let next_via = node;
-        (vout, next_via, outgoing)
+
+        (vout, ValidateRoute::next_route(route, node), outgoing)
     }
 }
 
@@ -395,10 +484,18 @@ fn scuba_log_node(
     }
 }
 
-pub fn add_node_to_scuba(source_node: Option<&Node>, n: &Node, scuba: &mut ScubaSampleBuilder) {
+pub fn add_node_to_scuba(
+    source_node: Option<&Node>,
+    via_node: Option<&Node>,
+    n: &Node,
+    scuba: &mut ScubaSampleBuilder,
+) {
     scuba_log_node(n, scuba, NODE_TYPE, NODE_KEY, NODE_PATH);
     if let Some(src_node) = source_node {
         scuba_log_node(src_node, scuba, SRC_NODE_TYPE, SRC_NODE_KEY, SRC_NODE_PATH);
+    }
+    if let Some(via_node) = via_node {
+        scuba_log_node(via_node, scuba, VIA_NODE_TYPE, VIA_NODE_KEY, VIA_NODE_PATH);
     }
 }
 
@@ -421,30 +518,37 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
             // total
             self.total_checks += checkdata.stats;
             // By type
-            let source_node = &checkdata.source_node;
             for c in &checkdata.checked {
                 let k = c.check;
                 let stats = self.stats_by_type.entry(k).or_insert(CheckStats::default());
-                if c.status == CheckStatus::Pass {
-                    stats.pass += 1;
-                    STATS::walker_validate
-                        .add_value(1, (self.repo_stats_key.clone(), k.stats_key(), PASS));
-                } else {
-                    STATS::walker_validate
-                        .add_value(1, (self.repo_stats_key.clone(), k.stats_key(), FAIL));
-                    stats.fail += 1;
-                    // For failures log immediately
-                    let mut scuba = self.scuba_builder.clone();
-                    add_node_to_scuba(source_node.as_ref(), n, &mut scuba);
-                    scuba
-                        .add(CHECK_TYPE, k.stats_key())
-                        .add(
-                            CHECK_FAIL,
-                            if c.status == CheckStatus::Pass { 0 } else { 1 },
-                        )
-                        .log();
-                    for json in scuba.get_sample().to_json() {
-                        warn!(self.logger, "Validation failed: {}", json)
+                match &c.status {
+                    CheckStatus::Pass => {
+                        stats.pass += 1;
+                        STATS::walker_validate
+                            .add_value(1, (self.repo_stats_key.clone(), k.stats_key(), PASS));
+                    }
+                    CheckStatus::Fail(failure_info) => {
+                        STATS::walker_validate
+                            .add_value(1, (self.repo_stats_key.clone(), k.stats_key(), FAIL));
+                        stats.fail += 1;
+                        // For failures log immediately
+                        let mut scuba = self.scuba_builder.clone();
+                        add_node_to_scuba(
+                            failure_info.source_node.as_ref(),
+                            failure_info.via_node.as_ref(),
+                            n,
+                            &mut scuba,
+                        );
+                        scuba
+                            .add(CHECK_TYPE, k.stats_key())
+                            .add(
+                                CHECK_FAIL,
+                                if c.status == CheckStatus::Pass { 0 } else { 1 },
+                            )
+                            .log();
+                        for json in scuba.get_sample().to_json() {
+                            warn!(self.logger, "Validation failed: {}", json)
+                        }
                     }
                 }
             }
@@ -502,19 +606,12 @@ pub async fn validate<'a>(
         sort_by_string(&include_check_types)
     );
 
-    let stateful_visitor = Arc::new(ValidatingVisitor::new(
-        repo_stats_key.clone(),
-        include_node_types,
-        include_edge_types,
-        include_check_types.clone(),
-    ));
-
     let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
         logger.clone(),
         fb,
         datasources.scuba_builder.clone(),
-        repo_stats_key,
-        include_check_types,
+        repo_stats_key.clone(),
+        include_check_types.clone(),
         PROGRESS_SAMPLE_RATE,
         Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
     ));
@@ -544,6 +641,14 @@ pub async fn validate<'a>(
             one_fut.await
         }
     };
+
+    let stateful_visitor = Arc::new(ValidatingVisitor::new(
+        repo_stats_key,
+        include_node_types,
+        include_edge_types,
+        include_check_types,
+    ));
+
     walk_exact_tail(
         fb,
         logger,
