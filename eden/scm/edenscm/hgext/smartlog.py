@@ -109,9 +109,20 @@ def uisetup(ui):
         if commit_info and ctx == self.repo["."]:
             changes = ctx.p1().status(ctx)
             prefixes = ["M", "A", "R", "!", "?", "I", "C"]
-            for prefix, change in zip(prefixes, changes):
+            labels = [
+                "status.modified",
+                "status.added",
+                "status.removed",
+                "status.deleted",
+                "status.unknown",
+                "status.ignored",
+                "status.copied",
+            ]
+            for prefix, label, change in zip(prefixes, labels, changes):
                 for fname in change:
-                    self.ui.write(" {0} {1}\n".format(prefix, fname))
+                    self.ui.write(
+                        self.ui.label(" {0} {1}\n".format(prefix, fname), label)
+                    )
             self.ui.write("\n")
         return res
 
