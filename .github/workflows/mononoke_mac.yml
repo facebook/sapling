@@ -24,8 +24,7 @@ jobs:
         default: true
         profile: minimal
     - name: Install system deps
-      run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive monono
-ke
+      run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive mononoke
     - name: Build dependencies
       run: python3 build/fbcode_builder/getdeps.py build --allow-system-packages --only-deps --src-dir=. mononoke
     - name: Build mononoke
