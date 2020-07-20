@@ -216,7 +216,16 @@ fn check_linknode_populated(
     {
         CheckStatus::Pass
     } else {
-        CheckStatus::Fail(FailureInfo::new(route.map(|r| r.src_node.clone()), None))
+        let via = route.and_then(|r| {
+            for n in r.via.iter().rev() {
+                match n {
+                    Node::HgChangeset(_via_hg_cs_id) => return Some(n.clone()),
+                    _ => (),
+                }
+            }
+            return None;
+        });
+        CheckStatus::Fail(FailureInfo::new(route.map(|r| r.src_node.clone()), via))
     }
 }
 
