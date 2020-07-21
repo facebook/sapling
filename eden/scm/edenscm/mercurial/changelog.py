@@ -453,6 +453,12 @@ class changelog(revlog.revlog):
         """filtered version of revlog.__iter__"""
         return revlog.revlog.__iter__(self)
 
+    def __len__(self):
+        if self.userust("len"):
+            return len(self.dag.all())
+        else:
+            return super(changelog, self).__len__()
+
     def revs(self, start=0, stop=None):
         """filtered version of revlog.revs"""
         for i in super(changelog, self).revs(start, stop):
