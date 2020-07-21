@@ -34,5 +34,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<nameset::nameset>(py)?;
     m.add_class::<spanset::spans>(py)?;
 
+    // maximum Id
+    m.add(py, "MAX_ID", dag::Id::MAX.0)?;
+
     Ok(m)
 }

@@ -18,6 +18,9 @@ from . import error, util
 from .pycompat import range
 
 
+maxrev = bindings.dag.MAX_ID
+
+
 def _formatsetrepr(r):
     """Format an optional printable representation of a set
 
@@ -1144,7 +1147,7 @@ class generatorset(abstractsmartset):
         return "<%s%s>" % (type(self).__name__, d)
 
 
-def spanset(repo, start=0, end=None):
+def spanset(repo, start=0, end=maxrev):
     """Create a spanset that represents a range of repository revisions
 
     start: first revision included the set (default to 0)
@@ -1156,7 +1159,10 @@ def spanset(repo, start=0, end=None):
         end = len(repo)
     ascending = start <= end
     if not ascending:
-        start, end = end + 1, start + 1
+        start, end = min(end, maxrev - 1) + 1, min(start, maxrev - 1) + 1
+    # XXX: This assumes 0..len(repo) are valid revs,
+    # it is not true with segmented changelog.
+    end = min(len(repo), end)
     return _spanset(start, end, ascending)
 
 
@@ -1277,8 +1283,14 @@ class fullreposet(_spanset):
     revisions such as "null".
     """
 
-    def __init__(self, repo):
-        super(fullreposet, self).__init__(0, len(repo), True)
+    def __new__(cls, repo):
+        s = spanset(repo, 0, maxrev)
+        s.__class__ = cls
+        return s
+
+    def __init__(cls, repo):
+        # __new__ takes care of things
+        pass
 
     def __and__(self, other):
         """As self contains the whole repo, all of the other set should also be

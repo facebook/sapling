@@ -215,7 +215,7 @@ def rangeset(repo, subset, x, y, order):
 
 def rangeall(repo, subset, x, order):
     assert x is None
-    return _makerangeset(repo, subset, 0, len(repo) - 1, order)
+    return _makerangeset(repo, subset, 0, smartset.maxrev, order)
 
 
 def rangepre(repo, subset, y, order):
@@ -230,16 +230,16 @@ def rangepost(repo, subset, x, order):
     m = getset(repo, fullreposet(repo), x)
     if not m:
         return baseset()
-    return _makerangeset(repo, subset, m.first(), len(repo) - 1, order)
+    return _makerangeset(repo, subset, m.first(), smartset.maxrev, order)
 
 
 def _makerangeset(repo, subset, m, n, order):
     if m == n:
         r = baseset([m])
     elif n == node.wdirrev:
-        r = spanset(repo, m, len(repo)) + baseset([n])
+        r = spanset(repo, m, smartset.maxrev) + baseset([n])
     elif m == node.wdirrev:
-        r = baseset([m]) + spanset(repo, len(repo) - 1, n - 1)
+        r = baseset([m]) + spanset(repo, smartset.maxrev, n - 1)
     elif m < n:
         r = spanset(repo, m, n + 1)
     else:
