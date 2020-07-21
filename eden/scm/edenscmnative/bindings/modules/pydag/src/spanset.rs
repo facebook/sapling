@@ -35,6 +35,37 @@ py_class!(pub class spans |py| {
         Ok(Spans::extract(py, &obj)?.to_py_object(py))
     }
 
+    /// Construct a 'spans' from an arbitrary integer range.
+    ///
+    /// This is unsafe because there are no validation that Ids in this
+    /// range are valid.
+    ///
+    /// Use `tonodes(range) & torevs(dag.all())` to get a valid Set.
+    ///
+    /// This should only be used to be compatible with legacy revsets like
+    /// "x:", ":y", "x:y", ":", or for fast paths of lazy sets (ex. ancestors
+    /// with a cutoff minrev). Avoid using this function in new code.
+    @staticmethod
+    def unsaferange(start: Option<i64> = None, end: Option<i64> = None) -> PyResult<Spans> {
+        if end.unwrap_or(0) < 0 {
+            return Ok(Spans(IdSet::empty()))
+        }
+        let start = match start {
+            Some(start) => Id(start.max(0) as u64),
+            None => Id::MIN,
+        };
+        let end = match end {
+            Some(end) => Id(end.max(0) as u64),
+            None => Id::MAX,
+        };
+        let id_set: IdSet = if start <= end {
+            IdSet::from_spans(vec![start..=end])
+        } else {
+            IdSet::empty()
+        };
+        Ok(Spans(id_set))
+    }
+
     def __contains__(&self, id: i64) -> PyResult<bool> {
         if id < 0 {
             Ok(false)
