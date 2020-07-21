@@ -156,13 +156,13 @@ Verify we duplicate existing copies, instead of detecting them
   rebasing 47e1a9e6273b "copy a->b (2)"
 
   $ hg log -G -f b
-  @  changeset:   4:76024fb4b05b
-  :  parent:      2:235d81efe3d3
+  @  commit:      76024fb4b05b
+  :  parent:      235d81efe3d3
   :  user:        test
   :  date:        Thu Jan 01 00:00:00 1970 +0000
   :  summary:     copy a->b (2)
   :
-  o  changeset:   0:ac82d8b1f7c4
+  o  commit:      ac82d8b1f7c4
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add a

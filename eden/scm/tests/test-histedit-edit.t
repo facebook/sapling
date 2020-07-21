@@ -19,37 +19,37 @@
 
 log before edit
   $ hg log --graph
-  @  changeset:   6:3c6a8ed2ebe8
+  @  commit:      3c6a8ed2ebe8
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     g
   |
-  o  changeset:   5:652413bf663e
+  o  commit:      652413bf663e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:e860deea161a
+  o  commit:      e860deea161a
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   3:055a42cdd887
+  o  commit:      055a42cdd887
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   2:177f92b77385
+  o  commit:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -163,7 +163,7 @@ Stripping necessary commits should not break --abort
   $ hg histedit --abort
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r .
-  changeset:   9:b5f70786f9b0
+  commit:      b5f70786f9b0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -172,10 +172,10 @@ Stripping necessary commits should not break --abort
 check histedit_source
 
   $ hg log --debug --rev 'desc(foobaz)'
-  changeset:   8:a5e1ba2f7afb899ef1581cea528fd885d2fca70d
+  commit:      a5e1ba2f7afb899ef1581cea528fd885d2fca70d
   phase:       draft
-  parent:      7:1a60820cd1f6004a362aa622ebc47d59bc48eb34
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      1a60820cd1f6004a362aa622ebc47d59bc48eb34
+  parent:      0000000000000000000000000000000000000000
   manifest:    5ad3be8791f39117565557781f5464363b918a45
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -221,8 +221,8 @@ check histedit_source
 
 log after edit
   $ hg log --limit 1
-  changeset:   10:a107ee126658
-  parent:      8:a5e1ba2f7afb
+  commit:      a107ee126658
+  parent:      a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -236,8 +236,8 @@ say we'll change the message, but don't.
   $ HGEDITOR="sh ../edit.sh" hg histedit tip 2>&1 | fixbundle
   $ hg status
   $ hg log --limit 1
-  changeset:   11:1fd3b2fe7754
-  parent:      8:a5e1ba2f7afb
+  commit:      1fd3b2fe7754
+  parent:      a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -350,8 +350,8 @@ then, check "modify the message" itself
   > EOF
   $ hg status
   $ hg log --limit 1
-  changeset:   13:62feedb1200e
-  parent:      8:a5e1ba2f7afb
+  commit:      62feedb1200e
+  parent:      a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -371,8 +371,8 @@ then, check "modify the message" itself
   $ HGEDITOR=true hg histedit --continue
 
   $ hg log -G
-  @  changeset:   1:0efcea34f18a
-     parent:      -1:000000000000
+  @  commit:      0efcea34f18a
+     parent:      000000000000
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a

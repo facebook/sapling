@@ -684,14 +684,14 @@ each root have a different common ancestor with the destination and this is a de
   rebasing e7ec4e813ba6 "I"
   rebasing 23a4ace37988 "K"
   $ hg log --rev 'children(desc(G))'
-  changeset:   11:adb617877056
-  parent:      6:eea13746799a
+  commit:      adb617877056
+  parent:      eea13746799a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     I
   
-  changeset:   12:882431a34a0e
-  parent:      6:eea13746799a
+  commit:      882431a34a0e
+  parent:      eea13746799a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     K
@@ -825,29 +825,29 @@ Make the repo a bit more interesting
   $ hg add aaa
   $ hg commit -m aaa
   $ hg log -G
-  @  changeset:   6:5f7bc9025ed2
-  |  parent:      1:58d79cc1cf43
+  @  commit:      5f7bc9025ed2
+  |  parent:      58d79cc1cf43
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     aaa
   |
-  | o  changeset:   5:1910d5ff34ea
+  | o  commit:      1910d5ff34ea
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     second source with subdir
   | |
-  | o  changeset:   4:82901330b6ef
-  |/   parent:      1:58d79cc1cf43
+  | o  commit:      82901330b6ef
+  |/   parent:      58d79cc1cf43
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     first source commit
   |
-  o  changeset:   1:58d79cc1cf43
+  o  commit:      58d79cc1cf43
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     dest commit
   |
-  o  changeset:   0:e94b687f7da3
+  o  commit:      e94b687f7da3
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     initial commit
@@ -858,8 +858,8 @@ Testing from lower head
   $ hg up 'desc(second)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -r '_destrebase()'
-  changeset:   6:5f7bc9025ed2
-  parent:      1:58d79cc1cf43
+  commit:      5f7bc9025ed2
+  parent:      58d79cc1cf43
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     aaa
@@ -868,7 +868,7 @@ Testing from lower head
 Testing from upper head
 
   $ hg log -r '_destrebase(desc(aaa))'
-  changeset:   5:1910d5ff34ea
+  commit:      1910d5ff34ea
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second source with subdir
@@ -876,7 +876,7 @@ Testing from upper head
   $ hg up 'desc(aaa)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -r '_destrebase()'
-  changeset:   5:1910d5ff34ea
+  commit:      1910d5ff34ea
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second source with subdir

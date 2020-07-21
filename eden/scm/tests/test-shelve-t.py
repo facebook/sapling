@@ -307,7 +307,7 @@ sh % "hg status" == r"""
 sh % "hg unshelve -a" == r"""
     rebase aborted
     unshelve of 'default' aborted"""
-sh % "hg heads -q" == "10:ceefc37abe1e"
+sh % "hg heads -q" == "ceefc37abe1e"
 sh % "hg parents -T '{node|short}'" == "ceefc37abe1e"
 sh % "hg resolve -l"
 sh % "hg status" == r"""
@@ -351,7 +351,7 @@ sh % "hg unshelve -c --trace" == r"""
 
 # Ensure the repo is as we hope
 sh % "hg parents -T '{node|short}'" == "ceefc37abe1e"
-sh % "hg heads -q" == "11:83ed350dc2d6"
+sh % "hg heads -q" == "83ed350dc2d6"
 sh % "hg status -C" == r"""
     A b.rename/b
       b/b

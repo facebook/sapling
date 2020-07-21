@@ -33,12 +33,12 @@ Some sed versions appends newline, some don't, and some just fails
 
 trailing newline on .hg/sharedpath is ok
   $ hg tip -q
-  0:d3873e73d99e
+  d3873e73d99e
   $ echo '' >> .hg/sharedpath
   $ cat .hg/sharedpath
   $TESTTMP/repo1/.hg
   $ hg tip -q
-  0:d3873e73d99e
+  d3873e73d99e
 
 commit in shared clone
 
@@ -49,12 +49,12 @@ check original
 
   $ cd ../repo1
   $ hg log
-  changeset:   1:8af4dc49db9e
+  commit:      8af4dc49db9e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change in shared clone
   
-  changeset:   0:d3873e73d99e
+  commit:      d3873e73d99e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
@@ -75,17 +75,17 @@ check in shared clone
 
   $ cd ../repo2
   $ hg log
-  changeset:   2:c2e0ac586386
+  commit:      c2e0ac586386
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another file
   
-  changeset:   1:8af4dc49db9e
+  commit:      8af4dc49db9e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change in shared clone
   
-  changeset:   0:d3873e73d99e
+  commit:      d3873e73d99e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init

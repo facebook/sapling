@@ -3074,7 +3074,7 @@ class TextTestRunner(unittest.TextTestRunner):
             m = re.search(
                 (
                     br"\nThe first (?P<goodbad>bad|good) revision "
-                    br"is:\nchangeset: +\d+:(?P<node>[a-f0-9]+)\n.*\n"
+                    br"is:\ncommit: +(?P<node>[a-f0-9]+)\n.*\n"
                     br"summary: +(?P<summary>[^\n]+)\n"
                 ),
                 data,

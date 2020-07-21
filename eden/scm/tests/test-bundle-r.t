@@ -33,7 +33,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 1 changesets, 1 total revisions
-  0:bfaf4b5cbf01
+  bfaf4b5cbf01
   searching for changes
   2 changesets found
   adding changesets
@@ -45,7 +45,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  1:21f32785131f
+  21f32785131f
   searching for changes
   3 changesets found
   adding changesets
@@ -57,7 +57,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  2:4ce51a113780
+  4ce51a113780
   searching for changes
   4 changesets found
   adding changesets
@@ -69,7 +69,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 4 changesets, 4 total revisions
-  3:93ee6ab32777
+  93ee6ab32777
   searching for changes
   2 changesets found
   adding changesets
@@ -81,7 +81,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
-  1:c70afb1ee985
+  c70afb1ee985
   searching for changes
   3 changesets found
   adding changesets
@@ -93,7 +93,7 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 3 total revisions
-  2:f03ae5a9b979
+  f03ae5a9b979
   searching for changes
   4 changesets found
   adding changesets
@@ -105,7 +105,7 @@
   crosschecking files in changesets and manifests
   checking files
   2 files, 4 changesets, 5 total revisions
-  3:095cb14b1b4d
+  095cb14b1b4d
   searching for changes
   5 changesets found
   adding changesets
@@ -117,7 +117,7 @@
   crosschecking files in changesets and manifests
   checking files
   3 files, 5 changesets, 6 total revisions
-  4:faa2e4234c7a
+  faa2e4234c7a
   searching for changes
   5 changesets found
   adding changesets
@@ -129,7 +129,7 @@
   crosschecking files in changesets and manifests
   checking files
   2 files, 5 changesets, 5 total revisions
-  4:916f1afdef90
+  916f1afdef90
   $ cd test-8
   $ hg pull ../test-7
   pulling from ../test-7
@@ -196,7 +196,7 @@ result
 revision 2
 
   $ hg tip -q
-  2:4ce51a113780
+  4ce51a113780
   $ hg unbundle ../test-bundle-should-fail.hg
   adding changesets
   transaction abort!
@@ -207,7 +207,7 @@ revision 2
 revision 2
 
   $ hg tip -q
-  2:4ce51a113780
+  4ce51a113780
   $ hg unbundle ../test-bundle-all.hg
   adding changesets
   adding manifests
@@ -217,7 +217,7 @@ revision 2
 revision 8
 
   $ hg tip -q
-  8:916f1afdef90
+  916f1afdef90
   $ hg verify
   checking changesets
   checking manifests
@@ -264,7 +264,7 @@ revision 6
 revision 4
 
   $ hg tip -q
-  8:916f1afdef90
+  916f1afdef90
   $ hg verify
   checking changesets
   checking manifests
@@ -296,7 +296,7 @@ revision 4
 revision 9
 
   $ hg tip -q
-  9:03fc0b0e347c
+  03fc0b0e347c
   $ hg verify
   checking changesets
   checking manifests

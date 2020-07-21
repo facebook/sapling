@@ -18,22 +18,22 @@
   > A
   > EOS
   $ hg log --graph
-  o  changeset:   3:f585351a92f8
+  o  commit:      f585351a92f8
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     D
   |
-  o  changeset:   2:26805aba1e60
+  o  commit:      26805aba1e60
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     C
   |
-  o  changeset:   1:112478962961
+  o  commit:      112478962961
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     B
   |
-  o  changeset:   0:426bada5c675
+  o  commit:      426bada5c675
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     A
@@ -48,23 +48,23 @@
   > EOF
 
   $ hg log --graph
-  @  changeset:   6:ded77c342953
+  @  commit:      ded77c342953
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     D
   |
-  o  changeset:   5:508221a61cea
+  o  commit:      508221a61cea
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     B
   |
-  o  changeset:   4:088d21ab9b28
-  |  parent:      0:426bada5c675
+  o  commit:      088d21ab9b28
+  |  parent:      426bada5c675
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     C
   |
-  o  changeset:   0:426bada5c675
+  o  commit:      426bada5c675
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     A

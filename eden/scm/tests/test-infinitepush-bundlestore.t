@@ -41,14 +41,14 @@ the history but is stored on disk
   [1]
 
   $ hg log -G
-  @  changeset:   1:20759b6926ce
+  @  commit:      20759b6926ce
   |  bookmark:    default/scratch/mybranch
   |  hoistedname: scratch/mybranch
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     scratchcommit
   |
-  o  changeset:   0:67145f466344
+  o  commit:      67145f466344
      bookmark:    default/main
      hoistedname: main
      user:        test
@@ -56,7 +56,7 @@ the history but is stored on disk
      summary:     initialcommit
   
   $ hg log -G -R ../repo
-  o  changeset:   0:67145f466344
+  o  commit:      67145f466344
      bookmark:    main
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -88,14 +88,14 @@ From another client we can get the scratchbranch if we ask for it explicitely
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg log -G
-  o  changeset:   1:20759b6926ce
+  o  commit:      20759b6926ce
   |  bookmark:    default/scratch/mybranch
   |  hoistedname: scratch/mybranch
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     scratchcommit
   |
-  @  changeset:   0:67145f466344
+  @  commit:      67145f466344
      bookmark:    default/main
      hoistedname: main
      user:        test

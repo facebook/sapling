@@ -453,33 +453,33 @@ test revset converted() lookup
   $ hg -R c ci -d'0 0' -Amf
   adding f
   $ hg -R c log -r "converted(09d945a62ce6)"
-  changeset:   1:98c3dd46a874
+  commit:      98c3dd46a874
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
   
   $ hg -R c log -r "converted()"
-  changeset:   0:31ed57b2037c
+  commit:      31ed57b2037c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
-  changeset:   1:98c3dd46a874
+  commit:      98c3dd46a874
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
   
-  changeset:   2:3b9ca06ef716
+  commit:      3b9ca06ef716
   user:        test
   date:        Thu Jan 01 00:00:02 1970 +0000
   summary:     c
   
-  changeset:   3:4e0debd37cf2
+  commit:      4e0debd37cf2
   user:        test
   date:        Thu Jan 01 00:00:03 1970 +0000
   summary:     d
   
-  changeset:   4:9de3bc9349c5
+  commit:      9de3bc9349c5
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     e

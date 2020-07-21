@@ -42,42 +42,42 @@ Initial generation of the command files
 
 log before edit
   $ hg log --graph
-  @  changeset:   7:39522b764e3d
+  @  commit:      39522b764e3d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
   |
-  o  changeset:   6:500cac37a696
+  o  commit:      500cac37a696
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:7b4e2f4b7bcd
+  o  commit:      7b4e2f4b7bcd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   4:00f1c5383965
+  o  commit:      00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:65a9a84f33fd
+  o  commit:      65a9a84f33fd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:da6535b52e45
+  o  commit:      da6535b52e45
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:c1f09da44841
+  o  commit:      c1f09da44841
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     a
   |
-  o  changeset:   0:1715188a53c7
+  o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     Initial commit
@@ -99,42 +99,42 @@ abort the edit
 second edit set
 
   $ hg log --graph
-  @  changeset:   7:39522b764e3d
+  @  commit:      39522b764e3d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
   |
-  o  changeset:   6:500cac37a696
+  o  commit:      500cac37a696
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:7b4e2f4b7bcd
+  o  commit:      7b4e2f4b7bcd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   4:00f1c5383965
+  o  commit:      00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:65a9a84f33fd
+  o  commit:      65a9a84f33fd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:da6535b52e45
+  o  commit:      da6535b52e45
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:c1f09da44841
+  o  commit:      c1f09da44841
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     a
   |
-  o  changeset:   0:1715188a53c7
+  o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     Initial commit
@@ -177,38 +177,38 @@ make sure the to-be-empty commit doesn't screw up the state (issue5545)
 
 log after edit
   $ hg log --graph
-  @  changeset:   9:7efe1373e4bc
+  @  commit:      7efe1373e4bc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   8:e334d87a1e55
-  |  parent:      4:00f1c5383965
+  o  commit:      e334d87a1e55
+  |  parent:      00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
   |
-  o  changeset:   4:00f1c5383965
+  o  commit:      00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:65a9a84f33fd
+  o  commit:      65a9a84f33fd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:da6535b52e45
+  o  commit:      da6535b52e45
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:c1f09da44841
+  o  commit:      c1f09da44841
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     a
   |
-  o  changeset:   0:1715188a53c7
+  o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     Initial commit
@@ -260,38 +260,38 @@ second edit also fails, but just continue
 
 post message fix
   $ hg log --graph
-  @  changeset:   9:7efe1373e4bc
+  @  commit:      7efe1373e4bc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   8:e334d87a1e55
-  |  parent:      4:00f1c5383965
+  o  commit:      e334d87a1e55
+  |  parent:      00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
   |
-  o  changeset:   4:00f1c5383965
+  o  commit:      00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:65a9a84f33fd
+  o  commit:      65a9a84f33fd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:da6535b52e45
+  o  commit:      da6535b52e45
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:c1f09da44841
+  o  commit:      c1f09da44841
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     a
   |
-  o  changeset:   0:1715188a53c7
+  o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     Initial commit

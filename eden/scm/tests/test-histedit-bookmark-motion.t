@@ -20,38 +20,38 @@
   $ hg book -r 'desc(e)' four
   $ hg book -r tip five
   $ hg log --graph
-  @  changeset:   5:652413bf663e
+  @  commit:      652413bf663e
   |  bookmark:    five
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:e860deea161a
+  o  commit:      e860deea161a
   |  bookmark:    four
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   3:055a42cdd887
+  o  commit:      055a42cdd887
   |  bookmark:    three
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   2:177f92b77385
+  o  commit:      177f92b77385
   |  bookmark:    also-two
   |  bookmark:    two
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  bookmark:    will-move-backwards
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -88,29 +88,29 @@
   > EOF
   [1]
   $ hg log --graph
-  @  changeset:   10:cacdfd884a93
+  @  commit:      cacdfd884a93
   |  bookmark:    five
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   9:59d9f330561f
+  o  commit:      59d9f330561f
   |  bookmark:    four
   |  bookmark:    three
-  |  parent:      6:b346ab9a313d
+  |  parent:      b346ab9a313d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   6:b346ab9a313d
+  o  commit:      b346ab9a313d
   |  bookmark:    also-two
   |  bookmark:    two
-  |  parent:      0:cb9a9f314b8b
+  |  parent:      cb9a9f314b8b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      bookmark:    will-move-backwards
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -148,7 +148,7 @@ We expect 'five' to stay at tip, since the tipmost bookmark is most
 likely the useful signal.
 
   $ hg log --graph
-  @  changeset:   12:c04e50810e4b
+  @  commit:      c04e50810e4b
   |  bookmark:    five
   |  bookmark:    four
   |  bookmark:    three
@@ -156,21 +156,21 @@ likely the useful signal.
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   11:c13eb81022ca
-  |  parent:      6:b346ab9a313d
+  o  commit:      c13eb81022ca
+  |  parent:      b346ab9a313d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   6:b346ab9a313d
+  o  commit:      b346ab9a313d
   |  bookmark:    also-two
   |  bookmark:    two
-  |  parent:      0:cb9a9f314b8b
+  |  parent:      cb9a9f314b8b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      bookmark:    will-move-backwards
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

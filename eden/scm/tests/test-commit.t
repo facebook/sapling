@@ -205,7 +205,7 @@ partial subdir commit test
 subdir log 1
 
   $ hg log -v foo
-  changeset:   0:f97e73a25882
+  commit:      f97e73a25882
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/foo
@@ -217,7 +217,7 @@ subdir log 1
 subdir log 2
 
   $ hg log -v bar
-  changeset:   1:aa809156d50d
+  commit:      aa809156d50d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/bar
@@ -229,7 +229,7 @@ subdir log 2
 full log
 
   $ hg log -v
-  changeset:   1:aa809156d50d
+  commit:      aa809156d50d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/bar
@@ -237,7 +237,7 @@ full log
   commit-subdir-2
   
   
-  changeset:   0:f97e73a25882
+  commit:      f97e73a25882
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/foo
@@ -274,7 +274,7 @@ dot and subdir commit test
 full log
 
   $ hg log -v
-  changeset:   1:95b38e3a5b2e
+  commit:      95b38e3a5b2e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/plain-file
@@ -282,7 +282,7 @@ full log
   commit-foo-dot
   
   
-  changeset:   0:65d4e9386227
+  commit:      65d4e9386227
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/plain-file
@@ -295,12 +295,12 @@ subdir log
 
   $ cd foo
   $ hg log .
-  changeset:   1:95b38e3a5b2e
+  commit:      95b38e3a5b2e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-foo-dot
   
-  changeset:   0:65d4e9386227
+  commit:      65d4e9386227
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-foo-subdir
@@ -636,7 +636,7 @@ commit copy
 Test making empty commits
   $ hg commit --config ui.allowemptycommit=True -m "empty commit"
   $ hg log -r . -v --stat
-  changeset:   2:d809f3644287
+  commit:      d809f3644287
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:

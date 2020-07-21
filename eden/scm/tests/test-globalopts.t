@@ -42,13 +42,13 @@
 Testing -R/--repository:
 
   $ hg -R a tip
-  changeset:   0:8580ff50825a
+  commit:      8580ff50825a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
   
   $ hg --repository b tip
-  changeset:   0:b6c483daf290
+  commit:      b6c483daf290
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
@@ -79,8 +79,8 @@ Implicit -R:
 Abbreviation of long option:
 
   $ hg --repo c tip
-  changeset:   1:b6c483daf290
-  parent:      -1:000000000000
+  commit:      b6c483daf290
+  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
@@ -89,14 +89,14 @@ Abbreviation of long option:
 earlygetopt with duplicate options (36d23de02da1):
 
   $ hg --cwd a --cwd b --cwd c tip
-  changeset:   1:b6c483daf290
-  parent:      -1:000000000000
+  commit:      b6c483daf290
+  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
   
   $ hg --repo c --repository b -R a tip
-  changeset:   0:8580ff50825a
+  commit:      8580ff50825a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
@@ -105,7 +105,7 @@ earlygetopt with duplicate options (36d23de02da1):
 earlygetopt short option without following space:
 
   $ hg -q -Rb tip
-  0:b6c483daf290
+  b6c483daf290
 
 earlygetopt with illegal abbreviations:
 
@@ -131,7 +131,7 @@ earlygetopt with illegal abbreviations:
 Testing --cwd:
 
   $ hg --cwd a parents
-  changeset:   0:8580ff50825a
+  commit:      8580ff50825a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
@@ -140,25 +140,25 @@ Testing --cwd:
 Testing -y/--noninteractive - just be sure it is parsed:
 
   $ hg --cwd a tip -q --noninteractive
-  0:8580ff50825a
+  8580ff50825a
   $ hg --cwd a tip -q -y
-  0:8580ff50825a
+  8580ff50825a
 
 Testing -q/--quiet:
 
   $ hg -R a -q tip
-  0:8580ff50825a
+  8580ff50825a
   $ hg -R b -q tip
-  0:b6c483daf290
+  b6c483daf290
   $ hg -R c --quiet parents
-  0:8580ff50825a
-  1:b6c483daf290
+  8580ff50825a
+  b6c483daf290
 
 Testing -v/--verbose:
 
   $ hg --cwd c head -v
-  changeset:   1:b6c483daf290
-  parent:      -1:000000000000
+  commit:      b6c483daf290
+  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   files:       b
@@ -166,7 +166,7 @@ Testing -v/--verbose:
   b
   
   
-  changeset:   0:8580ff50825a
+  commit:      8580ff50825a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   files:       a
@@ -175,7 +175,7 @@ Testing -v/--verbose:
   
   
   $ hg --cwd b tip --verbose
-  changeset:   0:b6c483daf290
+  commit:      b6c483daf290
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   files:       b
@@ -207,10 +207,10 @@ Testing --config:
 Testing --debug:
 
   $ hg --cwd c log --debug
-  changeset:   1:b6c483daf2907ce5825c0bb50f5716226281cc1a
+  commit:      b6c483daf2907ce5825c0bb50f5716226281cc1a
   phase:       draft
-  parent:      -1:0000000000000000000000000000000000000000
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      0000000000000000000000000000000000000000
+  parent:      0000000000000000000000000000000000000000
   manifest:    23226e7a252cacdc2d99e4fbdc3653441056de49
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -220,10 +220,10 @@ Testing --debug:
   b
   
   
-  changeset:   0:8580ff50825a50c8f716709acdf8de0deddcd6ab
+  commit:      8580ff50825a50c8f716709acdf8de0deddcd6ab
   phase:       draft
-  parent:      -1:0000000000000000000000000000000000000000
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      0000000000000000000000000000000000000000
+  parent:      0000000000000000000000000000000000000000
   manifest:    a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000

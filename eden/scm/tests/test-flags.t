@@ -46,30 +46,30 @@ the changelog should mention file a:
   adding file changes
   added 1 changesets with 0 changes to 0 files
   $ hg heads
-  changeset:   2:7f4313b42a34
-  parent:      0:22a449e20da5
+  commit:      7f4313b42a34
+  parent:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
   
-  changeset:   1:c6ecefc45368
+  commit:      c6ecefc45368
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a updated
   
   $ hg history
-  changeset:   2:7f4313b42a34
-  parent:      0:22a449e20da5
+  commit:      7f4313b42a34
+  parent:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
   
-  changeset:   1:c6ecefc45368
+  commit:      c6ecefc45368
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a updated
   
-  changeset:   0:22a449e20da5
+  commit:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     added a b
@@ -95,30 +95,30 @@ the changelog should mention file a:
   adding file changes
   added 1 changesets with 0 changes to 0 files
   $ hg heads
-  changeset:   2:7f4313b42a34
-  parent:      0:22a449e20da5
+  commit:      7f4313b42a34
+  parent:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
   
-  changeset:   1:dc57ead75f79
+  commit:      dc57ead75f79
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b updated
   
   $ hg history
-  changeset:   2:7f4313b42a34
-  parent:      0:22a449e20da5
+  commit:      7f4313b42a34
+  parent:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
   
-  changeset:   1:dc57ead75f79
+  commit:      dc57ead75f79
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b updated
   
-  changeset:   0:22a449e20da5
+  commit:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     added a b

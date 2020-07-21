@@ -31,8 +31,8 @@ Tests about metadataonlyctx
   > EOF
   $ hg --config extensions.metaedit=$TESTTMP/metaedit.py metaedit 'text=Changed'
   $ hg log -r tip
-  changeset:   3:ad83e9e00ec9
-  parent:      1:3afb7afe6632
+  commit:      ad83e9e00ec9
+  parent:      3afb7afe6632
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Changed
@@ -42,8 +42,8 @@ Tests about metadataonlyctx
 
   $ hg --config extensions.metaedit=$TESTTMP/metaedit.py metaedit 'user=foo <foo@example.com>'
   $ hg log -r tip
-  changeset:   4:1f86eaeca92b
-  parent:      1:3afb7afe6632
+  commit:      1f86eaeca92b
+  parent:      3afb7afe6632
   user:        foo <foo@example.com>
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Remove A

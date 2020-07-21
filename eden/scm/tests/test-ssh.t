@@ -135,7 +135,7 @@ find outgoing
   $ hg out ssh://user@dummy/remote
   comparing with ssh://user@dummy/remote
   searching for changes
-  changeset:   1:a28a9d1a809c
+  commit:      a28a9d1a809c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -146,7 +146,7 @@ find incoming on the remote side
   $ hg incoming -R ../remote ssh://user@dummy/local
   comparing with ssh://user@dummy/local
   searching for changes
-  changeset:   1:a28a9d1a809c
+  commit:      a28a9d1a809c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -157,7 +157,7 @@ find incoming on the remote side (using absolute path)
   $ hg incoming -R ../remote "ssh://user@dummy/`pwd`"
   comparing with ssh://user@dummy/$TESTTMP/local
   searching for changes
-  changeset:   1:a28a9d1a809c
+  commit:      a28a9d1a809c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -177,7 +177,7 @@ push
 check remote tip
 
   $ hg tip
-  changeset:   1:a28a9d1a809c
+  commit:      a28a9d1a809c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add
@@ -272,14 +272,14 @@ push should succeed even though it has an unexpected response
   remote: KABOOM
   remote: KABOOM IN PROCESS
   $ hg -R ../remote heads
-  changeset:   3:1383141674ec
-  parent:      1:a28a9d1a809c
+  commit:      1383141674ec
+  parent:      a28a9d1a809c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     z
   
-  changeset:   2:6c0482d977a3
-  parent:      0:1160648e36ce
+  commit:      6c0482d977a3
+  parent:      1160648e36ce
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     z

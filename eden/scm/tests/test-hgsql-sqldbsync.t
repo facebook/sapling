@@ -36,7 +36,7 @@
   $ cd master2
   $ hg log
   [hgsql] getting 1 commits from database
-  changeset:   0:b292c1e3311f
+  commit:      b292c1e3311f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     x
@@ -52,13 +52,13 @@
   $ cd ../master2
   $ hg log -r tip --forcesync
   [hgsql] getting 1 commits from database
-  changeset:   1:d34c38483be9
+  commit:      d34c38483be9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
   
   $ hg log -r tip
-  changeset:   1:d34c38483be9
+  commit:      d34c38483be9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -78,14 +78,14 @@
   CorruptionException: tip doesn't match after sync (self: 1, fetchend: 0)
   $ DB="$(hg config hgsql.database --config hgsql.initialsync=False)"
   $ hg log -r tip --syncfromreplica --config hgsql.replicadatabase="$DB"
-  changeset:   1:d34c38483be9
+  commit:      d34c38483be9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
   
 
   $ hg log -r tip --forcesync --syncfromreplica --config hgsql.replicadatabase="$DB"
-  changeset:   1:d34c38483be9
+  commit:      d34c38483be9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y

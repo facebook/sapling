@@ -41,7 +41,7 @@ Clone a client and access git revision. Make sure it works
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd client
   $ hg log -r "gffffffffffffffffffffffffffffffffffffffff"
-  changeset:   0:3903775176ed
+  commit:      3903775176ed
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

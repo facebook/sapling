@@ -8,7 +8,7 @@ Show on empty repository: checking consistency
   $ hg init empty
   $ cd empty
   $ hg show
-  changeset:   -1:000000000000
+  commit:      000000000000
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
@@ -16,7 +16,7 @@ Show on empty repository: checking consistency
 
 Add log alias to and make sure show still works
   $ hg show --config alias.log=log
-  changeset:   -1:000000000000
+  commit:      000000000000
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
@@ -30,7 +30,7 @@ Add log alias to and make sure show still works
   (if branch(name) is a file, try `hg show . branch(name)`)
   [255]
   $ hg show null -q
-  changeset:   -1:000000000000
+  commit:      000000000000
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
@@ -42,7 +42,7 @@ Check various git-like options:
   $ echo two > two
   $ hg commit -qAm twofiles
   $ hg show --template status
-  changeset:   0:bf7b98b60f6f
+  commit:      bf7b98b60f6f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:
@@ -70,7 +70,7 @@ Check that the command parser always treats the first argument as a revision:
   abort: unknown revision 'two'!
   [255]
   $ hg show . two
-  changeset:   0:bf7b98b60f6f
+  commit:      bf7b98b60f6f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       one two
@@ -92,7 +92,7 @@ Check --stat
   $ echo show > x
   $ hg commit -qAm x
   $ hg show --stat
-  changeset:   0:852a8d467a01
+  commit:      852a8d467a01
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       x
@@ -110,7 +110,7 @@ Check --stat
   $ echo more >> x
   $ hg commit -qAm longer
   $ hg show --stat
-  changeset:   1:b73358b94785
+  commit:      b73358b94785
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       x
@@ -128,7 +128,7 @@ Check --stat
   $ echo remove > x
   $ hg commit -qAm remove
   $ hg show --stat
-  changeset:   2:3d74ea61c11c
+  commit:      3d74ea61c11c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       x
@@ -143,7 +143,7 @@ Check --stat
 
 
   $ hg show --stat 0
-  changeset:   0:852a8d467a01
+  commit:      852a8d467a01
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       x
@@ -175,7 +175,7 @@ Check --unified and -U
   > EOF
   $ hg commit -qm file
   $ hg show --unified=1
-  changeset:   1:8e33115c1596
+  commit:      8e33115c1596
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -195,7 +195,7 @@ Check --unified and -U
   +line10
   
   $ hg show --unified=2
-  changeset:   1:8e33115c1596
+  commit:      8e33115c1596
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -218,7 +218,7 @@ Check --unified and -U
 
 Check behavior with nonsensical integers.
   $ hg show --unified=-7
-  changeset:   1:8e33115c1596
+  commit:      8e33115c1596
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -247,7 +247,7 @@ Check whitespace handling options
   $ echo "some text " > file
   $ hg commit -qAm file
   $ hg show
-  changeset:   1:6dbf2c12e2e2
+  commit:      6dbf2c12e2e2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -263,7 +263,7 @@ Check whitespace handling options
   +some text 
   
   $ hg show -b
-  changeset:   1:6dbf2c12e2e2
+  commit:      6dbf2c12e2e2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -275,7 +275,7 @@ Check whitespace handling options
   $ echo "some text" > file
   $ hg commit -qAm file
   $ hg show -Z
-  changeset:   2:600038806867
+  commit:      600038806867
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -287,7 +287,7 @@ Check whitespace handling options
   $ echo "some text " > file
   $ hg commit -qAm file
   $ hg show -Z
-  changeset:   3:747594f0817c
+  commit:      747594f0817c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -302,7 +302,7 @@ Check whitespace handling options
   $ printf "some\ntext" > file
   $ hg commit -qAm file
   $ hg show -B
-  changeset:   5:10f3fc1d00d6
+  commit:      10f3fc1d00d6
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -319,7 +319,7 @@ Check --git and -g
   $ echo git > file
   $ hg commit -qAm file
   $ hg show --git
-  changeset:   0:2a575d662478
+  commit:      2a575d662478
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -339,7 +339,7 @@ Check --git and -g
   $ echo more >> file
   $ hg commit -qAm file
   $ hg show -g
-  changeset:   1:a23f7b259024
+  commit:      a23f7b259024
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -357,7 +357,7 @@ Check --git and -g
 
 
   $ hg show -g 0
-  changeset:   0:2a575d662478
+  commit:      2a575d662478
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -376,7 +376,7 @@ Check --git and -g
 
 Check nodates
   $ hg show --nodates
-  changeset:   1:a23f7b259024
+  commit:      a23f7b259024
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file
@@ -394,7 +394,7 @@ Check nodates
 
 Check noprefix
   $ hg show --noprefix
-  changeset:   1:a23f7b259024
+  commit:      a23f7b259024
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       file

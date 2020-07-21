@@ -19,32 +19,32 @@
 
 log before edit
   $ hg log --graph
-  @  changeset:   5:652413bf663e
+  @  commit:      652413bf663e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:e860deea161a
+  o  commit:      e860deea161a
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   3:055a42cdd887
+  o  commit:      055a42cdd887
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   2:177f92b77385
+  o  commit:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -108,33 +108,33 @@ rules should end up in .hg/histedit-last-edit.txt:
 
 log after edit
   $ hg log --graph
-  @  changeset:   8:07114f51870f
+  @  commit:      07114f51870f
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   7:8ade9693061e
+  o  commit:      8ade9693061e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   6:d8249471110a
-  |  parent:      2:177f92b77385
+  o  commit:      d8249471110a
+  |  parent:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   2:177f92b77385
+  o  commit:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -150,33 +150,33 @@ put things back
   > EOF
 
   $ hg log --graph
-  @  changeset:   11:7eca9b5b1148
+  @  commit:      7eca9b5b1148
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   10:915da888f2de
+  o  commit:      915da888f2de
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   9:10517e47bbbb
-  |  parent:      2:177f92b77385
+  o  commit:      10517e47bbbb
+  |  parent:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   2:177f92b77385
+  o  commit:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -191,33 +191,33 @@ slightly different this time
   > pick 177f92b77385 c
   > EOF
   $ hg log --graph
-  @  changeset:   15:38b92f448761
+  @  commit:      38b92f448761
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   14:de71b079d9ce
+  o  commit:      de71b079d9ce
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   13:be9ae3a309c6
+  o  commit:      be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   12:799205341b6b
-  |  parent:      1:d2ae7f538514
+  o  commit:      799205341b6b
+  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -231,44 +231,44 @@ keep prevents stripping dead revs
   > pick de71b079d9ce e
   > EOF
   $ hg log --graph
-  @  changeset:   17:803ef1c6fcfd
+  @  commit:      803ef1c6fcfd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   16:ece0b8d93dda
-  |  parent:      13:be9ae3a309c6
+  o  commit:      ece0b8d93dda
+  |  parent:      be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  | x  changeset:   15:38b92f448761
+  | x  commit:      38b92f448761
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     c
   | |
-  | x  changeset:   14:de71b079d9ce
+  | x  commit:      de71b079d9ce
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     e
   |
-  o  changeset:   13:be9ae3a309c6
+  o  commit:      be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   12:799205341b6b
-  |  parent:      1:d2ae7f538514
+  o  commit:      799205341b6b
+  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -282,44 +282,44 @@ try with --rev
   hg: parse error: pick "de71b079d9ce" changeset was not a candidate
   (only use listed changesets)
   $ hg log --graph
-  @  changeset:   17:803ef1c6fcfd
+  @  commit:      803ef1c6fcfd
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   16:ece0b8d93dda
-  |  parent:      13:be9ae3a309c6
+  o  commit:      ece0b8d93dda
+  |  parent:      be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  | x  changeset:   15:38b92f448761
+  | x  commit:      38b92f448761
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     c
   | |
-  | x  changeset:   14:de71b079d9ce
+  | x  commit:      de71b079d9ce
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     e
   |
-  o  changeset:   13:be9ae3a309c6
+  o  commit:      be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   12:799205341b6b
-  |  parent:      1:d2ae7f538514
+  o  commit:      799205341b6b
+  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -365,16 +365,16 @@ should also work if a commit message is missing
   $ hg co tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log --graph
-  @  changeset:   2:bd22688093b3
+  @  commit:      bd22688093b3
   |  user:        Robert Altman <robert.altman@telventDTN.com>
   |  date:        Mon Nov 28 16:40:04 2011 +0000
   |  summary:     Update file.
   |
-  o  changeset:   1:3b3e956f9171
+  o  commit:      3b3e956f9171
   |  user:        Robert Altman <robert.altman@telventDTN.com>
   |  date:        Mon Nov 28 16:37:57 2011 +0000
   |
-  o  changeset:   0:141947992243
+  o  commit:      141947992243
      user:        Robert Altman <robert.altman@telventDTN.com>
      date:        Mon Nov 28 16:35:28 2011 +0000
      summary:     Checked in text file

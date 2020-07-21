@@ -91,7 +91,7 @@ a new repo should use lz4 by default
   $ hg ci -q -m lz1
   $ hg verify -q
   $ hg tip
-  changeset:   1:18e28922b6ed
+  commit:      18e28922b6ed
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     lz1

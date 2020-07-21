@@ -201,7 +201,7 @@ Test that verbose, JSON, template and commit output work
   $ hg journal --commit
   previous locations of '.':
   1e6c11564562  up
-  changeset:   1:1e6c11564562
+  commit:      1e6c11564562
   bookmark:    bar
   bookmark:    baz
   user:        test
@@ -209,13 +209,13 @@ Test that verbose, JSON, template and commit output work
   summary:     b
   
   cb9a9f314b8b  up 0
-  changeset:   0:cb9a9f314b8b
+  commit:      cb9a9f314b8b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
   1e6c11564562  commit -Aqm b
-  changeset:   1:1e6c11564562
+  commit:      1e6c11564562
   bookmark:    bar
   bookmark:    baz
   user:        test
@@ -223,7 +223,7 @@ Test that verbose, JSON, template and commit output work
   summary:     b
   
   cb9a9f314b8b  commit -Aqm a
-  changeset:   0:cb9a9f314b8b
+  commit:      cb9a9f314b8b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

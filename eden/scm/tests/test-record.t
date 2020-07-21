@@ -75,7 +75,7 @@ Select no files
   [1]
 
   $ hg tip -p
-  changeset:   -1:000000000000
+  commit:      000000000000
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   

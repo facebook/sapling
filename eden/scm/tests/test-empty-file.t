@@ -17,13 +17,13 @@
   $ hg commit -m 'add empty3'
 
   $ hg heads
-  changeset:   2:a1cb177e0d44
-  parent:      0:1e1d9c4e5b64
+  commit:      a1cb177e0d44
+  parent:      1e1d9c4e5b64
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add empty3
   
-  changeset:   1:097d2b0e17f6
+  commit:      097d2b0e17f6
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add empty2

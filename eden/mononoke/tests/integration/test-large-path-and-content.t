@@ -34,7 +34,7 @@ setup repo-hg
   $ hg add ${LONG_PATH}/${LONG_FILENAME}
   $ hg ci -mlong
   $ hg log
-  changeset:   0:b8119d283b73
+  commit:      b8119d283b73
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
@@ -63,7 +63,7 @@ pull on repo2
   added 1 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   $ hgmn log
-  changeset:   0:b8119d283b73
+  commit:      b8119d283b73
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -85,13 +85,13 @@ push one more long path from repo2
   $ hg add ${LONG_PATH}2/${LONG_FILENAME}2
   $ hg ci -mlong2
   $ hg log
-  changeset:   1:8fffbbe6af55
+  commit:      8fffbbe6af55
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long2
    (re)
-  changeset:   0:b8119d283b73
+  commit:      b8119d283b73
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
@@ -114,13 +114,13 @@ pull on repo3
   added 2 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   $ hgmn log
-  changeset:   1:8fffbbe6af55
+  commit:      8fffbbe6af55
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long2
    (re)
-  changeset:   0:b8119d283b73
+  commit:      b8119d283b73
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long

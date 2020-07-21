@@ -171,7 +171,7 @@ the server supports our custom getfiles method.
 
   $ cd ../master
   $ hg log -l 1 -r 'desc(a)' --style compact
-  3   1489bbbc46f0   1970-01-01 00:00 +0000   test
+     1489bbbc46f0   1970-01-01 00:00 +0000   test
     a
   
   $ hg up 'desc(a)'

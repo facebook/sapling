@@ -141,49 +141,49 @@ Log -R full.hg in fresh empty
   $ hg init empty
   $ cd empty
   $ hg -R ../full.hg log
-  changeset:   8:aa35859c02ea
-  parent:      3:eebf5a27f8ca
+  commit:      aa35859c02ea
+  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
   
-  changeset:   7:a6a34bfa0076
+  commit:      a6a34bfa0076
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
-  changeset:   6:7373c1169842
+  commit:      7373c1169842
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3
   
-  changeset:   5:1bb50a9436a7
+  commit:      1bb50a9436a7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.2
   
-  changeset:   4:095197eb4973
-  parent:      0:f9ee2f85a263
+  commit:      095197eb4973
+  parent:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
   
-  changeset:   3:eebf5a27f8ca
+  commit:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3
   
-  changeset:   2:e38ba6f5b7e0
+  commit:      e38ba6f5b7e0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.2
   
-  changeset:   1:34c2bf6b0626
+  commit:      34c2bf6b0626
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.1
   
-  changeset:   0:f9ee2f85a263
+  commit:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.0
@@ -366,57 +366,57 @@ Create partial clones
 Log -R full.hg in partial
 
   $ hg -R ../full.hg log -T phases
-  changeset:   8:aa35859c02ea
+  commit:      aa35859c02ea
   phase:       draft
-  parent:      3:eebf5a27f8ca
+  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
   
-  changeset:   7:a6a34bfa0076
+  commit:      a6a34bfa0076
   phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
-  changeset:   6:7373c1169842
+  commit:      7373c1169842
   phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3
   
-  changeset:   5:1bb50a9436a7
+  commit:      1bb50a9436a7
   phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.2
   
-  changeset:   4:095197eb4973
+  commit:      095197eb4973
   phase:       draft
-  parent:      0:f9ee2f85a263
+  parent:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
   
-  changeset:   3:eebf5a27f8ca
+  commit:      eebf5a27f8ca
   phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3
   
-  changeset:   2:e38ba6f5b7e0
+  commit:      e38ba6f5b7e0
   phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.2
   
-  changeset:   1:34c2bf6b0626
+  commit:      34c2bf6b0626
   phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.1
   
-  changeset:   0:f9ee2f85a263
+  commit:      f9ee2f85a263
   phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -428,29 +428,29 @@ Incoming full.hg in partial
   $ hg incoming bundle://../full.hg
   comparing with bundle:../full.hg
   searching for changes
-  changeset:   4:095197eb4973
-  parent:      0:f9ee2f85a263
+  commit:      095197eb4973
+  parent:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
   
-  changeset:   5:1bb50a9436a7
+  commit:      1bb50a9436a7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.2
   
-  changeset:   6:7373c1169842
+  commit:      7373c1169842
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3
   
-  changeset:   7:a6a34bfa0076
+  commit:      a6a34bfa0076
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
-  changeset:   8:aa35859c02ea
-  parent:      3:eebf5a27f8ca
+  commit:      aa35859c02ea
+  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
@@ -461,29 +461,29 @@ Outgoing -R full.hg vs partial2 in partial
   $ hg -R ../full.hg outgoing ../partial2
   comparing with ../partial2
   searching for changes
-  changeset:   4:095197eb4973
-  parent:      0:f9ee2f85a263
+  commit:      095197eb4973
+  parent:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
   
-  changeset:   5:1bb50a9436a7
+  commit:      1bb50a9436a7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.2
   
-  changeset:   6:7373c1169842
+  commit:      7373c1169842
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3
   
-  changeset:   7:a6a34bfa0076
+  commit:      a6a34bfa0076
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
   
-  changeset:   8:aa35859c02ea
-  parent:      3:eebf5a27f8ca
+  commit:      aa35859c02ea
+  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
@@ -510,13 +510,13 @@ Direct clone from bundle (all-history)
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R full-clone heads
-  changeset:   8:aa35859c02ea
-  parent:      3:eebf5a27f8ca
+  commit:      aa35859c02ea
+  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
   
-  changeset:   7:a6a34bfa0076
+  commit:      a6a34bfa0076
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.3m
@@ -556,22 +556,22 @@ View full contents of the bundle
   4 changesets found
   $ cd test
   $ hg -R ../../partial.hg log -r "bundle()"
-  changeset:   0:f9ee2f85a263
+  commit:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.0
   
-  changeset:   1:34c2bf6b0626
+  commit:      34c2bf6b0626
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.1
   
-  changeset:   2:e38ba6f5b7e0
+  commit:      e38ba6f5b7e0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.2
   
-  changeset:   3:eebf5a27f8ca
+  commit:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3
@@ -603,7 +603,7 @@ test for 540d1059c802
   $ hg incoming ../bundle.hg
   comparing with ../bundle.hg
   searching for changes
-  changeset:   1:ed1b79f46b9a
+  commit:      ed1b79f46b9a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change foo
@@ -770,23 +770,23 @@ directory does not exist
   $ hg update -r 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
-  o  changeset:   3:8bd3e1f196af
-  |  parent:      1:a01eca7af26d
+  o  commit:      8bd3e1f196af
+  |  parent:      a01eca7af26d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     3
   |
-  | @  changeset:   2:4652c276ac4f
+  | @  commit:      4652c276ac4f
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     2
   |
-  o  changeset:   1:a01eca7af26d
+  o  commit:      a01eca7af26d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     1
   |
-  o  changeset:   0:4fe08cd4693e
+  o  commit:      4fe08cd4693e
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     0

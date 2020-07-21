@@ -72,7 +72,7 @@ Test adding .hgeol
   % hg commit
   % hg status
   % hg tip -p
-  changeset:   1:33503edb53b0
+  commit:      33503edb53b0
   user:        test
   date:        Thu Jan 01 00:03:20 1970 +0000
   summary:     Added .hgeol file
@@ -99,7 +99,7 @@ Test adding .hgeol
   % hg commit
   % hg status
   % hg tip -p
-  changeset:   1:6e64eaa9eb23
+  commit:      6e64eaa9eb23
   user:        test
   date:        Thu Jan 01 00:03:20 1970 +0000
   summary:     Added .hgeol file

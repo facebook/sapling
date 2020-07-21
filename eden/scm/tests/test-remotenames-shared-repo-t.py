@@ -30,7 +30,7 @@ sh % "hg clone upstream primary" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "cd primary"
 sh % "hg log --graph" == r"""
-    @  changeset:   0:d26a60f4f448
+    @  commit:      d26a60f4f448
        bookmark:    default/mainline
        hoistedname: mainline
        user:        test
@@ -44,7 +44,7 @@ sh % "hg share -B primary secondary" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "cd secondary"
 sh % "hg log --graph" == r"""
-    @  changeset:   0:d26a60f4f448
+    @  commit:      d26a60f4f448
        bookmark:    default/mainline
        hoistedname: mainline
        user:        test

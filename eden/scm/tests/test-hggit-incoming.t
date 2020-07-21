@@ -14,7 +14,7 @@ Load commonly used test logic
   $ hg init hgrepo-empty
   $ hg -R hgrepo-empty incoming gitrepo | grep -v 'no changes found'
   comparing with gitrepo
-  changeset:   0:7eeab2ea75ec
+  commit:      7eeab2ea75ec
   bookmark:    master
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:10 2007 +0000
@@ -36,7 +36,7 @@ Load commonly used test logic
 
   $ hg -R hgrepo incoming | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
-  changeset:   1:9497a4ee62e1
+  commit:      9497a4ee62e1
   bookmark:    master
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:11 2007 +0000
@@ -58,7 +58,7 @@ Load commonly used test logic
   $ cd ../hgrepo
   $ hg incoming -p | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
-  changeset:   1:9497a4ee62e1
+  commit:      9497a4ee62e1
   bookmark:    master
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:11 2007 +0000
@@ -70,8 +70,8 @@ Load commonly used test logic
   @@ -0,0 +1,1 @@
   +beta
   
-  changeset:   2:9865e289be73
-  parent:      0:69982ec78c6d
+  commit:      9865e289be73
+  parent:      69982ec78c6d
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add d/gamma
@@ -82,7 +82,7 @@ Load commonly used test logic
   @@ -0,0 +1,1 @@
   +gamma
   
-  changeset:   3:5202f48c20c9
+  commit:      5202f48c20c9
   bookmark:    b1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
@@ -99,7 +99,7 @@ Load commonly used test logic
 incoming -r
   $ hg incoming -r master | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
-  changeset:   1:9497a4ee62e1
+  commit:      9497a4ee62e1
   bookmark:    master
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:11 2007 +0000
@@ -107,12 +107,12 @@ incoming -r
   
   $ hg incoming -r b1 | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
-  changeset:   1:9865e289be73
+  commit:      9865e289be73
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add d/gamma
   
-  changeset:   2:5202f48c20c9
+  commit:      5202f48c20c9
   bookmark:    b1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
@@ -120,7 +120,7 @@ incoming -r
   
   $ hg incoming -r t1 | grep -v 'no changes found'
   comparing with $TESTTMP/gitrepo
-  changeset:   1:9865e289be73
+  commit:      9865e289be73
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add d/gamma

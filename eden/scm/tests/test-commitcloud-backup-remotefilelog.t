@@ -153,10 +153,10 @@ the client doesn't receive the public commit file data during the pull.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg log -r 7644808a0e88 --stat
-  changeset:   6:7644808a0e88
+  commit:      7644808a0e88
   bookmark:    default/master
   hoistedname: master
-  parent:      0:22ea264ff89d
+  parent:      22ea264ff89d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     extracommit

@@ -17,7 +17,7 @@ We are making commit in repo (server) and will recover it in client 1 via short 
 
   $ hg clone ssh://user@dummy/repo client2 -q
   $ (cd repo && mkcommit somecommit && hg log -r .)
-  changeset:   0:f8b49bf62d4d
+  commit:      f8b49bf62d4d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     somecommit
@@ -36,7 +36,7 @@ We will also run few checks with `hg hide` / `hg up` commands.
   $ cd client1
   $ mkcommit someothercommit
   $ hg log -r .
-  changeset:   1:c1b6fe8fce73
+  commit:      c1b6fe8fce73
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     someothercommit

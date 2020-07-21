@@ -56,7 +56,7 @@ sh % "echo a" >> "a"
 sh % "hg commit '-mone more commit to demonstrate the bug'" == "new tip: 799ae3599e0e"
 
 sh % "hg tip" == r"""
-    changeset:   1:799ae3599e0e
+    commit:      799ae3599e0e
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     one more commit to demonstrate the bug"""

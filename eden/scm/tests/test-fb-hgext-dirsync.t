@@ -342,7 +342,7 @@ Test committing part of the working copy
   $ hg status
   A dir1/b
   $ hg log -r . --stat
-  changeset:   0:9eb46ceb8af3
+  commit:      9eb46ceb8af3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a
@@ -358,8 +358,8 @@ Test committing part of the working copy
   $ hg status
   A dir1/b
   $ hg log -r . --stat
-  changeset:   1:50bf2325c501
-  parent:      -1:000000000000
+  commit:      50bf2325c501
+  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a
@@ -379,8 +379,8 @@ Test committing part of the working copy
   mirrored changes in 'dir1/a' to 'dir2/a'
   $ hg status
   $ hg log -r . --stat
-  changeset:   2:5245011388b8
-  parent:      -1:000000000000
+  commit:      5245011388b8
+  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a
@@ -583,7 +583,7 @@ Test .hgdirsync in the working copy
   mirrored adding 'dir2/a' to 'dir3/a'
   mirrored adding 'dir5/b' to 'dir4/b'
   $ hg log -p -r .
-  changeset:   0:1cde422b6101
+  commit:      1cde422b6101
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init

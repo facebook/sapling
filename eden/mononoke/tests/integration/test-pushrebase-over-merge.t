@@ -47,10 +47,10 @@ Now try to push over a merge commit
   $ hg ci -m 'pushrebase over merge'
   $ hgmn push -r . --to master_bookmark -q
   $ hg log -r master_bookmark
-  changeset:   10:c8a34708eb3a
+  commit:      c8a34708eb3a
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
-  parent:      8:2a9ef460b971
+  parent:      2a9ef460b971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     pushrebase over merge

@@ -119,130 +119,130 @@ test template
 test style
 
   $ hg log --style bisect
-  changeset:   14:cbf2f3105bbf
+  commit:      cbf2f3105bbf
   bisect:      
   user:        test
   date:        Thu Jan 01 00:00:14 1970 +0000
   summary:     14
   
-  changeset:   13:e07efca37c43
+  commit:      e07efca37c43
   bisect:      
-  parent:      3:8417d459b90c
+  parent:      8417d459b90c
   user:        test
   date:        Thu Jan 01 00:00:13 1970 +0000
   summary:     13
   
-  changeset:   12:98c6b56349c0
+  commit:      98c6b56349c0
   bisect:      bad
   user:        test
   date:        Thu Jan 01 00:00:12 1970 +0000
   summary:     12
   
-  changeset:   11:03f491376e63
+  commit:      03f491376e63
   bisect:      bad (implicit)
   user:        test
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     11
   
-  changeset:   10:c012b15e2409
+  commit:      c012b15e2409
   bisect:      bad
   user:        test
   date:        Thu Jan 01 00:00:10 1970 +0000
   summary:     10
   
-  changeset:   9:2197c557e14c
+  commit:      2197c557e14c
   bisect:      untested
-  parent:      8:e74a86251f58
-  parent:      3:8417d459b90c
+  parent:      e74a86251f58
+  parent:      8417d459b90c
   user:        test
   date:        Thu Jan 01 00:00:09 1970 +0000
   summary:     9=8+3
   
-  changeset:   8:e74a86251f58
+  commit:      e74a86251f58
   bisect:      untested
   user:        test
   date:        Thu Jan 01 00:00:08 1970 +0000
   summary:     8
   
-  changeset:   7:a5f87041c899
+  commit:      a5f87041c899
   bisect:      skipped
   user:        test
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     7
   
-  changeset:   6:7d997bedcd8d
+  commit:      7d997bedcd8d
   bisect:      good
   user:        test
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     6
   
-  changeset:   5:2dd1875f1028
+  commit:      2dd1875f1028
   bisect:      good (implicit)
   user:        test
   date:        Thu Jan 01 00:00:05 1970 +0000
   summary:     5
   
-  changeset:   4:2a1daef14cd4
+  commit:      2a1daef14cd4
   bisect:      good
-  parent:      1:ce7c85e06a9f
+  parent:      ce7c85e06a9f
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     4
   
-  changeset:   3:8417d459b90c
+  commit:      8417d459b90c
   bisect:      ignored
   user:        test
   date:        Thu Jan 01 00:00:03 1970 +0000
   summary:     3
   
-  changeset:   2:e1355ee1f23e
+  commit:      e1355ee1f23e
   bisect:      ignored
   user:        test
   date:        Thu Jan 01 00:00:02 1970 +0000
   summary:     2
   
-  changeset:   1:ce7c85e06a9f
+  commit:      ce7c85e06a9f
   bisect:      good (implicit)
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     1
   
-  changeset:   0:b4e73ffab476
+  commit:      b4e73ffab476
   bisect:      good (implicit)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
   $ hg log --quiet --style bisect
-    14:cbf2f3105bbf
-    13:e07efca37c43
-  B 12:98c6b56349c0
-  B 11:03f491376e63
-  B 10:c012b15e2409
-  U 9:2197c557e14c
-  U 8:e74a86251f58
-  S 7:a5f87041c899
-  G 6:7d997bedcd8d
-  G 5:2dd1875f1028
-  G 4:2a1daef14cd4
-  I 3:8417d459b90c
-  I 2:e1355ee1f23e
-  G 1:ce7c85e06a9f
-  G 0:b4e73ffab476
+    cbf2f3105bbf
+    e07efca37c43
+  B 98c6b56349c0
+  B 03f491376e63
+  B c012b15e2409
+  U 2197c557e14c
+  U e74a86251f58
+  S a5f87041c899
+  G 7d997bedcd8d
+  G 2dd1875f1028
+  G 2a1daef14cd4
+  I 8417d459b90c
+  I e1355ee1f23e
+  G ce7c85e06a9f
+  G b4e73ffab476
 
   $ hg --config extensions.color= --color=debug log --quiet --style bisect
-  [log.bisect| ] 14:cbf2f3105bbf
-  [log.bisect| ] 13:e07efca37c43
-  [log.bisect bisect.bad|B] 12:98c6b56349c0
-  [log.bisect bisect.bad|B] 11:03f491376e63
-  [log.bisect bisect.bad|B] 10:c012b15e2409
-  [log.bisect bisect.untested|U] 9:2197c557e14c
-  [log.bisect bisect.untested|U] 8:e74a86251f58
-  [log.bisect bisect.skipped|S] 7:a5f87041c899
-  [log.bisect bisect.good|G] 6:7d997bedcd8d
-  [log.bisect bisect.good|G] 5:2dd1875f1028
-  [log.bisect bisect.good|G] 4:2a1daef14cd4
-  [log.bisect bisect.ignored|I] 3:8417d459b90c
-  [log.bisect bisect.ignored|I] 2:e1355ee1f23e
-  [log.bisect bisect.good|G] 1:ce7c85e06a9f
-  [log.bisect bisect.good|G] 0:b4e73ffab476
+  [log.bisect| ] cbf2f3105bbf
+  [log.bisect| ] e07efca37c43
+  [log.bisect bisect.bad|B] 98c6b56349c0
+  [log.bisect bisect.bad|B] 03f491376e63
+  [log.bisect bisect.bad|B] c012b15e2409
+  [log.bisect bisect.untested|U] 2197c557e14c
+  [log.bisect bisect.untested|U] e74a86251f58
+  [log.bisect bisect.skipped|S] a5f87041c899
+  [log.bisect bisect.good|G] 7d997bedcd8d
+  [log.bisect bisect.good|G] 2dd1875f1028
+  [log.bisect bisect.good|G] 2a1daef14cd4
+  [log.bisect bisect.ignored|I] 8417d459b90c
+  [log.bisect bisect.ignored|I] e1355ee1f23e
+  [log.bisect bisect.good|G] ce7c85e06a9f
+  [log.bisect bisect.good|G] b4e73ffab476

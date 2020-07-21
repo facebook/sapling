@@ -126,9 +126,9 @@
   [255]
 
   $ hg snapshot show "$REBASEOID"
-  changeset:   9:bcda34b7ba8a
-  parent:      8:fdf2c0326bba
-  parent:      7:9d3ebf4630d3
+  commit:      bcda34b7ba8a
+  parent:      fdf2c0326bba
+  parent:      9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
@@ -152,9 +152,9 @@
   
   The snapshot is in an unfinished *rebase* state.
   $ hg snapshot show "$OID" --template status
-  changeset:   10:be6e4139c42c
-  parent:      8:fdf2c0326bba
-  parent:      7:9d3ebf4630d3
+  commit:      be6e4139c42c
+  parent:      fdf2c0326bba
+  parent:      9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
@@ -211,8 +211,8 @@
   The snapshot is in an unfinished *merge* state.
 
   $ hg snapshot show "$HOID"
-  changeset:   11:03d785189d28
-  parent:      3:ffb8db6e9ac3
+  commit:      03d785189d28
+  parent:      ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
@@ -227,8 +227,8 @@
   
 
   $ hg show --hidden "$HOID"
-  changeset:   11:03d785189d28
-  parent:      3:ffb8db6e9ac3
+  commit:      03d785189d28
+  parent:      ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:
@@ -239,59 +239,59 @@
 
 # 3) Show them in ssl
   $ hg smartlog -T default
-  s    changeset:   10:be6e4139c42c
-  |\   parent:      8:fdf2c0326bba
-  | |  parent:      7:9d3ebf4630d3
+  s    commit:      be6e4139c42c
+  |\   parent:      fdf2c0326bba
+  | |  parent:      9d3ebf4630d3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     snapshot
   | |
-  +---s  changeset:   9:bcda34b7ba8a
-  | |/   parent:      8:fdf2c0326bba
-  | |    parent:      7:9d3ebf4630d3
+  +---s  commit:      bcda34b7ba8a
+  | |/   parent:      fdf2c0326bba
+  | |    parent:      9d3ebf4630d3
   | |    user:        test
   | |    date:        Thu Jan 01 00:00:00 1970 +0000
   | |    summary:     snapshot
   | |
-  | o  changeset:   8:fdf2c0326bba
-  | |  parent:      2:fa948fa73a59
+  | o  commit:      fdf2c0326bba
+  | |  parent:      fa948fa73a59
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge #2
   | |
-  o |  changeset:   7:9d3ebf4630d3
+  o |  commit:      9d3ebf4630d3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge #1
   | |
-  o |  changeset:   6:8e676f2ef130
+  o |  commit:      8e676f2ef130
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     draft2
   | |
-  o |  changeset:   5:d521223a2fb5
-  |/   parent:      2:fa948fa73a59
+  o |  commit:      d521223a2fb5
+  |/   parent:      fa948fa73a59
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1 amend2
   |
-  | s  changeset:   11:03d785189d28
-  | |  parent:      3:ffb8db6e9ac3
+  | s  commit:      03d785189d28
+  | |  parent:      ffb8db6e9ac3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     snapshot
   | |
-  | x  changeset:   3:ffb8db6e9ac3
+  | x  commit:      ffb8db6e9ac3
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1
   |
-  @  changeset:   2:fa948fa73a59
+  @  commit:      fa948fa73a59
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add some files
   |
-  o  changeset:   1:175dbab47dcc
+  o  commit:      175dbab47dcc
   |  user:        test
   ~  date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     public1
@@ -323,39 +323,39 @@
 # If we don't have a snapshot extension
   $ setconfig extensions.snapshot=!
   $ hg smartlog -T default
-  o  changeset:   8:fdf2c0326bba
-  |  parent:      2:fa948fa73a59
+  o  commit:      fdf2c0326bba
+  |  parent:      fa948fa73a59
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     merge #2
   |
-  | o  changeset:   7:9d3ebf4630d3
+  | o  commit:      9d3ebf4630d3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge #1
   | |
-  | o  changeset:   6:8e676f2ef130
+  | o  commit:      8e676f2ef130
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     draft2
   | |
-  | o  changeset:   5:d521223a2fb5
-  |/   parent:      2:fa948fa73a59
+  | o  commit:      d521223a2fb5
+  |/   parent:      fa948fa73a59
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1 amend2
   |
-  | x  changeset:   3:ffb8db6e9ac3
+  | x  commit:      ffb8db6e9ac3
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1
   |
-  @  changeset:   2:fa948fa73a59
+  @  commit:      fa948fa73a59
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add some files
   |
-  o  changeset:   1:175dbab47dcc
+  o  commit:      175dbab47dcc
   |  user:        test
   ~  date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     public1
@@ -369,52 +369,52 @@
   bcda34b7ba8a snapshot
   03d785189d28 snapshot
   $ hg smartlog -T default
-  s    changeset:   9:bcda34b7ba8a
-  |\   parent:      8:fdf2c0326bba
-  | |  parent:      7:9d3ebf4630d3
+  s    commit:      bcda34b7ba8a
+  |\   parent:      fdf2c0326bba
+  | |  parent:      9d3ebf4630d3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     snapshot
   | |
-  | o  changeset:   8:fdf2c0326bba
-  | |  parent:      2:fa948fa73a59
+  | o  commit:      fdf2c0326bba
+  | |  parent:      fa948fa73a59
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge #2
   | |
-  o |  changeset:   7:9d3ebf4630d3
+  o |  commit:      9d3ebf4630d3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge #1
   | |
-  o |  changeset:   6:8e676f2ef130
+  o |  commit:      8e676f2ef130
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     draft2
   | |
-  o |  changeset:   5:d521223a2fb5
-  |/   parent:      2:fa948fa73a59
+  o |  commit:      d521223a2fb5
+  |/   parent:      fa948fa73a59
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1 amend2
   |
-  | s  changeset:   11:03d785189d28
-  | |  parent:      3:ffb8db6e9ac3
+  | s  commit:      03d785189d28
+  | |  parent:      ffb8db6e9ac3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     snapshot
   | |
-  | x  changeset:   3:ffb8db6e9ac3
+  | x  commit:      ffb8db6e9ac3
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1
   |
-  @  changeset:   2:fa948fa73a59
+  @  commit:      fa948fa73a59
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add some files
   |
-  o  changeset:   1:175dbab47dcc
+  o  commit:      175dbab47dcc
   |  user:        test
   ~  date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     public1
@@ -426,22 +426,22 @@
   be6e4139c42c snapshot
   $ hg unhide "$HOID"
   $ hg log -r "snapshot()"
-  changeset:   9:bcda34b7ba8a
-  parent:      8:fdf2c0326bba
-  parent:      7:9d3ebf4630d3
+  commit:      bcda34b7ba8a
+  parent:      fdf2c0326bba
+  parent:      9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
   
-  changeset:   10:be6e4139c42c
-  parent:      8:fdf2c0326bba
-  parent:      7:9d3ebf4630d3
+  commit:      be6e4139c42c
+  parent:      fdf2c0326bba
+  parent:      9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
   
-  changeset:   11:03d785189d28
-  parent:      3:ffb8db6e9ac3
+  commit:      03d785189d28
+  parent:      ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot

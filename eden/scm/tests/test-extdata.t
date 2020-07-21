@@ -30,10 +30,10 @@ test revset support
   > EOF
 
   $ hg log -qr "extdata(filedata)"
-  2:f6ed99a58333
-  3:9de260b1e88e
+  f6ed99a58333
+  9de260b1e88e
   $ hg log -qr "extdata(shelldata)"
-  2:f6ed99a58333
+  f6ed99a58333
 
 test weight of extdata() revset
 
@@ -94,6 +94,6 @@ we don't fix up relative file URLs, but we do run shell commands in repo root
   abort: error: $ENOENT$
   [255]
   $ hg log -qr "extdata(shelldata)"
-  2:f6ed99a58333
+  f6ed99a58333
 
   $ cd ..

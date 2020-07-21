@@ -105,7 +105,7 @@ Apply a bundle on the second server via the command line
   $ cd ../server2
   $ hg unbundle $TESTTMP/bundle
   $ hg log -r a8078509f8d1
-  changeset:   2:a8078509f8d1
+  commit:      a8078509f8d1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     client push
@@ -139,7 +139,7 @@ Try unbundle with bad commitdates file
 Now try with correct file
   $ hg unbundle $TESTTMP/bundle --config pushrebase.commitdatesfile=$TESTTMP/commitdatesfile
   $ hg show d85a52e5321a
-  changeset:   2:d85a52e5321a
+  commit:      d85a52e5321a
   user:        test
   date:        Thu Jan 01 00:00:03 1970 +0000
   files:       client push
@@ -202,13 +202,13 @@ Apply stack
   o  initial [public:2bb9d20e471c]
   
   $ hg log -r 143d91ad57b2
-  changeset:   4:143d91ad57b2
+  commit:      143d91ad57b2
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     stack push 2
   
   $ hg log -r b5e2b8071144
-  changeset:   3:b5e2b8071144
+  commit:      b5e2b8071144
   user:        test
   date:        Thu Jan 01 00:00:03 1970 +0000
   summary:     stack push 1

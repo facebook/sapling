@@ -1248,58 +1248,58 @@ test unknown reference:
 issue4553: check that revset aliases override existing hash prefix
 
   $ hg log -qr e
-  6:e0cc66ef77e8
+  e0cc66ef77e8
 
   $ hg log -qr e --config revsetalias.e="all()"
-  0:2785f51eece5
-  1:d75937da8da0
-  2:5ed5505e9f1c
-  3:8528aa5637f2
-  4:2326846efdab
-  5:904fa392b941
-  6:e0cc66ef77e8
-  7:013af1973af4
-  8:d5d0dcbdc4d9
-  9:6a4f54cc779b
+  2785f51eece5
+  d75937da8da0
+  5ed5505e9f1c
+  8528aa5637f2
+  2326846efdab
+  904fa392b941
+  e0cc66ef77e8
+  013af1973af4
+  d5d0dcbdc4d9
+  6a4f54cc779b
 
   $ hg log -qr e: --config revsetalias.e="0"
-  0:2785f51eece5
-  1:d75937da8da0
-  2:5ed5505e9f1c
-  3:8528aa5637f2
-  4:2326846efdab
-  5:904fa392b941
-  6:e0cc66ef77e8
-  7:013af1973af4
-  8:d5d0dcbdc4d9
-  9:6a4f54cc779b
+  2785f51eece5
+  d75937da8da0
+  5ed5505e9f1c
+  8528aa5637f2
+  2326846efdab
+  904fa392b941
+  e0cc66ef77e8
+  013af1973af4
+  d5d0dcbdc4d9
+  6a4f54cc779b
 
   $ hg log -qr :e --config revsetalias.e="9"
-  0:2785f51eece5
-  1:d75937da8da0
-  2:5ed5505e9f1c
-  3:8528aa5637f2
-  4:2326846efdab
-  5:904fa392b941
-  6:e0cc66ef77e8
-  7:013af1973af4
-  8:d5d0dcbdc4d9
-  9:6a4f54cc779b
+  2785f51eece5
+  d75937da8da0
+  5ed5505e9f1c
+  8528aa5637f2
+  2326846efdab
+  904fa392b941
+  e0cc66ef77e8
+  013af1973af4
+  d5d0dcbdc4d9
+  6a4f54cc779b
 
   $ hg log -qr e:
-  6:e0cc66ef77e8
-  7:013af1973af4
-  8:d5d0dcbdc4d9
-  9:6a4f54cc779b
+  e0cc66ef77e8
+  013af1973af4
+  d5d0dcbdc4d9
+  6a4f54cc779b
 
   $ hg log -qr :e
-  0:2785f51eece5
-  1:d75937da8da0
-  2:5ed5505e9f1c
-  3:8528aa5637f2
-  4:2326846efdab
-  5:904fa392b941
-  6:e0cc66ef77e8
+  2785f51eece5
+  d75937da8da0
+  5ed5505e9f1c
+  8528aa5637f2
+  2326846efdab
+  904fa392b941
+  e0cc66ef77e8
 
 issue2549 - correct optimizations
 
@@ -1378,8 +1378,8 @@ issue2549 - correct optimizations
 
 issue4289 - ordering of built-ins
   $ hg log -M -q -r 3:2
-  3:8528aa5637f2
-  2:5ed5505e9f1c
+  8528aa5637f2
+  5ed5505e9f1c
 
 test revsets started with 40-chars hash (issue3669)
 

@@ -254,8 +254,8 @@ Verify that target is not selected as external rev (issue3085)
   
 
   $ hg log --rev tip
-  changeset:   8:65079693dac4
-  parent:      4:4ea5b230dea3
+  commit:      65079693dac4
+  parent:      4ea5b230dea3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Collapsed revision

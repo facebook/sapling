@@ -40,7 +40,7 @@ sh % "hg convert --authors authormap.txt orig new" == r"""
     writing author map file $TESTTMP/new/.hg/authormap"""
 sh % "cat new/.hg/authormap" == "user name=Long User Name"
 sh % "hg -Rnew log" == r"""
-    changeset:   0:d89716e88087
+    commit:      d89716e88087
     user:        Long User Name
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     foo"""
@@ -57,7 +57,7 @@ sh % "hg convert orig new" == r"""
     converting...
     0 foo"""
 sh % "hg -Rnew log" == r"""
-    changeset:   0:d89716e88087
+    commit:      d89716e88087
     user:        Long User Name
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     foo"""

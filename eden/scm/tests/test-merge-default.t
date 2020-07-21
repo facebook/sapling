@@ -65,8 +65,8 @@ Should succeed:
 Should succeed - 2 heads:
 
   $ hg merge -P
-  changeset:   3:ea9ff125ff88
-  parent:      1:1846eede8b68
+  commit:      ea9ff125ff88
+  parent:      1846eede8b68
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
@@ -110,7 +110,7 @@ are not ancestors of 7, regardless of where their common ancestors are.
 Merge preview not affected by common ancestor:
 
   $ hg merge -q -P 6
-  2:2d95304fed5d
-  4:f25cbe84d8b3
-  5:a431fabd6039
-  6:e88e33f3bf62
+  2d95304fed5d
+  f25cbe84d8b3
+  a431fabd6039
+  e88e33f3bf62

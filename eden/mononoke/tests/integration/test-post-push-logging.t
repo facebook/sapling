@@ -26,7 +26,7 @@ setup master bookmarks
 
 verify content
   $ hg log
-  changeset:   0:0e7ec5675652
+  commit:      0e7ec5675652
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

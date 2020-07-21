@@ -89,10 +89,10 @@ Remove the directory, then try to replace it with a file (issue754)
   updating bookmarks
   $ hg up -q -R git-repo-hg
   $ hg -R git-repo-hg tip -v
-  changeset:   5:c78094926be2
+  commit:      c78094926be2
   bookmark:    master
-  parent:      3:f5f5cb45432b
-  parent:      4:4e174f80c67c
+  parent:      f5f5cb45432b
+  parent:      4e174f80c67c
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:15 2007 +0000
   files:       a
@@ -409,7 +409,7 @@ convert author committer
   0 addfoo2
   updating bookmarks
   $ hg -R git-repo4-hg log -v
-  changeset:   1:d63e967f93da
+  commit:      d63e967f93da
   bookmark:    master
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
@@ -420,7 +420,7 @@ convert author committer
   committer: test <test@example.org>
   
   
-  changeset:   0:0735477b0224
+  commit:      0735477b0224
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:20 2007 +0000
   files:       foo
@@ -458,7 +458,7 @@ custom prefix on messagedifferent works
   updating bookmarks
 
   $ hg -R git-repo4-hg-messagedifferentprefix log -v
-  changeset:   1:2fe0c98a109d
+  commit:      2fe0c98a109d
   bookmark:    master
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
@@ -469,7 +469,7 @@ custom prefix on messagedifferent works
   different: test <test@example.org>
   
   
-  changeset:   0:0735477b0224
+  commit:      0735477b0224
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:20 2007 +0000
   files:       foo
@@ -490,7 +490,7 @@ messagealways will always add the "committer: " line even if committer identical
   updating bookmarks
 
   $ hg -R git-repo4-hg-messagealways log -v
-  changeset:   1:8db057d8cd37
+  commit:      8db057d8cd37
   bookmark:    master
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
@@ -501,7 +501,7 @@ messagealways will always add the "committer: " line even if committer identical
   committer: test <test@example.org>
   
   
-  changeset:   0:8f71fe9c98be
+  commit:      8f71fe9c98be
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:20 2007 +0000
   files:       foo
@@ -524,7 +524,7 @@ custom prefix on messagealways works
   updating bookmarks
 
   $ hg -R git-repo4-hg-messagealwaysprefix log -v
-  changeset:   1:83c17174de79
+  commit:      83c17174de79
   bookmark:    master
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
@@ -535,7 +535,7 @@ custom prefix on messagealways works
   always: test <test@example.org>
   
   
-  changeset:   0:2ac9bcb3534a
+  commit:      2ac9bcb3534a
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:20 2007 +0000
   files:       foo
@@ -558,7 +558,7 @@ replaceauthor replaces author with committer
   updating bookmarks
 
   $ hg -R git-repo4-hg-replaceauthor log -v
-  changeset:   1:122c1d8999ea
+  commit:      122c1d8999ea
   bookmark:    master
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
@@ -567,7 +567,7 @@ replaceauthor replaces author with committer
   addfoo2
   
   
-  changeset:   0:0735477b0224
+  commit:      0735477b0224
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:20 2007 +0000
   files:       foo
@@ -588,7 +588,7 @@ dropcommitter removes the committer
   updating bookmarks
 
   $ hg -R git-repo4-hg-dropcommitter log -v
-  changeset:   1:190b2da396cc
+  commit:      190b2da396cc
   bookmark:    master
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:21 2007 +0000
@@ -597,7 +597,7 @@ dropcommitter removes the committer
   addfoo2
   
   
-  changeset:   0:0735477b0224
+  commit:      0735477b0224
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:20 2007 +0000
   files:       foo
@@ -749,7 +749,7 @@ convert sub modules
   0 addsubmodule
   updating bookmarks
   $ hg -R git-repo6-hg log -v
-  changeset:   0:* (glob)
+  commit:      * (glob)
   bookmark:    master
   user:        nottest <test@example.org>
   date:        Mon Jan 01 00:00:23 2007 +0000
@@ -959,11 +959,11 @@ convert will not retain custom metadata keys by default
   updating bookmarks
 
   $ hg -R hgextras1 log --debug -r 1
-  changeset:   1:e13a39880f68479127b2a80fa0b448cc8524aa09
+  commit:      e13a39880f68479127b2a80fa0b448cc8524aa09
   bookmark:    master
   phase:       draft
-  parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
+  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
@@ -993,11 +993,11 @@ Converting a specific extra works
   updating bookmarks
 
   $ hg -R hgextras2 log --debug -r 1
-  changeset:   1:d40fb205d58597e6ecfd55b16f198be5bf436391
+  commit:      d40fb205d58597e6ecfd55b16f198be5bf436391
   bookmark:    master
   phase:       draft
-  parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
+  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
@@ -1021,11 +1021,11 @@ Converting multiple extras works
   updating bookmarks
 
   $ hg -R hgextras3 log --debug -r 1
-  changeset:   1:0105af33379e7b6491501fd34141b7af700fe125
+  commit:      0105af33379e7b6491501fd34141b7af700fe125
   bookmark:    master
   phase:       draft
-  parent:      0:dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
+  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
@@ -1050,11 +1050,11 @@ convert.git.saverev can be disabled to prevent convert_revision from being writt
   updating bookmarks
 
   $ hg -R hgextras4 log --debug -r 1
-  changeset:   1:1dcaf4ffe5bee43fa86db2800821f6f0af212c5c
+  commit:      1dcaf4ffe5bee43fa86db2800821f6f0af212c5c
   bookmark:    master
   phase:       draft
-  parent:      0:a13935fec4daf06a5a87a7307ccb0fc94f98d06d
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      a13935fec4daf06a5a87a7307ccb0fc94f98d06d
+  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
@@ -1077,11 +1077,11 @@ convert_revision from source
   updating bookmarks
 
   $ hg -R hgextras5 log --debug -r 1
-  changeset:   1:574d85931544d4542007664fee3747360e85ee28
+  commit:      574d85931544d4542007664fee3747360e85ee28
   bookmark:    master
   phase:       draft
-  parent:      0:a13935fec4daf06a5a87a7307ccb0fc94f98d06d
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      a13935fec4daf06a5a87a7307ccb0fc94f98d06d
+  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000

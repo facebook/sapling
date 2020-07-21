@@ -7,17 +7,17 @@
   $ echo "b" > b ; hg add b ; hg commit -qAm b
   $ echo "c" > c ; hg add c ; hg commit -qAm c
   $ hg log
-  changeset:   2:177f92b77385
+  commit:      177f92b77385
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
   
-  changeset:   1:d2ae7f538514
+  commit:      d2ae7f538514
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  changeset:   0:cb9a9f314b8b
+  commit:      cb9a9f314b8b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

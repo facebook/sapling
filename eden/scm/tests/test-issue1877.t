@@ -20,14 +20,14 @@ https://bz.mercurial-scm.org/1877
   $ hg book
    * main                      2:d36c0562f908
   $ hg heads
-  changeset:   2:d36c0562f908
+  commit:      d36c0562f908
   bookmark:    main
-  parent:      0:cb9a9f314b8b
+  parent:      cb9a9f314b8b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
   
-  changeset:   1:1e6c11564562
+  commit:      1e6c11564562
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b

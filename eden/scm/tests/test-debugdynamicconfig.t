@@ -169,7 +169,7 @@ Verify unicode characters in configs can be logged to our sampling extension
   > bar = Å
   > EOF
   $ hg -R client2 log -q -r . --configfile $TESTTMP/good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchsampling=1 --config extensions.sampling= --config sampling.filepath=$TESTTMP/sampling.log --config sampling.key.config_mismatch=mismatches --config configs.testdynamicconfigsubset=good_hgrc --config configs.legacylist=foo.bar,
-  -1:000000000000
+  000000000000
   $ cat $TESTTMP/sampling.log
   {"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00{"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00 (no-eol) (esc)
 

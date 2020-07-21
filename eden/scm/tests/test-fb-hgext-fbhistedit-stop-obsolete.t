@@ -21,32 +21,32 @@
 log before edit
 
   $ hg log --graph
-  @  changeset:   5:652413bf663e
+  @  commit:      652413bf663e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:e860deea161a
+  o  commit:      e860deea161a
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   3:055a42cdd887
+  o  commit:      055a42cdd887
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   2:177f92b77385
+  o  commit:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -66,33 +66,33 @@ stop & continue cannot preserve hashes without obsolescence
   $ hg histedit --continue
 
   $ hg log --graph
-  @  changeset:   7:794fe033d0a0
+  @  commit:      794fe033d0a0
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   6:04d2fab98077
-  |  parent:      3:055a42cdd887
+  o  commit:      04d2fab98077
+  |  parent:      055a42cdd887
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   3:055a42cdd887
+  o  commit:      055a42cdd887
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   2:177f92b77385
+  o  commit:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -136,10 +136,10 @@ stop on a commit
 check histedit_source
 
   $ hg log --debug --rev d51720eb7a133e2dabf74a445e509a3900e9c0b5
-  changeset:   9:d51720eb7a133e2dabf74a445e509a3900e9c0b5
+  commit:      d51720eb7a133e2dabf74a445e509a3900e9c0b5
   phase:       draft
-  parent:      3:055a42cdd88768532f9cf79daa407fc8d138de9b
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      055a42cdd88768532f9cf79daa407fc8d138de9b
+  parent:      0000000000000000000000000000000000000000
   manifest:    b2ebbc42649134e3236996c0a3b1c6ec526e8f2e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

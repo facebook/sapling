@@ -182,8 +182,8 @@ Adding some more history to repo a:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark stable)
   $ hg parents
-  changeset:   12:7bc8ee83a26f
-  parent:      10:a7949464abda
+  commit:      7bc8ee83a26f
+  parent:      a7949464abda
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     starting branch stable
@@ -192,13 +192,13 @@ Adding some more history to repo a:
 Repo a has two heads:
 
   $ hg heads
-  changeset:   13:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   11:3aa88e8a4d5f
+  commit:      3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -223,13 +223,13 @@ Testing clone -u:
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   13:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   11:3aa88e8a4d5f
+  commit:      3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -259,13 +259,13 @@ Testing clone --pull -u:
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   13:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   11:3aa88e8a4d5f
+  commit:      3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -290,13 +290,13 @@ Testing clone -u <branch>:
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   13:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   11:3aa88e8a4d5f
+  commit:      3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -305,7 +305,7 @@ Repo ua has both heads:
 Branch 'stable' is checked out:
 
   $ hg -R ua parents
-  changeset:   13:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -324,13 +324,13 @@ Testing default checkout:
 Repo ua has both heads:
 
   $ hg -R ua heads
-  changeset:   13:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   11:3aa88e8a4d5f
+  commit:      3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -348,13 +348,13 @@ Testing #<bookmark> (no longer works):
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   13:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
   
-  changeset:   11:3aa88e8a4d5f
+  commit:      3aa88e8a4d5f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
@@ -383,7 +383,7 @@ Testing -u -r <branch>:
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   12:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -413,7 +413,7 @@ Testing -r <branch>:
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  changeset:   12:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -423,7 +423,7 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 Branch 'stable' is checked out:
 
   $ hg -R ua parents
-  changeset:   12:4f44d5743f52
+  commit:      4f44d5743f52
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

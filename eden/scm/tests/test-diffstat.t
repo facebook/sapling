@@ -82,7 +82,7 @@ Filename without "a/" or "b/" (issue5759):
    2 files changed, 0 insertions(+), 0 deletions(-)
 
   $ hg log --config 'diff.noprefix=1' -r '1:' -p --stat --git
-  changeset:   1:3a95b07bb77f
+  commit:      3a95b07bb77f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     appenda
@@ -101,7 +101,7 @@ Filename without "a/" or "b/" (issue5759):
   +a
   +a
   
-  changeset:   2:c60a6c753773
+  commit:      c60a6c753773
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     createb

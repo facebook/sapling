@@ -31,7 +31,7 @@ Setup a server repo
 
   $ hg bookmark master_bookmark -r tip
   $ hg log -r tip -q
-  2:26805aba1e60
+  26805aba1e60
 
 Send unbundle
   $ cat $TESTDIR/bundles/sendunbundle.test.hg | hg debugsendunbundle ssh://user@dummy/server
@@ -42,4 +42,4 @@ Send unbundle
 Server tip is now different
   $ cd "$TESTTMP/server"
   $ hg log -r tip -q
-  3:c2e526aacb51
+  c2e526aacb51

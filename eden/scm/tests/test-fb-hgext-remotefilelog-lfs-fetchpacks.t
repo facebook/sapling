@@ -109,7 +109,7 @@
     rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639\nsize 17\nx-is-binary 0\n'
 
   $ hg show
-  changeset:   0:0d2948821b2b
+  commit:      0d2948821b2b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       x

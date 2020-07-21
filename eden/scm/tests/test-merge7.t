@@ -114,31 +114,31 @@ pull and merge from test-a again
        4        5.      25  .....       4 d40249267ae3 8fe46a3eb557 000000000000 (re)
 
   $ hg log
-  changeset:   4:40d11a4173a8
-  parent:      2:96b70246a118
+  commit:      40d11a4173a8
+  parent:      96b70246a118
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     two -> two-point-one
   
-  changeset:   3:50c3a7e29886
-  parent:      1:d1e159716d41
-  parent:      2:96b70246a118
+  commit:      50c3a7e29886
+  parent:      d1e159716d41
+  parent:      96b70246a118
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Merge 1
   
-  changeset:   2:96b70246a118
-  parent:      0:b1832b9d912a
+  commit:      96b70246a118
+  parent:      b1832b9d912a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Numbers as words
   
-  changeset:   1:d1e159716d41
+  commit:      d1e159716d41
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2 -> 2.5
   
-  changeset:   0:b1832b9d912a
+  commit:      b1832b9d912a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Initial

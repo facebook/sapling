@@ -46,7 +46,7 @@ bookmark X moved to rev 0
 look up bookmark
 
   $ hg log -r X
-  changeset:   0:f7b1eb17ad24
+  commit:      f7b1eb17ad24
   bookmark:    X
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -99,13 +99,13 @@ list bookmarks
 bookmarks revset
 
   $ hg log -r 'bookmark()'
-  changeset:   0:f7b1eb17ad24
+  commit:      f7b1eb17ad24
   bookmark:    X
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
-  changeset:   1:925d80f479bb
+  commit:      925d80f479bb
   bookmark:    X2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -113,27 +113,27 @@ bookmarks revset
   
   $ hg log -r 'bookmark(Y)'
   $ hg log -r 'bookmark(X2)'
-  changeset:   1:925d80f479bb
+  commit:      925d80f479bb
   bookmark:    X2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
   $ hg log -r 'bookmark("re:X")'
-  changeset:   0:f7b1eb17ad24
+  commit:      f7b1eb17ad24
   bookmark:    X
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
   
-  changeset:   1:925d80f479bb
+  commit:      925d80f479bb
   bookmark:    X2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
   $ hg log -r 'bookmark("literal:X")'
-  changeset:   0:f7b1eb17ad24
+  commit:      f7b1eb17ad24
   bookmark:    X
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -304,10 +304,10 @@ list bookmarks
 look up stripped bookmark name
 
   $ hg log -r '"x  y"'
-  changeset:   2:db815d6d32e6
+  commit:      db815d6d32e6
   bookmark:    Y
   bookmark:    x  y
-  parent:      0:f7b1eb17ad24
+  parent:      f7b1eb17ad24
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -562,7 +562,7 @@ test clone with a bookmark named "default" (issue3677)
      default                   1:925d80f479bb
      x  y                      2:db815d6d32e6
   $ hg -R cloned-bookmark-default parents -q
-  2:db815d6d32e6
+  db815d6d32e6
   $ hg bookmark -d default
 
 test clone with a specific revision
@@ -712,29 +712,29 @@ remove all bookmarks
 test stripping a non-checked-out but bookmarked revision
 
   $ hg log --graph
-  @  changeset:   4:9c404beeabc2
-  |  parent:      2:db815d6d32e6
+  @  commit:      9c404beeabc2
+  |  parent:      db815d6d32e6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     y
   |
-  | o  changeset:   3:125c9a1d6df6
+  | o  commit:      125c9a1d6df6
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     x
   |
-  o  changeset:   2:db815d6d32e6
-  |  parent:      0:f7b1eb17ad24
+  o  commit:      db815d6d32e6
+  |  parent:      f7b1eb17ad24
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     2
   |
-  | o  changeset:   1:925d80f479bb
+  | o  commit:      925d80f479bb
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     1
   |
-  o  changeset:   0:f7b1eb17ad24
+  o  commit:      f7b1eb17ad24
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     0
@@ -748,25 +748,25 @@ test stripping a non-checked-out but bookmarked revision
 should-end-on-two should end up pointing to revision 2, as that's the
 tipmost surviving ancestor of the stripped revision.
   $ hg log --graph
-  @  changeset:   3:9c404beeabc2
+  @  commit:      9c404beeabc2
   |  bookmark:    four
   |  bookmark:    should-end-on-two
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     y
   |
-  o  changeset:   2:db815d6d32e6
-  |  parent:      0:f7b1eb17ad24
+  o  commit:      db815d6d32e6
+  |  parent:      f7b1eb17ad24
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     2
   |
-  | o  changeset:   1:925d80f479bb
+  | o  commit:      925d80f479bb
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     1
   |
-  o  changeset:   0:f7b1eb17ad24
+  o  commit:      f7b1eb17ad24
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     0
@@ -923,7 +923,7 @@ ensure changelog is written before bookmarks
   $ hg commit -qm two --config extensions.pausefinalize=$TESTTMP/pausefinalize.py &
   $ sleep 2
   $ hg log -r .
-  changeset:   0:867bc5792c8c
+  commit:      867bc5792c8c
   bookmark:    mybook
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1004,30 +1004,30 @@ add hooks:
   > EOF
 
   $ hg log -G -T phases
-  @  changeset:   6:81dcce76aa0b
+  @  commit:      81dcce76aa0b
   |  phase:       draft
-  |  parent:      4:125c9a1d6df6
+  |  parent:      125c9a1d6df6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     xx
   |
-  | o  changeset:   5:f047c86095b7
+  | o  commit:      f047c86095b7
   | |  bookmark:    Z
   | |  phase:       draft
-  | |  parent:      3:9c404beeabc2
+  | |  parent:      9c404beeabc2
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     yy
   | |
-  o |  changeset:   4:125c9a1d6df6
+  o |  commit:      125c9a1d6df6
   | |  bookmark:    Y
   | |  phase:       public
-  | |  parent:      2:db815d6d32e6
+  | |  parent:      db815d6d32e6
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     x
   | |
-  | o  changeset:   3:9c404beeabc2
+  | o  commit:      9c404beeabc2
   |/   bookmark:    foo
   |    bookmark:    four
   |    bookmark:    should-end-on-two
@@ -1036,16 +1036,16 @@ add hooks:
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     y
   |
-  o  changeset:   2:db815d6d32e6
+  o  commit:      db815d6d32e6
   |  bookmark:    foo@2
   |  bookmark:    x  y
   |  phase:       public
-  |  parent:      0:f7b1eb17ad24
+  |  parent:      f7b1eb17ad24
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     2
   |
-  | o  changeset:   1:925d80f479bb
+  | o  commit:      925d80f479bb
   |/   bookmark:    X2
   |    bookmark:    Z@1
   |    phase:       public
@@ -1053,7 +1053,7 @@ add hooks:
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     1
   |
-  o  changeset:   0:f7b1eb17ad24
+  o  commit:      f7b1eb17ad24
      bookmark:    foo@1
      phase:       public
      user:        test

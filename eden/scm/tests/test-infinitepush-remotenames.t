@@ -51,7 +51,7 @@ Push scratch commit and scratch bookmark
   $ hg book
   no bookmarks set
   $ hg -R ../repo log -G
-  @  changeset:   0:ac312cb08db5
+  @  commit:      ac312cb08db5
      bookmark:    scratch/serverbook
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -100,19 +100,19 @@ Create one more branch head on the server
   (leaving bookmark scratch/serverbook)
   $ mkcommit head2
   $ hg log -G
-  @  changeset:   2:dc4b2ecb723b
-  |  parent:      0:ac312cb08db5
+  @  commit:      dc4b2ecb723b
+  |  parent:      ac312cb08db5
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     head2
   |
-  | o  changeset:   1:64d557aa86fd
+  | o  commit:      64d557aa86fd
   |/   bookmark:    scratch/serverbook
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     head1
   |
-  o  changeset:   0:ac312cb08db5
+  o  commit:      ac312cb08db5
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     servercommit

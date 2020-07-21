@@ -62,7 +62,7 @@
   remote: pushing 1 changeset:
   remote:     0b41a6a811a2  x3
   $ hg log -r .
-  changeset:   2:0b41a6a811a2
+  commit:      0b41a6a811a2
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -83,7 +83,7 @@
   default = ssh://user@dummy/repo?read_copy
   default-push = ssh://user@dummy/repo?write
   $ hg log -r .
-  changeset:   1:a89d614e2364
+  commit:      a89d614e2364
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -93,7 +93,7 @@
   $ echo x >> x
   $ hg commit -qAm x4
   $ hg log -r .
-  changeset:   2:e68715a0fc4c
+  commit:      e68715a0fc4c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     x4
@@ -116,7 +116,7 @@
   1 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r .
-  changeset:   4:12f14bedbd28
+  commit:      12f14bedbd28
   bookmark:    default/master
   hoistedname: master
   user:        test

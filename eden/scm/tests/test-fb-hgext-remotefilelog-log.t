@@ -43,7 +43,7 @@ Shallow clone from full
 Log on a file without -f
 
   $ hg log dir/y
-  changeset:   1:79c51fb96423
+  commit:      79c51fb96423
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -53,7 +53,7 @@ Log on a file without -f
 Log on a file with -f
 
   $ hg log -f dir/y
-  changeset:   1:79c51fb96423
+  commit:      79c51fb96423
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -62,7 +62,7 @@ Log on a file with -f
   
 Log on a file with kind in path
   $ hg log -r "filelog('path:dir/y')"
-  changeset:   1:79c51fb96423
+  commit:      79c51fb96423
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -72,14 +72,14 @@ Log on a file with kind in path
 Log on multiple files with -f
 
   $ hg log -f dir/y x
-  changeset:   1:79c51fb96423
+  commit:      79c51fb96423
   bookmark:    default/master
   hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
   
-  changeset:   0:b292c1e3311f
+  commit:      b292c1e3311f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     x
@@ -87,7 +87,7 @@ Log on multiple files with -f
 Log on a directory
 
   $ hg log dir
-  changeset:   1:79c51fb96423
+  commit:      79c51fb96423
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -98,7 +98,7 @@ Log on a file from inside a directory
 
   $ cd dir
   $ hg log y
-  changeset:   1:79c51fb96423
+  commit:      79c51fb96423
   bookmark:    default/master
   hoistedname: master
   user:        test

@@ -34,10 +34,10 @@ The warning message changed in Git 1.8.0
   $ cd hgrepo
 
   $ HGENCODING=utf-8 hg log --graph --debug | grep -v 'phase:' | grep -v ': *author=' | grep -v ': *message='
-  @  changeset:   3:3c284d9743de7c02ac66b8b5ce10d39efd38d7bc
+  @  commit:      3c284d9743de7c02ac66b8b5ce10d39efd38d7bc
   |  bookmark:    master
-  |  parent:      2:727e37c486803fce561d97a80721324febade37e
-  |  parent:      -1:0000000000000000000000000000000000000000
+  |  parent:      727e37c486803fce561d97a80721324febade37e
+  |  parent:      0000000000000000000000000000000000000000
   |  manifest:    ea49f93388380ead5601c8fcbfa187516e7c2ed8
   |  user:        tést èncödîng <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
@@ -51,9 +51,9 @@ The warning message changed in Git 1.8.0
   |  add d\xc3\xa9lt\xc3\xa0 (esc)
   |
   |
-  o  changeset:   2:727e37c486803fce561d97a80721324febade37e
-  |  parent:      1:5408f831a4d1a1d6ecccdddbe04c5a8b888a33c1
-  |  parent:      -1:0000000000000000000000000000000000000000
+  o  commit:      727e37c486803fce561d97a80721324febade37e
+  |  parent:      5408f831a4d1a1d6ecccdddbe04c5a8b888a33c1
+  |  parent:      0000000000000000000000000000000000000000
   |  manifest:    f580e7da3673c137370da2b931a1dee83590d7b4
   |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
   |  date:        Mon Jan 01 00:00:12 2007 +0000
@@ -66,9 +66,9 @@ The warning message changed in Git 1.8.0
   |  add g\xc3\xa4mm\xc3\xa2 (esc)
   |
   |
-  o  changeset:   1:5408f831a4d1a1d6ecccdddbe04c5a8b888a33c1
-  |  parent:      0:b1884a2b1964e4881e235f33485aebc34ee61b90
-  |  parent:      -1:0000000000000000000000000000000000000000
+  o  commit:      5408f831a4d1a1d6ecccdddbe04c5a8b888a33c1
+  |  parent:      b1884a2b1964e4881e235f33485aebc34ee61b90
+  |  parent:      0000000000000000000000000000000000000000
   |  manifest:    f0bd6fbafbaebe4bb59c35108428f6fce152431d
   |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
   |  date:        Mon Jan 01 00:00:11 2007 +0000
@@ -81,9 +81,9 @@ The warning message changed in Git 1.8.0
   |  add beta
   |
   |
-  o  changeset:   0:b1884a2b1964e4881e235f33485aebc34ee61b90
-     parent:      -1:0000000000000000000000000000000000000000
-     parent:      -1:0000000000000000000000000000000000000000
+  o  commit:      b1884a2b1964e4881e235f33485aebc34ee61b90
+     parent:      0000000000000000000000000000000000000000
+     parent:      0000000000000000000000000000000000000000
      manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000

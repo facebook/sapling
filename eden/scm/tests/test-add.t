@@ -83,7 +83,7 @@ should fail
   $ hg ci -m 0 --traceback
 
   $ hg log -r "heads(. or wdir() & file('**'))"
-  changeset:   0:* (glob)
+  commit:      * (glob)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0
@@ -113,9 +113,9 @@ should fail
 wdir doesn't cause a crash, and can be dynamically selected if dirty
 
   $ hg log -r "heads(. or wdir() & file('**'))"
-  changeset:   2147483647:ffffffffffff
-  parent:      2:* (glob)
-  parent:      1:* (glob)
+  commit:      ffffffffffff
+  parent:      * (glob)
+  parent:      * (glob)
   user:        test
   date:        * (glob)
   

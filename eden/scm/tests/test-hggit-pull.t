@@ -30,7 +30,7 @@ pull a tag
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark t_alpha)
   $ hg -R hgrepo log --graph
-  @  changeset:   0:69982ec78c6d
+  @  commit:      69982ec78c6d
      bookmark:    master
      bookmark:    t_alpha
      user:        test <test@example.org>
@@ -65,13 +65,13 @@ pull a branch
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   $ hg -R hgrepo log --graph
-  o  changeset:   1:3bb02b6794dd
+  o  commit:      3bb02b6794dd
   |  bookmark:    beta
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  @  changeset:   0:69982ec78c6d
+  @  commit:      69982ec78c6d
      bookmark:    epsilon
      bookmark:    master
      bookmark:    t_alpha
@@ -94,27 +94,27 @@ pull everything else
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   $ hg -R hgrepo log --graph
-  o  changeset:   3:78f47553e70d
+  o  commit:      78f47553e70d
   |  bookmark:    master
-  |  parent:      0:69982ec78c6d
+  |  parent:      69982ec78c6d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     add gamma
   |
-  | o  changeset:   2:0a22250873dd
+  | o  commit:      0a22250873dd
   |/   bookmark:    delta
-  |    parent:      0:69982ec78c6d
+  |    parent:      69982ec78c6d
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:12 2007 +0000
   |    summary:     add delta
   |
-  | o  changeset:   1:3bb02b6794dd
+  | o  commit:      3bb02b6794dd
   |/   bookmark:    beta
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:11 2007 +0000
   |    summary:     add beta
   |
-  @  changeset:   0:69982ec78c6d
+  @  commit:      69982ec78c6d
      bookmark:    epsilon
      bookmark:    t_alpha
      user:        test <test@example.org>
@@ -135,34 +135,34 @@ pull the merge
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   $ hg -R hgrepo log --graph
-  o    changeset:   4:10c1db28cc89
+  o    commit:      10c1db28cc89
   |\   bookmark:    master
-  | |  parent:      3:78f47553e70d
-  | |  parent:      1:3bb02b6794dd
+  | |  parent:      78f47553e70d
+  | |  parent:      3bb02b6794dd
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     Merge branch 'beta'
   | |
-  | o  changeset:   3:78f47553e70d
-  | |  parent:      0:69982ec78c6d
+  | o  commit:      78f47553e70d
+  | |  parent:      69982ec78c6d
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     add gamma
   | |
-  | | o  changeset:   2:0a22250873dd
+  | | o  commit:      0a22250873dd
   | |/   bookmark:    delta
-  | |    parent:      0:69982ec78c6d
+  | |    parent:      69982ec78c6d
   | |    user:        test <test@example.org>
   | |    date:        Mon Jan 01 00:00:12 2007 +0000
   | |    summary:     add delta
   | |
-  o |  changeset:   1:3bb02b6794dd
+  o |  commit:      3bb02b6794dd
   |/   bookmark:    beta
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:11 2007 +0000
   |    summary:     add beta
   |
-  @  changeset:   0:69982ec78c6d
+  @  commit:      69982ec78c6d
      bookmark:    epsilon
      bookmark:    t_alpha
      user:        test <test@example.org>
@@ -190,47 +190,47 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   $ hg -R hgrepo log --graph
-  o  changeset:   6:47d709856ce8
+  o  commit:      47d709856ce8
   |  bookmark:    releases/v2
-  |  parent:      4:10c1db28cc89
+  |  parent:      10c1db28cc89
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:15 2007 +0000
   |  summary:     add eta
   |
-  | o  changeset:   5:e09a50abb1b1
+  | o  commit:      e09a50abb1b1
   |/   bookmark:    releases/v1
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:14 2007 +0000
   |    summary:     add zeta
   |
-  o    changeset:   4:10c1db28cc89
+  o    commit:      10c1db28cc89
   |\   bookmark:    master
-  | |  parent:      3:78f47553e70d
-  | |  parent:      1:3bb02b6794dd
+  | |  parent:      78f47553e70d
+  | |  parent:      3bb02b6794dd
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     Merge branch 'beta'
   | |
-  | o  changeset:   3:78f47553e70d
-  | |  parent:      0:69982ec78c6d
+  | o  commit:      78f47553e70d
+  | |  parent:      69982ec78c6d
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     add gamma
   | |
-  | | o  changeset:   2:0a22250873dd
+  | | o  commit:      0a22250873dd
   | |/   bookmark:    delta
-  | |    parent:      0:69982ec78c6d
+  | |    parent:      69982ec78c6d
   | |    user:        test <test@example.org>
   | |    date:        Mon Jan 01 00:00:12 2007 +0000
   | |    summary:     add delta
   | |
-  o |  changeset:   1:3bb02b6794dd
+  o |  commit:      3bb02b6794dd
   |/   bookmark:    beta
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:11 2007 +0000
   |    summary:     add beta
   |
-  @  changeset:   0:69982ec78c6d
+  @  commit:      69982ec78c6d
      bookmark:    epsilon
      bookmark:    t_alpha
      user:        test <test@example.org>
@@ -265,10 +265,10 @@ also add an annotated tag
   pulling from $TESTTMP/gitrepo
   no changes found
   $ hg -R hgrepo log -r master
-  changeset:   4:10c1db28cc89
+  commit:      10c1db28cc89
   bookmark:    master
-  parent:      3:78f47553e70d
-  parent:      1:3bb02b6794dd
+  parent:      78f47553e70d
+  parent:      3bb02b6794dd
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
   summary:     Merge branch 'beta'
@@ -289,34 +289,34 @@ also add an annotated tag
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   $ hg -R hgrepo heads
-  changeset:   9:497a89953f7c
+  commit:      497a89953f7c
   bookmark:    master
   user:        test <test@example.org>
   date:        Wed Jan 01 00:00:00 2014 +0000
   summary:     newcommit
   
-  changeset:   7:6809e41e5128
-  parent:      4:10c1db28cc89
+  commit:      6809e41e5128
+  parent:      10c1db28cc89
   user:        test <test@example.org>
   date:        Sat Mar 01 00:00:00 2014 +0000
   summary:     oldtag
   
-  changeset:   6:47d709856ce8
+  commit:      47d709856ce8
   bookmark:    releases/v2
-  parent:      4:10c1db28cc89
+  parent:      10c1db28cc89
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:15 2007 +0000
   summary:     add eta
   
-  changeset:   5:e09a50abb1b1
+  commit:      e09a50abb1b1
   bookmark:    releases/v1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:14 2007 +0000
   summary:     add zeta
   
-  changeset:   2:0a22250873dd
+  commit:      0a22250873dd
   bookmark:    delta
-  parent:      0:69982ec78c6d
+  parent:      69982ec78c6d
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add delta
@@ -351,7 +351,7 @@ Skip commits using hggit.skipgithashes
       1 files changed, 1 insertions(+), 0 deletions(-)
   
   $ hg log -r 4d4019e3dd06 --stat
-  changeset:   1:4d4019e3dd06
+  commit:      4d4019e3dd06
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
   summary:     add gamma

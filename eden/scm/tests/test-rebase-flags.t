@@ -35,18 +35,18 @@ Test rebasing a single commit that changes flags:
   $ echo "B" > foo
   $ hg com -m "change"
   $ hg log -G
-  @  changeset:   2:a7f7eece6b0c
-  |  parent:      0:c0233516197f
+  @  commit:      a7f7eece6b0c
+  |  parent:      c0233516197f
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     change
   |
-  | o  changeset:   1:5f41048406b0
+  | o  commit:      5f41048406b0
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     move
   |
-  o  changeset:   0:c0233516197f
+  o  commit:      c0233516197f
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     base

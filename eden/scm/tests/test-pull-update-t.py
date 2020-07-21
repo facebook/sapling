@@ -119,7 +119,7 @@ sh % "hg pull -u -r active-after-pull" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (activating bookmark active-after-pull)"""
 
-sh % "hg parents -q" == "4:f815b3da6163"
+sh % "hg parents -q" == "f815b3da6163"
 sh % "hg bookmarks" == r"""
      * active-after-pull         4:f815b3da6163
        active-before-pull        3:483b76ad4309"""
@@ -147,7 +147,7 @@ sh % "hg pull -u '$TESTTMP/t#active-after-pull'" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (activating bookmark active-after-pull)"""
 
-sh % "hg parents -q" == "4:f815b3da6163"
+sh % "hg parents -q" == "f815b3da6163"
 sh % "hg bookmarks" == r"""
      * active-after-pull         4:f815b3da6163
        active-before-pull        3:483b76ad4309"""
@@ -181,7 +181,7 @@ sh % "hg pull -u -r f815b3da6163" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (leaving bookmark active-before-pull)"""
 
-sh % "hg parents -q" == "4:f815b3da6163"
+sh % "hg parents -q" == "f815b3da6163"
 sh % "hg bookmarks" == "   active-before-pull        3:483b76ad4309"
 
 # (discard pulled changes)

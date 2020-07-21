@@ -76,7 +76,7 @@ Clone and apply patch:
   $ hg import ../c/p
   applying ../c/p
   $ hg log -v -r 1
-  changeset:   1:cd0bde79c428
+  commit:      cd0bde79c428
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       a

@@ -44,7 +44,7 @@ as well
   default = ssh://user@dummy/repo?read
   default-push = ssh://user@dummy/repo?write
   $ hg log -r .
-  changeset:   1:a89d614e2364
+  commit:      a89d614e2364
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -62,7 +62,7 @@ as well
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   $ hg log -r .
-  changeset:   2:421535db10b6
+  commit:      421535db10b6
   bookmark:    default/master
   hoistedname: master
   user:        test
@@ -74,7 +74,7 @@ as well
   searching for changes
   no changes found
   $ hg log -r .
-  changeset:   2:421535db10b6
+  commit:      421535db10b6
   bookmark:    default/master
   hoistedname: master
   user:        test

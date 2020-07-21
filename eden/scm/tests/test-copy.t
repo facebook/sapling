@@ -35,7 +35,7 @@
 we should see two history entries
 
   $ hg history -v
-  changeset:   1:93580a2c28a5
+  commit:      93580a2c28a5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       b
@@ -43,7 +43,7 @@ we should see two history entries
   2
   
   
-  changeset:   0:c19d34741b0a
+  commit:      c19d34741b0a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       a
@@ -55,7 +55,7 @@ we should see two history entries
 we should see one log entry for a
 
   $ hg log a
-  changeset:   0:c19d34741b0a
+  commit:      c19d34741b0a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
@@ -70,7 +70,7 @@ this should show a revision linked to changeset 0
 we should see one log entry for b
 
   $ hg log b
-  changeset:   1:93580a2c28a5
+  commit:      93580a2c28a5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2

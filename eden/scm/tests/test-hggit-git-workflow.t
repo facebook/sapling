@@ -9,9 +9,9 @@ Load commonly used test logic
   $ hg add alpha
   $ fn_hg_commit -m "add alpha"
   $ hg log --graph --debug | grep -v phase:
-  @  changeset:   0:0221c246a56712c6aa64e5ee382244d8a471b1e2
-     parent:      -1:0000000000000000000000000000000000000000
-     parent:      -1:0000000000000000000000000000000000000000
+  @  commit:      0221c246a56712c6aa64e5ee382244d8a471b1e2
+     parent:      0000000000000000000000000000000000000000
+     parent:      0000000000000000000000000000000000000000
      manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -48,10 +48,10 @@ get things back to hg
   $ hg gimport
   importing git objects into hg
   $ hg log --graph --debug | grep -v phase:
-  o  changeset:   1:d294862c083a2eac3c1b31d3a3bdbdffb49a5b25
+  o  commit:      d294862c083a2eac3c1b31d3a3bdbdffb49a5b25
   |  bookmark:    master
-  |  parent:      0:0221c246a56712c6aa64e5ee382244d8a471b1e2
-  |  parent:      -1:0000000000000000000000000000000000000000
+  |  parent:      0221c246a56712c6aa64e5ee382244d8a471b1e2
+  |  parent:      0000000000000000000000000000000000000000
   |  manifest:    f0bd6fbafbaebe4bb59c35108428f6fce152431d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
@@ -63,9 +63,9 @@ get things back to hg
   |  add beta
   |
   |
-  o  changeset:   0:0221c246a56712c6aa64e5ee382244d8a471b1e2
-     parent:      -1:0000000000000000000000000000000000000000
-     parent:      -1:0000000000000000000000000000000000000000
+  o  commit:      0221c246a56712c6aa64e5ee382244d8a471b1e2
+     parent:      0000000000000000000000000000000000000000
+     parent:      0000000000000000000000000000000000000000
      manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -92,13 +92,13 @@ gimport support for git.mindate
   $ hg gimport
   no changes found
   $ hg log --graph
-  o  changeset:   1:d294862c083a
+  o  commit:      d294862c083a
   |  bookmark:    master
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:0221c246a567
+  o  commit:      0221c246a567
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -112,23 +112,23 @@ gimport support for git.mindate
   $ hg gimport
   importing git objects into hg
   $ hg log --graph
-  o  changeset:   3:3231f2356e13
+  o  commit:      3231f2356e13
   |  bookmark:    master
   |  user:        test <test@example.org>
   |  date:        Wed Jan 01 00:00:00 2014 +0000
   |  summary:     newcommit
   |
-  o  changeset:   2:7912581b53bd
+  o  commit:      7912581b53bd
   |  user:        test <test@example.org>
   |  date:        Sat Mar 01 00:00:00 2014 +0000
   |  summary:     oldcommit
   |
-  o  changeset:   1:d294862c083a
+  o  commit:      d294862c083a
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:0221c246a567
+  o  commit:      0221c246a567
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha

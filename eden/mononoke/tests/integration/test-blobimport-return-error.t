@@ -30,12 +30,12 @@ Init treemanifest and remotefilelog
   $ hg add b
   $ hg ci -mb
   $ hg log
-  changeset:   1:0e067c57feba
+  commit:      0e067c57feba
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
    (re)
-  changeset:   0:3903775176ed
+  commit:      3903775176ed
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

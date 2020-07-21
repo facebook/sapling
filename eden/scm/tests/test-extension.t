@@ -117,7 +117,7 @@ Check normal command's load order of extensions and registration of functions
   3) bar extsetup
   4) foo reposetup
   4) bar reposetup
-  0:c24b9ac61126
+  c24b9ac61126
 
   $ echo 'foo = !' >> $HGRCPATH
   $ echo 'bar = !' >> $HGRCPATH

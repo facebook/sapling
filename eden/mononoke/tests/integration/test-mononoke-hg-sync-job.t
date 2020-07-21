@@ -92,7 +92,7 @@ Sync a pushrebase bookmark move
   * successful sync of entries [2] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
-  changeset:   2:1e43292ffbb3
+  commit:      1e43292ffbb3
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -103,14 +103,14 @@ Sync a pushrebase bookmark move
   * successful sync of entries [3] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
-  changeset:   3:6cc06ef82eeb
+  commit:      6cc06ef82eeb
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     anothercommit
   
   $ hg log -r master_bookmark^
-  changeset:   2:1e43292ffbb3
+  commit:      1e43292ffbb3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     pushcommit
@@ -120,7 +120,7 @@ Sync a pushrebase bookmark move
   * successful sync of entries [4] (glob)
   $ cd repo-hg
   $ hg log -r master_bookmark
-  changeset:   2:1e43292ffbb3
+  commit:      1e43292ffbb3
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -130,7 +130,7 @@ Enable replay verification hooks
   $ cd $TESTTMP/repo-hg-2
   $ enable_replay_verification_hook
   $ hg log -r master_bookmark
-  changeset:   1:add0c792bfce
+  commit:      add0c792bfce
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -159,7 +159,7 @@ Set the correct timestamp back
 
   $ cd repo-hg-2
   $ hg log -r master_bookmark
-  changeset:   1:add0c792bfce
+  commit:      add0c792bfce
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -188,9 +188,9 @@ Continue replay
   * successful sync of entries [5] (glob)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r tip
-  changeset:   4:67d5c96d65a7
+  commit:      67d5c96d65a7
   bookmark:    master_bookmark
-  parent:      2:1e43292ffbb3
+  parent:      1e43292ffbb3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     onemorecommit
@@ -235,13 +235,13 @@ Continue replay
   * successful sync of entries [7] (glob)
   $ cd repo-hg-3
   $ hg log -r master_bookmark^
-  changeset:   5:a7acac33c050
+  commit:      a7acac33c050
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     exec mode
   
   $ hg log -r master_bookmark
-  changeset:   6:6f24f1b38581
+  commit:      6f24f1b38581
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -273,7 +273,7 @@ Test hook bypass using REPLAY_BYPASS file
   > hooks.unbundlereplaybooks=other_bookmark
   > CONFIG
   $ hg log -r master_bookmark
-  changeset:   1:add0c792bfce
+  commit:      add0c792bfce
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -304,12 +304,12 @@ Test bookmark deletion sync
   $ hgmn -q push --rev . --to book_to_delete --create
   [1]
   $ hg log -r master_bookmark
-  changeset:   8:6f24f1b38581
+  commit:      6f24f1b38581
   bookmark:    default/book_to_delete
   bookmark:    default/master_bookmark
   hoistedname: book_to_delete
   hoistedname: master_bookmark
-  parent:      6:a7acac33c050
+  parent:      a7acac33c050
   user:        test
   date:        * (glob)
   summary:     symlink
@@ -325,10 +325,10 @@ Test bookmark deletion sync
   deleting remote bookmark book_to_delete
   [1]
   $ hg log -r master_bookmark
-  changeset:   8:6f24f1b38581
+  commit:      6f24f1b38581
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
-  parent:      6:a7acac33c050
+  parent:      a7acac33c050
   user:        test
   date:        * (glob)
   summary:     symlink
@@ -338,7 +338,7 @@ Test bookmark deletion sync
   * successful sync of entries [9] (glob)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r master_bookmark
-  changeset:   6:6f24f1b38581
+  commit:      6f24f1b38581
   bookmark:    master_bookmark
   user:        test
   date:        * (glob)
@@ -351,8 +351,8 @@ Test force pushrebase sync
 -- create a commit, which is not an ancestor of master
   $ mkcommit commit_to_force_pushmaster
   $ hg log -r .
-  changeset:   10:cc83c88b72d3
-  parent:      6:a7acac33c050
+  commit:      cc83c88b72d3
+  parent:      a7acac33c050
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit_to_force_pushmaster
@@ -361,10 +361,10 @@ Test force pushrebase sync
   $ hgmn push -q -f --to master_bookmark
 -- master should now point to it
   $ hg log -r .
-  changeset:   10:cc83c88b72d3
+  commit:      cc83c88b72d3
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
-  parent:      6:a7acac33c050
+  parent:      a7acac33c050
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit_to_force_pushmaster
@@ -376,9 +376,9 @@ Test force pushrebase sync
 -- and if the replay result is good (e.g. master_bookmark points to the same commit as in client-push)
   $ cd $TESTTMP/repo-hg-3
   $ hg log -r master_bookmark
-  changeset:   7:cc83c88b72d3
+  commit:      cc83c88b72d3
   bookmark:    master_bookmark
-  parent:      5:a7acac33c050
+  parent:      a7acac33c050
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit_to_force_pushmaster

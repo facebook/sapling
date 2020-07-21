@@ -41,28 +41,28 @@
   $ hg ci -Ame
 
   $ hg log
-  changeset:   4:443431ffac4f
+  commit:      443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
-  changeset:   3:65bd5f99a4a3
-  parent:      1:ef3a871183d7
+  commit:      65bd5f99a4a3
+  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
   
-  changeset:   2:264128213d29
+  commit:      264128213d29
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
   
-  changeset:   1:ef3a871183d7
+  commit:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  changeset:   0:9ab35a2d17cb
+  commit:      9ab35a2d17cb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -71,15 +71,15 @@
   $ teststrip 'desc(e)' 'desc(e)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update desc(e), strip desc(e)
-  changeset:   4:443431ffac4f
+  commit:      443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % after update desc(e), strip desc(e)
-  changeset:   3:65bd5f99a4a3
-  parent:      1:ef3a871183d7
+  commit:      65bd5f99a4a3
+  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
@@ -87,14 +87,14 @@
   $ teststrip 'desc(e)' 'desc(d)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update desc(e), strip desc(d)
-  changeset:   4:443431ffac4f
+  commit:      443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % after update desc(e), strip desc(d)
-  changeset:   1:ef3a871183d7
+  commit:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -102,13 +102,13 @@
   $ teststrip 'desc(b)' 'desc(e)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update desc(b), strip desc(e)
-  changeset:   1:ef3a871183d7
+  commit:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
   % after update desc(b), strip desc(e)
-  changeset:   1:ef3a871183d7
+  commit:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -116,13 +116,13 @@
   $ teststrip 'desc(e)' 'desc(c)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update desc(e), strip desc(c)
-  changeset:   4:443431ffac4f
+  commit:      443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
   % after update desc(e), strip desc(c)
-  changeset:   3:443431ffac4f
+  commit:      443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -130,15 +130,15 @@
   $ teststrip 'desc(c)' 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update desc(c), strip desc(b)
-  changeset:   4:264128213d29
-  parent:      1:ef3a871183d7
+  commit:      264128213d29
+  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
   
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % after update desc(c), strip desc(b)
-  changeset:   0:9ab35a2d17cb
+  commit:      9ab35a2d17cb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -149,28 +149,28 @@
   % after update null, strip desc(c)
 
   $ hg log
-  changeset:   4:264128213d29
-  parent:      1:ef3a871183d7
+  commit:      264128213d29
+  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
   
-  changeset:   3:443431ffac4f
+  commit:      443431ffac4f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
   
-  changeset:   2:65bd5f99a4a3
+  commit:      65bd5f99a4a3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
   
-  changeset:   1:ef3a871183d7
+  commit:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  changeset:   0:9ab35a2d17cb
+  commit:      9ab35a2d17cb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -178,8 +178,8 @@
   $ hg up -C 'desc(c)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg parents
-  changeset:   4:264128213d29
-  parent:      1:ef3a871183d7
+  commit:      264128213d29
+  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -188,7 +188,7 @@
   $ hg --traceback debugstrip 'desc(c)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg parents
-  changeset:   1:ef3a871183d7
+  commit:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -208,28 +208,28 @@
   added 1 changesets with 0 changes to 0 files
   $ rm .hg/strip-backup/*
   $ hg log --graph
-  o  changeset:   4:264128213d29
-  |  parent:      1:ef3a871183d7
+  o  commit:      264128213d29
+  |  parent:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  | o  changeset:   3:443431ffac4f
+  | o  commit:      443431ffac4f
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     e
   | |
-  | o  changeset:   2:65bd5f99a4a3
+  | o  commit:      65bd5f99a4a3
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     d
   |
-  @  changeset:   1:ef3a871183d7
+  @  commit:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:9ab35a2d17cb
+  o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -243,13 +243,13 @@
 before strip of merge parent
 
   $ hg parents
-  changeset:   2:65bd5f99a4a3
+  commit:      65bd5f99a4a3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
   
-  changeset:   4:264128213d29
-  parent:      1:ef3a871183d7
+  commit:      264128213d29
+  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -260,7 +260,7 @@ before strip of merge parent
 after strip of merge parent
 
   $ hg parents
-  changeset:   1:ef3a871183d7
+  commit:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -272,28 +272,28 @@ after strip of merge parent
   updated to "264128213d29: c"
   1 other heads for branch "default"
   $ hg log -G
-  @  changeset:   4:264128213d29
-  |  parent:      1:ef3a871183d7
+  @  commit:      264128213d29
+  |  parent:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  | o  changeset:   3:443431ffac4f
+  | o  commit:      443431ffac4f
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     e
   | |
-  | o  changeset:   2:65bd5f99a4a3
+  | o  commit:      65bd5f99a4a3
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     d
   |
-  o  changeset:   1:ef3a871183d7
+  o  commit:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:9ab35a2d17cb
+  o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -303,45 +303,45 @@ after strip of merge parent
 
   $ hg debugstrip "roots(desc(d))" 'desc(e)'
   $ hg log -G
-  @  changeset:   2:264128213d29
+  @  commit:      264128213d29
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   1:ef3a871183d7
+  o  commit:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:9ab35a2d17cb
+  o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
   $ restore
   $ hg log -G
-  o  changeset:   4:443431ffac4f
+  o  commit:      443431ffac4f
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   3:65bd5f99a4a3
-  |  parent:      1:ef3a871183d7
+  o  commit:      65bd5f99a4a3
+  |  parent:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  | @  changeset:   2:264128213d29
+  | @  commit:      264128213d29
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     c
   |
-  o  changeset:   1:ef3a871183d7
+  o  commit:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:9ab35a2d17cb
+  o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -351,17 +351,17 @@ after strip of merge parent
   $ hg debugstrip 'desc(c)' 'desc(e)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
-  o  changeset:   2:65bd5f99a4a3
+  o  commit:      65bd5f99a4a3
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  @  changeset:   1:ef3a871183d7
+  @  commit:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:9ab35a2d17cb
+  o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -561,30 +561,30 @@ initialization (previous repo is empty anyway)
   (branch merge, don't forget to commit)
   $ hg ci -m 'mergeCD'
   $ hg log -G
-  @    changeset:   4:d8db9d137221
-  |\   parent:      2:5c51d8d6557d
-  | |  parent:      3:6625a5168474
+  @    commit:      d8db9d137221
+  |\   parent:      5c51d8d6557d
+  | |  parent:      6625a5168474
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     mergeCD
   | |
-  | o  changeset:   3:6625a5168474
-  | |  parent:      1:eca11cf91c71
+  | o  commit:      6625a5168474
+  | |  parent:      eca11cf91c71
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     commitD
   | |
-  o |  changeset:   2:5c51d8d6557d
+  o |  commit:      5c51d8d6557d
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     commitC
   |
-  o  changeset:   1:eca11cf91c71
+  o  commit:      eca11cf91c71
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     commitB
   |
-  o  changeset:   0:105141ef12d0
+  o  commit:      105141ef12d0
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     commitA
@@ -595,15 +595,15 @@ Check bundle behavior:
   $ hg bundle -r 'desc(mergeCD)' --base 'desc(commitC)' ../issue4736.hg
   2 changesets found
   $ hg log -r 'bundle()' -R ../issue4736.hg
-  changeset:   3:6625a5168474
-  parent:      1:eca11cf91c71
+  commit:      6625a5168474
+  parent:      eca11cf91c71
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commitD
   
-  changeset:   4:d8db9d137221
-  parent:      2:5c51d8d6557d
-  parent:      3:6625a5168474
+  commit:      d8db9d137221
+  parent:      5c51d8d6557d
+  parent:      6625a5168474
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     mergeCD
@@ -634,17 +634,17 @@ unrelated to strip.)
   bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   $ hg log -G
-  o  changeset:   2:5c51d8d6557d
+  o  commit:      5c51d8d6557d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     commitC
   |
-  @  changeset:   1:eca11cf91c71
+  @  commit:      eca11cf91c71
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     commitB
   |
-  o  changeset:   0:105141ef12d0
+  o  commit:      105141ef12d0
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     commitA
@@ -653,20 +653,20 @@ unrelated to strip.)
 strip backup content
 
   $ hg log -r 'bundle()' -R .hg/strip-backup/6625a5168474-*-backup.hg
-  changeset:   2:5c51d8d6557d
+  commit:      5c51d8d6557d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commitC
   
-  changeset:   3:6625a5168474
-  parent:      1:eca11cf91c71
+  commit:      6625a5168474
+  parent:      eca11cf91c71
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commitD
   
-  changeset:   4:d8db9d137221
-  parent:      2:5c51d8d6557d
-  parent:      3:6625a5168474
+  commit:      d8db9d137221
+  parent:      5c51d8d6557d
+  parent:      6625a5168474
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     mergeCD

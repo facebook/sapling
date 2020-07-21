@@ -112,7 +112,7 @@ has tree manifest. In this case, this implies that tree manifest will be
 generated for the commit 'b9b574be2f5d' and its parent commit '9055b56f3916'.
 
   $ hg log -vpr 'b9b574be2f5d'
-  changeset:   2:b9b574be2f5d
+  commit:      b9b574be2f5d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x
@@ -132,7 +132,7 @@ generated for the commit 'b9b574be2f5d' and its parent commit '9055b56f3916'.
 able to view it even with 'treemanifest.demandgenerate' being False.
 
   $ hg log -vpr 'b9b574be2f5d' --config treemanifest.demandgenerate=False
-  changeset:   2:b9b574be2f5d
+  commit:      b9b574be2f5d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x
@@ -152,7 +152,7 @@ able to view it even with 'treemanifest.demandgenerate' being False.
 '9055b56f3916' because we now have the tree manifest for it.
 
   $ hg log -vpr '9055b56f3916' --config treemanifest.demandgenerate=False
-  changeset:   1:9055b56f3916
+  commit:      9055b56f3916
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x
@@ -231,8 +231,8 @@ able to view it even with 'treemanifest.demandgenerate' being False.
 manifest for commit 'f7febcf0f689'.
 
   $ hg log -vpr 'f7febcf0f689'
-  changeset:   3:f7febcf0f689
-  parent:      1:9055b56f3916
+  commit:      f7febcf0f689
+  parent:      9055b56f3916
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x

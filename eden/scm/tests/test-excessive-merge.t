@@ -33,32 +33,32 @@
   $ hg ci -m "merge a/b -> blah"
 
   $ hg log
-  changeset:   4:2ee31f665a86
-  parent:      1:96155394af80
-  parent:      2:92cc4c306b19
+  commit:      2ee31f665a86
+  parent:      96155394af80
+  parent:      92cc4c306b19
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge a/b -> blah
   
-  changeset:   3:e16a66a37edd
-  parent:      2:92cc4c306b19
-  parent:      1:96155394af80
+  commit:      e16a66a37edd
+  parent:      92cc4c306b19
+  parent:      96155394af80
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge b/a -> blah
   
-  changeset:   2:92cc4c306b19
-  parent:      0:5e0375449e74
+  commit:      92cc4c306b19
+  parent:      5e0375449e74
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     branch b
   
-  changeset:   1:96155394af80
+  commit:      96155394af80
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     branch a
   
-  changeset:   0:5e0375449e74
+  commit:      5e0375449e74
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     test

@@ -37,7 +37,7 @@ sh % "hg commit -Am y" == "adding y"
 
 sh % "cd ../master2"
 sh % "hg log -l 1" == r"""
-    changeset:   1:d34c38483be9
+    commit:      d34c38483be9
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     y"""

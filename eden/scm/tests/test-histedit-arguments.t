@@ -23,19 +23,19 @@ Repo setup.
   $ hg ci -m five
 
   $ hg log --style compact --graph
-  @  4   08d98a8350f3   1970-01-01 00:00 +0000   test
+  @     08d98a8350f3   1970-01-01 00:00 +0000   test
   |    five
   |
-  o  3   c8e68270e35a   1970-01-01 00:00 +0000   test
+  o     c8e68270e35a   1970-01-01 00:00 +0000   test
   |    four
   |
-  o  2   eb57da33312f   1970-01-01 00:00 +0000   test
+  o     eb57da33312f   1970-01-01 00:00 +0000   test
   |    three
   |
-  o  1   579e40513370   1970-01-01 00:00 +0000   test
+  o     579e40513370   1970-01-01 00:00 +0000   test
   |    two
   |
-  o  0   6058cbb6cfd7   1970-01-01 00:00 +0000   test
+  o     6058cbb6cfd7   1970-01-01 00:00 +0000   test
        one
   
 
@@ -491,13 +491,13 @@ Test autoverb feature
   $ hg ci -qAm "roll! one"
 
   $ hg log --style compact --graph
-  @  2   4f34d0f8b5fa   1970-01-01 00:00 +0000   test
+  @     4f34d0f8b5fa   1970-01-01 00:00 +0000   test
   |    roll! one
   |
-  o  1   579e40513370   1970-01-01 00:00 +0000   test
+  o     579e40513370   1970-01-01 00:00 +0000   test
   |    two
   |
-  o  0   6058cbb6cfd7   1970-01-01 00:00 +0000   test
+  o     6058cbb6cfd7   1970-01-01 00:00 +0000   test
        one
   
 

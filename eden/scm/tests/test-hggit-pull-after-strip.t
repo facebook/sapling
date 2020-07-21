@@ -23,7 +23,7 @@ clone a tag
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-a log --graph
-  @  changeset:   0:69982ec78c6d
+  @  commit:      69982ec78c6d
      bookmark:    master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -34,13 +34,13 @@ clone a branch
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-b log --graph
-  @  changeset:   1:3bb02b6794dd
+  @  commit:      3bb02b6794dd
   |  bookmark:    beta
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:69982ec78c6d
+  o  commit:      69982ec78c6d
      bookmark:    master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -68,18 +68,18 @@ pull works after 'hg git-cleanup'
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   $ hg log --graph
-  o  changeset:   2:3db9bf9073b5
+  o  commit:      3db9bf9073b5
   |  bookmark:    beta
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add to beta
   |
-  o  changeset:   1:3bb02b6794dd
+  o  commit:      3bb02b6794dd
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  @  changeset:   0:69982ec78c6d
+  @  commit:      69982ec78c6d
      bookmark:    master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000

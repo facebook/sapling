@@ -153,7 +153,7 @@ sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""
 
 sh % "hg reset -C '66ee28d0328c^'" == "2 changesets hidden"
 sh % "hg log -r 66ee28d0328c" == r"""
-    changeset:   1:66ee28d0328c
+    commit:      66ee28d0328c
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     y"""

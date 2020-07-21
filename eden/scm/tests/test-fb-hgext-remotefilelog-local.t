@@ -161,8 +161,8 @@
   added 2 changesets with 3 changes to 3 files
 
   $ hg log -r 'max(desc(a))' --stat
-  changeset:   3:19edf50f4de7
-  parent:      1:fed61014d323
+  commit:      19edf50f4de7
+  parent:      fed61014d323
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

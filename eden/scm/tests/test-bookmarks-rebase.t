@@ -41,26 +41,26 @@ rebase
   rebasing 2ae46b1d99a7 "3" (two)
 
   $ hg log
-  changeset:   4:42e5ed2cdcf4
+  commit:      42e5ed2cdcf4
   bookmark:    two
-  parent:      1:925d80f479bb
+  parent:      925d80f479bb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
-  changeset:   2:db815d6d32e6
-  parent:      0:f7b1eb17ad24
+  commit:      db815d6d32e6
+  parent:      f7b1eb17ad24
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  changeset:   1:925d80f479bb
+  commit:      925d80f479bb
   bookmark:    one
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  changeset:   0:f7b1eb17ad24
+  commit:      f7b1eb17ad24
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0

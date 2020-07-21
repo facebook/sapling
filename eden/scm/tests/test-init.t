@@ -45,7 +45,7 @@ test custom revlog chunk cache sizes
   abort: revlog chunk cache size 1023 is not a power of 2!
   [255]
   $ hg --config format.chunkcachesize=1024 log -R local -pv
-  changeset:   0:08b9e9f63b32
+  commit:      08b9e9f63b32
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo
@@ -118,7 +118,7 @@ init+push to remote2
   $ hg init ssh://user@dummy/remote2
   $ hg incoming -R remote2 local
   comparing with local
-  changeset:   0:08b9e9f63b32
+  commit:      08b9e9f63b32
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
@@ -178,11 +178,11 @@ output of dummyssh
 comparing repositories
 
   $ hg tip -q -R local
-  0:08b9e9f63b32
+  08b9e9f63b32
   $ hg tip -q -R remote1
-  0:08b9e9f63b32
+  08b9e9f63b32
   $ hg tip -q -R remote2
-  0:08b9e9f63b32
+  08b9e9f63b32
 
 check names for repositories (clashes with URL schemes, special chars)
 

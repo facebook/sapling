@@ -129,12 +129,12 @@ Check copy preservation
 (It seems like a bug in log that the following doesn't show rev 1.)
 
   $ hg log --follow --copies e
-  changeset:   2:82bbac3d2cf4
+  commit:      82bbac3d2cf4
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     4: merge 2 and 3
   
-  changeset:   0:23c3be426dce
+  commit:      23c3be426dce
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     1: add c, move f to d
@@ -142,7 +142,7 @@ Check copy preservation
 Check copy removal on missing parent
 
   $ hg log --follow --copies d
-  changeset:   0:23c3be426dce
+  commit:      23c3be426dce
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     1: add c, move f to d

@@ -27,16 +27,16 @@ resolve using second parent
   $ hg ci -m "merge to B"
 
   $ hg log --graph --style compact
-  @    3:2,1   120385945d08   1970-01-01 00:00 +0000   test
+  @    :ea82b67264a1,7205e83b5a3f   120385945d08   1970-01-01 00:00 +0000   test
   |\     merge to B
   | |
-  | o  2:0   ea82b67264a1   1970-01-01 00:00 +0000   test
+  | o  :5d1a6b64f9d0   ea82b67264a1   1970-01-01 00:00 +0000   test
   | |    A->C
   | |
-  o |  1   7205e83b5a3f   1970-01-01 00:00 +0000   test
+  o |     7205e83b5a3f   1970-01-01 00:00 +0000   test
   |/     A->B
   |
-  o  0   5d1a6b64f9d0   1970-01-01 00:00 +0000   test
+  o     5d1a6b64f9d0   1970-01-01 00:00 +0000   test
        origin
   
 
@@ -59,15 +59,15 @@ resolve using second parent
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 expect the same revision ids as above
   $ hg -R hgrepo2 log --graph --style compact
-  @    3[master]:1,2   df42911f11c1   1970-01-01 00:00 +0000   test
+  @    [master]:8ec5b459b86e,47fc555571b8   df42911f11c1   1970-01-01 00:00 +0000   test
   |\     merge to B
   | |
-  | o  2:0   47fc555571b8   1970-01-01 00:00 +0000   test
+  | o  :fd5eb788c3a1   47fc555571b8   1970-01-01 00:00 +0000   test
   | |    A->B
   | |
-  o |  1   8ec5b459b86e   1970-01-01 00:00 +0000   test
+  o |     8ec5b459b86e   1970-01-01 00:00 +0000   test
   |/     A->C
   |
-  o  0   fd5eb788c3a1   1970-01-01 00:00 +0000   test
+  o     fd5eb788c3a1   1970-01-01 00:00 +0000   test
        origin
   

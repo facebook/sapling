@@ -553,8 +553,8 @@ using ui.statuscopies setting
 
 using log status template (issue5155)
   $ hg log -Tstatus -r 'wdir()' -C
-  changeset:   2147483647:ffffffffffff
-  parent:      0:8c55c58b4c0e
+  commit:      ffffffffffff
+  parent:      8c55c58b4c0e
   user:        test
   date:        * (glob)
   files:
@@ -573,7 +573,7 @@ This is buggy behavior.
 
 using log status template, the copy information is displayed correctly.
   $ hg log -Tstatus -r. -C
-  changeset:   1:6685fde43d21
+  commit:      6685fde43d21
   user:        test
   date:        * (glob)
   summary:     blah

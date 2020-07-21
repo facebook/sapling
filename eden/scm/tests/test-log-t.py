@@ -24,7 +24,7 @@ sh % "hg log -r '-1:0'" == r"""
     abort: unknown revision '-1'!
     [255]"""
 sh % "hg log -r 'branch(name)'"
-sh % "hg log -r null -q" == "-1:000000000000"
+sh % "hg log -r null -q" == "000000000000"
 
 sh % "cd .."
 
@@ -60,17 +60,17 @@ sh % "hg ci -me -d '5 0'"
 
 sh % "hg --debug log a -T '{rev}: {desc}\\n'" == "0: a"
 sh % "hg log a" == r"""
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     a"""
 sh % "hg log 'glob:a*'" == r"""
-    changeset:   3:2ca5ba701980
+    commit:      2ca5ba701980
     user:        test
     date:        Thu Jan 01 00:00:04 1970 +0000
     summary:     d
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     a"""
@@ -81,22 +81,22 @@ sh % "hg --debug log 'glob:a*' -T '{rev}: {desc}\\n'" == r"""
 # log on directory
 
 sh % "hg log dir" == r"""
-    changeset:   4:7e4639b4691b
+    commit:      7e4639b4691b
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     e
 
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     c"""
 sh % "hg log somethingthatdoesntexist dir" == r"""
-    changeset:   4:7e4639b4691b
+    commit:      7e4639b4691b
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     e
 
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     c"""
@@ -112,41 +112,41 @@ sh % "hg log -f dir" == r"""
 
 sh % "hg up -q 3"
 sh % "hg log -f dir" == r"""
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     c
 
-    changeset:   1:d89b0a12d229
+    commit:      d89b0a12d229
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     b
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     a"""
 # -f, directory with --patch
 
 sh % "hg log -f dir -p" == r"""
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     c
 
     diff -r d89b0a12d229 -r f8954cd4dc1f dir/b
-    --- /dev/null* (glob)
-    +++ b/dir/b* (glob)
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/dir/b Thu Jan 01 00:00:03 1970 +0000
     @@ -0,0 +1,1 @@
     +a
 
-    changeset:   1:d89b0a12d229
+    commit:      d89b0a12d229
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     b
 
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     a"""
@@ -154,14 +154,14 @@ sh % "hg log -f dir -p" == r"""
 # -f, pattern
 
 sh % "hg log -f -I 'dir**' -p" == r"""
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     c
 
     diff -r d89b0a12d229 -r f8954cd4dc1f dir/b
-    --- /dev/null* (glob)
-    +++ b/dir/b* (glob)
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/dir/b Thu Jan 01 00:00:03 1970 +0000
     @@ -0,0 +1,1 @@
     +a"""
 sh % "hg up -q 4"
@@ -177,38 +177,38 @@ sh % "hg log -f -l1 --style something" == r"""
 
 
 sh % "hg log -f -l1 --style phases" == r"""
-    changeset:   4:7e4639b4691b
+    commit:      7e4639b4691b
     phase:       draft
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     e"""
 
-sh % "hg log -f -l1 --style phases -q" == "4:7e4639b4691b"
+sh % "hg log -f -l1 --style phases -q" == "7e4639b4691b"
 
 # -f, but no args
 
 sh % "hg log -f" == r"""
-    changeset:   4:7e4639b4691b
+    commit:      7e4639b4691b
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     e
 
-    changeset:   3:2ca5ba701980
+    commit:      2ca5ba701980
     user:        test
     date:        Thu Jan 01 00:00:04 1970 +0000
     summary:     d
 
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     c
 
-    changeset:   1:d89b0a12d229
+    commit:      d89b0a12d229
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     b
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     a"""
@@ -217,7 +217,7 @@ sh % "hg log -f" == r"""
 
 sh % "hg up -q 2"
 sh % "hg log -vf a" == r"""
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     files:       a f
@@ -228,7 +228,7 @@ sh % "hg log -vf a" == r"""
 
 sh % "hg up -q tip"
 sh % "hg log -vf e" == r"""
-    changeset:   4:7e4639b4691b
+    commit:      7e4639b4691b
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     files:       dir/b e
@@ -236,7 +236,7 @@ sh % "hg log -vf e" == r"""
     e
 
 
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     files:       b dir/b f g
@@ -244,7 +244,7 @@ sh % "hg log -vf e" == r"""
     c
 
 
-    changeset:   1:d89b0a12d229
+    commit:      d89b0a12d229
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     files:       b g
@@ -252,7 +252,7 @@ sh % "hg log -vf e" == r"""
     b
 
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     files:       a f
@@ -264,170 +264,170 @@ sh % "hg log -vf e" == r"""
 
 sh % "hg up -q 3"
 sh % "hg log -pf dir/b" == r"""
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     c
 
     diff -r d89b0a12d229 -r f8954cd4dc1f dir/b
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/dir/b	Thu Jan 01 00:00:03 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/dir/b Thu Jan 01 00:00:03 1970 +0000
     @@ -0,0 +1,1 @@
     +a
 
-    changeset:   1:d89b0a12d229
+    commit:      d89b0a12d229
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     b
 
     diff -r 9161b9aeaf16 -r d89b0a12d229 b
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/b	Thu Jan 01 00:00:02 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/b Thu Jan 01 00:00:02 1970 +0000
     @@ -0,0 +1,1 @@
     +a
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     a
 
     diff -r 000000000000 -r 9161b9aeaf16 a
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/a	Thu Jan 01 00:00:01 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/a Thu Jan 01 00:00:01 1970 +0000
     @@ -0,0 +1,1 @@
     +a"""
 
 # log -pf b inside dir
 
 sh % "hg '--cwd=dir' log -pf b" == r"""
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     c
 
     diff -r d89b0a12d229 -r f8954cd4dc1f dir/b
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/dir/b	Thu Jan 01 00:00:03 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/dir/b Thu Jan 01 00:00:03 1970 +0000
     @@ -0,0 +1,1 @@
     +a
 
-    changeset:   1:d89b0a12d229
+    commit:      d89b0a12d229
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     b
 
     diff -r 9161b9aeaf16 -r d89b0a12d229 b
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/b	Thu Jan 01 00:00:02 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/b Thu Jan 01 00:00:02 1970 +0000
     @@ -0,0 +1,1 @@
     +a
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     a
 
     diff -r 000000000000 -r 9161b9aeaf16 a
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/a	Thu Jan 01 00:00:01 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/a Thu Jan 01 00:00:01 1970 +0000
     @@ -0,0 +1,1 @@
     +a"""
 
 # log -pf, but no args
 
 sh % "hg log -pf" == r"""
-    changeset:   3:2ca5ba701980
+    commit:      2ca5ba701980
     user:        test
     date:        Thu Jan 01 00:00:04 1970 +0000
     summary:     d
 
     diff -r f8954cd4dc1f -r 2ca5ba701980 a
-    --- a/a	Thu Jan 01 00:00:03 1970 +0000
-    +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+    --- a/a Thu Jan 01 00:00:03 1970 +0000
+    +++ /dev/null Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +0,0 @@
     -a
     diff -r f8954cd4dc1f -r 2ca5ba701980 b
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/b	Thu Jan 01 00:00:04 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/b Thu Jan 01 00:00:04 1970 +0000
     @@ -0,0 +1,1 @@
     +a
     diff -r f8954cd4dc1f -r 2ca5ba701980 d
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/d	Thu Jan 01 00:00:04 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/d Thu Jan 01 00:00:04 1970 +0000
     @@ -0,0 +1,1 @@
     +a
     diff -r f8954cd4dc1f -r 2ca5ba701980 g
-    --- a/g	Thu Jan 01 00:00:03 1970 +0000
-    +++ b/g	Thu Jan 01 00:00:04 1970 +0000
+    --- a/g Thu Jan 01 00:00:03 1970 +0000
+    +++ b/g Thu Jan 01 00:00:04 1970 +0000
     @@ -1,2 +1,2 @@
      f
     -g
     +f
 
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     c
 
     diff -r d89b0a12d229 -r f8954cd4dc1f b
-    --- a/b	Thu Jan 01 00:00:02 1970 +0000
-    +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+    --- a/b Thu Jan 01 00:00:02 1970 +0000
+    +++ /dev/null Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +0,0 @@
     -a
     diff -r d89b0a12d229 -r f8954cd4dc1f dir/b
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/dir/b	Thu Jan 01 00:00:03 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/dir/b Thu Jan 01 00:00:03 1970 +0000
     @@ -0,0 +1,1 @@
     +a
     diff -r d89b0a12d229 -r f8954cd4dc1f f
-    --- a/f	Thu Jan 01 00:00:02 1970 +0000
-    +++ b/f	Thu Jan 01 00:00:03 1970 +0000
+    --- a/f Thu Jan 01 00:00:02 1970 +0000
+    +++ b/f Thu Jan 01 00:00:03 1970 +0000
     @@ -1,1 +1,2 @@
      f
     +f
     diff -r d89b0a12d229 -r f8954cd4dc1f g
-    --- a/g	Thu Jan 01 00:00:02 1970 +0000
-    +++ b/g	Thu Jan 01 00:00:03 1970 +0000
+    --- a/g Thu Jan 01 00:00:02 1970 +0000
+    +++ b/g Thu Jan 01 00:00:03 1970 +0000
     @@ -1,1 +1,2 @@
      f
     +g
 
-    changeset:   1:d89b0a12d229
+    commit:      d89b0a12d229
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     b
 
     diff -r 9161b9aeaf16 -r d89b0a12d229 b
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/b	Thu Jan 01 00:00:02 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/b Thu Jan 01 00:00:02 1970 +0000
     @@ -0,0 +1,1 @@
     +a
     diff -r 9161b9aeaf16 -r d89b0a12d229 g
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/g	Thu Jan 01 00:00:02 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/g Thu Jan 01 00:00:02 1970 +0000
     @@ -0,0 +1,1 @@
     +f
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     a
 
     diff -r 000000000000 -r 9161b9aeaf16 a
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/a	Thu Jan 01 00:00:01 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/a Thu Jan 01 00:00:01 1970 +0000
     @@ -0,0 +1,1 @@
     +a
     diff -r 000000000000 -r 9161b9aeaf16 f
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/f	Thu Jan 01 00:00:01 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/f Thu Jan 01 00:00:01 1970 +0000
     @@ -0,0 +1,1 @@
     +f"""
 
 # log -vf dir/b
 
 sh % "hg log -vf dir/b" == r"""
-    changeset:   2:f8954cd4dc1f
+    commit:      f8954cd4dc1f
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     files:       b dir/b f g
@@ -435,7 +435,7 @@ sh % "hg log -vf dir/b" == r"""
     c
 
 
-    changeset:   1:d89b0a12d229
+    commit:      d89b0a12d229
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     files:       b g
@@ -443,7 +443,7 @@ sh % "hg log -vf dir/b" == r"""
     b
 
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     files:       a f
@@ -496,7 +496,7 @@ sh % "hg log -vC --template '{rev} {file_copies_switch}\\n'" == r"""
 # log copies with hardcoded style and with --style=default
 
 sh % "hg log -vC -r4" == r"""
-    changeset:   4:7e4639b4691b
+    commit:      7e4639b4691b
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     files:       dir/b e
@@ -504,7 +504,7 @@ sh % "hg log -vC -r4" == r"""
     description:
     e"""
 sh % "hg log -vC -r4 '--style=default'" == r"""
-    changeset:   4:7e4639b4691b
+    commit:      7e4639b4691b
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     files:       dir/b e
@@ -548,7 +548,7 @@ if feature.check(["execbit"]):
 # log -p d
 
 sh % "hg log -pv d" == r"""
-    changeset:   3:2ca5ba701980
+    commit:      2ca5ba701980
     user:        test
     date:        Thu Jan 01 00:00:04 1970 +0000
     files:       a b d g
@@ -557,8 +557,8 @@ sh % "hg log -pv d" == r"""
 
 
     diff -r f8954cd4dc1f -r 2ca5ba701980 d
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/d	Thu Jan 01 00:00:04 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/d Thu Jan 01 00:00:04 1970 +0000
     @@ -0,0 +1,1 @@
     +a"""
 
@@ -566,7 +566,7 @@ sh % "hg log -pv d" == r"""
 # log --removed file
 
 sh % "hg log --removed -v a" == r"""
-    changeset:   3:2ca5ba701980
+    commit:      2ca5ba701980
     user:        test
     date:        Thu Jan 01 00:00:04 1970 +0000
     files:       a b d g
@@ -574,7 +574,7 @@ sh % "hg log --removed -v a" == r"""
     d
 
 
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     files:       a f
@@ -584,7 +584,7 @@ sh % "hg log --removed -v a" == r"""
 # log --removed revrange file
 
 sh % "hg log --removed -v '-r0:2' a" == r"""
-    changeset:   0:9161b9aeaf16
+    commit:      9161b9aeaf16
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     files:       a f
@@ -611,12 +611,12 @@ sh % "echo b1" > "b1"
 # log -r "follow('set:clean()')"
 
 sh % "hg log -r 'follow('\\''set:clean()'\\'')'" == r"""
-    changeset:   0:67e992f2c4f3
+    commit:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     base
 
-    changeset:   1:3d5bf5654eda
+    commit:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     r1"""
@@ -627,18 +627,18 @@ sh % "hg ci -Amb1 -d '1 0'" == "adding b1"
 # log -f
 
 sh % "hg log -f" == r"""
-    changeset:   3:e62f78d544b4
-    parent:      1:3d5bf5654eda
+    commit:      e62f78d544b4
+    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1
 
-    changeset:   1:3d5bf5654eda
+    commit:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     r1
 
-    changeset:   0:67e992f2c4f3
+    commit:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     base"""
@@ -646,18 +646,18 @@ sh % "hg log -f" == r"""
 # log -r follow('glob:b*')
 
 sh % "hg log -r 'follow('\\''glob:b*'\\'')'" == r"""
-    changeset:   0:67e992f2c4f3
+    commit:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     base
 
-    changeset:   1:3d5bf5654eda
+    commit:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     r1
 
-    changeset:   3:e62f78d544b4
-    parent:      1:3d5bf5654eda
+    commit:      e62f78d544b4
+    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1"""
@@ -667,26 +667,26 @@ sh % "hg up -C 0" == "1 files updated, 0 files merged, 1 files removed, 0 files 
 sh % "echo b2" > "b2"
 sh % "hg ci -Amb2 -d '1 0'" == "adding b2"
 sh % "hg log -f -r '1 + 4'" == r"""
-    changeset:   4:ddb82e70d1a1
-    parent:      0:67e992f2c4f3
+    commit:      ddb82e70d1a1
+    parent:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b2
 
-    changeset:   1:3d5bf5654eda
+    commit:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     r1
 
-    changeset:   0:67e992f2c4f3
+    commit:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     base"""
 # log -r "follow('set:grep(b2)')"
 
 sh % "hg log -r 'follow('\\''set:grep(b2)'\\'')'" == r"""
-    changeset:   4:ddb82e70d1a1
-    parent:      0:67e992f2c4f3
+    commit:      ddb82e70d1a1
+    parent:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b2"""
@@ -694,8 +694,8 @@ sh % "hg log -r 'follow('\\''set:grep(b2)'\\'')'" == r"""
 
 sh % "hg up -qC 0"
 sh % "hg log -r 'follow('\\''set:grep(b2)'\\'', 4)'" == r"""
-    changeset:   4:ddb82e70d1a1
-    parent:      0:67e992f2c4f3
+    commit:      ddb82e70d1a1
+    parent:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b2"""
@@ -713,28 +713,28 @@ sh % "hg log -T '{rev}: {files}\\n' -r 'follow('\\''glob:*'\\'', startrev=.-.)'"
 # follow starting from revisions:
 
 sh % "hg log -Gq -r 'follow(startrev=2+4)'" == r"""
-    o  4:ddb82e70d1a1
+    o  ddb82e70d1a1
     |
-    | o  2:60c670bf5b30
+    | o  60c670bf5b30
     | |
-    | o  1:3d5bf5654eda
+    | o  3d5bf5654eda
     |/
-    @  0:67e992f2c4f3"""
+    @  67e992f2c4f3"""
 
 # follow the current revision:
 
-sh % "hg log -Gq -r 'follow()'" == "@  0:67e992f2c4f3"
+sh % "hg log -Gq -r 'follow()'" == "@  67e992f2c4f3"
 
 sh % "hg up -qC 4"
 
 # log -f -r null
 
 sh % "hg log -f -r null" == r"""
-    changeset:   -1:000000000000
-    user:         (trailing space)
+    commit:      000000000000
+    user:        
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 sh % "hg log -f -r null -G" == r"""
-    o  changeset:   -1:000000000000
+    o  commit:      000000000000
        user:
        date:        Thu Jan 01 00:00:00 1970 +0000"""
 
@@ -752,8 +752,8 @@ sh % "hg merge tip" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (branch merge, don't forget to commit)"""
 sh % "hg log -r ." == r"""
-    changeset:   3:e62f78d544b4
-    parent:      1:3d5bf5654eda
+    commit:      e62f78d544b4
+    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1"""
@@ -763,9 +763,9 @@ sh % "hg log -r ." == r"""
 
 sh % "hg ci -mm12 -d '1 0'"
 sh % "hg log -r ." == r"""
-    changeset:   5:302e9dd6890d
-    parent:      3:e62f78d544b4
-    parent:      4:ddb82e70d1a1
+    commit:      302e9dd6890d
+    parent:      e62f78d544b4
+    parent:      ddb82e70d1a1
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12"""
@@ -777,30 +777,30 @@ sh % "hg ci -Amb1.1 '-d1 0'"
 # log --follow-first
 
 sh % "hg log --follow-first" == r"""
-    changeset:   6:2404bbcab562
+    commit:      2404bbcab562
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
 
-    changeset:   5:302e9dd6890d
-    parent:      3:e62f78d544b4
-    parent:      4:ddb82e70d1a1
+    commit:      302e9dd6890d
+    parent:      e62f78d544b4
+    parent:      ddb82e70d1a1
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12
 
-    changeset:   3:e62f78d544b4
-    parent:      1:3d5bf5654eda
+    commit:      e62f78d544b4
+    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1
 
-    changeset:   1:3d5bf5654eda
+    commit:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     r1
 
-    changeset:   0:67e992f2c4f3
+    commit:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     base"""
@@ -809,26 +809,26 @@ sh % "hg log --follow-first" == r"""
 # log -P 2
 
 sh % "hg log -P 2" == r"""
-    changeset:   6:2404bbcab562
+    commit:      2404bbcab562
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
 
-    changeset:   5:302e9dd6890d
-    parent:      3:e62f78d544b4
-    parent:      4:ddb82e70d1a1
+    commit:      302e9dd6890d
+    parent:      e62f78d544b4
+    parent:      ddb82e70d1a1
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12
 
-    changeset:   4:ddb82e70d1a1
-    parent:      0:67e992f2c4f3
+    commit:      ddb82e70d1a1
+    parent:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b2
 
-    changeset:   3:e62f78d544b4
-    parent:      1:3d5bf5654eda
+    commit:      e62f78d544b4
+    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1"""
@@ -837,7 +837,7 @@ sh % "hg log -P 2" == r"""
 # log -r tip -p --git
 
 sh % "hg log -r tip -p --git" == r"""
-    changeset:   6:2404bbcab562
+    commit:      2404bbcab562
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
@@ -865,14 +865,14 @@ sh % "hg log -r 1000000000000000000000000000000000000000" == r"""
 # log -k r1
 
 sh % "hg log -k r1" == r"""
-    changeset:   1:3d5bf5654eda
+    commit:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     r1"""
 # log -p -l2 --color=always
 
 sh % "hg --config 'extensions.color=' --config 'color.mode=ansi' log -p -l2 '--color=always'" == r"""
-    [0;93mchangeset:   6:2404bbcab562[0m
+    [0;93mcommit:      2404bbcab562[0m
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
@@ -884,9 +884,9 @@ sh % "hg --config 'extensions.color=' --config 'color.mode=ansi' log -p -l2 '--c
      b1
     [0;92m+postm[0m
 
-    [0;93mchangeset:   5:302e9dd6890d[0m
-    [0;93mparent:      3:e62f78d544b4[0m
-    [0;93mparent:      4:ddb82e70d1a1[0m
+    [0;93mcommit:      302e9dd6890d[0m
+    [0;93mparent:      e62f78d544b4[0m
+    [0;93mparent:      ddb82e70d1a1[0m
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12
@@ -901,7 +901,7 @@ sh % "hg --config 'extensions.color=' --config 'color.mode=ansi' log -p -l2 '--c
 # log -r tip --stat
 
 sh % "hg log -r tip --stat" == r"""
-    changeset:   6:2404bbcab562
+    commit:      2404bbcab562
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1.1
@@ -1145,17 +1145,17 @@ sh % "echo b" > "b"
 sh % "hg ci -A -m b -u 'User Two <user2@example.org>'" == "adding b"
 
 sh % "hg log -u 'User One <user1@example.org>'" == r"""
-    changeset:   0:29a4c94f1924
+    commit:      29a4c94f1924
     user:        User One <user1@example.org>
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a"""
 sh % "hg log -u user1 -u user2" == r"""
-    changeset:   1:e834b5e69c0e
+    commit:      e834b5e69c0e
     user:        User Two <user2@example.org>
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     b
 
-    changeset:   0:29a4c94f1924
+    commit:      29a4c94f1924
     user:        User One <user1@example.org>
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a"""
@@ -1206,9 +1206,9 @@ if feature.check("false"):
 
 sh % "mkdir dir"
 sh % "hg log -p --cwd dir" == r"""
-    changeset:   3:91f0fa364897
+    commit:      91f0fa364897
     bookmark:    test
-    parent:      1:45efe61fb969
+    parent:      45efe61fb969
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     commit on test
@@ -1219,7 +1219,7 @@ sh % "hg log -p --cwd dir" == r"""
     @@ -0,0 +1,1 @@
     +c
 
-    changeset:   2:735dba46f54d
+    commit:      735dba46f54d
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     commit on default
@@ -1230,7 +1230,7 @@ sh % "hg log -p --cwd dir" == r"""
     @@ -0,0 +1,1 @@
     +c
 
-    changeset:   1:45efe61fb969
+    commit:      45efe61fb969
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     commit on test
@@ -1241,7 +1241,7 @@ sh % "hg log -p --cwd dir" == r"""
     @@ -0,0 +1,1 @@
     +b
 
-    changeset:   0:24427303d56f
+    commit:      24427303d56f
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     commit on default
@@ -1257,14 +1257,14 @@ sh % "hg log -p --cwd dir" == r"""
 
 sh % "cd dir"
 sh % "hg log -p -R .. ../a" == r"""
-    changeset:   0:24427303d56f
+    commit:      24427303d56f
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     commit on default
 
     diff -r 000000000000 -r 24427303d56f a
-    --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-    +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+    --- /dev/null Thu Jan 01 00:00:00 1970 +0000
+    +++ b/a Thu Jan 01 00:00:00 1970 +0000
     @@ -0,0 +1,1 @@
     +a"""
 
@@ -1326,99 +1326,99 @@ sh % "hg resolve -m foo" == "(no more unresolved files)"
 sh % "hg ci -m 'Last merge, related'"
 
 sh % "hg log --graph" == r"""
-    @    changeset:   10:4dae8563d2c5
-    |\   parent:      9:7b35701b003e
-    | |  parent:      4:88176d361b69
+    @    commit:      4dae8563d2c5
+    |\   parent:      7b35701b003e
+    | |  parent:      88176d361b69
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     Last merge, related
     | |
-    | o    changeset:   9:7b35701b003e
-    | |\   parent:      8:e5416ad8a855
-    | | |  parent:      7:87fe3144dcfa
+    | o    commit:      7b35701b003e
+    | |\   parent:      e5416ad8a855
+    | | |  parent:      87fe3144dcfa
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | | |  summary:     First merge, related
     | | |
-    | | o  changeset:   8:e5416ad8a855
-    | | |  parent:      6:dc6c325fe5ee
+    | | o  commit:      e5416ad8a855
+    | | |  parent:      dc6c325fe5ee
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | | |  summary:     change foo in branch, related
     | | |
-    | o |  changeset:   7:87fe3144dcfa
+    | o |  commit:      87fe3144dcfa
     | |/   user:        test
     | |    date:        Thu Jan 01 00:00:00 1970 +0000
     | |    summary:     change foo, related
     | |
-    | o  changeset:   6:dc6c325fe5ee
+    | o  commit:      dc6c325fe5ee
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     create foo, related
     | |
-    | o  changeset:   5:73db34516eb9
-    | |  parent:      0:e87515fd044a
+    | o  commit:      73db34516eb9
+    | |  parent:      e87515fd044a
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     first branch, unrelated
     | |
-    o |  changeset:   4:88176d361b69
+    o |  commit:      88176d361b69
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     add foo, related
     | |
-    o |  changeset:   3:dd78ae4afb56
+    o |  commit:      dd78ae4afb56
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     delete foo, unrelated
     | |
-    o |  changeset:   2:c4c64aedf0f7
+    o |  commit:      c4c64aedf0f7
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     add unrelated old foo
     | |
-    o |  changeset:   1:e5faa7440653
+    o |  commit:      e5faa7440653
     |/   user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     change, unrelated
     |
-    o  changeset:   0:e87515fd044a
+    o  commit:      e87515fd044a
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     init, unrelated"""
 
 sh % "hg --traceback log -f foo" == r"""
-    changeset:   10:4dae8563d2c5
-    parent:      9:7b35701b003e
-    parent:      4:88176d361b69
+    commit:      4dae8563d2c5
+    parent:      7b35701b003e
+    parent:      88176d361b69
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     Last merge, related
 
-    changeset:   9:7b35701b003e
-    parent:      8:e5416ad8a855
-    parent:      7:87fe3144dcfa
+    commit:      7b35701b003e
+    parent:      e5416ad8a855
+    parent:      87fe3144dcfa
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     First merge, related
 
-    changeset:   8:e5416ad8a855
-    parent:      6:dc6c325fe5ee
+    commit:      e5416ad8a855
+    parent:      dc6c325fe5ee
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     change foo in branch, related
 
-    changeset:   7:87fe3144dcfa
+    commit:      87fe3144dcfa
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     change foo, related
 
-    changeset:   6:dc6c325fe5ee
+    commit:      dc6c325fe5ee
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     create foo, related
 
-    changeset:   4:88176d361b69
+    commit:      88176d361b69
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     add foo, related"""
@@ -1426,12 +1426,12 @@ sh % "hg --traceback log -f foo" == r"""
 # Also check when maxrev < lastrevfilelog
 
 sh % "hg --traceback log -f -r4 foo" == r"""
-    changeset:   4:88176d361b69
+    commit:      88176d361b69
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     add foo, related
 
-    changeset:   2:c4c64aedf0f7
+    commit:      c4c64aedf0f7
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     add unrelated old foo"""
@@ -1481,9 +1481,9 @@ sh % "hg diff --rev '2:3'" == r"""
 # Diff here should be the same:
 
 sh % "hg log -vpr 3" == r"""
-    changeset:   3:8e07aafe1edc
-    parent:      2:b09be438c43a
-    parent:      1:925d80f479bb
+    commit:      8e07aafe1edc
+    parent:      b09be438c43a
+    parent:      925d80f479bb
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       a
@@ -1514,7 +1514,7 @@ sh % "echo f" >> "a"
 sh % "hg ci '-Ama bis' -d '1 0'"
 
 sh % "hg log -r0 a" == r"""
-    changeset:   0:9f758d63dcde
+    commit:      9f758d63dcde
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a"""
@@ -1535,7 +1535,7 @@ sh % "hg log '--template={rev}:{node}\\n' --hidden" == r"""
     1:a765632148dc55d38c35c4f247c618701886cb2f
     0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05"""
 sh % "hg log -r a" == r"""
-    changeset:   1:a765632148dc
+    commit:      a765632148dc
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     a bis"""
@@ -1635,35 +1635,35 @@ sh % "hg log -l1 .d6/f1 -T '{node|short}'" == "65624cd9070a"
 # issue3772: hg log -r :null showing revision 0 as well
 
 sh % "hg log -r ':null'" == r"""
-    changeset:   0:65624cd9070a
+    commit:      65624cd9070a
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a bunch of weird directories
 
-    changeset:   -1:000000000000
+    commit:      000000000000
     user:        
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 sh % "hg log -r 'null:null'" == r"""
-    changeset:   -1:000000000000
-    user:         (trailing space)
+    commit:      000000000000
+    user:        
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 # working-directory revision requires special treatment
 
 # clean:
 
 sh % "hg log -r 'wdir()' --debug" == r"""
-    changeset:   2147483647:ffffffffffffffffffffffffffffffffffffffff
+    commit:      ffffffffffffffffffffffffffffffffffffffff
     phase:       draft
-    parent:      0:65624cd9070a035fa7191a54f2b8af39f16b0c08
-    parent:      -1:0000000000000000000000000000000000000000
+    parent:      65624cd9070a035fa7191a54f2b8af39f16b0c08
+    parent:      0000000000000000000000000000000000000000
     user:        test
-    date:        [A-Za-z0-9:+ ]+ (re)
+    date:        Thu Jan 01 00:00:00 1970 +0000
     extra:       branch=default"""
 sh % "hg log -r 'wdir()' -p --stat" == r"""
-    changeset:   2147483647:ffffffffffff
-    parent:      0:65624cd9070a
+    commit:      ffffffffffff
+    parent:      65624cd9070a
     user:        test
-    date:        [A-Za-z0-9:+ ]+ (re)"""
+    date:        Thu Jan 01 00:00:00 1970 +0000"""
 
 # dirty:
 
@@ -1677,28 +1677,28 @@ sh % "hg status" == r"""
     R .d6/f1"""
 
 sh % "hg log -r 'wdir()'" == r"""
-    changeset:   2147483647:ffffffffffff
-    parent:      0:65624cd9070a
+    commit:      ffffffffffff
+    parent:      65624cd9070a
     user:        test
-    date:        [A-Za-z0-9:+ ]+ (re)"""
-sh % "hg log -r 'wdir()' -q" == "2147483647:ffffffffffff"
+    date:        Thu Jan 01 00:00:00 1970 +0000"""
+sh % "hg log -r 'wdir()' -q" == "ffffffffffff"
 
 sh % "hg log -r 'wdir()' --debug" == r"""
-    changeset:   2147483647:ffffffffffffffffffffffffffffffffffffffff
+    commit:      ffffffffffffffffffffffffffffffffffffffff
     phase:       draft
-    parent:      0:65624cd9070a035fa7191a54f2b8af39f16b0c08
-    parent:      -1:0000000000000000000000000000000000000000
+    parent:      65624cd9070a035fa7191a54f2b8af39f16b0c08
+    parent:      0000000000000000000000000000000000000000
     user:        test
-    date:        [A-Za-z0-9:+ ]+ (re)
+    date:        Thu Jan 01 00:00:00 1970 +0000
     files:       d1/f1
     files+:      d1/f2
     files-:      .d6/f1
     extra:       branch=default"""
 sh % "hg log -r 'wdir()' -p --stat --git" == r"""
-    changeset:   2147483647:ffffffffffff
-    parent:      0:65624cd9070a
+    commit:      ffffffffffff
+    parent:      65624cd9070a
     user:        test
-    date:        [A-Za-z0-9:+ ]+ (re)
+    date:        Thu Jan 01 00:00:00 1970 +0000
 
      .d6/f1 |  1 -
      d1/f1  |  1 +
@@ -1796,13 +1796,13 @@ def barlookup(repo):
 ''' > "../names.py"
 
 sh % "hg --config 'extensions.names=../names.py' log -r 0" == r"""
-    changeset:   0:65624cd9070a
+    commit:      65624cd9070a
     barlog:      foo
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     a bunch of weird directories"""
 sh % "hg --config 'extensions.names=../names.py' --config 'extensions.color=' --config 'color.log.barcolor=red' '--color=always' log -r 0" == r"""
-    [0;93mchangeset:   0:65624cd9070a[0m
+    [0;93mcommit:      65624cd9070a[0m
     [0;31mbarlog:      foo[0m
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1876,28 +1876,28 @@ sh % "hg graft -r 'desc(content2)'" == 'grafting 2294ae80ad84 "content2"'
 sh % "echo 3" > "a"
 sh % "hg commit -m content3"
 sh % "hg log -G" == r"""
-    @  changeset:   4:50b9b36e9c5d
+    @  commit:      50b9b36e9c5d
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     content3
     |
-    o  changeset:   3:15b2327059e5
+    o  commit:      15b2327059e5
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     content2
     |
-    o  changeset:   2:2029acd1168c
-    |  parent:      0:ae0a3c9f9e95
+    o  commit:      2029acd1168c
+    |  parent:      ae0a3c9f9e95
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     unrelated
     |
-    | o  changeset:   1:2294ae80ad84
+    | o  commit:      2294ae80ad84
     |/   user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     content2
     |
-    o  changeset:   0:ae0a3c9f9e95
+    o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     content1"""
@@ -1905,17 +1905,17 @@ sh % "hg log -G" == r"""
 # log -f on the file should list the graft result.
 
 sh % "hg log -Gf a" == r"""
-    @  changeset:   4:50b9b36e9c5d
+    @  commit:      50b9b36e9c5d
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     content3
     |
-    o  changeset:   3:15b2327059e5
+    o  commit:      15b2327059e5
     :  user:        test
     :  date:        Thu Jan 01 00:00:00 1970 +0000
     :  summary:     content2
     :
-    o  changeset:   0:ae0a3c9f9e95
+    o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     content1"""
@@ -1924,17 +1924,17 @@ sh % "hg log -Gf a" == r"""
 # (XXX we should probably list both)
 
 sh % "hg log -G a" == r"""
-    @  changeset:   4:50b9b36e9c5d
+    @  commit:      50b9b36e9c5d
     :  user:        test
     :  date:        Thu Jan 01 00:00:00 1970 +0000
     :  summary:     content3
     :
-    : o  changeset:   1:2294ae80ad84
+    : o  commit:      2294ae80ad84
     :/   user:        test
     :    date:        Thu Jan 01 00:00:00 1970 +0000
     :    summary:     content2
     :
-    o  changeset:   0:ae0a3c9f9e95
+    o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     content1"""
@@ -1944,12 +1944,12 @@ sh % "hg log -G a" == r"""
 
 sh % "hg up 'desc(content3)^'" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg log -Gf a" == r"""
-    @  changeset:   3:15b2327059e5
+    @  commit:      15b2327059e5
     :  user:        test
     :  date:        Thu Jan 01 00:00:00 1970 +0000
     :  summary:     content2
     :
-    o  changeset:   0:ae0a3c9f9e95
+    o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     content1"""
@@ -1961,23 +1961,23 @@ sh % "hg log -Gf a" == r"""
 sh % "hg log -T '{node}\\n' -r 1" == "2294ae80ad8447bc78383182eeac50cb049df623"
 sh % "hg debugobsolete 2294ae80ad8447bc78383182eeac50cb049df623" == ""
 sh % "hg log -G" == r"""
-    o  changeset:   4:50b9b36e9c5d
+    o  commit:      50b9b36e9c5d
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     content3
     |
-    @  changeset:   3:15b2327059e5
+    @  commit:      15b2327059e5
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     content2
     |
-    o  changeset:   2:2029acd1168c
-    |  parent:      0:ae0a3c9f9e95
+    o  commit:      2029acd1168c
+    |  parent:      ae0a3c9f9e95
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     unrelated
     |
-    o  changeset:   0:ae0a3c9f9e95
+    o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     content1"""
@@ -1985,12 +1985,12 @@ sh % "hg log -G" == r"""
 # Check that log on the file does not drop the file revision.
 
 sh % "hg log -G a" == r"""
-    o  changeset:   4:50b9b36e9c5d
+    o  commit:      50b9b36e9c5d
     :  user:        test
     :  date:        Thu Jan 01 00:00:00 1970 +0000
     :  summary:     content3
     :
-    o  changeset:   0:ae0a3c9f9e95
+    o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     content1"""
@@ -2000,7 +2000,7 @@ sh % "hg log -G a" == r"""
 sh % "hg log -T '{node}\\n' -r 4" == "50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2"
 sh % "hg debugobsolete 50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2" == ""
 sh % "hg log -G a" == r"""
-    o  changeset:   0:ae0a3c9f9e95
+    o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     content1"""
@@ -2024,31 +2024,31 @@ sh % "echo c" > "c"
 sh % "hg ci -Am2" == "adding c"
 sh % "hg up 'head() and not .'" == "1 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "hg log -G" == r"""
-    o  changeset:   3:db815d6d32e6
-    |  parent:      0:f7b1eb17ad24
+    o  commit:      db815d6d32e6
+    |  parent:      f7b1eb17ad24
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     2
     |
-    | @  changeset:   2:9bc8ce7f9356
-    |/   parent:      0:f7b1eb17ad24
+    | @  commit:      9bc8ce7f9356
+    |/   parent:      f7b1eb17ad24
     |    user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     1
     |
-    o  changeset:   0:f7b1eb17ad24
+    o  commit:      f7b1eb17ad24
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     0"""
 sh % "hg log -f -G b" == r"""
-    @  changeset:   2:9bc8ce7f9356
-    |  parent:      0:f7b1eb17ad24
+    @  commit:      9bc8ce7f9356
+    |  parent:      f7b1eb17ad24
     ~  user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     1"""
 sh % "hg log -G b" == r"""
-    @  changeset:   2:9bc8ce7f9356
-    |  parent:      0:f7b1eb17ad24
+    @  commit:      9bc8ce7f9356
+    |  parent:      f7b1eb17ad24
     ~  user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     1"""
@@ -2076,18 +2076,18 @@ sh % "echo 2" > "C"
 sh % "hg commit -m A3B2C2"
 
 sh % "hg log -G" == r"""
-    @  changeset:   2:fe5fc3d0eb17
-    |  parent:      0:abf4f0e38563
+    @  commit:      fe5fc3d0eb17
+    |  parent:      abf4f0e38563
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     A3B2C2
     |
-    | o  changeset:   1:07dcc6b312c0
+    | o  commit:      07dcc6b312c0
     |/   user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     A2B2C2
     |
-    o  changeset:   0:abf4f0e38563
+    o  commit:      abf4f0e38563
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     A1B1C1"""
@@ -2095,13 +2095,13 @@ sh % "hg log -G" == r"""
 # Log -f on B should reports current changesets
 
 sh % "hg log -fG B" == r"""
-    @  changeset:   2:fe5fc3d0eb17
-    |  parent:      0:abf4f0e38563
+    @  commit:      fe5fc3d0eb17
+    |  parent:      abf4f0e38563
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     A3B2C2
     |
-    o  changeset:   0:abf4f0e38563
+    o  commit:      abf4f0e38563
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     A1B1C1"""

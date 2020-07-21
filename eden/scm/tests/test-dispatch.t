@@ -123,7 +123,7 @@ For compatibility reasons, HGPLAIN=+strictflags is not enabled by plain HGPLAIN:
   abort: pre-log hook exited with status 1
   [255]
   $ HGPLAINEXCEPT= hg log --cwd .. -q -Ra -b default
-  0:cb9a9f314b8b
+  cb9a9f314b8b
 
 [defaults]
 

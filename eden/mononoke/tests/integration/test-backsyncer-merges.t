@@ -71,7 +71,7 @@ although the second one became non-merge commit
   $
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ REPONAME=small-mon hgmn show master_bookmark
-  changeset:   4:534a740cd266
+  commit:      534a740cd266
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
   user:        test

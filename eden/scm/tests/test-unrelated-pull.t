@@ -30,13 +30,13 @@
   added 1 changesets with 1 changes to 1 files
 
   $ hg heads
-  changeset:   1:9a79c33a9db3
-  parent:      -1:000000000000
+  commit:      9a79c33a9db3
+  parent:      000000000000
   user:        a
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
-  changeset:   0:01f8062b2de5
+  commit:      01f8062b2de5
   user:        b
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b

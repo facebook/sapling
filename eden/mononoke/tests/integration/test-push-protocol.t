@@ -26,7 +26,7 @@ setup master bookmarks
 
 verify content
   $ hg log
-  changeset:   0:0e7ec5675652
+  commit:      0e7ec5675652
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -113,7 +113,7 @@ move master bookmarks
   $ hg bookmark -f master_bookmark -r 'tip'
 
   $ hg log -r "reverse(all())" --stat
-  changeset:   6:634de738bb0f
+  commit:      634de738bb0f
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -128,7 +128,7 @@ move master bookmarks
    e_dir/e     |  1 +
    7 files changed, 4 insertions(+), 4 deletions(-)
   
-  changeset:   5:8315ea53ef41
+  commit:      8315ea53ef41
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -139,7 +139,7 @@ move master bookmarks
    d_dir/d |  2 +-
    4 files changed, 4 insertions(+), 3 deletions(-)
   
-  changeset:   4:30da5bf63484
+  commit:      30da5bf63484
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -148,8 +148,8 @@ move master bookmarks
    b_dir/b |  2 +-
    2 files changed, 2 insertions(+), 2 deletions(-)
   
-  changeset:   3:fbd6b221382e
-  parent:      1:bb0985934a0f
+  commit:      fbd6b221382e
+  parent:      bb0985934a0f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
@@ -158,7 +158,7 @@ move master bookmarks
    d_dir/d |  1 +
    2 files changed, 2 insertions(+), 1 deletions(-)
   
-  changeset:   2:f40c09205504
+  commit:      f40c09205504
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -167,7 +167,7 @@ move master bookmarks
    c_dir/c |  1 +
    2 files changed, 2 insertions(+), 1 deletions(-)
   
-  changeset:   1:bb0985934a0f
+  commit:      bb0985934a0f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -176,7 +176,7 @@ move master bookmarks
    b_dir/b |  1 +
    2 files changed, 2 insertions(+), 1 deletions(-)
   
-  changeset:   0:0e7ec5675652
+  commit:      0e7ec5675652
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -188,33 +188,33 @@ move master bookmarks
   $ hgmn outgoing ssh://user@dummy/repo
   comparing with ssh://user@dummy/repo
   searching for changes
-  changeset:   1:bb0985934a0f
+  commit:      bb0985934a0f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
    (re)
-  changeset:   2:f40c09205504
+  commit:      f40c09205504
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
    (re)
-  changeset:   3:fbd6b221382e
-  parent:      1:bb0985934a0f
+  commit:      fbd6b221382e
+  parent:      bb0985934a0f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
    (re)
-  changeset:   4:30da5bf63484
+  commit:      30da5bf63484
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
    (re)
-  changeset:   5:8315ea53ef41
+  commit:      8315ea53ef41
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
    (re)
-  changeset:   6:634de738bb0f
+  commit:      634de738bb0f
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -264,7 +264,7 @@ Now pull what was just pushed
 
   $ cd ../repo3
   $ hgmn log -r "reverse(all())" --stat
-  changeset:   0:0e7ec5675652
+  commit:      0e7ec5675652
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

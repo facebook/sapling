@@ -41,22 +41,22 @@ these should work
 hg log (ascii)
 
   $ hg --encoding ascii log
-  changeset:   3:ca661e7520de
+  commit:      ca661e7520de
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: ?
   
-  changeset:   2:650c6f3d55dd
+  commit:      650c6f3d55dd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     latin-1 e' encoded: ?
   
-  changeset:   1:0e5b7e3f9c4a
+  commit:      0e5b7e3f9c4a
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
   summary:     koi8-r: ????? = u'\u0440\u0442\u0443\u0442\u044c'
   
-  changeset:   0:1e78a93102a3
+  commit:      1e78a93102a3
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
   summary:     latin-1 e': ? = u'\xe9'
@@ -65,22 +65,22 @@ hg log (ascii)
 hg log (latin-1)
 
   $ hg --encoding latin-1 log
-  changeset:   3:ca661e7520de
+  commit:      ca661e7520de
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: \xe9 (esc)
   
-  changeset:   2:650c6f3d55dd
+  commit:      650c6f3d55dd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     latin-1 e' encoded: \xe9 (esc)
   
-  changeset:   1:0e5b7e3f9c4a
+  commit:      0e5b7e3f9c4a
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
   summary:     koi8-r: \xd2\xd4\xd5\xd4\xd8 = u'\\u0440\\u0442\\u0443\\u0442\\u044c' (esc)
   
-  changeset:   0:1e78a93102a3
+  commit:      1e78a93102a3
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
   summary:     latin-1 e': \xe9 = u'\\xe9' (esc)
@@ -89,22 +89,22 @@ hg log (latin-1)
 hg log (utf-8)
 
   $ hg --encoding utf-8 log
-  changeset:   3:ca661e7520de
+  commit:      ca661e7520de
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: \xc3\xa9 (esc)
   
-  changeset:   2:650c6f3d55dd
+  commit:      650c6f3d55dd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     latin-1 e' encoded: \xc3\xa9 (esc)
   
-  changeset:   1:0e5b7e3f9c4a
+  commit:      0e5b7e3f9c4a
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
   summary:     koi8-r: \xc3\x92\xc3\x94\xc3\x95\xc3\x94\xc3\x98 = u'\\u0440\\u0442\\u0443\\u0442\\u044c' (esc)
   
-  changeset:   0:1e78a93102a3
+  commit:      1e78a93102a3
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
   summary:     latin-1 e': \xc3\xa9 = u'\\xe9' (esc)
@@ -113,22 +113,22 @@ hg log (utf-8)
 hg log (utf-8)
 
   $ HGENCODING=utf-8 hg log
-  changeset:   3:ca661e7520de
+  commit:      ca661e7520de
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     utf-8 e' encoded: \xc3\xa9 (esc)
   
-  changeset:   2:650c6f3d55dd
+  commit:      650c6f3d55dd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     latin-1 e' encoded: \xc3\xa9 (esc)
   
-  changeset:   1:0e5b7e3f9c4a
+  commit:      0e5b7e3f9c4a
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
   summary:     koi8-r: \xc3\x92\xc3\x94\xc3\x95\xc3\x94\xc3\x98 = u'\\u0440\\u0442\\u0443\\u0442\\u044c' (esc)
   
-  changeset:   0:1e78a93102a3
+  commit:      1e78a93102a3
   user:        test
   date:        Mon Jan 12 13:46:40 1970 +0000
   summary:     latin-1 e': \xc3\xa9 = u'\\xe9' (esc)

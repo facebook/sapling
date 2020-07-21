@@ -38,12 +38,12 @@ By default diff and log are paged, but id is not:
   paged! '+a 2\n'
 
   $ hg log --limit 2
-  paged! 'changeset:   10:46106edeeb38\n'
+  paged! 'commit:      46106edeeb38\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
   paged! '\n'
-  paged! 'changeset:   9:6dd8ea7dd621\n'
+  paged! 'commit:      6dd8ea7dd621\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 9\n'
@@ -55,19 +55,19 @@ By default diff and log are paged, but id is not:
 We can control the pager from the config
 
   $ hg log --limit 1 --config 'ui.paginate=False'
-  changeset:   10:46106edeeb38
+  commit:      46106edeeb38
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 10
   
   $ hg log --limit 1 --config 'ui.paginate=0'
-  changeset:   10:46106edeeb38
+  commit:      46106edeeb38
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 10
   
   $ hg log --limit 1 --config 'ui.paginate=1'
-  paged! 'changeset:   10:46106edeeb38\n'
+  paged! 'commit:      46106edeeb38\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
@@ -81,7 +81,7 @@ explicit --pager=on should take precedence over other configurations
   > paginate = false
   > EOF
   $ hg log --limit 1 --pager=on
-  paged! 'changeset:   10:46106edeeb38\n'
+  paged! 'commit:      46106edeeb38\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
@@ -93,7 +93,7 @@ explicit --pager=on should take precedence over other configurations
   > paginate = true
   > EOF
   $ hg log --limit 1 --pager=off
-  changeset:   10:46106edeeb38
+  commit:      46106edeeb38
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 10
@@ -119,12 +119,12 @@ core:
 Command aliases should have same behavior as main command
 
   $ hg history --limit 2
-  paged! 'changeset:   10:46106edeeb38\n'
+  paged! 'commit:      46106edeeb38\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
   paged! '\n'
-  paged! 'changeset:   9:6dd8ea7dd621\n'
+  paged! 'commit:      6dd8ea7dd621\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 9\n'
@@ -133,7 +133,7 @@ Command aliases should have same behavior as main command
 Abbreviated command alias should also be paged
 
   $ hg history -l 1
-  paged! 'changeset:   10:46106edeeb38\n'
+  paged! 'commit:      46106edeeb38\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
@@ -147,13 +147,13 @@ Attend for an abbreviated command does not work
 Pager should not start if stdout is not a tty.
 
   $ hg log -l1 -q --config ui.assume-tty=no
-  10:46106edeeb38
+  46106edeeb38
 
 Pager should be disabled if pager.pager is empty (otherwise the output would
 be silently lost.)
 
   $ hg log -l1 -q --config pager.pager=
-  10:46106edeeb38
+  46106edeeb38
 
 Pager with color enabled allows colors to come through by default,
 even though stdout is no longer a tty.
@@ -164,17 +164,17 @@ even though stdout is no longer a tty.
   > mode = ansi
   > EOF
   $ hg log --limit 3
-  paged! '\x1b[0;93mchangeset:   10:46106edeeb38\x1b[0m\n'
+  paged! '\x1b[0;93mcommit:      46106edeeb38\x1b[0m\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 10\n'
   paged! '\n'
-  paged! '\x1b[0;93mchangeset:   9:6dd8ea7dd621\x1b[0m\n'
+  paged! '\x1b[0;93mcommit:      6dd8ea7dd621\x1b[0m\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 9\n'
   paged! '\n'
-  paged! '\x1b[0;93mchangeset:   8:cff05a6312fe\x1b[0m\n'
+  paged! '\x1b[0;93mcommit:      cff05a6312fe\x1b[0m\n'
   paged! 'user:        test\n'
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 8\n'
@@ -185,17 +185,17 @@ An invalid pager command name is reported sensibly if we don't have to
 use shell=True in the subprocess call:
   $ hg log --limit 3 --config pager.pager=this-command-better-never-exist
   missing pager command 'this-command-better-never-exist', skipping pager
-  \x1b[0;93mchangeset:   10:46106edeeb38\x1b[0m (esc)
+  \x1b[0;93mcommit:      46106edeeb38\x1b[0m (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 10
   
-  \x1b[0;93mchangeset:   9:6dd8ea7dd621\x1b[0m (esc)
+  \x1b[0;93mcommit:      6dd8ea7dd621\x1b[0m (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 9
   
-  \x1b[0;93mchangeset:   8:cff05a6312fe\x1b[0m (esc)
+  \x1b[0;93mcommit:      cff05a6312fe\x1b[0m (esc)
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 8

@@ -38,43 +38,43 @@ Criss cross merging
   $ hg ci -m '6 second change f2'
 
   $ hg log -G
-  @  changeset:   6:6373bbfdae1d
-  |  parent:      3:c202c8af058d
+  @  commit:      6373bbfdae1d
+  |  parent:      c202c8af058d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     6 second change f2
   |
-  | o  changeset:   5:e673248094b1
+  | o  commit:      e673248094b1
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     5 second change f1
   | |
-  | o    changeset:   4:177f58377c06
-  | |\   parent:      2:d1d156401c1b
-  | | |  parent:      1:0f6b37dbe527
+  | o    commit:      177f58377c06
+  | |\   parent:      d1d156401c1b
+  | | |  parent:      0f6b37dbe527
   | | |  user:        test
   | | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | | |  summary:     4 merge
   | | |
-  o---+  changeset:   3:c202c8af058d
-  | | |  parent:      2:d1d156401c1b
-  |/ /   parent:      1:0f6b37dbe527
+  o---+  commit:      c202c8af058d
+  | | |  parent:      d1d156401c1b
+  |/ /   parent:      0f6b37dbe527
   | |    user:        test
   | |    date:        Thu Jan 01 00:00:00 1970 +0000
   | |    summary:     3 merge
   | |
-  | o  changeset:   2:d1d156401c1b
-  | |  parent:      0:40494bf2444c
+  | o  commit:      d1d156401c1b
+  | |  parent:      40494bf2444c
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     2 first change f2
   | |
-  o |  changeset:   1:0f6b37dbe527
+  o |  commit:      0f6b37dbe527
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     1 first change f1
   |
-  o  changeset:   0:40494bf2444c
+  o  commit:      40494bf2444c
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     0 base

@@ -21,7 +21,7 @@ sh % "hg add file"
 sh % "hg commit -m 'Æ'"
 
 sh % "hg log -v" == """
-changeset:   0:4bb70d3b3100
+commit:      4bb70d3b3100
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       file

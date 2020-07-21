@@ -17,14 +17,14 @@ Test basic functionality of url#rev syntax
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg --cwd clone heads
-  changeset:   1:17d330177ee9
+  commit:      17d330177ee9
   bookmark:    foo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change a
   
   $ hg --cwd clone parents
-  changeset:   1:17d330177ee9
+  commit:      17d330177ee9
   bookmark:    foo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -58,30 +58,30 @@ Changing original repo:
   $ hg ci -qAm 'add bar'
 
   $ hg log
-  changeset:   3:ad4513930219
+  commit:      ad4513930219
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
   
-  changeset:   2:7d4251d04d20
+  commit:      7d4251d04d20
   bookmark:    foo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
   
-  changeset:   1:17d330177ee9
+  commit:      17d330177ee9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     change a
   
-  changeset:   0:1f0dee641bb7
+  commit:      1f0dee641bb7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a
   
   $ hg -q outgoing '../clone'
-  2:7d4251d04d20
-  3:ad4513930219
+  7d4251d04d20
+  ad4513930219
   $ hg summary --remote --config paths.default='../clone'
   parent: 3:ad4513930219 
    add bar
@@ -89,7 +89,7 @@ Changing original repo:
   phases: 4 draft
   remote: 2 outgoing
   $ hg -q outgoing '../clone#foo'
-  2:7d4251d04d20
+  7d4251d04d20
   $ hg summary --remote --config paths.default='../clone#foo'
   parent: 3:ad4513930219 
    add bar
@@ -98,7 +98,7 @@ Changing original repo:
   remote: 1 outgoing
 
   $ hg -q --cwd ../clone incoming '../repo#foo'
-  2:7d4251d04d20
+  7d4251d04d20
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
   parent: 1:17d330177ee9 
    change a
@@ -110,7 +110,7 @@ Changing original repo:
   $ hg -q push '../clone#foo'
 
   $ hg --cwd ../clone heads
-  changeset:   2:7d4251d04d20
+  commit:      7d4251d04d20
   bookmark:    foo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -133,7 +133,7 @@ Changing original repo:
   $ hg -q pull
 
   $ hg heads
-  changeset:   2:7d4251d04d20
+  commit:      7d4251d04d20
   bookmark:    foo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -142,7 +142,7 @@ Changing original repo:
 Pull should not have updated:
 
   $ hg parents -q
-  1:17d330177ee9
+  17d330177ee9
 
 Going back to the default branch:
 
@@ -150,7 +150,7 @@ Going back to the default branch:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg parents
-  changeset:   0:1f0dee641bb7
+  commit:      1f0dee641bb7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a
@@ -160,19 +160,19 @@ No new revs, no update:
   $ hg pull -qu
 
   $ hg parents -q
-  0:1f0dee641bb7
+  1f0dee641bb7
 
   $ hg debugstrip 'desc(change)' --no-backup
 
   $ hg parents -q
-  0:1f0dee641bb7
+  1f0dee641bb7
 
 Pull -u takes us back to branch foo:
 
   $ hg pull -qu
 
   $ hg parents
-  changeset:   2:7d4251d04d20
+  commit:      7d4251d04d20
   bookmark:    foo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -186,21 +186,21 @@ Pull -u takes us back to branch foo:
   (leaving bookmark foo)
 
   $ hg parents -q
-  0:1f0dee641bb7
+  1f0dee641bb7
 
   $ hg heads -q
-  1:17d330177ee9
+  17d330177ee9
 
   $ hg pull -qur default default
 
   $ hg parents
-  changeset:   3:ad4513930219
+  commit:      ad4513930219
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
   
   $ hg heads
-  changeset:   3:ad4513930219
+  commit:      ad4513930219
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
@@ -223,7 +223,7 @@ Test handling common incoming revisions between "default" and
   $ hg commit -m "new head to push current default head"
 
   $ hg -q outgoing '../clone'
-  4:44b4e0c07491
+  44b4e0c07491
 
   $ hg summary --remote --config paths.default='../clone#foo' --config paths.default-push='../clone'
   parent: 4:44b4e0c07491 

@@ -22,13 +22,13 @@ clone a branch
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-b log --graph
-  @  changeset:   1:3bb02b6794dd
+  @  commit:      3bb02b6794dd
   |  bookmark:    beta
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:69982ec78c6d
+  o  commit:      69982ec78c6d
      bookmark:    master
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000

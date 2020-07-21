@@ -24,8 +24,8 @@ Push single empty commit
   $ hg revert -r .^ 1
   $ hg commit --amend
   $ hg show
-  changeset:   4:4d5799789652
-  parent:      0:426bada5c675
+  commit:      4d5799789652
+  parent:      426bada5c675
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:

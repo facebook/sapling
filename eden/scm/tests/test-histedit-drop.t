@@ -19,32 +19,32 @@
 
 log before edit
   $ hg log --graph
-  @  changeset:   5:652413bf663e
+  @  commit:      652413bf663e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:e860deea161a
+  o  commit:      e860deea161a
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   3:055a42cdd887
+  o  commit:      055a42cdd887
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   2:177f92b77385
+  o  commit:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -60,28 +60,28 @@ edit the history
 
 log after edit
   $ hg log --graph
-  @  changeset:   8:f518305ce889
+  @  commit:      f518305ce889
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   7:a4f7421b80f7
+  o  commit:      a4f7421b80f7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   6:ee283cb5f2d5
-  |  parent:      1:d2ae7f538514
+  o  commit:      ee283cb5f2d5
+  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -90,10 +90,10 @@ log after edit
 Check histedit_source
 
   $ hg log --debug --rev f518305ce889
-  changeset:   8:f518305ce889c07cb5bd05522176d75590ef3324
+  commit:      f518305ce889c07cb5bd05522176d75590ef3324
   phase:       draft
-  parent:      7:a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3
+  parent:      0000000000000000000000000000000000000000
   manifest:    d3d4f51c157ff242c32ff745d4799aaa26ccda44
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -121,23 +121,23 @@ Drop the last changeset
   > drop f518305ce889 d
   > EOF
   $ hg log --graph
-  @  changeset:   7:a4f7421b80f7
+  @  commit:      a4f7421b80f7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   6:ee283cb5f2d5
-  |  parent:      1:d2ae7f538514
+  o  commit:      ee283cb5f2d5
+  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   1:d2ae7f538514
+  o  commit:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
@@ -158,13 +158,13 @@ Drop the last changeset
   > pick ee283cb5f2d5 e
   > EOF
   $ hg log --graph
-  @  changeset:   9:e99c679bf03e
-  |  parent:      0:cb9a9f314b8b
+  @  commit:      e99c679bf03e
+  |  parent:      cb9a9f314b8b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
   |
-  o  changeset:   0:cb9a9f314b8b
+  o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a

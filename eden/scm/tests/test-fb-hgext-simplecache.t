@@ -75,11 +75,11 @@ Test that output remains the same with multiple invocations.
   $ hg --debug log -vpC -r .
   got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v2 from local
   got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v2 from local
-  changeset:   1:a5d935fe38ada2b984c29e4e02bffd7f19bf818d
+  commit:      a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   bookmark:    foo
   phase:       draft
-  parent:      0:b292c1e3311fd0f13ae83b409caae4a6d1fb348c
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      b292c1e3311fd0f13ae83b409caae4a6d1fb348c
+  parent:      0000000000000000000000000000000000000000
   manifest:    87b34bbb5b48d4106fd2da95fbe8beb73c1850d2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -104,7 +104,7 @@ Test that output remains the same with multiple invocations.
   +x
   
   $ hg log -vp -r .
-  changeset:   1:a5d935fe38ad
+  commit:      a5d935fe38ad
   bookmark:    foo
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -160,11 +160,11 @@ Test that corrupt caches are gracefully ignored, and updated
   falling back for value buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v2
   set value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v2 to local
   got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v2 from local
-  changeset:   1:a5d935fe38ada2b984c29e4e02bffd7f19bf818d
+  commit:      a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   bookmark:    foo
   phase:       draft
-  parent:      0:b292c1e3311fd0f13ae83b409caae4a6d1fb348c
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      b292c1e3311fd0f13ae83b409caae4a6d1fb348c
+  parent:      0000000000000000000000000000000000000000
   manifest:    87b34bbb5b48d4106fd2da95fbe8beb73c1850d2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -216,11 +216,11 @@ Test strange (unicode) filenames
   $ hg --debug log -vpC -r .
   got value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v2 from local
   got value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v2 from local
-  changeset:   2:f3a143469693894d291b7388ea8392a07492751f
+  commit:      f3a143469693894d291b7388ea8392a07492751f
   bookmark:    foo
   phase:       draft
-  parent:      1:a5d935fe38ada2b984c29e4e02bffd7f19bf818d
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      a5d935fe38ada2b984c29e4e02bffd7f19bf818d
+  parent:      0000000000000000000000000000000000000000
   manifest:    0640a75d79d252a6348f1e2316af42e7960b4a90
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

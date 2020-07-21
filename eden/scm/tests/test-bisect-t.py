@@ -22,162 +22,162 @@ for i in range(32):
     sh % "hg ci -m 'msg {i}' -d '{i} 0'".format(i=i)
 
 sh % "hg log" == r"""
-    changeset:   31:58c80a7c8a40
+    commit:      58c80a7c8a40
     user:        test
     date:        Thu Jan 01 00:00:31 1970 +0000
     summary:     msg 31
 
-    changeset:   30:ed2d2f24b11c
+    commit:      ed2d2f24b11c
     user:        test
     date:        Thu Jan 01 00:00:30 1970 +0000
     summary:     msg 30
 
-    changeset:   29:b5bd63375ab9
+    commit:      b5bd63375ab9
     user:        test
     date:        Thu Jan 01 00:00:29 1970 +0000
     summary:     msg 29
 
-    changeset:   28:8e0c2264c8af
+    commit:      8e0c2264c8af
     user:        test
     date:        Thu Jan 01 00:00:28 1970 +0000
     summary:     msg 28
 
-    changeset:   27:288867a866e9
+    commit:      288867a866e9
     user:        test
     date:        Thu Jan 01 00:00:27 1970 +0000
     summary:     msg 27
 
-    changeset:   26:3efc6fd51aeb
+    commit:      3efc6fd51aeb
     user:        test
     date:        Thu Jan 01 00:00:26 1970 +0000
     summary:     msg 26
 
-    changeset:   25:02a84173a97a
+    commit:      02a84173a97a
     user:        test
     date:        Thu Jan 01 00:00:25 1970 +0000
     summary:     msg 25
 
-    changeset:   24:10e0acd3809e
+    commit:      10e0acd3809e
     user:        test
     date:        Thu Jan 01 00:00:24 1970 +0000
     summary:     msg 24
 
-    changeset:   23:5ec79163bff4
+    commit:      5ec79163bff4
     user:        test
     date:        Thu Jan 01 00:00:23 1970 +0000
     summary:     msg 23
 
-    changeset:   22:06c7993750ce
+    commit:      06c7993750ce
     user:        test
     date:        Thu Jan 01 00:00:22 1970 +0000
     summary:     msg 22
 
-    changeset:   21:e5db6aa3fe2a
+    commit:      e5db6aa3fe2a
     user:        test
     date:        Thu Jan 01 00:00:21 1970 +0000
     summary:     msg 21
 
-    changeset:   20:7128fb4fdbc9
+    commit:      7128fb4fdbc9
     user:        test
     date:        Thu Jan 01 00:00:20 1970 +0000
     summary:     msg 20
 
-    changeset:   19:52798545b482
+    commit:      52798545b482
     user:        test
     date:        Thu Jan 01 00:00:19 1970 +0000
     summary:     msg 19
 
-    changeset:   18:86977a90077e
+    commit:      86977a90077e
     user:        test
     date:        Thu Jan 01 00:00:18 1970 +0000
     summary:     msg 18
 
-    changeset:   17:03515f4a9080
+    commit:      03515f4a9080
     user:        test
     date:        Thu Jan 01 00:00:17 1970 +0000
     summary:     msg 17
 
-    changeset:   16:a2e6ea4973e9
+    commit:      a2e6ea4973e9
     user:        test
     date:        Thu Jan 01 00:00:16 1970 +0000
     summary:     msg 16
 
-    changeset:   15:e7fa0811edb0
+    commit:      e7fa0811edb0
     user:        test
     date:        Thu Jan 01 00:00:15 1970 +0000
     summary:     msg 15
 
-    changeset:   14:ce8f0998e922
+    commit:      ce8f0998e922
     user:        test
     date:        Thu Jan 01 00:00:14 1970 +0000
     summary:     msg 14
 
-    changeset:   13:9d7d07bc967c
+    commit:      9d7d07bc967c
     user:        test
     date:        Thu Jan 01 00:00:13 1970 +0000
     summary:     msg 13
 
-    changeset:   12:1941b52820a5
+    commit:      1941b52820a5
     user:        test
     date:        Thu Jan 01 00:00:12 1970 +0000
     summary:     msg 12
 
-    changeset:   11:7b4cd9578619
+    commit:      7b4cd9578619
     user:        test
     date:        Thu Jan 01 00:00:11 1970 +0000
     summary:     msg 11
 
-    changeset:   10:7c5eff49a6b6
+    commit:      7c5eff49a6b6
     user:        test
     date:        Thu Jan 01 00:00:10 1970 +0000
     summary:     msg 10
 
-    changeset:   9:eb44510ef29a
+    commit:      eb44510ef29a
     user:        test
     date:        Thu Jan 01 00:00:09 1970 +0000
     summary:     msg 9
 
-    changeset:   8:453eb4dba229
+    commit:      453eb4dba229
     user:        test
     date:        Thu Jan 01 00:00:08 1970 +0000
     summary:     msg 8
 
-    changeset:   7:03750880c6b5
+    commit:      03750880c6b5
     user:        test
     date:        Thu Jan 01 00:00:07 1970 +0000
     summary:     msg 7
 
-    changeset:   6:a3d5c6fdf0d3
+    commit:      a3d5c6fdf0d3
     user:        test
     date:        Thu Jan 01 00:00:06 1970 +0000
     summary:     msg 6
 
-    changeset:   5:7874a09ea728
+    commit:      7874a09ea728
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     msg 5
 
-    changeset:   4:9b2ba8336a65
+    commit:      9b2ba8336a65
     user:        test
     date:        Thu Jan 01 00:00:04 1970 +0000
     summary:     msg 4
 
-    changeset:   3:b53bea5e2fcb
+    commit:      b53bea5e2fcb
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     msg 3
 
-    changeset:   2:db07c04beaca
+    commit:      db07c04beaca
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     msg 2
 
-    changeset:   1:5cd978ea5149
+    commit:      5cd978ea5149
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     msg 1
 
-    changeset:   0:b99c7b9c8e11
+    commit:      b99c7b9c8e11
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     msg 0"""
@@ -223,7 +223,7 @@ sh % "hg bisect -b" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
     The first bad revision is:
-    changeset:   29:b5bd63375ab9
+    commit:      b5bd63375ab9
     user:        test
     date:        Thu Jan 01 00:00:29 1970 +0000
     summary:     msg 29"""
@@ -280,7 +280,7 @@ sh % "hg bisect -b" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
     The first good revision is:
-    changeset:   1:5cd978ea5149
+    commit:      5cd978ea5149
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     msg 1"""
@@ -313,22 +313,22 @@ sh % "hg bisect -s" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
     Due to skipped revisions, the first bad revision could be any of:
-    changeset:   1:5cd978ea5149
+    commit:      5cd978ea5149
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     msg 1
 
-    changeset:   2:db07c04beaca
+    commit:      db07c04beaca
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     msg 2
 
-    changeset:   3:b53bea5e2fcb
+    commit:      b53bea5e2fcb
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     msg 3
 
-    changeset:   4:9b2ba8336a65
+    commit:      9b2ba8336a65
     user:        test
     date:        Thu Jan 01 00:00:04 1970 +0000
     summary:     msg 4"""
@@ -343,12 +343,12 @@ sh % "hg bisect -b 2" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -s" == r"""
     Due to skipped revisions, the first bad revision could be any of:
-    changeset:   1:5cd978ea5149
+    commit:      5cd978ea5149
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     msg 1
 
-    changeset:   2:db07c04beaca
+    commit:      db07c04beaca
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     msg 2"""
@@ -383,47 +383,47 @@ sh % "hg bisect -s" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect -g" == r"""
     The first bad revision is:
-    changeset:   6:a3d5c6fdf0d3
+    commit:      a3d5c6fdf0d3
     user:        test
     date:        Thu Jan 01 00:00:06 1970 +0000
     summary:     msg 6"""
 sh % "hg log -r 'bisect(good)'" == r"""
-    changeset:   0:b99c7b9c8e11
+    commit:      b99c7b9c8e11
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     msg 0
 
-    changeset:   5:7874a09ea728
+    commit:      7874a09ea728
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     msg 5"""
 sh % "hg log -r 'bisect(bad)'" == r"""
-    changeset:   6:a3d5c6fdf0d3
+    commit:      a3d5c6fdf0d3
     user:        test
     date:        Thu Jan 01 00:00:06 1970 +0000
     summary:     msg 6"""
 sh % "hg log -r 'bisect(current)'" == r"""
-    changeset:   5:7874a09ea728
+    commit:      7874a09ea728
     user:        test
     date:        Thu Jan 01 00:00:05 1970 +0000
     summary:     msg 5"""
 sh % "hg log -r 'bisect(skip)'" == r"""
-    changeset:   1:5cd978ea5149
+    commit:      5cd978ea5149
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     msg 1
 
-    changeset:   2:db07c04beaca
+    commit:      db07c04beaca
     user:        test
     date:        Thu Jan 01 00:00:02 1970 +0000
     summary:     msg 2
 
-    changeset:   3:b53bea5e2fcb
+    commit:      b53bea5e2fcb
     user:        test
     date:        Thu Jan 01 00:00:03 1970 +0000
     summary:     msg 3
 
-    changeset:   4:9b2ba8336a65
+    commit:      9b2ba8336a65
     user:        test
     date:        Thu Jan 01 00:00:04 1970 +0000
     summary:     msg 4"""
@@ -431,7 +431,7 @@ sh % "hg log -r 'bisect(skip)'" == r"""
 # test legacy bisected() keyword
 
 sh % "hg log -r 'bisected(bad)'" == r"""
-    changeset:   6:a3d5c6fdf0d3
+    commit:      a3d5c6fdf0d3
     user:        test
     date:        Thu Jan 01 00:00:06 1970 +0000
     summary:     msg 6"""
@@ -468,7 +468,7 @@ hg bisect --command \
     changeset 5:7874a09ea728: bad
     changeset 6:a3d5c6fdf0d3: good
     The first good revision is:
-    changeset:   6:a3d5c6fdf0d3
+    commit:      a3d5c6fdf0d3
     user:        test
     date:        Thu Jan 01 00:00:06 1970 +0000
     summary:     msg 6"""
@@ -498,7 +498,7 @@ sh % "hg bisect --command 'sh script.sh and some params' --noupdate" == r"""
     changeset 5:7874a09ea728: bad
     changeset 6:a3d5c6fdf0d3: good
     The first good revision is:
-    changeset:   6:a3d5c6fdf0d3
+    commit:      a3d5c6fdf0d3
     user:        test
     date:        Thu Jan 01 00:00:06 1970 +0000
     summary:     msg 6"""
@@ -534,7 +534,7 @@ sh % "hg bisect --command 'sh script.sh and some params'" == r"""
     changeset 5:7874a09ea728: bad
     changeset 6:a3d5c6fdf0d3: good
     The first good revision is:
-    changeset:   6:a3d5c6fdf0d3
+    commit:      a3d5c6fdf0d3
     user:        test
     date:        Thu Jan 01 00:00:06 1970 +0000
     summary:     msg 6"""
@@ -570,7 +570,7 @@ sh % "hg bisect --command true" == r"""
     changeset 28:8e0c2264c8af: good
     changeset 29:b5bd63375ab9: good
     The first bad revision is:
-    changeset:   30:ed2d2f24b11c
+    commit:      ed2d2f24b11c
     user:        test
     date:        Thu Jan 01 00:00:30 1970 +0000
     summary:     msg 30"""
@@ -590,7 +590,7 @@ sh % "hg bisect --command true" == r"""
     changeset 28:8e0c2264c8af: good
     changeset 26:3efc6fd51aeb: good
     The first good revision is:
-    changeset:   26:3efc6fd51aeb
+    commit:      3efc6fd51aeb
     user:        test
     date:        Thu Jan 01 00:00:26 1970 +0000
     summary:     msg 26"""

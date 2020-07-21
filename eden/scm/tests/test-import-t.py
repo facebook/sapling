@@ -53,7 +53,7 @@ sh % "'HGEDITOR=cat' hg --cwd b import ../exported-tip.patch" == "applying ../ex
 # message and committer and date should be same
 
 sh % "hg --cwd b tip" == r"""
-    changeset:   1:1d4bd90af0e4
+    commit:      1d4bd90af0e4
     user:        someone
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     second change"""
@@ -131,7 +131,7 @@ sh % "hg --cwd b2 import -mpatch ../diffed-tip.patch" == "applying ../diffed-tip
 sh % "hg clone -qr0 a b3"
 sh % "hg --cwd b3 import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch" == "applying ../diffed-tip.patch"
 sh % "hg -R b3 tip -pv" == r"""
-    changeset:   1:ca68f19f3a40
+    commit:      ca68f19f3a40
     user:        user@nowhere.net
     date:        Thu Jan 01 00:00:01 1970 +0000
     files:       a
@@ -327,7 +327,7 @@ sh % "cd ../../.."
 # committer should be 'someoneelse'
 
 sh % "hg --cwd b13 tip" == r"""
-    changeset:   1:3577f5aea227
+    commit:      3577f5aea227
     user:        someoneelse
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     subdir change"""
@@ -683,7 +683,7 @@ diff -r 000000000000 -r 9b4c1e343b55 test.txt
 """ > "a.patch"
 sh % "hg import -d '0 0' a.patch" == "applying a.patch"
 sh % "hg parents -v" == r"""
-    changeset:   0:5a681217c0ad
+    commit:      5a681217c0ad
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       a
@@ -713,7 +713,7 @@ new file mode 100644
 
 sh % "hg import -d '0 0' a.patch -q"
 sh % "hg parents -v" == r"""
-    changeset:   0:f34d9187897d
+    commit:      f34d9187897d
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       a
@@ -957,7 +957,7 @@ diff blah
 blah blah
 """
 sh % "hg --config 'diff.git=1' log -pv" == r"""
-    changeset:   0:c6ef204ef767
+    commit:      c6ef204ef767
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       empty nonempty
@@ -981,7 +981,7 @@ sh % "hg --config 'diff.git=1' log -pv" == r"""
 sh % "hg init plain"
 sh % "hg export 0" | "hg -R plain import -" == "applying patch from stdin"
 sh % "hg --config 'diff.git=1' -R plain log -pv" == r"""
-    changeset:   0:60a2d231e71f
+    commit:      60a2d231e71f
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       nonempty
@@ -1003,7 +1003,7 @@ sh % "hg --config 'diff.git=1' -R plain log -pv" == r"""
 sh % "hg init git"
 sh % "hg --config 'diff.git=1' export 0" | "hg -R git import -" == "applying patch from stdin"
 sh % "hg --config 'diff.git=1' -R git log -pv" == r"""
-    changeset:   0:c6ef204ef767
+    commit:      c6ef204ef767
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       empty nonempty

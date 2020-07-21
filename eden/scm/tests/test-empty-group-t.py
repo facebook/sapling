@@ -9,8 +9,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-
-
 sh % "setconfig 'extensions.treemanifest=!'"
 #  A          B
 #
@@ -76,36 +74,36 @@ sh % "hg clone -r 4 a c" == r"""
 sh % "hg -R a outgoing b" == r"""
     comparing with b
     searching for changes
-    changeset:   4:1ec3c74fc0e0
-    parent:      1:79f9e10cd04e
-    parent:      2:8e1bb01c1a24
+    commit:      1ec3c74fc0e0
+    parent:      79f9e10cd04e
+    parent:      8e1bb01c1a24
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     m2"""
 sh % "hg -R a outgoing c" == r"""
     comparing with c
     searching for changes
-    changeset:   3:d15a0c284984
-    parent:      2:8e1bb01c1a24
-    parent:      1:79f9e10cd04e
+    commit:      d15a0c284984
+    parent:      8e1bb01c1a24
+    parent:      79f9e10cd04e
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     m1"""
 sh % "hg -R b outgoing c" == r"""
     comparing with c
     searching for changes
-    changeset:   3:d15a0c284984
-    parent:      2:8e1bb01c1a24
-    parent:      1:79f9e10cd04e
+    commit:      d15a0c284984
+    parent:      8e1bb01c1a24
+    parent:      79f9e10cd04e
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     m1"""
 sh % "hg -R c outgoing b" == r"""
     comparing with b
     searching for changes
-    changeset:   3:1ec3c74fc0e0
-    parent:      1:79f9e10cd04e
-    parent:      2:8e1bb01c1a24
+    commit:      1ec3c74fc0e0
+    parent:      79f9e10cd04e
+    parent:      8e1bb01c1a24
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     m2"""

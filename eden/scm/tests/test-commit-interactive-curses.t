@@ -45,7 +45,7 @@ Committing some changes but stopping on the way
   no changes to record
   [1]
   $ hg tip
-  changeset:   -1:000000000000
+  commit:      000000000000
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
@@ -57,7 +57,7 @@ Committing some changes
   > EOF
   $ hg commit -i  -m "a" -d "0 0"
   $ hg tip
-  changeset:   0:cb9a9f314b8b
+  commit:      cb9a9f314b8b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
@@ -79,7 +79,7 @@ Committing only one file
   > EOF
   $ hg commit -i  -m "one file" -d "0 0"
   $ hg tip
-  changeset:   1:fb2705a663ea
+  commit:      fb2705a663ea
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     one file
@@ -123,7 +123,7 @@ Committing only one hunk while aborting edition of hunk
   editor ran
   $ rm editor.sh
   $ hg tip
-  changeset:   2:7d10dfe755a8
+  commit:      7d10dfe755a8
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     one hunk
@@ -155,7 +155,7 @@ Committing only one hunk while aborting edition of hunk
   y
   $ hg commit -m "other hunks"
   $ hg tip
-  changeset:   3:a6735021574d
+  commit:      a6735021574d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     other hunks

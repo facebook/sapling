@@ -205,7 +205,7 @@ Test --newest flag.
   (use the --newest flag to always pick the newest child at each step)
   [255]
   $ hg log -r .
-  changeset:   0:fdaccbb26270
+  commit:      fdaccbb26270
   bookmark:    bottom
   user:        debugbuilddag
   date:        Thu Jan 01 00:00:00 1970 +0000

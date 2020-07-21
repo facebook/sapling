@@ -490,13 +490,13 @@ with opts and whitespace
 interaction with defaults
 
   $ hg mylog
-  changeset:   0:e63c23eaa88a
+  commit:      e63c23eaa88a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo
   
   $ hg lognull
-  changeset:   -1:000000000000
+  commit:      000000000000
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
@@ -505,10 +505,10 @@ interaction with defaults
 properly recursive
 
   $ hg dln
-  changeset:   -1:0000000000000000000000000000000000000000
+  commit:      0000000000000000000000000000000000000000
   phase:       public
-  parent:      -1:0000000000000000000000000000000000000000
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      0000000000000000000000000000000000000000
+  parent:      0000000000000000000000000000000000000000
   manifest:    0000000000000000000000000000000000000000
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000

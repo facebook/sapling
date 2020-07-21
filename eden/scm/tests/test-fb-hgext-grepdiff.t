@@ -26,7 +26,7 @@ Commit some things
 
 Perform a grepdiff without a modifier over the whole repo
   $ hg log --rev "grepdiff('string \wne')" -p
-  changeset:   0:66a661e5ba18
+  commit:      66a661e5ba18
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     string one in root
@@ -37,7 +37,7 @@ Perform a grepdiff without a modifier over the whole repo
   @@ -0,0 +1,1 @@
   +string one
   
-  changeset:   1:e4e29c42d1c9
+  commit:      e4e29c42d1c9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     string one in a
@@ -48,7 +48,7 @@ Perform a grepdiff without a modifier over the whole repo
   @@ -0,0 +1,1 @@
   +string one
   
-  changeset:   2:f90b5c1dcd6f
+  commit:      f90b5c1dcd6f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     string two in root
@@ -62,7 +62,7 @@ Perform a grepdiff without a modifier over the whole repo
   
 Perform a "remove" grepdiff over a limited set of files
   $ hg log --rev "grepdiff('remove:string', root)" -p
-  changeset:   2:f90b5c1dcd6f
+  commit:      f90b5c1dcd6f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     string two in root
@@ -77,7 +77,7 @@ Perform a "remove" grepdiff over a limited set of files
 
 Perform an "add" grepdiff over the whole repo
   $ hg log --rev "grepdiff('add:two')" -p
-  changeset:   2:f90b5c1dcd6f
+  commit:      f90b5c1dcd6f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     string two in root
@@ -92,7 +92,7 @@ Perform an "add" grepdiff over the whole repo
 
 Perform a "delta" grepdiff over the whole repo with another revset used
   $ hg log --rev "(4:0) and grepdiff('delta:string')" -p
-  changeset:   3:0173332b5f0e
+  commit:      0173332b5f0e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     string three in a
@@ -104,7 +104,7 @@ Perform a "delta" grepdiff over the whole repo with another revset used
    string one
   +string three
   
-  changeset:   1:e4e29c42d1c9
+  commit:      e4e29c42d1c9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     string one in a
@@ -115,7 +115,7 @@ Perform a "delta" grepdiff over the whole repo with another revset used
   @@ -0,0 +1,1 @@
   +string one
   
-  changeset:   0:66a661e5ba18
+  commit:      66a661e5ba18
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     string one in root

@@ -103,48 +103,48 @@ final manifest in git is just beta
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
   $ hg log --graph
-  @  changeset:   8:378e6ad159a5
+  @  commit:      378e6ad159a5
   |  bookmark:    master
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     remove betalink
   |
-  o  changeset:   7:cdab01d82d2c
+  o  commit:      cdab01d82d2c
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:17 2007 +0000
   |  summary:     replace file with symlink
   |
-  o  changeset:   6:6489fe6b5d5d
+  o  commit:      6489fe6b5d5d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:16 2007 +0000
   |  summary:     replace symlink with file
   |
-  o  changeset:   5:8b6301fee25f
+  o  commit:      8b6301fee25f
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:15 2007 +0000
   |  summary:     add symlink to beta
   |
-  o  changeset:   4:c1cc4c542dff
+  o  commit:      c1cc4c542dff
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:14 2007 +0000
   |  summary:     remove foo/bar
   |
-  o  changeset:   3:ac85e2bfa8ee
+  o  commit:      ac85e2bfa8ee
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     remove alpha
   |
-  o  changeset:   2:02c84a0b42d8
+  o  commit:      02c84a0b42d8
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add foo
   |
-  o  changeset:   1:3bb02b6794dd
+  o  commit:      3bb02b6794dd
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:69982ec78c6d
+  o  commit:      69982ec78c6d
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
@@ -230,48 +230,48 @@ test with rename detection enabled
 
   $ cd hgreporenames
   $ hg log --graph
-  @  changeset:   8:378e6ad159a5
+  @  commit:      378e6ad159a5
   |  bookmark:    master
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:18 2007 +0000
   |  summary:     remove betalink
   |
-  o  changeset:   7:cdab01d82d2c
+  o  commit:      cdab01d82d2c
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:17 2007 +0000
   |  summary:     replace file with symlink
   |
-  o  changeset:   6:6489fe6b5d5d
+  o  commit:      6489fe6b5d5d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:16 2007 +0000
   |  summary:     replace symlink with file
   |
-  o  changeset:   5:8b6301fee25f
+  o  commit:      8b6301fee25f
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:15 2007 +0000
   |  summary:     add symlink to beta
   |
-  o  changeset:   4:c1cc4c542dff
+  o  commit:      c1cc4c542dff
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:14 2007 +0000
   |  summary:     remove foo/bar
   |
-  o  changeset:   3:ac85e2bfa8ee
+  o  commit:      ac85e2bfa8ee
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     remove alpha
   |
-  o  changeset:   2:02c84a0b42d8
+  o  commit:      02c84a0b42d8
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:12 2007 +0000
   |  summary:     add foo
   |
-  o  changeset:   1:3bb02b6794dd
+  o  commit:      3bb02b6794dd
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
   |  summary:     add beta
   |
-  o  changeset:   0:69982ec78c6d
+  o  commit:      69982ec78c6d
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha

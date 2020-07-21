@@ -21,7 +21,7 @@ the other changes
 
 we get conflicts that shouldn't be there
   $ hg merge -P
-  changeset:   1:484bf6903104
+  commit:      484bf6903104
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     cp foo bar; change both

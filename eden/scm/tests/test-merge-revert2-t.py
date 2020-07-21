@@ -21,8 +21,8 @@ sh % "echo 'changed file1'" >> "file1"
 sh % "hg commit -m 'changed file1'"
 
 sh % "hg -q log" == r"""
-    1:dfab7f3c2efb
-    0:c3fa057dd86f"""
+    dfab7f3c2efb
+    c3fa057dd86f"""
 sh % "hg id" == "dfab7f3c2efb"
 
 sh % "hg update -C 0" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"

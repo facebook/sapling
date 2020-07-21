@@ -27,28 +27,28 @@
   [1]
 
   $ hg log -Gr 'all()'
-  @  changeset:   4:27652fba03b2
-  |  parent:      0:96cc3511f894
+  @  commit:      27652fba03b2
+  |  parent:      96cc3511f894
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     B
   |
-  | @  changeset:   3:2f1af6263db7
+  | @  commit:      2f1af6263db7
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     A1
   | |
-  | x  changeset:   2:c84328973e26
+  | x  commit:      c84328973e26
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     B
   | |
-  | o  changeset:   1:9cfaa5b6d3e1
+  | o  commit:      9cfaa5b6d3e1
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     A
   |
-  o  changeset:   0:96cc3511f894
+  o  commit:      96cc3511f894
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     C
@@ -65,23 +65,23 @@
   rebasing 2f1af6263db7 "A1"
 
   $ hg log -Gr 'all()'
-  o  changeset:   5:8bbb642d1454
+  o  commit:      8bbb642d1454
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     A1
   |
-  o  changeset:   4:27652fba03b2
-  |  parent:      0:96cc3511f894
+  o  commit:      27652fba03b2
+  |  parent:      96cc3511f894
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     B
   |
-  | o  changeset:   1:9cfaa5b6d3e1
+  | o  commit:      9cfaa5b6d3e1
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     A
   |
-  o  changeset:   0:96cc3511f894
+  o  commit:      96cc3511f894
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     C

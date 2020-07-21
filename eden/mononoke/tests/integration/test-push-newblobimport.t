@@ -33,13 +33,13 @@ verify content
   3903775176ed42b1458a6281db4a0ccf4d9f287a: a
   c201a1696ba0db28be95eedf0949329fa8c44478: b
   $ hg log
-  changeset:   1:c201a1696ba0
+  commit:      c201a1696ba0
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
    (re)
-  changeset:   0:3903775176ed
+  commit:      3903775176ed
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

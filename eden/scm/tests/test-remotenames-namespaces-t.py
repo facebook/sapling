@@ -34,7 +34,7 @@ sh % "hg bookmark local"
 # Test colors
 
 sh % "hg log '--color=always' -l 1" == r"""
-    [0;33mchangeset:   0:cb9a9f314b8b[0m
+    [0;33mcommit:      cb9a9f314b8b[0m
     bookmark:    local
     [0;33mbookmark:    default/bm2[0m
     [0;34mhoistedname: bm2[0m

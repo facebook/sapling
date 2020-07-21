@@ -170,13 +170,13 @@ Make sure ui.formatted=False works
   adding modified
   adding removed
   $ hg log --color=debug
-  [log.changeset changeset.draft|changeset:   0:51a28a6611a2]
+  [log.changeset changeset.draft|commit:      51a28a6611a2]
   [log.user|user:        test]
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
   [log.summary|summary:     initial checkin]
   
   $ hg log -Tcompact --color=debug
-  [log.changeset changeset.draft|0]   [log.node|51a28a6611a2]   [log.date|1970-01-01 00:00 +0000]   [log.user|test]
+     [log.node|51a28a6611a2]   [log.date|1970-01-01 00:00 +0000]   [log.user|test]
     [ui.note log.description|initial checkin]
   
 Labels on empty strings should not be displayed, labels on custom

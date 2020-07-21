@@ -42,7 +42,7 @@ Make pull and check that scratch commit is not pulled
   no changes found
   $ hg log -r scratch/book
   pulling 'scratch/book' from 'ssh://user@dummy/server'
-  changeset:   0:2d9cfa751213
+  commit:      2d9cfa751213
   bookmark:    default/scratch/book
   hoistedname: scratch/book
   user:        test
@@ -62,7 +62,7 @@ Pull scratch commit from the second client
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark scratch/book)
   $ hg log -G
-  @  changeset:   0:2d9cfa751213
+  @  commit:      2d9cfa751213
      bookmark:    scratch/book
      bookmark:    default/scratch/book
      hoistedname: scratch/book

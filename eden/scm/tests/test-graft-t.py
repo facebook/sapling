@@ -150,10 +150,10 @@ sh % "hg export tip --git" == r"""
 # Look for extra:source
 
 sh % "hg log --debug -r tip" == r"""
-    changeset:   7:ef0ef43d49e79e81ddafdc7997401ba0041efc82
+    commit:      ef0ef43d49e79e81ddafdc7997401ba0041efc82
     phase:       draft
-    parent:      0:68795b066622ca79a25816a662041d8f78f3cd9e
-    parent:      -1:0000000000000000000000000000000000000000
+    parent:      68795b066622ca79a25816a662041d8f78f3cd9e
+    parent:      0000000000000000000000000000000000000000
     manifest:    e59b6b228f9cbf9903d5e9abf996e083a1f533eb
     user:        foo
     date:        Thu Jan 01 00:00:00 1970 +0000
@@ -387,10 +387,10 @@ sh % "hg log -r 7 --template '{rev}:{node}\\n'" == "7:ef0ef43d49e79e81ddafdc7997
 sh % "hg log -r 2 --template '{rev}:{node}\\n'" == "2:5c095ad7e90f871700f02dd1fa5012cb4498a2d4"
 
 sh % "hg log --debug -r tip" == r"""
-    changeset:   13:7a4785234d87ec1aa420ed6b11afe40fa73e12a9
+    commit:      7a4785234d87ec1aa420ed6b11afe40fa73e12a9
     phase:       draft
-    parent:      12:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
-    parent:      -1:0000000000000000000000000000000000000000
+    parent:      b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
+    parent:      0000000000000000000000000000000000000000
     manifest:    dc313617b8c32457c0d589e0dbbedfe71f3cd637
     user:        foo
     date:        Thu Jan 01 00:00:00 1970 +0000
@@ -446,7 +446,7 @@ sh % "hg graft 3 --log -u foo" == r"""
     grafting 4c60f11aa304 "3"
     warning: can't find ancestor for 'c' copied from 'b'!"""
 sh % "hg log --template '{rev}:{node|short} {parents} {desc}\\n' -r tip" == r"""
-    14:0c921c65ef1e 1:5d205f8b35b6  3
+    14:0c921c65ef1e 5d205f8b35b6  3
     (grafted from 4c60f11aa304a54ae1c199feb94e7fc771e51ed8)"""
 
 # Resolve conflicted graft
@@ -689,22 +689,22 @@ sh % "hg mv f3b f3d"
 sh % "echo c4d" > "f4a"
 sh % "hg ci -qAm D0"
 sh % "hg log -G" == r"""
-    @  changeset:   3:b69f5839d2d9
+    @  commit:      b69f5839d2d9
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     D0
     |
-    o  changeset:   2:f58c7e2b28fa
+    o  commit:      f58c7e2b28fa
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     C0
     |
-    o  changeset:   1:3d7bba921b5d
+    o  commit:      3d7bba921b5d
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     B0
     |
-    o  changeset:   0:11f7a1b56675
+    o  commit:      11f7a1b56675
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     A0"""
@@ -747,39 +747,39 @@ sh % "hg mv f4a f4e"
 sh % "hg mv f5a f5b"
 sh % "hg ci -qAm E0"
 sh % "hg log -G" == r"""
-    @  changeset:   6:6bd1736cab86
-    |  parent:      0:11f7a1b56675
+    @  commit:      6bd1736cab86
+    |  parent:      11f7a1b56675
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     E0
     |
-    | o  changeset:   5:560daee679da
+    | o  commit:      560daee679da
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     D1
     | |
-    | o  changeset:   4:c9763722f9bd
-    |/   parent:      0:11f7a1b56675
+    | o  commit:      c9763722f9bd
+    |/   parent:      11f7a1b56675
     |    user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     C1
     |
-    | o  changeset:   3:b69f5839d2d9
+    | o  commit:      b69f5839d2d9
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     D0
     | |
-    | o  changeset:   2:f58c7e2b28fa
+    | o  commit:      f58c7e2b28fa
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     C0
     | |
-    | o  changeset:   1:3d7bba921b5d
+    | o  commit:      3d7bba921b5d
     |/   user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     B0
     |
-    o  changeset:   0:11f7a1b56675
+    o  commit:      11f7a1b56675
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     A0"""
@@ -806,7 +806,7 @@ sh % "'HGEDITOR=echo D2 >' hg graft -r 'desc(\"D0\")' --edit" == r"""
 # Check the results of the grafts tested
 
 sh % "hg log -CGv --patch --git" == r"""
-    @  changeset:   8:93ee502e8b0a
+    @  commit:      93ee502e8b0a
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  files:       f3d f4e
@@ -827,7 +827,7 @@ sh % "hg log -CGv --patch --git" == r"""
     |  -c4a
     |  +c4d
     |
-    o  changeset:   7:539cf145f496
+    o  commit:      539cf145f496
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  files:       f1e f2a f2c f5a f5b
@@ -854,8 +854,8 @@ sh % "hg log -CGv --patch --git" == r"""
     |  -c5a
     |  +c5c
     |
-    o  changeset:   6:6bd1736cab86
-    |  parent:      0:11f7a1b56675
+    o  commit:      6bd1736cab86
+    |  parent:      11f7a1b56675
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  files:       f1a f1e f2a f3a f3e f4a f4e f5a f5b
@@ -883,7 +883,7 @@ sh % "hg log -CGv --patch --git" == r"""
     |  rename from f5a
     |  rename to f5b
     |
-    | o  changeset:   5:560daee679da
+    | o  commit:      560daee679da
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  files:       f3d f4a
@@ -904,8 +904,8 @@ sh % "hg log -CGv --patch --git" == r"""
     | |  -c4a
     | |  +c4d
     | |
-    | o  changeset:   4:c9763722f9bd
-    |/   parent:      0:11f7a1b56675
+    | o  commit:      c9763722f9bd
+    |/   parent:      11f7a1b56675
     |    user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    files:       f1a f2a f2c f5a
@@ -930,7 +930,7 @@ sh % "hg log -CGv --patch --git" == r"""
     |    -c5a
     |    +c5c
     |
-    | o  changeset:   3:b69f5839d2d9
+    | o  commit:      b69f5839d2d9
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  files:       f3b f3d f4a
@@ -949,7 +949,7 @@ sh % "hg log -CGv --patch --git" == r"""
     | |  -c4a
     | |  +c4d
     | |
-    | o  changeset:   2:f58c7e2b28fa
+    | o  commit:      f58c7e2b28fa
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  files:       f1b f2a f2c f5a f5b
@@ -976,7 +976,7 @@ sh % "hg log -CGv --patch --git" == r"""
     | |  -c5a
     | |  +c5c
     | |
-    | o  changeset:   1:3d7bba921b5d
+    | o  commit:      3d7bba921b5d
     |/   user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    files:       f1a f1b f3a f3b f5a f5b
@@ -995,7 +995,7 @@ sh % "hg log -CGv --patch --git" == r"""
     |    rename from f5a
     |    rename to f5b
     |
-    o  changeset:   0:11f7a1b56675
+    o  commit:      11f7a1b56675
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        files:       f1a f2a f3a f4a f5a

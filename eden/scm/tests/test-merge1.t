@@ -64,7 +64,7 @@ Prepare a basic merge
   $ echo This is file b1 > b
 no merges expected
   $ hg merge -P 1
-  changeset:   1:b8bb4a988f25
+  commit:      b8bb4a988f25
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit #1

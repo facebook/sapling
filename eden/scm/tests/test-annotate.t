@@ -917,28 +917,28 @@ create history with a filerev whose linkrev points to another branch
   $ hg commit -m 'contentC'
   $ echo W >> a
   $ hg log -G
-  @  changeset:   4:072f1e8df249
+  @  commit:      072f1e8df249
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     contentC
   |
-  o  changeset:   3:ff38df03cc4b
+  o  commit:      ff38df03cc4b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     contentB
   |
-  o  changeset:   2:62aaf3f6fc06
-  |  parent:      0:f0932f74827e
+  o  commit:      62aaf3f6fc06
+  |  parent:      f0932f74827e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     unrelated
   |
-  | o  changeset:   1:fd27c222e3e6
+  | o  commit:      fd27c222e3e6
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     contentB
   |
-  o  changeset:   0:f0932f74827e
+  o  commit:      f0932f74827e
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     contentA

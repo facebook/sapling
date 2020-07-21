@@ -57,28 +57,28 @@ Continue testing
 
 graph shows tags for the branch heads of each path
   $ hg log --graph
-  @  changeset:   4:9d206ffc875e
+  @  commit:      9d206ffc875e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add e
   |
-  o  changeset:   3:47d2a3944de8
+  o  commit:      47d2a3944de8
   |  bookmark:    beta/babar
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add d
   |
-  o  changeset:   2:4538525df7e2
+  o  commit:      4538525df7e2
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add c
   |
-  o  changeset:   1:7c3bad9141dc
+  o  commit:      7c3bad9141dc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add b
   |
-  o  changeset:   0:1f0dee641bb7
+  o  commit:      1f0dee641bb7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add a
@@ -111,14 +111,14 @@ make sure bogus revisions in .hg/store/remotenames do not break hg
   $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default >> \
   > .hg/store/remotenames
   $ hg parents
-  changeset:   4:9d206ffc875e
+  commit:      9d206ffc875e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add e
   
 Verify that the revsets operate as expected:
   $ hg log -r 'not pushed()'
-  changeset:   4:9d206ffc875e
+  commit:      9d206ffc875e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add e
@@ -127,28 +127,28 @@ Verify that the revsets operate as expected:
 
 Upstream without configuration is synonymous with upstream('default'):
   $ hg log -r 'not upstream()'
-  changeset:   0:1f0dee641bb7
+  commit:      1f0dee641bb7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a
   
-  changeset:   1:7c3bad9141dc
+  commit:      7c3bad9141dc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add b
   
-  changeset:   2:4538525df7e2
+  commit:      4538525df7e2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add c
   
-  changeset:   3:47d2a3944de8
+  commit:      47d2a3944de8
   bookmark:    beta/babar
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add d
   
-  changeset:   4:9d206ffc875e
+  commit:      9d206ffc875e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add e
@@ -158,28 +158,28 @@ but configured, it'll do the expected thing:
   $ echo '[remotenames]' >> .hg/hgrc
   $ echo 'upstream=alpha' >> .hg/hgrc
   $ hg log --graph -r 'not upstream()'
-  @  changeset:   4:9d206ffc875e
+  @  commit:      9d206ffc875e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add e
   |
-  o  changeset:   3:47d2a3944de8
+  o  commit:      47d2a3944de8
   |  bookmark:    beta/babar
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add d
   |
-  o  changeset:   2:4538525df7e2
+  o  commit:      4538525df7e2
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add c
   |
-  o  changeset:   1:7c3bad9141dc
+  o  commit:      7c3bad9141dc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add b
   |
-  o  changeset:   0:1f0dee641bb7
+  o  commit:      1f0dee641bb7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add a

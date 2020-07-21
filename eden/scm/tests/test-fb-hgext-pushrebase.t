@@ -553,7 +553,7 @@ Test pushing bookmark with no new commit
   updating bookmark stable
   [1]
   $ hg log -r stable -R ../server
-  changeset:   5:fb983dc509b6
+  commit:      fb983dc509b6
   bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -603,7 +603,7 @@ Test that the prepushrebase hook can run against the bundle repo
   searching for changes
   remote: prepushrebase hook exited with status * (glob)
   abort: push failed on remote
-  remote: changeset:   1:0e067c57feba
+  remote: commit:      0e067c57feba
   remote: user:        test
   remote: date:        Thu Jan 01 00:00:00 1970 +0000
   remote: summary:     b

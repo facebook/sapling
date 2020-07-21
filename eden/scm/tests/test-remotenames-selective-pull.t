@@ -214,7 +214,7 @@ Check that log shows the hint about selective pull
 By using "default/" the commit gets automatically pulled
   $ hg log -r default/thirdbook
   pulling 'thirdbook' from 'ssh://user@dummy/remoterepo'
-  changeset:   0:1449e7934ec1
+  commit:      1449e7934ec1
   bookmark:    default/thirdbook
   hoistedname: thirdbook
   user:        test
@@ -392,7 +392,7 @@ Check the repo.pull API
   $ setconfig paths.default=ssh://user@dummy/remoterepo
   $ hg log -r '::1449e7934ec1c4d0c2eefb1194c1cb70e78ba232'
   pulling '1449e7934ec1c4d0c2eefb1194c1cb70e78ba232' from 'ssh://user@dummy/remoterepo'
-  changeset:   0:1449e7934ec1
+  commit:      1449e7934ec1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     First

@@ -105,21 +105,21 @@ check that the changes are synced
   $ REPONAME=meg-mon hgmn status --change 4523b8346e49
   A .fbsource-rest/arvr/tomerge
   $ hg log -G
-  o    changeset:   2:9c3b218de12e
+  o    commit:      9c3b218de12e
   |\   bookmark:    master_bookmark
-  | |  parent:      0:14e20a60e5f4
-  | |  parent:      1:4523b8346e49
+  | |  parent:      14e20a60e5f4
+  | |  parent:      4523b8346e49
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge_commit
   | |
-  | o  changeset:   1:4523b8346e49
-  |    parent:      -1:000000000000
+  | o  commit:      4523b8346e49
+  |    parent:      000000000000
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     to merge
   |
-  o  changeset:   0:14e20a60e5f4
+  o  commit:      14e20a60e5f4
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     megarepo commit 1

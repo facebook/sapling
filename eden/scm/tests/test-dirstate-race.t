@@ -116,7 +116,7 @@ This avoidance is important to keep consistency of dirstate in race
 condition (see issue5584 for detail).
 
   $ hg parents -q
-  1:* (glob)
+  * (glob)
 
   $ hg debugrebuilddirstate
   $ hg debugdirstate
@@ -166,7 +166,7 @@ treated differently in _checklookup() according to runtime platform.
   ? b
 
   $ hg parents -q
-  0:* (glob)
+  * (glob)
   $ hg files
   a
   $ hg debugdirstate

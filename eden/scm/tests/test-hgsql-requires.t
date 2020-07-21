@@ -22,7 +22,7 @@ Test that hgsql is a requirement
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ hg log -r tip
-  changeset:   0:b292c1e3311f
+  commit:      b292c1e3311f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     x

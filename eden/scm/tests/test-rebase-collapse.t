@@ -479,18 +479,18 @@ running into merge conflict and invoking rebase --continue.
   $ hg rebase --continue
   rebasing 1fb04abbc715 "a-dev"
   $ hg log
-  changeset:   3:925b342b51db
-  parent:      1:3c8db56a44bc
+  commit:      925b342b51db
+  parent:      3c8db56a44bc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a-default-dev
   
-  changeset:   1:3c8db56a44bc
+  commit:      3c8db56a44bc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a-default
   
-  changeset:   0:3903775176ed
+  commit:      3903775176ed
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

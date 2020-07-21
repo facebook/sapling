@@ -36,7 +36,7 @@
   $ hg status
   M a
   $ hg parents
-  changeset:   0:c19d34741b0a
+  commit:      c19d34741b0a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
@@ -62,7 +62,7 @@
   merge tool returned: 0
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
-  changeset:   1:1e71731e6fbb
+  commit:      1e71731e6fbb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -88,7 +88,7 @@
   merge tool returned: 0
   0 files updated, 1 files merged, 1 files removed, 0 files unresolved
   $ hg parents
-  changeset:   0:c19d34741b0a
+  commit:      c19d34741b0a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
@@ -114,13 +114,13 @@
   merge tool returned: 0
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
-  changeset:   1:1e71731e6fbb
+  commit:      1e71731e6fbb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
   $ hg -v history
-  changeset:   1:1e71731e6fbb
+  commit:      1e71731e6fbb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       a b
@@ -128,7 +128,7 @@
   2
   
   
-  changeset:   0:c19d34741b0a
+  commit:      c19d34741b0a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       a
@@ -161,7 +161,7 @@ create a second head
   $ hg status
   M a
   $ hg parents
-  changeset:   1:1e71731e6fbb
+  commit:      1e71731e6fbb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2

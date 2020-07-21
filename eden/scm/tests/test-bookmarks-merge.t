@@ -85,15 +85,15 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg parents
-  changeset:   4:a0546fcfe0fb
+  commit:      a0546fcfe0fb
   bookmark:    e@diverged
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
   
-  changeset:   5:26bee9c5bcf3
+  commit:      26bee9c5bcf3
   bookmark:    e
-  parent:      3:b8f96cf4688b
+  parent:      b8f96cf4688b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -130,17 +130,17 @@
      e                         7:ca784329f0ba
      g                         8:04dd21731d95
   $ hg heads
-  changeset:   8:04dd21731d95
+  commit:      04dd21731d95
   bookmark:    g
-  parent:      6:be381d1126a0
+  parent:      be381d1126a0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     g
   
-  changeset:   7:ca784329f0ba
+  commit:      ca784329f0ba
   bookmark:    e
-  parent:      5:26bee9c5bcf3
-  parent:      4:a0546fcfe0fb
+  parent:      26bee9c5bcf3
+  parent:      a0546fcfe0fb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge

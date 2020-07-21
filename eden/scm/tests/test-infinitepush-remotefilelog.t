@@ -124,7 +124,7 @@ Second client: pull regex file an make sure it is readable
   adding file changes
   added 1 changesets with 6 changes to 6 files
   $ hg log -r 2eea49d22494 --stat
-  changeset:   3:2eea49d22494
+  commit:      2eea49d22494
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Add foo[bar]

@@ -79,7 +79,7 @@ verify bisect skips empty sparse commits (2,3)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
   The first bad revision is:
-  changeset:   6:6b9461e31152
+  commit:      6b9461e31152
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     bad  6 - introducing bug
@@ -100,7 +100,7 @@ check --nosparseskip flag
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
   The first bad revision is:
-  changeset:   6:6b9461e31152
+  commit:      6b9461e31152
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     bad  6 - introducing bug
@@ -131,7 +131,7 @@ verify skipping works with --command flag
   the sparse profile from the known bad changeset 9:d910e57b873b
   changeset 5:2ecc2db0df15: good
   The first bad revision is:
-  changeset:   6:6b9461e31152
+  commit:      6b9461e31152
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     bad  6 - introducing bug
@@ -194,9 +194,9 @@ New test set
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --bad
   The first bad revision is:
-  changeset:   13:a41c9f2666a8
-  parent:      12:e694d9484bb8
-  parent:      9:d910e57b873b
+  commit:      a41c9f2666a8
+  parent:      e694d9484bb8
+  parent:      d910e57b873b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13: merge(9,12)
@@ -219,7 +219,7 @@ New test set
   Skipping changeset 12:e694d9484bb8 as there are no changes inside
   the sparse profile from the known bad changeset 13:a41c9f2666a8
   The first bad revision is:
-  changeset:   12:e694d9484bb8
+  commit:      e694d9484bb8
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     12
@@ -273,7 +273,7 @@ Empty case with --command flag: all commits are skipped
   Skipping changeset 17:9ca8d13c5161 as there are no changes inside
   the sparse profile from the known bad changeset 18:ddea298cfd5a
   The first bad revision is:
-  changeset:   17:9ca8d13c5161
+  commit:      9ca8d13c5161
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     empty bad - 17

@@ -17,7 +17,7 @@ New file:
   applying patch from stdin
 
   $ hg tip -q
-  0:ae3ee40d2079
+  ae3ee40d2079
 
 New empty file:
 
@@ -28,7 +28,7 @@ New empty file:
   applying patch from stdin
 
   $ hg tip -q
-  1:ab199dc869b5
+  ab199dc869b5
 
   $ hg locate empty
   empty
@@ -44,7 +44,7 @@ chmod +x:
 
 #if execbit
   $ hg tip -q
-  2:3a34410f282e
+  3a34410f282e
   $ test -x new
 #else
   $ hg tip -q
@@ -72,7 +72,7 @@ Copy and removing x bit:
   $ test ! -x copy
   $ test -x copyx
   $ hg tip -q
-  3:37bacb7ca14d
+  37bacb7ca14d
 #else
   $ hg tip -q
   2:0efdaa8e3bf3
@@ -95,7 +95,7 @@ Copy (like above but independent of execbit):
   applying patch from stdin
 
   $ hg tip -q
-  4:0efdaa8e3bf3
+  0efdaa8e3bf3
   $ test -f copy
 
   $ cat copy
@@ -115,7 +115,7 @@ Rename:
   applying patch from stdin
 
   $ hg tip -q
-  5:b1f57753fad2
+  b1f57753fad2
 
   $ hg locate
   copyx
@@ -137,7 +137,7 @@ Delete:
   applying patch from stdin
 
   $ hg tip -q
-  6:1bd1da94b9b2
+  1bd1da94b9b2
 
   $ hg locate
   empty
@@ -164,7 +164,7 @@ Regular diff:
   applying patch from stdin
 
   $ hg tip -q
-  7:46fe99cb3035
+  46fe99cb3035
 
 Copy and modify:
 
@@ -187,7 +187,7 @@ Copy and modify:
   applying patch from stdin
 
   $ hg tip -q
-  8:ffeb3197c12d
+  ffeb3197c12d
 
   $ hg cat copy2
   a
@@ -217,7 +217,7 @@ Rename and modify:
   applying patch from stdin
 
   $ hg tip -q
-  9:401aede9e6bb
+  401aede9e6bb
 
   $ hg locate copy2
   [1]
@@ -241,7 +241,7 @@ One file renamed multiple times:
   applying patch from stdin
 
   $ hg tip -q
-  10:2ef727e684e8
+  2ef727e684e8
 
   $ hg log -vr. --template '{rev} {files} / {file_copies}\n'
   10 rename2 rename3 rename3-2 / rename3 (rename2)rename3-2 (rename2)
@@ -285,7 +285,7 @@ Binary files and regular patch hunks:
   applying patch from stdin
 
   $ hg tip -q
-  12:27377172366e
+  27377172366e
 
   $ cat foo2
   foo
@@ -314,7 +314,7 @@ Multiple binary files:
   applying patch from stdin
 
   $ hg tip -q
-  13:18b73a84b4ab
+  18b73a84b4ab
 
   $ hg manifest --debug | grep mbinary
   045c85ba38952325e126c70962cc0f9d9077bc67 644   mbinary1
@@ -446,7 +446,7 @@ Filenames with spaces:
   applying patch from stdin
 
   $ hg tip -q
-  16:4b79479c9a6d
+  4b79479c9a6d
 
   $ cat "foo bar"
   foo
@@ -469,7 +469,7 @@ Copy then modify the original file:
   applying patch from stdin
 
   $ hg tip -q
-  17:9cbe44af4ae9
+  9cbe44af4ae9
 
   $ cat foo3
   foo
@@ -837,7 +837,7 @@ Test email metadata
   applying patch from stdin
 #if py2
   $ hg --encoding utf-8 log -r .
-  changeset:   *:* (glob)
+  commit:      d08bb06ede5e
   user:        Rapha\xc3\xabl Hertzog <hertzog@debian.org> (esc)
   date:        * (glob)
   summary:     \xc5\xa7\xe2\x82\xac\xc3\x9f\xe1\xb9\xaa (esc)
@@ -845,7 +845,7 @@ Test email metadata
 #else
 Python 3 email parser is slightly different - it inserts a space in "user".
   $ hg --encoding utf-8 log -r .
-  changeset:   *:* (glob)
+  commit:      * (glob)
   user:        Rapha\xc3\xabl Hertzog  <hertzog@debian.org> (esc)
   date:        * (glob)
   summary:     \xc5\xa7\xe2\x82\xac\xc3\x9f\xe1\xb9\xaa (esc)

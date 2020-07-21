@@ -94,7 +94,7 @@ Enable sendtrees and verify flat is converted to tree on demand
   > sendtrees=True
   > EOF
   $ hg log -r f3216a7f98b5a80b45db6bd600d958cbffa49d9e --stat
-  changeset:   1:f3216a7f98b5
+  commit:      f3216a7f98b5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     flat only commit
@@ -141,8 +141,8 @@ Tree-only amend
   [255]
 
   $ hg log -r 'predecessors(tip)-tip' --stat
-  changeset:   3:43903a6bf43f
-  parent:      0:d618f764f9a1
+  commit:      43903a6bf43f
+  parent:      d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     tree only commit
@@ -181,8 +181,8 @@ Test pulling new commits from a hybrid server
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, found via 098a163f13ea
   2 trees fetched over * (glob)
-  changeset:   5:098a163f13ea
-  parent:      0:d618f764f9a1
+  commit:      098a163f13ea
+  parent:      d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify subdir/x
@@ -382,8 +382,8 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
        3       163      55      1       3 14bce01d0d73 7e265a5dc522 000000000000
 - Verify the manifest data is accessible
   $ hg log -r tip --stat
-  changeset:   2:dad1be784127
-  parent:      0:d618f764f9a1
+  commit:      dad1be784127
+  parent:      d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     extra head commit
@@ -502,7 +502,7 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
        3       132      44     -1       5 f4c373af9a41 a18d21674e76 000000000000
        4       176      44     -1       7 d20854ad7783 f4c373af9a41 000000000000
   $ hg -R ../master log -r tip --stat
-  changeset:   7:5f0bc1aaff22
+  commit:      5f0bc1aaff22
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     pushable treeonly commit
@@ -542,7 +542,7 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
   remote: adding file changes
   remote: added 4 changesets with 0 changes to 2 files
   $ hg -R ../master log -r tip --stat
-  changeset:   7:5f0bc1aaff22
+  commit:      5f0bc1aaff22
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     pushable treeonly commit
@@ -629,7 +629,7 @@ Test creating a treeonly repo from scratch
   $ echo foo > a
   $ hg commit -Aqm 'add a'
   $ hg log -r . -p
-  changeset:   0:f87d03aef498
+  commit:      f87d03aef498
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a

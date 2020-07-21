@@ -215,7 +215,7 @@ commit and update back
   $ hg commit -m 'add symlink'
 
   $ hg tip -v
-  changeset:   0:cabd88b706fc
+  commit:      cabd88b706fc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dangling

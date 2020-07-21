@@ -103,11 +103,11 @@ Push of a merge with a copy
   $ hg ci -m 'copied'
   $ hgmn push -r . --to master_bookmark -q
   $ hg log -r tip
-  changeset:   9:bc6bfc6ac632
+  commit:      bc6bfc6ac632
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
-  parent:      8:af1639811192
-  parent:      7:21ecc753c272
+  parent:      af1639811192
+  parent:      21ecc753c272
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     copied
@@ -124,10 +124,10 @@ Push of a merge with a copy
   $ mononoke_hg_sync repo-hg 3 &> /dev/null
   $ cd $TESTTMP/repo-hg
   $ hg log -r tip
-  changeset:   7:bc6bfc6ac632
+  commit:      bc6bfc6ac632
   bookmark:    master_bookmark
-  parent:      6:af1639811192
-  parent:      5:21ecc753c272
+  parent:      af1639811192
+  parent:      21ecc753c272
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     copied

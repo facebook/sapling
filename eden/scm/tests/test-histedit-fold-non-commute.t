@@ -49,42 +49,42 @@ Initial generation of the command files
 
 log before edit
   $ hg log --graph
-  @  changeset:   7:42abbb61bede
+  @  commit:      42abbb61bede
   |  user:        test
   |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     does not commute with e
   |
-  o  changeset:   6:dd184f2faeb0
+  o  commit:      dd184f2faeb0
   |  user:        test
   |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:7f3755409b00
+  o  commit:      7f3755409b00
   |  user:        test
   |  date:        Thu Jan 01 00:00:05 1970 +0000
   |  summary:     e
   |
-  o  changeset:   4:ae78f4c9d74f
+  o  commit:      ae78f4c9d74f
   |  user:        test
   |  date:        Thu Jan 01 00:00:04 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:092e4ce14829
+  o  commit:      092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:03 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:40ccdd8beb95
+  o  commit:      40ccdd8beb95
   |  user:        test
   |  date:        Thu Jan 01 00:00:02 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:cd997a145b29
+  o  commit:      cd997a145b29
   |  user:        test
   |  date:        Thu Jan 01 00:00:01 1970 +0000
   |  summary:     a
   |
-  o  changeset:   0:1715188a53c7
+  o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     Initial commit
@@ -134,33 +134,33 @@ keep the non-commuting change, and thus the pending change will be dropped
 
 log after edit
   $ hg log --graph
-  @  changeset:   10:1300355b1a54
+  @  commit:      1300355b1a54
   |  user:        test
   |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   9:e2ac33269083
-  |  parent:      3:092e4ce14829
+  o  commit:      e2ac33269083
+  |  parent:      092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:092e4ce14829
+  o  commit:      092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:03 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:40ccdd8beb95
+  o  commit:      40ccdd8beb95
   |  user:        test
   |  date:        Thu Jan 01 00:00:02 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:cd997a145b29
+  o  commit:      cd997a145b29
   |  user:        test
   |  date:        Thu Jan 01 00:00:01 1970 +0000
   |  summary:     a
   |
-  o  changeset:   0:1715188a53c7
+  o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     Initial commit
@@ -203,42 +203,42 @@ Initial generation of the command files
 
 log before edit
   $ hg log --graph
-  @  changeset:   7:42abbb61bede
+  @  commit:      42abbb61bede
   |  user:        test
   |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     does not commute with e
   |
-  o  changeset:   6:dd184f2faeb0
+  o  commit:      dd184f2faeb0
   |  user:        test
   |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:7f3755409b00
+  o  commit:      7f3755409b00
   |  user:        test
   |  date:        Thu Jan 01 00:00:05 1970 +0000
   |  summary:     e
   |
-  o  changeset:   4:ae78f4c9d74f
+  o  commit:      ae78f4c9d74f
   |  user:        test
   |  date:        Thu Jan 01 00:00:04 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:092e4ce14829
+  o  commit:      092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:03 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:40ccdd8beb95
+  o  commit:      40ccdd8beb95
   |  user:        test
   |  date:        Thu Jan 01 00:00:02 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:cd997a145b29
+  o  commit:      cd997a145b29
   |  user:        test
   |  date:        Thu Jan 01 00:00:01 1970 +0000
   |  summary:     a
   |
-  o  changeset:   0:1715188a53c7
+  o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     Initial commit
@@ -273,33 +273,33 @@ just continue this time
 
 log after edit
   $ hg log --graph
-  @  changeset:   10:b538bcb461be
+  @  commit:      b538bcb461be
   |  user:        test
   |  date:        Thu Jan 01 00:00:06 1970 +0000
   |  summary:     f
   |
-  o  changeset:   9:317e37cb6d66
-  |  parent:      3:092e4ce14829
+  o  commit:      317e37cb6d66
+  |  parent:      092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:04 1970 +0000
   |  summary:     d
   |
-  o  changeset:   3:092e4ce14829
+  o  commit:      092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:03 1970 +0000
   |  summary:     c
   |
-  o  changeset:   2:40ccdd8beb95
+  o  commit:      40ccdd8beb95
   |  user:        test
   |  date:        Thu Jan 01 00:00:02 1970 +0000
   |  summary:     b
   |
-  o  changeset:   1:cd997a145b29
+  o  commit:      cd997a145b29
   |  user:        test
   |  date:        Thu Jan 01 00:00:01 1970 +0000
   |  summary:     a
   |
-  o  changeset:   0:1715188a53c7
+  o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     Initial commit
@@ -321,10 +321,10 @@ manifest
 description is taken from rollup target commit
 
   $ hg log --debug --rev 'max(desc(d))'
-  changeset:   9:317e37cb6d66c1c84628c00e5bf4c8c292831951
+  commit:      317e37cb6d66c1c84628c00e5bf4c8c292831951
   phase:       draft
-  parent:      3:092e4ce14829f4974399ce4316d59f64ef0b6725
-  parent:      -1:0000000000000000000000000000000000000000
+  parent:      092e4ce14829f4974399ce4316d59f64ef0b6725
+  parent:      0000000000000000000000000000000000000000
   manifest:    b068a323d969f22af1296ec6a5ea9384cef437ac
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000

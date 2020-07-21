@@ -85,7 +85,7 @@
   $
 
   $ hg show master_bookmark
-  changeset:   * (glob)
+  commit:      * (glob)
   bookmark:    master_bookmark
   user:        test
   date:        * (glob)

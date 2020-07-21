@@ -85,7 +85,7 @@ Pull a non-tree scratch branch into a normal client
   adding file changes
   added 2 changesets with 2 changes to 1 files
   $ hg log -r tip -vp
-  changeset:   2:ebde88dba372
+  commit:      ebde88dba372
   bookmark:    default/scratch/nontree
   hoistedname: scratch/nontree
   user:        test
@@ -134,7 +134,7 @@ Pull just part of a treeonly scratch branch (this causes rebundling on the serve
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg log -r 02c12aef64ff  --stat
-  changeset:   1:02c12aef64ff
+  commit:      02c12aef64ff
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add subdir/a
@@ -153,19 +153,19 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   adding file changes
   added 1 changesets with 2 changes to 1 files
   $ hg log -G
-  o  changeset:   2:5a7a7de8a420
+  o  commit:      5a7a7de8a420
   |  bookmark:    default/scratch/foo
   |  hoistedname: scratch/foo
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     edit subdir/a
   |
-  o  changeset:   1:02c12aef64ff
+  o  commit:      02c12aef64ff
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add subdir/a
   |
-  @  changeset:   0:085784c01c08
+  @  commit:      085784c01c08
      bookmark:    default/master
      hoistedname: master
      user:        test
@@ -186,8 +186,8 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg log -r 3ef288300b64 --stat
-  changeset:   3:3ef288300b64
-  parent:      0:085784c01c08
+  commit:      3ef288300b64
+  parent:      085784c01c08
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar/car
@@ -230,7 +230,7 @@ trees
 Verify its not on the server
   $ cd master
   $ hg log -G
-  @  changeset:   0:085784c01c08
+  @  commit:      085784c01c08
      bookmark:    master
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

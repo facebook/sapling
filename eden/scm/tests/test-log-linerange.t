@@ -102,7 +102,7 @@ Add some changes with two diff hunks
   +11-
 
   $ hg log -f -L foo,5:7 -p
-  changeset:   5:cfdf972b3971
+  commit:      cfdf972b3971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -120,7 +120,7 @@ Add some changes with two diff hunks
    5
    6
   
-  changeset:   4:eaec41c1a0c9
+  commit:      eaec41c1a0c9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11 -> 11+; leading space before "1"
@@ -138,7 +138,7 @@ Add some changes with two diff hunks
    3
    4
   
-  changeset:   2:63a884426fd0
+  commit:      63a884426fd0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2 -> 2+; added bar
@@ -155,7 +155,7 @@ Add some changes with two diff hunks
    3
    4
   
-  changeset:   0:5ae1f82b9a00
+  commit:      5ae1f82b9a00
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
@@ -230,7 +230,7 @@ With --template.
 With some white-space diff option, respective revisions are skipped.
 
   $ hg log -f -L foo,5:7 -p --config diff.ignorews=true
-  changeset:   5:cfdf972b3971
+  commit:      cfdf972b3971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -248,7 +248,7 @@ With some white-space diff option, respective revisions are skipped.
    5
    6
   
-  changeset:   2:63a884426fd0
+  commit:      63a884426fd0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2 -> 2+; added bar
@@ -265,7 +265,7 @@ With some white-space diff option, respective revisions are skipped.
    3
    4
   
-  changeset:   0:5ae1f82b9a00
+  commit:      5ae1f82b9a00
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
@@ -291,7 +291,7 @@ Regular file patterns are not allowed.
 Option --rev acts as a restriction.
 
   $ hg log -f -L foo,5:7 -p -r 'desc(2)'
-  changeset:   2:63a884426fd0
+  commit:      63a884426fd0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2 -> 2+; added bar
@@ -308,7 +308,7 @@ Option --rev acts as a restriction.
    3
    4
   
-  changeset:   0:5ae1f82b9a00
+  commit:      5ae1f82b9a00
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
@@ -329,7 +329,7 @@ With several -L patterns, changes touching any files in their respective line
 range are show.
 
   $ hg log -f -L foo,5:7 -L bar,1:2 -p
-  changeset:   5:cfdf972b3971
+  commit:      cfdf972b3971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -356,7 +356,7 @@ range are show.
    5
    6
   
-  changeset:   4:eaec41c1a0c9
+  commit:      eaec41c1a0c9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11 -> 11+; leading space before "1"
@@ -374,7 +374,7 @@ range are show.
    3
    4
   
-  changeset:   2:63a884426fd0
+  commit:      63a884426fd0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2 -> 2+; added bar
@@ -401,7 +401,7 @@ range are show.
    3
    4
   
-  changeset:   0:5ae1f82b9a00
+  commit:      5ae1f82b9a00
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
@@ -422,7 +422,7 @@ Multiple -L options with the same file yields changes touching any of
 specified line ranges.
 
   $ hg log -f -L foo,5:7 -L foo,14:15 -p
-  changeset:   5:cfdf972b3971
+  commit:      cfdf972b3971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -446,7 +446,7 @@ specified line ranges.
   -11+
   +11-
   
-  changeset:   4:eaec41c1a0c9
+  commit:      eaec41c1a0c9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11 -> 11+; leading space before "1"
@@ -470,7 +470,7 @@ specified line ranges.
   -11
   +11+
   
-  changeset:   3:730a61fbaecf
+  commit:      730a61fbaecf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     to 11
@@ -490,7 +490,7 @@ specified line ranges.
   +10
   +11
   
-  changeset:   2:63a884426fd0
+  commit:      63a884426fd0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2 -> 2+; added bar
@@ -507,7 +507,7 @@ specified line ranges.
    3
    4
   
-  changeset:   0:5ae1f82b9a00
+  commit:      5ae1f82b9a00
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
@@ -557,7 +557,7 @@ A file with a comma in its name.
   > EOF
   $ hg ci -m 'azerty'
   $ hg log -f -L ba,z,1:2 -p
-  changeset:   8:52373265138b
+  commit:      52373265138b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     azerty
@@ -574,7 +574,7 @@ A file with a comma in its name.
    r
    t
   
-  changeset:   6:96ba8850f316
+  commit:      96ba8850f316
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     querty
@@ -597,7 +597,7 @@ Exact prefix kinds work in -L options.
   $ mkdir dir
   $ cd dir
   $ hg log -f -L path:foo,5:7 -p
-  changeset:   5:cfdf972b3971
+  commit:      cfdf972b3971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -615,7 +615,7 @@ Exact prefix kinds work in -L options.
    5
    6
   
-  changeset:   4:eaec41c1a0c9
+  commit:      eaec41c1a0c9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11 -> 11+; leading space before "1"
@@ -633,7 +633,7 @@ Exact prefix kinds work in -L options.
    3
    4
   
-  changeset:   2:63a884426fd0
+  commit:      63a884426fd0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2 -> 2+; added bar
@@ -650,7 +650,7 @@ Exact prefix kinds work in -L options.
    3
    4
   
-  changeset:   0:5ae1f82b9a00
+  commit:      5ae1f82b9a00
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
@@ -697,7 +697,7 @@ Renames are followed.
   +1+0
   +1+1-
   $ hg log -f -L relpath:baz,5:7 -p
-  changeset:   9:6af29c3a778f
+  commit:      6af29c3a778f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo -> dir/baz; 1-1+
@@ -717,7 +717,7 @@ Renames are followed.
    3+
    4
   
-  changeset:   5:cfdf972b3971
+  commit:      cfdf972b3971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
@@ -735,7 +735,7 @@ Renames are followed.
    5
    6
   
-  changeset:   4:eaec41c1a0c9
+  commit:      eaec41c1a0c9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     11 -> 11+; leading space before "1"
@@ -753,7 +753,7 @@ Renames are followed.
    3
    4
   
-  changeset:   2:63a884426fd0
+  commit:      63a884426fd0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2 -> 2+; added bar
@@ -770,7 +770,7 @@ Renames are followed.
    3
    4
   
-  changeset:   0:5ae1f82b9a00
+  commit:      5ae1f82b9a00
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     init
@@ -795,7 +795,7 @@ Binary files work but without diff hunks filtering.
   $ hg ci -m 'add a binary file' --quiet
 #if common-zlib
   $ hg log -f -L binary,1:2 -p
-  changeset:   10:c96381c229df
+  commit:      c96381c229df
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a binary file
@@ -811,7 +811,7 @@ Binary files work but without diff hunks filtering.
 #endif
 
   $ hg log -f -L binary,1:2 -p --config diff.git=false
-  changeset:   10:c96381c229df
+  commit:      c96381c229df
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a binary file

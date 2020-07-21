@@ -25,35 +25,35 @@
   $ hg commit -m "Added side2"
 
   $ hg log
-  changeset:   3:91ebc10ed028
+  commit:      91ebc10ed028
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added side2
   
-  changeset:   2:b932d7dbb1e1
-  parent:      0:c2eda428b523
+  commit:      b932d7dbb1e1
+  parent:      c2eda428b523
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added side1
   
-  changeset:   1:71a760306caf
+  commit:      71a760306caf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added main
   
-  changeset:   0:c2eda428b523
+  commit:      c2eda428b523
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added a
   
 
   $ hg heads
-  changeset:   3:91ebc10ed028
+  commit:      91ebc10ed028
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added side2
   
-  changeset:   1:71a760306caf
+  commit:      71a760306caf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added main

@@ -35,7 +35,7 @@
   $ cd master2
   $ hg log
   [hgsql] getting 1 commits from database
-  changeset:   0:b292c1e3311f
+  commit:      b292c1e3311f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     x
@@ -57,7 +57,7 @@
   $ cd ../master2
   $ hg log -l 1
   [hgsql] getting 1 commits from database
-  changeset:   1:b62091368546
+  commit:      b62091368546
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -97,7 +97,7 @@
   $ cd ../master2
   $ hg log -l 1
   [hgsql] getting 1 commits from database
-  changeset:   2:f3a7cb746fa9
+  commit:      f3a7cb746fa9
   bookmark:    mybook
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

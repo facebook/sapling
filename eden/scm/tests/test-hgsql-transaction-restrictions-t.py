@@ -38,7 +38,7 @@ sh % "hg debugstrip -r tip" == r"""
     [255]"""
 
 sh % "hg log -l 1" == r"""
-    changeset:   0:b292c1e3311f
+    commit:      b292c1e3311f
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     x"""

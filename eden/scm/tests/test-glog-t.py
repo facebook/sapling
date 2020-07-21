@@ -170,541 +170,541 @@ sh % "commit 34 head 32"
 
 
 sh % "hg log -G -q" == r"""
-    @  34:fea3ac5810e0
+    @  fea3ac5810e0
     |
-    | o  33:68608f5145f9
+    | o  68608f5145f9
     | |
-    o |    32:d06dffa21a31
+    o |    d06dffa21a31
     |\ \
-    | o \    31:621d83e11f67
+    | o \    621d83e11f67
     | |\ \
-    | | o \    30:6e11cd4b648f
+    | | o \    6e11cd4b648f
     | | |\ \
-    | | | o |  29:cd9bb2be7593
+    | | | o |  cd9bb2be7593
     | | | | |
-    | | o | |    28:44ecd0b9ae99
+    | | o | |    44ecd0b9ae99
     | | |\ \ \
-    o | | | | |  27:886ed638191b
+    o | | | | |  886ed638191b
     |/ / / / /
-    | | o---+  26:7f25b6c2f0b9
+    | | o---+  7f25b6c2f0b9
     | | | | |
-    +---o | |  25:91da8ed57247
+    +---o | |  91da8ed57247
     | | | | |
-    | | o | |  24:a9c19a3d96b7
+    | | o | |  a9c19a3d96b7
     | | |\| |
-    | | o | |  23:a01cddf0766d
+    | | o | |  a01cddf0766d
     | |/| | |
-    +---o---+  22:e0d9cccacb5d
+    +---o---+  e0d9cccacb5d
     | |  / /
-    o | | |    21:d42a756af44d
+    o | | |    d42a756af44d
     |\ \ \ \
-    | o---+-+  20:d30ed6450e32
+    | o---+-+  d30ed6450e32
     |  / / /
-    o | | |    19:31ddc2c1573b
+    o | | |    31ddc2c1573b
     |\ \ \ \
-    +---+---o  18:1aa84d96232a
+    +---+---o  1aa84d96232a
     | | | |
-    | o | |    17:44765d7c06e0
+    | o | |    44765d7c06e0
     | |\ \ \
-    | | o---+  16:3677d192927d
+    | | o---+  3677d192927d
     | | |/ /
-    o | | |    15:1dda3f72782d
+    o | | |    1dda3f72782d
     |\ \ \ \
-    | o-----+  14:8eac370358ef
+    | o-----+  8eac370358ef
     | |/ / /
-    o | | |    13:22d8966a97e3
+    o | | |    22d8966a97e3
     |\ \ \ \
-    +---o | |  12:86b91144a6e9
+    +---o | |  86b91144a6e9
     | | |/ /
-    | o | |    11:832d76e6bdf2
+    | o | |    832d76e6bdf2
     | |\ \ \
-    | | o---+  10:74c64d036d72
+    | | o---+  74c64d036d72
     | |/ / /
-    o | | |    9:7010c0af0a35
+    o | | |    7010c0af0a35
     |\ \ \ \
-    | o-----+  8:7a0b11f71937
+    | o-----+  7a0b11f71937
     |/ / / /
-    o | | |    7:b632bb1b1224
+    o | | |    b632bb1b1224
     |\ \ \ \
-    +---o | |  6:b105a072e251
+    +---o | |  b105a072e251
     | |/ / /
-    | o | |    5:4409d547b708
+    | o | |    4409d547b708
     | |\ \ \
-    | | o | |  4:26a8bac39d9f
+    | | o | |  26a8bac39d9f
     | |/|/ /
-    | o / /  3:27eef8ed80b4
+    | o / /  27eef8ed80b4
     |/ / /
-    o / /  2:3d9a33b8d1e1
+    o / /  3d9a33b8d1e1
     |/ /
-    o /  1:6db2ef61d156
+    o /  6db2ef61d156
     |/
-    o  0:e6eb3150255d"""
+    o  e6eb3150255d"""
 
 sh % "hg log -G" == r"""
-    @  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    @  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
-    | o  changeset:   33:68608f5145f9
-    | |  parent:      18:1aa84d96232a
+    | o  commit:      68608f5145f9
+    | |  parent:      1aa84d96232a
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:33 1970 +0000
     | |  summary:     (33) head
     | |
-    o |    changeset:   32:d06dffa21a31
-    |\ \   parent:      27:886ed638191b
-    | | |  parent:      31:621d83e11f67
+    o |    commit:      d06dffa21a31
+    |\ \   parent:      886ed638191b
+    | | |  parent:      621d83e11f67
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:32 1970 +0000
     | | |  summary:     (32) expand
     | | |
-    | o |    changeset:   31:621d83e11f67
-    | |\ \   parent:      21:d42a756af44d
-    | | | |  parent:      30:6e11cd4b648f
+    | o |    commit:      621d83e11f67
+    | |\ \   parent:      d42a756af44d
+    | | | |  parent:      6e11cd4b648f
     | | | |  user:        test
     | | | |  date:        Thu Jan 01 00:00:31 1970 +0000
     | | | |  summary:     (31) expand
     | | | |
-    | | o |    changeset:   30:6e11cd4b648f
-    | | |\ \   parent:      28:44ecd0b9ae99
-    | | | | |  parent:      29:cd9bb2be7593
+    | | o |    commit:      6e11cd4b648f
+    | | |\ \   parent:      44ecd0b9ae99
+    | | | | |  parent:      cd9bb2be7593
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:30 1970 +0000
     | | | | |  summary:     (30) expand
     | | | | |
-    | | | o |  changeset:   29:cd9bb2be7593
-    | | | | |  parent:      0:e6eb3150255d
+    | | | o |  commit:      cd9bb2be7593
+    | | | | |  parent:      e6eb3150255d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:29 1970 +0000
     | | | | |  summary:     (29) regular commit
     | | | | |
-    | | o | |    changeset:   28:44ecd0b9ae99
-    | | |\ \ \   parent:      1:6db2ef61d156
-    | | | | | |  parent:      26:7f25b6c2f0b9
+    | | o | |    commit:      44ecd0b9ae99
+    | | |\ \ \   parent:      6db2ef61d156
+    | | | | | |  parent:      7f25b6c2f0b9
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
     | | | | | |  summary:     (28) merge zero known
     | | | | | |
-    o | | | | |  changeset:   27:886ed638191b
-    |/ / / / /   parent:      21:d42a756af44d
+    o | | | | |  commit:      886ed638191b
+    |/ / / / /   parent:      d42a756af44d
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:27 1970 +0000
     | | | | |    summary:     (27) collapse
     | | | | |
-    | | o---+  changeset:   26:7f25b6c2f0b9
-    | | | | |  parent:      18:1aa84d96232a
-    | | | | |  parent:      25:91da8ed57247
+    | | o---+  commit:      7f25b6c2f0b9
+    | | | | |  parent:      1aa84d96232a
+    | | | | |  parent:      91da8ed57247
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
     | | | | |  summary:     (26) merge one known; far right
     | | | | |
-    +---o | |  changeset:   25:91da8ed57247
-    | | | | |  parent:      21:d42a756af44d
-    | | | | |  parent:      24:a9c19a3d96b7
+    +---o | |  commit:      91da8ed57247
+    | | | | |  parent:      d42a756af44d
+    | | | | |  parent:      a9c19a3d96b7
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
     | | | | |  summary:     (25) merge one known; far left
     | | | | |
-    | | o | |  changeset:   24:a9c19a3d96b7
-    | | |\| |  parent:      0:e6eb3150255d
-    | | | | |  parent:      23:a01cddf0766d
+    | | o | |  commit:      a9c19a3d96b7
+    | | |\| |  parent:      e6eb3150255d
+    | | | | |  parent:      a01cddf0766d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
     | | | | |  summary:     (24) merge one known; immediate right
     | | | | |
-    | | o | |  changeset:   23:a01cddf0766d
-    | |/| | |  parent:      1:6db2ef61d156
-    | | | | |  parent:      22:e0d9cccacb5d
+    | | o | |  commit:      a01cddf0766d
+    | |/| | |  parent:      6db2ef61d156
+    | | | | |  parent:      e0d9cccacb5d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
     | | | | |  summary:     (23) merge one known; immediate left
     | | | | |
-    +---o---+  changeset:   22:e0d9cccacb5d
-    | |   | |  parent:      18:1aa84d96232a
-    | |  / /   parent:      21:d42a756af44d
+    +---o---+  commit:      e0d9cccacb5d
+    | |   | |  parent:      1aa84d96232a
+    | |  / /   parent:      d42a756af44d
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:22 1970 +0000
     | | | |    summary:     (22) merge two known; one far left, one far right
     | | | |
-    o | | |    changeset:   21:d42a756af44d
-    |\ \ \ \   parent:      19:31ddc2c1573b
-    | | | | |  parent:      20:d30ed6450e32
+    o | | |    commit:      d42a756af44d
+    |\ \ \ \   parent:      31ddc2c1573b
+    | | | | |  parent:      d30ed6450e32
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | | | |  summary:     (21) expand
     | | | | |
-    | o---+-+  changeset:   20:d30ed6450e32
-    |   | | |  parent:      0:e6eb3150255d
-    |  / / /   parent:      18:1aa84d96232a
+    | o---+-+  commit:      d30ed6450e32
+    |   | | |  parent:      e6eb3150255d
+    |  / / /   parent:      1aa84d96232a
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:20 1970 +0000
     | | | |    summary:     (20) merge two known; two far right
     | | | |
-    o | | |    changeset:   19:31ddc2c1573b
-    |\ \ \ \   parent:      15:1dda3f72782d
-    | | | | |  parent:      17:44765d7c06e0
+    o | | |    commit:      31ddc2c1573b
+    |\ \ \ \   parent:      1dda3f72782d
+    | | | | |  parent:      44765d7c06e0
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | | | |  summary:     (19) expand
     | | | | |
-    +---+---o  changeset:   18:1aa84d96232a
-    | | | |    parent:      1:6db2ef61d156
-    | | | |    parent:      15:1dda3f72782d
+    +---+---o  commit:      1aa84d96232a
+    | | | |    parent:      6db2ef61d156
+    | | | |    parent:      1dda3f72782d
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:18 1970 +0000
     | | | |    summary:     (18) merge two known; two far left
     | | | |
-    | o | |    changeset:   17:44765d7c06e0
-    | |\ \ \   parent:      12:86b91144a6e9
-    | | | | |  parent:      16:3677d192927d
+    | o | |    commit:      44765d7c06e0
+    | |\ \ \   parent:      86b91144a6e9
+    | | | | |  parent:      3677d192927d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | | | |  summary:     (17) expand
     | | | | |
-    | | o---+  changeset:   16:3677d192927d
-    | | | | |  parent:      0:e6eb3150255d
-    | | |/ /   parent:      1:6db2ef61d156
+    | | o---+  commit:      3677d192927d
+    | | | | |  parent:      e6eb3150255d
+    | | |/ /   parent:      6db2ef61d156
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:16 1970 +0000
     | | | |    summary:     (16) merge two known; one immediate right, one near right
     | | | |
-    o | | |    changeset:   15:1dda3f72782d
-    |\ \ \ \   parent:      13:22d8966a97e3
-    | | | | |  parent:      14:8eac370358ef
+    o | | |    commit:      1dda3f72782d
+    |\ \ \ \   parent:      22d8966a97e3
+    | | | | |  parent:      8eac370358ef
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | | | |  summary:     (15) expand
     | | | | |
-    | o-----+  changeset:   14:8eac370358ef
-    | | | | |  parent:      0:e6eb3150255d
-    | |/ / /   parent:      12:86b91144a6e9
+    | o-----+  commit:      8eac370358ef
+    | | | | |  parent:      e6eb3150255d
+    | |/ / /   parent:      86b91144a6e9
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:14 1970 +0000
     | | | |    summary:     (14) merge two known; one immediate right, one far right
     | | | |
-    o | | |    changeset:   13:22d8966a97e3
-    |\ \ \ \   parent:      9:7010c0af0a35
-    | | | | |  parent:      11:832d76e6bdf2
+    o | | |    commit:      22d8966a97e3
+    |\ \ \ \   parent:      7010c0af0a35
+    | | | | |  parent:      832d76e6bdf2
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | | | |  summary:     (13) expand
     | | | | |
-    +---o | |  changeset:   12:86b91144a6e9
-    | | |/ /   parent:      1:6db2ef61d156
-    | | | |    parent:      9:7010c0af0a35
+    +---o | |  commit:      86b91144a6e9
+    | | |/ /   parent:      6db2ef61d156
+    | | | |    parent:      7010c0af0a35
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | | | |    summary:     (12) merge two known; one immediate right, one far left
     | | | |
-    | o | |    changeset:   11:832d76e6bdf2
-    | |\ \ \   parent:      6:b105a072e251
-    | | | | |  parent:      10:74c64d036d72
+    | o | |    commit:      832d76e6bdf2
+    | |\ \ \   parent:      b105a072e251
+    | | | | |  parent:      74c64d036d72
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | | | |  summary:     (11) expand
     | | | | |
-    | | o---+  changeset:   10:74c64d036d72
-    | | | | |  parent:      0:e6eb3150255d
-    | |/ / /   parent:      6:b105a072e251
+    | | o---+  commit:      74c64d036d72
+    | | | | |  parent:      e6eb3150255d
+    | |/ / /   parent:      b105a072e251
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:10 1970 +0000
     | | | |    summary:     (10) merge two known; one immediate left, one near right
     | | | |
-    o | | |    changeset:   9:7010c0af0a35
-    |\ \ \ \   parent:      7:b632bb1b1224
-    | | | | |  parent:      8:7a0b11f71937
+    o | | |    commit:      7010c0af0a35
+    |\ \ \ \   parent:      b632bb1b1224
+    | | | | |  parent:      7a0b11f71937
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | | | |  summary:     (9) expand
     | | | | |
-    | o-----+  changeset:   8:7a0b11f71937
-    | | | | |  parent:      0:e6eb3150255d
-    |/ / / /   parent:      7:b632bb1b1224
+    | o-----+  commit:      7a0b11f71937
+    | | | | |  parent:      e6eb3150255d
+    |/ / / /   parent:      b632bb1b1224
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:08 1970 +0000
     | | | |    summary:     (8) merge two known; one immediate left, one far right
     | | | |
-    o | | |    changeset:   7:b632bb1b1224
-    |\ \ \ \   parent:      2:3d9a33b8d1e1
-    | | | | |  parent:      5:4409d547b708
+    o | | |    commit:      b632bb1b1224
+    |\ \ \ \   parent:      3d9a33b8d1e1
+    | | | | |  parent:      4409d547b708
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
     | | | | |  summary:     (7) expand
     | | | | |
-    +---o | |  changeset:   6:b105a072e251
-    | |/ / /   parent:      2:3d9a33b8d1e1
-    | | | |    parent:      5:4409d547b708
+    +---o | |  commit:      b105a072e251
+    | |/ / /   parent:      3d9a33b8d1e1
+    | | | |    parent:      4409d547b708
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:06 1970 +0000
     | | | |    summary:     (6) merge two known; one immediate left, one far left
     | | | |
-    | o | |    changeset:   5:4409d547b708
-    | |\ \ \   parent:      3:27eef8ed80b4
-    | | | | |  parent:      4:26a8bac39d9f
+    | o | |    commit:      4409d547b708
+    | |\ \ \   parent:      27eef8ed80b4
+    | | | | |  parent:      26a8bac39d9f
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
     | | | | |  summary:     (5) expand
     | | | | |
-    | | o | |  changeset:   4:26a8bac39d9f
-    | |/|/ /   parent:      1:6db2ef61d156
-    | | | |    parent:      3:27eef8ed80b4
+    | | o | |  commit:      26a8bac39d9f
+    | |/|/ /   parent:      6db2ef61d156
+    | | | |    parent:      27eef8ed80b4
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:04 1970 +0000
     | | | |    summary:     (4) merge two known; one immediate left, one immediate right
     | | | |
-    | o | |  changeset:   3:27eef8ed80b4
+    | o | |  commit:      27eef8ed80b4
     |/ / /   user:        test
     | | |    date:        Thu Jan 01 00:00:03 1970 +0000
     | | |    summary:     (3) collapse
     | | |
-    o | |  changeset:   2:3d9a33b8d1e1
+    o | |  commit:      3d9a33b8d1e1
     |/ /   user:        test
     | |    date:        Thu Jan 01 00:00:02 1970 +0000
     | |    summary:     (2) collapse
     | |
-    o |  changeset:   1:6db2ef61d156
+    o |  commit:      6db2ef61d156
     |/   user:        test
     |    date:        Thu Jan 01 00:00:01 1970 +0000
     |    summary:     (1) collapse
     |
-    o  changeset:   0:e6eb3150255d
+    o  commit:      e6eb3150255d
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     (0) root"""
 
 # File glog:
 sh % "hg log -G a" == r"""
-    @  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    @  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
-    | o  changeset:   33:68608f5145f9
-    | |  parent:      18:1aa84d96232a
+    | o  commit:      68608f5145f9
+    | |  parent:      1aa84d96232a
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:33 1970 +0000
     | |  summary:     (33) head
     | |
-    o |    changeset:   32:d06dffa21a31
-    |\ \   parent:      27:886ed638191b
-    | | |  parent:      31:621d83e11f67
+    o |    commit:      d06dffa21a31
+    |\ \   parent:      886ed638191b
+    | | |  parent:      621d83e11f67
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:32 1970 +0000
     | | |  summary:     (32) expand
     | | |
-    | o |    changeset:   31:621d83e11f67
-    | |\ \   parent:      21:d42a756af44d
-    | | | |  parent:      30:6e11cd4b648f
+    | o |    commit:      621d83e11f67
+    | |\ \   parent:      d42a756af44d
+    | | | |  parent:      6e11cd4b648f
     | | | |  user:        test
     | | | |  date:        Thu Jan 01 00:00:31 1970 +0000
     | | | |  summary:     (31) expand
     | | | |
-    | | o |    changeset:   30:6e11cd4b648f
-    | | |\ \   parent:      28:44ecd0b9ae99
-    | | | | |  parent:      29:cd9bb2be7593
+    | | o |    commit:      6e11cd4b648f
+    | | |\ \   parent:      44ecd0b9ae99
+    | | | | |  parent:      cd9bb2be7593
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:30 1970 +0000
     | | | | |  summary:     (30) expand
     | | | | |
-    | | | o |  changeset:   29:cd9bb2be7593
-    | | | | |  parent:      0:e6eb3150255d
+    | | | o |  commit:      cd9bb2be7593
+    | | | | |  parent:      e6eb3150255d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:29 1970 +0000
     | | | | |  summary:     (29) regular commit
     | | | | |
-    | | o | |    changeset:   28:44ecd0b9ae99
-    | | |\ \ \   parent:      1:6db2ef61d156
-    | | | | | |  parent:      26:7f25b6c2f0b9
+    | | o | |    commit:      44ecd0b9ae99
+    | | |\ \ \   parent:      6db2ef61d156
+    | | | | | |  parent:      7f25b6c2f0b9
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
     | | | | | |  summary:     (28) merge zero known
     | | | | | |
-    o | | | | |  changeset:   27:886ed638191b
-    |/ / / / /   parent:      21:d42a756af44d
+    o | | | | |  commit:      886ed638191b
+    |/ / / / /   parent:      d42a756af44d
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:27 1970 +0000
     | | | | |    summary:     (27) collapse
     | | | | |
-    | | o---+  changeset:   26:7f25b6c2f0b9
-    | | | | |  parent:      18:1aa84d96232a
-    | | | | |  parent:      25:91da8ed57247
+    | | o---+  commit:      7f25b6c2f0b9
+    | | | | |  parent:      1aa84d96232a
+    | | | | |  parent:      91da8ed57247
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
     | | | | |  summary:     (26) merge one known; far right
     | | | | |
-    +---o | |  changeset:   25:91da8ed57247
-    | | | | |  parent:      21:d42a756af44d
-    | | | | |  parent:      24:a9c19a3d96b7
+    +---o | |  commit:      91da8ed57247
+    | | | | |  parent:      d42a756af44d
+    | | | | |  parent:      a9c19a3d96b7
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
     | | | | |  summary:     (25) merge one known; far left
     | | | | |
-    | | o | |  changeset:   24:a9c19a3d96b7
-    | | |\| |  parent:      0:e6eb3150255d
-    | | | | |  parent:      23:a01cddf0766d
+    | | o | |  commit:      a9c19a3d96b7
+    | | |\| |  parent:      e6eb3150255d
+    | | | | |  parent:      a01cddf0766d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
     | | | | |  summary:     (24) merge one known; immediate right
     | | | | |
-    | | o | |  changeset:   23:a01cddf0766d
-    | |/| | |  parent:      1:6db2ef61d156
-    | | | | |  parent:      22:e0d9cccacb5d
+    | | o | |  commit:      a01cddf0766d
+    | |/| | |  parent:      6db2ef61d156
+    | | | | |  parent:      e0d9cccacb5d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
     | | | | |  summary:     (23) merge one known; immediate left
     | | | | |
-    +---o---+  changeset:   22:e0d9cccacb5d
-    | |   | |  parent:      18:1aa84d96232a
-    | |  / /   parent:      21:d42a756af44d
+    +---o---+  commit:      e0d9cccacb5d
+    | |   | |  parent:      1aa84d96232a
+    | |  / /   parent:      d42a756af44d
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:22 1970 +0000
     | | | |    summary:     (22) merge two known; one far left, one far right
     | | | |
-    o | | |    changeset:   21:d42a756af44d
-    |\ \ \ \   parent:      19:31ddc2c1573b
-    | | | | |  parent:      20:d30ed6450e32
+    o | | |    commit:      d42a756af44d
+    |\ \ \ \   parent:      31ddc2c1573b
+    | | | | |  parent:      d30ed6450e32
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | | | |  summary:     (21) expand
     | | | | |
-    | o---+-+  changeset:   20:d30ed6450e32
-    |   | | |  parent:      0:e6eb3150255d
-    |  / / /   parent:      18:1aa84d96232a
+    | o---+-+  commit:      d30ed6450e32
+    |   | | |  parent:      e6eb3150255d
+    |  / / /   parent:      1aa84d96232a
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:20 1970 +0000
     | | | |    summary:     (20) merge two known; two far right
     | | | |
-    o | | |    changeset:   19:31ddc2c1573b
-    |\ \ \ \   parent:      15:1dda3f72782d
-    | | | | |  parent:      17:44765d7c06e0
+    o | | |    commit:      31ddc2c1573b
+    |\ \ \ \   parent:      1dda3f72782d
+    | | | | |  parent:      44765d7c06e0
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | | | |  summary:     (19) expand
     | | | | |
-    +---+---o  changeset:   18:1aa84d96232a
-    | | | |    parent:      1:6db2ef61d156
-    | | | |    parent:      15:1dda3f72782d
+    +---+---o  commit:      1aa84d96232a
+    | | | |    parent:      6db2ef61d156
+    | | | |    parent:      1dda3f72782d
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:18 1970 +0000
     | | | |    summary:     (18) merge two known; two far left
     | | | |
-    | o | |    changeset:   17:44765d7c06e0
-    | |\ \ \   parent:      12:86b91144a6e9
-    | | | | |  parent:      16:3677d192927d
+    | o | |    commit:      44765d7c06e0
+    | |\ \ \   parent:      86b91144a6e9
+    | | | | |  parent:      3677d192927d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | | | |  summary:     (17) expand
     | | | | |
-    | | o---+  changeset:   16:3677d192927d
-    | | | | |  parent:      0:e6eb3150255d
-    | | |/ /   parent:      1:6db2ef61d156
+    | | o---+  commit:      3677d192927d
+    | | | | |  parent:      e6eb3150255d
+    | | |/ /   parent:      6db2ef61d156
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:16 1970 +0000
     | | | |    summary:     (16) merge two known; one immediate right, one near right
     | | | |
-    o | | |    changeset:   15:1dda3f72782d
-    |\ \ \ \   parent:      13:22d8966a97e3
-    | | | | |  parent:      14:8eac370358ef
+    o | | |    commit:      1dda3f72782d
+    |\ \ \ \   parent:      22d8966a97e3
+    | | | | |  parent:      8eac370358ef
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | | | |  summary:     (15) expand
     | | | | |
-    | o-----+  changeset:   14:8eac370358ef
-    | | | | |  parent:      0:e6eb3150255d
-    | |/ / /   parent:      12:86b91144a6e9
+    | o-----+  commit:      8eac370358ef
+    | | | | |  parent:      e6eb3150255d
+    | |/ / /   parent:      86b91144a6e9
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:14 1970 +0000
     | | | |    summary:     (14) merge two known; one immediate right, one far right
     | | | |
-    o | | |    changeset:   13:22d8966a97e3
-    |\ \ \ \   parent:      9:7010c0af0a35
-    | | | | |  parent:      11:832d76e6bdf2
+    o | | |    commit:      22d8966a97e3
+    |\ \ \ \   parent:      7010c0af0a35
+    | | | | |  parent:      832d76e6bdf2
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | | | |  summary:     (13) expand
     | | | | |
-    +---o | |  changeset:   12:86b91144a6e9
-    | | |/ /   parent:      1:6db2ef61d156
-    | | | |    parent:      9:7010c0af0a35
+    +---o | |  commit:      86b91144a6e9
+    | | |/ /   parent:      6db2ef61d156
+    | | | |    parent:      7010c0af0a35
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | | | |    summary:     (12) merge two known; one immediate right, one far left
     | | | |
-    | o | |    changeset:   11:832d76e6bdf2
-    | |\ \ \   parent:      6:b105a072e251
-    | | | | |  parent:      10:74c64d036d72
+    | o | |    commit:      832d76e6bdf2
+    | |\ \ \   parent:      b105a072e251
+    | | | | |  parent:      74c64d036d72
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | | | |  summary:     (11) expand
     | | | | |
-    | | o---+  changeset:   10:74c64d036d72
-    | | | | |  parent:      0:e6eb3150255d
-    | |/ / /   parent:      6:b105a072e251
+    | | o---+  commit:      74c64d036d72
+    | | | | |  parent:      e6eb3150255d
+    | |/ / /   parent:      b105a072e251
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:10 1970 +0000
     | | | |    summary:     (10) merge two known; one immediate left, one near right
     | | | |
-    o | | |    changeset:   9:7010c0af0a35
-    |\ \ \ \   parent:      7:b632bb1b1224
-    | | | | |  parent:      8:7a0b11f71937
+    o | | |    commit:      7010c0af0a35
+    |\ \ \ \   parent:      b632bb1b1224
+    | | | | |  parent:      7a0b11f71937
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | | | |  summary:     (9) expand
     | | | | |
-    | o-----+  changeset:   8:7a0b11f71937
-    | | | | |  parent:      0:e6eb3150255d
-    |/ / / /   parent:      7:b632bb1b1224
+    | o-----+  commit:      7a0b11f71937
+    | | | | |  parent:      e6eb3150255d
+    |/ / / /   parent:      b632bb1b1224
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:08 1970 +0000
     | | | |    summary:     (8) merge two known; one immediate left, one far right
     | | | |
-    o | | |    changeset:   7:b632bb1b1224
-    |\ \ \ \   parent:      2:3d9a33b8d1e1
-    | | | | |  parent:      5:4409d547b708
+    o | | |    commit:      b632bb1b1224
+    |\ \ \ \   parent:      3d9a33b8d1e1
+    | | | | |  parent:      4409d547b708
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
     | | | | |  summary:     (7) expand
     | | | | |
-    +---o | |  changeset:   6:b105a072e251
-    | |/ / /   parent:      2:3d9a33b8d1e1
-    | | | |    parent:      5:4409d547b708
+    +---o | |  commit:      b105a072e251
+    | |/ / /   parent:      3d9a33b8d1e1
+    | | | |    parent:      4409d547b708
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:06 1970 +0000
     | | | |    summary:     (6) merge two known; one immediate left, one far left
     | | | |
-    | o | |    changeset:   5:4409d547b708
-    | |\ \ \   parent:      3:27eef8ed80b4
-    | | | | |  parent:      4:26a8bac39d9f
+    | o | |    commit:      4409d547b708
+    | |\ \ \   parent:      27eef8ed80b4
+    | | | | |  parent:      26a8bac39d9f
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
     | | | | |  summary:     (5) expand
     | | | | |
-    | | o | |  changeset:   4:26a8bac39d9f
-    | |/|/ /   parent:      1:6db2ef61d156
-    | | | |    parent:      3:27eef8ed80b4
+    | | o | |  commit:      26a8bac39d9f
+    | |/|/ /   parent:      6db2ef61d156
+    | | | |    parent:      27eef8ed80b4
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:04 1970 +0000
     | | | |    summary:     (4) merge two known; one immediate left, one immediate right
     | | | |
-    | o | |  changeset:   3:27eef8ed80b4
+    | o | |  commit:      27eef8ed80b4
     |/ / /   user:        test
     | | |    date:        Thu Jan 01 00:00:03 1970 +0000
     | | |    summary:     (3) collapse
     | | |
-    o | |  changeset:   2:3d9a33b8d1e1
+    o | |  commit:      3d9a33b8d1e1
     |/ /   user:        test
     | |    date:        Thu Jan 01 00:00:02 1970 +0000
     | |    summary:     (2) collapse
     | |
-    o |  changeset:   1:6db2ef61d156
+    o |  commit:      6db2ef61d156
     |/   user:        test
     |    date:        Thu Jan 01 00:00:01 1970 +0000
     |    summary:     (1) collapse
     |
-    o  changeset:   0:e6eb3150255d
+    o  commit:      e6eb3150255d
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     (0) root"""
@@ -712,235 +712,235 @@ sh % "hg log -G a" == r"""
 # File glog per revset:
 
 sh % "hg log -G -r 'file(\"a\")'" == r"""
-    @  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    @  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
-    | o  changeset:   33:68608f5145f9
-    | |  parent:      18:1aa84d96232a
+    | o  commit:      68608f5145f9
+    | |  parent:      1aa84d96232a
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:33 1970 +0000
     | |  summary:     (33) head
     | |
-    o |    changeset:   32:d06dffa21a31
-    |\ \   parent:      27:886ed638191b
-    | | |  parent:      31:621d83e11f67
+    o |    commit:      d06dffa21a31
+    |\ \   parent:      886ed638191b
+    | | |  parent:      621d83e11f67
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:32 1970 +0000
     | | |  summary:     (32) expand
     | | |
-    | o |    changeset:   31:621d83e11f67
-    | |\ \   parent:      21:d42a756af44d
-    | | | |  parent:      30:6e11cd4b648f
+    | o |    commit:      621d83e11f67
+    | |\ \   parent:      d42a756af44d
+    | | | |  parent:      6e11cd4b648f
     | | | |  user:        test
     | | | |  date:        Thu Jan 01 00:00:31 1970 +0000
     | | | |  summary:     (31) expand
     | | | |
-    | | o |    changeset:   30:6e11cd4b648f
-    | | |\ \   parent:      28:44ecd0b9ae99
-    | | | | |  parent:      29:cd9bb2be7593
+    | | o |    commit:      6e11cd4b648f
+    | | |\ \   parent:      44ecd0b9ae99
+    | | | | |  parent:      cd9bb2be7593
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:30 1970 +0000
     | | | | |  summary:     (30) expand
     | | | | |
-    | | | o |  changeset:   29:cd9bb2be7593
-    | | | | |  parent:      0:e6eb3150255d
+    | | | o |  commit:      cd9bb2be7593
+    | | | | |  parent:      e6eb3150255d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:29 1970 +0000
     | | | | |  summary:     (29) regular commit
     | | | | |
-    | | o | |    changeset:   28:44ecd0b9ae99
-    | | |\ \ \   parent:      1:6db2ef61d156
-    | | | | | |  parent:      26:7f25b6c2f0b9
+    | | o | |    commit:      44ecd0b9ae99
+    | | |\ \ \   parent:      6db2ef61d156
+    | | | | | |  parent:      7f25b6c2f0b9
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
     | | | | | |  summary:     (28) merge zero known
     | | | | | |
-    o | | | | |  changeset:   27:886ed638191b
-    |/ / / / /   parent:      21:d42a756af44d
+    o | | | | |  commit:      886ed638191b
+    |/ / / / /   parent:      d42a756af44d
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:27 1970 +0000
     | | | | |    summary:     (27) collapse
     | | | | |
-    | | o---+  changeset:   26:7f25b6c2f0b9
-    | | | | |  parent:      18:1aa84d96232a
-    | | | | |  parent:      25:91da8ed57247
+    | | o---+  commit:      7f25b6c2f0b9
+    | | | | |  parent:      1aa84d96232a
+    | | | | |  parent:      91da8ed57247
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
     | | | | |  summary:     (26) merge one known; far right
     | | | | |
-    +---o | |  changeset:   25:91da8ed57247
-    | | | | |  parent:      21:d42a756af44d
-    | | | | |  parent:      24:a9c19a3d96b7
+    +---o | |  commit:      91da8ed57247
+    | | | | |  parent:      d42a756af44d
+    | | | | |  parent:      a9c19a3d96b7
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
     | | | | |  summary:     (25) merge one known; far left
     | | | | |
-    | | o | |  changeset:   24:a9c19a3d96b7
-    | | |\| |  parent:      0:e6eb3150255d
-    | | | | |  parent:      23:a01cddf0766d
+    | | o | |  commit:      a9c19a3d96b7
+    | | |\| |  parent:      e6eb3150255d
+    | | | | |  parent:      a01cddf0766d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
     | | | | |  summary:     (24) merge one known; immediate right
     | | | | |
-    | | o | |  changeset:   23:a01cddf0766d
-    | |/| | |  parent:      1:6db2ef61d156
-    | | | | |  parent:      22:e0d9cccacb5d
+    | | o | |  commit:      a01cddf0766d
+    | |/| | |  parent:      6db2ef61d156
+    | | | | |  parent:      e0d9cccacb5d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
     | | | | |  summary:     (23) merge one known; immediate left
     | | | | |
-    +---o---+  changeset:   22:e0d9cccacb5d
-    | |   | |  parent:      18:1aa84d96232a
-    | |  / /   parent:      21:d42a756af44d
+    +---o---+  commit:      e0d9cccacb5d
+    | |   | |  parent:      1aa84d96232a
+    | |  / /   parent:      d42a756af44d
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:22 1970 +0000
     | | | |    summary:     (22) merge two known; one far left, one far right
     | | | |
-    o | | |    changeset:   21:d42a756af44d
-    |\ \ \ \   parent:      19:31ddc2c1573b
-    | | | | |  parent:      20:d30ed6450e32
+    o | | |    commit:      d42a756af44d
+    |\ \ \ \   parent:      31ddc2c1573b
+    | | | | |  parent:      d30ed6450e32
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | | | |  summary:     (21) expand
     | | | | |
-    | o---+-+  changeset:   20:d30ed6450e32
-    |   | | |  parent:      0:e6eb3150255d
-    |  / / /   parent:      18:1aa84d96232a
+    | o---+-+  commit:      d30ed6450e32
+    |   | | |  parent:      e6eb3150255d
+    |  / / /   parent:      1aa84d96232a
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:20 1970 +0000
     | | | |    summary:     (20) merge two known; two far right
     | | | |
-    o | | |    changeset:   19:31ddc2c1573b
-    |\ \ \ \   parent:      15:1dda3f72782d
-    | | | | |  parent:      17:44765d7c06e0
+    o | | |    commit:      31ddc2c1573b
+    |\ \ \ \   parent:      1dda3f72782d
+    | | | | |  parent:      44765d7c06e0
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | | | |  summary:     (19) expand
     | | | | |
-    +---+---o  changeset:   18:1aa84d96232a
-    | | | |    parent:      1:6db2ef61d156
-    | | | |    parent:      15:1dda3f72782d
+    +---+---o  commit:      1aa84d96232a
+    | | | |    parent:      6db2ef61d156
+    | | | |    parent:      1dda3f72782d
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:18 1970 +0000
     | | | |    summary:     (18) merge two known; two far left
     | | | |
-    | o | |    changeset:   17:44765d7c06e0
-    | |\ \ \   parent:      12:86b91144a6e9
-    | | | | |  parent:      16:3677d192927d
+    | o | |    commit:      44765d7c06e0
+    | |\ \ \   parent:      86b91144a6e9
+    | | | | |  parent:      3677d192927d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | | | |  summary:     (17) expand
     | | | | |
-    | | o---+  changeset:   16:3677d192927d
-    | | | | |  parent:      0:e6eb3150255d
-    | | |/ /   parent:      1:6db2ef61d156
+    | | o---+  commit:      3677d192927d
+    | | | | |  parent:      e6eb3150255d
+    | | |/ /   parent:      6db2ef61d156
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:16 1970 +0000
     | | | |    summary:     (16) merge two known; one immediate right, one near right
     | | | |
-    o | | |    changeset:   15:1dda3f72782d
-    |\ \ \ \   parent:      13:22d8966a97e3
-    | | | | |  parent:      14:8eac370358ef
+    o | | |    commit:      1dda3f72782d
+    |\ \ \ \   parent:      22d8966a97e3
+    | | | | |  parent:      8eac370358ef
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | | | |  summary:     (15) expand
     | | | | |
-    | o-----+  changeset:   14:8eac370358ef
-    | | | | |  parent:      0:e6eb3150255d
-    | |/ / /   parent:      12:86b91144a6e9
+    | o-----+  commit:      8eac370358ef
+    | | | | |  parent:      e6eb3150255d
+    | |/ / /   parent:      86b91144a6e9
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:14 1970 +0000
     | | | |    summary:     (14) merge two known; one immediate right, one far right
     | | | |
-    o | | |    changeset:   13:22d8966a97e3
-    |\ \ \ \   parent:      9:7010c0af0a35
-    | | | | |  parent:      11:832d76e6bdf2
+    o | | |    commit:      22d8966a97e3
+    |\ \ \ \   parent:      7010c0af0a35
+    | | | | |  parent:      832d76e6bdf2
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | | | |  summary:     (13) expand
     | | | | |
-    +---o | |  changeset:   12:86b91144a6e9
-    | | |/ /   parent:      1:6db2ef61d156
-    | | | |    parent:      9:7010c0af0a35
+    +---o | |  commit:      86b91144a6e9
+    | | |/ /   parent:      6db2ef61d156
+    | | | |    parent:      7010c0af0a35
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | | | |    summary:     (12) merge two known; one immediate right, one far left
     | | | |
-    | o | |    changeset:   11:832d76e6bdf2
-    | |\ \ \   parent:      6:b105a072e251
-    | | | | |  parent:      10:74c64d036d72
+    | o | |    commit:      832d76e6bdf2
+    | |\ \ \   parent:      b105a072e251
+    | | | | |  parent:      74c64d036d72
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | | | |  summary:     (11) expand
     | | | | |
-    | | o---+  changeset:   10:74c64d036d72
-    | | | | |  parent:      0:e6eb3150255d
-    | |/ / /   parent:      6:b105a072e251
+    | | o---+  commit:      74c64d036d72
+    | | | | |  parent:      e6eb3150255d
+    | |/ / /   parent:      b105a072e251
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:10 1970 +0000
     | | | |    summary:     (10) merge two known; one immediate left, one near right
     | | | |
-    o | | |    changeset:   9:7010c0af0a35
-    |\ \ \ \   parent:      7:b632bb1b1224
-    | | | | |  parent:      8:7a0b11f71937
+    o | | |    commit:      7010c0af0a35
+    |\ \ \ \   parent:      b632bb1b1224
+    | | | | |  parent:      7a0b11f71937
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | | | |  summary:     (9) expand
     | | | | |
-    | o-----+  changeset:   8:7a0b11f71937
-    | | | | |  parent:      0:e6eb3150255d
-    |/ / / /   parent:      7:b632bb1b1224
+    | o-----+  commit:      7a0b11f71937
+    | | | | |  parent:      e6eb3150255d
+    |/ / / /   parent:      b632bb1b1224
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:08 1970 +0000
     | | | |    summary:     (8) merge two known; one immediate left, one far right
     | | | |
-    o | | |    changeset:   7:b632bb1b1224
-    |\ \ \ \   parent:      2:3d9a33b8d1e1
-    | | | | |  parent:      5:4409d547b708
+    o | | |    commit:      b632bb1b1224
+    |\ \ \ \   parent:      3d9a33b8d1e1
+    | | | | |  parent:      4409d547b708
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
     | | | | |  summary:     (7) expand
     | | | | |
-    +---o | |  changeset:   6:b105a072e251
-    | |/ / /   parent:      2:3d9a33b8d1e1
-    | | | |    parent:      5:4409d547b708
+    +---o | |  commit:      b105a072e251
+    | |/ / /   parent:      3d9a33b8d1e1
+    | | | |    parent:      4409d547b708
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:06 1970 +0000
     | | | |    summary:     (6) merge two known; one immediate left, one far left
     | | | |
-    | o | |    changeset:   5:4409d547b708
-    | |\ \ \   parent:      3:27eef8ed80b4
-    | | | | |  parent:      4:26a8bac39d9f
+    | o | |    commit:      4409d547b708
+    | |\ \ \   parent:      27eef8ed80b4
+    | | | | |  parent:      26a8bac39d9f
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
     | | | | |  summary:     (5) expand
     | | | | |
-    | | o | |  changeset:   4:26a8bac39d9f
-    | |/|/ /   parent:      1:6db2ef61d156
-    | | | |    parent:      3:27eef8ed80b4
+    | | o | |  commit:      26a8bac39d9f
+    | |/|/ /   parent:      6db2ef61d156
+    | | | |    parent:      27eef8ed80b4
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:04 1970 +0000
     | | | |    summary:     (4) merge two known; one immediate left, one immediate right
     | | | |
-    | o | |  changeset:   3:27eef8ed80b4
+    | o | |  commit:      27eef8ed80b4
     |/ / /   user:        test
     | | |    date:        Thu Jan 01 00:00:03 1970 +0000
     | | |    summary:     (3) collapse
     | | |
-    o | |  changeset:   2:3d9a33b8d1e1
+    o | |  commit:      3d9a33b8d1e1
     |/ /   user:        test
     | |    date:        Thu Jan 01 00:00:02 1970 +0000
     | |    summary:     (2) collapse
     | |
-    o |  changeset:   1:6db2ef61d156
+    o |  commit:      6db2ef61d156
     |/   user:        test
     |    date:        Thu Jan 01 00:00:01 1970 +0000
     |    summary:     (1) collapse
     |
-    o  changeset:   0:e6eb3150255d
+    o  commit:      e6eb3150255d
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     (0) root"""
@@ -949,191 +949,191 @@ sh % "hg log -G -r 'file(\"a\")'" == r"""
 # File glog per revset (only merges):
 
 sh % "hg log -G -r 'file(\"a\")' -m" == r"""
-    o    changeset:   32:d06dffa21a31
-    |\   parent:      27:886ed638191b
-    | :  parent:      31:621d83e11f67
+    o    commit:      d06dffa21a31
+    |\   parent:      886ed638191b
+    | :  parent:      621d83e11f67
     | :  user:        test
     | :  date:        Thu Jan 01 00:00:32 1970 +0000
     | :  summary:     (32) expand
     | :
-    o :  changeset:   31:621d83e11f67
-    |\:  parent:      21:d42a756af44d
-    | :  parent:      30:6e11cd4b648f
+    o :  commit:      621d83e11f67
+    |\:  parent:      d42a756af44d
+    | :  parent:      6e11cd4b648f
     | :  user:        test
     | :  date:        Thu Jan 01 00:00:31 1970 +0000
     | :  summary:     (31) expand
     | :
-    o :    changeset:   30:6e11cd4b648f
-    |\ \   parent:      28:44ecd0b9ae99
-    | ~ :  parent:      29:cd9bb2be7593
+    o :    commit:      6e11cd4b648f
+    |\ \   parent:      44ecd0b9ae99
+    | ~ :  parent:      cd9bb2be7593
     |   :  user:        test
     |   :  date:        Thu Jan 01 00:00:30 1970 +0000
     |   :  summary:     (30) expand
     |  /
-    o :    changeset:   28:44ecd0b9ae99
-    |\ \   parent:      1:6db2ef61d156
-    | ~ :  parent:      26:7f25b6c2f0b9
+    o :    commit:      44ecd0b9ae99
+    |\ \   parent:      6db2ef61d156
+    | ~ :  parent:      7f25b6c2f0b9
     |   :  user:        test
     |   :  date:        Thu Jan 01 00:00:28 1970 +0000
     |   :  summary:     (28) merge zero known
     |  /
-    o :    changeset:   26:7f25b6c2f0b9
-    |\ \   parent:      18:1aa84d96232a
-    | | :  parent:      25:91da8ed57247
+    o :    commit:      7f25b6c2f0b9
+    |\ \   parent:      1aa84d96232a
+    | | :  parent:      91da8ed57247
     | | :  user:        test
     | | :  date:        Thu Jan 01 00:00:26 1970 +0000
     | | :  summary:     (26) merge one known; far right
     | | :
-    | o :  changeset:   25:91da8ed57247
-    | |\:  parent:      21:d42a756af44d
-    | | :  parent:      24:a9c19a3d96b7
+    | o :  commit:      91da8ed57247
+    | |\:  parent:      d42a756af44d
+    | | :  parent:      a9c19a3d96b7
     | | :  user:        test
     | | :  date:        Thu Jan 01 00:00:25 1970 +0000
     | | :  summary:     (25) merge one known; far left
     | | :
-    | o :    changeset:   24:a9c19a3d96b7
-    | |\ \   parent:      0:e6eb3150255d
-    | | ~ :  parent:      23:a01cddf0766d
+    | o :    commit:      a9c19a3d96b7
+    | |\ \   parent:      e6eb3150255d
+    | | ~ :  parent:      a01cddf0766d
     | |   :  user:        test
     | |   :  date:        Thu Jan 01 00:00:24 1970 +0000
     | |   :  summary:     (24) merge one known; immediate right
     | |  /
-    | o :    changeset:   23:a01cddf0766d
-    | |\ \   parent:      1:6db2ef61d156
-    | | ~ :  parent:      22:e0d9cccacb5d
+    | o :    commit:      a01cddf0766d
+    | |\ \   parent:      6db2ef61d156
+    | | ~ :  parent:      e0d9cccacb5d
     | |   :  user:        test
     | |   :  date:        Thu Jan 01 00:00:23 1970 +0000
     | |   :  summary:     (23) merge one known; immediate left
     | |  /
-    | o :  changeset:   22:e0d9cccacb5d
-    |/:/   parent:      18:1aa84d96232a
-    | :    parent:      21:d42a756af44d
+    | o :  commit:      e0d9cccacb5d
+    |/:/   parent:      1aa84d96232a
+    | :    parent:      d42a756af44d
     | :    user:        test
     | :    date:        Thu Jan 01 00:00:22 1970 +0000
     | :    summary:     (22) merge two known; one far left, one far right
     | :
-    | o    changeset:   21:d42a756af44d
-    | |\   parent:      19:31ddc2c1573b
-    | | |  parent:      20:d30ed6450e32
+    | o    commit:      d42a756af44d
+    | |\   parent:      31ddc2c1573b
+    | | |  parent:      d30ed6450e32
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | |  summary:     (21) expand
     | | |
-    +---o  changeset:   20:d30ed6450e32
-    | | |  parent:      0:e6eb3150255d
-    | | ~  parent:      18:1aa84d96232a
+    +---o  commit:      d30ed6450e32
+    | | |  parent:      e6eb3150255d
+    | | ~  parent:      1aa84d96232a
     | |    user:        test
     | |    date:        Thu Jan 01 00:00:20 1970 +0000
     | |    summary:     (20) merge two known; two far right
     | |
-    | o    changeset:   19:31ddc2c1573b
-    | |\   parent:      15:1dda3f72782d
-    | | |  parent:      17:44765d7c06e0
+    | o    commit:      31ddc2c1573b
+    | |\   parent:      1dda3f72782d
+    | | |  parent:      44765d7c06e0
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | |  summary:     (19) expand
     | | |
-    o | |  changeset:   18:1aa84d96232a
-    |\| |  parent:      1:6db2ef61d156
-    ~ | |  parent:      15:1dda3f72782d
+    o | |  commit:      1aa84d96232a
+    |\| |  parent:      6db2ef61d156
+    ~ | |  parent:      1dda3f72782d
       | |  user:        test
       | |  date:        Thu Jan 01 00:00:18 1970 +0000
       | |  summary:     (18) merge two known; two far left
      / /
-    | o    changeset:   17:44765d7c06e0
-    | |\   parent:      12:86b91144a6e9
-    | | |  parent:      16:3677d192927d
+    | o    commit:      44765d7c06e0
+    | |\   parent:      86b91144a6e9
+    | | |  parent:      3677d192927d
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | |  summary:     (17) expand
     | | |
-    | | o    changeset:   16:3677d192927d
-    | | |\   parent:      0:e6eb3150255d
-    | | ~ ~  parent:      1:6db2ef61d156
+    | | o    commit:      3677d192927d
+    | | |\   parent:      e6eb3150255d
+    | | ~ ~  parent:      6db2ef61d156
     | |      user:        test
     | |      date:        Thu Jan 01 00:00:16 1970 +0000
     | |      summary:     (16) merge two known; one immediate right, one near right
     | |
-    o |    changeset:   15:1dda3f72782d
-    |\ \   parent:      13:22d8966a97e3
-    | | |  parent:      14:8eac370358ef
+    o |    commit:      1dda3f72782d
+    |\ \   parent:      22d8966a97e3
+    | | |  parent:      8eac370358ef
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | |  summary:     (15) expand
     | | |
-    | o |  changeset:   14:8eac370358ef
-    | |\|  parent:      0:e6eb3150255d
-    | ~ |  parent:      12:86b91144a6e9
+    | o |  commit:      8eac370358ef
+    | |\|  parent:      e6eb3150255d
+    | ~ |  parent:      86b91144a6e9
     |   |  user:        test
     |   |  date:        Thu Jan 01 00:00:14 1970 +0000
     |   |  summary:     (14) merge two known; one immediate right, one far right
     |  /
-    o |    changeset:   13:22d8966a97e3
-    |\ \   parent:      9:7010c0af0a35
-    | | |  parent:      11:832d76e6bdf2
+    o |    commit:      22d8966a97e3
+    |\ \   parent:      7010c0af0a35
+    | | |  parent:      832d76e6bdf2
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | |  summary:     (13) expand
     | | |
-    +---o  changeset:   12:86b91144a6e9
-    | | |  parent:      1:6db2ef61d156
-    | | ~  parent:      9:7010c0af0a35
+    +---o  commit:      86b91144a6e9
+    | | |  parent:      6db2ef61d156
+    | | ~  parent:      7010c0af0a35
     | |    user:        test
     | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | |    summary:     (12) merge two known; one immediate right, one far left
     | |
-    | o    changeset:   11:832d76e6bdf2
-    | |\   parent:      6:b105a072e251
-    | | |  parent:      10:74c64d036d72
+    | o    commit:      832d76e6bdf2
+    | |\   parent:      b105a072e251
+    | | |  parent:      74c64d036d72
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | |  summary:     (11) expand
     | | |
-    | | o  changeset:   10:74c64d036d72
-    | |/|  parent:      0:e6eb3150255d
-    | | ~  parent:      6:b105a072e251
+    | | o  commit:      74c64d036d72
+    | |/|  parent:      e6eb3150255d
+    | | ~  parent:      b105a072e251
     | |    user:        test
     | |    date:        Thu Jan 01 00:00:10 1970 +0000
     | |    summary:     (10) merge two known; one immediate left, one near right
     | |
-    o |    changeset:   9:7010c0af0a35
-    |\ \   parent:      7:b632bb1b1224
-    | | |  parent:      8:7a0b11f71937
+    o |    commit:      7010c0af0a35
+    |\ \   parent:      b632bb1b1224
+    | | |  parent:      7a0b11f71937
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | |  summary:     (9) expand
     | | |
-    | o |  changeset:   8:7a0b11f71937
-    |/| |  parent:      0:e6eb3150255d
-    | ~ |  parent:      7:b632bb1b1224
+    | o |  commit:      7a0b11f71937
+    |/| |  parent:      e6eb3150255d
+    | ~ |  parent:      b632bb1b1224
     |   |  user:        test
     |   |  date:        Thu Jan 01 00:00:08 1970 +0000
     |   |  summary:     (8) merge two known; one immediate left, one far right
     |  /
-    o |    changeset:   7:b632bb1b1224
-    |\ \   parent:      2:3d9a33b8d1e1
-    | ~ |  parent:      5:4409d547b708
+    o |    commit:      b632bb1b1224
+    |\ \   parent:      3d9a33b8d1e1
+    | ~ |  parent:      4409d547b708
     |   |  user:        test
     |   |  date:        Thu Jan 01 00:00:07 1970 +0000
     |   |  summary:     (7) expand
     |  /
-    | o  changeset:   6:b105a072e251
-    |/|  parent:      2:3d9a33b8d1e1
-    | ~  parent:      5:4409d547b708
+    | o  commit:      b105a072e251
+    |/|  parent:      3d9a33b8d1e1
+    | ~  parent:      4409d547b708
     |    user:        test
     |    date:        Thu Jan 01 00:00:06 1970 +0000
     |    summary:     (6) merge two known; one immediate left, one far left
     |
-    o    changeset:   5:4409d547b708
-    |\   parent:      3:27eef8ed80b4
-    | ~  parent:      4:26a8bac39d9f
+    o    commit:      4409d547b708
+    |\   parent:      27eef8ed80b4
+    | ~  parent:      26a8bac39d9f
     |    user:        test
     |    date:        Thu Jan 01 00:00:05 1970 +0000
     |    summary:     (5) expand
     |
-    o    changeset:   4:26a8bac39d9f
-    |\   parent:      1:6db2ef61d156
-    ~ ~  parent:      3:27eef8ed80b4
+    o    commit:      26a8bac39d9f
+    |\   parent:      6db2ef61d156
+    ~ ~  parent:      27eef8ed80b4
          user:        test
          date:        Thu Jan 01 00:00:04 1970 +0000
          summary:     (4) merge two known; one immediate left, one immediate right"""
@@ -1174,19 +1174,19 @@ sh % "hg commit -mtwo"
 sh % "echo more" > "two"
 sh % "hg commit -mmore"
 sh % "hg log -G two" == r"""
-    @  changeset:   2:12c28321755b
+    @  commit:      12c28321755b
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     more
     |
-    o  changeset:   1:5ac72c0599bf
+    o  commit:      5ac72c0599bf
     |  user:        test
     ~  date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     two"""
 
 # Issue1896: File log with explicit style
 sh % "hg log -G '--style=default' one" == r"""
-    o  changeset:   0:3d578b4a1f53
+    o  commit:      3d578b4a1f53
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     one"""
@@ -1194,7 +1194,7 @@ sh % "hg log -G '--style=default' one" == r"""
 sh % "hg log -G '--style=xml' one" == r"""
     <?xml version="1.0"?>
     <log>
-    o  <logentry revision="0" node="3d578b4a1f537d5fcf7301bfa9c0b97adfaa6fb1">
+    o  <logentry node="3d578b4a1f537d5fcf7301bfa9c0b97adfaa6fb1">
        <author email="test">test</author>
        <date>1970-01-01T00:00:00+00:00</date>
        <msg xml:space="preserve">one</msg>
@@ -1215,27 +1215,27 @@ sh % "cd repo2"
 sh % "hg incoming --graph ../repo" == r"""
     comparing with ../repo
     searching for changes
-    o  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    o  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
-    | o  changeset:   33:68608f5145f9
-    |    parent:      18:1aa84d96232a
+    | o  commit:      68608f5145f9
+    |    parent:      1aa84d96232a
     |    user:        test
     |    date:        Thu Jan 01 00:00:33 1970 +0000
     |    summary:     (33) head
     |
-    o  changeset:   32:d06dffa21a31
-    |  parent:      27:886ed638191b
-    |  parent:      31:621d83e11f67
+    o  commit:      d06dffa21a31
+    |  parent:      886ed638191b
+    |  parent:      621d83e11f67
     |  user:        test
     |  date:        Thu Jan 01 00:00:32 1970 +0000
     |  summary:     (32) expand
     |
-    o  changeset:   27:886ed638191b
-       parent:      21:d42a756af44d
+    o  commit:      886ed638191b
+       parent:      d42a756af44d
        user:        test
        date:        Thu Jan 01 00:00:27 1970 +0000
        summary:     (27) collapse"""
@@ -1244,27 +1244,27 @@ sh % "cd .."
 sh % "hg -R repo outgoing --graph repo2" == r"""
     comparing with repo2
     searching for changes
-    @  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    @  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
-    | o  changeset:   33:68608f5145f9
-    |    parent:      18:1aa84d96232a
+    | o  commit:      68608f5145f9
+    |    parent:      1aa84d96232a
     |    user:        test
     |    date:        Thu Jan 01 00:00:33 1970 +0000
     |    summary:     (33) head
     |
-    o  changeset:   32:d06dffa21a31
-    |  parent:      27:886ed638191b
-    |  parent:      31:621d83e11f67
+    o  commit:      d06dffa21a31
+    |  parent:      886ed638191b
+    |  parent:      621d83e11f67
     |  user:        test
     |  date:        Thu Jan 01 00:00:32 1970 +0000
     |  summary:     (32) expand
     |
-    o  changeset:   27:886ed638191b
-       parent:      21:d42a756af44d
+    o  commit:      886ed638191b
+       parent:      d42a756af44d
        user:        test
        date:        Thu Jan 01 00:00:27 1970 +0000
        summary:     (27) collapse"""
@@ -1274,35 +1274,35 @@ sh % "cd repo"
 sh % "touch b"
 sh % "hg ci -Aqm0"
 sh % "hg log -G -l2 a" == r"""
-    o  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    o  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     ~  user:        test
        date:        Thu Jan 01 00:00:34 1970 +0000
        summary:     (34) head
 
-    o  changeset:   33:68608f5145f9
-    |  parent:      18:1aa84d96232a
+    o  commit:      68608f5145f9
+    |  parent:      1aa84d96232a
     ~  user:        test
        date:        Thu Jan 01 00:00:33 1970 +0000
        summary:     (33) head"""
 
 # File + limit + -ra:b, (b - a) < limit:
 sh % "hg log -G -l3000 '-r32:tip' a" == r"""
-    o  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    o  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
-    | o  changeset:   33:68608f5145f9
-    | |  parent:      18:1aa84d96232a
+    | o  commit:      68608f5145f9
+    | |  parent:      1aa84d96232a
     | ~  user:        test
     |    date:        Thu Jan 01 00:00:33 1970 +0000
     |    summary:     (33) head
     |
-    o    changeset:   32:d06dffa21a31
-    |\   parent:      27:886ed638191b
-    ~ ~  parent:      31:621d83e11f67
+    o    commit:      d06dffa21a31
+    |\   parent:      886ed638191b
+    ~ ~  parent:      621d83e11f67
          user:        test
          date:        Thu Jan 01 00:00:32 1970 +0000
          summary:     (32) expand"""
@@ -1310,16 +1310,16 @@ sh % "hg log -G -l3000 '-r32:tip' a" == r"""
 # Point out a common and an uncommon unshown parent
 
 sh % "hg log -G -r 'rev(8) or rev(9)'" == r"""
-    o    changeset:   9:7010c0af0a35
-    |\   parent:      7:b632bb1b1224
-    | ~  parent:      8:7a0b11f71937
+    o    commit:      7010c0af0a35
+    |\   parent:      b632bb1b1224
+    | ~  parent:      7a0b11f71937
     |    user:        test
     |    date:        Thu Jan 01 00:00:09 1970 +0000
     |    summary:     (9) expand
     |
-    o    changeset:   8:7a0b11f71937
-    |\   parent:      0:e6eb3150255d
-    ~ ~  parent:      7:b632bb1b1224
+    o    commit:      7a0b11f71937
+    |\   parent:      e6eb3150255d
+    ~ ~  parent:      b632bb1b1224
          user:        test
          date:        Thu Jan 01 00:00:08 1970 +0000
          summary:     (8) merge two known; one immediate left, one far right"""
@@ -1327,8 +1327,8 @@ sh % "hg log -G -r 'rev(8) or rev(9)'" == r"""
 # File + limit + -ra:b, b < tip:
 
 sh % "hg log -G -l1 '-r32:34' a" == r"""
-    o  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    o  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     ~  user:        test
        date:        Thu Jan 01 00:00:34 1970 +0000
        summary:     (34) head"""
@@ -1336,8 +1336,8 @@ sh % "hg log -G -l1 '-r32:34' a" == r"""
 # file(File) + limit + -ra:b, b < tip:
 
 sh % "hg log -G -l1 '-r32:34' -r 'file(\"a\")'" == r"""
-    o  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    o  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     ~  user:        test
        date:        Thu Jan 01 00:00:34 1970 +0000
        summary:     (34) head"""
@@ -1345,9 +1345,9 @@ sh % "hg log -G -l1 '-r32:34' -r 'file(\"a\")'" == r"""
 # limit(file(File) and a::b), b < tip:
 
 sh % "hg log -G -r 'limit(file(\"a\") and 32::34, 1)'" == r"""
-    o    changeset:   32:d06dffa21a31
-    |\   parent:      27:886ed638191b
-    ~ ~  parent:      31:621d83e11f67
+    o    commit:      d06dffa21a31
+    |\   parent:      886ed638191b
+    ~ ~  parent:      621d83e11f67
          user:        test
          date:        Thu Jan 01 00:00:32 1970 +0000
          summary:     (32) expand"""
@@ -1359,14 +1359,14 @@ sh % "hg log -G -r 'limit(file(\"a\") and 34::32, 1)'"
 # File + limit + -ra:b, b < tip, (b - a) < limit:
 
 sh % "hg log -G -l10 '-r33:34' a" == r"""
-    o  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    o  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     ~  user:        test
        date:        Thu Jan 01 00:00:34 1970 +0000
        summary:     (34) head
 
-    o  changeset:   33:68608f5145f9
-    |  parent:      18:1aa84d96232a
+    o  commit:      68608f5145f9
+    |  parent:      1aa84d96232a
     ~  user:        test
        date:        Thu Jan 01 00:00:33 1970 +0000
        summary:     (33) head"""
@@ -1375,33 +1375,33 @@ sh % "hg log -G -l10 '-r33:34' a" == r"""
 
 sh % "commit 36 'buggy merge: identical parents' 35 35"
 sh % "hg log -G -l5" == r"""
-    @  changeset:   36:95fa8febd08a
-    |  parent:      35:9159c3644c5e
-    |  parent:      35:9159c3644c5e
+    @  commit:      95fa8febd08a
+    |  parent:      9159c3644c5e
+    |  parent:      9159c3644c5e
     |  user:        test
     |  date:        Thu Jan 01 00:00:36 1970 +0000
     |  summary:     (36) buggy merge: identical parents
     |
-    o  changeset:   35:9159c3644c5e
+    o  commit:      9159c3644c5e
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     0
     |
-    o  changeset:   34:fea3ac5810e0
-    |  parent:      32:d06dffa21a31
+    o  commit:      fea3ac5810e0
+    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
-    | o  changeset:   33:68608f5145f9
-    | |  parent:      18:1aa84d96232a
+    | o  commit:      68608f5145f9
+    | |  parent:      1aa84d96232a
     | ~  user:        test
     |    date:        Thu Jan 01 00:00:33 1970 +0000
     |    summary:     (33) head
     |
-    o    changeset:   32:d06dffa21a31
-    |\   parent:      27:886ed638191b
-    ~ ~  parent:      31:621d83e11f67
+    o    commit:      d06dffa21a31
+    |\   parent:      886ed638191b
+    ~ ~  parent:      621d83e11f67
          user:        test
          date:        Thu Jan 01 00:00:32 1970 +0000
          summary:     (32) expand"""
@@ -1797,7 +1797,7 @@ sh % "hg log -G --print-revset --removed --follow a" == r"""
 
 sh % "hg up -q 3"
 sh % "hg log -G --git --patch b" == r"""
-    o  changeset:   1:216d4c92cf98
+    o  commit:      216d4c92cf98
     |  user:        test
     ~  date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     copy a b
@@ -1807,7 +1807,7 @@ sh % "hg log -G --git --patch b" == r"""
        copy to b"""
 
 sh % "hg log -G --git --stat b" == r"""
-    o  changeset:   1:216d4c92cf98
+    o  commit:      216d4c92cf98
     |  user:        test
     ~  date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     copy a b
@@ -1816,7 +1816,7 @@ sh % "hg log -G --git --stat b" == r"""
         1 files changed, 0 insertions(+), 0 deletions(-)"""
 
 sh % "hg log -G --git --patch --follow b" == r"""
-    o  changeset:   1:216d4c92cf98
+    o  commit:      216d4c92cf98
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     copy a b
@@ -1825,7 +1825,7 @@ sh % "hg log -G --git --patch --follow b" == r"""
     |  copy from a
     |  copy to b
     |
-    o  changeset:   0:f8035bb17114
+    o  commit:      f8035bb17114
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     add a
@@ -1838,7 +1838,7 @@ sh % "hg log -G --git --patch --follow b" == r"""
        +a"""
 
 sh % "hg log -G --git --stat --follow b" == r"""
-    o  changeset:   1:216d4c92cf98
+    o  commit:      216d4c92cf98
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     copy a b
@@ -1846,7 +1846,7 @@ sh % "hg log -G --git --stat --follow b" == r"""
     |   b |  0
     |   1 files changed, 0 insertions(+), 0 deletions(-)
     |
-    o  changeset:   0:f8035bb17114
+    o  commit:      f8035bb17114
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     add a
@@ -1856,9 +1856,9 @@ sh % "hg log -G --git --stat --follow b" == r"""
 
 sh % "hg up -q 6"
 sh % "hg log -G --git --patch --follow-first e" == r"""
-    @    changeset:   6:fc281d8ff18d
-    |\   parent:      5:99b31f1c2782
-    | ~  parent:      4:17d952250a9d
+    @    commit:      fc281d8ff18d
+    |\   parent:      99b31f1c2782
+    | ~  parent:      17d952250a9d
     |    user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     merge 5 and 4
@@ -1870,8 +1870,8 @@ sh % "hg log -G --git --patch --follow-first e" == r"""
     |    -ee
     |    +merge
     |
-    o  changeset:   5:99b31f1c2782
-    |  parent:      3:5918b8d165d1
+    o  commit:      99b31f1c2782
+    |  parent:      5918b8d165d1
     ~  user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     add another e
@@ -2240,16 +2240,16 @@ sh % "hg log -G -r '::2' --template '\\n'" == r"""
 # issue3772
 
 sh % "hg log -G -r ':null'" == r"""
-    o  changeset:   0:f8035bb17114
+    o  commit:      f8035bb17114
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     add a
     |
-    o  changeset:   -1:000000000000
+    o  commit:      000000000000
        user:
        date:        Thu Jan 01 00:00:00 1970 +0000"""
 sh % "hg log -G -r 'null:null'" == r"""
-    o  changeset:   -1:000000000000
+    o  commit:      000000000000
        user:
        date:        Thu Jan 01 00:00:00 1970 +0000"""
 
@@ -2257,7 +2257,7 @@ sh % "hg log -G -r 'null:null'" == r"""
 
 sh % "hg log -G -r 'all()'" | "tail -5" == r"""
     |
-    o  changeset:   0:f8035bb17114
+    o  commit:      f8035bb17114
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     add a"""
@@ -2265,28 +2265,28 @@ sh % "hg log -G -r 'all()'" | "tail -5" == r"""
 # working-directory revision
 
 sh % "hg log -G -qr '. + wdir()'" == r"""
-    o  2147483647:ffffffffffff
+    o  ffffffffffff
     |
-    @  3:5918b8d165d1
+    @  5918b8d165d1
     |
     ~"""
 
 # node template with changeset_printer:
 
 sh % "hg log -Gqr '5:7' --config 'ui.graphnodetemplate=\"{rev}\"'" == r"""
-    7  7:02dbb8e276b8
+    7  02dbb8e276b8
     |
-    6    6:fc281d8ff18d
+    6    fc281d8ff18d
     |\
     | ~
-    5  5:99b31f1c2782
+    5  99b31f1c2782
     |
     ~"""
 
 # label() should just work in node template:
 
 sh % "hg log -Gqr 7 --config 'extensions.color=' '--color=debug' --config 'ui.graphnodetemplate={label(\"branch.{branch}\", rev)}'" == r"""
-    [branch.default|7]  [log.node|7:02dbb8e276b8]
+    [branch.default|7]  [log.node|02dbb8e276b8]
     |
     ~"""
 
@@ -2302,198 +2302,198 @@ graphstyle.grandparent = :
 graphstyle.missing =
 """ >> "$HGRCPATH"
 sh % "hg log -G -r 'file(\"a\")' -m" == r"""
-    @  changeset:   36:95fa8febd08a
-    :  parent:      35:9159c3644c5e
-    :  parent:      35:9159c3644c5e
+    @  commit:      95fa8febd08a
+    :  parent:      9159c3644c5e
+    :  parent:      9159c3644c5e
     :  user:        test
     :  date:        Thu Jan 01 00:00:36 1970 +0000
     :  summary:     (36) buggy merge: identical parents
     :
-    o    changeset:   32:d06dffa21a31
-    |\   parent:      27:886ed638191b
-    | :  parent:      31:621d83e11f67
+    o    commit:      d06dffa21a31
+    |\   parent:      886ed638191b
+    | :  parent:      621d83e11f67
     | :  user:        test
     | :  date:        Thu Jan 01 00:00:32 1970 +0000
     | :  summary:     (32) expand
     | :
-    o :  changeset:   31:621d83e11f67
-    |\:  parent:      21:d42a756af44d
-    | :  parent:      30:6e11cd4b648f
+    o :  commit:      621d83e11f67
+    |\:  parent:      d42a756af44d
+    | :  parent:      6e11cd4b648f
     | :  user:        test
     | :  date:        Thu Jan 01 00:00:31 1970 +0000
     | :  summary:     (31) expand
     | :
-    o :    changeset:   30:6e11cd4b648f
-    |\ \   parent:      28:44ecd0b9ae99
-    | ~ :  parent:      29:cd9bb2be7593
+    o :    commit:      6e11cd4b648f
+    |\ \   parent:      44ecd0b9ae99
+    | ~ :  parent:      cd9bb2be7593
     |   :  user:        test
     |   :  date:        Thu Jan 01 00:00:30 1970 +0000
     |   :  summary:     (30) expand
     |  /
-    o :    changeset:   28:44ecd0b9ae99
-    |\ \   parent:      1:6db2ef61d156
-    | ~ :  parent:      26:7f25b6c2f0b9
+    o :    commit:      44ecd0b9ae99
+    |\ \   parent:      6db2ef61d156
+    | ~ :  parent:      7f25b6c2f0b9
     |   :  user:        test
     |   :  date:        Thu Jan 01 00:00:28 1970 +0000
     |   :  summary:     (28) merge zero known
     |  /
-    o :    changeset:   26:7f25b6c2f0b9
-    |\ \   parent:      18:1aa84d96232a
-    | | :  parent:      25:91da8ed57247
+    o :    commit:      7f25b6c2f0b9
+    |\ \   parent:      1aa84d96232a
+    | | :  parent:      91da8ed57247
     | | :  user:        test
     | | :  date:        Thu Jan 01 00:00:26 1970 +0000
     | | :  summary:     (26) merge one known; far right
     | | :
-    | o :  changeset:   25:91da8ed57247
-    | |\:  parent:      21:d42a756af44d
-    | | :  parent:      24:a9c19a3d96b7
+    | o :  commit:      91da8ed57247
+    | |\:  parent:      d42a756af44d
+    | | :  parent:      a9c19a3d96b7
     | | :  user:        test
     | | :  date:        Thu Jan 01 00:00:25 1970 +0000
     | | :  summary:     (25) merge one known; far left
     | | :
-    | o :    changeset:   24:a9c19a3d96b7
-    | |\ \   parent:      0:e6eb3150255d
-    | | ~ :  parent:      23:a01cddf0766d
+    | o :    commit:      a9c19a3d96b7
+    | |\ \   parent:      e6eb3150255d
+    | | ~ :  parent:      a01cddf0766d
     | |   :  user:        test
     | |   :  date:        Thu Jan 01 00:00:24 1970 +0000
     | |   :  summary:     (24) merge one known; immediate right
     | |  /
-    | o :    changeset:   23:a01cddf0766d
-    | |\ \   parent:      1:6db2ef61d156
-    | | ~ :  parent:      22:e0d9cccacb5d
+    | o :    commit:      a01cddf0766d
+    | |\ \   parent:      6db2ef61d156
+    | | ~ :  parent:      e0d9cccacb5d
     | |   :  user:        test
     | |   :  date:        Thu Jan 01 00:00:23 1970 +0000
     | |   :  summary:     (23) merge one known; immediate left
     | |  /
-    | o :  changeset:   22:e0d9cccacb5d
-    |/:/   parent:      18:1aa84d96232a
-    | :    parent:      21:d42a756af44d
+    | o :  commit:      e0d9cccacb5d
+    |/:/   parent:      1aa84d96232a
+    | :    parent:      d42a756af44d
     | :    user:        test
     | :    date:        Thu Jan 01 00:00:22 1970 +0000
     | :    summary:     (22) merge two known; one far left, one far right
     | :
-    | o    changeset:   21:d42a756af44d
-    | |\   parent:      19:31ddc2c1573b
-    | | |  parent:      20:d30ed6450e32
+    | o    commit:      d42a756af44d
+    | |\   parent:      31ddc2c1573b
+    | | |  parent:      d30ed6450e32
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | |  summary:     (21) expand
     | | |
-    +---o  changeset:   20:d30ed6450e32
-    | | |  parent:      0:e6eb3150255d
-    | | ~  parent:      18:1aa84d96232a
+    +---o  commit:      d30ed6450e32
+    | | |  parent:      e6eb3150255d
+    | | ~  parent:      1aa84d96232a
     | |    user:        test
     | |    date:        Thu Jan 01 00:00:20 1970 +0000
     | |    summary:     (20) merge two known; two far right
     | |
-    | o    changeset:   19:31ddc2c1573b
-    | |\   parent:      15:1dda3f72782d
-    | | |  parent:      17:44765d7c06e0
+    | o    commit:      31ddc2c1573b
+    | |\   parent:      1dda3f72782d
+    | | |  parent:      44765d7c06e0
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | |  summary:     (19) expand
     | | |
-    o | |  changeset:   18:1aa84d96232a
-    |\| |  parent:      1:6db2ef61d156
-    ~ | |  parent:      15:1dda3f72782d
+    o | |  commit:      1aa84d96232a
+    |\| |  parent:      6db2ef61d156
+    ~ | |  parent:      1dda3f72782d
       | |  user:        test
       | |  date:        Thu Jan 01 00:00:18 1970 +0000
       | |  summary:     (18) merge two known; two far left
      / /
-    | o    changeset:   17:44765d7c06e0
-    | |\   parent:      12:86b91144a6e9
-    | | |  parent:      16:3677d192927d
+    | o    commit:      44765d7c06e0
+    | |\   parent:      86b91144a6e9
+    | | |  parent:      3677d192927d
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | |  summary:     (17) expand
     | | |
-    | | o    changeset:   16:3677d192927d
-    | | |\   parent:      0:e6eb3150255d
-    | | ~ ~  parent:      1:6db2ef61d156
+    | | o    commit:      3677d192927d
+    | | |\   parent:      e6eb3150255d
+    | | ~ ~  parent:      6db2ef61d156
     | |      user:        test
     | |      date:        Thu Jan 01 00:00:16 1970 +0000
     | |      summary:     (16) merge two known; one immediate right, one near right
     | |
-    o |    changeset:   15:1dda3f72782d
-    |\ \   parent:      13:22d8966a97e3
-    | | |  parent:      14:8eac370358ef
+    o |    commit:      1dda3f72782d
+    |\ \   parent:      22d8966a97e3
+    | | |  parent:      8eac370358ef
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | |  summary:     (15) expand
     | | |
-    | o |  changeset:   14:8eac370358ef
-    | |\|  parent:      0:e6eb3150255d
-    | ~ |  parent:      12:86b91144a6e9
+    | o |  commit:      8eac370358ef
+    | |\|  parent:      e6eb3150255d
+    | ~ |  parent:      86b91144a6e9
     |   |  user:        test
     |   |  date:        Thu Jan 01 00:00:14 1970 +0000
     |   |  summary:     (14) merge two known; one immediate right, one far right
     |  /
-    o |    changeset:   13:22d8966a97e3
-    |\ \   parent:      9:7010c0af0a35
-    | | |  parent:      11:832d76e6bdf2
+    o |    commit:      22d8966a97e3
+    |\ \   parent:      7010c0af0a35
+    | | |  parent:      832d76e6bdf2
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | |  summary:     (13) expand
     | | |
-    +---o  changeset:   12:86b91144a6e9
-    | | |  parent:      1:6db2ef61d156
-    | | ~  parent:      9:7010c0af0a35
+    +---o  commit:      86b91144a6e9
+    | | |  parent:      6db2ef61d156
+    | | ~  parent:      7010c0af0a35
     | |    user:        test
     | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | |    summary:     (12) merge two known; one immediate right, one far left
     | |
-    | o    changeset:   11:832d76e6bdf2
-    | |\   parent:      6:b105a072e251
-    | | |  parent:      10:74c64d036d72
+    | o    commit:      832d76e6bdf2
+    | |\   parent:      b105a072e251
+    | | |  parent:      74c64d036d72
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | |  summary:     (11) expand
     | | |
-    | | o  changeset:   10:74c64d036d72
-    | |/|  parent:      0:e6eb3150255d
-    | | ~  parent:      6:b105a072e251
+    | | o  commit:      74c64d036d72
+    | |/|  parent:      e6eb3150255d
+    | | ~  parent:      b105a072e251
     | |    user:        test
     | |    date:        Thu Jan 01 00:00:10 1970 +0000
     | |    summary:     (10) merge two known; one immediate left, one near right
     | |
-    o |    changeset:   9:7010c0af0a35
-    |\ \   parent:      7:b632bb1b1224
-    | | |  parent:      8:7a0b11f71937
+    o |    commit:      7010c0af0a35
+    |\ \   parent:      b632bb1b1224
+    | | |  parent:      7a0b11f71937
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | |  summary:     (9) expand
     | | |
-    | o |  changeset:   8:7a0b11f71937
-    |/| |  parent:      0:e6eb3150255d
-    | ~ |  parent:      7:b632bb1b1224
+    | o |  commit:      7a0b11f71937
+    |/| |  parent:      e6eb3150255d
+    | ~ |  parent:      b632bb1b1224
     |   |  user:        test
     |   |  date:        Thu Jan 01 00:00:08 1970 +0000
     |   |  summary:     (8) merge two known; one immediate left, one far right
     |  /
-    o |    changeset:   7:b632bb1b1224
-    |\ \   parent:      2:3d9a33b8d1e1
-    | ~ |  parent:      5:4409d547b708
+    o |    commit:      b632bb1b1224
+    |\ \   parent:      3d9a33b8d1e1
+    | ~ |  parent:      4409d547b708
     |   |  user:        test
     |   |  date:        Thu Jan 01 00:00:07 1970 +0000
     |   |  summary:     (7) expand
     |  /
-    | o  changeset:   6:b105a072e251
-    |/|  parent:      2:3d9a33b8d1e1
-    | ~  parent:      5:4409d547b708
+    | o  commit:      b105a072e251
+    |/|  parent:      3d9a33b8d1e1
+    | ~  parent:      4409d547b708
     |    user:        test
     |    date:        Thu Jan 01 00:00:06 1970 +0000
     |    summary:     (6) merge two known; one immediate left, one far left
     |
-    o    changeset:   5:4409d547b708
-    |\   parent:      3:27eef8ed80b4
-    | ~  parent:      4:26a8bac39d9f
+    o    commit:      4409d547b708
+    |\   parent:      27eef8ed80b4
+    | ~  parent:      26a8bac39d9f
     |    user:        test
     |    date:        Thu Jan 01 00:00:05 1970 +0000
     |    summary:     (5) expand
     |
-    o    changeset:   4:26a8bac39d9f
-    |\   parent:      1:6db2ef61d156
-    ~ ~  parent:      3:27eef8ed80b4
+    o    commit:      26a8bac39d9f
+    |\   parent:      6db2ef61d156
+    ~ ~  parent:      27eef8ed80b4
          user:        test
          date:        Thu Jan 01 00:00:04 1970 +0000
          summary:     (4) merge two known; one immediate left, one immediate right"""
@@ -2501,198 +2501,198 @@ sh % "hg log -G -r 'file(\"a\")' -m" == r"""
 # Setting HGPLAIN ignores graphmod styling:
 
 sh % "'HGPLAIN=1' hg log -G -r 'file(\"a\")' -m" == r"""
-    @  changeset:   36:95fa8febd08a
-    |  parent:      35:9159c3644c5e
-    |  parent:      35:9159c3644c5e
+    @  commit:      95fa8febd08a
+    |  parent:      9159c3644c5e
+    |  parent:      9159c3644c5e
     |  user:        test
     |  date:        Thu Jan 01 00:00:36 1970 +0000
     |  summary:     (36) buggy merge: identical parents
     |
-    o    changeset:   32:d06dffa21a31
-    |\   parent:      27:886ed638191b
-    | |  parent:      31:621d83e11f67
+    o    commit:      d06dffa21a31
+    |\   parent:      886ed638191b
+    | |  parent:      621d83e11f67
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:32 1970 +0000
     | |  summary:     (32) expand
     | |
-    o |  changeset:   31:621d83e11f67
-    |\|  parent:      21:d42a756af44d
-    | |  parent:      30:6e11cd4b648f
+    o |  commit:      621d83e11f67
+    |\|  parent:      d42a756af44d
+    | |  parent:      6e11cd4b648f
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:31 1970 +0000
     | |  summary:     (31) expand
     | |
-    o |    changeset:   30:6e11cd4b648f
-    |\ \   parent:      28:44ecd0b9ae99
-    | | |  parent:      29:cd9bb2be7593
+    o |    commit:      6e11cd4b648f
+    |\ \   parent:      44ecd0b9ae99
+    | | |  parent:      cd9bb2be7593
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:30 1970 +0000
     | | |  summary:     (30) expand
     | | |
-    o | |    changeset:   28:44ecd0b9ae99
-    |\ \ \   parent:      1:6db2ef61d156
-    | | | |  parent:      26:7f25b6c2f0b9
+    o | |    commit:      44ecd0b9ae99
+    |\ \ \   parent:      6db2ef61d156
+    | | | |  parent:      7f25b6c2f0b9
     | | | |  user:        test
     | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
     | | | |  summary:     (28) merge zero known
     | | | |
-    o | | |    changeset:   26:7f25b6c2f0b9
-    |\ \ \ \   parent:      18:1aa84d96232a
-    | | | | |  parent:      25:91da8ed57247
+    o | | |    commit:      7f25b6c2f0b9
+    |\ \ \ \   parent:      1aa84d96232a
+    | | | | |  parent:      91da8ed57247
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
     | | | | |  summary:     (26) merge one known; far right
     | | | | |
-    | o-----+  changeset:   25:91da8ed57247
-    | | | | |  parent:      21:d42a756af44d
-    | | | | |  parent:      24:a9c19a3d96b7
+    | o-----+  commit:      91da8ed57247
+    | | | | |  parent:      d42a756af44d
+    | | | | |  parent:      a9c19a3d96b7
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
     | | | | |  summary:     (25) merge one known; far left
     | | | | |
-    | o | | |    changeset:   24:a9c19a3d96b7
-    | |\ \ \ \   parent:      0:e6eb3150255d
-    | | | | | |  parent:      23:a01cddf0766d
+    | o | | |    commit:      a9c19a3d96b7
+    | |\ \ \ \   parent:      e6eb3150255d
+    | | | | | |  parent:      a01cddf0766d
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
     | | | | | |  summary:     (24) merge one known; immediate right
     | | | | | |
-    | o---+ | |  changeset:   23:a01cddf0766d
-    | | | | | |  parent:      1:6db2ef61d156
-    | | | | | |  parent:      22:e0d9cccacb5d
+    | o---+ | |  commit:      a01cddf0766d
+    | | | | | |  parent:      6db2ef61d156
+    | | | | | |  parent:      e0d9cccacb5d
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
     | | | | | |  summary:     (23) merge one known; immediate left
     | | | | | |
-    | o-------+  changeset:   22:e0d9cccacb5d
-    | | | | | |  parent:      18:1aa84d96232a
-    |/ / / / /   parent:      21:d42a756af44d
+    | o-------+  commit:      e0d9cccacb5d
+    | | | | | |  parent:      1aa84d96232a
+    |/ / / / /   parent:      d42a756af44d
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:22 1970 +0000
     | | | | |    summary:     (22) merge two known; one far left, one far right
     | | | | |
-    | | | | o    changeset:   21:d42a756af44d
-    | | | | |\   parent:      19:31ddc2c1573b
-    | | | | | |  parent:      20:d30ed6450e32
+    | | | | o    commit:      d42a756af44d
+    | | | | |\   parent:      31ddc2c1573b
+    | | | | | |  parent:      d30ed6450e32
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | | | | |  summary:     (21) expand
     | | | | | |
-    +-+-------o  changeset:   20:d30ed6450e32
-    | | | | |    parent:      0:e6eb3150255d
-    | | | | |    parent:      18:1aa84d96232a
+    +-+-------o  commit:      d30ed6450e32
+    | | | | |    parent:      e6eb3150255d
+    | | | | |    parent:      1aa84d96232a
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:20 1970 +0000
     | | | | |    summary:     (20) merge two known; two far right
     | | | | |
-    | | | | o    changeset:   19:31ddc2c1573b
-    | | | | |\   parent:      15:1dda3f72782d
-    | | | | | |  parent:      17:44765d7c06e0
+    | | | | o    commit:      31ddc2c1573b
+    | | | | |\   parent:      1dda3f72782d
+    | | | | | |  parent:      44765d7c06e0
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | | | | |  summary:     (19) expand
     | | | | | |
-    o---+---+ |  changeset:   18:1aa84d96232a
-      | | | | |  parent:      1:6db2ef61d156
-     / / / / /   parent:      15:1dda3f72782d
+    o---+---+ |  commit:      1aa84d96232a
+      | | | | |  parent:      6db2ef61d156
+     / / / / /   parent:      1dda3f72782d
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:18 1970 +0000
     | | | | |    summary:     (18) merge two known; two far left
     | | | | |
-    | | | | o    changeset:   17:44765d7c06e0
-    | | | | |\   parent:      12:86b91144a6e9
-    | | | | | |  parent:      16:3677d192927d
+    | | | | o    commit:      44765d7c06e0
+    | | | | |\   parent:      86b91144a6e9
+    | | | | | |  parent:      3677d192927d
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | | | | |  summary:     (17) expand
     | | | | | |
-    +-+-------o  changeset:   16:3677d192927d
-    | | | | |    parent:      0:e6eb3150255d
-    | | | | |    parent:      1:6db2ef61d156
+    +-+-------o  commit:      3677d192927d
+    | | | | |    parent:      e6eb3150255d
+    | | | | |    parent:      6db2ef61d156
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:16 1970 +0000
     | | | | |    summary:     (16) merge two known; one immediate right, one near right
     | | | | |
-    | | | o |    changeset:   15:1dda3f72782d
-    | | | |\ \   parent:      13:22d8966a97e3
-    | | | | | |  parent:      14:8eac370358ef
+    | | | o |    commit:      1dda3f72782d
+    | | | |\ \   parent:      22d8966a97e3
+    | | | | | |  parent:      8eac370358ef
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | | | | |  summary:     (15) expand
     | | | | | |
-    +-------o |  changeset:   14:8eac370358ef
-    | | | | |/   parent:      0:e6eb3150255d
-    | | | | |    parent:      12:86b91144a6e9
+    +-------o |  commit:      8eac370358ef
+    | | | | |/   parent:      e6eb3150255d
+    | | | | |    parent:      86b91144a6e9
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:14 1970 +0000
     | | | | |    summary:     (14) merge two known; one immediate right, one far right
     | | | | |
-    | | | o |    changeset:   13:22d8966a97e3
-    | | | |\ \   parent:      9:7010c0af0a35
-    | | | | | |  parent:      11:832d76e6bdf2
+    | | | o |    commit:      22d8966a97e3
+    | | | |\ \   parent:      7010c0af0a35
+    | | | | | |  parent:      832d76e6bdf2
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | | | | |  summary:     (13) expand
     | | | | | |
-    | +---+---o  changeset:   12:86b91144a6e9
-    | | | | |    parent:      1:6db2ef61d156
-    | | | | |    parent:      9:7010c0af0a35
+    | +---+---o  commit:      86b91144a6e9
+    | | | | |    parent:      6db2ef61d156
+    | | | | |    parent:      7010c0af0a35
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | | | | |    summary:     (12) merge two known; one immediate right, one far left
     | | | | |
-    | | | | o    changeset:   11:832d76e6bdf2
-    | | | | |\   parent:      6:b105a072e251
-    | | | | | |  parent:      10:74c64d036d72
+    | | | | o    commit:      832d76e6bdf2
+    | | | | |\   parent:      b105a072e251
+    | | | | | |  parent:      74c64d036d72
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | | | | |  summary:     (11) expand
     | | | | | |
-    +---------o  changeset:   10:74c64d036d72
-    | | | | |/   parent:      0:e6eb3150255d
-    | | | | |    parent:      6:b105a072e251
+    +---------o  commit:      74c64d036d72
+    | | | | |/   parent:      e6eb3150255d
+    | | | | |    parent:      b105a072e251
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:10 1970 +0000
     | | | | |    summary:     (10) merge two known; one immediate left, one near right
     | | | | |
-    | | | o |    changeset:   9:7010c0af0a35
-    | | | |\ \   parent:      7:b632bb1b1224
-    | | | | | |  parent:      8:7a0b11f71937
+    | | | o |    commit:      7010c0af0a35
+    | | | |\ \   parent:      b632bb1b1224
+    | | | | | |  parent:      7a0b11f71937
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | | | | |  summary:     (9) expand
     | | | | | |
-    +-------o |  changeset:   8:7a0b11f71937
-    | | | |/ /   parent:      0:e6eb3150255d
-    | | | | |    parent:      7:b632bb1b1224
+    +-------o |  commit:      7a0b11f71937
+    | | | |/ /   parent:      e6eb3150255d
+    | | | | |    parent:      b632bb1b1224
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:08 1970 +0000
     | | | | |    summary:     (8) merge two known; one immediate left, one far right
     | | | | |
-    | | | o |    changeset:   7:b632bb1b1224
-    | | | |\ \   parent:      2:3d9a33b8d1e1
-    | | | | | |  parent:      5:4409d547b708
+    | | | o |    commit:      b632bb1b1224
+    | | | |\ \   parent:      3d9a33b8d1e1
+    | | | | | |  parent:      4409d547b708
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
     | | | | | |  summary:     (7) expand
     | | | | | |
-    | | | +---o  changeset:   6:b105a072e251
-    | | | | |/   parent:      2:3d9a33b8d1e1
-    | | | | |    parent:      5:4409d547b708
+    | | | +---o  commit:      b105a072e251
+    | | | | |/   parent:      3d9a33b8d1e1
+    | | | | |    parent:      4409d547b708
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:06 1970 +0000
     | | | | |    summary:     (6) merge two known; one immediate left, one far left
     | | | | |
-    | | | o |    changeset:   5:4409d547b708
-    | | | |\ \   parent:      3:27eef8ed80b4
-    | | | | | |  parent:      4:26a8bac39d9f
+    | | | o |    commit:      4409d547b708
+    | | | |\ \   parent:      27eef8ed80b4
+    | | | | | |  parent:      26a8bac39d9f
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
     | | | | | |  summary:     (5) expand
     | | | | | |
-    | +---o | |  changeset:   4:26a8bac39d9f
-    | | | |/ /   parent:      1:6db2ef61d156
-    | | | | |    parent:      3:27eef8ed80b4
+    | +---o | |  commit:      26a8bac39d9f
+    | | | |/ /   parent:      6db2ef61d156
+    | | | | |    parent:      27eef8ed80b4
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:04 1970 +0000
     | | | | |    summary:     (4) merge two known; one immediate left, one immediate right
@@ -2701,198 +2701,198 @@ sh % "'HGPLAIN=1' hg log -G -r 'file(\"a\")' -m" == r"""
 # .. unless HGPLAINEXCEPT=graph is set:
 
 sh % "'HGPLAIN=1' 'HGPLAINEXCEPT=graph' hg log -G -r 'file(\"a\")' -m" == r"""
-    @  changeset:   36:95fa8febd08a
-    :  parent:      35:9159c3644c5e
-    :  parent:      35:9159c3644c5e
+    @  commit:      95fa8febd08a
+    :  parent:      9159c3644c5e
+    :  parent:      9159c3644c5e
     :  user:        test
     :  date:        Thu Jan 01 00:00:36 1970 +0000
     :  summary:     (36) buggy merge: identical parents
     :
-    o    changeset:   32:d06dffa21a31
-    |\   parent:      27:886ed638191b
-    | :  parent:      31:621d83e11f67
+    o    commit:      d06dffa21a31
+    |\   parent:      886ed638191b
+    | :  parent:      621d83e11f67
     | :  user:        test
     | :  date:        Thu Jan 01 00:00:32 1970 +0000
     | :  summary:     (32) expand
     | :
-    o :  changeset:   31:621d83e11f67
-    |\:  parent:      21:d42a756af44d
-    | :  parent:      30:6e11cd4b648f
+    o :  commit:      621d83e11f67
+    |\:  parent:      d42a756af44d
+    | :  parent:      6e11cd4b648f
     | :  user:        test
     | :  date:        Thu Jan 01 00:00:31 1970 +0000
     | :  summary:     (31) expand
     | :
-    o :    changeset:   30:6e11cd4b648f
-    |\ \   parent:      28:44ecd0b9ae99
-    | ~ :  parent:      29:cd9bb2be7593
+    o :    commit:      6e11cd4b648f
+    |\ \   parent:      44ecd0b9ae99
+    | ~ :  parent:      cd9bb2be7593
     |   :  user:        test
     |   :  date:        Thu Jan 01 00:00:30 1970 +0000
     |   :  summary:     (30) expand
     |  /
-    o :    changeset:   28:44ecd0b9ae99
-    |\ \   parent:      1:6db2ef61d156
-    | ~ :  parent:      26:7f25b6c2f0b9
+    o :    commit:      44ecd0b9ae99
+    |\ \   parent:      6db2ef61d156
+    | ~ :  parent:      7f25b6c2f0b9
     |   :  user:        test
     |   :  date:        Thu Jan 01 00:00:28 1970 +0000
     |   :  summary:     (28) merge zero known
     |  /
-    o :    changeset:   26:7f25b6c2f0b9
-    |\ \   parent:      18:1aa84d96232a
-    | | :  parent:      25:91da8ed57247
+    o :    commit:      7f25b6c2f0b9
+    |\ \   parent:      1aa84d96232a
+    | | :  parent:      91da8ed57247
     | | :  user:        test
     | | :  date:        Thu Jan 01 00:00:26 1970 +0000
     | | :  summary:     (26) merge one known; far right
     | | :
-    | o :  changeset:   25:91da8ed57247
-    | |\:  parent:      21:d42a756af44d
-    | | :  parent:      24:a9c19a3d96b7
+    | o :  commit:      91da8ed57247
+    | |\:  parent:      d42a756af44d
+    | | :  parent:      a9c19a3d96b7
     | | :  user:        test
     | | :  date:        Thu Jan 01 00:00:25 1970 +0000
     | | :  summary:     (25) merge one known; far left
     | | :
-    | o :    changeset:   24:a9c19a3d96b7
-    | |\ \   parent:      0:e6eb3150255d
-    | | ~ :  parent:      23:a01cddf0766d
+    | o :    commit:      a9c19a3d96b7
+    | |\ \   parent:      e6eb3150255d
+    | | ~ :  parent:      a01cddf0766d
     | |   :  user:        test
     | |   :  date:        Thu Jan 01 00:00:24 1970 +0000
     | |   :  summary:     (24) merge one known; immediate right
     | |  /
-    | o :    changeset:   23:a01cddf0766d
-    | |\ \   parent:      1:6db2ef61d156
-    | | ~ :  parent:      22:e0d9cccacb5d
+    | o :    commit:      a01cddf0766d
+    | |\ \   parent:      6db2ef61d156
+    | | ~ :  parent:      e0d9cccacb5d
     | |   :  user:        test
     | |   :  date:        Thu Jan 01 00:00:23 1970 +0000
     | |   :  summary:     (23) merge one known; immediate left
     | |  /
-    | o :  changeset:   22:e0d9cccacb5d
-    |/:/   parent:      18:1aa84d96232a
-    | :    parent:      21:d42a756af44d
+    | o :  commit:      e0d9cccacb5d
+    |/:/   parent:      1aa84d96232a
+    | :    parent:      d42a756af44d
     | :    user:        test
     | :    date:        Thu Jan 01 00:00:22 1970 +0000
     | :    summary:     (22) merge two known; one far left, one far right
     | :
-    | o    changeset:   21:d42a756af44d
-    | |\   parent:      19:31ddc2c1573b
-    | | |  parent:      20:d30ed6450e32
+    | o    commit:      d42a756af44d
+    | |\   parent:      31ddc2c1573b
+    | | |  parent:      d30ed6450e32
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | |  summary:     (21) expand
     | | |
-    +---o  changeset:   20:d30ed6450e32
-    | | |  parent:      0:e6eb3150255d
-    | | ~  parent:      18:1aa84d96232a
+    +---o  commit:      d30ed6450e32
+    | | |  parent:      e6eb3150255d
+    | | ~  parent:      1aa84d96232a
     | |    user:        test
     | |    date:        Thu Jan 01 00:00:20 1970 +0000
     | |    summary:     (20) merge two known; two far right
     | |
-    | o    changeset:   19:31ddc2c1573b
-    | |\   parent:      15:1dda3f72782d
-    | | |  parent:      17:44765d7c06e0
+    | o    commit:      31ddc2c1573b
+    | |\   parent:      1dda3f72782d
+    | | |  parent:      44765d7c06e0
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | |  summary:     (19) expand
     | | |
-    o | |  changeset:   18:1aa84d96232a
-    |\| |  parent:      1:6db2ef61d156
-    ~ | |  parent:      15:1dda3f72782d
+    o | |  commit:      1aa84d96232a
+    |\| |  parent:      6db2ef61d156
+    ~ | |  parent:      1dda3f72782d
       | |  user:        test
       | |  date:        Thu Jan 01 00:00:18 1970 +0000
       | |  summary:     (18) merge two known; two far left
      / /
-    | o    changeset:   17:44765d7c06e0
-    | |\   parent:      12:86b91144a6e9
-    | | |  parent:      16:3677d192927d
+    | o    commit:      44765d7c06e0
+    | |\   parent:      86b91144a6e9
+    | | |  parent:      3677d192927d
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | |  summary:     (17) expand
     | | |
-    | | o    changeset:   16:3677d192927d
-    | | |\   parent:      0:e6eb3150255d
-    | | ~ ~  parent:      1:6db2ef61d156
+    | | o    commit:      3677d192927d
+    | | |\   parent:      e6eb3150255d
+    | | ~ ~  parent:      6db2ef61d156
     | |      user:        test
     | |      date:        Thu Jan 01 00:00:16 1970 +0000
     | |      summary:     (16) merge two known; one immediate right, one near right
     | |
-    o |    changeset:   15:1dda3f72782d
-    |\ \   parent:      13:22d8966a97e3
-    | | |  parent:      14:8eac370358ef
+    o |    commit:      1dda3f72782d
+    |\ \   parent:      22d8966a97e3
+    | | |  parent:      8eac370358ef
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | |  summary:     (15) expand
     | | |
-    | o |  changeset:   14:8eac370358ef
-    | |\|  parent:      0:e6eb3150255d
-    | ~ |  parent:      12:86b91144a6e9
+    | o |  commit:      8eac370358ef
+    | |\|  parent:      e6eb3150255d
+    | ~ |  parent:      86b91144a6e9
     |   |  user:        test
     |   |  date:        Thu Jan 01 00:00:14 1970 +0000
     |   |  summary:     (14) merge two known; one immediate right, one far right
     |  /
-    o |    changeset:   13:22d8966a97e3
-    |\ \   parent:      9:7010c0af0a35
-    | | |  parent:      11:832d76e6bdf2
+    o |    commit:      22d8966a97e3
+    |\ \   parent:      7010c0af0a35
+    | | |  parent:      832d76e6bdf2
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | |  summary:     (13) expand
     | | |
-    +---o  changeset:   12:86b91144a6e9
-    | | |  parent:      1:6db2ef61d156
-    | | ~  parent:      9:7010c0af0a35
+    +---o  commit:      86b91144a6e9
+    | | |  parent:      6db2ef61d156
+    | | ~  parent:      7010c0af0a35
     | |    user:        test
     | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | |    summary:     (12) merge two known; one immediate right, one far left
     | |
-    | o    changeset:   11:832d76e6bdf2
-    | |\   parent:      6:b105a072e251
-    | | |  parent:      10:74c64d036d72
+    | o    commit:      832d76e6bdf2
+    | |\   parent:      b105a072e251
+    | | |  parent:      74c64d036d72
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | |  summary:     (11) expand
     | | |
-    | | o  changeset:   10:74c64d036d72
-    | |/|  parent:      0:e6eb3150255d
-    | | ~  parent:      6:b105a072e251
+    | | o  commit:      74c64d036d72
+    | |/|  parent:      e6eb3150255d
+    | | ~  parent:      b105a072e251
     | |    user:        test
     | |    date:        Thu Jan 01 00:00:10 1970 +0000
     | |    summary:     (10) merge two known; one immediate left, one near right
     | |
-    o |    changeset:   9:7010c0af0a35
-    |\ \   parent:      7:b632bb1b1224
-    | | |  parent:      8:7a0b11f71937
+    o |    commit:      7010c0af0a35
+    |\ \   parent:      b632bb1b1224
+    | | |  parent:      7a0b11f71937
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | |  summary:     (9) expand
     | | |
-    | o |  changeset:   8:7a0b11f71937
-    |/| |  parent:      0:e6eb3150255d
-    | ~ |  parent:      7:b632bb1b1224
+    | o |  commit:      7a0b11f71937
+    |/| |  parent:      e6eb3150255d
+    | ~ |  parent:      b632bb1b1224
     |   |  user:        test
     |   |  date:        Thu Jan 01 00:00:08 1970 +0000
     |   |  summary:     (8) merge two known; one immediate left, one far right
     |  /
-    o |    changeset:   7:b632bb1b1224
-    |\ \   parent:      2:3d9a33b8d1e1
-    | ~ |  parent:      5:4409d547b708
+    o |    commit:      b632bb1b1224
+    |\ \   parent:      3d9a33b8d1e1
+    | ~ |  parent:      4409d547b708
     |   |  user:        test
     |   |  date:        Thu Jan 01 00:00:07 1970 +0000
     |   |  summary:     (7) expand
     |  /
-    | o  changeset:   6:b105a072e251
-    |/|  parent:      2:3d9a33b8d1e1
-    | ~  parent:      5:4409d547b708
+    | o  commit:      b105a072e251
+    |/|  parent:      3d9a33b8d1e1
+    | ~  parent:      4409d547b708
     |    user:        test
     |    date:        Thu Jan 01 00:00:06 1970 +0000
     |    summary:     (6) merge two known; one immediate left, one far left
     |
-    o    changeset:   5:4409d547b708
-    |\   parent:      3:27eef8ed80b4
-    | ~  parent:      4:26a8bac39d9f
+    o    commit:      4409d547b708
+    |\   parent:      27eef8ed80b4
+    | ~  parent:      26a8bac39d9f
     |    user:        test
     |    date:        Thu Jan 01 00:00:05 1970 +0000
     |    summary:     (5) expand
     |
-    o    changeset:   4:26a8bac39d9f
-    |\   parent:      1:6db2ef61d156
-    ~ ~  parent:      3:27eef8ed80b4
+    o    commit:      26a8bac39d9f
+    |\   parent:      6db2ef61d156
+    ~ ~  parent:      27eef8ed80b4
          user:        test
          date:        Thu Jan 01 00:00:04 1970 +0000
          summary:     (4) merge two known; one immediate left, one immediate right"""
@@ -2910,100 +2910,100 @@ graphstyle.grandparent = 3.
 graphstyle.missing =
 """ >> "$HGRCPATH"
 sh % "hg log -G -r '36:18 & file(\"a\")' -m" == r"""
-    @  changeset:   36:95fa8febd08a
-    !  parent:      35:9159c3644c5e
-    !  parent:      35:9159c3644c5e
+    @  commit:      95fa8febd08a
+    !  parent:      9159c3644c5e
+    !  parent:      9159c3644c5e
     !  user:        test
     .  date:        Thu Jan 01 00:00:36 1970 +0000
     .  summary:     (36) buggy merge: identical parents
     .
-    o    changeset:   32:d06dffa21a31
-    !\   parent:      27:886ed638191b
-    ! !  parent:      31:621d83e11f67
+    o    commit:      d06dffa21a31
+    !\   parent:      886ed638191b
+    ! !  parent:      621d83e11f67
     ! !  user:        test
     ! .  date:        Thu Jan 01 00:00:32 1970 +0000
     ! .  summary:     (32) expand
     ! .
-    o !  changeset:   31:621d83e11f67
-    !\!  parent:      21:d42a756af44d
-    ! !  parent:      30:6e11cd4b648f
+    o !  commit:      621d83e11f67
+    !\!  parent:      d42a756af44d
+    ! !  parent:      6e11cd4b648f
     ! !  user:        test
     ! !  date:        Thu Jan 01 00:00:31 1970 +0000
     ! !  summary:     (31) expand
     ! !
-    o !    changeset:   30:6e11cd4b648f
-    !\ \   parent:      28:44ecd0b9ae99
-    ! ~ !  parent:      29:cd9bb2be7593
+    o !    commit:      6e11cd4b648f
+    !\ \   parent:      44ecd0b9ae99
+    ! ~ !  parent:      cd9bb2be7593
     !   !  user:        test
     !   !  date:        Thu Jan 01 00:00:30 1970 +0000
     !   !  summary:     (30) expand
     !  /
-    o !    changeset:   28:44ecd0b9ae99
-    !\ \   parent:      1:6db2ef61d156
-    ! ~ !  parent:      26:7f25b6c2f0b9
+    o !    commit:      44ecd0b9ae99
+    !\ \   parent:      6db2ef61d156
+    ! ~ !  parent:      7f25b6c2f0b9
     !   !  user:        test
     !   !  date:        Thu Jan 01 00:00:28 1970 +0000
     !   !  summary:     (28) merge zero known
     !  /
-    o !    changeset:   26:7f25b6c2f0b9
-    !\ \   parent:      18:1aa84d96232a
-    ! ! !  parent:      25:91da8ed57247
+    o !    commit:      7f25b6c2f0b9
+    !\ \   parent:      1aa84d96232a
+    ! ! !  parent:      91da8ed57247
     ! ! !  user:        test
     ! ! !  date:        Thu Jan 01 00:00:26 1970 +0000
     ! ! !  summary:     (26) merge one known; far right
     ! ! !
-    ! o !  changeset:   25:91da8ed57247
-    ! !\!  parent:      21:d42a756af44d
-    ! ! !  parent:      24:a9c19a3d96b7
+    ! o !  commit:      91da8ed57247
+    ! !\!  parent:      d42a756af44d
+    ! ! !  parent:      a9c19a3d96b7
     ! ! !  user:        test
     ! ! !  date:        Thu Jan 01 00:00:25 1970 +0000
     ! ! !  summary:     (25) merge one known; far left
     ! ! !
-    ! o !    changeset:   24:a9c19a3d96b7
-    ! !\ \   parent:      0:e6eb3150255d
-    ! ! ~ !  parent:      23:a01cddf0766d
+    ! o !    commit:      a9c19a3d96b7
+    ! !\ \   parent:      e6eb3150255d
+    ! ! ~ !  parent:      a01cddf0766d
     ! !   !  user:        test
     ! !   !  date:        Thu Jan 01 00:00:24 1970 +0000
     ! !   !  summary:     (24) merge one known; immediate right
     ! !  /
-    ! o !    changeset:   23:a01cddf0766d
-    ! !\ \   parent:      1:6db2ef61d156
-    ! ! ~ !  parent:      22:e0d9cccacb5d
+    ! o !    commit:      a01cddf0766d
+    ! !\ \   parent:      6db2ef61d156
+    ! ! ~ !  parent:      e0d9cccacb5d
     ! !   !  user:        test
     ! !   !  date:        Thu Jan 01 00:00:23 1970 +0000
     ! !   !  summary:     (23) merge one known; immediate left
     ! !  /
-    ! o !  changeset:   22:e0d9cccacb5d
-    !/!/   parent:      18:1aa84d96232a
-    ! !    parent:      21:d42a756af44d
+    ! o !  commit:      e0d9cccacb5d
+    !/!/   parent:      1aa84d96232a
+    ! !    parent:      d42a756af44d
     ! !    user:        test
     ! !    date:        Thu Jan 01 00:00:22 1970 +0000
     ! !    summary:     (22) merge two known; one far left, one far right
     ! !
-    ! o    changeset:   21:d42a756af44d
-    ! !\   parent:      19:31ddc2c1573b
-    ! ! !  parent:      20:d30ed6450e32
+    ! o    commit:      d42a756af44d
+    ! !\   parent:      31ddc2c1573b
+    ! ! !  parent:      d30ed6450e32
     ! ! !  user:        test
     ! ! !  date:        Thu Jan 01 00:00:21 1970 +0000
     ! ! !  summary:     (21) expand
     ! ! !
-    +---o  changeset:   20:d30ed6450e32
-    ! ! |  parent:      0:e6eb3150255d
-    ! ! ~  parent:      18:1aa84d96232a
+    +---o  commit:      d30ed6450e32
+    ! ! |  parent:      e6eb3150255d
+    ! ! ~  parent:      1aa84d96232a
     ! !    user:        test
     ! !    date:        Thu Jan 01 00:00:20 1970 +0000
     ! !    summary:     (20) merge two known; two far right
     ! !
-    ! o    changeset:   19:31ddc2c1573b
-    ! |\   parent:      15:1dda3f72782d
-    ! ~ ~  parent:      17:44765d7c06e0
+    ! o    commit:      31ddc2c1573b
+    ! |\   parent:      1dda3f72782d
+    ! ~ ~  parent:      44765d7c06e0
     !      user:        test
     !      date:        Thu Jan 01 00:00:19 1970 +0000
     !      summary:     (19) expand
     !
-    o    changeset:   18:1aa84d96232a
-    |\   parent:      1:6db2ef61d156
-    ~ ~  parent:      15:1dda3f72782d
+    o    commit:      1aa84d96232a
+    |\   parent:      6db2ef61d156
+    ~ ~  parent:      1dda3f72782d
          user:        test
          date:        Thu Jan 01 00:00:18 1970 +0000
          summary:     (18) merge two known; two far left"""
@@ -3016,100 +3016,100 @@ graphstyle.grandparent = -3.
 graphstyle.missing =
 """ >> "$HGRCPATH"
 sh % "hg log -G -r '36:18 & file(\"a\")' -m" == r"""
-    @  changeset:   36:95fa8febd08a
-    !  parent:      35:9159c3644c5e
-    !  parent:      35:9159c3644c5e
+    @  commit:      95fa8febd08a
+    !  parent:      9159c3644c5e
+    !  parent:      9159c3644c5e
     .  user:        test
     .  date:        Thu Jan 01 00:00:36 1970 +0000
     .  summary:     (36) buggy merge: identical parents
     .
-    o    changeset:   32:d06dffa21a31
-    !\   parent:      27:886ed638191b
-    ! !  parent:      31:621d83e11f67
+    o    commit:      d06dffa21a31
+    !\   parent:      886ed638191b
+    ! !  parent:      621d83e11f67
     ! .  user:        test
     ! .  date:        Thu Jan 01 00:00:32 1970 +0000
     ! .  summary:     (32) expand
     ! .
-    o !  changeset:   31:621d83e11f67
-    !\!  parent:      21:d42a756af44d
-    ! !  parent:      30:6e11cd4b648f
+    o !  commit:      621d83e11f67
+    !\!  parent:      d42a756af44d
+    ! !  parent:      6e11cd4b648f
     ! !  user:        test
     ! !  date:        Thu Jan 01 00:00:31 1970 +0000
     ! !  summary:     (31) expand
     ! !
-    o !    changeset:   30:6e11cd4b648f
-    !\ \   parent:      28:44ecd0b9ae99
-    ! ~ !  parent:      29:cd9bb2be7593
+    o !    commit:      6e11cd4b648f
+    !\ \   parent:      44ecd0b9ae99
+    ! ~ !  parent:      cd9bb2be7593
     !   !  user:        test
     !   !  date:        Thu Jan 01 00:00:30 1970 +0000
     !   !  summary:     (30) expand
     !  /
-    o !    changeset:   28:44ecd0b9ae99
-    !\ \   parent:      1:6db2ef61d156
-    ! ~ !  parent:      26:7f25b6c2f0b9
+    o !    commit:      44ecd0b9ae99
+    !\ \   parent:      6db2ef61d156
+    ! ~ !  parent:      7f25b6c2f0b9
     !   !  user:        test
     !   !  date:        Thu Jan 01 00:00:28 1970 +0000
     !   !  summary:     (28) merge zero known
     !  /
-    o !    changeset:   26:7f25b6c2f0b9
-    !\ \   parent:      18:1aa84d96232a
-    ! ! !  parent:      25:91da8ed57247
+    o !    commit:      7f25b6c2f0b9
+    !\ \   parent:      1aa84d96232a
+    ! ! !  parent:      91da8ed57247
     ! ! !  user:        test
     ! ! !  date:        Thu Jan 01 00:00:26 1970 +0000
     ! ! !  summary:     (26) merge one known; far right
     ! ! !
-    ! o !  changeset:   25:91da8ed57247
-    ! !\!  parent:      21:d42a756af44d
-    ! ! !  parent:      24:a9c19a3d96b7
+    ! o !  commit:      91da8ed57247
+    ! !\!  parent:      d42a756af44d
+    ! ! !  parent:      a9c19a3d96b7
     ! ! !  user:        test
     ! ! !  date:        Thu Jan 01 00:00:25 1970 +0000
     ! ! !  summary:     (25) merge one known; far left
     ! ! !
-    ! o !    changeset:   24:a9c19a3d96b7
-    ! !\ \   parent:      0:e6eb3150255d
-    ! ! ~ !  parent:      23:a01cddf0766d
+    ! o !    commit:      a9c19a3d96b7
+    ! !\ \   parent:      e6eb3150255d
+    ! ! ~ !  parent:      a01cddf0766d
     ! !   !  user:        test
     ! !   !  date:        Thu Jan 01 00:00:24 1970 +0000
     ! !   !  summary:     (24) merge one known; immediate right
     ! !  /
-    ! o !    changeset:   23:a01cddf0766d
-    ! !\ \   parent:      1:6db2ef61d156
-    ! ! ~ !  parent:      22:e0d9cccacb5d
+    ! o !    commit:      a01cddf0766d
+    ! !\ \   parent:      6db2ef61d156
+    ! ! ~ !  parent:      e0d9cccacb5d
     ! !   !  user:        test
     ! !   !  date:        Thu Jan 01 00:00:23 1970 +0000
     ! !   !  summary:     (23) merge one known; immediate left
     ! !  /
-    ! o !  changeset:   22:e0d9cccacb5d
-    !/!/   parent:      18:1aa84d96232a
-    ! !    parent:      21:d42a756af44d
+    ! o !  commit:      e0d9cccacb5d
+    !/!/   parent:      1aa84d96232a
+    ! !    parent:      d42a756af44d
     ! !    user:        test
     ! !    date:        Thu Jan 01 00:00:22 1970 +0000
     ! !    summary:     (22) merge two known; one far left, one far right
     ! !
-    ! o    changeset:   21:d42a756af44d
-    ! !\   parent:      19:31ddc2c1573b
-    ! ! !  parent:      20:d30ed6450e32
+    ! o    commit:      d42a756af44d
+    ! !\   parent:      31ddc2c1573b
+    ! ! !  parent:      d30ed6450e32
     ! ! !  user:        test
     ! ! !  date:        Thu Jan 01 00:00:21 1970 +0000
     ! ! !  summary:     (21) expand
     ! ! !
-    +---o  changeset:   20:d30ed6450e32
-    ! ! |  parent:      0:e6eb3150255d
-    ! ! ~  parent:      18:1aa84d96232a
+    +---o  commit:      d30ed6450e32
+    ! ! |  parent:      e6eb3150255d
+    ! ! ~  parent:      1aa84d96232a
     ! !    user:        test
     ! !    date:        Thu Jan 01 00:00:20 1970 +0000
     ! !    summary:     (20) merge two known; two far right
     ! !
-    ! o    changeset:   19:31ddc2c1573b
-    ! |\   parent:      15:1dda3f72782d
-    ! ~ ~  parent:      17:44765d7c06e0
+    ! o    commit:      31ddc2c1573b
+    ! |\   parent:      1dda3f72782d
+    ! ~ ~  parent:      44765d7c06e0
     !      user:        test
     !      date:        Thu Jan 01 00:00:19 1970 +0000
     !      summary:     (19) expand
     !
-    o    changeset:   18:1aa84d96232a
-    |\   parent:      1:6db2ef61d156
-    ~ ~  parent:      15:1dda3f72782d
+    o    commit:      1aa84d96232a
+    |\   parent:      6db2ef61d156
+    ~ ~  parent:      1dda3f72782d
          user:        test
          date:        Thu Jan 01 00:00:18 1970 +0000
          summary:     (18) merge two known; two far left"""
@@ -3240,24 +3240,24 @@ sh % "hg merge -r 3" == r"""
     (branch merge, don't forget to commit)"""
 sh % "hg ci -qm 6"
 sh % "hg log -G -r '0 | 1 | 2 | 6'" == r"""
-    @    changeset:   6:851fe89689ad
-    :\   parent:      5:4f1e3cf15f5d
-    : :  parent:      3:b74ba7084d2d
+    @    commit:      851fe89689ad
+    :\   parent:      4f1e3cf15f5d
+    : :  parent:      b74ba7084d2d
     : :  user:        test
     : :  date:        Thu Jan 01 00:00:00 1970 +0000
     : :  summary:     6
     : :
-    o :  changeset:   2:3e6599df4cce
+    o :  commit:      3e6599df4cce
     :/   user:        test
     :    date:        Thu Jan 01 00:00:00 1970 +0000
     :    summary:     2
     :
-    o  changeset:   1:bd9a55143933
+    o  commit:      bd9a55143933
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     1
     |
-    o  changeset:   0:870a5edc339c
+    o  commit:      870a5edc339c
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     0"""

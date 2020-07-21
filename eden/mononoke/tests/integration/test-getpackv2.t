@@ -86,7 +86,7 @@ Then make sure update succeeds
   $ cat A
   A (no-eol)
   $ hg log -f A
-  changeset:   0:426bada5c675
+  commit:      426bada5c675
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     A
@@ -96,13 +96,13 @@ Then make sure update succeeds
   $ cat A
   AA
   $ hg log -f A
-  changeset:   3:be4e0feadad6
+  commit:      be4e0feadad6
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     AA
   
-  changeset:   0:426bada5c675
+  commit:      426bada5c675
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     A

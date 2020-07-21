@@ -9,17 +9,17 @@
   starting commit is: -1 (goal is 2)
   created *, * sec elapsed (* commits/sec, * per hour, * per day) (glob)
   $ hg log -G -r ::tip
-  o  changeset:   2:26c418a67612
+  o  commit:      26c418a67612
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     memory commit
   |
-  o  changeset:   1:331925392347
+  o  commit:      331925392347
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     memory commit
   |
-  o  changeset:   0:af3f7799efa3
+  o  commit:      af3f7799efa3
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     memory commit
