@@ -32,7 +32,7 @@
               "direction": "small_to_large"
             }
           ],
-          "version_name": "TEST_VERSION_NAME_LIVE"
+          "version_name": "TEST_VERSION_NAME"
         },
         {
           "large_repo_id": 0,
@@ -64,10 +64,10 @@
               "direction": "small_to_large"
             }
           ],
-          "version_name": "TEST_VERSION_NAME_LIVE_OLD"
+          "version_name": "TEST_VERSION_NAME_OLD"
         }
       ],
-      "current_version": "TEST_VERSION_NAME_LIVE"
+      "current_version": "TEST_VERSION_NAME"
     }
   }
 }

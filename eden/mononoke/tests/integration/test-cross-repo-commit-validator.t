@@ -24,6 +24,7 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   > EOF
 
   $ setup_commitsyncmap
+  $ setup_configerator_configs
 
 -- setup hg server repos
 
@@ -191,7 +192,7 @@ Check that we pay attention to missing files in large repo, but present in small
   $ FBSOURCE_MISSING_IN_LARGE_BONSAI=$(get_bonsai_bookmark 1 missing_in_large)
 
 -- fake a commit sync mapping between fbsource master and corrupted commit
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO synced_commit_mapping (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id) VALUES (1, X'$FBSOURCE_MISSING_IN_LARGE_BONSAI', 0, X'$MEGAREPO_MISSING_IN_LARGE_BONSAI')"
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO synced_commit_mapping (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name) VALUES (1, X'$FBSOURCE_MISSING_IN_LARGE_BONSAI', 0, X'$MEGAREPO_MISSING_IN_LARGE_BONSAI', 'TEST_VERSION_NAME')"
 
 -- run the validator one more time, expect to fail and say it's because of contents
   $ REPOIDLARGE=0 validate_commit_sync 10 |& grep "present in fbs-mon, but missing in meg-mon"
@@ -233,11 +234,11 @@ attention to more than just the last commit (successful validation of many commi
 -- fake a commit sync mapping between the new commits
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
   > INSERT INTO synced_commit_mapping
-  >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id)
+  >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
   > VALUES 
-  >   (1, X'$FBSOURCE_C1_BONSAI', 0, X'$MEGAREPO_C1_BONSAI'),
-  >   (1, X'$FBSOURCE_C2_BONSAI', 0, X'$MEGAREPO_C2_BONSAI'),
-  >   (1, X'$FBSOURCE_C3_BONSAI', 0, X'$MEGAREPO_C3_BONSAI');
+  >   (1, X'$FBSOURCE_C1_BONSAI', 0, X'$MEGAREPO_C1_BONSAI', 'TEST_VERSION_NAME'),
+  >   (1, X'$FBSOURCE_C2_BONSAI', 0, X'$MEGAREPO_C2_BONSAI', 'TEST_VERSION_NAME'),
+  >   (1, X'$FBSOURCE_C3_BONSAI', 0, X'$MEGAREPO_C3_BONSAI', 'TEST_VERSION_NAME');
   > ENDOFINSERT
 
 -- run the validator, check that commits are eqiuvalent
@@ -282,11 +283,11 @@ attention to more than just the last commit (failed validation of inner commit)
 -- fake a commit sync mapping between the new commits
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
   > INSERT INTO synced_commit_mapping
-  >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id)
+  >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
   > VALUES 
-  >   (1, X'$FBSOURCE_C1_BONSAI', 0, X'$MEGAREPO_C1_BONSAI'),
-  >   (1, X'$FBSOURCE_C2_BONSAI', 0, X'$MEGAREPO_C2_BONSAI'),
-  >   (1, X'$FBSOURCE_C3_BONSAI', 0, X'$MEGAREPO_C3_BONSAI');
+  >   (1, X'$FBSOURCE_C1_BONSAI', 0, X'$MEGAREPO_C1_BONSAI', 'TEST_VERSION_NAME'),
+  >   (1, X'$FBSOURCE_C2_BONSAI', 0, X'$MEGAREPO_C2_BONSAI', 'TEST_VERSION_NAME'),
+  >   (1, X'$FBSOURCE_C3_BONSAI', 0, X'$MEGAREPO_C3_BONSAI', 'TEST_VERSION_NAME');
   > ENDOFINSERT
 
 -- run the validator, check that commits are eqiuvalent
@@ -320,10 +321,10 @@ Check that we validate the topological order
 -- fake a commit sync mapping between the new commits
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
   > INSERT INTO synced_commit_mapping
-  >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id)
+  >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
   > VALUES 
-  >   (1, X'$FBSOURCE_C1_BONSAI', 0, X'$MEGAREPO_C2_BONSAI'),
-  >   (1, X'$FBSOURCE_C2_BONSAI', 0, X'$MEGAREPO_C1_BONSAI');
+  >   (1, X'$FBSOURCE_C1_BONSAI', 0, X'$MEGAREPO_C2_BONSAI', 'TEST_VERSION_NAME'),
+  >   (1, X'$FBSOURCE_C2_BONSAI', 0, X'$MEGAREPO_C1_BONSAI', 'TEST_VERSION_NAME');
   > ENDOFINSERT
 
 -- run the validator, check that commits are eqiuvalent
@@ -350,9 +351,9 @@ Check that we validate the newly-added root commits
 -- fake a commit sync mapping between the new commits
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << ENDOFINSERT
   > INSERT INTO synced_commit_mapping
-  >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id)
+  >   (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
   > VALUES 
-  >   (1, X'$FBSOURCE_NEWROOT_BONSAI', 0, X'$MEGAREPO_NEWROOT_BONSAI');
+  >   (1, X'$FBSOURCE_NEWROOT_BONSAI', 0, X'$MEGAREPO_NEWROOT_BONSAI', 'TEST_VERSION_NAME');
   > ENDOFINSERT
 
 -- run the validator, check that commits are (1) validated (2) different

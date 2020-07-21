@@ -22,6 +22,8 @@ function validate_commit_sync() {
   shift
   "$COMMIT_VALIDATOR" "${COMMON_ARGS[@]}" --debug --repo-id "$REPOIDLARGE" \
    --mononoke-config-path "$TESTTMP/mononoke-config" \
+   --test-instance \
+   --local-configerator-path="$TESTTMP/configerator" \
    --master-bookmark=master_bookmark \
    once --entry-id "$entry_id" "$@"
 }

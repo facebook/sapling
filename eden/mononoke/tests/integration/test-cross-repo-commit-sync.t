@@ -24,6 +24,7 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   > EOF
 
   $ setup_commitsyncmap
+  $ setup_configerator_configs
 
 -- setup hg server repos
 
@@ -179,60 +180,16 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
    e0cb430152c2dcc47b93a516344e3814ece60d4b fbsource commit 10
 
 -- Validate the synced entries
-  $ REPOIDLARGE=0 validate_commit_sync 17
-  * enabled stdlog * (glob)
-  * using repo * (glob)
-  * using repo * (glob)
-  * using repo * (glob)
-  * Validation helpers are: * (glob)
-  * BookmarkUpdateLogEntry 17 has been expanded into 1 commits (glob)
-  * Mapping small cs_ids * (glob)
-  * Commit * is rewritten as follows:* (glob)
-  * Preparing entry Entry 17(0/1); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
-  * validating topological order * (glob)
-  * done validating topological order * (glob)
+  $ REPOIDLARGE=0 validate_commit_sync 17 |& grep "Validated entry"
   * Validated entry: Entry 17(0/1) (glob)
 
-  $ REPOIDLARGE=0 validate_commit_sync 18
-  * enabled stdlog * (glob)
-  * using repo * (glob)
-  * using repo * (glob)
-  * using repo * (glob)
-  * Validation helpers are: * (glob)
-  * BookmarkUpdateLogEntry 18 has been expanded into 1 commits (glob)
-  * Mapping small cs_ids * (glob)
-  * Commit * is rewritten as follows: * (glob)
-  * Preparing entry Entry 18(0/1); book: fbsource/somebook; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
-  * validating topological order * (glob)
-  * done validating topological order * (glob)
+  $ REPOIDLARGE=0 validate_commit_sync 18 |& grep "Validated entry"
   * Validated entry: Entry 18(0/1) (glob)
 
-  $ REPOIDLARGE=0 validate_commit_sync 19
-  * enabled stdlog * (glob)
-  * using repo * (glob)
-  * using repo * (glob)
-  * using repo * (glob)
-  * Validation helpers are: * (glob)
-  * BookmarkUpdateLogEntry 19 has been expanded into 1 commits (glob)
-  * Mapping small cs_ids * (glob)
-  * Commit * is rewritten as follows: * (glob)
-  * Preparing entry Entry 19(0/1); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
-  * validating topological order * (glob)
-  * done validating topological order * (glob)
+  $ REPOIDLARGE=0 validate_commit_sync 19 |& grep "Validated entry"
   * Validated entry: Entry 19(0/1) (glob)
 
-  $ REPOIDLARGE=0 validate_commit_sync 21
-  * enabled stdlog * (glob)
-  * using repo * (glob)
-  * using repo * (glob)
-  * using repo * (glob)
-  * Validation helpers are: * (glob)
-  * BookmarkUpdateLogEntry 21 has been expanded into 1 commits (glob)
-  * Mapping small cs_ids * (glob)
-  * Commit * is rewritten as follows: * (glob)
-  * Preparing entry Entry 21(0/1); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
-  * validating topological order for *<->* (glob)
-  * done validating topological order for *<->* (glob)
+  $ REPOIDLARGE=0 validate_commit_sync 21 |& grep "Validated entry"
   * Validated entry: Entry 21(0/1) (glob)
 
 Query synced commit mapping, check that automatically inserted mappings have version_name
