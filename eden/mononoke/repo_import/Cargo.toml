@@ -8,6 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 blobrepo = { path = "../blobrepo" }
+bookmarks = { path = "../bookmarks" }
 cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
 cross_repo_sync = { path = "../commit_rewriting/cross_repo_sync" }
@@ -16,8 +17,15 @@ import_tools = { path = "../git/import_tools" }
 mercurial_types = { path = "../mercurial/types" }
 mononoke_types = { path = "../mononoke_types" }
 movers = { path = "../commit_rewriting/movers" }
+topo_sort = { path = "../common/topo_sort" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
+
+[dev-dependencies]
+blobrepo_factory = { path = "../blobrepo/factory" }
+blobstore = { path = "../blobstore" }
+tests_utils = { path = "../tests/utils" }
+tokio-compat = "0.1"
