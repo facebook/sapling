@@ -279,11 +279,12 @@ EdenServiceHandler::EdenServiceHandler(
 
   apache::thrift::metadata::ThriftServiceMetadataResponse metadataResponse;
   getProcessor()->getServiceMetadata(metadataResponse);
-  auto& edenService = metadataResponse.metadata.services.at("eden.EdenService");
-  for (auto& function : edenService.functions) {
+  auto& edenService =
+      metadataResponse.metadata_ref()->services_ref()->at("eden.EdenService");
+  for (auto& function : *edenService.functions_ref()) {
     HistConfig hc;
     for (auto& [name, customHistConfig] : customMethodConfigs) {
-      if (function.name == name) {
+      if (*function.name_ref() == name) {
         hc = customHistConfig;
         break;
       }
@@ -292,7 +293,7 @@ EdenServiceHandler::EdenServiceHandler(
     // parent services too.
     static constexpr StringPiece prefix = "EdenService.";
     exportThriftFuncHist(
-        folly::to<std::string>(prefix, function.name),
+        folly::to<std::string>(prefix, *function.name_ref()),
         facebook::fb303::PROCESS,
         folly::small_vector<int>({50, 90, 99}), // percentiles to record
         hc.bucketSize,
@@ -331,10 +332,10 @@ void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, argument->get_mountPoint());
   try {
     auto initialConfig = CheckoutConfig::loadFromClientDirectory(
-        AbsolutePathPiece{argument->mountPoint},
-        AbsolutePathPiece{argument->edenClientPath});
+        AbsolutePathPiece{*argument->mountPoint_ref()},
+        AbsolutePathPiece{*argument->edenClientPath_ref()});
 
-    server_->mount(std::move(initialConfig), argument->readOnly).get();
+    server_->mount(std::move(initialConfig), *argument->readOnly_ref()).get();
   } catch (const EdenError& ex) {
     XLOG(ERR) << "Error: " << ex.what();
     throw;
@@ -359,9 +360,10 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   for (const auto& edenMount : server_->getAllMountPoints()) {
     MountInfo info;
-    info.mountPoint = edenMount->getPath().value();
-    info.edenClientPath = edenMount->getConfig()->getClientDirectory().value();
-    info.state = edenMount->getState();
+    *info.mountPoint_ref() = edenMount->getPath().value();
+    *info.edenClientPath_ref() =
+        edenMount->getConfig()->getClientDirectory().value();
+    *info.state_ref() = edenMount->getState();
     results.push_back(info);
   }
 }
@@ -386,10 +388,10 @@ void EdenServiceHandler::checkOutRevision(
 void EdenServiceHandler::resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents) {
-  auto helper =
-      INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, logHash(parents->parent1));
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG1, *mountPoint, logHash(*parents->parent1_ref()));
   ParentCommits edenParents;
-  edenParents.parent1() = hashFromThrift(parents->parent1);
+  edenParents.parent1() = hashFromThrift(*parents->parent1_ref());
   if (parents->parent2_ref()) {
     edenParents.parent2() =
         hashFromThrift(parents->parent2_ref().value_unchecked());
@@ -496,13 +498,13 @@ void EdenServiceHandler::getCurrentJournalPosition(
   auto edenMount = server_->getMount(*mountPoint);
   auto latest = edenMount->getJournal().getLatest();
 
-  out.mountGeneration = edenMount->getMountGeneration();
+  *out.mountGeneration_ref() = edenMount->getMountGeneration();
   if (latest) {
-    out.sequenceNumber = latest->sequenceID;
-    out.snapshotHash = thriftHash(latest->toHash);
+    *out.sequenceNumber_ref() = latest->sequenceID;
+    *out.snapshotHash_ref() = thriftHash(latest->toHash);
   } else {
-    out.sequenceNumber = 0;
-    out.snapshotHash = thriftHash(kZeroHash);
+    *out.sequenceNumber_ref() = 0;
+    *out.snapshotHash_ref() = thriftHash(kZeroHash);
   }
 }
 
@@ -574,13 +576,13 @@ EdenServiceHandler::subscribeStreamTemporary(
 
       auto latest = journal.getLatest();
       if (latest) {
-        pos.sequenceNumber = latest->sequenceID;
-        pos.snapshotHash = StringPiece(latest->toHash.getBytes()).str();
+        *pos.sequenceNumber_ref() = latest->sequenceID;
+        *pos.snapshotHash_ref() = StringPiece(latest->toHash.getBytes()).str();
       } else {
-        pos.sequenceNumber = 0;
-        pos.snapshotHash = StringPiece(kZeroHash.getBytes()).str();
+        *pos.sequenceNumber_ref() = 0;
+        *pos.snapshotHash_ref() = StringPiece(kZeroHash.getBytes()).str();
       }
-      pos.mountGeneration = mount->getMountGeneration();
+      *pos.mountGeneration_ref() = mount->getMountGeneration();
       stream->publisher.next(pos);
     }
   };
@@ -600,7 +602,7 @@ void EdenServiceHandler::getFilesChangedSince(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
 
-  if (fromPosition->mountGeneration !=
+  if (*fromPosition->mountGeneration_ref() !=
       static_cast<ssize_t>(edenMount->getMountGeneration())) {
     throw newEdenError(
         ERANGE,
@@ -613,15 +615,17 @@ void EdenServiceHandler::getFilesChangedSince(
   // The +1 is because the core merge stops at the item prior to
   // its limitSequence parameter and we want the changes *since*
   // the provided sequence number.
-  auto summed =
-      edenMount->getJournal().accumulateRange(fromPosition->sequenceNumber + 1);
+  auto summed = edenMount->getJournal().accumulateRange(
+      *fromPosition->sequenceNumber_ref() + 1);
 
   // We set the default toPosition to be where we where if summed is null
-  out.toPosition.sequenceNumber = fromPosition->sequenceNumber;
-  out.toPosition.snapshotHash = fromPosition->snapshotHash;
-  out.toPosition.mountGeneration = edenMount->getMountGeneration();
+  *out.toPosition_ref()->sequenceNumber_ref() =
+      *fromPosition->sequenceNumber_ref();
+  *out.toPosition_ref()->snapshotHash_ref() = *fromPosition->snapshotHash_ref();
+  *out.toPosition_ref()->mountGeneration_ref() =
+      edenMount->getMountGeneration();
 
-  out.fromPosition = out.toPosition;
+  *out.fromPosition_ref() = *out.toPosition_ref();
 
   if (summed) {
     if (summed->isTruncated) {
@@ -630,26 +634,28 @@ void EdenServiceHandler::getFilesChangedSince(
           EdenErrorType::JOURNAL_TRUNCATED,
           "Journal entry range has been truncated.");
     }
-    out.toPosition.sequenceNumber = summed->toSequence;
-    out.toPosition.snapshotHash = thriftHash(summed->toHash);
-    out.toPosition.mountGeneration = edenMount->getMountGeneration();
+    *out.toPosition_ref()->sequenceNumber_ref() = summed->toSequence;
+    *out.toPosition_ref()->snapshotHash_ref() = thriftHash(summed->toHash);
+    *out.toPosition_ref()->mountGeneration_ref() =
+        edenMount->getMountGeneration();
 
-    out.fromPosition.sequenceNumber = summed->fromSequence;
-    out.fromPosition.snapshotHash = thriftHash(summed->fromHash);
-    out.fromPosition.mountGeneration = out.toPosition.mountGeneration;
+    *out.fromPosition_ref()->sequenceNumber_ref() = summed->fromSequence;
+    *out.fromPosition_ref()->snapshotHash_ref() = thriftHash(summed->fromHash);
+    *out.fromPosition_ref()->mountGeneration_ref() =
+        *out.toPosition_ref()->mountGeneration_ref();
 
     for (const auto& entry : summed->changedFilesInOverlay) {
       auto& path = entry.first;
       auto& changeInfo = entry.second;
       if (changeInfo.isNew()) {
-        out.createdPaths.emplace_back(path.stringPiece().str());
+        out.createdPaths_ref()->emplace_back(path.stringPiece().str());
       } else {
-        out.changedPaths.emplace_back(path.stringPiece().str());
+        out.changedPaths_ref()->emplace_back(path.stringPiece().str());
       }
     }
 
     for (auto& path : summed->uncleanPaths) {
-      out.uncleanPaths.emplace_back(path.stringPiece().str());
+      out.uncleanPaths_ref()->emplace_back(path.stringPiece().str());
     }
   }
 }
@@ -693,8 +699,8 @@ void EdenServiceHandler::flushJournal(std::unique_ptr<PathString> mountPoint) {
 void EdenServiceHandler::debugGetRawJournal(
     DebugGetRawJournalResponse& out,
     std::unique_ptr<DebugGetRawJournalParams> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, params->mountPoint);
-  auto edenMount = server_->getMount(params->mountPoint);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *params->mountPoint_ref());
+  auto edenMount = server_->getMount(*params->mountPoint_ref());
   auto mountGeneration = static_cast<ssize_t>(edenMount->getMountGeneration());
 
   std::optional<size_t> limitopt = std::nullopt;
@@ -702,8 +708,8 @@ void EdenServiceHandler::debugGetRawJournal(
     limitopt = static_cast<size_t>(*limit);
   }
 
-  out.allDeltas = edenMount->getJournal().getDebugRawJournalInfo(
-      params->fromSequenceNumber, limitopt, mountGeneration);
+  *out.allDeltas_ref() = edenMount->getJournal().getDebugRawJournalInfo(
+      *params->fromSequenceNumber_ref(), limitopt, mountGeneration);
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<EntryInformationOrError>>>
@@ -762,11 +768,12 @@ EdenServiceHandler::semifuture_getFileInformation(
                               ->stat(ObjectFetchContext::getNullContext())
                               .thenValue([](struct stat st) {
                                 FileInformation info;
-                                info.size = st.st_size;
+                                *info.size_ref() = st.st_size;
                                 auto ts = stMtime(st);
-                                info.mtime.seconds = ts.tv_sec;
-                                info.mtime.nanoSeconds = ts.tv_nsec;
-                                info.mode = st.st_mode;
+                                *info.mtime_ref()->seconds_ref() = ts.tv_sec;
+                                *info.mtime_ref()->nanoSeconds_ref() =
+                                    ts.tv_nsec;
+                                *info.mode_ref() = st.st_mode;
 
                                 FileInformationOrError result;
                                 result.set_info(info);
@@ -829,26 +836,26 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     std::unique_ptr<GlobParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
-      params->mountPoint,
-      toLogArg(params->globs),
-      params->includeDotfiles);
-  auto edenMount = server_->getMount(params->mountPoint);
+      *params->mountPoint_ref(),
+      toLogArg(*params->globs_ref()),
+      *params->includeDotfiles_ref());
+  auto edenMount = server_->getMount(*params->mountPoint_ref());
   auto rootInode = edenMount->getRootInode();
 
   // TODO: Track and report object fetches required for this glob.
   auto& context = ObjectFetchContext::getNullContext();
 
   // Compile the list of globs into a tree
-  auto globRoot = std::make_shared<GlobNode>(params->includeDotfiles);
+  auto globRoot = std::make_shared<GlobNode>(*params->includeDotfiles_ref());
   try {
-    for (auto& globString : params->globs) {
+    for (auto& globString : *params->globs_ref()) {
       globRoot->parse(globString);
     }
   } catch (const std::system_error& exc) {
     throw newEdenError(exc);
   }
 
-  auto fileBlobsToPrefetch = params->prefetchFiles
+  auto fileBlobsToPrefetch = *params->prefetchFiles_ref()
       ? std::make_shared<folly::Synchronized<std::vector<Hash>>>()
       : nullptr;
 
@@ -862,9 +869,9 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               rootInode,
               fileBlobsToPrefetch)
           .thenValue([edenMount,
-                      wantDtype = params->wantDtype,
+                      wantDtype = *params->wantDtype_ref(),
                       fileBlobsToPrefetch,
-                      suppressFileList = params->suppressFileList](
+                      suppressFileList = *params->suppressFileList_ref()](
                          std::vector<GlobNode::GlobResult>&& results) {
             auto out = std::make_unique<Glob>();
 
@@ -873,11 +880,12 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               for (auto& entry : results) {
                 auto ret = seenPaths.insert(entry.name);
                 if (ret.second) {
-                  out->matchingFiles.emplace_back(
+                  out->matchingFiles_ref()->emplace_back(
                       entry.name.stringPiece().toString());
 
                   if (wantDtype) {
-                    out->dtypes.emplace_back(static_cast<OsDtype>(entry.dtype));
+                    out->dtypes_ref()->emplace_back(
+                        static_cast<OsDtype>(entry.dtype));
                   }
                 }
               }
@@ -936,7 +944,7 @@ void EdenServiceHandler::getManifestEntry(
   auto filename = RelativePathPiece{*relativePath};
   auto mode = isInManifestAsFile(mount.get(), filename);
   if (mode.has_value()) {
-    out.mode = mode.value();
+    *out.mode_ref() = mode.value();
   } else {
     NoValueForKeyError error;
     error.key_ref() = *relativePath;
@@ -982,22 +990,22 @@ void EdenServiceHandler::async_tm_getScmStatusV2(
     auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(
         DBG2,
         func,
-        params->mountPoint,
-        folly::to<string>("commitHash=", logHash(params->commit)),
-        folly::to<string>("listIgnored=", params->listIgnored));
+        *params->mountPoint_ref(),
+        folly::to<string>("commitHash=", logHash(*params->commit_ref())),
+        folly::to<string>("listIgnored=", *params->listIgnored_ref()));
 
-    auto mount = server_->getMount(params->mountPoint);
-    auto hash = hashFromThrift(params->commit);
+    auto mount = server_->getMount(*params->mountPoint_ref());
+    auto hash = hashFromThrift(*params->commit_ref());
     const auto& enforceParents = server_->getServerState()
                                      ->getReloadableConfig()
                                      .getEdenConfig()
                                      ->enforceParents.getValue();
     return helper.wrapFuture(
-        mount->diff(hash, params->listIgnored, enforceParents, request)
+        mount->diff(hash, *params->listIgnored_ref(), enforceParents, request)
             .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
               auto result = std::make_unique<GetScmStatusResult>();
-              result->status = std::move(*status);
-              result->version = server_->getVersion();
+              *result->status_ref() = std::move(*status);
+              *result->version_ref() = server_->getVersion();
               return result;
             }));
   })
@@ -1085,9 +1093,9 @@ void EdenServiceHandler::debugGetScmTree(
   for (const auto& entry : tree->getTreeEntries()) {
     entries.emplace_back();
     auto& out = entries.back();
-    out.name = entry.getName().stringPiece().str();
-    out.mode = modeFromTreeEntryType(entry.getType());
-    out.id = thriftHash(entry.getHash());
+    *out.name_ref() = entry.getName().stringPiece().str();
+    *out.mode_ref() = modeFromTreeEntryType(entry.getType());
+    *out.id_ref() = thriftHash(entry.getHash());
   }
 }
 
@@ -1149,8 +1157,8 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
         "no blob metadata found for id ",
         id.toString());
   }
-  result.size = metadata->size;
-  result.contentsSha1 = thriftHash(metadata->sha1);
+  *result.size_ref() = metadata->size;
+  *result.contentsSha1_ref() = thriftHash(metadata->sha1);
 }
 
 void EdenServiceHandler::debugInodeStatus(
@@ -1181,13 +1189,13 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
     // Conversion is done here to avoid building a dependency between
     // FuseChannel and thrift
 
-    fuseCall.len = call.len;
-    fuseCall.opcode = call.opcode;
-    fuseCall.unique = call.unique;
-    fuseCall.nodeid = call.nodeid;
-    fuseCall.uid = call.uid;
-    fuseCall.gid = call.gid;
-    fuseCall.pid = call.pid;
+    *fuseCall.len_ref() = call.len;
+    *fuseCall.opcode_ref() = call.opcode;
+    *fuseCall.unique_ref() = call.unique;
+    *fuseCall.nodeid_ref() = call.nodeid;
+    *fuseCall.uid_ref() = call.uid;
+    *fuseCall.gid_ref() = call.gid;
+    *fuseCall.pid_ref() = call.pid;
 
     outstandingCalls.push_back(fuseCall);
   }
@@ -1206,10 +1214,10 @@ void EdenServiceHandler::debugGetInodePath(
 
   auto relativePath = inodeMap->getPathForInode(inodeNum);
   // Check if the inode is loaded
-  info.loaded = inodeMap->lookupLoadedInode(inodeNum) != nullptr;
+  *info.loaded_ref() = inodeMap->lookupLoadedInode(inodeNum) != nullptr;
   // If getPathForInode returned none then the inode is unlinked
-  info.linked = relativePath != std::nullopt;
-  info.path = relativePath ? relativePath->stringPiece().str() : "";
+  *info.linked_ref() = relativePath != std::nullopt;
+  *info.path_ref() = relativePath ? relativePath->stringPiece().str() : "";
 }
 
 void EdenServiceHandler::getAccessCounts(
@@ -1218,7 +1226,7 @@ void EdenServiceHandler::getAccessCounts(
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
 
-  result.cmdsByPid =
+  *result.cmdsByPid_ref() =
       server_->getServerState()->getProcessNameCache()->getAllProcessNames();
 
   auto seconds = std::chrono::seconds{duration};
@@ -1229,13 +1237,13 @@ void EdenServiceHandler::getAccessCounts(
 
     auto& pidFetches = mount->getObjectStore()->getPidFetches();
 
-    MountAccesses& ma = result.accessesByMount[mountStr];
+    MountAccesses& ma = result.accessesByMount_ref()[mountStr];
     for (auto& [pid, accessCounts] : pal.getAccessCounts(seconds)) {
-      ma.accessCountsByPid[pid] = accessCounts;
+      ma.accessCountsByPid_ref()[pid] = accessCounts;
     }
 
     for (auto& [pid, fetchCount] : *pidFetches.rlock()) {
-      ma.fetchCountsByPid[pid] = fetchCount;
+      ma.fetchCountsByPid_ref()[pid] = fetchCount;
     }
   }
 #else
@@ -1268,8 +1276,8 @@ int64_t EdenServiceHandler::unloadInodeForPath(
 
   TreeInodePtr inode = inodeFromUserPath(*edenMount, *path).asTreePtr();
   auto cutoff = std::chrono::system_clock::now() -
-      std::chrono::seconds(age->seconds) -
-      std::chrono::nanoseconds(age->nanoSeconds);
+      std::chrono::seconds(*age->seconds_ref()) -
+      std::chrono::nanoseconds(*age->nanoSeconds_ref());
   auto cutoff_ts = folly::to<timespec>(cutoff);
   return inode->unloadChildrenLastAccessedBefore(cutoff_ts);
 #else
@@ -1285,54 +1293,58 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
     // Set LoadedInde Count and unloaded Inode count for the mountPoint.
     MountInodeInfo mountInodeInfo;
     auto counts = inodeMap->getInodeCounts();
-    mountInodeInfo.unloadedInodeCount = counts.unloadedInodeCount;
-    mountInodeInfo.loadedFileCount = counts.fileCount;
-    mountInodeInfo.loadedTreeCount = counts.treeCount;
+    *mountInodeInfo.unloadedInodeCount_ref() = counts.unloadedInodeCount;
+    *mountInodeInfo.loadedFileCount_ref() = counts.fileCount;
+    *mountInodeInfo.loadedTreeCount_ref() = counts.treeCount;
 
     JournalInfo journalThrift;
     if (auto journalStats = mount->getJournal().getStats()) {
-      journalThrift.entryCount = journalStats->entryCount;
-      journalThrift.durationSeconds = journalStats->getDurationInSeconds();
+      *journalThrift.entryCount_ref() = journalStats->entryCount;
+      *journalThrift.durationSeconds_ref() =
+          journalStats->getDurationInSeconds();
     } else {
-      journalThrift.entryCount = 0;
-      journalThrift.durationSeconds = 0;
+      *journalThrift.entryCount_ref() = 0;
+      *journalThrift.durationSeconds_ref() = 0;
     }
-    journalThrift.memoryUsage = mount->getJournal().estimateMemoryUsage();
-    result.mountPointJournalInfo[mount->getPath().stringPiece().str()] =
+    *journalThrift.memoryUsage_ref() =
+        mount->getJournal().estimateMemoryUsage();
+    result.mountPointJournalInfo_ref()[mount->getPath().stringPiece().str()] =
         journalThrift;
 
-    result.mountPointInfo[mount->getPath().stringPiece().str()] =
+    result.mountPointInfo_ref()[mount->getPath().stringPiece().str()] =
         mountInodeInfo;
   }
   // Get the counters and set number of inodes unloaded by periodic unload job.
-  result.counters = fb303::ServiceData::get()->getCounters();
-  result.periodicUnloadCount =
-      result.counters[kPeriodicUnloadCounterKey.toString()];
+  *result.counters_ref() = fb303::ServiceData::get()->getCounters();
+  *result.periodicUnloadCount_ref() =
+      result.counters_ref()[kPeriodicUnloadCounterKey.toString()];
 
   auto privateDirtyBytes = facebook::eden::proc_util::calculatePrivateBytes();
   if (privateDirtyBytes) {
-    result.privateBytes = privateDirtyBytes.value();
+    *result.privateBytes_ref() = privateDirtyBytes.value();
   }
 
   auto memoryStats = facebook::eden::proc_util::readMemoryStats();
   if (memoryStats) {
-    result.vmRSSBytes = memoryStats->resident;
+    *result.vmRSSBytes_ref() = memoryStats->resident;
   }
 
   // Note: this will be removed in a subsequent commit.
   // We now report periodically via ServiceData
   std::string smaps;
   if (folly::readFile("/proc/self/smaps", smaps)) {
-    result.smaps = std::move(smaps);
+    *result.smaps_ref() = std::move(smaps);
   }
 
   const auto blobCacheStats = server_->getBlobCache()->getStats();
-  result.blobCacheStats.entryCount = blobCacheStats.blobCount;
-  result.blobCacheStats.totalSizeInBytes = blobCacheStats.totalSizeInBytes;
-  result.blobCacheStats.hitCount = blobCacheStats.hitCount;
-  result.blobCacheStats.missCount = blobCacheStats.missCount;
-  result.blobCacheStats.evictionCount = blobCacheStats.evictionCount;
-  result.blobCacheStats.dropCount = blobCacheStats.dropCount;
+  *result.blobCacheStats_ref()->entryCount_ref() = blobCacheStats.blobCount;
+  *result.blobCacheStats_ref()->totalSizeInBytes_ref() =
+      blobCacheStats.totalSizeInBytes;
+  *result.blobCacheStats_ref()->hitCount_ref() = blobCacheStats.hitCount;
+  *result.blobCacheStats_ref()->missCount_ref() = blobCacheStats.missCount;
+  *result.blobCacheStats_ref()->evictionCount_ref() =
+      blobCacheStats.evictionCount;
+  *result.blobCacheStats_ref()->dropCount_ref() = blobCacheStats.dropCount;
 }
 
 void EdenServiceHandler::flushStatsNow() {
@@ -1428,38 +1440,51 @@ std::optional<folly::exception_wrapper> getFaultError(
 
 void EdenServiceHandler::injectFault(unique_ptr<FaultDefinition> fault) {
   auto& injector = server_->getServerState()->getFaultInjector();
-  if (fault->block) {
-    injector.injectBlock(fault->keyClass, fault->keyValueRegex, fault->count);
+  if (*fault->block_ref()) {
+    injector.injectBlock(
+        *fault->keyClass_ref(),
+        *fault->keyValueRegex_ref(),
+        *fault->count_ref());
     return;
   }
 
   auto error = getFaultError(fault->errorType_ref(), fault->errorMessage_ref());
-  std::chrono::milliseconds delay(fault->delayMilliseconds);
+  std::chrono::milliseconds delay(*fault->delayMilliseconds_ref());
   if (error.has_value()) {
     if (delay.count() > 0) {
       injector.injectDelayedError(
-          fault->keyClass,
-          fault->keyValueRegex,
+          *fault->keyClass_ref(),
+          *fault->keyValueRegex_ref(),
           delay,
           error.value(),
-          fault->count);
+          *fault->count_ref());
     } else {
       injector.injectError(
-          fault->keyClass, fault->keyValueRegex, error.value(), fault->count);
+          *fault->keyClass_ref(),
+          *fault->keyValueRegex_ref(),
+          error.value(),
+          *fault->count_ref());
     }
   } else {
     if (delay.count() > 0) {
       injector.injectDelay(
-          fault->keyClass, fault->keyValueRegex, delay, fault->count);
+          *fault->keyClass_ref(),
+          *fault->keyValueRegex_ref(),
+          delay,
+          *fault->count_ref());
     } else {
-      injector.injectNoop(fault->keyClass, fault->keyValueRegex, fault->count);
+      injector.injectNoop(
+          *fault->keyClass_ref(),
+          *fault->keyValueRegex_ref(),
+          *fault->count_ref());
     }
   }
 }
 
 bool EdenServiceHandler::removeFault(unique_ptr<RemoveFaultArg> fault) {
   auto& injector = server_->getServerState()->getFaultInjector();
-  return injector.removeFault(fault->keyClass, fault->keyValueRegex);
+  return injector.removeFault(
+      *fault->keyClass_ref(), *fault->keyValueRegex_ref());
 }
 
 int64_t EdenServiceHandler::unblockFault(unique_ptr<UnblockFaultArg> info) {
@@ -1495,8 +1520,8 @@ void EdenServiceHandler::reloadConfig() {
 }
 
 void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
-  result.pid = getpid();
-  result.commandLine = originalCommandLine_;
+  *result.pid_ref() = getpid();
+  *result.commandLine_ref() = originalCommandLine_;
   result.status_ref() = getStatus();
 
 #ifndef _WIN32
@@ -1520,7 +1545,7 @@ void EdenServiceHandler::getConfig(
     EdenConfigData& result,
     unique_ptr<GetConfigParams> params) {
   auto state = server_->getServerState();
-  auto config = state->getEdenConfig(params->reload);
+  auto config = state->getEdenConfig(*params->reload_ref());
 
   result = config->toThriftConfigData();
 }

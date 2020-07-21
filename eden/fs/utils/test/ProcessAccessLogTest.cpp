@@ -44,10 +44,10 @@ TEST(ProcessAccessLog, accessIncrementsAccessCount) {
   log.recordAccess(pid, ProcessAccessLog::AccessType::FuseBackingStoreImport);
 
   auto ac = AccessCounts{};
-  ac.fuseTotal = 3;
-  ac.fuseReads = 1;
-  ac.fuseWrites = 1;
-  ac.fuseBackingStoreImports = 1;
+  *ac.fuseTotal_ref() = 3;
+  *ac.fuseReads_ref() = 1;
+  *ac.fuseWrites_ref() = 1;
+  *ac.fuseBackingStoreImports_ref() = 1;
 
   EXPECT_THAT(log.getAccessCounts(10s), Contains(std::pair{pid, ac}));
 }

@@ -294,11 +294,13 @@ IOBuf TakeoverData::serializeVersion3() {
   for (const auto& mount : mountPoints) {
     SerializedMountInfo serializedMount;
 
-    serializedMount.mountPath = mount.mountPath.stringPiece().str();
-    serializedMount.stateDirectory = mount.stateDirectory.stringPiece().str();
+    *serializedMount.mountPath_ref() = mount.mountPath.stringPiece().str();
+    *serializedMount.stateDirectory_ref() =
+        mount.stateDirectory.stringPiece().str();
 
     for (const auto& bindMount : mount.bindMounts) {
-      serializedMount.bindMountPaths.push_back(bindMount.stringPiece().str());
+      serializedMount.bindMountPaths_ref()->push_back(
+          bindMount.stringPiece().str());
     }
 
     // Stuffing the fuse connection information in as a binary
@@ -306,10 +308,10 @@ IOBuf TakeoverData::serializeVersion3() {
     // machine must match the current system for a graceful
     // takeover, and it saves us from re-encoding an operating
     // system specific struct into a thrift file.
-    serializedMount.connInfo = std::string{
+    *serializedMount.connInfo_ref() = std::string{
         reinterpret_cast<const char*>(&mount.connInfo), sizeof(mount.connInfo)};
 
-    serializedMount.inodeMap = mount.inodeMap;
+    *serializedMount.inodeMap_ref() = mount.inodeMap;
 
     serializedMounts.emplace_back(std::move(serializedMount));
   }
@@ -349,20 +351,20 @@ TakeoverData TakeoverData::deserializeVersion3(IOBuf* buf) {
       TakeoverData data;
       for (auto& serializedMount : serialized.mutable_mounts()) {
         const auto* connInfo = reinterpret_cast<const fuse_init_out*>(
-            serializedMount.connInfo.data());
+            serializedMount.connInfo_ref()->data());
 
         std::vector<AbsolutePath> bindMounts;
-        for (const auto& path : serializedMount.bindMountPaths) {
+        for (const auto& path : *serializedMount.bindMountPaths_ref()) {
           bindMounts.emplace_back(AbsolutePathPiece{path});
         }
 
         data.mountPoints.emplace_back(
-            AbsolutePath{serializedMount.mountPath},
-            AbsolutePath{serializedMount.stateDirectory},
+            AbsolutePath{*serializedMount.mountPath_ref()},
+            AbsolutePath{*serializedMount.stateDirectory_ref()},
             std::move(bindMounts),
             folly::File{},
             *connInfo,
-            std::move(serializedMount.inodeMap));
+            std::move(*serializedMount.inodeMap_ref()));
       }
       return data;
     }

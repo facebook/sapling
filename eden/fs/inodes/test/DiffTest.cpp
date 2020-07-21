@@ -111,7 +111,7 @@ class DiffTest {
 
   void checkNoChanges() {
     auto result = diff();
-    EXPECT_THAT(result.entries, UnorderedElementsAre());
+    EXPECT_THAT(*result.entries_ref(), UnorderedElementsAre());
   }
 
   void testResetFileModified(bool loadInodes);
@@ -171,7 +171,7 @@ TEST(DiffTest, fileModified) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
@@ -183,7 +183,7 @@ TEST(DiffTest, fileModeChanged) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/2.txt", ScmFileStatus::MODIFIED)));
 }
@@ -196,7 +196,7 @@ TEST(DiffTest, fileRemoved) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::REMOVED)));
 }
@@ -207,7 +207,7 @@ TEST(DiffTest, fileAdded) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/new.txt", ScmFileStatus::ADDED)));
 }
@@ -222,7 +222,7 @@ TEST(DiffTest, directoryRemoved) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/a/b/c/4.txt", ScmFileStatus::REMOVED),
           std::make_pair("src/a/b/3.txt", ScmFileStatus::REMOVED)));
@@ -239,7 +239,7 @@ TEST(DiffTest, directoryAdded) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/new/file.txt", ScmFileStatus::ADDED),
           std::make_pair("src/new/subdir/foo.txt", ScmFileStatus::ADDED),
@@ -257,7 +257,7 @@ TEST(DiffTest, dirReplacedWithFile) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/a/b", ScmFileStatus::ADDED),
           std::make_pair("src/a/b/3.txt", ScmFileStatus::REMOVED),
@@ -276,7 +276,7 @@ TEST(DiffTest, fileReplacedWithDir) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/2.txt/file.txt", ScmFileStatus::ADDED),
           std::make_pair("src/2.txt/subdir/foo.txt", ScmFileStatus::ADDED),
@@ -329,7 +329,7 @@ TEST(DiffTest, pathOrdering) {
   // Perform the diff
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("one/aaa.txt", ScmFileStatus::ADDED),
           std::make_pair("one/mmm.txt", ScmFileStatus::ADDED),
@@ -359,7 +359,7 @@ void testResetFileModified(bool loadInodes) {
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
@@ -380,7 +380,7 @@ void testResetFileModeChanged(bool loadInodes) {
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
@@ -403,7 +403,7 @@ void testResetFileRemoved(bool loadInodes) {
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/notpresent.txt", ScmFileStatus::REMOVED)));
 }
@@ -425,7 +425,7 @@ void testResetFileAdded(bool loadInodes) {
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(std::make_pair("src/1.txt", ScmFileStatus::ADDED)));
 }
 
@@ -450,7 +450,7 @@ void testResetDirectoryRemoved(bool loadInodes) {
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/extradir/foo.txt", ScmFileStatus::REMOVED),
           std::make_pair("src/extradir/bar.txt", ScmFileStatus::REMOVED),
@@ -478,7 +478,7 @@ void testResetDirectoryAdded(bool loadInodes) {
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/a/b/3.txt", ScmFileStatus::ADDED),
           std::make_pair("src/a/b/c/4.txt", ScmFileStatus::ADDED)));
@@ -506,7 +506,7 @@ void testResetReplaceDirWithFile(bool loadInodes) {
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/2.txt", ScmFileStatus::ADDED),
           std::make_pair("src/2.txt/foo.txt", ScmFileStatus::REMOVED),
@@ -535,7 +535,7 @@ void testResetReplaceFileWithDir(bool loadInodes) {
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/a/b/3.txt", ScmFileStatus::ADDED),
           std::make_pair("src/a/b/c/4.txt", ScmFileStatus::ADDED),
@@ -574,12 +574,12 @@ TEST(DiffTest, ignoreToplevelOnly) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(std::make_pair("src/1.txt", ScmFileStatus::ADDED)));
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::ADDED),
           std::make_pair("1.txt", ScmFileStatus::IGNORED),
@@ -621,7 +621,7 @@ TEST(DiffTest, ignoredFileInMountAndInTree) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::ADDED),
           std::make_pair(
@@ -629,7 +629,7 @@ TEST(DiffTest, ignoredFileInMountAndInTree) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::ADDED),
           std::make_pair("src/foo/abc/xyz/ignore.txt", ScmFileStatus::MODIFIED),
@@ -670,7 +670,7 @@ TEST(DiffTest, ignoredFileNotInMountButInTree) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::ADDED),
           std::make_pair(
@@ -678,7 +678,7 @@ TEST(DiffTest, ignoredFileNotInMountButInTree) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/1.txt", ScmFileStatus::ADDED),
           std::make_pair("src/foo/abc/xyz/ignore.txt", ScmFileStatus::REMOVED),
@@ -709,28 +709,28 @@ TEST(DiffTest, ignoreSystemLevelAndUser) {
   auto result =
       test.diff(true /* listIgnored */, "skip_global.txt\n", "skip_user.txt\n");
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("skip_global.txt", ScmFileStatus::IGNORED),
           std::make_pair("skip_user.txt", ScmFileStatus::IGNORED)));
 
   result = test.diff(true /* listIgnored */, "", "skip_user.txt\n");
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("skip_global.txt", ScmFileStatus::ADDED),
           std::make_pair("skip_user.txt", ScmFileStatus::IGNORED)));
 
   result = test.diff(true /* listIgnored */, "skip_global.txt\n", "");
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("skip_global.txt", ScmFileStatus::IGNORED),
           std::make_pair("skip_user.txt", ScmFileStatus::ADDED)));
 
   result = test.diff(true /* listIgnored */, "", "");
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("skip_global.txt", ScmFileStatus::ADDED),
           std::make_pair("skip_user.txt", ScmFileStatus::ADDED)));
@@ -759,7 +759,7 @@ TEST(DiffTest, ignoreSymlink) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair(".gitignore", ScmFileStatus::ADDED),
           std::make_pair("a/.gitignore", ScmFileStatus::ADDED),
@@ -769,7 +769,7 @@ TEST(DiffTest, ignoreSymlink) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair(".gitignore", ScmFileStatus::ADDED),
           std::make_pair("a/.gitignore", ScmFileStatus::ADDED),
@@ -817,7 +817,7 @@ TEST(DiffTest, ignoreInSubdirectories) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("abc/test.log", ScmFileStatus::ADDED),
           std::make_pair("abc/def/test", ScmFileStatus::ADDED),
@@ -830,7 +830,7 @@ TEST(DiffTest, ignoreInSubdirectories) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAreArray(
           {std::make_pair("abc/test.log", ScmFileStatus::ADDED),
            std::make_pair("abc/def/test", ScmFileStatus::ADDED),
@@ -893,7 +893,7 @@ TEST(DiffTest, ignoreInSubdirectoriesInMountAndInTree) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("abc/test.log", ScmFileStatus::ADDED),
           std::make_pair("abc/def/test", ScmFileStatus::ADDED),
@@ -907,7 +907,7 @@ TEST(DiffTest, ignoreInSubdirectoriesInMountAndInTree) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAreArray(
           {std::make_pair("abc/test.log", ScmFileStatus::ADDED),
            std::make_pair("abc/def/test", ScmFileStatus::ADDED),
@@ -970,7 +970,7 @@ TEST(DiffTest, ignoreInSubdirectoriesNotInMountButInTree) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("abc/test.log", ScmFileStatus::ADDED),
           std::make_pair("abc/def/test", ScmFileStatus::ADDED),
@@ -984,7 +984,7 @@ TEST(DiffTest, ignoreInSubdirectoriesNotInMountButInTree) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAreArray(
           {std::make_pair("abc/test.log", ScmFileStatus::ADDED),
            std::make_pair("abc/def/test", ScmFileStatus::ADDED),
@@ -1029,7 +1029,7 @@ TEST(DiffTest, explicitlyTracked) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("other.txt", ScmFileStatus::ADDED),
           std::make_pair("junk/x/foo.txt", ScmFileStatus::REMOVED),
@@ -1037,7 +1037,7 @@ TEST(DiffTest, explicitlyTracked) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("other.txt", ScmFileStatus::ADDED),
           std::make_pair("docs/1.txt", ScmFileStatus::IGNORED),
@@ -1060,7 +1060,7 @@ TEST(DiffTest, ignoreFileModified) {
 
   auto result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("a/bar.txt", ScmFileStatus::ADDED),
           std::make_pair("a/test.txt", ScmFileStatus::ADDED),
@@ -1071,7 +1071,7 @@ TEST(DiffTest, ignoreFileModified) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("a/test.txt", ScmFileStatus::ADDED),
           std::make_pair("a/foo.txt", ScmFileStatus::ADDED),
@@ -1083,7 +1083,7 @@ TEST(DiffTest, ignoreFileModified) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair(".gitignore", ScmFileStatus::ADDED),
           std::make_pair("a/foo.txt", ScmFileStatus::ADDED),
@@ -1104,11 +1104,11 @@ TEST(DiffTest, ignoreFileIsDirectory) {
   test.getMount().addFile("a/b/1.txt", "new\n");
 
   auto result = test.diff();
-  EXPECT_THAT(result.entries, UnorderedElementsAre());
+  EXPECT_THAT(*result.entries_ref(), UnorderedElementsAre());
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("a/b/1.txt", ScmFileStatus::IGNORED)));
 }
@@ -1124,7 +1124,7 @@ TEST(DiffTest, emptyIgnoreFile) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/subdir/new.txt", ScmFileStatus::ADDED)));
 }
@@ -1138,11 +1138,11 @@ TEST(DiffTest, ignoredFilePatternCarriageReturn) {
   test.getMount().addFile("src/Icon\r", "");
 
   auto result = test.diff();
-  EXPECT_THAT(result.entries, UnorderedElementsAre());
+  EXPECT_THAT(*result.entries_ref(), UnorderedElementsAre());
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/Icon\r", ScmFileStatus::IGNORED)));
 }
@@ -1156,11 +1156,11 @@ TEST(DiffTest, ignoredFileDoubleCarriageReturn) {
   test.getMount().addFile("src/Icon\r", "");
 
   auto result = test.diff();
-  EXPECT_THAT(result.entries, UnorderedElementsAre());
+  EXPECT_THAT(*result.entries_ref(), UnorderedElementsAre());
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/Icon\r", ScmFileStatus::IGNORED)));
 }
@@ -1175,7 +1175,7 @@ TEST(DiffTest, ignoredFileSingleCarriageReturn) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(std::make_pair("src/Icon\r", ScmFileStatus::ADDED)));
 }
 
@@ -1200,7 +1200,7 @@ TEST(DiffTest, ignoreHidden) {
 
   auto result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("a/c/1.txt", ScmFileStatus::MODIFIED)));
 }
@@ -1224,7 +1224,7 @@ TEST(DiffTest, directoryToFileWithGitIgnore) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("a/b/c.txt", ScmFileStatus::REMOVED),
           std::make_pair("a/b/d.txt", ScmFileStatus::REMOVED),
@@ -1233,7 +1233,7 @@ TEST(DiffTest, directoryToFileWithGitIgnore) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("a/b/c.txt", ScmFileStatus::REMOVED),
           std::make_pair("a/b/d.txt", ScmFileStatus::REMOVED),
@@ -1267,7 +1267,7 @@ TEST(DiffTest, addIgnoredDirectory) {
   auto result = test.diff(true, systemIgnore);
 
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("a/b/r", ScmFileStatus::REMOVED),
           std::make_pair("a/b/r/e.txt", ScmFileStatus::IGNORED),
@@ -1294,7 +1294,7 @@ TEST(DiffTest, nestedGitIgnoreFiles) {
   auto systemIgnore = "a/b/r/*\n!a/b/r/.gitignore\n";
   auto result = test.diff(true, systemIgnore);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("a/b/r", ScmFileStatus::REMOVED),
           std::make_pair("a/b/r/.gitignore", ScmFileStatus::ADDED),
@@ -1326,7 +1326,7 @@ TEST(DiffTest, diff_trees_with_tracked_ignored_file_modified) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/bar/e.txt", ScmFileStatus::ADDED),
           std::make_pair("src/bar/d.txt", ScmFileStatus::REMOVED),
@@ -1334,7 +1334,7 @@ TEST(DiffTest, diff_trees_with_tracked_ignored_file_modified) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/bar/e.txt", ScmFileStatus::ADDED),
           std::make_pair("src/bar/d.txt", ScmFileStatus::REMOVED),
@@ -1365,7 +1365,7 @@ TEST(DiffTest, tree_file_matches_new_ignore_rule_modified_locally) {
 
   auto result = test.diff();
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/foo/.gitignore", ScmFileStatus::ADDED),
           std::make_pair("src/bar/e.txt", ScmFileStatus::ADDED),
@@ -1374,7 +1374,7 @@ TEST(DiffTest, tree_file_matches_new_ignore_rule_modified_locally) {
 
   result = test.diff(true);
   EXPECT_THAT(
-      result.entries,
+      *result.entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/foo/.gitignore", ScmFileStatus::ADDED),
           std::make_pair("src/bar/e.txt", ScmFileStatus::ADDED),
@@ -1534,7 +1534,7 @@ TEST(DiffTest, fileNotReady) {
   auto result = std::move(diffFuture).get(10ms);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("src/r.txt", ScmFileStatus::MODIFIED),
           std::make_pair("src/s.txt", ScmFileStatus::MODIFIED),
@@ -1621,7 +1621,7 @@ TEST_F(DiffTestNonMateralized, diff_modified_trees_top_level_not_materialized) {
   auto result = diff(commitHash2);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("root/src/r.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/src/s.txt", ScmFileStatus::MODIFIED),
@@ -1660,7 +1660,7 @@ TEST_F(
   auto result = diff(commitHash2);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("root/src/test/t.txt", ScmFileStatus::IGNORED),
           std::make_pair("root/src/r.txt", ScmFileStatus::MODIFIED),
@@ -1699,7 +1699,7 @@ TEST_F(DiffTestNonMateralized, diff_modified_trees_low_level_not_materialized) {
   auto result = diff(commitHash2);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("root/doc/src/r.txt", ScmFileStatus::MODIFIED),
           std::make_pair("root/doc/src/s.txt", ScmFileStatus::MODIFIED),
@@ -1744,7 +1744,7 @@ TEST_F(
   auto result = diff(commitHash2);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("root/doc/src/test/t.txt", ScmFileStatus::IGNORED),
           std::make_pair("root/doc/src/r.txt", ScmFileStatus::MODIFIED),
@@ -1780,7 +1780,7 @@ TEST_F(DiffTestNonMateralized, diff_added_tree_top_level_not_materialized) {
   auto result = diff(commitHash2);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("root/src/r.txt", ScmFileStatus::ADDED),
           std::make_pair("root/src/s.txt", ScmFileStatus::ADDED),
@@ -1820,7 +1820,7 @@ TEST_F(
   auto result = diff(commitHash2);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("root/src/foo/r.txt", ScmFileStatus::IGNORED),
           std::make_pair("root/src/r.txt", ScmFileStatus::ADDED),
@@ -1856,7 +1856,7 @@ TEST_F(DiffTestNonMateralized, diff_removed_tree_top_level_not_materialized) {
   auto result = diff(commitHash2);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("root/another/r.txt", ScmFileStatus::REMOVED),
           std::make_pair("root/another/s.txt", ScmFileStatus::REMOVED),
@@ -1895,7 +1895,7 @@ TEST_F(
   auto result = diff(commitHash2);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("root/another/r.txt", ScmFileStatus::REMOVED),
           std::make_pair("root/another/s.txt", ScmFileStatus::REMOVED),
@@ -1936,7 +1936,7 @@ TEST_F(DiffTestNonMateralized, diff_removed_tree_low_level_not_materialized) {
   auto result = diff(commitHash2);
 
   EXPECT_THAT(
-      result->entries,
+      *result->entries_ref(),
       UnorderedElementsAre(
           std::make_pair("root/doc/another/r.txt", ScmFileStatus::REMOVED),
           std::make_pair("root/doc/another/s.txt", ScmFileStatus::REMOVED),

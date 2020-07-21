@@ -3410,20 +3410,20 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
 
 void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
   TreeInodeDebugInfo info;
-  info.inodeNumber = getNodeId().get();
-  info.refcount = debugGetFuseRefcount();
+  *info.inodeNumber_ref() = getNodeId().get();
+  *info.refcount_ref() = debugGetFuseRefcount();
 
   auto myPath = getPath();
   if (myPath.has_value()) {
-    info.path = myPath.value().stringPiece().str();
+    *info.path_ref() = myPath.value().stringPiece().str();
   }
 
   vector<std::pair<PathComponent, InodePtr>> childInodes;
   {
     auto contents = contents_.rlock();
 
-    info.materialized = contents->isMaterialized();
-    info.treeHash = thriftHash(contents->treeHash);
+    *info.materialized_ref() = contents->isMaterialized();
+    *info.treeHash_ref() = thriftHash(contents->treeHash);
 
     for (const auto& entry : contents->entries) {
       if (entry.second.getInode()) {
@@ -3436,16 +3436,16 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
         // We can store data about unloaded entries immediately, since we have
         // the authoritative data ourself, and don't need to ask a separate
         // InodeBase object.
-        info.entries.emplace_back();
-        auto& infoEntry = info.entries.back();
+        info.entries_ref()->emplace_back();
+        auto& infoEntry = info.entries_ref()->back();
         auto& inodeEntry = entry.second;
-        infoEntry.name = entry.first.stringPiece().str();
-        infoEntry.inodeNumber = inodeEntry.getInodeNumber().get();
-        infoEntry.mode = inodeEntry.getInitialMode();
-        infoEntry.loaded = false;
-        infoEntry.materialized = inodeEntry.isMaterialized();
-        if (!infoEntry.materialized) {
-          infoEntry.hash = thriftHash(inodeEntry.getHash());
+        *infoEntry.name_ref() = entry.first.stringPiece().str();
+        *infoEntry.inodeNumber_ref() = inodeEntry.getInodeNumber().get();
+        *infoEntry.mode_ref() = inodeEntry.getInitialMode();
+        *infoEntry.loaded_ref() = false;
+        *infoEntry.materialized_ref() = inodeEntry.isMaterialized();
+        if (!(*infoEntry.materialized_ref())) {
+          *infoEntry.hash_ref() = thriftHash(inodeEntry.getHash());
         }
       }
     }
@@ -3453,11 +3453,11 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
 
   std::vector<folly::Future<std::pair<size_t, uint64_t>>> futures;
   for (const auto& childData : childInodes) {
-    info.entries.emplace_back();
-    auto& infoEntry = info.entries.back();
-    infoEntry.name = childData.first.stringPiece().str();
-    infoEntry.inodeNumber = childData.second->getNodeId().get();
-    infoEntry.loaded = true;
+    info.entries_ref()->emplace_back();
+    auto& infoEntry = info.entries_ref()->back();
+    *infoEntry.name_ref() = childData.first.stringPiece().str();
+    *infoEntry.inodeNumber_ref() = childData.second->getNodeId().get();
+    *infoEntry.loaded_ref() = true;
 
     auto childTree = childData.second.asTreePtrOrNull();
     if (childTree) {
@@ -3465,30 +3465,31 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
       // and grab the materialization and status info now.
       {
         auto childContents = childTree->contents_.rlock();
-        infoEntry.materialized = !childContents->treeHash.has_value();
-        infoEntry.hash = thriftHash(childContents->treeHash);
+        *infoEntry.materialized_ref() = !childContents->treeHash.has_value();
+        *infoEntry.hash_ref() = thriftHash(childContents->treeHash);
         // TODO: We don't currently store mode data for TreeInodes.  We should.
-        infoEntry.mode = (S_IFDIR | 0755);
+        *infoEntry.mode_ref() = (S_IFDIR | 0755);
       }
     } else {
       auto childFile = childData.second.asFilePtr();
 
-      infoEntry.mode = childFile->getMode();
+      *infoEntry.mode_ref() = childFile->getMode();
       auto blobHash = childFile->getBlobHash();
-      infoEntry.materialized = !blobHash.has_value();
-      infoEntry.hash = thriftHash(blobHash);
-      futures.push_back(childFile->stat(ObjectFetchContext::getNullContext())
-                            .thenValue([i = info.entries.size() - 1](auto st) {
-                              auto fileSize = st.st_size;
-                              return std::make_pair(i, fileSize);
-                            }));
+      *infoEntry.materialized_ref() = !blobHash.has_value();
+      *infoEntry.hash_ref() = thriftHash(blobHash);
+      futures.push_back(
+          childFile->stat(ObjectFetchContext::getNullContext())
+              .thenValue([i = info.entries_ref()->size() - 1](auto st) {
+                auto fileSize = st.st_size;
+                return std::make_pair(i, fileSize);
+              }));
     }
   }
   auto fileSizeMappings = folly::collectAllUnsafe(futures).get();
   for (const auto& future : fileSizeMappings) {
     auto [i, fileSize] = future.value();
 
-    auto& infoEntry = info.entries[i];
+    auto& infoEntry = info.entries_ref()[i];
     // We must use set_size here because size is
     // optional and if it is set directly then it will
     // not get serialized correctly.

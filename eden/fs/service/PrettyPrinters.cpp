@@ -46,8 +46,9 @@ std::ostream& operator<<(std::ostream& os, ConflictType conflictType) {
 }
 
 std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict) {
-  os << "CheckoutConflict(type=" << conflict.type << ", path=\""
-     << conflict.path << "\", message=\"" << conflict.message << "\")";
+  os << "CheckoutConflict(type=" << *conflict.type_ref() << ", path=\""
+     << *conflict.path_ref() << "\", message=\"" << *conflict.message_ref()
+     << "\")";
   return os;
 }
 

@@ -17,22 +17,22 @@
 namespace facebook {
 namespace eden {
 void ScmStatusDiffCallback::ignoredFile(RelativePathPiece path) {
-  data_.wlock()->entries.emplace(
+  data_.wlock()->entries_ref()->emplace(
       path.stringPiece().str(), ScmFileStatus::IGNORED);
 }
 
 void ScmStatusDiffCallback::addedFile(RelativePathPiece path) {
-  data_.wlock()->entries.emplace(
+  data_.wlock()->entries_ref()->emplace(
       path.stringPiece().str(), ScmFileStatus::ADDED);
 }
 
 void ScmStatusDiffCallback::removedFile(RelativePathPiece path) {
-  data_.wlock()->entries.emplace(
+  data_.wlock()->entries_ref()->emplace(
       path.stringPiece().str(), ScmFileStatus::REMOVED);
 }
 
 void ScmStatusDiffCallback::modifiedFile(RelativePathPiece path) {
-  data_.wlock()->entries.emplace(
+  data_.wlock()->entries_ref()->emplace(
       path.stringPiece().str(), ScmFileStatus::MODIFIED);
 }
 
@@ -41,7 +41,7 @@ void ScmStatusDiffCallback::diffError(
     const folly::exception_wrapper& ew) {
   XLOG(WARNING) << "error computing status data for " << path << ": "
                 << folly::exceptionStr(ew);
-  data_.wlock()->errors.emplace(
+  data_.wlock()->errors_ref()->emplace(
       path.stringPiece().str(), folly::exceptionStr(ew).toStdString());
 }
 

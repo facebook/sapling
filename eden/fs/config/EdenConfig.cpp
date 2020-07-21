@@ -141,9 +141,9 @@ EdenConfigData EdenConfig::toThriftConfigData() const {
     const auto& sectionKey = sectionEntry.first;
     for (const auto& keyEntry : sectionEntry.second) {
       auto keyName = folly::to<string>(sectionKey, ":", keyEntry.first);
-      auto& configValue = result.values[keyName];
-      configValue.parsedValue = keyEntry.second->getStringValue();
-      configValue.source = keyEntry.second->getSource();
+      auto& configValue = result.values_ref()[keyName];
+      *configValue.parsedValue_ref() = keyEntry.second->getStringValue();
+      *configValue.source_ref() = keyEntry.second->getSource();
     }
   }
   return result;

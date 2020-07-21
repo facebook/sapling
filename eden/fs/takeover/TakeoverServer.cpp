@@ -124,10 +124,10 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
               CompactSerializer::deserialize<TakeoverVersionQuery>(&msg->data);
 
           auto supported =
-              TakeoverData::computeCompatibleVersion(query.versions);
+              TakeoverData::computeCompatibleVersion(*query.versions_ref());
 
           if (!supported.has_value()) {
-            auto clientVersionList = folly::join(", ", query.versions);
+            auto clientVersionList = folly::join(", ", *query.versions_ref());
             auto serverVersionList =
                 folly::join(", ", kSupportedTakeoverVersions);
 

@@ -991,13 +991,13 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
   for (const auto& client : dirs.items()) {
     auto mountFuture = makeFutureWith([&] {
       MountInfo mountInfo;
-      mountInfo.mountPoint = client.first.c_str();
+      *mountInfo.mountPoint_ref() = client.first.c_str();
       auto edenClientPath =
           edenDir_.getCheckoutStateDir(client.second.asString());
-      mountInfo.edenClientPath = edenClientPath.stringPiece().str();
+      *mountInfo.edenClientPath_ref() = edenClientPath.stringPiece().str();
       auto initialConfig = CheckoutConfig::loadFromClientDirectory(
-          AbsolutePathPiece{mountInfo.mountPoint},
-          AbsolutePathPiece{mountInfo.edenClientPath});
+          AbsolutePathPiece{*mountInfo.mountPoint_ref()},
+          AbsolutePathPiece{*mountInfo.edenClientPath_ref()});
       auto progressIndex = progressManager_->wlock()->registerEntry(
           client.first.asString(), initialConfig->getOverlayPath().c_str());
 

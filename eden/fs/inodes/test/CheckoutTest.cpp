@@ -224,9 +224,9 @@ void loadInodes(
 CheckoutConflict
 makeConflict(ConflictType type, StringPiece path, StringPiece message = "") {
   CheckoutConflict conflict;
-  conflict.type = type;
-  conflict.path = path.str();
-  conflict.message = message.str();
+  *conflict.type_ref() = type;
+  *conflict.path_ref() = path.str();
+  *conflict.message_ref() = message.str();
   return conflict;
 }
 } // unnamed namespace
@@ -574,8 +574,8 @@ void testModifyConflict(
   auto result = std::move(checkoutResult).get();
   ASSERT_EQ(1, result.conflicts.size());
 
-  EXPECT_EQ(path, result.conflicts[0].path);
-  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, result.conflicts[0].type);
+  EXPECT_EQ(path, *result.conflicts[0].path_ref());
+  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, *result.conflicts[0].type_ref());
 
   const auto currentParent =
       testMount.getEdenMount()->getParentCommits().parent1();
@@ -1269,23 +1269,23 @@ TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
 
   {
     auto& conflict = result.conflicts[0];
-    EXPECT_EQ("d1/sub/one.txt", conflict.path);
-    EXPECT_EQ(ConflictType::MODIFIED_REMOVED, conflict.type);
-    EXPECT_EQ("", conflict.message);
+    EXPECT_EQ("d1/sub/one.txt", *conflict.path_ref());
+    EXPECT_EQ(ConflictType::MODIFIED_REMOVED, *conflict.type_ref());
+    EXPECT_EQ("", *conflict.message_ref());
   }
 
   {
     auto& conflict = result.conflicts[1];
-    EXPECT_EQ("d1/sub", conflict.path);
-    EXPECT_EQ(ConflictType::DIRECTORY_NOT_EMPTY, conflict.type);
-    EXPECT_EQ("", conflict.message);
+    EXPECT_EQ("d1/sub", *conflict.path_ref());
+    EXPECT_EQ(ConflictType::DIRECTORY_NOT_EMPTY, *conflict.type_ref());
+    EXPECT_EQ("", *conflict.message_ref());
   }
 
   {
     auto& conflict = result.conflicts[2];
-    EXPECT_EQ("d1", conflict.path);
-    EXPECT_EQ(ConflictType::DIRECTORY_NOT_EMPTY, conflict.type);
-    EXPECT_EQ("", conflict.message);
+    EXPECT_EQ("d1", *conflict.path_ref());
+    EXPECT_EQ(ConflictType::DIRECTORY_NOT_EMPTY, *conflict.type_ref());
+    EXPECT_EQ("", *conflict.message_ref());
   }
 }
 

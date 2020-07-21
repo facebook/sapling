@@ -459,9 +459,10 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
           auto& changeInfo = entry.second;
 
           DebugPathChangeInfo debugChangeInfo;
-          debugChangeInfo.existedBefore = changeInfo.existedBefore;
-          debugChangeInfo.existedAfter = changeInfo.existedAfter;
-          delta.changedPaths.emplace(path.stringPiece().str(), debugChangeInfo);
+          *debugChangeInfo.existedBefore_ref() = changeInfo.existedBefore;
+          *debugChangeInfo.existedAfter_ref() = changeInfo.existedAfter;
+          delta.changedPaths_ref()->emplace(
+              path.stringPiece().str(), debugChangeInfo);
         }
 
         result.push_back(delta);
@@ -483,7 +484,7 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
         currentHash = current.fromHash;
 
         for (auto& path : current.uncleanPaths) {
-          delta.uncleanPaths.emplace(path.stringPiece().str());
+          delta.uncleanPaths_ref()->emplace(path.stringPiece().str());
         }
 
         result.push_back(delta);

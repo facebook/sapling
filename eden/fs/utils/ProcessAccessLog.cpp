@@ -226,14 +226,18 @@ std::unordered_map<pid_t, AccessCounts> ProcessAccessLog::getAccessCounts(
   // Transfer to a Thrift map
   std::unordered_map<pid_t, AccessCounts> accessCountsByPid;
   for (auto& [pid, accessCounts] : bucket.accessCountsByPid) {
-    accessCountsByPid[pid].fuseReads = accessCounts[AccessType::FuseRead];
-    accessCountsByPid[pid].fuseWrites = accessCounts[AccessType::FuseWrite];
-    accessCountsByPid[pid].fuseTotal = accessCounts[AccessType::FuseRead] +
+    *accessCountsByPid[pid].fuseReads_ref() =
+        accessCounts[AccessType::FuseRead];
+    *accessCountsByPid[pid].fuseWrites_ref() =
+        accessCounts[AccessType::FuseWrite];
+    *accessCountsByPid[pid].fuseTotal_ref() =
+        accessCounts[AccessType::FuseRead] +
         accessCounts[AccessType::FuseWrite] +
         accessCounts[AccessType::FuseOther];
-    accessCountsByPid[pid].fuseBackingStoreImports =
+    *accessCountsByPid[pid].fuseBackingStoreImports_ref() =
         accessCounts[AccessType::FuseBackingStoreImport];
-    accessCountsByPid[pid].fuseDurationNs = accessCounts.duration.count();
+    *accessCountsByPid[pid].fuseDurationNs_ref() =
+        accessCounts.duration.count();
   }
   return accessCountsByPid;
 }

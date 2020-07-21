@@ -335,15 +335,15 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
       : parent_(parentDirInode), childName_(childName), childInfo_(childInfo) {}
 
   string getMessage(OverlayChecker* checker) const override {
-    auto fileTypeStr = S_ISDIR(childInfo_.mode)
+    auto fileTypeStr = S_ISDIR(*childInfo_.mode_ref())
         ? "directory"
-        : (S_ISLNK(childInfo_.mode) ? "symlink" : "file");
+        : (S_ISLNK(*childInfo_.mode_ref()) ? "symlink" : "file");
     auto path = checker->computePath(parent_, childName_);
     return folly::to<string>(
         "missing overlay file for materialized ",
         fileTypeStr,
         " inode ",
-        childInfo_.inodeNumber,
+        *childInfo_.inodeNumber_ref(),
         " (",
         path.toString(),
         ")");
@@ -351,18 +351,19 @@ class OverlayChecker::MissingMaterializedInode : public OverlayChecker::Error {
 
   bool repair(RepairState& repair) const override {
     // Create replacement data for this inode in the overlay
-    XDCHECK_NE(childInfo_.inodeNumber, 0);
-    InodeNumber childInodeNumber(childInfo_.inodeNumber);
-    repair.createInodeReplacement(childInodeNumber, childInfo_.mode);
+    XDCHECK_NE(*childInfo_.inodeNumber_ref(), 0);
+    InodeNumber childInodeNumber(*childInfo_.inodeNumber_ref());
+    repair.createInodeReplacement(childInodeNumber, *childInfo_.mode_ref());
 
     // Add an entry in the OverlayChecker's inodes_ set.
     // In case the parent directory was part of an orphaned subtree the
     // OrphanInode code will look for this child in the inodes_ map.
-    auto type = S_ISDIR(childInfo_.mode) ? InodeType::Dir : InodeType::File;
+    auto type =
+        S_ISDIR(*childInfo_.mode_ref()) ? InodeType::Dir : InodeType::File;
     auto [iter, inserted] = repair.checker()->inodes_.try_emplace(
         childInodeNumber, childInodeNumber, type);
     XDCHECK(inserted);
-    iter->second.addParent(parent_, childInfo_.mode);
+    iter->second.addParent(parent_, *childInfo_.mode_ref());
     return true;
   }
 
@@ -433,8 +434,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
     }
 
     auto* const checker = repair.checker();
-    for (const auto& childEntry : children.entries) {
-      auto childRawInode = childEntry.second.inodeNumber;
+    for (const auto& childEntry : *children.entries_ref()) {
+      auto childRawInode = *childEntry.second.inodeNumber_ref();
       if (childRawInode == 0) {
         // If this child does not have an inode number allocated it cannot
         // be materialized.
@@ -473,7 +474,8 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
 
     switch (info->type) {
       case InodeType::File:
-        archiveOrphanFile(repair, info->number, archivePath, dirEntry.mode);
+        archiveOrphanFile(
+            repair, info->number, archivePath, *dirEntry.mode_ref());
         return;
       case InodeType::Dir:
         archiveOrphanDir(repair, info->number, archivePath, info->children);
@@ -833,8 +835,8 @@ PathComponent OverlayChecker::findChildName(
   // error, which is hopefully rare.  Therefore we avoid doing as much work as
   // possible during linkInodeChildren(), at the cost of doing extra work here
   // if we do actually need to compute paths.
-  for (const auto& entry : parentInfo.children.entries) {
-    if (static_cast<uint64_t>(entry.second.inodeNumber) == child.get()) {
+  for (const auto& entry : *parentInfo.children.entries_ref()) {
+    if (static_cast<uint64_t>(*entry.second.inodeNumber_ref()) == child.get()) {
       return PathComponent(entry.first);
     }
   }
@@ -1006,8 +1008,8 @@ overlay::OverlayDir OverlayChecker::loadDirectoryChildren(folly::File& file) {
 
 void OverlayChecker::linkInodeChildren() {
   for (const auto& [parentInodeNumber, parent] : inodes_) {
-    for (const auto& [childName, child] : parent.children.entries) {
-      auto childRawInode = child.inodeNumber;
+    for (const auto& [childName, child] : *parent.children.entries_ref()) {
+      auto childRawInode = *child.inodeNumber_ref();
       if (childRawInode == 0) {
         // Older versions of edenfs would leave the inode number set to 0
         // if the child inode has never been loaded.  The child can't be
@@ -1032,7 +1034,7 @@ void OverlayChecker::linkInodeChildren() {
               parentInodeNumber, childName, child);
         }
       } else {
-        childInfo->addParent(parentInodeNumber, child.mode);
+        childInfo->addParent(parentInodeNumber, *child.mode_ref());
 
         // TODO: It would be nice to also check for mismatch between
         // childInfo->type and child.mode

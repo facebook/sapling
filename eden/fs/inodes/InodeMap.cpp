@@ -134,31 +134,33 @@ void InodeMap::initializeFromTakeover(
   insertLoadedInode(data, root_.get());
   DCHECK_EQ(1, data->numTreeInodes_);
   DCHECK_EQ(0, data->numFileInodes_);
-  for (const auto& entry : takeover.unloadedInodes) {
-    if (entry.numFuseReferences < 0) {
+  for (const auto& entry : *takeover.unloadedInodes_ref()) {
+    if (*entry.numFuseReferences_ref() < 0) {
       auto message = folly::to<std::string>(
           "inode number ",
-          entry.inodeNumber,
+          *entry.inodeNumber_ref(),
           " has a negative numFuseReferences number");
       XLOG(ERR) << message;
       throw std::runtime_error(message);
     }
 
     auto unloadedEntry = UnloadedInode(
-        InodeNumber::fromThrift(entry.parentInode),
-        PathComponentPiece{entry.name},
-        entry.isUnlinked,
-        entry.mode,
-        entry.hash.empty() ? std::nullopt
-                           : std::optional<Hash>{hashFromThrift(entry.hash)},
-        folly::to<uint32_t>(entry.numFuseReferences));
+        InodeNumber::fromThrift(*entry.parentInode_ref()),
+        PathComponentPiece{*entry.name_ref()},
+        *entry.isUnlinked_ref(),
+        *entry.mode_ref(),
+        entry.hash_ref()->empty()
+            ? std::nullopt
+            : std::optional<Hash>{hashFromThrift(*entry.hash_ref())},
+        folly::to<uint32_t>(*entry.numFuseReferences_ref()));
 
     auto result = data->unloadedInodes_.emplace(
-        InodeNumber::fromThrift(entry.inodeNumber), std::move(unloadedEntry));
+        InodeNumber::fromThrift(*entry.inodeNumber_ref()),
+        std::move(unloadedEntry));
     if (!result.second) {
       auto message = folly::to<std::string>(
           "failed to emplace inode number ",
-          entry.inodeNumber,
+          *entry.inodeNumber_ref(),
           "; is it already present in the InodeMap?");
       XLOG(ERR) << message;
       throw std::runtime_error(message);
@@ -614,22 +616,22 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
     }
 
     SerializedInodeMap result;
-    result.unloadedInodes.reserve(data->unloadedInodes_.size());
+    result.unloadedInodes_ref()->reserve(data->unloadedInodes_.size());
     for (const auto& [inodeNumber, entry] : data->unloadedInodes_) {
       SerializedInodeMapEntry serializedEntry;
 
       XLOG(DBG5) << "  serializing unloaded inode " << inodeNumber
                  << " parent=" << entry.parent.get() << " name=" << entry.name;
 
-      serializedEntry.inodeNumber = inodeNumber.get();
-      serializedEntry.parentInode = entry.parent.get();
-      serializedEntry.name = entry.name.stringPiece().str();
-      serializedEntry.isUnlinked = entry.isUnlinked;
-      serializedEntry.numFuseReferences = entry.numFuseReferences;
-      serializedEntry.hash = thriftHash(entry.hash);
-      serializedEntry.mode = entry.mode;
+      *serializedEntry.inodeNumber_ref() = inodeNumber.get();
+      *serializedEntry.parentInode_ref() = entry.parent.get();
+      *serializedEntry.name_ref() = entry.name.stringPiece().str();
+      *serializedEntry.isUnlinked_ref() = entry.isUnlinked;
+      *serializedEntry.numFuseReferences_ref() = entry.numFuseReferences;
+      *serializedEntry.hash_ref() = thriftHash(entry.hash);
+      *serializedEntry.mode_ref() = entry.mode;
 
-      result.unloadedInodes.emplace_back(std::move(serializedEntry));
+      result.unloadedInodes_ref()->emplace_back(std::move(serializedEntry));
     }
 
     return result;
