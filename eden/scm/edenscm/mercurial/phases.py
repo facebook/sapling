@@ -228,7 +228,7 @@ class phasecache(object):
             if draft in phases:
                 revs += self._draftrevs
             # XXX: 'secret' is treated as an ampty set.
-            revs = smartset.spansset(revs)
+            revs = smartset.idset(revs)
             if subset is not None:
                 revs = subset & revs
             return revs

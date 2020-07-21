@@ -410,18 +410,18 @@ class baseset(abstractsmartset):
         return "<%s%s %s>" % (type(self).__name__, d, s)
 
 
-class spansset(abstractsmartset):
-    """Wrapper around Rust's SpanSet that meets the smartset interface.
+class idset(abstractsmartset):
+    """Wrapper around Rust's IdSet that meets the smartset interface.
 
     The Rust SpanSet does not keep order. This structure keeps orders.
 
-    >>> xs = spansset([1, 3, 2, 4, 11, 10])
-    >>> ys = spansset([2, 3, 4, 5, 20])
+    >>> xs = idset([1, 3, 2, 4, 11, 10])
+    >>> ys = idset([2, 3, 4, 5, 20])
 
     >>> xs
-    <spansset- [1..=4 10 11]>
+    <idset- [1..=4 10 11]>
     >>> ys
-    <spansset- [2..=5 20]>
+    <idset- [2..=5 20]>
 
     Iteration
 
@@ -464,11 +464,11 @@ class spansset(abstractsmartset):
     Set operations
 
     >>> xs & ys
-    <spansset+ [2 3 4]>
+    <idset+ [2 3 4]>
     >>> xs - ys
-    <spansset+ [1 10 11]>
+    <idset+ [1 10 11]>
     >>> xs + ys
-    <spansset+ [1..=5 10 11 20]>
+    <idset+ [1..=5 10 11 20]>
     """
 
     def __init__(self, spans):
@@ -556,11 +556,11 @@ class spansset(abstractsmartset):
 
     def _fastsetop(self, other, op):
         # try to use native set operations as fast paths
-        if type(other) is spansset:
-            s = spansset(getattr(self._spans, op)(other._spans))
+        if type(other) is idset:
+            s = idset(getattr(self._spans, op)(other._spans))
             s._ascending = self._ascending
         else:
-            s = getattr(super(spansset, self), op)(other)
+            s = getattr(super(idset, self), op)(other)
         return s
 
     def __and__(self, other):
@@ -571,7 +571,7 @@ class spansset(abstractsmartset):
 
     def __add__(self, other):
         # XXX: This is an aggressive optimization. It does not respect orders
-        # if 'other' is also a spansset.
+        # if 'other' is also a idset.
         return self._fastsetop(other, "__add__")
 
     def __repr__(self):
