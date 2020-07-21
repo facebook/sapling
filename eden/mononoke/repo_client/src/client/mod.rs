@@ -7,7 +7,9 @@
 
 use crate::errors::ErrorKind;
 
-use unbundle::{run_hooks, run_post_resolve_action, PushRedirector, PushRedirectorArgs};
+use unbundle::{
+    run_hooks, run_post_resolve_action, BundleResolverError, PushRedirector, PushRedirectorArgs,
+};
 
 use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
@@ -21,7 +23,9 @@ use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
 use filenodes::FilenodeResult;
 use futures::{
     channel::oneshot::{self, Sender},
-    future::{self, FutureExt, TryFutureExt},
+    compat::Future01CompatExt,
+    future::{self, select, Either, FutureExt, TryFutureExt},
+    pin_mut,
 };
 use futures_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
@@ -74,6 +78,7 @@ use std::sync::{
 use std::time::{Duration, Instant};
 use streaming_clone::RevlogStreamingChunks;
 use time_ext::DurationExt;
+use tokio::time::delay_for;
 use tokio_old::timer::timeout::Error as TimeoutError;
 use tokio_old::util::FutureExt as TokioFutureExt;
 use tracing::{trace_args, Traced};
@@ -955,6 +960,27 @@ where
         .flatten_stream()
 }
 
+async fn check_lock_repo(repo: MononokeRepo) -> Result<Bytes, BundleResolverError> {
+    loop {
+        match repo
+            .readonly()
+            .or_else(|_| {
+                ok::<RepoReadOnly, Error>(RepoReadOnly::ReadOnly(
+                    "Failed to fetch repo lock status".to_string(),
+                ))
+            })
+            .compat()
+            .await?
+        {
+            RepoReadOnly::ReadOnly(reason) => {
+                let e = Error::from(ErrorKind::RepoReadOnly(reason));
+                return Err(e.into());
+            }
+            RepoReadOnly::ReadWrite => delay_for(Duration::from_secs(1)).await,
+        }
+    }
+}
+
 impl HgCommands for RepoClient {
     // @wireprotocommand('between', 'pairs')
     fn between(
@@ -1514,9 +1540,12 @@ impl HgCommands for RepoClient {
         stream: BoxStream<Bundle2Item, Error>,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     ) -> HgCommandRes<BytesOld> {
-        let client = self.clone();
         let reponame = self.repo.reponame().clone();
-        cloned!(self.cached_pull_default_bookmarks_maybe_stale);
+        cloned!(
+            self.cached_pull_default_bookmarks_maybe_stale,
+            self as repoclient,
+            self.repo as mononoke_repo
+        );
 
         let hook_manager = self.repo.hook_manager();
 
@@ -1539,130 +1568,139 @@ impl HgCommands for RepoClient {
                 ))
             })
             .and_then(move |read_write| {
-                client.command_future(ops::UNBUNDLE, |ctx, command_logger| {
-                    let blobrepo = client.repo.blobrepo().clone();
-                    let bookmark_attrs = client.repo.bookmark_attrs();
-                    let lca_hint = client.repo.lca_hint().clone();
-                    let infinitepush_params = client.repo.infinitepush().clone();
-                    let infinitepush_writes_allowed = infinitepush_params.allow_writes;
-                    let pushrebase_params = client.repo.pushrebase_params().clone();
-                    let push_params = client.repo.push_params().clone();
-                    let pure_push_allowed = push_params.pure_push_allowed;
+                let client = repoclient.clone();
+                let trace = client.session.trace().clone();
+                repoclient.command_future(ops::UNBUNDLE, move |ctx, command_logger| {
+                    async move {
+                        let blobrepo = client.repo.blobrepo();
+                        let bookmark_attrs = client.repo.bookmark_attrs();
+                        let lca_hint = client.repo.lca_hint().clone();
+                        let infinitepush_params = client.repo.infinitepush().clone();
+                        let infinitepush_writes_allowed = infinitepush_params.allow_writes;
+                        let pushrebase_params = client.repo.pushrebase_params().clone();
+                        let push_params = client.repo.push_params().clone();
+                        let pure_push_allowed = push_params.pure_push_allowed;
+                        let reponame = client.repo.reponame().clone();
 
-                    let res = {
-                        cloned!(ctx);
-                        let blobrepo = client.repo.blobrepo().clone();
                         let pushrebase_flags = pushrebase_params.flags.clone();
-                        async move {
-                            unbundle::resolve(
-                                &ctx,
-                                &blobrepo,
-                                infinitepush_writes_allowed,
-                                stream,
-                                read_write,
-                                maybe_full_content,
-                                pure_push_allowed,
-                                pushrebase_flags,
-                            )
-                            .await
+                        let res = unbundle::resolve(
+                            &ctx,
+                            &blobrepo,
+                            infinitepush_writes_allowed,
+                            stream,
+                            read_write,
+                            maybe_full_content,
+                            pure_push_allowed,
+                            pushrebase_flags,
+                        )
+                        .await;
+                        match res {
+                            Err(e) => Err(e.into()),
+                            Ok((action, bypass_readonly)) => {
+                                let unbundle_future = async {
+                                    run_hooks(ctx.clone(), blobrepo.clone(), hook_manager, &action)
+                                        .compat()
+                                        .await?;
+
+                                    let response = match client
+                                        .maybe_get_pushredirector_for_action(&ctx, &action)?
+                                    {
+                                        Some(push_redirector) => {
+                                            let ctx = ctx.with_mutated_scuba(|mut sample| {
+                                                sample.add(
+                                                    "target_repo_name",
+                                                    push_redirector.repo.reponame().as_ref(),
+                                                );
+                                                sample.add(
+                                                    "target_repo_id",
+                                                    push_redirector.repo.repoid().id(),
+                                                );
+                                                sample
+                                            });
+                                            ctx.scuba().clone().log_with_msg(
+                                                "Push redirected to large repo",
+                                                None,
+                                            );
+                                            push_redirector
+                                                .run_redirected_post_resolve_action(ctx, action)
+                                                .await
+                                        }
+                                        None => {
+                                            let maybe_reverse_filler_queue =
+                                                client.repo.maybe_reverse_filler_queue();
+                                            run_post_resolve_action(
+                                                &ctx,
+                                                &blobrepo,
+                                                &bookmark_attrs,
+                                                &*lca_hint,
+                                                &infinitepush_params,
+                                                &pushrebase_params,
+                                                &push_params,
+                                                maybe_reverse_filler_queue,
+                                                action,
+                                            )
+                                            .await
+                                        }
+                                    };
+
+                                    let response = response?
+                                        .generate_bytes(
+                                            ctx.clone(),
+                                            blobrepo.clone(),
+                                            reponame,
+                                            pushrebase_params,
+                                            lca_hint,
+                                            lfs_params,
+                                        )
+                                        .map_err(Error::from)
+                                        .compat()
+                                        .await?;
+
+                                    Ok(response)
+                                };
+
+                                let response = if bypass_readonly == true {
+                                    unbundle_future.await
+                                } else {
+                                    let repo_lock = check_lock_repo(mononoke_repo);
+                                    pin_mut!(repo_lock, unbundle_future);
+                                    select(repo_lock, unbundle_future)
+                                        .then(|either| async move {
+                                            match either {
+                                                Either::Left((repo_locked, _)) => repo_locked,
+                                                Either::Right((unbundle, _)) => unbundle,
+                                            }
+                                        })
+                                        .await
+                                };
+                                if response.is_ok() {
+                                    // There's a bookmarks race condition where the client requests bookmarks after we return commits to it,
+                                    // and is then confused because the bookmarks refer to commits that it doesn't know about. Ultimately,
+                                    // this is something we need to resolve by sending down the commits we know the client doesn't have,
+                                    // or by getting bookmarks atomically with the commits we send back.
+                                    //
+                                    // This tries to minimise the duration of the bookmarks race condition - we've just updated bookmarks,
+                                    // and now we fill the cache with new bookmark data, so that, with luck, the bookmark update we see
+                                    // will just be from this client's push, rather than from a later push that came in during the RTT
+                                    // needed to get the `listkeys` request from the client.
+                                    //
+                                    // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
+                                    // depend on the reply part with a bookmark change in - T57874233
+                                    update_pull_default_bookmarks_maybe_stale_cache(
+                                        ctx.clone(),
+                                        cached_pull_default_bookmarks_maybe_stale,
+                                        blobrepo.clone(),
+                                    )
+                                    .compat()
+                                    .await?;
+                                }
+                                response
+                            }
                         }
                     }
                     .boxed()
                     .compat()
-                    .and_then({
-                        cloned!(ctx, blobrepo);
-                        move |action| {
-                            run_hooks(ctx, blobrepo, hook_manager, &action).map(move |_| action)
-                        }
-                    })
-                    .and_then({
-                        cloned!(ctx, client, blobrepo, pushrebase_params, lca_hint);
-                        move |action| {
-                            async move {
-                                match client.maybe_get_pushredirector_for_action(&ctx, &action)? {
-                                    Some(push_redirector) => {
-                                        let ctx = ctx.with_mutated_scuba(|mut sample| {
-                                            sample.add(
-                                                "target_repo_name",
-                                                push_redirector.repo.reponame().as_ref(),
-                                            );
-                                            sample.add(
-                                                "target_repo_id",
-                                                push_redirector.repo.repoid().id(),
-                                            );
-                                            sample
-                                        });
-                                        ctx.scuba()
-                                            .clone()
-                                            .log_with_msg("Push redirected to large repo", None);
-                                        push_redirector
-                                            .run_redirected_post_resolve_action(ctx, action)
-                                            .await
-                                    }
-                                    None => {
-                                        let maybe_reverse_filler_queue =
-                                            client.repo.maybe_reverse_filler_queue();
-                                        run_post_resolve_action(
-                                            &ctx,
-                                            &blobrepo,
-                                            &bookmark_attrs,
-                                            &*lca_hint,
-                                            &infinitepush_params,
-                                            &pushrebase_params,
-                                            &push_params,
-                                            maybe_reverse_filler_queue,
-                                            action,
-                                        )
-                                        .await
-                                    }
-                                }
-                            }
-                            .boxed()
-                            .compat()
-                            .boxify()
-                        }
-                    })
-                    .and_then({
-                        // There's a bookmarks race condition where the client requests bookmarks after we return commits to it,
-                        // and is then confused because the bookmarks refer to commits that it doesn't know about. Ultimately,
-                        // this is something we need to resolve by sending down the commits we know the client doesn't have,
-                        // or by getting bookmarks atomically with the commits we send back.
-                        //
-                        // This tries to minimise the duration of the bookmarks race condition - we've just updated bookmarks,
-                        // and now we fill the cache with new bookmark data, so that, with luck, the bookmark update we see
-                        // will just be from this client's push, rather than from a later push that came in during the RTT
-                        // needed to get the `listkeys` request from the client.
-                        //
-                        // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
-                        // depend on the reply part with a bookmark change in - T57874233
-                        cloned!(ctx, blobrepo);
-                        move |response| {
-                            // If this fails, we end up with a cold cache - but that just means we see the race and/or error again later
-                            update_pull_default_bookmarks_maybe_stale_cache(
-                                ctx,
-                                cached_pull_default_bookmarks_maybe_stale,
-                                blobrepo,
-                            )
-                            .then(|_| Ok(response))
-                        }
-                    })
-                    .and_then({
-                        cloned!(ctx, reponame);
-                        move |response| {
-                            response
-                                .generate_bytes(
-                                    ctx,
-                                    blobrepo,
-                                    reponame,
-                                    pushrebase_params,
-                                    lca_hint,
-                                    lfs_params,
-                                )
-                                .from_err()
-                        }
-                    });
-
-                    res.inspect_err({
+                    .inspect_err({
                         cloned!(reponame);
                         move |err| {
                             use unbundle::BundleResolverError::*;
@@ -1695,7 +1733,7 @@ impl HgCommands for RepoClient {
                     .timeout(*TIMEOUT)
                     .map_err(process_timeout_error)
                     .inspect(move |_| STATS::push_success.add_value(1, (reponame,)))
-                    .traced(client.session.trace(), ops::UNBUNDLE, trace_args!())
+                    .traced(&trace, ops::UNBUNDLE, trace_args!())
                     .timed(move |stats, _| {
                         command_logger.without_wireproto().finalize_command(&stats);
                         Ok(())

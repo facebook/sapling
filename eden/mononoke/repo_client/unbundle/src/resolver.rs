@@ -239,7 +239,7 @@ pub async fn resolve<'a>(
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
-) -> Result<PostResolveAction, BundleResolverError> {
+) -> Result<(PostResolveAction, bool), BundleResolverError> {
     UNBUNDLE_STATS::total_unbundles.add_value(1, (repo.name().to_string(),));
     let resolver = Bundle2Resolver::new(ctx, repo, infinitepush_writes_allowed, pushrebase_flags);
     let (stream_header, bundle2) = resolver.resolve_stream_params(bundle2).await?;
@@ -325,7 +325,10 @@ pub async fn resolve<'a>(
     };
 
     report_unbundle_type(ctx, repo, &post_resolve_action);
-    post_resolve_action
+    match post_resolve_action {
+        Err(e) => Err(e),
+        Ok(val) => Ok((val, bypass_readonly)),
+    }
 }
 
 fn report_unbundle_type(

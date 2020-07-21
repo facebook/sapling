@@ -19,4 +19,6 @@ pub enum ErrorKind {
     },
     #[error("Request {request_name} was throttled")]
     RequestThrottled { request_name: String },
+    #[error("Repo is marked as read-only: {0}")]
+    RepoReadOnly(String),
 }
