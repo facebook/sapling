@@ -24,6 +24,8 @@ pub enum ErrorKind {
     InvalidMPath(MPath, String),
     #[error("error while deserializing blob for '{0}'")]
     BlobDeserializeError(String),
+    #[error("error for key '{0}'")]
+    BlobKeyError(String),
     #[error("invalid Thrift structure '{0}': {1}")]
     InvalidThrift(String, String),
     #[error("invalid changeset date: {0}")]

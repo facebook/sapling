@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use futures::future::{self, BoxFuture, FutureExt};
-use mononoke_types::{hash, ContentAlias, ContentId};
+use mononoke_types::{errors::ErrorKind, hash, ContentAlias, ContentId};
 
 /// Key for fetching - we can access with any of the supported key types
 #[derive(Debug, Clone)]
@@ -92,10 +92,11 @@ impl Loadable for Alias {
         let get = blobstore.get(ctx, key.clone());
         async move {
             let maybe_alias = get.await?;
-            let blob = maybe_alias.ok_or(LoadableError::Missing(key))?;
+            let blob = maybe_alias.ok_or_else(|| LoadableError::Missing(key.clone()))?;
 
             ContentAlias::from_bytes(blob.into_raw_bytes())
                 .map(|alias| alias.content_id())
+                .with_context(|| ErrorKind::BlobKeyError(key.clone()))
                 .map_err(LoadableError::Error)
         }
         .boxed()
