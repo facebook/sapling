@@ -600,7 +600,7 @@ impl PushRedirector {
             ))
             .and_then(|commit_sync_outcome| match commit_sync_outcome {
                 CommitSyncOutcome::Preserved => Ok(cs_id),
-                CommitSyncOutcome::RewrittenAs(rewritten) => Ok(rewritten),
+                CommitSyncOutcome::RewrittenAs(rewritten, _) => Ok(rewritten),
                 cso => Err(format_err!(
                     "Unexpected CommitSyncOutcome for {} in {:?}: {:?}",
                     cs_id,

@@ -293,12 +293,12 @@ pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         .compat()
         .await?;
 
-    if let Some((cs_id, _)) = remapped {
+    if let Some((cs_id, maybe_version)) = remapped {
         // If we have a mapping for this commit, then it is already synced
         if cs_id == source_cs_id.0 {
             return Ok(Some(CommitSyncOutcome::Preserved));
         } else {
-            return Ok(Some(CommitSyncOutcome::RewrittenAs(cs_id)));
+            return Ok(Some(CommitSyncOutcome::RewrittenAs(cs_id, maybe_version)));
         }
     }
 
@@ -355,7 +355,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
 
         use CommitSyncOutcome::*;
         let remapped_parent = match sync_outcome {
-            RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => cs_id,
+            RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id) => cs_id,
             Preserved => *commit,
             NotSyncCandidate => {
                 return Err(ErrorKind::ParentNotSyncCandidate(*commit).into());
@@ -431,7 +431,7 @@ pub enum CommitSyncOutcome {
     /// Not suitable for syncing to this repo
     NotSyncCandidate,
     /// This commit is a 1:1 semantic mapping, but sync process rewrote it to a new ID.
-    RewrittenAs(ChangesetId),
+    RewrittenAs(ChangesetId, Option<CommitSyncConfigVersion>),
     /// This commit is exactly identical in the target repo
     Preserved,
     /// This commit is removed by the sync process, and the commit with the given ID has same content
@@ -689,7 +689,7 @@ where
         use CommitSyncOutcome::*;
         let res = match commit_sync_outcome {
             NotSyncCandidate => None,
-            RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => Some(cs_id),
+            RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id) => Some(cs_id),
             Preserved => Some(source_cs_id),
         };
         Ok(res)
@@ -820,7 +820,9 @@ where
                     let (sync_outcome, parent) = &remapped_parents_outcome[0];
                     let wc_equivalence = match sync_outcome {
                         NotSyncCandidate => None,
-                        RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => Some(*cs_id),
+                        RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id) => {
+                            Some(*cs_id)
+                        }
                         Preserved => Some(*parent),
                     };
 
@@ -986,7 +988,7 @@ where
                     .await?;
                 Ok(None)
             }
-            RewrittenAs(remapped_p) | EquivalentWorkingCopyAncestor(remapped_p) => {
+            RewrittenAs(remapped_p, _) | EquivalentWorkingCopyAncestor(remapped_p) => {
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
                 let maybe_rewritten = rewrite_commit(
@@ -1140,7 +1142,9 @@ where
             .filter_map(|(p, outcome)| {
                 use CommitSyncOutcome::*;
                 match outcome {
-                    EquivalentWorkingCopyAncestor(cs_id) | RewrittenAs(cs_id) => Some((*p, *cs_id)),
+                    EquivalentWorkingCopyAncestor(cs_id) | RewrittenAs(cs_id, _) => {
+                        Some((*p, *cs_id))
+                    }
                     Preserved => Some((*p, *p)),
                     NotSyncCandidate => None,
                 }

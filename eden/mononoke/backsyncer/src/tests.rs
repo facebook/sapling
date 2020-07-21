@@ -542,7 +542,7 @@ async fn verify_mapping_and_all_wc(
         let outcome = outcome.expect(&format!("commit has not been synced {}", source_cs_id));
         use CommitSyncOutcome::*;
         let (target_cs_id, mover_to_use): (_, Mover) = match outcome {
-            EquivalentWorkingCopyAncestor(cs_id) | RewrittenAs(cs_id) => (cs_id, mover.clone()),
+            EquivalentWorkingCopyAncestor(cs_id) | RewrittenAs(cs_id, _) => (cs_id, mover.clone()),
             Preserved => (source_cs_id, Arc::new(identity_mover)),
             NotSyncCandidate => {
                 continue;

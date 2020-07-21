@@ -259,7 +259,7 @@ where
                         "invalid bookmark move: {:?} should not be synced to target repo",
                         cs_id
                     )),
-                    RewrittenAs(cs_id) | EquivalentWorkingCopyAncestor(cs_id) => Ok(Some(cs_id)),
+                    RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id) => Ok(Some(cs_id)),
                     Preserved => Ok(Some(cs_id)),
                 }
             }
