@@ -104,7 +104,7 @@ test stripping of filelogs where the linkrev doesn't always increase
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  7 files, 4 changesets, 14 total revisions
+  7 files, 4 changesets, 20 total revisions
   
   % Trying to strip revision 2
   % Verifying
@@ -112,7 +112,7 @@ test stripping of filelogs where the linkrev doesn't always increase
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  7 files, 4 changesets, 14 total revisions
+  7 files, 4 changesets, 20 total revisions
   
   % Trying to strip revision 3
   % Verifying
@@ -120,7 +120,7 @@ test stripping of filelogs where the linkrev doesn't always increase
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  7 files, 4 changesets, 19 total revisions
+  7 files, 4 changesets, 20 total revisions
   
   % Trying to strip revision 4
   % Verifying
@@ -128,5 +128,5 @@ test stripping of filelogs where the linkrev doesn't always increase
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  7 files, 4 changesets, 19 total revisions
+  7 files, 4 changesets, 20 total revisions
   

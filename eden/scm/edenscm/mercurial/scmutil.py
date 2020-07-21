@@ -726,7 +726,9 @@ class _containsnode(object):
         return self._revcontains(self._torev(node))
 
 
-def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
+def cleanupnodes(
+    repo, replacements, operation, moves=None, metadata=None, skipobsstore=False
+):
     """do common cleanups when old nodes are replaced by new nodes
 
     That includes writing obsmarkers or stripping nodes, and moving bookmarks.
@@ -822,7 +824,7 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
 
         # Obsolete, adjust visibility, or strip nodes
         strip = True
-        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        if obsolete.isenabled(repo, obsolete.createmarkersopt) and not skipobsstore:
             # If a node is already obsoleted, and we want to obsolete it
             # without a successor, skip that obssolete request since it's
             # unnecessary. That's the "if s or not isobs(n)" check below.

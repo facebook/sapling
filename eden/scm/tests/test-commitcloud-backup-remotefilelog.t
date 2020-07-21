@@ -96,7 +96,7 @@ Now try to restore it from different client. Make sure bookmark
   $ hgcloneshallow ssh://user@dummy/repo secondclient
   streaming all changes
   3 files to transfer, * of data (glob)
-  transferred 275 bytes in 0.0 seconds (269 KB/sec)
+  transferred 548 bytes in 0.0 seconds (535 KB/sec)
   searching for changes
   no changes found
   updating to branch default

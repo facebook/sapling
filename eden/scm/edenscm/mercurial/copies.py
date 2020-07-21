@@ -137,7 +137,10 @@ def _tracefile(fctx, am, limit=-1):
     for f in fctx.topologicalancestors():
         if am.get(f.path(), None) == f.filenode():
             return f
-        if limit >= 0 and f.linkrev() < limit and f.rev() < limit:
+        lkr = f.linkrev()
+        if lkr is None:
+            continue
+        if limit >= 0 and lkr < limit and f.rev() < limit:
             return None
 
 
@@ -778,15 +781,14 @@ def _related(f1, f2, limit):
 
     g1, g2 = f1.ancestors(), f2.ancestors()
     try:
-        f1r, f2r = f1.linkrev(), f2.linkrev()
-
-        if f1r is None:
-            f1 = next(g1)
-        if f2r is None:
-            f2 = next(g2)
-
         while True:
             f1r, f2r = f1.linkrev(), f2.linkrev()
+            while f1r is None:
+                f1 = next(g1)
+                f1r = f1.linkrev()
+            while f2r is None:
+                f2 = next(g2)
+                f2r = f2.linkrev()
             if f1r > f2r:
                 f1 = next(g1)
             elif f2r > f1r:
@@ -846,7 +848,7 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
         of = oc.path()
         if of in seen:
             # check limit late - grab last rename before
-            if ocr < limit:
+            if ocr is not None and ocr < limit:
                 break
             continue
         seen.add(of)

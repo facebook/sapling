@@ -85,7 +85,7 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 1 changesets with 0 changes to 1 files
   updating to active bookmark bmnottracking
   nothing to rebase
   $ hg rebase -d 'desc(untrackedremotecommit)'

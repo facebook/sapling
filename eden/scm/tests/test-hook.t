@@ -531,7 +531,7 @@ different between Python 2.6 and Python 2.7.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 1 changesets with 0 changes to 1 files
 
 post- python hooks that fail to *run* don't cause an abort
   $ rm ../a/.hg/hgrc
@@ -771,7 +771,6 @@ pretxnclose hook failure should abort the transaction
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   transaction abort!
   rollback completed
-  strip failed, backup bundle stored in * (glob)
   abort: pretxnclose.error hook exited with status 1
   [255]
   $ hg recover

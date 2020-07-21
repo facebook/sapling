@@ -50,7 +50,7 @@ sh % "hg pull -u ../tt" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
+    added 1 changesets with 0 changes to 1 files
     0 files updated, 0 files merged, 0 files removed, 0 files unresolved
     updated to "800c91d5bfc1: m"
     1 other heads for branch "default"'''

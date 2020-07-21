@@ -335,7 +335,12 @@ class localrepository(object):
         "treestate",
         "storerequirements",
     }
-    _basestoresupported = {"visibleheads", "narrowheads", "zstorecommitdata"}
+    _basestoresupported = {
+        "visibleheads",
+        "narrowheads",
+        "zstorecommitdata",
+        "invalidatelinkrev",
+    }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
     # sets of (ui, featureset) functions for repo and store features.

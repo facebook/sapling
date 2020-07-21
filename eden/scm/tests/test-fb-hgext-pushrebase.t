@@ -174,7 +174,7 @@ Push using changegroup2
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 1 changes to 2 files
+  added 3 changesets with 0 changes to 2 files
   updating bookmark main
   remote: pushing 2 changesets:
   remote:     46a2df24e272  b => xxx
@@ -382,7 +382,7 @@ Pushing a merge should rebase only the latest side of the merge
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 1 changes to 3 files
+  added 4 changesets with 0 changes to 3 files
   updating bookmark main
   remote: pushing 5 changesets:
   remote:     e6b7549904cd  branch left
@@ -468,7 +468,7 @@ With evolution enabled, should set obsolescence markers
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 2 changes to 4 files
+  added 4 changesets with 0 changes to 4 files
   updating bookmark main
   remote: pushing 2 changesets:
   remote:     9467a8ee5d0d  b => k

@@ -105,7 +105,7 @@ Pull full.hg into empty again (using --cwd)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files
+  added 9 changesets with 0 changes to 4 files
 
 Pull full.hg into test (using -R)
 
@@ -133,7 +133,7 @@ Pull full.hg into empty again (using -R)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files
+  added 9 changesets with 0 changes to 4 files
 
 Log -R full.hg in fresh empty
 
@@ -236,7 +236,7 @@ Pull full.hg into empty again (using -R; with hook)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files
+  added 9 changesets with 0 changes to 4 files
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=bundle:empty+full.hg
 
 Cannot produce streaming clone bundles with "hg bundle"

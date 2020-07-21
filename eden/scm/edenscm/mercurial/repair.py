@@ -26,6 +26,7 @@ from . import (
     obsutil,
     progress,
     pycompat,
+    scmutil,
     util,
     visibility,
 )
@@ -108,6 +109,43 @@ def _collectbrokencsets(repo, files, striprev):
     return s
 
 
+def stripgeneric(repo, nodelist, backup=True, topic="backup"):
+    """Strip that does not depend on revlog details, namely:
+
+    - Do not use non-DAG span "rev:".
+    - Give up dealing with linkrevs which are specific to revlog.
+
+    This is only be used in legacy tests for compatibility.
+    Non-test uses are forbidden.
+    Do not rely on this for new code.
+    """
+    assert util.istest()
+
+    with repo.lock():
+        # Give up on linkrevs handling by just saying all linkrevs are
+        # invalidated now.
+        repo.storerequirements.add("invalidatelinkrev")
+        repo._writestorerequirements()
+
+        # Generate backup.
+        if backup:
+            _bundle(repo, nodelist, repo.heads(), nodelist[-1], topic)
+
+        # Apply bookmark and visibility changes.
+        with repo.transaction("strip"):
+            allnodes = list(repo.nodes("%ln::", nodelist))
+            # skip obsstore to avoid a draft/public check.
+            scmutil.cleanupnodes(repo, allnodes, "strip", skipobsstore=True)
+
+        # Strip changelog (unsafe for readers).
+        # Handled by the Rust layer. Independent from revlog.
+        repo.changelog.inner.strip(nodelist)
+
+        # Since we give up on linkrevs, it's fine to have
+        # unreferenced manifest or file revisions. No need
+        # to strip them.
+
+
 def strip(ui, repo, nodelist, backup=True, topic="backup"):
     # This function requires the caller to lock the repo, but it operates
     # within a transaction of its own, and thus requires there to be no current
@@ -115,17 +153,21 @@ def strip(ui, repo, nodelist, backup=True, topic="backup"):
     if repo.currenttransaction() is not None:
         raise error.ProgrammingError("cannot strip from inside a transaction")
 
+    if isinstance(nodelist, str):
+        nodelist = [nodelist]
+
     # Simple way to maintain backwards compatibility for this
     # argument.
     if backup in ["none", "strip"]:
         backup = False
 
+    if repo.changelog.userust("strip"):
+        return stripgeneric(repo, nodelist, backup, topic)
+
     repo.destroying()
 
     cl = repo.changelog
     # TODO handle undo of merge sets
-    if isinstance(nodelist, str):
-        nodelist = [nodelist]
     striplist = [cl.rev(node) for node in nodelist]
     striprev = min(striplist)
 

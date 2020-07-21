@@ -783,6 +783,8 @@ class basefilectx(object):
         return self._changeid
 
     def linkrev(self):
+        if "invalidatelinkrev" in self._repo.storerequirements:
+            return None
         return self._filelog.linkrev(self._filerev)
 
     def node(self):
@@ -895,7 +897,7 @@ class basefilectx(object):
         # fetch the linkrev
         lkr = self.linkrev()
         # developer config: unsafe.incorrectfilehistory
-        if repo.ui.configbool("unsafe", "incorrectfilehistory"):
+        if lkr is not None and repo.ui.configbool("unsafe", "incorrectfilehistory"):
             return lkr
         # hack to reuse ancestor computation when searching for renames
         memberanc = getattr(self, "_ancestrycontext", None)
@@ -907,11 +909,11 @@ class basefilectx(object):
         else:
             revs = [srcrev]
         if memberanc is None:
-            memberanc = iteranc = cl.ancestors(revs, lkr, inclusive=inclusive)
+            memberanc = iteranc = cl.ancestors(revs, lkr or 0, inclusive=inclusive)
         # check if this linkrev is an ancestor of srcrev
-        if lkr not in memberanc:
+        if lkr is None or lkr not in memberanc:
             if iteranc is None:
-                iteranc = cl.ancestors(revs, lkr, inclusive=inclusive)
+                iteranc = cl.ancestors(revs, lkr or 0, inclusive=inclusive)
             fnode = self._filenode
             path = self._path
             for a in iteranc:
@@ -925,6 +927,7 @@ class basefilectx(object):
             # But if manifest uses a buggy file revision (not children of the
             # one it replaces) we could. Such a buggy situation will likely
             # result is crash somewhere else at to some point.
+        assert lkr is not None
         return lkr
 
     def introrev(self):

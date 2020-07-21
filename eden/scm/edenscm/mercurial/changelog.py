@@ -516,13 +516,15 @@ class changelog(revlog.revlog):
         else:
             return self.index.headrevs()
 
-    def strip(self, *args, **kwargs):
-        super(changelog, self).strip(*args, **kwargs)
-
+    def strip(self, minlink, transaction):
         # Invalidate on-disk nodemap.
         if self.indexfile.startswith("00changelog"):
             self.opener.tryunlink("00changelog.nodemap")
             self.opener.tryunlink("00changelog.i.nodemap")
+        if self.userust("strip"):
+            self.inner.strip([self.node(minlink)])
+        else:
+            super(changelog, self).strip(minlink, transaction)
 
     def rev(self, node):
         """filtered version of revlog.rev"""

@@ -90,8 +90,9 @@ class verifier(object):
             self.warn(_("warning: `%s' uses revlog format 0") % name)
 
     def checkentry(self, obj, i, node, seen, linkrevs, f):
+        skiplinkrevcheck = "invalidatelinkrev" in self.repo.storerequirements
         lr = obj.linkrev(obj.rev(node))
-        if lr < 0 or (self.havecl and lr not in linkrevs):
+        if not skiplinkrevcheck and (lr < 0 or (self.havecl and lr not in linkrevs)):
             if lr < 0 or lr >= len(self.repo.changelog):
                 msg = _("rev %d points to nonexistent changeset %d")
             else:
@@ -256,7 +257,7 @@ class verifier(object):
         return filenodes
 
     def _verifymanifestpart(self, mflinkrevs, dir="", storefiles=None, progress=None):
-
+        skiplinkrevcheck = "invalidatelinkrev" in self.repo.storerequirements
         match = self.match
         mfl = self.repo.manifestlog
         mf = mfl._revlog.dirlog(dir)
@@ -286,7 +287,7 @@ class verifier(object):
                 del mflinkrevs[n]
             elif dir:
                 self.err(lr, _("%s not in parent-directory manifest") % short(n), label)
-            else:
+            elif not skiplinkrevcheck:
                 self.err(lr, _("%s not in changesets") % short(n), label)
 
             try:

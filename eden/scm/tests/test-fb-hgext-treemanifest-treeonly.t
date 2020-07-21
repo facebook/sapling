@@ -373,11 +373,13 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
        0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
        1        50      50     -1       1 7e265a5dc522 5fbe397e5ac6 000000000000
        2       100      63      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
+       3       163      55      1       3 14bce01d0d73 7e265a5dc522 000000000000
   $ hg debugindex .hg/store/00manifesttree.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      50     -1       0 5fbe397e5ac6 000000000000 000000000000
        1        50      50     -1       1 7e265a5dc522 5fbe397e5ac6 000000000000
        2       100      63      0       2 9bd1ef658bef 5fbe397e5ac6 000000000000
+       3       163      55      1       3 14bce01d0d73 7e265a5dc522 000000000000
 - Verify the manifest data is accessible
   $ hg log -r tip --stat
   changeset:   2:dad1be784127
@@ -485,11 +487,11 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 4 changesets with 4 changes to 2 files
+  remote: added 4 changesets with 3 changes to 2 files
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg --cwd ../master debugindex .hg/store/00manifesttree.i | tail -4
-       4       224      55      1       4 14bce01d0d73 7e265a5dc522 000000000000
-       5       279      61      4       5 5f15f80c2b54 14bce01d0d73 000000000000
+       4       218      61      2       3 e249b5cd4abe 9bd1ef658bef 000000000000
+       5       279      61      3       5 5f15f80c2b54 14bce01d0d73 000000000000
        6       340      93     -1       6 13c9facfa409 5f15f80c2b54 000000000000
        7       433      61      6       7 c760d8ba4646 13c9facfa409 000000000000
   $ hg --cwd ../master debugindex .hg/store/meta/subdir/00manifest.i
@@ -538,7 +540,7 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 4 changesets with 4 changes to 2 files
+  remote: added 4 changesets with 0 changes to 2 files
   $ hg -R ../master log -r tip --stat
   changeset:   7:5f0bc1aaff22
   user:        test

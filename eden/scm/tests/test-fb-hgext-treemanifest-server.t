@@ -9,6 +9,9 @@
   $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"
 
+Disable Rust strip since it does not strip manifest revlog.
+
+  $ setconfig experimental.rust-commits:strip=0
 
 - Disable simplecache since it can cause certain reads to not actually hit the
 - ondisk structures.

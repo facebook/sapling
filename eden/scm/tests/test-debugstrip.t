@@ -346,49 +346,10 @@ after strip of merge parent
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
-Failed hook while applying "saveheads" bundle.
-
-  $ hg debugstrip 'desc(c)' --config hooks.pretxnchangegroup.bad=false
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  transaction abort!
-  rollback completed
-  strip failed, backup bundle stored in '$TESTTMP/test/.hg/strip-backup/*-backup.hg' (glob)
-  strip failed, unrecovered changes stored in '$TESTTMP/test/.hg/strip-backup/*-temp.hg' (glob)
-  (fix the problem, then recover the changesets with "hg unbundle '$TESTTMP/test/.hg/strip-backup/*-temp.hg'") (glob)
-  abort: pretxnchangegroup.bad hook exited with status 1
-  [255]
-  $ restore
-  $ hg log -G
-  o  changeset:   4:443431ffac4f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
-  o  changeset:   3:65bd5f99a4a3
-  |  parent:      1:ef3a871183d7
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
-  | o  changeset:   2:264128213d29
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     c
-  |
-  @  changeset:   1:ef3a871183d7
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
-  o  changeset:   0:9ab35a2d17cb
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
-  
-
 2 different branches: 2 strips
 
   $ hg debugstrip 'desc(c)' 'desc(e)'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   o  changeset:   2:65bd5f99a4a3
   |  user:        test
@@ -412,18 +373,6 @@ Failed hook while applying "saveheads" bundle.
   $ hg debugstrip 'desc(b)' "desc(c)|desc(e)"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ restore
-
-verify fncache is kept up-to-date
-
-  $ touch a
-  $ hg ci -qAm a
-  $ cat .hg/store/fncache | sort
-  data/a.i
-  data/bar.i
-  $ hg debugstrip tip
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ cat .hg/store/fncache
-  data/bar.i
 
 stripping an empty revset
 
@@ -661,6 +610,11 @@ Check bundle behavior:
   
 
 check strip behavior
+(commitC is incorrectly included because the "_bundle" logic uses the
+"outgoing" discovery logic to figure out what to bundle. The outgoing logic
+cannot easily express revset like "commitD::", and it uses something like
+"mergeCD % commitD". This should be fixed in the bundle / discovery logic,
+unrelated to strip.)
 
   $ hg debugstrip 'desc(commitD)' --debug
   resolving manifests
@@ -671,8 +625,9 @@ check strip behavior
    d: other deleted -> r
   removing d
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  2 changesets found
+  3 changesets found
   list of changesets:
+  5c51d8d6557d0cb2ed8ef7d1e19ea477fb90e327
   6625a516847449b6f0fa3737b9ba56e9f0f3032c
   d8db9d1372214336d2b5570f20ee468d2c72fa8b
   bundle2-output-bundle: "HG20", (1 params) 2 parts total
@@ -698,6 +653,11 @@ check strip behavior
 strip backup content
 
   $ hg log -r 'bundle()' -R .hg/strip-backup/6625a5168474-*-backup.hg
+  changeset:   2:5c51d8d6557d
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commitC
+  
   changeset:   3:6625a5168474
   parent:      1:eca11cf91c71
   user:        test
@@ -745,26 +705,6 @@ Check that the phase cache is properly invalidated after a strip with bookmark.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg up -C 'desc(commitB)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-
-Error during post-close callback of the strip transaction
-(They should be gracefully handled and reported)
-
-  $ cat > ../crashstrip.py << EOF
-  > from edenscm.mercurial import error
-  > def reposetup(ui, repo):
-  >     class crashstriprepo(repo.__class__):
-  >         def transaction(self, desc, *args, **kwargs):
-  >             tr = super(crashstriprepo, self).transaction(desc, *args, **kwargs)
-  >             if desc == 'strip':
-  >                 def crash(tra): raise error.Abort('boom')
-  >                 tr.addpostclose('crash', crash)
-  >             return tr
-  >     repo.__class__ = crashstriprepo
-  > EOF
-  $ hg debugstrip tip --config extensions.crash=$TESTTMP/crashstrip.py
-  strip failed, backup bundle stored in '$TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg'
-  abort: boom
-  [255]
 
 Use delayedstrip to strip inside a transaction
 
