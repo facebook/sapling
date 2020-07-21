@@ -21,6 +21,7 @@ use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::{
     BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks, Freshness,
 };
+use cached_config::ConfigStore;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
@@ -33,9 +34,12 @@ use futures::stream::{StreamExt, TryStreamExt};
 use futures::try_join;
 use futures_old::stream::Stream;
 use itertools::Itertools;
+#[cfg(test)]
+use live_commit_sync_config::TestLiveCommitSyncConfig;
+use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mercurial_types::Globalrev;
 #[cfg(test)]
-use metaconfig_types::{CommitSyncConfig, SourceControlServiceParams};
+use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::{CommonConfig, RepoConfig};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
@@ -92,6 +96,7 @@ pub(crate) struct Repo {
     pub(crate) config: RepoConfig,
     pub(crate) repo_permission_checker: ArcPermissionChecker,
     pub(crate) service_permission_checker: ArcPermissionChecker,
+    pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 }
 
 #[derive(Clone)]
@@ -142,6 +147,7 @@ impl Repo {
         with_cachelib: Caching,
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
+        config_store: ConfigStore,
     ) -> Result<Self, Error> {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
@@ -153,6 +159,9 @@ impl Repo {
             &logger,
         )
         .await?;
+
+        let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
+            Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
 
         let builder = BlobrepoBuilder::new(
             fb,
@@ -217,6 +226,7 @@ impl Repo {
             config,
             repo_permission_checker,
             service_permission_checker,
+            live_commit_sync_config,
         })
     }
 
@@ -237,13 +247,13 @@ impl Repo {
     pub(crate) async fn new_test_xrepo(
         ctx: CoreContext,
         blob_repo: BlobRepo,
-        commit_sync_config: CommitSyncConfig,
+        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     ) -> Result<Self, Error> {
         Self::new_test_common(
             ctx,
             blob_repo,
-            Some(commit_sync_config),
+            Some(live_commit_sync_config),
             synced_commit_mapping,
         )
         .await
@@ -254,11 +264,16 @@ impl Repo {
     async fn new_test_common(
         ctx: CoreContext,
         blob_repo: BlobRepo,
-        commit_sync_config: Option<CommitSyncConfig>,
+        live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     ) -> Result<Self, Error> {
+        let init_commit_sync_config = live_commit_sync_config
+            .as_ref()
+            .map(|lcsc| lcsc.get_current_commit_sync_config(&ctx, blob_repo.get_repoid()))
+            .transpose()?;
+
         let config = RepoConfig {
-            commit_sync_config,
+            commit_sync_config: init_commit_sync_config,
             source_control_service: SourceControlServiceParams {
                 permit_writes: true,
                 ..Default::default()
@@ -270,6 +285,12 @@ impl Repo {
                 .compat()
                 .await?,
         );
+
+        let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = match live_commit_sync_config {
+            Some(live_commit_sync_config) => live_commit_sync_config,
+            None => Arc::new(TestLiveCommitSyncConfig::new_empty()),
+        };
+
         Ok(Self {
             name: String::from("test"),
             blob_repo,
@@ -283,6 +304,7 @@ impl Repo {
             service_permission_checker: ArcPermissionChecker::from(
                 PermissionCheckerBuilder::always_allow(),
             ),
+            live_commit_sync_config,
         })
     }
 
@@ -580,6 +602,11 @@ impl RepoContext {
     /// The underlying `BlobRepo`.
     pub(crate) fn blob_repo(&self) -> &BlobRepo {
         &self.repo.blob_repo
+    }
+
+    /// `LiveCommitSyncConfig` instance to query current state of sync configs.
+    pub(crate) fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
+        self.repo.live_commit_sync_config.clone()
     }
 
     /// The skiplist index for the referenced repository.
@@ -974,19 +1001,22 @@ impl RepoContext {
         other: &Self,
         specifier: ChangesetSpecifier,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
-        let commit_sync_repos = match &self.config().commit_sync_config {
-            Some(commit_sync_config) => CommitSyncRepos::new(
-                self.blob_repo().clone(),
-                other.blob_repo().clone(),
-                &commit_sync_config,
-            )?,
-            None => {
-                return Err(MononokeError::InvalidRequest(format!(
-                    "Commits from {} are not configured to be remapped to another repo",
-                    self.repo.name
-                )));
-            }
-        };
+        let commit_sync_config = self
+            .live_commit_sync_config()
+            .get_current_commit_sync_config(self.ctx(), self.blob_repo().get_repoid())
+            .map_err(|e| {
+                MononokeError::InvalidRequest(format!(
+                    "Commits from {} are not configured to be remapped to another repo: {}",
+                    self.repo.name, e
+                ))
+            })?;
+
+        let commit_sync_repos = CommitSyncRepos::new(
+            self.blob_repo().clone(),
+            other.blob_repo().clone(),
+            &commit_sync_config,
+        )?;
+
         let changeset =
             self.resolve_specifier(specifier)
                 .await?

@@ -22,6 +22,7 @@ fastlog = { path = "../derived_data/fastlog" }
 filestore = { path = "../filestore" }
 fsnodes = { path = "../derived_data/fsnodes" }
 hgproto = { path = "../hgproto" }
+live_commit_sync_config = { path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { path = "../manifest" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_parser = { path = "../metaconfig/parser" }
@@ -40,6 +41,7 @@ unbundle = { path = "../repo_client/unbundle" }
 unodes = { path = "../derived_data/unodes" }
 warm_bookmarks_cache = { path = "../bookmarks/warm_bookmarks_cache" }
 xdiff = { path = "../../scm/lib/xdiff" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

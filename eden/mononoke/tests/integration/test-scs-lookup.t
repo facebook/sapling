@@ -8,6 +8,7 @@
 
 Setup config repo:
   $ POPULATE_GIT_MAPPING=1 setup_common_config
+  $ setup_configerator_configs
   $ cd "$TESTTMP"
 
 Setup testing repo for mononoke:

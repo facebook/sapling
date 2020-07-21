@@ -10,6 +10,7 @@
 use ascii::AsciiString;
 
 use anyhow::{format_err, Error};
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -249,30 +250,32 @@ pub async fn init_small_large_repo(
             .await?
     );
 
-    let small_repo_sync_config = SmallRepoCommitSyncConfig {
-        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new(
-            "prefix",
-        )?),
-        map: hashmap! {},
-        bookmark_prefix: AsciiString::new(),
-        direction: CommitSyncDirection::SmallToLarge,
-    };
-    let commit_sync_config = CommitSyncConfig {
-        large_repo_id: megarepo.get_repoid(),
-        common_pushrebase_bookmarks: vec![],
-        small_repos: hashmap! {
-            smallrepo.get_repoid() => small_repo_sync_config,
-        },
-        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
-    };
-
     Ok((
         Syncers {
             small_to_large: small_to_large_commit_syncer,
             large_to_small: large_to_small_commit_syncer,
         },
-        commit_sync_config,
+        base_commit_sync_config(&megarepo, &smallrepo),
     ))
+}
+
+pub fn base_commit_sync_config(large_repo: &BlobRepo, small_repo: &BlobRepo) -> CommitSyncConfig {
+    let small_repo_sync_config = SmallRepoCommitSyncConfig {
+        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
+            MPath::new("prefix").unwrap(),
+        ),
+        map: hashmap! {},
+        bookmark_prefix: AsciiString::new(),
+        direction: CommitSyncDirection::SmallToLarge,
+    };
+    CommitSyncConfig {
+        large_repo_id: large_repo.get_repoid(),
+        common_pushrebase_bookmarks: vec![],
+        small_repos: hashmap! {
+            small_repo.get_repoid() => small_repo_sync_config,
+        },
+        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+    }
 }
 
 fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {

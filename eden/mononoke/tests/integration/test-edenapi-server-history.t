@@ -8,6 +8,7 @@
 
 Set up local hgrc and Mononoke config.
   $ setup_common_config
+  $ setup_configerator_configs
   $ cd $TESTTMP
 
 Initialize test repo.
@@ -94,3 +95,4 @@ Check history content.
     linknode: f91e155a86e1b909d99174818a2f98de2c128c59
   
   
+

@@ -18,6 +18,7 @@ use pushredirect_enable::types::{MononokePushRedirectEnable, PushRedirectEnableS
 use repos::types::RawCommitSyncConfig;
 use slog::{debug, error, info, Logger};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
@@ -41,7 +42,7 @@ pub enum ErrorKind {
     UnknownCommitSyncConfigVersion(RepositoryId, String),
 }
 
-pub trait LiveCommitSyncConfig: Clone {
+pub trait LiveCommitSyncConfig: Send + Sync {
     /// Return whether push redirection is currently
     /// enabled for draft commits in `repo_id`
     ///
@@ -261,5 +262,190 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
         all_versions.remove(&version_name).ok_or_else(|| {
             ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
         })
+    }
+}
+
+/// Inner container for `TestLiveCommitSyncConfigSource`
+/// See `TestLiveCommitSyncConfigSource` for more details
+struct TestLiveCommitSyncConfigSourceInner {
+    commit_sync_config: Mutex<HashMap<RepositoryId, CommitSyncConfig>>,
+    push_redirection_for_draft: Mutex<HashMap<RepositoryId, bool>>,
+    push_redirection_for_public: Mutex<HashMap<RepositoryId, bool>>,
+}
+
+/// A helper type to manage `TestLiveCommitSyncConfig` from outside
+/// The idea behind `TestLiveCommitSyncConfig` is that it is going
+/// to be used in type-erased contexts, behind `dyn LiveCommitSyncConfig`.
+/// Therefore there will be no way to access anything beyond the
+/// `LiveCommitSyncConfig` interface, so no way to edit existing config.
+/// To allow test scenarios to edit underlying configs, creators of
+/// `TestLiveCommitSyncConfig` also receive an accompanying
+/// `TestLiveCommitSyncConfigSource`, which allows editing underlying
+/// configs
+#[derive(Clone)]
+pub struct TestLiveCommitSyncConfigSource(Arc<TestLiveCommitSyncConfigSourceInner>);
+
+impl TestLiveCommitSyncConfigSource {
+    fn new() -> Self {
+        Self(Arc::new(TestLiveCommitSyncConfigSourceInner {
+            commit_sync_config: Mutex::new(HashMap::new()),
+            push_redirection_for_draft: Mutex::new(HashMap::new()),
+            push_redirection_for_public: Mutex::new(HashMap::new()),
+        }))
+    }
+
+    pub fn set_draft_push_redirection_enabled(&self, repo_id: RepositoryId) {
+        self.0
+            .push_redirection_for_draft
+            .lock()
+            .expect("poisoned lock")
+            .insert(repo_id, true);
+    }
+
+    pub fn set_public_push_redirection_enabled(&self, repo_id: RepositoryId) {
+        self.0
+            .push_redirection_for_public
+            .lock()
+            .expect("poisoned lock")
+            .insert(repo_id, true);
+    }
+
+    pub fn set_commit_sync_config(
+        &self,
+        repo_id: RepositoryId,
+        commit_sync_config: CommitSyncConfig,
+    ) {
+        self.0
+            .commit_sync_config
+            .lock()
+            .expect("poisoned lock")
+            .insert(repo_id, commit_sync_config);
+    }
+
+    pub fn get_commit_sync_config_for_repo(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<CommitSyncConfig> {
+        self.0
+            .commit_sync_config
+            .lock()
+            .expect("poisoned lock")
+            .get(&repo_id)
+            .ok_or_else(|| ErrorKind::NotPartOfAnyCommitSyncConfig(repo_id).into())
+            .map(|v| v.clone())
+    }
+
+    fn push_redirector_enabled_for_draft(&self, repo_id: RepositoryId) -> bool {
+        *self
+            .0
+            .push_redirection_for_draft
+            .lock()
+            .expect("poisoned lock")
+            .get(&repo_id)
+            .unwrap_or(&false)
+    }
+
+    fn push_redirector_enabled_for_public(&self, repo_id: RepositoryId) -> bool {
+        *self
+            .0
+            .push_redirection_for_public
+            .lock()
+            .expect("poisoned lock")
+            .get(&repo_id)
+            .unwrap_or(&false)
+    }
+
+    fn get_current_commit_sync_config(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<CommitSyncConfig> {
+        self.get_commit_sync_config_for_repo(repo_id)
+    }
+
+    fn get_all_commit_sync_config_versions(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>> {
+        let c = self.get_commit_sync_config_for_repo(repo_id)?;
+        let hm = {
+            let mut hm: HashMap<_, _> = HashMap::new();
+            hm.insert(c.version_name.clone(), c);
+            hm
+        };
+
+        Ok(hm)
+    }
+
+    fn get_commit_sync_config_by_version(
+        &self,
+        repo_id: RepositoryId,
+        version_name: &CommitSyncConfigVersion,
+    ) -> Result<CommitSyncConfig> {
+        self.get_commit_sync_config_for_repo(repo_id).map_err(|_| {
+            ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
+        })
+    }
+}
+
+/// A unit-test freindly implementor of `LiveCommitSyncConfig`
+/// As this struct is meant to be held behind a type-erasing
+/// `dyn LiveCommitSyncConfig`, anything beyond the interface
+/// of `LiveCommitSyncConfig` won't be visible to the users.
+/// Therefore, to modify internal state a `TestLiveCommitSyncConfigSource`
+/// should be used.
+#[derive(Clone)]
+pub struct TestLiveCommitSyncConfig {
+    source: TestLiveCommitSyncConfigSource,
+}
+
+impl TestLiveCommitSyncConfig {
+    pub fn new_with_source() -> (Self, TestLiveCommitSyncConfigSource) {
+        let source = TestLiveCommitSyncConfigSource::new();
+        (
+            Self {
+                source: source.clone(),
+            },
+            source,
+        )
+    }
+
+    pub fn new_empty() -> Self {
+        let source = TestLiveCommitSyncConfigSource::new();
+        Self { source }
+    }
+}
+
+impl LiveCommitSyncConfig for TestLiveCommitSyncConfig {
+    fn push_redirector_enabled_for_draft(&self, repo_id: RepositoryId) -> bool {
+        self.source.push_redirector_enabled_for_draft(repo_id)
+    }
+
+    fn push_redirector_enabled_for_public(&self, repo_id: RepositoryId) -> bool {
+        self.source.push_redirector_enabled_for_public(repo_id)
+    }
+
+    fn get_current_commit_sync_config(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<CommitSyncConfig> {
+        self.source.get_current_commit_sync_config(ctx, repo_id)
+    }
+
+    fn get_all_commit_sync_config_versions(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>> {
+        self.source.get_all_commit_sync_config_versions(repo_id)
+    }
+
+    fn get_commit_sync_config_by_version(
+        &self,
+        repo_id: RepositoryId,
+        version_name: &CommitSyncConfigVersion,
+    ) -> Result<CommitSyncConfig> {
+        self.source
+            .get_commit_sync_config_by_version(repo_id, version_name)
     }
 }

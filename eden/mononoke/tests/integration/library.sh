@@ -850,7 +850,7 @@ CONFIG
 
 function register_hook {
   hook_name="$1"
-  
+
   shift 1
   EXTRA_CONFIG_DESCRIPTOR=""
   if [[ $# -gt 0 ]]; then
@@ -926,6 +926,8 @@ function start_and_wait_for_scs_server {
   GLOG_minloglevel=5 "$SCS_SERVER" "$@" \
     -p "$SCS_PORT" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --test-instance \
+    --local-configerator-path="$TESTTMP/configerator" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
   export SCS_SERVER_PID=$!
   echo "$SCS_SERVER_PID" >> "$DAEMON_PIDS"
@@ -969,6 +971,8 @@ function start_edenapi_server {
     --listen-host 127.0.0.1 \
     --listen-port "$port" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --test-instance \
+    --local-configerator-path="$TESTTMP/configerator" \
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \
     --tls-private-key "$TEST_CERTDIR/localhost.key" \
     --tls-certificate "$TEST_CERTDIR/localhost.crt" \

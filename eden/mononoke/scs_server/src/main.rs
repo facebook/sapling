@@ -58,6 +58,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_all_repos()
         .with_shutdown_timeout_args()
         .with_scuba_logging_args()
+        .with_test_args()
         .build()
         .arg(
             Arg::with_name(ARG_HOST)
@@ -89,6 +90,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let exec = runtime.executor();
 
     let repo_configs = load_repo_configs(fb, config_path)?;
+    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
+        .expect("failed to instantiate ConfigStore");
 
     let mut scuba_builder = args::get_scuba_sample_builder(fb, &matches)?;
 
@@ -102,6 +105,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         caching,
         args::parse_readonly_storage(&matches),
         args::parse_blobstore_options(&matches),
+        config_store,
     ))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));

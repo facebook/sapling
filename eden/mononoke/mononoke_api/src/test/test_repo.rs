@@ -26,6 +26,8 @@ use crate::{
     TreeEntry, TreeId,
 };
 use cross_repo_sync_test_utils::init_small_large_repo;
+use live_commit_sync_config::TestLiveCommitSyncConfigSource;
+use metaconfig_types::{CommitSyncConfigVersion, DefaultSmallToLargeCommitSyncPathAction};
 use mononoke_types::{
     hash::{GitSha1, RichGitSha1, Sha1, Sha256},
     MPath,
@@ -562,7 +564,7 @@ async fn file_contents(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::compat_test]
 async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = init_x_repo(&ctx).await?;
+    let (mononoke, _cfg_src) = init_x_repo(&ctx).await?;
 
     let smallrepo = mononoke
         .repo(ctx.clone(), "smallrepo")
@@ -602,7 +604,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::compat_test]
 async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = init_x_repo(&ctx).await?;
+    let (mononoke, _cfg_src) = init_x_repo(&ctx).await?;
 
     let smallrepo = mononoke
         .repo(ctx.clone(), "smallrepo")
@@ -658,7 +660,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::compat_test]
 async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mononoke = init_x_repo(&ctx).await?;
+    let (mononoke, _cfg_src) = init_x_repo(&ctx).await?;
 
     let smallrepo = mononoke
         .repo(ctx.clone(), "smallrepo")
@@ -711,7 +713,85 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-async fn init_x_repo(ctx: &CoreContext) -> Result<Mononoke, Error> {
+#[fbinit::compat_test]
+async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (mononoke, cfg_src) = init_x_repo(&ctx).await?;
+
+    let smallrepo = mononoke
+        .repo(ctx.clone(), "smallrepo")
+        .await?
+        .expect("repo exists");
+    let largerepo = mononoke
+        .repo(ctx.clone(), "largerepo")
+        .await?
+        .expect("repo exists");
+    let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
+
+    // Before config change
+    let first_large =
+        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
+            .add_file("prefix/remapped_before", "content1")
+            .add_file("not_remapped", "content2")
+            .commit()
+            .await?;
+
+    let first_small = largerepo
+        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(first_large))
+        .await?;
+    let file_changes: Vec<_> = first_small
+        .unwrap()
+        .id()
+        .load(ctx.clone(), smallrepo.blob_repo().blobstore())
+        .await?
+        .file_changes()
+        .map(|(path, _)| path)
+        .cloned()
+        .collect();
+
+    assert_eq!(file_changes, vec![MPath::new("remapped_before")?]);
+
+    // Config change: new config remaps prefix2 instead of prefix
+    let large_repo_id = largerepo.blob_repo().get_repoid();
+    let small_repo_id = smallrepo.blob_repo().get_repoid();
+    let mut cfg = cfg_src.get_commit_sync_config_for_repo(large_repo_id)?;
+    cfg.small_repos
+        .get_mut(&small_repo_id)
+        .unwrap()
+        .default_action =
+        DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("prefix2").unwrap());
+    cfg.version_name = CommitSyncConfigVersion("TEST_VERSION_NAME_2".to_string());
+    cfg_src.set_commit_sync_config(small_repo_id, cfg.clone());
+    cfg_src.set_commit_sync_config(large_repo_id, cfg);
+
+    // After config change
+    let second_large =
+        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
+            .add_file("prefix2/remapped_after", "content1")
+            .add_file("not_remapped", "content2")
+            .commit()
+            .await?;
+
+    let second_small = largerepo
+        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(second_large))
+        .await?;
+    let file_changes: Vec<_> = second_small
+        .unwrap()
+        .id()
+        .load(ctx.clone(), smallrepo.blob_repo().blobstore())
+        .await?
+        .file_changes()
+        .map(|(path, _)| path)
+        .cloned()
+        .collect();
+
+    assert_eq!(file_changes, vec![MPath::new("remapped_after")?]);
+    Ok(())
+}
+
+async fn init_x_repo(
+    ctx: &CoreContext,
+) -> Result<(Mononoke, TestLiveCommitSyncConfigSource), Error> {
     let (syncers, commit_sync_config) = init_small_large_repo(&ctx).await?;
 
     let small_to_large = syncers.small_to_large;

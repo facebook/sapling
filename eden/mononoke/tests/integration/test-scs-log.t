@@ -8,6 +8,7 @@
 
 Setup config repo:
   $ setup_common_config
+  $ setup_configerator_configs
   $ cd "$TESTTMP"
 
 Setup testing repo for mononoke:

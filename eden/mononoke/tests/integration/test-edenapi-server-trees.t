@@ -8,6 +8,7 @@
 
 Set up local hgrc and Mononoke config.
   $ setup_common_config
+  $ setup_configerator_configs
   $ cd $TESTTMP
 
 Initialize test repo.

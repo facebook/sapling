@@ -10,6 +10,7 @@ include = ["**/*.rs"]
 path = "lib.rs"
 
 [dependencies]
+blobrepo = { path = "../../../blobrepo" }
 blobrepo_factory = { path = "../../../blobrepo/factory" }
 blobrepo_hg = { path = "../../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../../blobstore" }

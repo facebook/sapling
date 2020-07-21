@@ -8,6 +8,7 @@
 
 setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
+  $ setup_configerator_configs
   $ cd "$TESTTMP"
 
 Setup testing repo for mononoke:
@@ -184,4 +185,3 @@ the --include-scratch option requires the prefix
   $ scsc list-bookmarks -R repo --include-scratch
   error: SourceControlService::repo_list_bookmarks failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "prefix required to list scratch bookmarks" }
   [1]
-

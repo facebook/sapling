@@ -9,6 +9,7 @@
 
 Setup config repo:
   $ cd "$TESTTMP"
+  $ setup_configerator_configs
   $ create_large_small_repo
   Setting up hg server repos
   Blobimporting them

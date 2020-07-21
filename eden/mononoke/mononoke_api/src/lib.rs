@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
+use cached_config::ConfigStore;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::future;
@@ -75,6 +76,7 @@ impl Mononoke {
         with_cachelib: Caching,
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
+        config_store: ConfigStore,
     ) -> Result<Self, Error> {
         let common_config = configs.common;
         let repos = future::join_all(
@@ -82,25 +84,28 @@ impl Mononoke {
                 .repos
                 .into_iter()
                 .filter(move |&(_, ref config)| config.enabled)
-                .map(move |(name, config)| {
-                    cloned!(logger, common_config, blobstore_options);
-                    async move {
-                        info!(logger, "Initializing repo: {}", &name);
-                        let repo = Repo::new(
-                            fb,
-                            logger.new(o!("repo" => name.clone())),
-                            name.clone(),
-                            config,
-                            common_config,
-                            mysql_options,
-                            with_cachelib,
-                            readonly_storage,
-                            blobstore_options,
-                        )
-                        .await
-                        .expect("failed to initialize repo");
-                        debug!(logger, "Initialized {}", &name);
-                        (name, Arc::new(repo))
+                .map({
+                    move |(name, config)| {
+                        cloned!(logger, common_config, blobstore_options, config_store);
+                        async move {
+                            info!(logger, "Initializing repo: {}", &name);
+                            let repo = Repo::new(
+                                fb,
+                                logger.new(o!("repo" => name.clone())),
+                                name.clone(),
+                                config,
+                                common_config,
+                                mysql_options,
+                                with_cachelib,
+                                readonly_storage,
+                                blobstore_options,
+                                config_store,
+                            )
+                            .await
+                            .expect("failed to initialize repo");
+                            debug!(logger, "Initialized {}", &name);
+                            (name, Arc::new(repo))
+                        }
                     }
                 }),
         )
@@ -142,6 +147,9 @@ impl Mononoke {
 mod test_impl {
     use super::*;
     use blobrepo::BlobRepo;
+    use live_commit_sync_config::{
+        LiveCommitSyncConfig, TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource,
+    };
     use metaconfig_types::CommitSyncConfig;
     use synced_commit_mapping::SyncedCommitMapping;
 
@@ -179,30 +187,33 @@ mod test_impl {
                     Arc<dyn SyncedCommitMapping>,
                 ),
             >,
-        ) -> Result<Self, Error> {
+        ) -> Result<(Self, TestLiveCommitSyncConfigSource), Error> {
             use futures::stream::{FuturesOrdered, TryStreamExt};
+            let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+            let lv_cfg: Arc<dyn LiveCommitSyncConfig> = Arc::new(lv_cfg);
+
             let repos = repos
                 .into_iter()
-                .map(
+                .map({
+                    cloned!(lv_cfg_src);
                     move |(name, repo, commit_sync_config, synced_commit_maping)| {
-                        cloned!(ctx);
+                        cloned!(ctx, lv_cfg, lv_cfg_src);
                         async move {
-                            Repo::new_test_xrepo(
-                                ctx.clone(),
-                                repo,
-                                commit_sync_config,
-                                synced_commit_maping,
-                            )
-                            .await
-                            .map(move |repo| (name, Arc::new(repo)))
+                            lv_cfg_src.set_commit_sync_config(
+                                repo.get_repoid(),
+                                commit_sync_config.clone(),
+                            );
+                            Repo::new_test_xrepo(ctx.clone(), repo, lv_cfg, synced_commit_maping)
+                                .await
+                                .map(move |repo| (name, Arc::new(repo)))
                         }
-                    },
-                )
+                    }
+                })
                 .collect::<FuturesOrdered<_>>()
                 .try_collect()
                 .await?;
 
-            Ok(Self { repos })
+            Ok((Self { repos }, lv_cfg_src))
         }
     }
 }

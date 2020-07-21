@@ -4,6 +4,7 @@ $ . "$TESTDIR/library.sh"
 
 Start up EdenAPI server.
   $ setup_mononoke_config
+  $ setup_configerator_configs
   $ start_edenapi_server
 
 Hit health check endpoint.

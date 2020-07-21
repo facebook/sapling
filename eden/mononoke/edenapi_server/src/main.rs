@@ -117,6 +117,8 @@ async fn start(
     let blobstore_options = args::parse_blobstore_options(&matches);
     let trusted_proxy_idents = parse_identities(&matches)?;
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
+    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
+        .expect("failed to instantiate ConfigStore");
 
     debug!(logger, "Initializing Mononoke API");
     let mononoke = Mononoke::new(
@@ -127,6 +129,7 @@ async fn start(
         caching,
         readonly_storage,
         blobstore_options,
+        config_store,
     )
     .await?;
 
@@ -228,6 +231,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_fb303_args()
         .with_all_repos()
         .with_shutdown_timeout_args()
+        .with_test_args()
         .build()
         .arg(
             Arg::with_name(ARG_LISTEN_HOST)
