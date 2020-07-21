@@ -155,8 +155,18 @@ fn subcommand_map(
                             }
                         })
                         .left_future(),
-                    Some((target_hash, _)) => {
-                        println!("Hash {} maps to {}", source_hash, target_hash);
+                    Some((target_hash, maybe_version_name)) => {
+                        match maybe_version_name {
+                            Some(version_name) => {
+                                println!(
+                                    "Hash {} maps to {}, used {:?}",
+                                    source_hash, target_hash, version_name
+                                );
+                            }
+                            None => {
+                                println!("Hash {} maps to {}", source_hash, target_hash);
+                            }
+                        }
                         future::ok(()).right_future()
                     }
                 })
