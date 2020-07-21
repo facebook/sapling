@@ -785,10 +785,7 @@ void FileInode::materialize() {
   }
 
   materializeInParent();
-  auto path = getPath();
-  if (path.has_value()) {
-    getMount()->getJournal().recordChanged(std::move(path.value()));
-  }
+  updateJournal();
 }
 #else
 
@@ -856,10 +853,7 @@ size_t FileInode::writeImpl(
 
   state.unlock();
 
-  auto myname = getPath();
-  if (myname.has_value()) {
-    getMount()->getJournal().recordChanged(std::move(myname.value()));
-  }
+  updateJournal();
 
   return xfer;
 }
