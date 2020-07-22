@@ -6,24 +6,19 @@
  */
 
 use anyhow::{format_err, Error};
-use clap::{App, Arg, ArgMatches, SubCommand};
-use fbinit::FacebookInit;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, Future};
-
 use blobrepo::BlobRepo;
 use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer};
 use bookmarks::BookmarkUpdateReason;
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use cross_repo_sync::{
     validation::{self, BookmarkDiff},
     CommitSyncRepos, CommitSyncer,
 };
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt as PreviewFutureExt, TryFutureExt},
-};
+use fbinit::FacebookInit;
+use futures::{compat::Future01CompatExt, try_join};
+use futures_ext::FutureExt;
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfigVersion;
@@ -43,7 +38,7 @@ const HASH_ARG: &str = "HASH";
 const LARGE_REPO_HASH_ARG: &str = "LARGE_REPO_HASH";
 const UPDATE_LARGE_REPO_BOOKMARKS: &str = "update-large-repo-bookmarks";
 
-const SUBCOMMAND_COMMIT_SYNC_CONFIG: &str = "config";
+const SUBCOMMAND_CONFIG: &str = "config";
 const SUBCOMMAND_BY_VERSION: &str = "by-version";
 const SUBCOMMAND_LIST: &str = "list";
 const SUBCOMMAND_CURRENT: &str = "current";
@@ -64,9 +59,7 @@ pub async fn subcommand_crossrepo<'a>(
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
 
             let hash = sub_sub_m.value_of(HASH_ARG).unwrap().to_owned();
-            subcommand_map(ctx, source_repo, target_repo, mapping, hash)
-                .compat()
-                .await
+            subcommand_map(ctx, source_repo, target_repo, mapping, hash).await
         }
         (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, mapping) =
@@ -74,7 +67,7 @@ pub async fn subcommand_crossrepo<'a>(
             let source_repo_id = source_repo.get_repoid();
 
             let (_, source_repo_config) = args::get_config_by_repoid(fb, matches, source_repo_id)?;
-            let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
+
             let commit_syncer = {
                 let commit_sync_repos = get_large_to_small_commit_sync_repos(
                     source_repo,
@@ -84,22 +77,18 @@ pub async fn subcommand_crossrepo<'a>(
                 CommitSyncer::new(mapping, commit_sync_repos)
             };
 
-            helpers::csid_resolve(
-                ctx.clone(),
-                commit_syncer.get_large_repo().clone(),
-                large_hash,
-            )
-            .map(move |large_hash| (commit_syncer, large_hash))
-            .and_then(move |(commit_syncer, large_hash)| {
-                validation::verify_working_copy(ctx.clone(), commit_syncer, large_hash)
-                    .boxed()
-                    .compat()
+            let large_hash = {
+                let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
+                let large_repo = commit_syncer.get_large_repo();
+                helpers::csid_resolve(ctx.clone(), large_repo.clone(), large_hash)
                     .boxify()
-            })
-            .from_err()
-            .boxify()
-            .compat()
-            .await
+                    .compat()
+                    .await?
+            };
+
+            validation::verify_working_copy(ctx.clone(), commit_syncer, large_hash)
+                .await
+                .map_err(|e| e.into())
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, mapping) =
@@ -109,6 +98,7 @@ pub async fn subcommand_crossrepo<'a>(
             let (_, source_repo_config) = args::get_config_by_repoid(fb, matches, source_repo_id)?;
 
             let update_large_repo_bookmarks = sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS);
+
             subcommand_verify_bookmarks(
                 ctx,
                 source_repo,
@@ -119,7 +109,7 @@ pub async fn subcommand_crossrepo<'a>(
             )
             .await
         }
-        (SUBCOMMAND_COMMIT_SYNC_CONFIG, Some(sub_sub_m)) => {
+        (SUBCOMMAND_CONFIG, Some(sub_sub_m)) => {
             run_config_sub_subcommand(fb, ctx, logger, matches, sub_sub_m).await
         }
         _ => Err(SubcommandError::InvalidArgs),
@@ -168,18 +158,18 @@ async fn get_source_target_repos_and_mapping<'a>(
 ) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
     let source_repo_id = args::get_source_repo_id(fb, matches)?;
     let target_repo_id = args::get_target_repo_id(fb, matches)?;
-    let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
-    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
 
+    let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches)
+        .boxify()
+        .compat();
+    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches)
+        .boxify()
+        .compat();
     // TODO(stash): in reality both source and target should point to the same mapping
     // It'll be nice to verify it
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches);
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches).compat();
 
-    source_repo
-        .join3(target_repo, mapping)
-        .boxify()
-        .compat()
-        .await
+    try_join!(source_repo, target_repo, mapping)
 }
 
 fn print_commit_sync_config(csc: CommitSyncConfig, line_prefix: &str) {
@@ -264,52 +254,55 @@ async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
     Ok(())
 }
 
-fn subcommand_map(
+async fn subcommand_map(
     ctx: CoreContext,
     source_repo: BlobRepo,
     target_repo: BlobRepo,
     mapping: SqlSyncedCommitMapping,
     hash: String,
-) -> BoxFuture<(), SubcommandError> {
+) -> Result<(), SubcommandError> {
     let source_repo_id = source_repo.get_repoid();
     let target_repo_id = target_repo.get_repoid();
-    let source_hash = helpers::csid_resolve(ctx.clone(), source_repo, hash);
-    source_hash
-        .and_then(move |source_hash| {
-            mapping
-                .get(ctx.clone(), source_repo_id, source_hash, target_repo_id)
-                .and_then(move |mapped| match mapped {
-                    None => target_repo
-                        .changeset_exists_by_bonsai(ctx, source_hash.clone())
-                        .map(move |exists| {
-                            if exists {
-                                println!(
-                                    "Hash {} not currently remapped (but present in target as-is)",
-                                    source_hash
-                                );
-                            } else {
-                                println!("Hash {} not currently remapped", source_hash);
-                            }
-                        })
-                        .left_future(),
-                    Some((target_hash, maybe_version_name)) => {
-                        match maybe_version_name {
-                            Some(version_name) => {
-                                println!(
-                                    "Hash {} maps to {}, used {:?}",
-                                    source_hash, target_hash, version_name
-                                );
-                            }
-                            None => {
-                                println!("Hash {} maps to {}", source_hash, target_hash);
-                            }
-                        }
-                        future::ok(()).right_future()
-                    }
-                })
-        })
-        .from_err()
-        .boxify()
+    let source_hash = helpers::csid_resolve(ctx.clone(), source_repo, hash)
+        .compat()
+        .await?;
+
+    let mapped = mapping
+        .get(ctx.clone(), source_repo_id, source_hash, target_repo_id)
+        .compat()
+        .await?;
+
+    match mapped {
+        None => {
+            let exists = target_repo
+                .changeset_exists_by_bonsai(ctx, source_hash.clone())
+                .compat()
+                .await?;
+
+            if exists {
+                println!(
+                    "Hash {} not currently remapped (but present in target as-is)",
+                    source_hash
+                );
+            } else {
+                println!("Hash {} not currently remapped", source_hash);
+            }
+        }
+
+        Some((target_hash, maybe_version_name)) => match maybe_version_name {
+            Some(version_name) => {
+                println!(
+                    "Hash {} maps to {}, used {:?}",
+                    source_hash, target_hash, version_name
+                );
+            }
+            None => {
+                println!("Hash {} maps to {}", source_hash, target_hash);
+            }
+        },
+    };
+
+    Ok(())
 }
 
 async fn subcommand_verify_bookmarks(
@@ -544,7 +537,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                     .help("Do not just print version name, also include config body"),
             );
 
-        SubCommand::with_name(SUBCOMMAND_COMMIT_SYNC_CONFIG)
+        SubCommand::with_name(SUBCOMMAND_CONFIG)
             .about("query available CommitSyncConfig versions for repo")
             .subcommand(current_subcommand)
             .subcommand(list_subcommand)
