@@ -138,6 +138,7 @@ impl CommonMetadata {
 pub trait AnyhowExt {
     fn with_fault(self, fault: Fault) -> Self;
     fn with_type_name(self, type_name: TypeName) -> Self;
+    fn with_metadata(self, metadata: CommonMetadata) -> Self;
 
     /// Traverse the error / context tree and assemble all CommonMetadata
     fn common_metadata(&self) -> CommonMetadata;
@@ -150,6 +151,10 @@ impl AnyhowExt for anyhow::Error {
 
     fn with_type_name(self, typename: TypeName) -> Self {
         TaggedError::new(self, CommonMetadata::default().with_type_name(typename)).wrapped()
+    }
+
+    fn with_metadata(self, metadata: CommonMetadata) -> Self {
+        TaggedError::new(self, metadata).wrapped()
     }
 
     fn common_metadata(&self) -> CommonMetadata {
@@ -175,6 +180,10 @@ impl<T> AnyhowExt for anyhow::Result<T> {
 
     fn with_type_name(self, typename: TypeName) -> Self {
         self.map_err(|e| e.with_type_name(typename))
+    }
+
+    fn with_metadata(self, metadata: CommonMetadata) -> Self {
+        self.map_err(|e| e.with_metadata(metadata))
     }
 
     fn common_metadata(&self) -> CommonMetadata {
@@ -239,6 +248,15 @@ pub fn intentional_error() -> anyhow::Result<u8> {
     Err(IntentionalError(String::from("intentional_error")).tagged()).into()
 }
 
+pub fn intentional_bail() -> anyhow::Result<u8> {
+    bail!(
+        fault = Fault::Request,
+        TypeName("taggederror::FakeTypeNameForTesting"),
+        "intentional bail with {}",
+        "format params"
+    )
+}
+
 /// Controls how metadata is handled when formatting a FilteredAnyhow.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PrintMode {
@@ -257,6 +275,82 @@ pub enum PrintMode {
     /// added later overriding those added earlier), and printing that metadata
     /// at the end of the formatted error message.
     SeparateTags,
+}
+
+/// A drop-in replacement for the anyhow::bail macro, which allows applying error metadata.
+///
+/// Supports all three styles of `bail!` calls supported by anyhow
+///
+/// String literal: `bail!("literal error message")`
+/// Display Expression: `bail!(my_expr_impls_display)`
+/// Format Expression: `bail!("failure in {} system", "logging")`
+///
+/// You can provide metadata for these errors by prepending it to the
+/// `bail` argument list. Metadata can be provided with in two styles,
+/// `key = value` and "literal" syntax. These forms can be mixed as desired in
+/// the same call.
+///
+/// Literal style: `bail!(Fault::Request, TypeName("fakemod::FakeTypeName"), "standard bail args")`
+/// Key-value style: `bail!(fault = my_fault(), type_name = TypeName(my_static_str()), "bail format {}", "args")`
+/// Mixed: `bail!(Fault::Request, type_name = my_typename(), "bail message")`
+#[macro_export]
+macro_rules! bail {
+    // Bail variations with metadata
+    (@withmeta $meta:expr, $msg:literal $(,)?) => {
+        return std::result::Result::Err(anyhow::anyhow!($msg).with_metadata($meta));
+    };
+    (@withmeta $meta:expr, $err:expr $(,)?) => {
+        return std::result::Result::Err(anyhow::anyhow!($err).with_metadata($meta));
+    };
+    (@withmeta $meta:expr, $fmt:expr, $($arg:tt)*) => {
+        return std::result::Result::Err(anyhow::anyhow!($fmt, $($arg)*).with_metadata($meta));
+    };
+
+    // Metadata munching
+    // Concise syntax for literal metadata
+    (@metadata $meta:expr, Fault::$fault:ident, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::with_fault($meta, Fault::$fault), $($tail)+)
+    };
+    (@metadata $meta:expr, TypeName($type_name:expr), $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::with_type_name($meta, TypeName($type_name)), $($tail)+)
+    };
+    // More verbose key=value syntax for metadata expressions
+    (@metadata $meta:expr, fault=$fault:expr, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::with_fault($meta, $fault), $($tail)+)
+    };
+    (@metadata $meta:expr, type_name=$type_name:expr, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::with_type_name($meta, $type_name), $($tail)+)
+    };
+
+    // Metadata base case, trailing bail args
+    (@metadata $meta:expr, $($args:tt)+) => {
+        bail!(@withmeta $meta, $($args)+)
+    };
+
+    // Metadata entry points
+    (Fault::$fault:ident, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::default().with_fault(Fault::$fault), $($tail)+)
+    };
+    (TypeName($type_name:expr), $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::default().with_type_name(TypeName($type_name)), $($tail)+)
+    };
+    (fault=$fault:expr, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::default().with_fault($fault), $($tail)+)
+    };
+    (type_name=$type_name:expr, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::default().with_type_name($type_name), $($tail)+)
+    };
+
+    // Bail variations without metadata
+    ($msg:literal $(,)?) => {
+        return std::result::Result::Err(anyhow::anyhow!($msg));
+    };
+    ($err:expr $(,)?) => {
+        return std::result::Result::Err(anyhow::anyhow!($err));
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        return std::result::Result::Err(anyhow::anyhow!($fmt, $($arg)*));
+    };
 }
 
 /// A wrapper for anyhow which allows special handling of TaggedError metadata.

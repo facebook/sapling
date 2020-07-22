@@ -8,7 +8,7 @@
 use cpython::*;
 use cpython_ext::{error, ResultPyErrExt};
 
-use taggederror::{intentional_error, CommonMetadata, Fault, FilteredAnyhow};
+use taggederror::{intentional_bail, intentional_error, CommonMetadata, Fault, FilteredAnyhow};
 
 py_exception!(error, IndexedLogError);
 py_exception!(error, MetaLogError);
@@ -72,6 +72,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py.get_type::<TaggedExceptionData>(),
     )?;
     m.add(py, "throwrustexception", py_fn!(py, py_intentional_error()))?;
+    m.add(py, "throwrustbail", py_fn!(py, py_intentional_bail()))?;
 
     register_error_handlers();
 
@@ -117,6 +118,12 @@ fn register_error_handlers() {
 
 fn py_intentional_error(py: Python) -> PyResult<PyInt> {
     Ok(intentional_error()
+        .map(|r| r.to_py_object(py))
+        .map_pyerr(py)?)
+}
+
+fn py_intentional_bail(py: Python) -> PyResult<PyInt> {
+    Ok(intentional_bail()
         .map(|r| r.to_py_object(py))
         .map_pyerr(py)?)
 }

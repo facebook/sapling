@@ -1070,6 +1070,9 @@ Test list of internal help commands
                  parse and apply a template
    debugthrowexception
                  cause an intentional exception to be raised in the command
+   debugthrowrustbail
+                 cause an error to be returned from rust and propagated to
+                 python using bail
    debugthrowrustexception
                  cause an error to be returned from rust and propagated to
                  python

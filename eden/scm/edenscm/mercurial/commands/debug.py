@@ -3624,6 +3624,12 @@ def debugthrowrustexception(ui, _repo):
     bindings.error.throwrustexception()
 
 
+@command("debugthrowrustbail", [], "")
+def debugthrowrustbail(ui, _repo):
+    """cause an error to be returned from rust and propagated to python using bail"""
+    bindings.error.throwrustbail()
+
+
 @command("debugthrowexception", [], "")
 def debugthrowexception(ui, _repo):
     """cause an intentional exception to be raised in the command"""

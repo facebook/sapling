@@ -7,8 +7,3 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.20"
 thiserror = "1.0.5"
-thrift-types = { path = "../thrift-types" }
-tracing = "0.1"
-
-[dev-dependencies]
-tempfile = "3.0.7"

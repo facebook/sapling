@@ -167,6 +167,7 @@ Show debug commands if there are no other candidates
   debugsuccessorssets
   debugtemplate
   debugthrowexception
+  debugthrowrustbail
   debugthrowrustexception
   debugtreestate
   debugupdatecaches
@@ -448,6 +449,7 @@ Show all commands + options
   debugsuccessorssets: closest
   debugtemplate: rev, define
   debugthrowexception: 
+  debugthrowrustbail: 
   debugthrowrustexception: 
   debugtreestate: 
   debugupdatecaches: 

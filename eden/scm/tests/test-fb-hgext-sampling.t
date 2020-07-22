@@ -141,6 +141,26 @@ Test exception logging:
   rust_error_type: taggederror::IntentionalError
 
   $ > $LOGDIR/samplingpath.txt
+  $ hg debugthrowrustbail 2>&1 | egrep -v '^  '
+  \*\* Mercurial Distributed SCM * has crashed: (glob)
+  atexit handler executed
+  Traceback (most recent call last):
+  *RustError: intentional bail with format params (glob)
+  >>> import json, pprint
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read().strip("\0").split("\0")
+  >>> for jsonstr in data:
+  ...     entry = json.loads(jsonstr)
+  ...     if entry["category"] == "exceptions":
+  ...         for k in sorted(entry["data"].keys()):
+  ...             print("%s: %s" % (k, entry["data"][k]))
+  exception_msg: intentional bail with format params
+  exception_type: RustError
+  fault: request
+  metrics_type: exceptions
+  rust_error_type: taggederror::FakeTypeNameForTesting
+
+  $ > $LOGDIR/samplingpath.txt
   $ hg debugthrowexception 2>&1 | egrep -v '^  '
   \*\* Mercurial Distributed SCM * has crashed: (glob)
   atexit handler executed
