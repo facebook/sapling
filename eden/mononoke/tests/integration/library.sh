@@ -273,6 +273,8 @@ function mononoke_hg_sync_loop_regenerate {
 function mononoke_admin {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${COMMON_ARGS[@]}" \
+    --test-instance \
+    --local-configerator-path="$TESTTMP/configerator" \
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }

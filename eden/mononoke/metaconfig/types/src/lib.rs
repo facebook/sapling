@@ -983,8 +983,14 @@ pub enum CommitSyncDirection {
 }
 
 /// CommitSyncConfig version name
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct CommitSyncConfigVersion(pub String);
+
+impl fmt::Display for CommitSyncConfigVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// Commit sync configuration for a large repo
 #[derive(Debug, Clone, Eq, PartialEq)]

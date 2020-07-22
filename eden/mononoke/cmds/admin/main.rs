@@ -55,6 +55,7 @@ mod subcommand_unodes;
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Mononoke admin command line tool")
         .with_advanced_args_hidden()
+        .with_test_args()
         .with_source_and_target_repos()
         .build()
         .version("0.0.0")

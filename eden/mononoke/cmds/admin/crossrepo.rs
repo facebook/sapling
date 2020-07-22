@@ -9,12 +9,11 @@ use anyhow::{format_err, Error};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, future::IntoFuture, Future};
+use futures_old::{future, Future};
 
 use blobrepo::BlobRepo;
 use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer};
 use bookmarks::BookmarkUpdateReason;
-use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use cross_repo_sync::{
@@ -25,7 +24,11 @@ use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as PreviewFutureExt, TryFutureExt},
 };
+use itertools::Itertools;
+use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
+use mononoke_types::RepositoryId;
 use movers::{get_large_to_small_mover, get_small_to_large_mover};
 use slog::{info, warn, Logger};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
@@ -40,91 +43,225 @@ const HASH_ARG: &str = "HASH";
 const LARGE_REPO_HASH_ARG: &str = "LARGE_REPO_HASH";
 const UPDATE_LARGE_REPO_BOOKMARKS: &str = "update-large-repo-bookmarks";
 
+const SUBCOMMAND_COMMIT_SYNC_CONFIG: &str = "config";
+const SUBCOMMAND_BY_VERSION: &str = "by-version";
+const SUBCOMMAND_LIST: &str = "list";
+const SUBCOMMAND_CURRENT: &str = "current";
+const ARG_VERSION_NAME: &str = "version-name";
+const ARG_WITH_CONTENTS: &str = "with-contents";
+
 pub async fn subcommand_crossrepo<'a>(
     fb: FacebookInit,
     logger: Logger,
     matches: &'a ArgMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
+    args::init_cachelib(fb, &matches, None);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    match sub_m.subcommand() {
+        (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
+            let (source_repo, target_repo, mapping) =
+                get_source_target_repos_and_mapping(fb, logger, matches).await?;
+
+            let hash = sub_sub_m.value_of(HASH_ARG).unwrap().to_owned();
+            subcommand_map(ctx, source_repo, target_repo, mapping, hash)
+                .compat()
+                .await
+        }
+        (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
+            let (source_repo, target_repo, mapping) =
+                get_source_target_repos_and_mapping(fb, logger, matches).await?;
+            let source_repo_id = source_repo.get_repoid();
+
+            let (_, source_repo_config) = args::get_config_by_repoid(fb, matches, source_repo_id)?;
+            let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
+            let commit_syncer = {
+                let commit_sync_repos = get_large_to_small_commit_sync_repos(
+                    source_repo,
+                    target_repo,
+                    &source_repo_config,
+                )?;
+                CommitSyncer::new(mapping, commit_sync_repos)
+            };
+
+            helpers::csid_resolve(
+                ctx.clone(),
+                commit_syncer.get_large_repo().clone(),
+                large_hash,
+            )
+            .map(move |large_hash| (commit_syncer, large_hash))
+            .and_then(move |(commit_syncer, large_hash)| {
+                validation::verify_working_copy(ctx.clone(), commit_syncer, large_hash)
+                    .boxed()
+                    .compat()
+                    .boxify()
+            })
+            .from_err()
+            .boxify()
+            .compat()
+            .await
+        }
+        (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
+            let (source_repo, target_repo, mapping) =
+                get_source_target_repos_and_mapping(fb, logger, matches).await?;
+            let source_repo_id = source_repo.get_repoid();
+
+            let (_, source_repo_config) = args::get_config_by_repoid(fb, matches, source_repo_id)?;
+
+            let update_large_repo_bookmarks = sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS);
+            subcommand_verify_bookmarks(
+                ctx,
+                source_repo,
+                source_repo_config,
+                target_repo,
+                mapping,
+                update_large_repo_bookmarks,
+            )
+            .await
+        }
+        (SUBCOMMAND_COMMIT_SYNC_CONFIG, Some(sub_sub_m)) => {
+            run_config_sub_subcommand(fb, ctx, logger, matches, sub_sub_m).await
+        }
+        _ => Err(SubcommandError::InvalidArgs),
+    }
+}
+
+async fn run_config_sub_subcommand<'a>(
+    fb: FacebookInit,
+    ctx: CoreContext,
+    logger: Logger,
+    matches: &'a ArgMatches<'_>,
+    config_subcommand_matches: &'a ArgMatches<'a>,
+) -> Result<(), SubcommandError> {
+    let repo_id = args::get_repo_id(fb, matches)?;
+    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
+        .expect("failed to instantiate ConfigStore");
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+
+    match config_subcommand_matches.subcommand() {
+        (SUBCOMMAND_BY_VERSION, Some(sub_m)) => {
+            let version_name: String = sub_m.value_of(ARG_VERSION_NAME).unwrap().to_string();
+            subcommand_by_version(repo_id, live_commit_sync_config, version_name)
+                .await
+                .map_err(|e| e.into())
+        }
+        (SUBCOMMAND_CURRENT, Some(sub_m)) => {
+            let with_contents = sub_m.is_present(ARG_WITH_CONTENTS);
+            subcommand_current(ctx, repo_id, live_commit_sync_config, with_contents)
+                .await
+                .map_err(|e| e.into())
+        }
+        (SUBCOMMAND_LIST, Some(sub_m)) => {
+            let with_contents = sub_m.is_present(ARG_WITH_CONTENTS);
+            subcommand_list(repo_id, live_commit_sync_config, with_contents)
+                .await
+                .map_err(|e| e.into())
+        }
+        _ => Err(SubcommandError::InvalidArgs),
+    }
+}
+
+async fn get_source_target_repos_and_mapping<'a>(
+    fb: FacebookInit,
+    logger: Logger,
+    matches: &'a ArgMatches<'_>,
+) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
     let source_repo_id = args::get_source_repo_id(fb, matches)?;
     let target_repo_id = args::get_target_repo_id(fb, matches)?;
-
-    args::init_cachelib(fb, &matches, None);
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
     let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
     // TODO(stash): in reality both source and target should point to the same mapping
     // It'll be nice to verify it
     let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches);
 
-    match sub_m.subcommand() {
-        (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
-            let hash = sub_sub_m.value_of(HASH_ARG).unwrap().to_owned();
-            source_repo
-                .join3(target_repo, mapping)
-                .from_err()
-                .and_then(move |(source_repo, target_repo, mapping)| {
-                    subcommand_map(ctx, source_repo, target_repo, mapping, hash)
-                })
-                .boxify()
-        }
-        (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
-            let (_, source_repo_config) = args::get_config_by_repoid(fb, matches, source_repo_id)?;
-            let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
+    source_repo
+        .join3(target_repo, mapping)
+        .boxify()
+        .compat()
+        .await
+}
 
-            source_repo
-                .join3(target_repo, mapping)
-                .from_err()
-                .and_then(move |(source_repo, target_repo, mapping)| {
-                    get_large_to_small_commit_sync_repos(
-                        source_repo,
-                        target_repo,
-                        &source_repo_config,
-                    )
-                    .map(move |commit_sync_repos| CommitSyncer::new(mapping, commit_sync_repos))
-                })
-                .and_then({
-                    cloned!(ctx);
-                    move |commit_syncer| {
-                        let large_repo = commit_syncer.get_large_repo();
-                        helpers::csid_resolve(ctx.clone(), large_repo.clone(), large_hash)
-                            .map(move |large_hash| (commit_syncer, large_hash))
-                    }
-                })
-                .and_then(move |(commit_syncer, large_hash)| {
-                    validation::verify_working_copy(ctx.clone(), commit_syncer, large_hash)
-                        .boxed()
-                        .compat()
-                        .boxify()
-                })
-                .from_err()
-                .boxify()
+fn print_commit_sync_config(csc: CommitSyncConfig, line_prefix: &str) {
+    println!("{}large repo: {}", line_prefix, csc.large_repo_id);
+    println!(
+        "{}common pushrebase bookmarks: {:?}",
+        line_prefix, csc.common_pushrebase_bookmarks
+    );
+    println!("{}version name: {}", line_prefix, csc.version_name);
+    for (small_repo_id, small_repo_config) in csc
+        .small_repos
+        .into_iter()
+        .sorted_by_key(|(small_repo_id, _)| *small_repo_id)
+    {
+        println!("{}  small repo: {}", line_prefix, small_repo_id);
+        println!(
+            "{}  bookmark prefix: {}",
+            line_prefix, small_repo_config.bookmark_prefix
+        );
+        println!(
+            "{}  direction: {:?}",
+            line_prefix, small_repo_config.direction
+        );
+        println!(
+            "{}  default action: {:?}",
+            line_prefix, small_repo_config.default_action
+        );
+        println!("{}  prefix map:", line_prefix);
+        for (from, to) in small_repo_config
+            .map
+            .into_iter()
+            .sorted_by_key(|(from, _)| from.clone())
+        {
+            println!("{}    {}->{}", line_prefix, from, to);
         }
-        (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
-            let (_, source_repo_config) = args::get_config_by_repoid(fb, matches, source_repo_id)?;
-
-            let update_large_repo_bookmarks = sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS);
-            source_repo
-                .join3(target_repo, mapping)
-                .from_err()
-                .and_then(move |(source_repo, target_repo, mapping)| {
-                    subcommand_verify_bookmarks(
-                        ctx,
-                        source_repo,
-                        source_repo_config,
-                        target_repo,
-                        mapping,
-                        update_large_repo_bookmarks,
-                    )
-                    .boxed()
-                    .compat()
-                })
-                .boxify()
-        }
-        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
-    .compat()
-    .await
+}
+
+async fn subcommand_current<'a, L: LiveCommitSyncConfig>(
+    ctx: CoreContext,
+    repo_id: RepositoryId,
+    live_commit_sync_config: L,
+    with_contents: bool,
+) -> Result<(), Error> {
+    let csc = live_commit_sync_config.get_current_commit_sync_config(&ctx, repo_id)?;
+    if with_contents {
+        print_commit_sync_config(csc, "");
+    } else {
+        println!("{}", csc.version_name);
+    }
+
+    Ok(())
+}
+
+async fn subcommand_list<'a, L: LiveCommitSyncConfig>(
+    repo_id: RepositoryId,
+    live_commit_sync_config: L,
+    with_contents: bool,
+) -> Result<(), Error> {
+    let all = live_commit_sync_config.get_all_commit_sync_config_versions(repo_id)?;
+    for (version_name, csc) in all.into_iter().sorted_by_key(|(vn, _)| vn.clone()) {
+        if with_contents {
+            println!("{}:", version_name);
+            print_commit_sync_config(csc, "  ");
+            println!("\n");
+        } else {
+            println!("{}", version_name);
+        }
+    }
+
+    Ok(())
+}
+
+async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
+    repo_id: RepositoryId,
+    live_commit_sync_config: L,
+    version_name: String,
+) -> Result<(), Error> {
+    let csc = live_commit_sync_config
+        .get_commit_sync_config_by_version(repo_id, &CommitSyncConfigVersion(version_name))?;
+    print_commit_sync_config(csc, "");
+    Ok(())
 }
 
 fn subcommand_map(
@@ -377,10 +514,48 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             .help("update any inconsistencies between bookmarks (except for the common bookmarks between large and small repo e.g. 'master')"),
     );
 
+    let commit_sync_config_subcommand = {
+        let by_version_subcommand = SubCommand::with_name(SUBCOMMAND_BY_VERSION)
+            .about("print info about a particular version of CommitSyncConfig")
+            .arg(
+                Arg::with_name(ARG_VERSION_NAME)
+                    .required(true)
+                    .takes_value(true)
+                    .help("commit sync config version name to query"),
+            );
+
+        let list_subcommand = SubCommand::with_name(SUBCOMMAND_LIST)
+            .about("list all available CommitSyncConfig versions for repo")
+            .arg(
+                Arg::with_name(ARG_WITH_CONTENTS)
+                    .long(ARG_WITH_CONTENTS)
+                    .required(false)
+                    .takes_value(false)
+                    .help("Do not just print version names, also include config bodies"),
+            );
+
+        let current_subcommand = SubCommand::with_name(SUBCOMMAND_CURRENT)
+            .about("print current CommitSyncConfig version for repo")
+            .arg(
+                Arg::with_name(ARG_WITH_CONTENTS)
+                    .long(ARG_WITH_CONTENTS)
+                    .required(false)
+                    .takes_value(false)
+                    .help("Do not just print version name, also include config body"),
+            );
+
+        SubCommand::with_name(SUBCOMMAND_COMMIT_SYNC_CONFIG)
+            .about("query available CommitSyncConfig versions for repo")
+            .subcommand(current_subcommand)
+            .subcommand(list_subcommand)
+            .subcommand(by_version_subcommand)
+    };
+
     SubCommand::with_name(CROSSREPO)
         .subcommand(map_subcommand)
         .subcommand(verify_wc_subcommand)
         .subcommand(verify_bookmarks_subcommand)
+        .subcommand(commit_sync_config_subcommand)
 }
 
 fn get_large_to_small_commit_sync_repos(

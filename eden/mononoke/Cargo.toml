@@ -110,6 +110,7 @@ filestore = { path = "filestore" }
 fsnodes = { path = "derived_data/fsnodes" }
 git_types = { path = "git/git_types" }
 lfs_import_lib = { path = "lfs_import_lib" }
+live_commit_sync_config = { path = "commit_rewriting/live_commit_sync_config" }
 manifest = { path = "manifest" }
 memblob = { path = "blobstore/memblob" }
 mercurial_bundle_replay_data = { path = "mercurial/bundle_replay_data" }
