@@ -90,7 +90,7 @@ def _bypassdirsync(orig, ui, repo, *args, **kwargs):
 def getconfigs(repo):
     # read from wvfs/.hgdirsync
     filename = ".hgdirsync"
-    content = repo.wvfs.tryread(filename)
+    content = repo.wvfs.tryreadutf8(filename)
     cfg = config.config()
     if content:
         cfg.parse(filename, "[dirsync]\n%s" % content, ["dirsync"])
