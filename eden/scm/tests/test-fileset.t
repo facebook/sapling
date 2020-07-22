@@ -331,14 +331,14 @@ Test 'revs(...)'
 small reminder of the repository state
 
   $ hg log -G
-  @  commit:      248fdd570b06
+  @  commit:      * (glob)
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     subrepo
   |
-  o    commit:      c7ce47cca5f0
+  o    commit:      * (glob)
   |\   parent:      55b05bdebf36
-  | |  parent:      830839835f98
+  | |  parent:      * (glob)
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge
@@ -349,7 +349,7 @@ small reminder of the repository state
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     diverging
   | |
-  o |  commit:      830839835f98
+  o |  commit:      * (glob)
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     manychanges
