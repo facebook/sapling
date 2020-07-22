@@ -30,7 +30,7 @@ test TLS Session/Ticket resumption when using client certs
   $ TMPFILE=$(mktemp)
   $ RUN1=$(echo -e "hello\n" | s_client -sess_out $TMPFILE | grep -E "^(HTTP|\s+Session-ID:)")
   Can't use SSL_get_servername
-  depth=1 C = US, ST = CA, O = FakeRootCanal, CN = fbmononoke.com
+  depth=1 C = US, ST = CA, O = TestRoot, CN = mononoke.com
   verify return:1
   depth=0 CN = localhost, O = Mononoke, C = US, ST = CA
   verify return:1

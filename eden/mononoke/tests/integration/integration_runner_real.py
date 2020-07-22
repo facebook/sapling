@@ -130,7 +130,7 @@ def maybe_use_local_test_paths(manifest_env: ManifestEnv):
 
     manifest_env.update(
         {
-            "TEST_CERTS": os.path.join(tests, "facebook/certs"),
+            "TEST_CERTS": os.path.join(tests, "certs/facebook"),
             "TEST_ROOT_PUBLIC": tests,
             "TEST_ROOT_FACEBOOK": os.path.join(tests, "facebook"),
             "TEST_FIXTURES": tests,

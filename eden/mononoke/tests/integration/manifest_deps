@@ -42,6 +42,7 @@ OSS_DEPS = {
     "BINARY_HGPYTHON": "python2.7",
     "DUMMYSSH": "//eden/mononoke/tests/integration/dummyssh.sh",
     "RUN_TESTS_LIBRARY": "//eden/scm/tests",
+    "TEST_CERTS": "//eden/mononoke/tests/integration/certs",
     "TEST_FIXTURES": "//eden/mononoke/tests/integration",
     "TEST_ROOT_PUBLIC": "//eden/mononoke/tests/integration",
 }
