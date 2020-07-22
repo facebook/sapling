@@ -113,6 +113,7 @@ lfs_import_lib = { path = "lfs_import_lib" }
 manifest = { path = "manifest" }
 memblob = { path = "blobstore/memblob" }
 mercurial_bundle_replay_data = { path = "mercurial/bundle_replay_data" }
+mercurial_derived_data = { path = "derived_data/mercurial_derived_data" }
 mercurial_revlog = { path = "mercurial/revlog" }
 mercurial_types = { path = "mercurial/types" }
 metaconfig_types = { path = "metaconfig/types" }
