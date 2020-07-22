@@ -6,6 +6,14 @@
 
 # Library routines and initial setup for Mononoke-related tests.
 
+if [ -f "$TEST_FIXTURES/facebook/fb_library.sh" ]; then
+  # shellcheck source=fbcode/eden/mononoke/tests/integration/facebook/fb_library.sh
+  . "$TEST_FIXTURES/facebook/fb_library.sh"
+fi
+
+ALLOWED_IDENTITY_TYPE="${FB_ALLOWED_IDENTITY_TYPE:-X509_SUBJECT_NAME}"
+ALLOWED_IDENTITY_DATA="${FB_ALLOWED_IDENTITY_DATA:-CN=localhost,O=Mononoke,C=US,ST=CA}"
+
 if [[ -n "$DB_SHARD_NAME" ]]; then
   MONONOKE_DEFAULT_START_TIMEOUT=60
 else
@@ -479,15 +487,13 @@ EOF
 
   echo "{}" > "$TESTTMP/mononoke_tunables.json"
 
-  ALLOWED_USERNAME="${ALLOWED_USERNAME:-myusername0}"
-
   cd mononoke-config || exit 1
   mkdir -p common
   touch common/commitsyncmap.toml
   cat > common/common.toml <<CONFIG
 [[whitelist_entry]]
-identity_type = "USER"
-identity_data = "$ALLOWED_USERNAME"
+identity_type = "$ALLOWED_IDENTITY_TYPE"
+identity_data = "$ALLOWED_IDENTITY_DATA"
 CONFIG
 
   echo "# Start new config" > common/storage.toml

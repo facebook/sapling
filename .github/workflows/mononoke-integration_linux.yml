@@ -75,8 +75,4 @@ jobs:
       run: df -h
     - name: Run Monononke integration tests
       run: |
-        for dir in /tmp/build/installed/python-click-*/lib/fb-py-libs/python-click/click; do
-            export PYTHONPATH="${dir}${PYTHONPATH:+:${PYTHONPATH}}"
-        done
         python3 eden/mononoke/tests/integration/run_tests_getdeps.py /tmp/build/installed /tmp/build/build/mononoke_integration_test
-      continue-on-error: true
