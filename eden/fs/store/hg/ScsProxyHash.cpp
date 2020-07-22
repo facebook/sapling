@@ -36,7 +36,7 @@ ScsProxyHash::load(LocalStore* store, Hash edenBlobHash, StringPiece context) {
   // Read the path name and commit hash
   auto infoResult = store->get(KeySpace::ScsProxyHashFamily, edenBlobHash);
   if (!infoResult.isValid()) {
-    XLOG(DBG1) << "scs proxy hash received unknown mercurial proxy hash "
+    XLOG(DBG3) << "scs proxy hash received unknown mercurial proxy hash "
                << edenBlobHash.toString() << " in " << context;
     return std::nullopt;
   }
