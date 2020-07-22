@@ -10,6 +10,7 @@ use context::CoreContext;
 use futures::{compat::Stream01CompatExt, TryStream, TryStreamExt};
 use hgproto::GettreepackArgs;
 use mercurial_types::{HgFileNodeId, HgManifestId};
+use metaconfig_types::RepoConfig;
 use mononoke_types::MPath;
 use repo_client::gettreepack_entries;
 
@@ -42,6 +43,11 @@ impl HgRepoContext {
     /// The underlying Mononoke `BlobRepo` backing this repo.
     pub(crate) fn blob_repo(&self) -> &BlobRepo {
         &self.repo().blob_repo()
+    }
+
+    /// The configuration for the repository.
+    pub(crate) fn config(&self) -> &RepoConfig {
+        self.repo.config()
     }
 
     /// Look up a file in the repo by `HgFileNodeId`.

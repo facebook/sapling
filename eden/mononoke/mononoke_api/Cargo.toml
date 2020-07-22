@@ -21,6 +21,7 @@ derived_data = { path = "../derived_data" }
 fastlog = { path = "../derived_data/fastlog" }
 filestore = { path = "../filestore" }
 fsnodes = { path = "../derived_data/fsnodes" }
+getbundle_response = { path = "../repo_client/getbundle_response" }
 hgproto = { path = "../hgproto" }
 live_commit_sync_config = { path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { path = "../manifest" }
@@ -32,6 +33,7 @@ permission_checker = { path = "../permission_checker" }
 reachabilityindex = { path = "../reachabilityindex" }
 remotefilelog = { path = "../repo_client/remotefilelog" }
 repo_client = { path = "../repo_client" }
+revisionstore_types = { path = "../../scm/lib/revisionstore/types" }
 revset = { path = "../revset" }
 scuba_ext = { path = "../common/scuba_ext" }
 skiplist = { path = "../reachabilityindex/skiplist" }

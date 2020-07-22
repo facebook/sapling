@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 
 use mercurial_types::{HgNodeHash, HgParents};
+use revisionstore_types::Metadata;
 
 use crate::errors::MononokeError;
 
@@ -30,7 +31,7 @@ pub trait HgDataContext: Send + Sync + 'static {
     fn hg_parents(&self) -> HgParents;
 
     /// Fetch the blob content.
-    async fn content(&self) -> Result<Bytes, MononokeError>;
+    async fn content(&self) -> Result<(Bytes, Metadata), MononokeError>;
 }
 
 /// Trait describing a typed identifier for a blob-like type.

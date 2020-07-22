@@ -15,7 +15,6 @@ use edenapi_types::{DataEntry, DataRequest};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgManifestId, HgNodeHash};
 use mononoke_api::hg::{HgDataContext, HgDataId, HgRepoContext};
-use revisionstore_types::Metadata;
 use types::Key;
 
 use crate::context::ServerContext;
@@ -79,12 +78,11 @@ async fn fetch<ID: HgDataId>(repo: HgRepoContext, key: Key) -> Result<DataEntry,
         .with_context(|| ErrorKind::DataFetchFailed(key.clone()))?
         .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
-    let data = ctx
+    let (data, metadata) = ctx
         .content()
         .await
         .with_context(|| ErrorKind::DataFetchFailed(key.clone()))?;
     let parents = ctx.hg_parents().into();
-    let metadata = Metadata::default();
 
     Ok(DataEntry::new(key, data, parents, metadata))
 }

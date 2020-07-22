@@ -13,11 +13,13 @@ use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     TryStream, TryStreamExt,
 };
+use getbundle_response::SessionLfsParams;
 use mercurial_types::{
     envelope::HgFileEnvelope, HgFileHistoryEntry, HgFileNodeId, HgNodeHash, HgParents,
 };
 use mononoke_types::MPath;
-use remotefilelog::create_getpack_v1_blob;
+use remotefilelog::create_getpack_v2_blob;
+use revisionstore_types::Metadata;
 
 use crate::errors::MononokeError;
 
@@ -114,25 +116,29 @@ impl HgDataContext for HgFileContext {
         self.envelope.hg_parents()
     }
 
-    /// Get the content for this file in the format expected by Mercurial's data storage layer.
-    /// In particular, this returns the full content of the file, in some cases prefixed with
-    /// a small header. Callers should not assume that the data returned by this function
-    /// only contains file content.
-    async fn content(&self) -> Result<Bytes, MononokeError> {
+    /// Get the content and metadata for this file in the format expected by
+    /// Mercurial's data storage layer. In particular, this returns the full
+    /// content of the file, in some cases prefixed with a small header. Callers
+    /// should not assume that the data returned by this function only contains
+    /// file content.
+    async fn content(&self) -> Result<(Bytes, Metadata), MononokeError> {
         let ctx = self.repo.ctx().clone();
         let blob_repo = self.repo.blob_repo().clone();
         let filenode_id = self.node_id();
+        let lfs_params = SessionLfsParams {
+            threshold: self.repo.config().lfs.threshold,
+        };
 
-        // TODO(kulshrax): Update this to use getpack_v2, which supports LFS.
-        let (_size, content_fut) = create_getpack_v1_blob(ctx, blob_repo, filenode_id, false)
-            .compat()
-            .await?;
+        let (_size, content_fut) =
+            create_getpack_v2_blob(ctx, blob_repo, filenode_id, lfs_params, false)
+                .compat()
+                .await?;
 
         // TODO(kulshrax): Right now this buffers the entire file content in memory. It would
         // probably be better for this method to return a stream of the file content instead.
-        let (_filenode, content) = content_fut.compat().await?;
+        let (_filenode, content, metadata) = content_fut.compat().await?;
 
-        Ok(content)
+        Ok((content, metadata))
     }
 }
 
@@ -185,7 +191,8 @@ mod tests {
         assert_eq!(file_id, hg_file.node_id());
 
         let content = hg_file.content().await?;
-        assert_eq!(content, &b"1\n"[..]);
+        assert_eq!(&content.0, &b"1\n"[..]);
+        assert_eq!(&content.1, &Metadata::default());
 
         // Test HgFileContext::new_check_exists.
         let hg_file = HgFileContext::new_check_exists(hg.clone(), file_id).await?;

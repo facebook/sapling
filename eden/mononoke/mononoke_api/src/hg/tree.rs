@@ -8,10 +8,12 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::compat::Future01CompatExt;
+
 use mercurial_types::{
     fetch_manifest_envelope, fetch_manifest_envelope_opt, HgBlobEnvelope, HgManifestEnvelope,
     HgManifestId, HgNodeHash, HgParents,
 };
+use revisionstore_types::Metadata;
 
 use crate::errors::MononokeError;
 
@@ -87,12 +89,13 @@ impl HgDataContext for HgTreeContext {
         self.envelope.get_parents()
     }
 
-    /// The manifest envelope actually contains the underlying
-    /// tree bytes inline, so they can be accessed synchronously
-    /// and infallibly with the `content_bytes` method. This method
-    /// just wraps the bytes in a TryFuture that immediately succeeds.
-    async fn content(&self) -> Result<Bytes, MononokeError> {
-        Ok(self.content_bytes())
+    /// The manifest envelope actually contains the underlying tree bytes
+    /// inline, so they can be accessed synchronously and infallibly with the
+    /// `content_bytes` method. This method just wraps the bytes in a TryFuture
+    /// that immediately succeeds. Note that tree blobs don't have associated
+    /// metadata so we just return the default value here.
+    async fn content(&self) -> Result<(Bytes, Metadata), MononokeError> {
+        Ok((self.content_bytes(), Metadata::default()))
     }
 }
 
