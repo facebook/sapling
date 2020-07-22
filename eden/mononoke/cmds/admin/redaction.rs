@@ -10,7 +10,7 @@ use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{App, Arg, ArgGroup, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
@@ -30,6 +30,8 @@ use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use redactedblobstore::SqlRedactedContentStore;
 use slog::{info, Logger};
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::sync::Arc;
 
 use crate::error::SubcommandError;
@@ -38,11 +40,12 @@ pub const REDACTION: &str = "redaction";
 const REDACTION_ADD: &str = "add";
 const REDACTION_REMOVE: &str = "remove";
 const REDACTION_LIST: &str = "list";
+const ARG_INPUT_FILE: &str = "input-file";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(REDACTION)
         .about("handle file redaction")
-        .subcommand(
+        .subcommand(add_path_parameters(
             SubCommand::with_name(REDACTION_ADD)
                 .about("add a new redacted file at a given commit")
                 .arg(
@@ -56,14 +59,9 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .help("hg commit hash")
                         .takes_value(true)
                         .required(true),
-                )
-                .args_from_usage(
-                    r#"
-                        <FILES_LIST>...                             'list of files to be be redacted'
-                        "#,
-                )
-        )
-        .subcommand(
+                ),
+        ))
+        .subcommand(add_path_parameters(
             SubCommand::with_name(REDACTION_REMOVE)
                 .about("remove a file from the redaction")
                 .arg(
@@ -71,13 +69,8 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .help("hg commit hash")
                         .takes_value(true)
                         .required(true),
-                )
-                .args_from_usage(
-                    r#"
-                        <FILES_LIST>...                             'list of files to be be unredacted'
-                        "#,
-                )
-        )
+                ),
+        ))
         .subcommand(
             SubCommand::with_name(REDACTION_LIST)
                 .about("list all redacted file for a given commit")
@@ -86,8 +79,28 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .help("hg commit hash or a bookmark")
                         .takes_value(true)
                         .required(true),
-                )
+                ),
         )
+}
+
+pub fn add_path_parameters<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(ARG_INPUT_FILE)
+            .long(ARG_INPUT_FILE)
+            .help("file with a list of filenames to redact")
+            .takes_value(true)
+            .required(false),
+    )
+    .args_from_usage(
+        r#"
+                [FILES_LIST]...                             'list of files to be be redacted'
+                "#,
+    )
+    .group(
+        ArgGroup::with_name("input_files")
+            .args(&["FILES_LIST", ARG_INPUT_FILE])
+            .required(true),
+    )
 }
 
 fn find_files_with_given_content_id_blobstore_keys(
@@ -205,13 +218,25 @@ pub async fn subcommand_redaction<'a>(
 
 /// Fetch the file list from the subcommand cli matches
 fn paths_parser(sub_m: &ArgMatches<'_>) -> Result<Vec<MPath>, Error> {
-    let paths: Result<Vec<_>, Error> = match sub_m.values_of("FILES_LIST") {
-        Some(values) => values,
-        None => return Err(format_err!("File list is needed")),
+    match sub_m.values_of("FILES_LIST") {
+        Some(values) => values.map(|s| s.to_string()).map(MPath::new).collect(),
+        None => match sub_m.value_of(ARG_INPUT_FILE) {
+            Some(inputfile) => {
+                let inputfile = File::open(inputfile)?;
+                let input_file = BufReader::new(&inputfile);
+                let mut files = vec![];
+                for line in input_file.lines() {
+                    let line = line?;
+                    files.push(MPath::new(line)?);
+                }
+
+                Ok(files)
+            }
+            None => {
+                return Err(format_err!("file list is not specified"));
+            }
+        },
     }
-    .map(|path| MPath::new(path))
-    .collect();
-    paths
 }
 
 /// Fetch the task id and the file list from the subcommand cli matches

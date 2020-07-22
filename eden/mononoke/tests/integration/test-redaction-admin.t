@@ -81,8 +81,9 @@ Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
 
-Censor multiple files
-  $ mononoke_admin redaction add "[TASK]Censor g,f" 2cc2702dde1d7133c30a1ed763ee82c04befb237 f dir/g
+Censor multiple files but pass these files via a filename
+  $ echo -e "f\ndir/g" > "$TESTTMP"/input
+  $ mononoke_admin redaction add "[TASK]Censor g,f" 2cc2702dde1d7133c30a1ed763ee82c04befb237 --input-file "$TESTTMP/input"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
