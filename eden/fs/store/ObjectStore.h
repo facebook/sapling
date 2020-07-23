@@ -44,6 +44,9 @@ struct PidFetchCounts {
     auto fetch_count = (*map_lock)[pid]++;
     return fetch_count;
   }
+  void clear() {
+    map_.wlock()->clear();
+  }
 };
 
 /**
@@ -146,6 +149,10 @@ class ObjectStore : public IObjectStore,
 
   folly::Synchronized<std::unordered_map<pid_t, uint64_t>>& getPidFetches() {
     return pidFetchCounts_->map_;
+  }
+
+  void clearFetchCounts() {
+    pidFetchCounts_->clear();
   }
 
  private:

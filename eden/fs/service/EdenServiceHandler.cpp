@@ -1219,6 +1219,18 @@ void EdenServiceHandler::debugGetInodePath(
   *info.path_ref() = relativePath ? relativePath->stringPiece().str() : "";
 }
 
+void EdenServiceHandler::clearFetchCounts() {
+#ifndef _WIN32
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+
+  for (auto& mount : server_->getMountPoints()) {
+    mount->getObjectStore()->clearFetchCounts();
+  }
+#else
+  NOT_IMPLEMENTED();
+#endif // !_WIN32
+}
+
 void EdenServiceHandler::getAccessCounts(
     GetAccessCountsResult& result,
     int64_t duration) {

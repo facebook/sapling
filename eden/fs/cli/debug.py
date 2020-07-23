@@ -348,6 +348,17 @@ def do_buildinfo(instance: EdenInstance, out: Optional[IO[bytes]] = None) -> Non
         out.write(b"%s: %s\n" % (key.encode(), value.encode()))
 
 
+@debug_cmd(
+    "gc_process_fetch", "clear and start a new recording of process fetch counts"
+)
+class GcProcessFetchCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        eden = cmd_util.get_eden_instance(args)
+        with eden.get_thrift_client() as client:
+            client.clearFetchCounts()
+        return 0
+
+
 @debug_cmd("clear_local_caches", "Clears local caches of objects stored in RocksDB")
 class ClearLocalCachesCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:

@@ -178,6 +178,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       int64_t inodeNumber) override;
 
+  void clearFetchCounts() override;
   void getAccessCounts(GetAccessCountsResult& result, int64_t duration)
       override;
 
