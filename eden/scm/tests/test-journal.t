@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Tests for the journal extension; records bookmark locations.
@@ -17,7 +16,7 @@ Tests for the journal extension; records bookmark locations.
   >             time = float(timef.read()) + 1
   >     except IOError:
   >         time = 0.0
-  >     with open(filename, 'wb') as timef:
+  >     with open(filename, 'w') as timef:
   >         timef.write(str(time))
   >     return (time, 0)
   > 
