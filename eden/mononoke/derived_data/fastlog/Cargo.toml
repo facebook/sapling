@@ -29,6 +29,7 @@ bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
+itertools = "0.8"
 maplit = "1.0"
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }

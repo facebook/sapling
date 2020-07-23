@@ -19,13 +19,13 @@ use futures::{
 };
 use futures_stats::futures03::TimedFutureExt;
 use futures_util::{StreamExt, TryStreamExt};
+use itertools::Itertools;
 use manifest::{Entry, ManifestOps};
 use maplit::hashset;
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future;
-use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;
@@ -129,42 +129,40 @@ where
     let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
 
     let mut visited = HashSet::new();
+    let mut history_graph = HashMap::new();
+
     // there might be more than one unode entry: if the given path was
     // deleted in several different branches, we have to gather history
     // from all of them
-    let unode_entries = match resolved {
+    let last_changesets = match resolved {
         Some(PathState::Deleted(deletion_nodes)) => {
             // we want to show commit, where path was deleted
-            let mut entries = vec![];
-            for (deleted_linknode, last_unode_entry) in deletion_nodes {
-                if visited.insert(deleted_linknode.clone()) {
-                    // there might be one linknode for the several entries
-                    // for example, if the path was deleted in merge commit
-                    top_history.push(Ok(deleted_linknode));
-                }
-                entries.push(last_unode_entry);
-            }
-            entries
+            process_deletion_nodes(&ctx, &repo, &mut history_graph, deletion_nodes).await?
         }
-        Some(PathState::Exists(unode_entry)) => vec![unode_entry],
+        Some(PathState::Exists(unode_entry)) => {
+            fetch_linknodes_and_update_graph(&ctx, &repo, vec![unode_entry], &mut history_graph)
+                .await?
+        }
         None => {
             return Err(not_found_err());
         }
     };
 
-    let mut history_graph = HashMap::new();
-    let last_changesets =
-        fetch_linknodes_and_update_graph(&ctx, &repo, unode_entries, &mut history_graph).await?;
-
-    visited.extend(last_changesets.clone().into_iter());
-
-    let mut last_changesets = last_changesets.into_iter();
-    let the_last_change = last_changesets.next().ok_or_else(not_found_err)?;
-    top_history.push(Ok(the_last_change.clone()));
-    let bfs = VecDeque::from_iter(last_changesets);
+    let mut bfs = VecDeque::new();
+    visit(
+        &ctx,
+        &repo,
+        None,
+        last_changesets.clone(),
+        &mut bfs,
+        &mut visited,
+        &mut top_history,
+    )
+    .await?;
 
     // generate file history
     Ok(stream::iter(top_history)
+        .map(Ok::<_, Error>)
         .chain({
             stream::try_unfold(
                 // starting point
@@ -172,7 +170,7 @@ where
                     history_graph,
                     visited,
                     bfs,
-                    prefetch: Some(the_last_change),
+                    prefetch: None,
                 },
                 // unfold
                 move |state| {
@@ -194,6 +192,62 @@ where
             .try_flatten()
         })
         .boxed())
+}
+
+// Encapsulates all the things that should happen when the ancestors of a single history
+// are node are processed.
+async fn visit(
+    _ctx: &CoreContext, // will be used later
+    _repo: &BlobRepo,
+    _cs_id: Option<ChangesetId>,
+    ancestors: Vec<ChangesetId>,
+    bfs: &mut VecDeque<ChangesetId>,
+    visited: &mut HashSet<ChangesetId>,
+    history: &mut Vec<ChangesetId>,
+) -> Result<(), FastlogError> {
+    for ancestor in ancestors {
+        if visited.insert(ancestor) {
+            history.push(ancestor.clone());
+            bfs.push_back(ancestor);
+        }
+    }
+    Ok(())
+}
+
+// Resolves the deletion nodes and inserts them into history as-if they were normal
+// nodes being part of fastlog batch.
+async fn process_deletion_nodes(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    history_graph: &mut CommitGraph,
+    deletion_nodes: Vec<(ChangesetId, UnodeEntry)>,
+) -> Result<Vec<ChangesetId>, FastlogError> {
+    let mut deleted_linknodes = vec![];
+    let mut last_unodes = vec![];
+
+    for (deleted_linknode, last_unode_entry) in deletion_nodes {
+        deleted_linknodes.push(deleted_linknode);
+        last_unodes.push(last_unode_entry);
+    }
+
+    let last_linknodes =
+        fetch_linknodes_and_update_graph(&ctx, &repo, last_unodes, history_graph).await?;
+    let mut deleted_to_last_mapping: Vec<_> = deleted_linknodes
+        .iter()
+        .zip(last_linknodes.into_iter())
+        .collect();
+    deleted_to_last_mapping.sort_by_key(|(deleted_linknode, _)| *deleted_linknode);
+    deleted_to_last_mapping
+        .into_iter()
+        .group_by(|(deleted_linknode, _)| **deleted_linknode)
+        .into_iter()
+        .for_each(|(deleted_linknode, grouped_last)| {
+            history_graph.insert(
+                deleted_linknode,
+                Some(grouped_last.map(|(_, last)| last).collect()),
+            );
+        });
+    Ok(deleted_linknodes)
 }
 
 async fn fetch_linknodes_and_update_graph(
@@ -443,38 +497,30 @@ where
     TFut: Future<Output = Result<bool, Error>>,
 {
     let TraversalState {
-        history_graph,
+        mut history_graph,
         mut visited,
         mut bfs,
         prefetch,
     } = state;
 
-    let prefetch = match prefetch {
-        Some(prefetch) => prefetch,
-        _ => return Ok(None),
-    };
-    let terminate = match terminator {
-        Some(terminator) => terminator(prefetch.clone()).await?,
-        _ => false,
-    };
-    let mut history_graph = if !terminate {
-        // Now we fetched parents for `prefetch` node - put it back in the queue so we
-        // can process it's parents again
-        bfs.push_front(prefetch);
-        prefetch_and_process_history(&ctx, &repo, &path, prefetch.clone(), history_graph).await?
-    } else {
-        history_graph
-    };
+    if let Some(prefetch) = prefetch {
+        let terminate = match terminator {
+            Some(terminator) => terminator(prefetch.clone()).await?,
+            _ => false,
+        };
+        if !terminate {
+            prefetch_and_process_history(&ctx, &repo, &path, prefetch.clone(), &mut history_graph)
+                .await?;
+        } else {
+            // We won't be processing that node as we skipped fetching its ancestors.
+            let _prefetch = bfs.pop_front();
+        };
+    }
+
     let mut history = vec![];
     // process nodes to yield
     let mut next_to_fetch = None;
     while let Some(cs_id) = bfs.pop_front() {
-        // `prefetch` was already returned to the caller on the previous iteration,
-        // that's why we don't add it to the `history` here.
-        if cs_id != prefetch {
-            history.push(cs_id.clone());
-        }
-
         match history_graph.get(&cs_id) {
             Some(Some(parents)) => {
                 // parents are fetched, ready to process
@@ -488,42 +534,34 @@ where
                     STATS::find_where_file_was_deleted_ms
                         .add_value(stats.completion_time.as_millis_unchecked() as i64);
                     let deletion_nodes = deletion_nodes?;
-
-                    let mut new_unodes = vec![];
-                    for (cs_id, unode_entry) in deletion_nodes {
-                        if visited.insert(cs_id) {
-                            history.push(cs_id);
-                        }
-                        new_unodes.push(unode_entry);
-                    }
-                    let ancestor_linknodes = fetch_linknodes_and_update_graph(
-                        &ctx,
-                        &repo,
-                        new_unodes,
-                        &mut history_graph,
-                    )
-                    .await?;
-                    ancestor_linknodes
+                    process_deletion_nodes(&ctx, &repo, &mut history_graph, deletion_nodes).await?
                 } else {
                     parents.clone()
                 };
 
-                for ancestor in ancestors {
-                    if visited.insert(ancestor) {
-                        bfs.push_back(ancestor);
-                    }
-                }
+                visit(
+                    &ctx,
+                    &repo,
+                    Some(cs_id),
+                    ancestors,
+                    &mut bfs,
+                    &mut visited,
+                    &mut history,
+                )
+                .await?;
             }
             Some(None) => {
                 // parents haven't been fetched yet
                 // we want to proceed to next iteration to fetch the parents
-                if cs_id == prefetch {
+                if Some(cs_id) == prefetch {
                     return Err(format_err!(
                         "internal error: infinite loop while traversing history for {:?}",
                         path
                     ));
                 }
                 next_to_fetch = Some(cs_id);
+                // Put it back in the queue so we can process once we fetch its history
+                bfs.push_front(cs_id);
                 break;
             }
             // this should never happen as the [cs -> parents] mapping is fetched
@@ -533,6 +571,10 @@ where
         }
     }
 
+    // Terminate when there's nothing to return and nothing on BFS queue.
+    if history.is_empty() && bfs.is_empty() {
+        return Ok(None);
+    }
     Ok(Some((
         history,
         TraversalState {
@@ -595,11 +637,11 @@ async fn prefetch_and_process_history(
     repo: &BlobRepo,
     path: &Option<MPath>,
     changeset_id: ChangesetId,
-    mut history_graph: CommitGraph,
-) -> Result<CommitGraph, Error> {
+    history_graph: &mut CommitGraph,
+) -> Result<(), Error> {
     let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, path).await?;
-    process_unode_batch(fastlog_batch, &mut history_graph);
-    Ok(history_graph)
+    process_unode_batch(fastlog_batch, history_graph);
+    Ok(())
 }
 
 fn process_unode_batch(
