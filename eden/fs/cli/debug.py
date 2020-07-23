@@ -352,10 +352,24 @@ def do_buildinfo(instance: EdenInstance, out: Optional[IO[bytes]] = None) -> Non
     "gc_process_fetch", "clear and start a new recording of process fetch counts"
 )
 class GcProcessFetchCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "mount",
+            nargs="?",
+            help="The path to an EdenFS mount point. If not specified,"
+            " process fetch data will be cleared for all mounts.",
+        )
+
     def run(self, args: argparse.Namespace) -> int:
         eden = cmd_util.get_eden_instance(args)
         with eden.get_thrift_client() as client:
-            client.clearFetchCounts()
+            if args.mount:
+                instance, checkout, _rel_path = cmd_util.require_checkout(
+                    args, args.mount
+                )
+                client.clearFetchCountsByMount(bytes(checkout.path))
+            else:
+                client.clearFetchCounts()
         return 0
 
 

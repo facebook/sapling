@@ -1231,6 +1231,18 @@ void EdenServiceHandler::clearFetchCounts() {
 #endif // !_WIN32
 }
 
+void EdenServiceHandler::clearFetchCountsByMount(
+    std::unique_ptr<std::string> mountPath) {
+#ifndef _WIN32
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+  auto mount = server_->getMount(*mountPath);
+  mount->getObjectStore()->clearFetchCounts();
+
+#else
+  NOT_IMPLEMENTED();
+#endif // !_WIN32
+}
+
 void EdenServiceHandler::getAccessCounts(
     GetAccessCountsResult& result,
     int64_t duration) {
