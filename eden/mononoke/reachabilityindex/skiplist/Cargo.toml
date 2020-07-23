@@ -15,7 +15,6 @@ mononoke_types = { path = "../../mononoke_types" }
 reachabilityindex = { path = ".." }
 skiplist-thrift = { path = "../if" }
 tunables = { path = "../../tunables" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 anyhow = "1.0"
 async-trait = "0.1.29"
@@ -34,6 +33,7 @@ fixtures = { path = "../../tests/fixtures" }
 revset = { path = "../../revset" }
 test-helpers = { path = "../test-helpers" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures-old = { package = "futures", version = "0.1" }
