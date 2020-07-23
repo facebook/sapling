@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ disable treemanifest
@@ -68,7 +67,7 @@ default is internal merge:
 hg merge -r 2
 override $PATH to ensure hgmerge not visible
 
-  $ PATH="$BINDIR:/usr/sbin" "$BINDIR"/hg merge -r 2
+  $ PATH="$TMPBINDIR:$BINDIR:/usr/sbin:/usr/bin" hg merge -r 2
   merging f
   warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -114,30 +113,39 @@ simplest hgrc using false for merge:
 #if unix-permissions
 
 unexecutable file in $PATH shouldn't be found:
-
-  $ echo "echo fail" > false
+- Replace false with false2 so we dont fight with the system false
+  $ cat > .hg/hgrc <<EOF
+  > [merge-tools]
+  > false2.whatever=
+  > EOF
+  $ echo "echo fail" > false2
   $ hg up -qC 1
-  $ PATH="`pwd`:$BINDIR:/usr/sbin" "$BINDIR"/hg merge -r 2
+  $ PATH="`pwd`:$TMPBINDIR:$BINDIR:/usr/sbin:/usr/bin" hg merge -r 2
   merging f
   warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
-  $ rm false
+  $ rm false2
 
 #endif
 
 executable directory in $PATH shouldn't be found:
 
-  $ mkdir false
+  $ mkdir false2
   $ hg up -qC 1
-  $ PATH="`pwd`:$BINDIR:/usr/sbin" "$BINDIR"/hg merge -r 2
+  $ PATH="`pwd`:$TMPBINDIR:$BINDIR:/usr/sbin:/usr/bin" hg merge -r 2
   merging f
   warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
-  $ rmdir false
+  $ rmdir false2
+
+  $ cat > .hg/hgrc <<EOF
+  > [merge-tools]
+  > false.whatever=
+  > EOF
 
 true with higher .priority gets precedence:
 
@@ -1303,7 +1311,7 @@ Verify naming of temporary files and that extension is preserved:
   $ hg update -q -C 2
   $ hg merge -y -r tip --tool echo --config merge-tools.echo.args='$base $local $other $output'
   merging f and f.txt to f.txt
-  */f~base.?????? $TESTTMP/f.txt.orig */f~other.??????.txt $TESTTMP/f.txt (glob)
+  */f~base* $TESTTMP/f.txt.orig */f~other.*txt $TESTTMP/f.txt (glob)
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

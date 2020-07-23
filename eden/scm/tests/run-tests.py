@@ -3459,6 +3459,7 @@ class TestRunner(object):
                 del osenvironb[b"HGFSMONITOR_TESTS"]
 
         osenvironb[b"BINDIR"] = self._bindir
+        osenvironb[b"TMPBINDIR"] = self._tmpbindir
         osenvironb[b"PYTHON"] = PYTHON
 
         if self.options.with_python3:
