@@ -320,6 +320,7 @@ impl ChangesetPathContext {
             mpath.cloned(),
             self.changeset.id(),
             terminator,
+            (),
             history_across_deletions,
         )
         .await

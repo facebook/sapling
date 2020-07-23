@@ -6,6 +6,7 @@
  */
 
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use cloned::cloned;
@@ -61,6 +62,10 @@ pub enum HistoryAcrossDeletions {
 
 /// Returns a full history of the given path starting from the given unode in BFS order.
 ///
+/// Accepts a `Visitor` object which controls the BFS flow by filtering out the unwanted changesets
+/// before they're added to the queue, see its docs for details. If you don't need to filter the
+/// history you can provide `()` instead for default implementation.
+///
 /// Can accept a terminator function: a function on changeset id, that returns true if
 /// the history fetching on the current branch has to be terminated.
 /// The terminator will be called on changeset id when a fatslog batch is going to be
@@ -110,6 +115,7 @@ pub async fn list_file_history<Terminator, TFut>(
     path: Option<MPath>,
     changeset_id: ChangesetId,
     terminator: Option<Terminator>,
+    mut visitor: impl Visitor,
     history_across_deletions: HistoryAcrossDeletions,
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError>
 where
@@ -151,6 +157,7 @@ where
     visit(
         &ctx,
         &repo,
+        &mut visitor,
         None,
         last_changesets.clone(),
         &mut bfs,
@@ -170,6 +177,7 @@ where
                     visited,
                     bfs,
                     prefetch: None,
+                    visitor,
                 },
                 // unfold
                 move |state| {
@@ -193,17 +201,65 @@ where
         .boxed())
 }
 
+#[async_trait]
+pub trait Visitor: Send + 'static {
+    /// Filters out the changesets which should be pursued during BFS traversal of file history.
+    ///
+    /// Given `cs_ids` list returns the filtered list of changesets that should be part of the
+    /// traversal result and which should be pursues recursively.
+    ///
+    /// `descendant_cs_id` is:
+    ///  * None in the first BFS iteration
+    ///  * common descendant of the ancestors that lead us to processing them.
+    async fn visit(
+        &mut self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        descendant_cs_id: Option<ChangesetId>,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>, Error>;
+
+    /// May be called before visiting node so the visitor can prefetch neccesary
+    /// data to make the visit faster.
+    ///
+    /// This funtion is not guaranteed to be called before each visit() call.
+    //  The visit() is not guaranteed to be called later -  the traversal may terminat earlier.
+    async fn preprocess(
+        &mut self,
+        _ctx: &CoreContext,
+        _repo: &BlobRepo,
+        _descendant_id_cs_ids: Vec<(Option<ChangesetId>, Vec<ChangesetId>)>,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl Visitor for () {
+    async fn visit(
+        &mut self,
+        _ctx: &CoreContext,
+        _repo: &BlobRepo,
+        _descentant_cs_id: Option<ChangesetId>,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>, Error> {
+        Ok(cs_ids)
+    }
+}
+
 // Encapsulates all the things that should happen when the ancestors of a single history
-// are node are processed.
+// node are processed.
 async fn visit(
-    _ctx: &CoreContext, // will be used later
-    _repo: &BlobRepo,
-    _cs_id: Option<ChangesetId>,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    visitor: &mut impl Visitor,
+    cs_id: Option<ChangesetId>,
     ancestors: Vec<ChangesetId>,
     bfs: &mut VecDeque<ChangesetId>,
     visited: &mut HashSet<ChangesetId>,
     history: &mut Vec<ChangesetId>,
 ) -> Result<(), FastlogError> {
+    let ancestors = visitor.visit(ctx, repo, cs_id, ancestors).await?;
     for ancestor in ancestors {
         if visited.insert(ancestor) {
             history.push(ancestor.clone());
@@ -313,22 +369,24 @@ async fn derive_unode_entry(
 
 type CommitGraph = HashMap<ChangesetId, Option<Vec<ChangesetId>>>;
 
-struct TraversalState {
+struct TraversalState<V: Visitor> {
     history_graph: CommitGraph,
     visited: HashSet<ChangesetId>,
     bfs: VecDeque<ChangesetId>,
     prefetch: Option<ChangesetId>,
+    visitor: V,
 }
 
-async fn do_history_unfold<Terminator, TFut>(
+async fn do_history_unfold<Terminator, TFut, V>(
     ctx: CoreContext,
     repo: BlobRepo,
     path: Option<MPath>,
-    state: TraversalState,
+    state: TraversalState<V>,
     terminator: Option<Terminator>,
     history_across_deletions: HistoryAcrossDeletions,
-) -> Result<Option<(Vec<ChangesetId>, TraversalState)>, Error>
+) -> Result<Option<(Vec<ChangesetId>, TraversalState<V>)>, Error>
 where
+    V: Visitor,
     Terminator: Fn(ChangesetId) -> TFut + Clone,
     TFut: Future<Output = Result<bool, Error>>,
 {
@@ -337,6 +395,7 @@ where
         mut visited,
         mut bfs,
         prefetch,
+        mut visitor,
     } = state;
 
     if let Some(prefetch) = prefetch {
@@ -345,8 +404,15 @@ where
             _ => false,
         };
         if !terminate {
-            prefetch_and_process_history(&ctx, &repo, &path, prefetch.clone(), &mut history_graph)
-                .await?;
+            prefetch_and_process_history(
+                &ctx,
+                &repo,
+                &mut visitor,
+                &path,
+                prefetch.clone(),
+                &mut history_graph,
+            )
+            .await?;
         } else {
             // We won't be processing that node as we skipped fetching its ancestors.
             let _prefetch = bfs.pop_front();
@@ -378,6 +444,7 @@ where
                 visit(
                     &ctx,
                     &repo,
+                    &mut visitor,
                     Some(cs_id),
                     ancestors,
                     &mut bfs,
@@ -418,6 +485,7 @@ where
             visited,
             bfs,
             prefetch: next_to_fetch,
+            visitor,
         },
     )))
 }
@@ -471,12 +539,31 @@ async fn find_where_file_was_deleted(
 async fn prefetch_and_process_history(
     ctx: &CoreContext,
     repo: &BlobRepo,
+    visitor: &mut impl Visitor,
     path: &Option<MPath>,
     changeset_id: ChangesetId,
     history_graph: &mut CommitGraph,
 ) -> Result<(), Error> {
     let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, path).await?;
+    let affected_changesets: Vec<_> = fastlog_batch.iter().map(|(cs_id, _)| *cs_id).collect();
     process_unode_batch(fastlog_batch, history_graph);
+
+    visitor
+        .preprocess(
+            ctx,
+            repo,
+            affected_changesets
+                .into_iter()
+                .filter_map(|cs_id| {
+                    history_graph
+                        .get(&cs_id)
+                        .cloned()
+                        .flatten()
+                        .map(|parents| (Some(cs_id), parents))
+                })
+                .collect(),
+        )
+        .await?;
     Ok(())
 }
 
@@ -593,6 +680,7 @@ mod test {
             path(filename),
             top,
             Some(terminator),
+            (),
             HistoryAcrossDeletions::Track,
         )
         .await?;
@@ -667,6 +755,7 @@ mod test {
             path(filename),
             top,
             Some(terminator),
+            (),
             HistoryAcrossDeletions::Track,
         )
         .await?;
@@ -733,6 +822,7 @@ mod test {
             path(filename),
             prev_id,
             Some(terminator),
+            (),
             HistoryAcrossDeletions::Track,
         )
         .await?;
@@ -748,21 +838,21 @@ mod test {
     async fn test_list_history_terminator(fb: FacebookInit) -> Result<(), Error> {
         // Test history termination on one of the history branches.
         // The main branch (top) and branch A have commits that change only single file.
-        // Branch B changes 2 files and this is used as a termination condition.
+        //
         // The history is long enough so it needs to prefetch fastlog batch for both A and B
         // branches.
         //
-        //          o - top   _
-        //          |          |
-        //          o          |
-        //          :          |
-        //          o          |- single fastlog batch
-        //         / \         |
-        //    A - o   o - B    |
-        //        |   |        |
-        //        o   o        |
-        //        :   :       _| <- we want terminate here
-        //        o   o          - other two fastlog batches
+        //          o - top
+        //          |
+        //          o
+        //          :
+        //          o
+        //         / \--------- we want to terminate this branch
+        //    A - o   o - B
+        //        |   |
+        //        o   o
+        //        :   :
+        //        o   o
         //        |   |
         //        o   o
         //
@@ -781,54 +871,75 @@ mod test {
         let (b_branch, graph) = create_branch(&ctx, &repo, "B", 20, true, vec![], graph).await?;
         let b_top = *b_branch.last().unwrap();
 
-        let (main_branch, graph) =
+        let (mut main_branch, _graph) =
             create_branch(&ctx, &repo, "top", 100, false, vec![a_top, b_top], graph).await?;
         let top = *main_branch.last().unwrap();
+        main_branch.reverse();
 
-        // prune all fastlog batch fetchings
-        let terminator = Some(|_cs_id| future::ready(Ok(true)));
+        let terminator = Some(|_cs_id| future::ready(Ok(false)));
+
+        struct NothingVisitor;
+        #[async_trait]
+        impl Visitor for NothingVisitor {
+            async fn visit(
+                &mut self,
+                _ctx: &CoreContext,
+                _repo: &BlobRepo,
+                _descendant_cs_id: Option<ChangesetId>,
+                _cs_ids: Vec<ChangesetId>,
+            ) -> Result<Vec<ChangesetId>, Error> {
+                Ok(vec![])
+            }
+        };
         let history = list_file_history(
             ctx.clone(),
             repo.clone(),
             filepath.clone(),
             top.clone(),
             terminator,
+            NothingVisitor {},
             HistoryAcrossDeletions::Track,
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
 
-        // history now should represent only a single commit - the first one
-        assert_eq!(history, vec![top.clone()]);
+        // history now should be empty - the visitor prevented traversal
+        assert_eq!(history, vec![]);
 
-        // prune right branch on fastlog batch fetching
-        let terminator = move |ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| async move {
-            let cs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
-            let files = cs.file_changes_map();
-            Ok(files.len() > 1)
+        // prune right branch
+        struct SingleBranchOfHistoryVisitor;
+        #[async_trait]
+        impl Visitor for SingleBranchOfHistoryVisitor {
+            async fn visit(
+                &mut self,
+                _ctx: &CoreContext,
+                _repo: &BlobRepo,
+                _descendant_cs_id: Option<ChangesetId>,
+                cs_ids: Vec<ChangesetId>,
+            ) -> Result<Vec<ChangesetId>, Error> {
+                Ok(cs_ids.into_iter().next().into_iter().collect())
+            }
         };
-        let terminator = Some({
-            cloned!(ctx, repo);
-            move |cs_id| terminator(ctx.clone(), repo.clone(), cs_id)
-        });
+        let terminator = Some(|_cs_id| future::ready(Ok(false)));
         let history = list_file_history(
             ctx,
             repo,
             filepath,
             top,
             terminator,
+            SingleBranchOfHistoryVisitor {},
             HistoryAcrossDeletions::Track,
         )
         .await?;
         let history = history.try_collect::<Vec<_>>().await?;
 
-        // the beginning of the history should be same as bfs
-        let expected = bfs(&graph, top);
-        assert_eq!(history[..109], expected[..109]);
+        // the beginning of the history should be same as main branch
+        // main_branch.reverse();
+        assert_eq!(history[..100], main_branch[..100]);
 
-        // last 15 commits of the history should be last 15 of the branch A
+        // the second part should be just a_branch
         a_branch.reverse();
-        assert_eq!(history[109..], a_branch[5..]);
+        assert_eq!(history[100..], a_branch[..]);
 
         Ok(())
     }
@@ -881,6 +992,7 @@ mod test {
                     path,
                     cs_id,
                     terminator,
+                    (),
                     HistoryAcrossDeletions::Track,
                 )
                 .await?;
@@ -1009,6 +1121,7 @@ mod test {
                     path,
                     cs_id,
                     terminator,
+                    (),
                     HistoryAcrossDeletions::Track,
                 )
                 .await?;
@@ -1078,6 +1191,7 @@ mod test {
             MPath::new_opt(filename)?,
             bcs_id,
             terminator,
+            (),
             HistoryAcrossDeletions::Track,
         )
         .await?;
@@ -1092,6 +1206,7 @@ mod test {
             MPath::new_opt(filename)?,
             bcs_id,
             terminator,
+            (),
             HistoryAcrossDeletions::DontTrack,
         )
         .await?;
@@ -1156,6 +1271,7 @@ mod test {
             MPath::new_opt(filename)?,
             bcs_id,
             terminator,
+            (),
             HistoryAcrossDeletions::Track,
         )
         .await?;
@@ -1171,6 +1287,7 @@ mod test {
             MPath::new_opt(filename)?,
             merge,
             terminator,
+            (),
             HistoryAcrossDeletions::Track,
         )
         .await?;
