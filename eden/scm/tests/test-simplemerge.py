@@ -18,10 +18,8 @@ from __future__ import absolute_import
 import unittest
 
 from edenscm.mercurial import error, simplemerge, util
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
 from hghave import require
-
-
-require(["py2"])
 
 
 TestCase = unittest.TestCase
@@ -34,9 +32,9 @@ class Merge3(simplemerge.Merge3Text):
     All three will typically be sequences of lines."""
 
     def __init__(self, base, a, b):
-        basetext = "\n".join([i.strip("\n") for i in base] + [""])
-        atext = "\n".join([i.strip("\n") for i in a] + [""])
-        btext = "\n".join([i.strip("\n") for i in b] + [""])
+        basetext = b"\n".join([i.strip(b"\n") for i in base] + [b""])
+        atext = b"\n".join([i.strip(b"\n") for i in a] + [b""])
+        btext = b"\n".join([i.strip(b"\n") for i in b] + [b""])
         if util.binary(basetext) or util.binary(atext) or util.binary(btext):
             raise error.Abort("don't know how to merge binary files")
         simplemerge.Merge3Text.__init__(self, basetext, atext, btext, base, a, b)
@@ -53,7 +51,7 @@ def split_lines(t):
 # test case data from the gnu diffutils manual
 # common base
 TZU = split_lines(
-    """     The Nameless is the origin of Heaven and Earth;
+    b"""     The Nameless is the origin of Heaven and Earth;
      The named is the mother of all things.
 
      Therefore let there always be non-being,
@@ -70,7 +68,7 @@ TZU = split_lines(
 )
 
 LAO = split_lines(
-    """     The Way that can be told of is not the eternal Way;
+    b"""     The Way that can be told of is not the eternal Way;
      The name that can be named is not the eternal name.
      The Nameless is the origin of Heaven and Earth;
      The Named is the mother of all things.
@@ -86,7 +84,7 @@ LAO = split_lines(
 
 
 TAO = split_lines(
-    """     The Way that can be told of is not the eternal Way;
+    b"""     The Way that can be told of is not the eternal Way;
      The name that can be named is not the eternal name.
      The Nameless is the origin of Heaven and Earth;
      The named is the mother of all things.
@@ -105,7 +103,7 @@ TAO = split_lines(
 )
 
 MERGED_RESULT = split_lines(
-    """\
+    b"""\
      The Way that can be told of is not the eternal Way;
      The name that can be named is not the eternal name.
      The Nameless is the origin of Heaven and Earth;
@@ -117,12 +115,12 @@ MERGED_RESULT = split_lines(
      The two are the same,
      But after they are produced,
        they have different names.
-<<<<<<< LAO
+""" b"""<<<<<<< LAO
 =======
 
        -- The Way of Lao-Tzu, tr. Wing-tsit Chan
 
->>>>>>> TAO
+""" b""">>>>>>> TAO
 """
 )
 
@@ -133,7 +131,7 @@ class TestMerge3(TestCase):
 
     def test_no_changes(self):
         """No conflicts because nothing changed"""
-        m3 = Merge3(["aaa", "bbb"], ["aaa", "bbb"], ["aaa", "bbb"])
+        m3 = Merge3([b"aaa", b"bbb"], [b"aaa", b"bbb"], [b"aaa", b"bbb"])
 
         self.assertEqual(m3.find_unconflicted(), [(0, 2)])
 
@@ -143,10 +141,10 @@ class TestMerge3(TestCase):
 
         self.assertEqual(list(m3.merge_regions()), [("unchanged", 0, 2)])
 
-        self.assertEqual(list(m3.merge_groups()), [("unchanged", ["aaa", "bbb"])])
+        self.assertEqual(list(m3.merge_groups()), [("unchanged", [b"aaa", b"bbb"])])
 
     def test_front_insert(self):
-        m3 = Merge3(["zz"], ["aaa", "bbb", "zz"], ["zz"])
+        m3 = Merge3([b"zz"], [b"aaa", b"bbb", b"zz"], [b"zz"])
 
         # todo: should use a sentinel at end as from get_matching_blocks
         # to match without zz
@@ -157,22 +155,22 @@ class TestMerge3(TestCase):
         self.assertEqual(list(m3.merge_regions()), [("a", 0, 2), ("unchanged", 0, 1)])
 
         self.assertEqual(
-            list(m3.merge_groups()), [("a", ["aaa", "bbb"]), ("unchanged", ["zz"])]
+            list(m3.merge_groups()), [("a", [b"aaa", b"bbb"]), ("unchanged", [b"zz"])]
         )
 
     def test_null_insert(self):
-        m3 = Merge3([], ["aaa", "bbb"], [])
+        m3 = Merge3([], [b"aaa", b"bbb"], [])
         # todo: should use a sentinel at end as from get_matching_blocks
         # to match without zz
         self.assertEqual(list(m3.find_sync_regions()), [(0, 0, 2, 2, 0, 0)])
 
         self.assertEqual(list(m3.merge_regions()), [("a", 0, 2)])
 
-        self.assertEqual(list(m3.merge_lines()), ["aaa", "bbb"])
+        self.assertEqual(list(m3.merge_lines()), [b"aaa", b"bbb"])
 
     def test_no_conflicts(self):
         """No conflicts because only one side changed"""
-        m3 = Merge3(["aaa", "bbb"], ["aaa", "111", "bbb"], ["aaa", "bbb"])
+        m3 = Merge3([b"aaa", b"bbb"], [b"aaa", b"111", b"bbb"], [b"aaa", b"bbb"])
 
         self.assertEqual(m3.find_unconflicted(), [(0, 1), (1, 2)])
 
@@ -187,48 +185,69 @@ class TestMerge3(TestCase):
         )
 
     def test_append_a(self):
-        m3 = Merge3(["aaa\n", "bbb\n"], ["aaa\n", "bbb\n", "222\n"], ["aaa\n", "bbb\n"])
+        m3 = Merge3(
+            [b"aaa\n", b"bbb\n"], [b"aaa\n", b"bbb\n", b"222\n"], [b"aaa\n", b"bbb\n"]
+        )
 
-        self.assertEqual("".join(m3.merge_lines()), "aaa\nbbb\n222\n")
+        self.assertEqual(b"".join(m3.merge_lines()), b"aaa\nbbb\n222\n")
 
     def test_append_b(self):
-        m3 = Merge3(["aaa\n", "bbb\n"], ["aaa\n", "bbb\n"], ["aaa\n", "bbb\n", "222\n"])
+        m3 = Merge3(
+            [b"aaa\n", b"bbb\n"], [b"aaa\n", b"bbb\n"], [b"aaa\n", b"bbb\n", b"222\n"]
+        )
 
-        self.assertEqual("".join(m3.merge_lines()), "aaa\nbbb\n222\n")
+        self.assertEqual(b"".join(m3.merge_lines()), b"aaa\nbbb\n222\n")
 
     def test_append_agreement(self):
         m3 = Merge3(
-            ["aaa\n", "bbb\n"], ["aaa\n", "bbb\n", "222\n"], ["aaa\n", "bbb\n", "222\n"]
+            [b"aaa\n", b"bbb\n"],
+            [b"aaa\n", b"bbb\n", b"222\n"],
+            [b"aaa\n", b"bbb\n", b"222\n"],
         )
 
-        self.assertEqual("".join(m3.merge_lines()), "aaa\nbbb\n222\n")
+        self.assertEqual(b"".join(m3.merge_lines()), b"aaa\nbbb\n222\n")
 
     def test_append_clash(self):
         m3 = Merge3(
-            ["aaa\n", "bbb\n"], ["aaa\n", "bbb\n", "222\n"], ["aaa\n", "bbb\n", "333\n"]
+            [b"aaa\n", b"bbb\n"],
+            [b"aaa\n", b"bbb\n", b"222\n"],
+            [b"aaa\n", b"bbb\n", b"333\n"],
         )
 
         ml = m3.merge_lines(
-            name_a="a", name_b="b", start_marker="<<", mid_marker="--", end_marker=">>"
+            name_a=b"a",
+            name_b=b"b",
+            start_marker=b"<<",
+            mid_marker=b"--",
+            end_marker=b">>",
         )
         self.assertEqual(
-            "".join(ml), "aaa\n" "bbb\n" "<< a\n" "222\n" "--\n" "333\n" ">> b\n"
+            b"".join(ml),
+            b"aaa\n" b"bbb\n" b"<< a\n" b"222\n" b"--\n" b"333\n" b">> b\n",
         )
 
     def test_insert_agreement(self):
         m3 = Merge3(
-            ["aaa\n", "bbb\n"], ["aaa\n", "222\n", "bbb\n"], ["aaa\n", "222\n", "bbb\n"]
+            [b"aaa\n", b"bbb\n"],
+            [b"aaa\n", b"222\n", b"bbb\n"],
+            [b"aaa\n", b"222\n", b"bbb\n"],
         )
 
         ml = m3.merge_lines(
-            name_a="a", name_b="b", start_marker="<<", mid_marker="--", end_marker=">>"
+            name_a=b"a",
+            name_b=b"b",
+            start_marker=b"<<",
+            mid_marker=b"--",
+            end_marker=b">>",
         )
-        self.assertEqual("".join(ml), "aaa\n222\nbbb\n")
+        self.assertEqual(b"".join(ml), b"aaa\n222\nbbb\n")
 
     def test_insert_clash(self):
         """Both try to insert lines in the same place."""
         m3 = Merge3(
-            ["aaa\n", "bbb\n"], ["aaa\n", "111\n", "bbb\n"], ["aaa\n", "222\n", "bbb\n"]
+            [b"aaa\n", b"bbb\n"],
+            [b"aaa\n", b"111\n", b"bbb\n"],
+            [b"aaa\n", b"222\n", b"bbb\n"],
         )
 
         self.assertEqual(m3.find_unconflicted(), [(0, 1), (1, 2)])
@@ -246,18 +265,22 @@ class TestMerge3(TestCase):
         self.assertEqual(
             list(m3.merge_groups()),
             [
-                ("unchanged", ["aaa\n"]),
-                ("conflict", [], ["111\n"], ["222\n"]),
-                ("unchanged", ["bbb\n"]),
+                ("unchanged", [b"aaa\n"]),
+                ("conflict", [], [b"111\n"], [b"222\n"]),
+                ("unchanged", [b"bbb\n"]),
             ],
         )
 
         ml = m3.merge_lines(
-            name_a="a", name_b="b", start_marker="<<", mid_marker="--", end_marker=">>"
+            name_a=b"a",
+            name_b=b"b",
+            start_marker=b"<<",
+            mid_marker=b"--",
+            end_marker=b">>",
         )
         self.assertEqual(
-            "".join(ml),
-            """aaa
+            b"".join(ml),
+            b"""aaa
 << a
 111
 --
@@ -269,7 +292,9 @@ bbb
 
     def test_replace_clash(self):
         """Both try to insert lines in the same place."""
-        m3 = Merge3(["aaa", "000", "bbb"], ["aaa", "111", "bbb"], ["aaa", "222", "bbb"])
+        m3 = Merge3(
+            [b"aaa", b"000", b"bbb"], [b"aaa", b"111", b"bbb"], [b"aaa", b"222", b"bbb"]
+        )
 
         self.assertEqual(m3.find_unconflicted(), [(0, 1), (2, 3)])
 
@@ -281,9 +306,9 @@ bbb
     def test_replace_multi(self):
         """Replacement with regions of different size."""
         m3 = Merge3(
-            ["aaa", "000", "000", "bbb"],
-            ["aaa", "111", "111", "111", "bbb"],
-            ["aaa", "222", "222", "222", "222", "bbb"],
+            [b"aaa", b"000", b"000", b"bbb"],
+            [b"aaa", b"111", b"111", b"111", b"bbb"],
+            [b"aaa", b"222", b"222", b"222", b"222", b"bbb"],
         )
 
         self.assertEqual(m3.find_unconflicted(), [(0, 1), (3, 4)])
@@ -296,43 +321,43 @@ bbb
     def test_merge_poem(self):
         """Test case from diff3 manual"""
         m3 = Merge3(TZU, LAO, TAO)
-        ml = list(m3.merge_lines("LAO", "TAO"))
+        ml = list(m3.merge_lines(b"LAO", b"TAO"))
         self.log("merge result:")
-        self.log("".join(ml))
+        self.log(decodeutf8(b"".join(ml)))
         self.assertEqual(ml, MERGED_RESULT)
 
     def test_binary(self):
         with self.assertRaises(error.Abort):
-            Merge3(["\x00"], ["a"], ["b"])
+            Merge3([b"\x00"], [b"a"], [b"b"])
 
     def test_dos_text(self):
-        base_text = "a\r\n"
-        this_text = "b\r\n"
-        other_text = "c\r\n"
+        base_text = b"a\r\n"
+        this_text = b"b\r\n"
+        other_text = b"c\r\n"
         m3 = Merge3(
             base_text.splitlines(True),
             other_text.splitlines(True),
             this_text.splitlines(True),
         )
-        m_lines = m3.merge_lines("OTHER", "THIS")
+        m_lines = m3.merge_lines(b"OTHER", b"THIS")
         self.assertEqual(
-            "<<<<<<< OTHER\r\nc\r\n=======\r\nb\r\n"
-            ">>>>>>> THIS\r\n".splitlines(True),
+            b"<<<<<<< OTHER\r\nc\r\n=======\r\nb\r\n"
+            b">>>>>>> THIS\r\n".splitlines(True),
             list(m_lines),
         )
 
     def test_mac_text(self):
-        base_text = "a\r"
-        this_text = "b\r"
-        other_text = "c\r"
+        base_text = b"a\r"
+        this_text = b"b\r"
+        other_text = b"c\r"
         m3 = Merge3(
             base_text.splitlines(True),
             other_text.splitlines(True),
             this_text.splitlines(True),
         )
-        m_lines = m3.merge_lines("OTHER", "THIS")
+        m_lines = m3.merge_lines(b"OTHER", b"THIS")
         self.assertEqual(
-            "<<<<<<< OTHER\rc\r=======\rb\r" ">>>>>>> THIS\r".splitlines(True),
+            b"<<<<<<< OTHER\rc\r=======\rb\r" b">>>>>>> THIS\r".splitlines(True),
             list(m_lines),
         )
 
