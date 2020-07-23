@@ -58,7 +58,7 @@ Do infinitepush (aka commit cloud) push
   backing up stack rooted at * (glob)
   commitcloud: backed up 1 commit
 
-  $ kill $MONONOKE_PID && wait $MONONOKE_PID
+  $ killandwait $MONONOKE_PID
 
 At least once infinitepush was performed
   $ jq '.normal | contains({log_tag: "Unbundle resolved", msg: "infinitepush"})' < "$SCUBA_LOGGING_PATH" | grep true

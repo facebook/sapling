@@ -168,7 +168,7 @@ Censore the redacted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a4ce
   * changeset resolved as: * (glob)
 
 Restart mononoke
-  $ kill $MONONOKE_PID
+  $ killandwait $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"
   $ setup_common_config blob_files
   $ mononoke
