@@ -305,3 +305,36 @@ Test full log
   Author: test
   Summary: E
   
+
+Test log with path and limited to descendants of
+
+  $ scsc log --repo repo -i "$COMMIT_I" -i "$COMMIT_C" --path b --limit 10 --history-across-deletions
+  Commit: 4eddc88ca261a8115dd01c3af50a17aad50287de
+  Date: 2020-01-03 00:00:00 +00:00
+  Author: test
+  Summary: I
+  
+  Commit: 159ed529f60d23c614fe315d46a4b2eb5d27b569
+  Date: 2020-01-03 00:00:00 +00:00
+  Author: test
+  Summary: H
+  
+  Commit: 3a61e10442a9b76f8826b05e7ef1a60d33c3bc2d
+  Date: 2020-01-01 00:00:00 +00:00
+  Author: test
+  Summary: F
+  
+  Commit: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
+  Date: 2019-01-01 00:00:00 +00:00
+  Author: test
+  Summary: E
+  
+  Commit: dba4093ee164cd983101ff9e37751e2a5465c6a9
+  Date: 2017-01-01 00:00:00 +00:00
+  Author: test
+  Summary: C
+  
+
+
+
+
