@@ -33,8 +33,8 @@ Config::
   port = 11101
 """
 
+import base64
 import hashlib
-import json
 import os
 import random
 import socket
@@ -46,6 +46,7 @@ from edenscm.mercurial import (
     encoding,
     error,
     extensions,
+    json,
     node,
     pycompat,
     util,
@@ -181,7 +182,10 @@ class pathcopiesserializer(jsonserializer):
     @classmethod
     def serialize(cls, copydict):
         encoded = dict(
-            (k.encode("base64"), v.encode("base64"))
+            (
+                pycompat.decodeutf8(base64.b64encode(pycompat.encodeutf8(k))),
+                pycompat.decodeutf8(base64.b64encode(pycompat.encodeutf8(v))),
+            )
             for (k, v) in pycompat.iteritems(copydict)
         )
         return super(pathcopiesserializer, cls).serialize(encoded)
@@ -190,7 +194,10 @@ class pathcopiesserializer(jsonserializer):
     def deserialize(cls, string):
         encoded = super(pathcopiesserializer, cls).deserialize(string)
         return dict(
-            (k.decode("base64"), v.decode("base64"))
+            (
+                pycompat.decodeutf8(base64.b64decode(pycompat.encodeutf8(k))),
+                pycompat.decodeutf8(base64.b64decode(pycompat.encodeutf8(v))),
+            )
             for k, v in pycompat.iteritems(encoded)
         )
 
@@ -223,7 +230,12 @@ class buildstatusserializer(jsonserializer):
         ls = [list(status[i]) for i in range(7)]
         ll = []
         for s in ls:
-            ll.append([f.encode("base64") for f in s])
+            ll.append(
+                [
+                    pycompat.decodeutf8(base64.b64encode(pycompat.encodeutf8(f)))
+                    for f in s
+                ]
+            )
         return super(buildstatusserializer, cls).serialize(ll)
 
     @classmethod
@@ -231,7 +243,12 @@ class buildstatusserializer(jsonserializer):
         ll = super(buildstatusserializer, cls).deserialize(string)
         ls = []
         for l in ll:
-            ls.append([f.decode("base64") for f in l])
+            ls.append(
+                [
+                    pycompat.decodeutf8(base64.b64decode(pycompat.encodeutf8(f)))
+                    for f in l
+                ]
+            )
         return status(*ls)
 
 
@@ -369,6 +386,8 @@ def cacheset(key, value, serializer, ui, _adjusted=False):
 
 
 def checksum(key, value):
+    key = pycompat.encodeutf8(key)
+    value = pycompat.encodeutf8(value)
     s = hashlib.sha1(key)
     s.update(value)
     return node.hex(s.digest())
