@@ -465,9 +465,9 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     # the base and present in the source.
     # Presence in the base is important to exclude added files, presence in the
     # source is important to exclude removed files.
-    missingfiles = filter(
+    missingfiles = list(filter(
         lambda f: f not in mdst and f in base and f in csrc, changedfiles
-    )
+    ))
     if missingfiles:
         # Use the following file name heuristic to find moves: moves are
         # usually either directory moves or renames of the files in the

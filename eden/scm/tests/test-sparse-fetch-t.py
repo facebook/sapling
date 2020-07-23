@@ -13,9 +13,6 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 os.environ["EDENSCM_TRACE_LEVEL"] = "trace"
 idtopath = {}
 
@@ -36,7 +33,7 @@ def collectprefetch(command):
         (sh % command).output
 
     ids = []
-    for span in d.treespans().values()[0].flatten():
+    for span in list(d.treespans().values())[0].flatten():
         name = span.get("name")
         if name == "tree::store::prefetch":
             ids += span["ids"].split()
