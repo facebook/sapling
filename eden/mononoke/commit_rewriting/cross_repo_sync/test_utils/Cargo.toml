@@ -17,7 +17,7 @@ blobstore = { path = "../../../blobstore" }
 bookmarks = { path = "../../../bookmarks" }
 context = { path = "../../../server/context" }
 cross_repo_sync = { path = ".." }
-megarepolib = { path = "../../../megarepolib" }
+megarepolib = { path = "../../megarepolib" }
 metaconfig_types = { path = "../../../metaconfig/types" }
 mononoke_types = { path = "../../../mononoke_types" }
 sql_construct = { path = "../../../common/sql_construct" }
