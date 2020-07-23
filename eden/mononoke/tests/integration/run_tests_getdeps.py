@@ -71,7 +71,6 @@ if args.tests or args.rerun_failed:
     tests = list(tests)
 else:
     excluded_tests = {
-        "test-backfill-git-mapping.t",  # "${ENV^^}" problem
         "test-backsync-forever.t",  # Unknown issue
         "test-backsyncer-merges.t",  # Missing BACKSYNCER
         "test-blobimport-inline.t",  # Illegal byte sequence and "sed -i"

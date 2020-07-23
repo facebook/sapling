@@ -39,9 +39,9 @@ import testing repo to mononoke
   * using repo "repo" repoid RepositoryId(0) (glob)
 
 check that mapping is populated
-  $ echo ${HG_HASH_1^^}
+  $ tr "[:lower:]" "[:upper:]" <<< "${HG_HASH_1}"
   D000F571737066778CC230F7DC9A763180FDE257
-  $ echo ${HG_HASH_2^^}
+  $ tr "[:lower:]" "[:upper:]" <<< "${HG_HASH_2}"
   87B89069092550479FDF0EB22E632E031AF9C3D9
 
   $ get_bonsai_git_mapping
