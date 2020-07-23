@@ -634,7 +634,93 @@ fn move_skippable_nodes(
     (no_skiplist_edges, node_frontier)
 }
 
-// Returns a frontier "C" that satisfy the following condition:
+/// Advances the node frontier towards the target generation by a single conceptual step.
+///
+/// For an input frontier IN returns: advanceed frontier OUT a number "N" (skip
+/// size) that satisfy the following conditions:
+///
+/// - Max generation number in OUT + N is the max generation in frontier IN
+/// - Any ancestor of IN with generation <= "target_gen" is also an ancestor of OUT
+///
+/// As long as the max_gen in IN > max_gen,  N is greater than 0
+async fn process_frontier_single_skip(
+    ctx: &CoreContext,
+    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    skip_edges: &Arc<SkiplistEdgeMapping>,
+    mut node_frontier: NodeFrontier,
+    target_gen: Generation,
+) -> Result<(NodeFrontier, u64), Error> {
+    let old_max_gen = if let Some(val) = node_frontier.max_gen() {
+        if val <= target_gen {
+            return Ok((node_frontier, 0));
+        }
+        val
+    } else {
+        return Err(ErrorKind::ProgrammingError("frontier can't be empty").into());
+    };
+
+    let all_cs_ids = node_frontier
+        .remove_max_gen()
+        .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?;
+    let (no_skiplist_edges, skipped_frontier) = move_skippable_nodes(
+        skip_edges.clone(),
+        all_cs_ids.into_iter().collect(),
+        target_gen,
+    );
+    if skipped_frontier.is_empty() {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SkiplistNoskipIterations);
+    } else {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SkiplistSkipIterations);
+        if let Some(new) = skipped_frontier.max_gen() {
+            ctx.perf_counters().add_to_counter(
+                PerfCounterType::SkiplistSkippedGenerations,
+                (old_max_gen.value() - new.value()) as i64,
+            );
+        }
+    }
+    let gen_cs = no_skiplist_edges
+        .into_iter()
+        .map(|cs_id| async move {
+            Ok::<_, Error>(stream::iter(
+                get_parents(ctx, changeset_fetcher, cs_id)
+                    .await?
+                    .into_iter()
+                    .map(Ok::<_, Error>),
+            ))
+        })
+        .collect::<FuturesUnordered<_>>()
+        .try_flatten()
+        .and_then(|p| {
+            cloned!(ctx, changeset_fetcher);
+            async move {
+                let gen_num = changeset_fetcher
+                    .get_generation_number(ctx.clone(), p)
+                    .compat()
+                    .await?;
+                let res: Result<_, Error> = Ok((p, gen_num));
+                res
+            }
+        })
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter();
+
+    node_frontier.extend(gen_cs);
+
+    for (gen, s) in skipped_frontier {
+        for entry in s {
+            node_frontier.insert((entry, gen));
+        }
+    }
+    let new_max_gen = node_frontier
+        .max_gen()
+        .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?;
+    Ok((node_frontier, old_max_gen.value() - new_max_gen.value()))
+}
+
+/// Returns a frontier "C" that satisfy the following condition:
 /// - Max generation number in "C" is <= "max_gen"
 /// - Any ancestor of "node_frontier" with generation <= "max_gen" is also an ancestor of "C"
 async fn process_frontier(
@@ -644,65 +730,26 @@ async fn process_frontier(
     node_frontier: NodeFrontier,
     max_gen: Generation,
 ) -> Result<NodeFrontier, Error> {
-    let mut node_frontier = node_frontier;
     let max_skips_without_yield = tunables::tunables().get_skiplist_max_skips_without_yield();
     let mut skips_without_yield = 0;
+    let mut node_frontier = node_frontier;
 
-    while let Some(val) = node_frontier.max_gen() {
-        if val <= max_gen {
+    loop {
+        let (new_node_frontier, step_size) = process_frontier_single_skip(
+            ctx,
+            changeset_fetcher,
+            skip_edges,
+            node_frontier,
+            max_gen,
+        )
+        .await?;
+        node_frontier = new_node_frontier;
+        if step_size == 0 {
             break;
         }
-        let all_cs_ids = node_frontier.remove_max_gen().unwrap();
-        let (no_skiplist_edges, skipped_frontier) = move_skippable_nodes(
-            skip_edges.clone(),
-            all_cs_ids.into_iter().collect(),
-            max_gen,
-        );
-        if skipped_frontier.is_empty() {
-            ctx.perf_counters()
-                .increment_counter(PerfCounterType::SkiplistNoskipIterations);
-        } else {
-            ctx.perf_counters()
-                .increment_counter(PerfCounterType::SkiplistSkipIterations);
-            if let Some(new) = skipped_frontier.max_gen() {
-                ctx.perf_counters().add_to_counter(
-                    PerfCounterType::SkiplistSkippedGenerations,
-                    (val.value() - new.value()) as i64,
-                );
-            }
-        }
-        let gen_cs = no_skiplist_edges
-            .into_iter()
-            .map(|cs_id| async move {
-                Ok::<_, Error>(stream::iter(
-                    get_parents(ctx, changeset_fetcher, cs_id)
-                        .await?
-                        .into_iter()
-                        .map(Ok::<_, Error>),
-                ))
-            })
-            .collect::<FuturesUnordered<_>>()
-            .try_flatten()
-            .and_then(|p| {
-                cloned!(ctx, changeset_fetcher);
-                async move {
-                    let gen_num = changeset_fetcher
-                        .get_generation_number(ctx.clone(), p)
-                        .compat()
-                        .await?;
-                    let res: Result<_, Error> = Ok((p, gen_num));
-                    res
-                }
-            })
-            .try_collect::<Vec<_>>()
-            .await?
-            .into_iter();
-
-        node_frontier.extend(gen_cs);
-
-        for (gen, s) in skipped_frontier {
-            for entry in s {
-                node_frontier.insert((entry, gen));
+        if let Some(val) = node_frontier.max_gen() {
+            if val <= max_gen {
+                break;
             }
         }
         skips_without_yield += 1;
