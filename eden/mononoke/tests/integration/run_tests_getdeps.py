@@ -74,7 +74,6 @@ else:
         "test-backfill-git-mapping.t",  # "${ENV^^}" problem
         "test-backsync-forever.t",  # Unknown issue
         "test-backsyncer-merges.t",  # Missing BACKSYNCER
-        "test-blobimport-derived-data.t",  # "|&" problem
         "test-blobimport-inline.t",  # Illegal byte sequence and "sed -i"
         "test-blobimport-lfs.t",  # Timed out
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
@@ -96,7 +95,6 @@ else:
         "test-hook-tailer.t",  # Issue with hggit extension
         "test-hooks.t",  # Hooks are not in OSS yet
         "test-inconsistent-hash.t",  # Illegal byte sequence and "sed -i"
-        "test-infinitepush-hydrated.t",  # "|&" problem
         "test-infinitepush-lfs.t",  # Timed out
         "test-large-path-and-content.t",  # Complex bash issues
         "test-lfs-copytracing.t",  # Timed out

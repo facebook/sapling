@@ -106,7 +106,7 @@ check unhydrated infinitepush pulls
   $ cd "$TESTTMP/repo-pull-unhydrated"
 
 -- do a public pull.
-  $ hgmn pull |& grep "changesets"
+  $ hgmn pull 2>&1 | grep "changesets"
   adding changesets
   added * changesets with 0 changes to 0 files (glob)
   $ tglogpnr -r "draft()"
@@ -190,7 +190,7 @@ check hydrated infinitepush pulls
   $ cd "$TESTTMP/repo-pull-hydrated"
 
 -- do a public pull.
-  $ hgmn pull |& grep "changesets"
+  $ hgmn pull 2>&1 | grep "changesets"
   adding changesets
   added * changesets with 0 changes to 0 files (glob)
   $ tglogpnr -r "draft()"
