@@ -25,6 +25,21 @@ REPONAME=repo
 COMMON_ARGS=(--skip-caching --mysql-master-only --tunables-config "file:$TESTTMP/mononoke_tunables.json")
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 
+case "$(uname -s)" in
+  # Workarounds for running tests on MacOS
+  Darwin*)
+    # As opposed to the GNU version wc -l outputs number of lines prefixed by
+    # whitespace. This function will strip the whitespaces on MacOS.
+    function count_stdin_lines {
+      wc -l "$@" | sed -E "s/^[[:space:]]+//"
+    }
+  ;;
+  *)
+    function count_stdin_lines {
+      wc -l "$@"
+    }
+esac
+
 function get_free_socket {
 
 # From https://unix.stackexchange.com/questions/55913/whats-the-easiest-way-to-find-an-unused-local-port

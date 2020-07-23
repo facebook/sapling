@@ -111,7 +111,7 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
 
-  $ ls $TESTTMP/blobstore/blobs | grep "alias.content" | wc -l
+  $ ls $TESTTMP/blobstore/blobs | grep "alias.content" | count_stdin_lines
   0
 
   $ hgmn update -r master_bookmark -v

@@ -30,7 +30,7 @@ Base case, check can walk fine
   Walked* (glob)
 
 Delete all data from one side of the multiplex
-  $ ls blobstore/0/blobs/* | wc -l
+  $ ls blobstore/0/blobs/* | count_stdin_lines
   30
   $ rm blobstore/0/blobs/*
 
@@ -75,7 +75,7 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly 
 
 Check scuba data
 Note - we might get duplicate reports, we just expect that there should not be a lot of them
-  $ LINES="$(wc -l < scuba-reportonly.json)"
+  $ LINES="$(count_stdin_lines < scuba-reportonly.json)"
   $ [[ $LINES -lt 50 ]]
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .repo, .walk_type, .ctime ] | @csv' < scuba-reportonly.json | sort | uniq
   1,"scrub_repair","repo0000.alias.gitsha1.7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54","repo","scrub",1* (glob)
@@ -118,7 +118,7 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode
 
 Check scuba data
 Note - we might get duplicate repairs, we just expect that there should not be a lot of them
-  $ LINES="$(wc -l < scuba-repair.json)"
+  $ LINES="$(count_stdin_lines < scuba-repair.json)"
   $ [[ $LINES -lt 50 ]]
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .repo, .walk_type, .ctime ] | @csv' < scuba-repair.json | sort | uniq
   0,"scrub_repair","repo0000.alias.gitsha1.7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54","repo","scrub",1* (glob)
@@ -159,7 +159,7 @@ Check that all is repaired by running on only the deleted side
   Walked* (glob)
 
 Check the files after restore.  The blobstore filenode_lookup representation is currently not traversed, so remains as a difference
-  $ ls blobstore/0/blobs/* | wc -l
+  $ ls blobstore/0/blobs/* | count_stdin_lines
   27
   $ diff -ur blobstore/0/blobs/ blobstore/1/blobs/
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.61585a6b75335f6ec9540101b7147908564f2699dcad59134fdf23cb086787ad

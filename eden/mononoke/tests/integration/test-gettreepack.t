@@ -61,7 +61,7 @@ Make sure that cache is empty
 
 Make sure that new entries were downloaded
   $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
-  $ ls $TESTTMP/cachepath/repo/packs/manifests | wc -l
+  $ ls $TESTTMP/cachepath/repo/packs/manifests | count_stdin_lines
   8
 
 Update to the revisions. Change the path to make sure that gettreepack command is

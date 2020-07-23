@@ -83,7 +83,7 @@ Fetch with designated ndoes
   2 trees fetched over * (glob)
 
 Confirm that Mononoke logged commands, but didn't log any missing filenodes
-  $ grep "Command processed" "$SCUBA_LOGGING_PATH" | wc -l
+  $ grep "Command processed" "$SCUBA_LOGGING_PATH" | count_stdin_lines
   38
   $ grep NullLinknode "$SCUBA_LOGGING_PATH"
   [1]

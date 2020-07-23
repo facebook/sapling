@@ -27,10 +27,10 @@ Base case, check can walk fine
   Walked* (glob)
 
 Delete a gitsha1 alias so that we get errors
-  $ ls blobstore/blobs/* | wc -l
+  $ ls blobstore/blobs/* | count_stdin_lines
   30
   $ rm blobstore/blobs/*.alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c*
-  $ ls blobstore/blobs/* | wc -l
+  $ ls blobstore/blobs/* | count_stdin_lines
   29
 
 Check we get an error due to the missing aliases
@@ -64,7 +64,7 @@ Check counts with error-as-data-node-type
   1 Walked* (glob)
 
 Check scuba data
-  $ wc -l < scuba.json
+  $ count_stdin_lines < scuba.json
   1
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .edge_type, .node_key, .node_type, .repo, .walk_type ] | @csv' < scuba.json | sort
   1,"step","FileContentMetadataToGitSha1Alias","alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c","AliasContentMapping","repo","scrub"

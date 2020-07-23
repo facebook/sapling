@@ -18,11 +18,11 @@ setup configuration
   blobimporting
 
 Base case, check the stores have expected counts
-  $ ls blobstore/0/blobs/ | wc -l
+  $ ls blobstore/0/blobs/ | count_stdin_lines
   30
-  $ ls blobstore/1/blobs/ | wc -l
+  $ ls blobstore/1/blobs/ | count_stdin_lines
   30
-  $ ls blobstore/2/blobs/ | wc -l
+  $ ls blobstore/2/blobs/ | count_stdin_lines
   30
 
 Check that healer queue has all items
@@ -36,11 +36,11 @@ blobimport them into Mononoke storage again, but with failures on one side
   $ blobimport repo-hg/.hg repo --blobstore-write-chaos-rate=1
 
 Check the stores have expected counts
-  $ ls blobstore/0/blobs/ | wc -l
+  $ ls blobstore/0/blobs/ | count_stdin_lines
   0
-  $ ls blobstore/1/blobs/ | wc -l
+  $ ls blobstore/1/blobs/ | count_stdin_lines
   30
-  $ ls blobstore/2/blobs/ | wc -l
+  $ ls blobstore/2/blobs/ | count_stdin_lines
   30
 
 Check that healer queue has successful items

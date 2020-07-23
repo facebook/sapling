@@ -18,9 +18,9 @@ setup configuration in usual uncompressed way
   blobimporting
 
 Check the stores have expected counts
-  $ ls blobstore/0/blobs/ | wc -l
+  $ ls blobstore/0/blobs/ | count_stdin_lines
   30
-  $ ls blobstore/1/blobs/ | wc -l
+  $ ls blobstore/1/blobs/ | count_stdin_lines
   30
 
 Check that the packed sizes are larger due to the packblob wrappers on store 0

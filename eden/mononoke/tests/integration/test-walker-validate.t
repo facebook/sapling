@@ -42,7 +42,7 @@ validate, expecting validation fails
   Nodes,Pass,Fail:39,2,1; EdgesChecked:7; CheckType:Pass,Fail Total:2,1 HgLinkNodePopulated:2,1
 
 Check scuba data
-  $ wc -l < scuba.json
+  $ count_stdin_lines < scuba.json
   1
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_path, .node_type, .repo, .src_node_key, .src_node_path, .src_node_type, .via_node_key, .via_node_path, .via_node_type, .walk_type ] | @csv' < scuba.json | sort
   1,"hg_link_node_populated","hgfilenode.sha1.35e7525ce3a48913275d7061dd9a867ffef1e34d","B","HgFileNode","repo","hgmanifest.sha1.*","(none)","HgManifest","hgchangeset.sha1.*",,"HgChangeset","validate" (glob)

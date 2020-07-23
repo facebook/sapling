@@ -19,13 +19,13 @@ setup configuration
 
 check blobstore numbers, walk will do some more steps for mappings
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
-  $ BONSAICOUNT=$(ls $BLOBPREFIX.changeset.* $BLOBPREFIX.content.* $BLOBPREFIX.content_metadata.* | wc -l)
+  $ BONSAICOUNT=$(ls $BLOBPREFIX.changeset.* $BLOBPREFIX.content.* $BLOBPREFIX.content_metadata.* | count_stdin_lines)
   $ echo "$BONSAICOUNT"
   9
-  $ HGCOUNT=$(ls $BLOBPREFIX.* | grep -E '.(filenode_lookup|hgchangeset|hgfilenode|hgmanifest).' | wc -l)
+  $ HGCOUNT=$(ls $BLOBPREFIX.* | grep -E '.(filenode_lookup|hgchangeset|hgfilenode|hgmanifest).' | count_stdin_lines)
   $ echo "$HGCOUNT"
   12
-  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .alias. | wc -l)
+  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .alias. | count_stdin_lines)
   $ echo "$BLOBCOUNT"
   27
 

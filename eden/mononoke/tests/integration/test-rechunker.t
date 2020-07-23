@@ -50,5 +50,5 @@
   $ mononoke_rechunker "$FILENODE"
   * using repo "repo" repoid RepositoryId(0) (glob)
 
-  $ ls "$TESTTMP/blobstore/blobs" | grep chunk | wc -l
+  $ ls "$TESTTMP/blobstore/blobs" | grep chunk | count_stdin_lines
   2

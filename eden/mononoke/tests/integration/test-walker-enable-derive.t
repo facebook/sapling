@@ -44,7 +44,7 @@ setup configuration
 
 Check counts
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
-  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | wc -l)
+  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | count_stdin_lines)
   $ echo "$BLOBCOUNT"
   30
 
@@ -65,7 +65,7 @@ check the metadata base case
 
 delete the hg blob forms
   $ ls $BLOBPREFIX.* | grep -E '.(filenode_lookup|hgchangeset|hgfilenode|hgmanifest).' | xargs rm
-  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | wc -l)
+  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | count_stdin_lines)
   $ echo "$BLOBCOUNT"
   18
 
@@ -93,7 +93,7 @@ Do a walk again, with --enable-derive, should succeed with the full count
 
 check the blobs were re-derived
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
-  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | wc -l)
+  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | count_stdin_lines)
   $ echo "$BLOBCOUNT"
   36
 
@@ -114,7 +114,7 @@ check the base case with all the alias types present in blobstore
 
 delete the derived file metadata
   $ ls $BLOBPREFIX.* | grep -E '.(alias|content_metadata).' | xargs rm
-  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | wc -l)
+  $ BLOBCOUNT=$(ls $BLOBPREFIX.* | count_stdin_lines)
   $ echo "$BLOBCOUNT"
   24
 

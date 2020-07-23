@@ -77,7 +77,7 @@ Do a push, while bundle preservation is enabled
   searching for changes
   updating bookmark master_bookmark
 
-  $ ls $TESTTMP/blobstore/blobs | grep rawbundle2 | wc -l
+  $ ls $TESTTMP/blobstore/blobs | grep rawbundle2 | count_stdin_lines
   1
 
 Do a pushrebase, while preservation is enabled
@@ -90,5 +90,5 @@ Do a pushrebase, while preservation is enabled
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
-  $ ls $TESTTMP/blobstore/blobs | grep rawbundle2 | wc -l
+  $ ls $TESTTMP/blobstore/blobs | grep rawbundle2 | count_stdin_lines
   2

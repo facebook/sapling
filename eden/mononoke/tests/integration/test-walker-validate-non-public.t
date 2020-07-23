@@ -71,7 +71,7 @@ validate, expect failures on phase info, as we now point to a non-public commit
   Nodes,Pass,Fail:56,7,1; EdgesChecked:16; CheckType:Pass,Fail Total:7,1 BonsaiChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:4,0
 
 Check scuba data
-  $ wc -l < scuba.json
+  $ count_stdin_lines < scuba.json
   1
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_path, .node_type, .repo, .src_node_key, .src_node_path, .src_node_type, .via_node_key, .via_node_path, .via_node_type, .walk_type ] | @csv' < scuba.json | sort
   1,"bonsai_phase_is_public","changeset.blake2.2b06a8547bfe6a3ac79392aef3fa7f3f45a82f4e0beb95c4fa2b914c34b5b215",,"BonsaiPhaseMapping","repo","changeset.blake2.2b06a8547bfe6a3ac79392aef3fa7f3f45a82f4e0beb95c4fa2b914c34b5b215",,"BonsaiChangeset","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b",,"HgChangeset","validate"

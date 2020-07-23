@@ -44,7 +44,7 @@ Check reads throttle
   Took Long Enough Read
 
 Delete all data from one side of the multiplex
-  $ ls blobstore/0/blobs/* | wc -l
+  $ ls blobstore/0/blobs/* | count_stdin_lines
   30
   $ rm blobstore/0/blobs/*
 
@@ -64,5 +64,5 @@ Check writes throttle in Repair mode
   Took Long Enough Repair
 
 Check repair happened
-  $ ls blobstore/0/blobs/* | wc -l
+  $ ls blobstore/0/blobs/* | count_stdin_lines
   27
