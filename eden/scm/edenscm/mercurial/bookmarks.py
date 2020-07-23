@@ -597,8 +597,9 @@ def binaryencode(bookmarks):
     for book, node in bookmarks:
         if not node:  # None or ''
             node = wdirid
+        book = pycompat.encodeutf8(book)
         binarydata.append(_binaryentry.pack(node, len(book)))
-        binarydata.append(pycompat.encodeutf8(book))
+        binarydata.append(book)
     return b"".join(binarydata)
 
 

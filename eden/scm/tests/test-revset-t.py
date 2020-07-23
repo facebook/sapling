@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -7,11 +8,11 @@
 from __future__ import absolute_import
 
 import os
+import sys
 
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
-
-feature.require(["py2"])
+from edenscm.mercurial.pycompat import decodeutf8
 
 
 sh % "enable commitextras"
@@ -180,7 +181,7 @@ sh % "setbranch all"
 sh % "hg co 4" == """
     0 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (leaving bookmark .a.b.c.)"""
-sh % "setbranch '\xc3\xa9'"
+sh % decodeutf8(b"setbranch '\xc3\xa9'")
 sh % "commit -Aqm9"
 
 sh % "hg book -fr 6 1.0"
@@ -349,11 +350,19 @@ sh % "try -- -a-b-c--a" == r"""
         (symbol 'a')))
     abort: unknown revision '-a'!
     [255]"""
-sh % "try '\xc3\xa9'" == r"""
-    (symbol '\xc3\xa9')
-    * set:
-    <baseset [8]>
-    8"""
+
+if sys.version_info[0] >= 3:
+    sh % decodeutf8(b"try '\xc3\xa9'") == """
+        (symbol 'é')
+        * set:
+        <baseset [8]>
+        8"""
+else:
+    sh % "try '\xc3\xa9'" == r"""
+        (symbol '\xc3\xa9')
+        * set:
+        <baseset [8]>
+        8"""
 
 # no quoting needed
 
@@ -452,7 +461,7 @@ sh % "log 'date('" == r"""
           ^ here)
     [255]"""
 sh % "log 'date(\"\\xy\")'" == r"""
-    hg: parse error: invalid \x escape
+    hg: parse error: invalid \x escape* (glob)
     [255]"""
 sh % "log 'date(tip)'" == r"""
     hg: parse error: invalid date: 'tip'
@@ -1286,14 +1295,14 @@ sh % "log 'follow()'" == r"""
     4
     8
     9"""
-sh % "log 'grep(\"issue\\d+\")'" == "6"
+sh % "log 'grep(\"issue\\\\d+\")'" == "6"
 sh % "try 'grep(\"(\")'" == r"""
     (func
       (symbol 'grep')
       (string '('))
-    hg: parse error: invalid match pattern: unbalanced parenthesis
+    hg: parse error: invalid match pattern: * (glob)
     [255]"""
-sh % "try 'grep(\"\\bissue\\d+\")'" == r"""
+sh % "try 'grep(\"\\bissue\\\\d+\")'" == r"""
     (func
       (symbol 'grep')
       (string '\x08issue\\d+'))
@@ -1790,7 +1799,7 @@ sh % "hg ci -qAm 0"
 for i in [2463, 2961, 6726, 78127]:
     sh.hg("up", "-q", "0")
     with open("a", "wb") as f:
-        f.write("%s\n" % i)
+        f.write(b"%i\n" % i)
     sh.hg("ci", "-qm", "%s" % i)
 sh % "hg up -q null"
 sh % "hg log -r '0:wdir()' -T '{rev}:{node} {shortest(node, 3)}\\n'" == r"""
