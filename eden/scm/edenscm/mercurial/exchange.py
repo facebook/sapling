@@ -178,13 +178,14 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
 
 def readbundle(ui, fh, fname, vfs=None):
-    header = pycompat.decodeutf8(changegroup.readexactly(fh, 4), errors="replace")
+    rawheader = changegroup.readexactly(fh, 4)
+    header = pycompat.decodeutf8(rawheader, errors="replace")
 
     alg = None
     if not fname:
         fname = "stream"
-        if not header.startswith("HG") and header.startswith("\0"):
-            fh = changegroup.headerlessfixup(fh, header)
+        if not header.startswith("HG") and rawheader.startswith(b"\0"):
+            fh = changegroup.headerlessfixup(fh, rawheader)
             header = "HG10"
             alg = "UN"
     elif vfs:
