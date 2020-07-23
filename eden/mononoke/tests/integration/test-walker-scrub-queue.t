@@ -28,7 +28,7 @@ Check that healer queue has successful items
   60
 
 Check that scrub doesnt report issues despite one store being missing, as the entries needed are on the queue and less than N minutes old
-  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub --scrub-blobstore-action=ReportOnly -I deep -q --bookmark master_bookmark --scuba-log-file scuba-reportonly.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub --scrub-blobstore-action=ReportOnly -I deep -q --bookmark master_bookmark --scuba-log-file scuba-reportonly.json 2>&1 | strip_glog | sed -Ee 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)

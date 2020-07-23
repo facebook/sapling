@@ -53,7 +53,7 @@ Check error as data fails if not in readonly-storage mode
   Error: Execution failed
 
 Check counts with error-as-data-node-type
-  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub --error-as-data-node-type AliasContentMapping -I deep -q --bookmark master_bookmark --scuba-log-file=scuba.json 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub --error-as-data-node-type AliasContentMapping -I deep -q --bookmark master_bookmark --scuba-log-file=scuba.json 2>&1 | strip_glog | sed -Ee 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
@@ -82,7 +82,7 @@ Check error-as-data-edge-type, should get an error on FileContentMetadataToGitSh
   Error: Execution failed
 
 Check error-as-data-edge-type, should get no errors as FileContentMetadataToGitSha1Alias has its errors converted to data
-  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub --error-as-data-node-type AliasContentMapping --error-as-data-edge-type FileContentMetadataToGitSha1Alias -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub --error-as-data-node-type AliasContentMapping --error-as-data-edge-type FileContentMetadataToGitSha1Alias -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -Ee 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)

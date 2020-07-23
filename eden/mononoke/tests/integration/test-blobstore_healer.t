@@ -56,7 +56,7 @@ Check that healer queue has successful items
 
 Run the heal, with write errors injected, simulating store still bad
   $ function count_log() {
-  >  sed -re 's/^(Adding source blobstores \[BlobstoreId\(1\), BlobstoreId\(2\)\] to the queue so that failed destination blob stores \[BlobstoreId\(0\)\] will be retried later).*/\1/' |
+  >  sed -Ee 's/^(Adding source blobstores \[BlobstoreId\(1\), BlobstoreId\(2\)\] to the queue so that failed destination blob stores \[BlobstoreId\(0\)\] will be retried later).*/\1/' |
   >  uniq -c | sed 's/^ *//'
   > }
   $ mononoke_blobstore_healer --blobstore-write-chaos-rate 1 -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 | strip_glog | count_log | grep -v "speed" | grep -E -v "^1 (Monitoring|Discovered) regions:.*"
