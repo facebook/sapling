@@ -105,6 +105,7 @@ def reposetup(ui, repo):
         "command_info",
         reporoot=replaceuser(repo.root),
         reposharedroot=replaceuser(repo.sharedroot),
+        python_version=sys.version,
     )
 
     # Log the current directory bucketed to top-level directories, if enabled.
