@@ -994,6 +994,61 @@ impl SkiplistIndex {
         }
         Err(ErrorKind::ProgrammingError("impossible state during LCA computation").into())
     }
+
+    /// Find all merge commits on the path between two nodes.
+    /// where there might be more than one such ancestor, this function is guaranteed to
+    /// return all the common ancestors with highest generation number.
+    ///
+    /// Works by first doing a skiplist-based walk from descendant to ancestor's generation
+    /// and then backtracking to find the only visited merge nodes on the path to ancestor.
+    pub async fn find_merges_between(
+        &self,
+        ctx: &CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        ancestor: ChangesetId,
+        descendant: ChangesetId,
+    ) -> Result<Vec<ChangesetId>, Error> {
+        let ancestor_gen = fetch_generation(ctx, changeset_fetcher, ancestor).await?;
+        let node_frontier =
+            NodeFrontier::new_from_single_node(&ctx, changeset_fetcher.clone(), descendant).await?;
+        let mut trace = SkiplistTraversalTrace::new();
+
+        let node_frontier = process_frontier(
+            &ctx,
+            changeset_fetcher,
+            &self.skip_list_edges,
+            node_frontier,
+            ancestor_gen,
+            &Some(&mut trace),
+        )
+        .await?;
+        if match node_frontier.get_all_changesets_for_gen_num(ancestor_gen) {
+            Some(cs_ids) => !cs_ids.contains(&ancestor),
+            None => true,
+        } {
+            return Err(ErrorKind::ProgrammingError(
+                "ancestor arg is not really an ancestor of descendant arg",
+            )
+            .into());
+        }
+
+        let mut stack = vec![ancestor];
+        let mut merges = vec![];
+
+        // DFS walk over the skiplist travesal trace.
+        while let Some(cs_id) = stack.pop() {
+            let descendant_entries = trace.inner().remove(&cs_id);
+            if let Some(descendant_entries) = descendant_entries {
+                for (descendant_cs_id, is_merge) in descendant_entries {
+                    stack.push(descendant_cs_id);
+                    if is_merge {
+                        merges.push(descendant_cs_id);
+                    }
+                }
+            }
+        }
+        Ok(merges)
+    }
 }
 
 #[cfg(test)]
@@ -1021,7 +1076,8 @@ mod test {
 
     use super::*;
     use fixtures::{
-        branch_even, branch_uneven, branch_wide, linear, merge_uneven, unshared_merge_even,
+        branch_even, branch_uneven, branch_wide, linear, merge_even, merge_uneven,
+        unshared_merge_even,
     };
     use test_helpers::string_to_bonsai;
     use test_helpers::test_branch_wide_reachability;
@@ -2682,6 +2738,29 @@ mod test {
         assert_eq!(lca, expected.into_iter().collect::<Vec<_>>());
     }
 
+    async fn test_find_merge(
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        sli: SkiplistIndex,
+        ancestor: &'static str,
+        descendant: &'static str,
+        merge_commit: Option<&'static str>,
+    ) {
+        let ba = string_to_bonsai(ctx.clone(), &repo, ancestor).await;
+        let bd = string_to_bonsai(ctx.clone(), &repo, descendant).await;
+        let expected = if let Some(merge_commit) = merge_commit {
+            Some(string_to_bonsai(ctx.clone(), &repo, merge_commit).await)
+        } else {
+            None
+        };
+        let merges = sli
+            .find_merges_between(&ctx, &repo.get_changeset_fetcher(), ba.clone(), bd.clone())
+            .await
+            .unwrap();
+
+        assert_eq!(merges, expected.into_iter().collect::<Vec<_>>());
+    }
+
     async fn test_is_ancestor(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
         let f = repo
             .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())
@@ -2881,6 +2960,30 @@ mod test {
         .await;
     }
 
+    async fn test_find_merges_negative(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+        test_find_merge(
+            ctx,
+            repo,
+            sli,
+            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+            "79a13814c5ce7330173ec04d279bf95ab3f652fb",
+            None,
+        )
+        .await;
+    }
+
+    async fn test_find_merges_positive(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
+        test_find_merge(
+            ctx,
+            repo,
+            sli,
+            "d7542c9db7f4c77dab4b315edd328edf1514952f",
+            "4dcf230cd2f20577cb3e88ba52b73b376a2b3f69",
+            Some("4dcf230cd2f20577cb3e88ba52b73b376a2b3f69"),
+        )
+        .await;
+    }
+
     #[fbinit::test]
     fn test_index_update(fb: FacebookInit) {
         // This test was created to show the problem we had with skiplists not being correctly
@@ -2982,4 +3085,6 @@ mod test {
         test_lca_unshared_merge_even_empty_result,
         unshared_merge_even
     );
+    skiplist_test!(test_find_merges_negative, linear);
+    skiplist_test!(test_find_merges_positive, merge_even);
 }
