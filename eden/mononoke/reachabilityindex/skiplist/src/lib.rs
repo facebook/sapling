@@ -634,6 +634,40 @@ fn move_skippable_nodes(
     (no_skiplist_edges, node_frontier)
 }
 
+// Take all changesets in `cs_ids` and returns a list of their parents with
+// their generations.
+async fn move_nonskippable_nodes(
+    ctx: &CoreContext,
+    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    cs_ids: Vec<ChangesetId>,
+) -> Result<Vec<(ChangesetId, Generation)>, Error> {
+    cs_ids
+        .into_iter()
+        .map(|cs_id| async move {
+            Ok::<_, Error>(stream::iter(
+                get_parents(ctx, changeset_fetcher, cs_id)
+                    .await?
+                    .into_iter()
+                    .map(Ok::<_, Error>),
+            ))
+        })
+        .collect::<FuturesUnordered<_>>()
+        .try_flatten()
+        .and_then(|p| {
+            cloned!(ctx, changeset_fetcher);
+            async move {
+                let gen_num = changeset_fetcher
+                    .get_generation_number(ctx.clone(), p)
+                    .compat()
+                    .await?;
+                let res: Result<_, Error> = Ok((p, gen_num));
+                res
+            }
+        })
+        .try_collect::<Vec<_>>()
+        .await
+}
+
 /// Advances the node frontier towards the target generation by a single conceptual step.
 ///
 /// For an input frontier IN returns: advanceed frontier OUT a number "N" (skip
@@ -680,30 +714,8 @@ async fn process_frontier_single_skip(
             );
         }
     }
-    let gen_cs = no_skiplist_edges
-        .into_iter()
-        .map(|cs_id| async move {
-            Ok::<_, Error>(stream::iter(
-                get_parents(ctx, changeset_fetcher, cs_id)
-                    .await?
-                    .into_iter()
-                    .map(Ok::<_, Error>),
-            ))
-        })
-        .collect::<FuturesUnordered<_>>()
-        .try_flatten()
-        .and_then(|p| {
-            cloned!(ctx, changeset_fetcher);
-            async move {
-                let gen_num = changeset_fetcher
-                    .get_generation_number(ctx.clone(), p)
-                    .compat()
-                    .await?;
-                let res: Result<_, Error> = Ok((p, gen_num));
-                res
-            }
-        })
-        .try_collect::<Vec<_>>()
+
+    let gen_cs = move_nonskippable_nodes(ctx, changeset_fetcher, no_skiplist_edges)
         .await?
         .into_iter();
 
