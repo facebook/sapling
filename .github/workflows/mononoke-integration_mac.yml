@@ -71,7 +71,7 @@ jobs:
         pip install click
     - name: Install Brew dependencies
       run: |
-        brew install curl-openssl
+        brew install curl-openssl jq
     - name: Check space
       run: df -h
     - name: Run Monononke integration tests
