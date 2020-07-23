@@ -99,7 +99,7 @@ impl RepoWriteContext {
             self.ctx(),
             self.blob_repo(),
             &bookmark_attrs,
-            self.skiplist_index(),
+            self.skiplist_index().as_ref(),
             &self.config().infinitepush,
             &self.config().pushrebase,
             &self.config().push,

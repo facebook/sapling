@@ -9,6 +9,7 @@ use std::convert::identity;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
@@ -29,8 +30,10 @@ use futures::try_join;
 use futures_old::Future as FutureLegacy;
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
-    Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, ManifestUnodeId,
+    Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, Generation, ManifestUnodeId,
 };
+use reachabilityindex::ReachabilityIndex;
+use skiplist::SkiplistIndex;
 use std::collections::HashMap;
 use xdiff;
 
@@ -280,6 +283,7 @@ impl ChangesetPathContext {
     pub async fn history(
         &self,
         until_timestamp: Option<i64>,
+        descendants_of: Option<ChangesetId>,
         follow_history_across_deletions: bool,
     ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_, MononokeError>
     {
@@ -287,22 +291,36 @@ impl ChangesetPathContext {
         let repo = self.repo().blob_repo().clone();
         let mpath = self.path.as_mpath();
 
+        let descendants_of = match descendants_of {
+            Some(descendants_of) => Some((
+                descendants_of,
+                repo.get_changeset_fetcher()
+                    .get_generation_number(ctx.clone(), descendants_of)
+                    .compat()
+                    .await?,
+            )),
+            None => None,
+        };
+
         struct FilterVisitor {
             cs_info_enabled: bool,
             until_timestamp: Option<i64>,
+            descendants_of: Option<(ChangesetId, Generation)>,
             cache: HashMap<(Option<ChangesetId>, Vec<ChangesetId>), Vec<ChangesetId>>,
+            skiplist_index: Arc<SkiplistIndex>,
         };
         impl FilterVisitor {
             async fn _visit(
                 &self,
                 ctx: &CoreContext,
                 repo: &BlobRepo,
-                _descendant_cs_id: Option<ChangesetId>,
-                cs_ids: Vec<ChangesetId>,
+                descendant_cs_id: Option<ChangesetId>,
+                mut cs_ids: Vec<ChangesetId>,
             ) -> Result<Vec<ChangesetId>, Error> {
                 let cs_info_enabled = self.cs_info_enabled;
+                let skiplist_index = self.skiplist_index.clone();
                 if let Some(until_ts) = self.until_timestamp {
-                    let res = try_join_all(cs_ids.into_iter().map(|cs_id| async move {
+                    cs_ids = try_join_all(cs_ids.into_iter().map(|cs_id| async move {
                         let info = if cs_info_enabled {
                             ChangesetInfo::derive(ctx.clone(), repo.clone(), cs_id)
                                 .compat()
@@ -318,10 +336,53 @@ impl ChangesetPathContext {
                     .into_iter()
                     .filter_map(identity)
                     .collect();
-                    Ok(res)
-                } else {
-                    Ok(cs_ids)
                 }
+                if let Some((descendants_of, descendants_of_gen)) = self.descendants_of {
+                    cs_ids = try_join_all(cs_ids.into_iter().map(|cs_id| {
+                        cloned!(skiplist_index);
+                        async move {
+                            let changeset_fetcher = repo.get_changeset_fetcher();
+                            let cs_gen = changeset_fetcher
+                                .get_generation_number(ctx.clone(), cs_id)
+                                .compat()
+                                .await?;
+                            if cs_gen < descendants_of_gen {
+                                return Ok(None);
+                            }
+                            let ancestry_check_needed =
+                                if let Some(descendant_cs_id) = descendant_cs_id {
+                                    let merges = skiplist_index
+                                        .find_merges_between(
+                                            ctx,
+                                            &changeset_fetcher,
+                                            cs_id,
+                                            descendant_cs_id,
+                                        )
+                                        .await?;
+                                    !merges.is_empty()
+                                } else {
+                                    true
+                                };
+                            let mut is_descendant = true;
+                            if ancestry_check_needed {
+                                is_descendant = skiplist_index
+                                    .query_reachability(
+                                        ctx,
+                                        &repo.get_changeset_fetcher(),
+                                        cs_id,
+                                        descendants_of,
+                                    )
+                                    .await?;
+                            }
+                            Ok::<_, Error>(is_descendant.then_some(cs_id))
+                        }
+                    }))
+                    .await?
+                    .into_iter()
+                    .filter_map(identity)
+                    .collect();
+                }
+                Ok(cs_ids)
             }
         }
         #[async_trait]
@@ -380,7 +441,9 @@ impl ChangesetPathContext {
             FilterVisitor {
                 cs_info_enabled,
                 until_timestamp,
+                descendants_of,
                 cache: HashMap::new(),
+                skiplist_index: self.repo().skiplist_index().clone(),
             },
             history_across_deletions,
         )

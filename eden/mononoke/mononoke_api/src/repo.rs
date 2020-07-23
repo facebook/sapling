@@ -610,7 +610,7 @@ impl RepoContext {
     }
 
     /// The skiplist index for the referenced repository.
-    pub(crate) fn skiplist_index(&self) -> &SkiplistIndex {
+    pub(crate) fn skiplist_index(&self) -> &Arc<SkiplistIndex> {
         &self.repo.skiplist_index
     }
 
