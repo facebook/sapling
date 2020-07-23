@@ -284,6 +284,18 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
         ]
     );
 
+    // Setting until_timestamp omits some commits.
+    let a_history_with_time_filter: Vec<_> = a_path
+        .history(Some(2500), follow_history_across_deletions)
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        a_history_with_time_filter,
+        vec![changesets["a4"], changesets["m1"], changesets["a3"],]
+    );
+
     Ok(())
 }
 

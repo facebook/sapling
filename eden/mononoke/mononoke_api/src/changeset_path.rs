@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::identity;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use blame::{fetch_blame, BlameError};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -18,10 +20,10 @@ use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use fastlog::{list_file_history, FastlogError, HistoryAcrossDeletions};
+use fastlog::{list_file_history, FastlogError, HistoryAcrossDeletions, Visitor};
 use filestore::FetchKey;
 use futures::compat::Future01CompatExt;
-use futures::future::{FutureExt, Shared};
+use futures::future::{self, try_join_all, FutureExt, Shared, TryFutureExt};
 use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
 use futures_old::Future as FutureLegacy;
@@ -29,6 +31,7 @@ use manifest::{Entry, ManifestOps};
 use mononoke_types::{
     Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, ManifestUnodeId,
 };
+use std::collections::HashMap;
 use xdiff;
 
 pub use xdiff::CopyInfo;
@@ -284,30 +287,86 @@ impl ChangesetPathContext {
         let repo = self.repo().blob_repo().clone();
         let mpath = self.path.as_mpath();
 
-        let terminator_until =
-            move |ctx: CoreContext, repo: BlobRepo, cs_id, until_ts, cs_info_enabled| async move {
-                let info = if cs_info_enabled {
-                    ChangesetInfo::derive(ctx, repo, cs_id).compat().await
-                } else {
-                    let bonsai = cs_id.load(ctx, repo.blobstore()).await?;
-                    Ok(ChangesetInfo::new(cs_id, bonsai))
-                }?;
-                let date = info.author_date().as_chrono().clone();
-
-                let terminate = date.timestamp() < until_ts;
-                Ok(terminate)
-            };
-        let cs_info_enabled = self.repo().derive_changeset_info_enabled();
-        let terminator = if let Some(until) = until_timestamp {
-            Some({
-                cloned!(ctx, repo);
-                move |cs_id| {
-                    terminator_until(ctx.clone(), repo.clone(), cs_id, until, cs_info_enabled)
-                }
-            })
-        } else {
-            None
+        struct FilterVisitor {
+            cs_info_enabled: bool,
+            until_timestamp: Option<i64>,
+            cache: HashMap<(Option<ChangesetId>, Vec<ChangesetId>), Vec<ChangesetId>>,
         };
+        impl FilterVisitor {
+            async fn _visit(
+                &self,
+                ctx: &CoreContext,
+                repo: &BlobRepo,
+                _descendant_cs_id: Option<ChangesetId>,
+                cs_ids: Vec<ChangesetId>,
+            ) -> Result<Vec<ChangesetId>, Error> {
+                let cs_info_enabled = self.cs_info_enabled;
+                if let Some(until_ts) = self.until_timestamp {
+                    let res = try_join_all(cs_ids.into_iter().map(|cs_id| async move {
+                        let info = if cs_info_enabled {
+                            ChangesetInfo::derive(ctx.clone(), repo.clone(), cs_id)
+                                .compat()
+                                .await
+                        } else {
+                            let bonsai = cs_id.load(ctx.clone(), repo.blobstore()).await?;
+                            Ok(ChangesetInfo::new(cs_id, bonsai))
+                        }?;
+                        let timestamp = info.author_date().as_chrono().timestamp();
+                        Ok::<_, Error>((timestamp >= until_ts).then_some(cs_id))
+                    }))
+                    .await?
+                    .into_iter()
+                    .filter_map(identity)
+                    .collect();
+                    Ok(res)
+                } else {
+                    Ok(cs_ids)
+                }
+            }
+        }
+        #[async_trait]
+        impl Visitor for FilterVisitor {
+            async fn visit(
+                &mut self,
+                ctx: &CoreContext,
+                repo: &BlobRepo,
+                descendant_cs_id: Option<ChangesetId>,
+                cs_ids: Vec<ChangesetId>,
+            ) -> Result<Vec<ChangesetId>, Error> {
+                if let Some(res) = self
+                    .cache
+                    .remove(&(descendant_cs_id.clone(), cs_ids.clone()))
+                {
+                    Ok(res)
+                } else {
+                    Ok(self._visit(ctx, repo, descendant_cs_id, cs_ids).await?)
+                }
+            }
+
+            async fn preprocess(
+                &mut self,
+                ctx: &CoreContext,
+                repo: &BlobRepo,
+                descendant_id_cs_ids: Vec<(Option<ChangesetId>, Vec<ChangesetId>)>,
+            ) -> Result<(), Error> {
+                try_join_all(
+                    descendant_id_cs_ids
+                        .into_iter()
+                        .map(|(descendant_cs_id, cs_ids)| {
+                            self._visit(ctx, repo, descendant_cs_id.clone(), cs_ids.clone())
+                                .map_ok(move |res| (((descendant_cs_id, cs_ids), res)))
+                        }),
+                )
+                .await?
+                .into_iter()
+                .for_each(|(k, v)| {
+                    self.cache.insert(k, v);
+                });
+                Ok(())
+            }
+        };
+        let cs_info_enabled = self.repo().derive_changeset_info_enabled();
+        let terminator = Some(|_cs_id| future::ready(Ok(false)));
 
         let history_across_deletions = if follow_history_across_deletions {
             HistoryAcrossDeletions::Track
@@ -320,7 +379,11 @@ impl ChangesetPathContext {
             mpath.cloned(),
             self.changeset.id(),
             terminator,
-            (),
+            FilterVisitor {
+                cs_info_enabled,
+                until_timestamp,
+                cache: HashMap::new(),
+            },
             history_across_deletions,
         )
         .await
