@@ -148,18 +148,11 @@ else:
         "test-traffic-replay.t",  # Missing TRAFFIC_REPLAY
         "test-unbundle-replay-hg-bookmark.t",  # "kill" printing problem
         "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
-        "test-walker-compression-benefit.t",  # strip_glog problem
         "test-walker-corpus.t",  # "du --bytes" problem
-        "test-walker-count-objects.t",  # strip_glog problem
-        "test-walker-enable-derive.t",  # strip_glog problem
         "test-walker-error-as-data.t",  # "sed -r" problem
-        "test-walker-sample-by-node.t",  # strip_glog problem
-        "test-walker-sample-by-path.t",  # strip_glog problem
         "test-walker-scrub-blobstore.t",  # "sed -r" problem
         "test-walker-scrub-queue.t",  # "sed -r" problem
         "test-walker-throttle.t",  # "date" and arithmetic problem
-        "test-walker-validate-non-public.t",  # strip_glog problem
-        "test-walker-validate.t",  # strip_glog problem
     }
 
     tests = [

@@ -331,7 +331,7 @@ function write_stub_log_entry {
 # Remove the glog prefix
 function strip_glog {
   # based on https://our.internmc.facebook.com/intern/wiki/LogKnock/Log_formats/#regex-for-glog
-  sed -E -e 's%^[VDIWECF][[:digit:]]{4} [[:digit:]]{2}:?[[:digit:]]{2}:?[[:digit:]]{2}(\.[[:digit:]]+)?\s+(([0-9a-f]+)\s+)?(\[([^]]+)\]\s+)?(\(([^\)]+)\)\s+)?(([a-zA-Z0-9_./-]+):([[:digit:]]+))\]\s+%%'
+  sed -E -e 's%^[VDIWECF][[:digit:]]{4} [[:digit:]]{2}:?[[:digit:]]{2}:?[[:digit:]]{2}(\.[[:digit:]]+)?[[:space:]]+(([0-9a-f]+)[[:space:]]+)?(\[([^]]+)\][[:space:]]+)?(\(([^\)]+)\)[[:space:]]+)?(([a-zA-Z0-9_./-]+):([[:digit:]]+))\][[:space:]]+%%'
 }
 
 function wait_for_json_record_count {
