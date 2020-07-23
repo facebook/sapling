@@ -28,6 +28,12 @@ TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 case "$(uname -s)" in
   # Workarounds for running tests on MacOS
   Darwin*)
+    # MacOS builtin "du" command has very different flags than the GNU version.
+    # Adding this as env variable rather than a function, because this is called
+    # mostly in "find -exec" context and it is hard to use bash functions there,
+    # because of https://unix.stackexchange.com/questions/50692/executing-user-defined-function-in-a-find-exec-call
+    GNU_DU=gdu
+
     # As opposed to the GNU version wc -l outputs number of lines prefixed by
     # whitespace. This function will strip the whitespaces on MacOS.
     function count_stdin_lines {
@@ -35,6 +41,8 @@ case "$(uname -s)" in
     }
   ;;
   *)
+    GNU_DU=du
+
     function count_stdin_lines {
       wc -l "$@"
     }

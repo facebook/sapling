@@ -127,7 +127,6 @@ else:
         "test-mononoke-hg-sync-job-sync-globalrevs.t",  # Missing MONONOKE_HG_SYNC
         "test-mononoke-hg-sync-job-with-copies.t",  # Missing MONONOKE_HG_SYNC
         "test-mononoke-hg-sync-job.t",  # Missing MONONOKE_HG_SYNC
-        "test-multiplexed-packblob.t",  # "du --bytes" problem
         "test-push-protocol-lfs.t",  # Timed out
         "test-push-redirector-pushrebase-hooks.t",  # Hooks are not in OSS yet
         "test-push-redirector-pushrebase-onesided.t",  # Missing MONONOKE_X_REPO_SYNC
@@ -148,7 +147,6 @@ else:
         "test-traffic-replay.t",  # Missing TRAFFIC_REPLAY
         "test-unbundle-replay-hg-bookmark.t",  # "kill" printing problem
         "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
-        "test-walker-corpus.t",  # "du --bytes" problem
         "test-walker-error-as-data.t",  # "sed -r" problem
         "test-walker-scrub-blobstore.t",  # "sed -r" problem
         "test-walker-scrub-queue.t",  # "sed -r" problem

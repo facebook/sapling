@@ -72,7 +72,7 @@ pull on repo2
   $ hgmn update -r master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)
-  $ du ${LONG_PATH}/${LONG_FILENAME}
+  $ $GNU_DU ${LONG_PATH}/${LONG_FILENAME}
   153600	this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars
 
 push one more long path from repo2
@@ -128,7 +128,7 @@ pull on repo3
   $ hgmn update -r master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)
-  $ du ${LONG_PATH}/${LONG_FILENAME}
+  $ $GNU_DU ${LONG_PATH}/${LONG_FILENAME}
   153600	this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars
-  $ du ${LONG_PATH}2/${LONG_FILENAME}2
+  $ $GNU_DU ${LONG_PATH}2/${LONG_FILENAME}2
   154624	this/is/a/very/long/path/that/we/want/to/test/in/order/to/ensure/our/blobimport/as/well/as/mononoke/works/correctly/when/given/such/a/long/path/which/I/hope/will/have/enough/characters/for/the/purpose/of/testing/I/need/few/more/to/go/pass/255/chars2/this_is_a_very_long_file_name_that_we_want_to_test_in_order_to_ensure_our_blobimport_as_well_as_mononoke_works_correctly_when_given_such_a_long_path_which_I_hope_will_have_enough_characters_for_the_purpose_of_testing_I_need_few_more_to_go_pass_255_chars2

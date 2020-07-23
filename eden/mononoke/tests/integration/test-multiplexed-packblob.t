@@ -24,7 +24,7 @@ Check the stores have expected counts
   30
 
 Check that the packed sizes are larger due to the packblob wrappers on store 0
-  $ PACKED=$(du -s --bytes blobstore/0/blobs/ | cut -f1); UNPACKED=$(du -s --bytes blobstore/1/blobs/ | cut -f1)
+  $ PACKED=$($GNU_DU -s --bytes blobstore/0/blobs/ | cut -f1); UNPACKED=$($GNU_DU -s --bytes blobstore/1/blobs/ | cut -f1)
   $ if [[ "$PACKED" -le "$UNPACKED" ]]; then echo "expected packed $PACKED to be larger than unpacked $UNPACKED due to thift wrappers"; fi
 
 Move the uncompressed packed store aside
@@ -35,5 +35,5 @@ Blobimport again, but this time enable zstd compression
   $ blobimport repo-hg/.hg repo --blobstore-write-zstd-level 0
 
 Check that the packed sizes are smaller due to compression
-  $ PACKED=$(du -s --bytes blobstore/0/blobs/ | cut -f1); OLDPACKED=$(du -s --bytes blobstore.raw/blobs/ | cut -f1)
+  $ PACKED=$($GNU_DU -s --bytes blobstore/0/blobs/ | cut -f1); OLDPACKED=$($GNU_DU -s --bytes blobstore.raw/blobs/ | cut -f1)
   $ if [[ "$PACKED" -ge "$OLDPACKED" ]]; then echo "expected packed $PACKED to be smaller than packed $OLDPACKED due to compression"; fi

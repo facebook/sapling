@@ -22,7 +22,7 @@ check blobstore numbers, walk will do some more steps for mappings
   $ WALKABLEBLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .filenode_lookup. | count_stdin_lines)
   $ echo "$WALKABLEBLOBCOUNT"
   33
-  $ find $TESTTMP/blobstore/blobs/ -type f ! -path "*.filenode_lookup.*" -exec du --bytes -c {} + | tail -1 | cut -f1
+  $ find $TESTTMP/blobstore/blobs/ -type f ! -path "*.filenode_lookup.*" -exec $GNU_DU --bytes -c {} + | tail -1 | cut -f1
   2805
 
 Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings and root.  Note that the total is 3086, but blobs are 2805. This is due to BonsaiHgMapping loading the hg changeset
@@ -35,7 +35,7 @@ Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings a
   Walked/s,* (glob)
 
 Check the corpus dumped to disk agrees with the walk stats
-  $ for x in full/*; do size=$(find $x -type f -exec du --bytes -c {} + | tail -1 | cut -f1); if [[ -n "$size" ]]; then echo "$x $size"; fi; done
+  $ for x in full/*; do size=$(find $x -type f -exec $GNU_DU --bytes -c {} + | tail -1 | cut -f1); if [[ -n "$size" ]]; then echo "$x $size"; fi; done
   full/AliasContentMapping 333
   full/BonsaiChangeset 277
   full/BonsaiFsnodeMapping 96
@@ -69,7 +69,7 @@ Repeat but using the sample-offset to slice.  Offset zero will tend to be larger
   Walked/s,* (glob)
 
 See the breakdown
-  $ for x in slice/*/*; do size=$(find $x -type f -exec du --bytes -c {} + | tail -1 | cut -f1); if [[ -n "$size" ]]; then echo "$x $size"; fi; done
+  $ for x in slice/*/*; do size=$(find $x -type f -exec $GNU_DU --bytes -c {} + | tail -1 | cut -f1); if [[ -n "$size" ]]; then echo "$x $size"; fi; done
   slice/0/AliasContentMapping 111
   slice/0/BonsaiChangeset 104
   slice/0/BonsaiFsnodeMapping 32
@@ -97,7 +97,7 @@ See the breakdown
   slice/2/HgFileEnvelope 63
 
 Check overall total
-  $ find slice -type f -exec du --bytes -c {} + | tail -1 | cut -f1
+  $ find slice -type f -exec $GNU_DU --bytes -c {} + | tail -1 | cut -f1
   3086
 
 Check path regex can pick out just one path
