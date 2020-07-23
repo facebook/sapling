@@ -16,6 +16,7 @@ from edenscm.mercurial import (
     hintutil,
     mdiff,
     patch,
+    pycompat,
     registrar,
     revset,
     scmutil,
@@ -80,7 +81,7 @@ def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
             for hunkrange, hunklines in hunks:
                 difflines += list(hunklines)
             header = patch.header(headerlines)
-            filepatches[header.files()[0]] = "".join(difflines)
+            filepatches[header.files()[0]] = b"".join(difflines)
         return (set(filepatches.keys()), filepatches, node)
 
     rev1node = repo[rev1].node()
@@ -106,7 +107,7 @@ def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
         changelines = []
         i = 0
         while i < len(hunklines):
-            line = hunklines[i]
+            line = pycompat.decodeutf8(hunklines[i], errors="replace")
             i += 1
             if line[:2] == "++":
                 changelines.append("+" + line[2:])
