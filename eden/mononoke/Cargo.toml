@@ -182,7 +182,6 @@ maplit = "1.0"
 
 members = [
     ".",
-    "backsyncer",
     "benchmark",
     "blobimport_lib",
     "blobrepo",
@@ -232,6 +231,7 @@ members = [
     "cmdlib",
     "cmdlib/x_repo",
     "cmds/blobrepo_checker",
+    "commit_rewriting/backsyncer",
     "commit_rewriting/bookmark_renaming",
     "commit_rewriting/cross_repo_sync",
     "commit_rewriting/cross_repo_sync/test_utils",

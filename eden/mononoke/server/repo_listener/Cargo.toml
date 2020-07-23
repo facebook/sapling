@@ -8,7 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 async_limiter = { path = "../../common/async_limiter" }
-backsyncer = { path = "../../backsyncer" }
+backsyncer = { path = "../../commit_rewriting/backsyncer" }
 blobrepo = { path = "../../blobrepo" }
 blobrepo_factory = { path = "../../blobrepo/factory" }
 blobstore_factory = { path = "../../blobstore/factory" }

@@ -7,7 +7,7 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-backsyncer = { path = "../../backsyncer" }
+backsyncer = { path = "../../commit_rewriting/backsyncer" }
 blobrepo = { path = "../../blobrepo" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
