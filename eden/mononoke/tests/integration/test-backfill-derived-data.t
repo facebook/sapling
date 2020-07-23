@@ -25,11 +25,20 @@ backfill derived data
   $ backfill_derived_data prefetch-commits --out-filename "$TESTTMP/prefetched_commits"
   * using repo "repo" repoid RepositoryId(0) (glob)
 
-  $ backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" "$DERIVED_DATA_TYPE"
+  $ backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" "$DERIVED_DATA_TYPE" --limit 1
   * using repo "repo" repoid RepositoryId(0) (glob)
   * reading all changesets for: RepositoryId(0) (glob)
-  * starting deriving data for 3 changesets (glob)
-  * 3/3 estimate:* speed:* mean_speed:* (glob)
+  * starting deriving data for 1 changesets (glob)
+  * 1/1 estimate:* speed:* mean_speed:* (glob)
+  $ hg log -r 0 -T '{node}'
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 (no-eol)
+  $ mononoke_admin --log-level ERROR derived-data exists "$DERIVED_DATA_TYPE" 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  Derived: 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec
+  $ backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" "$DERIVED_DATA_TYPE" --skip-changesets 1
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * reading all changesets for: RepositoryId(0) (glob)
+  * starting deriving data for 2 changesets (glob)
+  * 2/2 estimate:0.00ns speed:* mean_speed:* (glob)
 
   $ mononoke_admin --log-level ERROR derived-data exists "$DERIVED_DATA_TYPE" master_bookmark
   Derived: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd

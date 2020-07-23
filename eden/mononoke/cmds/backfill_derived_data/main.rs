@@ -68,6 +68,7 @@ const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
 const ARG_DRY_RUN: &str = "dry-run";
 const ARG_OUT_FILENAME: &str = "out-filename";
 const ARG_SKIP: &str = "skip-changesets";
+const ARG_LIMIT: &str = "limit";
 const ARG_REGENERATE: &str = "regenerate";
 const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 const ARG_CHANGESET: &str = "changeset";
@@ -131,6 +132,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .long(ARG_SKIP)
                         .takes_value(true)
                         .help("skip this number of changesets"),
+                )
+                .arg(
+                    Arg::with_name(ARG_LIMIT)
+                        .long(ARG_LIMIT)
+                        .takes_value(true)
+                        .help("backfill at most this number of changesets"),
                 )
                 .arg(
                     Arg::with_name(ARG_REGENERATE)
@@ -247,6 +254,11 @@ async fn run_subcmd<'a>(
                 .transpose()
                 .map(|skip| skip.unwrap_or(0))?;
 
+            let maybe_limit = sub_m
+                .value_of(ARG_LIMIT)
+                .map(|limit| limit.parse::<usize>())
+                .transpose()?;
+
             let repo = open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
                 .compat()
                 .await?;
@@ -299,11 +311,11 @@ async fn run_subcmd<'a>(
                 }
             }
 
-            let changesets: Vec<_> = changesets
-                .into_iter()
-                .skip(skip)
-                .map(|entry| entry.cs_id)
-                .collect();
+            let iter = changesets.into_iter().skip(skip);
+            let changesets = match maybe_limit {
+                Some(limit) => iter.take(limit).map(|entry| entry.cs_id).collect(),
+                None => iter.map(|entry| entry.cs_id).collect(),
+            };
 
             subcommand_backfill(
                 &ctx,
