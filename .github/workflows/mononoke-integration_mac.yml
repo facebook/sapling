@@ -78,3 +78,9 @@ jobs:
       run: |
         export PATH="/usr/local/opt/curl-openssl/bin:$PATH"
         python3 eden/mononoke/tests/integration/run_tests_getdeps.py /tmp/build/installed /tmp/build/build/mononoke_integration_test
+      continue-on-error: true
+    - name: Rerun failed Monononke integration tests (reduce flakiness)
+      run: |
+        cat eden/mononoke/tests/integration/.test* || true
+        export PATH="/usr/local/opt/curl-openssl/bin:$PATH"
+        python3 eden/mononoke/tests/integration/run_tests_getdeps.py /tmp/build/installed /tmp/build/build/mononoke_integration_test --rerun-failed
