@@ -699,13 +699,11 @@ def diffcmd(orig, ui, repo, *args, **opts):
 
     ui.pushbuffer()
     res = orig(ui, repo, *args, **opts)
-    buffer = ui.popbuffer()
+    buffer = ui.popbufferbytes()
     difflines = util.iterlines([buffer])
     diffstat = patch.diffstatdata(difflines)
     output = {}
     for filename, adds, removes, isbinary in diffstat:
-        # use special encoding that allows non-utf8 filenames
-        filename = encoding.jsonescape(filename, paranoid=True)
         output[filename] = {"adds": adds, "removes": removes, "isbinary": isbinary}
     ui.write("%s\n" % (json.dumps(output, sort_keys=True)))
     return res
