@@ -48,6 +48,16 @@ case "$(uname -s)" in
     }
 esac
 
+function silentkill {
+  # sends KILL to the given process and waits for it so that nothing is printed
+  # to the terminal on MacOS
+  { kill -9 $1 && wait $1; } > /dev/null 2>&1
+  # wait exit code is 137, if the process was already killed when wait was
+  # called, or the process' exit code. Because we don't need it and we want
+  # determinism in tests lets return 0 here
+  true
+}
+
 function get_free_socket {
 
 # From https://unix.stackexchange.com/questions/55913/whats-the-easiest-way-to-find-an-unused-local-port

@@ -44,9 +44,7 @@ test TLS Session/Ticket resumption when using client certs
   SUCCESS
 
 test TLS Tickets use encryption keys from seeds - sessions should persist across restarts
-  $ kill -9 $MONONOKE_PID && wait $MONONOKE_PID
-  $TESTTMP.sh: * Killed * (glob)
-  [137]
+  $ silentkill $MONONOKE_PID
   $ mononoke
   $ wait_for_mononoke
   $ echo -e "hello\n" | s_client -sess_in $TMPFILE -state | grep -E "^SSL_connect"

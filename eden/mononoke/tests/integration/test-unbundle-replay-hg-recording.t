@@ -53,7 +53,7 @@ Export the bundle so we can replay it as it if were coming from hg, through the 
 
 Blow everything away: we're going to re-do the push from scratch, in a new repo.
 
-  $ kill -9 "$MONONOKE_PID"
+  $ silentkill "$MONONOKE_PID"
   $ rm -rf "$TESTTMP/mononoke-config" "$TESTTMP/monsql" "$TESTTMP/blobstore"
   $ ASSIGN_GLOBALREVS=1 BLOB_TYPE="blob_files" quiet default_setup
 

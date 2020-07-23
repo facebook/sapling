@@ -60,7 +60,7 @@ Do a push, while bundle preservation is disabled
   [1]
 
 Restart mononoke with enabled bundle2 preservation
-  $ kill $MONONOKE_PID
+  $ silentkill $MONONOKE_PID
   $ rm -rf $TESTTMP/mononoke-config
   $ export ENABLE_PRESERVE_BUNDLE2=1
   $ setup_common_config "blob_files"

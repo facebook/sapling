@@ -178,7 +178,7 @@ check unhydrated infinitepush pulls
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 stop mononoke before running it with a different config
-  $ kill "$MONONOKE_PID"
+  $ silentkill "$MONONOKE_PID"
   $ rm -rf "$TESTTMP/mononoke-config"
 
 setup a new config and restart mononoke
