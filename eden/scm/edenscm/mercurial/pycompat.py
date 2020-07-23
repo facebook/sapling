@@ -154,6 +154,7 @@ if sys.version_info[0] >= 3:
     import collections.abc
 
     Mapping = collections.abc.Mapping
+    Set = collections.abc.Set
 
 
 else:
@@ -237,6 +238,7 @@ else:
         __metaclass__ = abc.ABCMeta
 
     Mapping = collections.Mapping
+    Set = collections.Set
 
 
 isjython = sysplatform.startswith("java")

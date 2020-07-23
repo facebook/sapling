@@ -776,7 +776,6 @@ def _wraprepo(ui, repo):
             set to False.
 
             """
-            raw = pycompat.decodeutf8(raw)
             filename = filename or "<sparse profile>"
             metadata = {}
             last_key = None
@@ -887,7 +886,7 @@ def _wraprepo(ui, repo):
                     self._warnfullcheckout()
                     return SparseConfig(None, set(), set(), [])
 
-                raw = self.localvfs.read("sparse")
+                raw = self.localvfs.readutf8("sparse")
                 config = self.readsparseconfig(
                     raw, filename=self.localvfs.join("sparse")
                 )
@@ -984,14 +983,16 @@ def _wraprepo(ui, repo):
                 node = repo[changeid].hex()
 
                 def func():
-                    return repo.filectx(profile, changeid=changeid).data()
+                    return pycompat.decodeutf8(repo.filectx(profile,
+                        changeid=changeid).data())
 
                 key = "sparseprofile:%s:%s" % (profile.replace("/", "__"), node)
                 return simplecache.memoize(
                     func, key, simplecache.stringserializer, self.ui
                 )
             except KeyError:
-                return repo.filectx(profile, changeid=changeid).data()
+                return pycompat.decodeutf8(repo.filectx(profile,
+                    changeid=changeid).data())
 
         def _sparsesignature(self, includetemp=True, config=None, revs=()):
             """Returns the signature string representing the contents of the
@@ -1017,7 +1018,8 @@ def _wraprepo(ui, repo):
                     sha1 = hashlib.sha1()
                     for r in revs:
                         try:
-                            sha1.update(self.getrawprofile(config.path, r))
+                            sha1.update(pycompat.encodeutf8(self.getrawprofile(config.path,
+                                r)))
                             signature = sha1.hexdigest()
                         except KeyError:
                             pass
@@ -1153,7 +1155,7 @@ def _wraprepo(ui, repo):
         def gettemporaryincludes(self):
             existingtemp = set()
             if self.localvfs.exists("tempsparse"):
-                raw = pycompat.decodeutf8(self.localvfs.read("tempsparse"))
+                raw = self.localvfs.readutf8("tempsparse")
                 existingtemp.update(raw.split("\n"))
             return existingtemp
 
@@ -1250,7 +1252,7 @@ def _discover(ui, repo, rev=None):
     """
     if not rev:
         included = repo.getactiveprofiles()
-        sparse = repo.localvfs.read("sparse")
+        sparse = repo.localvfs.readutf8("sparse")
         active = repo.readsparseconfig(sparse).profiles
         active = frozenset(active)
         rev = "."
@@ -1580,7 +1582,7 @@ def sparse(ui, repo, *pats, **opts):
 
     if count == 0:
         if repo.localvfs.exists("sparse"):
-            ui.status(pycompat.decodeutf8(repo.localvfs.read("sparse")) + "\n")
+            ui.status(repo.localvfs.readutf8("sparse") + "\n")
             temporaryincludes = repo.gettemporaryincludes()
             if temporaryincludes:
                 ui.status(_("Temporarily Included Files (for merge/rebase):\n"))
@@ -1653,7 +1655,7 @@ def show(ui, repo, **opts):
     # Disable fullcheckout warnings to allow users to sparse their fullcheckouts
     repo.ui.setconfig("sparse", "warnfullcheckout", None)
 
-    raw = repo.localvfs.read("sparse")
+    raw = repo.localvfs.readutf8("sparse")
     include, exclude, profiles = list(map(set, repo.readsparseconfig(raw)))
 
     LOOKUP_SUCCESS, LOOKUP_NOT_FOUND = range(0, 2)
@@ -1742,7 +1744,7 @@ def debugsparsematch(ui, repo, *args, **opts):
     if not filename:
         raise error.Abort(_("--sparse-profile is required"))
     ctx = repo["."]
-    raw = ctx[filename].data()
+    raw = pycompat.decodeutf8(ctx[filename].data())
     matcher, _key = repo._sparsematch_and_key(
         revs=[nullrev], config=repo.readsparseconfig(raw=raw, filename=filename)
     )
@@ -1980,7 +1982,7 @@ def _explainprofile(ui, repo, *profiles, **opts):
 
     def sortedsets(d):
         return {
-            k: sorted(v) if isinstance(v, collections.Set) else v for k, v in d.items()
+            k: sorted(v) if isinstance(v, pycompat.Set) else v for k, v in d.items()
         }
 
     ui.pager("sparse explain")
@@ -2264,7 +2266,7 @@ def _config(
         oldsparsematch = repo.sparsematch()
 
         if repo.localvfs.exists("sparse"):
-            raw = repo.localvfs.read("sparse")
+            raw = repo.localvfs.readutf8("sparse")
             oldinclude, oldexclude, oldprofiles = list(
                 map(set, repo.readsparseconfig(raw))
             )
@@ -2376,9 +2378,9 @@ def _import(ui, repo, files, opts, force=False):
         ]
 
         # read current configuration
-        raw = b""
+        raw = ""
         if repo.localvfs.exists("sparse"):
-            raw = repo.localvfs.read("sparse")
+            raw = repo.localvfs.readutf8("sparse")
         oincludes, oexcludes, oprofiles = repo.readsparseconfig(raw)
         includes, excludes, profiles = list(map(set, (oincludes, oexcludes, oprofiles)))
 
@@ -2396,7 +2398,7 @@ def _import(ui, repo, files, opts, force=False):
         for file in files:
             with util.posixfile(util.expandpath(file), "rb") as importfile:
                 iincludes, iexcludes, iprofiles = repo.readsparseconfig(
-                    importfile.read(), filename=file
+                    pycompat.decodeutf8(importfile.read()), filename=file
                 )
                 oldsize = len(includes) + len(excludes) + len(profiles)
                 includes.update(iincludes - aincludes)
@@ -2436,7 +2438,7 @@ def _clear(ui, repo, files, force=False):
     with repo.wlock():
         raw = ""
         if repo.localvfs.exists("sparse"):
-            raw = repo.localvfs.read("sparse")
+            raw = repo.localvfs.readutf8("sparse")
         includes, excludes, profiles = repo.readsparseconfig(raw)
 
         if includes or excludes:
