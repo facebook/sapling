@@ -89,7 +89,6 @@ Check the repo is usable again:
      +A
      \ No newline at end of file
   
-#if py2
 Check changelog repiar:
 
   $ newrepo
@@ -102,8 +101,8 @@ Check changelog repiar:
   > EOS
   >>> with open(".hg/store/00changelog.i", "rb+") as f:
   ...     filelen = len(f.read())
-  ...     f.seek(filelen - 64)
-  ...     f.write(b"x" * 64)
+  ...     x = f.seek(filelen - 64)
+  ...     x = f.write(b"x" * 64)
   $ hg doctor
   checking internal storage
   changelog: corrupted at rev 2 (linkrev=2021161080)
@@ -125,7 +124,7 @@ Check unknown visibleheads format:
   $ newrepo
   $ hg dbsh << 'EOS'
   > ml = repo.svfs.metalog
-  > ml.set("visibleheads", "v-1")
+  > ml.set("visibleheads", b"v-1")
   > ml.commit("break visibleheads")
   > EOS
   $ hg doctor
@@ -172,7 +171,7 @@ Check dirstate pointing to a stripped commit:
 
  (strip 2 commits while preserving the treestate)
   >>> with open(".hg/store/00changelog.i", "rb+") as f:
-  ...     f.truncate(64)  # only keep 1 commit: "A"
+  ...     x = f.truncate(64)  # only keep 1 commit: "A"
 
   $ hg status
   abort: 00changelog.i@d2653ea8ee94: no node!
@@ -203,9 +202,9 @@ Check dirstate pointing to a stripped commit:
 
 Try other kinds of dirstate corruptions:
 
-  >>> with open(".hg/dirstate", "r+") as f:
-  ...     f.seek(0);
-  ...     f.write(b"x" * 1024);
+  >>> with open(".hg/dirstate", "rb+") as f:
+  ...     x = f.seek(0)
+  ...     x = f.write(b"x" * 1024)
   $ hg doctor
   checking internal storage
   treestate: repaired
@@ -220,4 +219,3 @@ Try other kinds of dirstate corruptions:
   ? C
   ? Y
   ? Z
-#endif

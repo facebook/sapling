@@ -100,7 +100,7 @@ def debugshell(ui, repo, *args, **opts):
         exec(command, globalvars, localvars)
         return 0
     elif not ui.interactive():
-        command = decodeutf8(ui.fin.read())
+        command = ui.fin.read()
         exec(command)
         return 0
 

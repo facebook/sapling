@@ -333,7 +333,7 @@ def repairtreestate(ui, vfs, root, cl):
             for rootpos in range(end, p1pos):
                 # The first byte of the Root entry is "version", b"\0".
                 # No need to try otherwise.
-                if data[rootpos] != b"\0":
+                if data[rootpos:rootpos + 1] != b"\0":
                     continue
                 try:
                     rawtree = rawtreestate.treestate(path, rootpos)
