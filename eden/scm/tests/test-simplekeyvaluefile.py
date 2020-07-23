@@ -60,23 +60,23 @@ class testsimplekeyvaluefile(unittest.TestCase):
 
     def testinvalidkeys(self):
         d = {"0key1": "value1", "Key2": "value2"}
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             error.ProgrammingError, "keys must start with a letter.*"
         ):
             scmutil.simplekeyvaluefile(self.vfs, "kvfile").write(d)
 
         d = {"key1@": "value1", "Key2": "value2"}
-        with self.assertRaisesRegexp(error.ProgrammingError, "invalid key.*"):
+        with self.assertRaisesRegex(error.ProgrammingError, "invalid key.*"):
             scmutil.simplekeyvaluefile(self.vfs, "kvfile").write(d)
 
     def testinvalidvalues(self):
         d = {"key1": "value1", "Key2": "value2\n"}
-        with self.assertRaisesRegexp(error.ProgrammingError, "invalid val.*"):
+        with self.assertRaisesRegex(error.ProgrammingError, "invalid val.*"):
             scmutil.simplekeyvaluefile(self.vfs, "kvfile").write(d)
 
     def testcorruptedfile(self):
         self.vfs.contents["badfile"] = b"ababagalamaga\n"
-        with self.assertRaisesRegexp(error.CorruptedState, "dictionary.*element.*"):
+        with self.assertRaisesRegex(error.CorruptedState, "dictionary.*element.*"):
             scmutil.simplekeyvaluefile(self.vfs, "badfile").read()
 
     def testfirstline(self):
@@ -86,6 +86,8 @@ class testsimplekeyvaluefile(unittest.TestCase):
         dr = scmutil.simplekeyvaluefile(self.vfs, "fl").read(firstlinenonkeyval=True)
         self.assertEqual(dr, {"__firstline": "1.0", "key1": "value1"})
 
+if not hasattr(unittest.TestCase, 'assertRaisesRegex'):
+    unittest.TestCase.assertRaisesRegex = getattr(unittest.TestCase, 'assertRaisesRegexp')
 
 if __name__ == "__main__":
     silenttestrunner.main(__name__)

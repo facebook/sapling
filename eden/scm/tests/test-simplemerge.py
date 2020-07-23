@@ -369,6 +369,7 @@ if __name__ == "__main__":
     orig = time.time
     try:
         time.time = lambda: 0
+        time.perf_counter = lambda: 0
         unittest.main()
     finally:
         time.time = orig
