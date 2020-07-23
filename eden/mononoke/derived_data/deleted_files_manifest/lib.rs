@@ -12,4 +12,4 @@ mod mapping;
 mod ops;
 
 pub use mapping::{RootDeletedManifestId, RootDeletedManifestMapping};
-pub use ops::{find_entries, find_entry, list_all_entries};
+pub use ops::{find_entries, find_entry, list_all_entries, resolve_path_state, PathState};

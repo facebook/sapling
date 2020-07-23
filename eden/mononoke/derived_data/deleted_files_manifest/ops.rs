@@ -6,17 +6,224 @@
  */
 
 use anyhow::Error;
-use blobstore::{Blobstore, Loadable};
-use context::CoreContext;
-use futures::future::TryFutureExt;
+use futures::compat::Future01CompatExt;
+use futures::{
+    future::{self, FutureExt, TryFutureExt},
+    stream,
+};
 use futures_ext::bounded_traversal::bounded_traversal_stream;
 use futures_old::{
     stream::{iter_ok, Stream},
     Future,
 };
-use manifest::{PathOrPrefix, PathTree};
-use mononoke_types::{DeletedManifestId, MPath};
+use futures_util::{StreamExt, TryStreamExt};
+use maplit::hashset;
+use std::collections::{HashSet, VecDeque};
 use std::iter::FromIterator;
+
+use blobrepo::BlobRepo;
+use blobstore::{Blobstore, Loadable};
+use cloned::cloned;
+use context::CoreContext;
+use derived_data::BonsaiDerived;
+use manifest::{Entry, ManifestOps, PathOrPrefix, PathTree};
+use mononoke_types::{ChangesetId, DeletedManifestId, FileUnodeId, MPath, ManifestUnodeId};
+use unodes::RootUnodeManifestId;
+//use time_ext::DurationExt;
+
+use crate::RootDeletedManifestId;
+
+type UnodeEntry = Entry<ManifestUnodeId, FileUnodeId>;
+
+pub enum PathState {
+    // Changeset where the path was deleted and unode where the path was last changed.
+    Deleted(Vec<(ChangesetId, UnodeEntry)>),
+    // Unode if the path exists.
+    Exists(UnodeEntry),
+}
+
+/// Find if and when the path deleted.
+///
+/// Given a changeset and a path returns:
+///  * if the paths exists in the commit: the unode corresponding to the path
+///  * if it doesn't the unodes and changeset where the path last existed (there might be more than
+///    one if deletion happened in separe merge branches)
+///  * if the path never existed returns None
+///
+/// Returns None for deleted files if deleted file manifests are not enabled in a given repo.
+///
+/// This is the high-level public API of this crate i.e. what clients should use if they want to
+/// fetch find where the path was deleted.
+pub async fn resolve_path_state(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    path: &Option<MPath>,
+) -> Result<Option<PathState>, Error> {
+    // if unode exists return entry
+    let unode_entry = derive_unode_entry(ctx, repo, cs_id.clone(), path).await?;
+    if let Some(unode_entry) = unode_entry {
+        return Ok(Some(PathState::Exists(unode_entry)));
+    }
+
+    let use_deleted_manifest = repo
+        .get_derived_data_config()
+        .derived_data_types
+        .contains(RootDeletedManifestId::NAME);
+    if !use_deleted_manifest {
+        return Ok(None);
+    }
+
+    // if there is no unode for the commit:path, check deleted manifest
+    // the path might be deleted
+    stream::try_unfold(
+        // starting state
+        (VecDeque::from(vec![cs_id.clone()]), hashset! { cs_id }),
+        // unfold
+        {
+            cloned!(ctx, repo, path);
+            move |(queue, visited)| {
+                resolve_path_state_unfold(ctx.clone(), repo.clone(), path.clone(), queue, visited)
+            }
+        },
+    )
+    .map_ok(|deleted_nodes| stream::iter(deleted_nodes).map(Ok::<_, Error>))
+    .try_flatten()
+    .try_collect::<Vec<_>>()
+    .map_ok(move |deleted_nodes| {
+        if deleted_nodes.is_empty() {
+            None
+        } else {
+            Some(PathState::Deleted(deleted_nodes))
+        }
+    })
+    .boxed()
+    .await
+}
+
+async fn resolve_path_state_unfold(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    path: Option<MPath>,
+    mut queue: VecDeque<ChangesetId>,
+    mut visited: HashSet<ChangesetId>,
+) -> Result<
+    Option<(
+        Vec<(ChangesetId, UnodeEntry)>,
+        (VecDeque<ChangesetId>, HashSet<ChangesetId>),
+    )>,
+    Error,
+> {
+    // let's get deleted manifests for each changeset id
+    // and try to find the given path
+    if let Some(cs_id) = queue.pop_front() {
+        let root_dfm_id = RootDeletedManifestId::derive(ctx.clone(), repo.clone(), cs_id.clone())
+            .compat()
+            .await?;
+        let dfm_id = root_dfm_id.deleted_manifest_id();
+        let entry = find_entry(ctx.clone(), repo.get_blobstore(), *dfm_id, path.clone())
+            .compat()
+            .await?;
+
+        if let Some(mf_id) = entry {
+            // we need to get the linknode, so let's load the deleted manifest
+            // if the linknodes is None it means that file should exist
+            // but it doesn't, let's throw an error
+            let mf = mf_id.load(ctx.clone(), repo.blobstore()).await?;
+            let linknode = mf.linknode().ok_or_else(|| {
+                let message = format!(
+                    "there is no unode for the path '{}' and changeset {:?}, but it exists as a live entry in deleted manifest",
+                    MPath::display_opt(path.as_ref()),
+                    cs_id,
+                );
+                Error::msg(message)
+            })?;
+
+            // to get last change before deletion we have to look at the liknode
+            // parents for the deleted path
+            let parents = repo
+                .get_changeset_parents_by_bonsai(ctx.clone(), linknode.clone())
+                .compat()
+                .await?;
+
+            // checking parent unodes
+            let parent_unodes = parents.into_iter().map({
+                cloned!(ctx, repo, path);
+                move |parent| {
+                    cloned!(ctx, repo, path);
+                    async move {
+                        let unode_entry =
+                            derive_unode_entry(&ctx, &repo, parent.clone(), &path).await?;
+                        Ok::<_, Error>((parent, unode_entry))
+                    }
+                }
+            });
+            let parent_unodes = future::try_join_all(parent_unodes).await?;
+            return match *parent_unodes {
+                [] => {
+                    // the linknode must have a parent, otherwise the path couldn't be deleted
+                    let message = format!(
+                        "the path '{}' was deleted in {:?}, but the changeset doesn't have parents",
+                        MPath::display_opt(path.as_ref()),
+                        linknode,
+                    );
+                    Err(Error::msg(message))
+                }
+                [(_parent, unode_entry)] => {
+                    if let Some(unode_entry) = unode_entry {
+                        // we've found the last path change before deletion
+                        Ok(Some((vec![(linknode, unode_entry)], (queue, visited))))
+                    } else {
+                        // the unode entry must exist
+                        let message = format!(
+                            "the path '{}' was deleted in {:?}, but the parent changeset doesn't have a unode",
+                            MPath::display_opt(path.as_ref()),
+                            linknode,
+                        );
+                        Err(Error::msg(message))
+                    }
+                }
+                _ => {
+                    let mut last_changes = vec![];
+                    for (parent, unode_entry) in parent_unodes.into_iter() {
+                        if let Some(unode_entry) = unode_entry {
+                            // this is one of the last changes
+                            last_changes.push((linknode, unode_entry));
+                        } else {
+                            // the path could have been already deleted here
+                            // need to add this node into the queue
+                            if visited.insert(parent.clone()) {
+                                queue.push_back(parent);
+                            }
+                        }
+                    }
+                    Ok(Some((last_changes, (queue, visited))))
+                }
+            };
+        }
+
+        // the path was not deleted here, but could be deleted in other branches
+        return Ok(Some((vec![], (queue, visited))));
+    }
+
+    Ok(None)
+}
+
+async fn derive_unode_entry(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    path: &Option<MPath>,
+) -> Result<Option<UnodeEntry>, Error> {
+    let root_unode_mf_id = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), cs_id)
+        .compat()
+        .await?;
+    root_unode_mf_id
+        .manifest_unode_id()
+        .find_entry(ctx.clone(), repo.get_blobstore(), path.clone())
+        .compat()
+        .await
+}
 
 /// List all Deleted Files Manifest paths recursively that were deleted and match specified paths
 /// and/or prefixes.

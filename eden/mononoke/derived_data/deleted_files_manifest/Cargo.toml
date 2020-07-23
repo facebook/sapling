@@ -24,6 +24,8 @@ anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+maplit = "1.0"
 parking_lot = "0.10.2"
 tokio = "0.1"
 
@@ -33,5 +35,4 @@ fixtures = { path = "../../tests/fixtures" }
 test_utils = { path = "../../manifest/test_utils" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-maplit = "1.0"
 tokio-compat = "0.1"
