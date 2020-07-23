@@ -125,7 +125,6 @@ else:
         "test-push-protocol-lfs.t",  # Timed out
         "test-push-redirector-pushrebase-hooks.t",  # Hooks are not in OSS yet
         "test-push-redirector-pushrebase-onesided.t",  # Missing MONONOKE_X_REPO_SYNC
-        "test-push-redirector-pushrebase.t",  # "[[ -v ... ]]" in library-push-redirector.sh and "ls" problem
         "test-push-redirector-sync-job.t",  # Missing BACKSYNCER
         "test-pushrebase-block-casefolding.t",  # Most likely MacOS path case insensitivity
         "test-pushrebase-discovery.t",  # Hooks are not in OSS yet

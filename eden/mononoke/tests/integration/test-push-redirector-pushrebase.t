@@ -220,9 +220,9 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ REPONAME=large-mon hgmn up -q master_bookmark
-  $ ls non_path_shifting/filetomove
-  ls: cannot access *: No such file or directory (glob)
-  [2]
+  $ stat non_path_shifting/filetomove
+  stat: *: No such file or directory (glob)
+  [1]
   $ ls smallrepofolder/filetomove
   smallrepofolder/filetomove
   $ verify_wc master_bookmark
@@ -240,9 +240,9 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ REPONAME=large-mon hgmn up -q master_bookmark
   $ ls non_path_shifting
   filetomove
-  $ ls smallrepofolder/filetomove
-  ls: cannot access *: No such file or directory (glob)
-  [2]
+  $ stat smallrepofolder/filetomove
+  stat: *: No such file or directory (glob)
+  [1]
   $ verify_wc master_bookmark
 
 Pushrebase, which replaces a file with a directory
