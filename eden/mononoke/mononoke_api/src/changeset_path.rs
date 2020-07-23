@@ -23,7 +23,7 @@ use derived_data::BonsaiDerived;
 use fastlog::{list_file_history, FastlogError, HistoryAcrossDeletions, Visitor};
 use filestore::FetchKey;
 use futures::compat::Future01CompatExt;
-use futures::future::{self, try_join_all, FutureExt, Shared, TryFutureExt};
+use futures::future::{try_join_all, FutureExt, Shared, TryFutureExt};
 use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
 use futures_old::Future as FutureLegacy;
@@ -366,7 +366,6 @@ impl ChangesetPathContext {
             }
         };
         let cs_info_enabled = self.repo().derive_changeset_info_enabled();
-        let terminator = Some(|_cs_id| future::ready(Ok(false)));
 
         let history_across_deletions = if follow_history_across_deletions {
             HistoryAcrossDeletions::Track
@@ -378,7 +377,6 @@ impl ChangesetPathContext {
             repo,
             mpath.cloned(),
             self.changeset.id(),
-            terminator,
             FilterVisitor {
                 cs_info_enabled,
                 until_timestamp,
