@@ -7,6 +7,7 @@ import random
 import shutil
 import stat
 import struct
+import sys
 import tempfile
 import time
 import unittest
@@ -21,10 +22,7 @@ from edenscm.mercurial.node import nullid
 from hghave import require
 
 
-require(["py2"])
-
-
-SMALLFANOUTCUTOFF = 2 ** 16 / 8
+SMALLFANOUTCUTOFF = 2 ** 16 // 8
 
 try:
     xrange(0)
@@ -52,11 +50,14 @@ class datapacktestsbase(object):
         return hashlib.sha1(content).digest()
 
     def getFakeHash(self):
-        return "".join(chr(random.randint(0, 255)) for _ in range(20))
+        if sys.version_info[0] >= 3:
+            return bytes(random.getrandbits(8) for _ in xrange(20))
+        else:
+            return "".join(chr(random.randint(0, 255)) for _ in range(20))
 
     def createPack(self, revisions=None, packdir=None, version=0):
         if revisions is None:
-            revisions = [("filename", self.getFakeHash(), nullid, "content")]
+            revisions = [("filename", self.getFakeHash(), nullid, b"content")]
 
         if packdir is None:
             packdir = self.makeTempDir()
@@ -87,10 +88,10 @@ class datapacktestsbase(object):
         self.assertEqual(content, chain[0][4])
 
     def testAddSingle(self):
-        self._testAddSingle("")
+        self._testAddSingle(b"")
 
     def testAddSingleEmpty(self):
-        self._testAddSingle("abcdef")
+        self._testAddSingle(b"abcdef")
 
     def testAddMultiple(self):
         """Test putting multiple unrelated blobs into a pack and reading them
@@ -99,7 +100,7 @@ class datapacktestsbase(object):
         revisions = []
         for i in range(10):
             filename = "foo%s" % i
-            content = "abcdef%s" % i
+            content = b"abcdef%i" % i
             node = self.getHash(content)
             revisions.append((filename, node, nullid, content))
 
@@ -116,7 +117,7 @@ class datapacktestsbase(object):
         revisions = []
         for i in range(100):
             filename = "%s.txt" % i
-            content = "put-something-here \n" * i
+            content = b"put-something-here \n" * i
             node = self.getHash(content)
             meta = {constants.METAKEYFLAG: i ** 4, constants.METAKEYSIZE: len(content)}
             revisions.append((filename, node, nullid, content, meta))
@@ -135,7 +136,7 @@ class datapacktestsbase(object):
         filename = "foo"
         lastnode = nullid
         for i in range(10):
-            content = "abcdef%s" % i
+            content = b"abcdef%i" % i
             node = self.getHash(content)
             revisions.append((filename, node, lastnode, content))
             lastnode = node
@@ -156,7 +157,7 @@ class datapacktestsbase(object):
         pack = self.createPack()
 
         try:
-            pack.add("filename", nullid, "contents")
+            pack.add("filename", nullid, b"contents")
             self.assertTrue(False, "datapack.add should throw")
         except (AttributeError, RuntimeError):
             pass
@@ -164,11 +165,11 @@ class datapacktestsbase(object):
     def testBadVersionThrows(self):
         pack = self.createPack()
         path = pack.path() + ".datapack"
-        with open(path) as f:
+        with open(path, "rb") as f:
             raw = f.read()
         raw = struct.pack("!B", 255) + raw[1:]
         os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
-        with open(path, "w+") as f:
+        with open(path, "wb+") as f:
             f.write(raw)
 
         try:
@@ -179,7 +180,7 @@ class datapacktestsbase(object):
 
     def testMissingDeltabase(self):
         fakenode = self.getFakeHash()
-        revisions = [("filename", fakenode, self.getFakeHash(), "content")]
+        revisions = [("filename", fakenode, self.getFakeHash(), b"content")]
         pack = self.createPack(revisions)
         chain = pack.getdeltachain("filename", fakenode)
         self.assertEqual(len(chain), 1)
@@ -192,7 +193,7 @@ class datapacktestsbase(object):
         total = SMALLFANOUTCUTOFF + 1
         for i in xrange(total):
             filename = "filename-%s" % i
-            content = filename
+            content = pycompat.encodeutf8(filename)
             node = self.getHash(content)
             blobs[(filename, node)] = content
             revisions.append((filename, node, nullid, content))
@@ -215,7 +216,7 @@ class datapacktestsbase(object):
 
         for i in range(numpacks):
             chain = []
-            revision = (str(i), self.getFakeHash(), nullid, "content")
+            revision = (str(i), self.getFakeHash(), nullid, b"content")
 
             for _ in range(revisionsperpack):
                 chain.append(revision)
@@ -263,7 +264,7 @@ class datapacktestsbase(object):
         secondindex = None
         for i in range(numpacks):
             chain = []
-            revision = (str(i), self.getFakeHash(), nullid, "content")
+            revision = (str(i), self.getFakeHash(), nullid, b"content")
 
             for _ in range(revisionsperpack):
                 chain.append(revision)
@@ -340,17 +341,17 @@ class datapacktestsbase(object):
         packer = revisionstore.mutabledeltastore(packfilepath=packdir)
 
         # Add some unused first revision for noise
-        packer.add("qwert", self.getFakeHash(), nullid, "qwertcontent")
+        packer.add("qwert", self.getFakeHash(), nullid, b"qwertcontent")
 
         filename = "filename1"
         node = self.getFakeHash()
         base = nullid
-        content = "asdf"
+        content = b"asdf"
         meta = {constants.METAKEYFLAG: 1, constants.METAKEYSIZE: len(content)}
         packer.add(filename, node, base, content, metadata=meta)
 
         # Add some unused third revision for noise
-        packer.add("zxcv", self.getFakeHash(), nullid, "zcxvcontent")
+        packer.add("zxcv", self.getFakeHash(), nullid, b"zcxvcontent")
 
         # Test getmissing
         missing = ("", self.getFakeHash())
