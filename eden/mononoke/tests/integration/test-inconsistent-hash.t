@@ -53,7 +53,7 @@
   $ PACK_TO_CORRUPT=".hg/store/packs/dee3d9750ad87ede865d69e20330c34e51ec83d5.datapack"
 # change access to file, as it is readonly
   $ chmod 666 "$PACK_TO_CORRUPT"
-  $ sed -i s/hello_world/aaaaaaaaaaa/ "$PACK_TO_CORRUPT"
+  $ LC_ALL=C sed -i s/hello_world/aaaaaaaaaaa/ "$PACK_TO_CORRUPT"
 
 Do a push, but disable cache verification on the client side, otherwise
 filenode won't be send at all

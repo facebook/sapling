@@ -73,7 +73,6 @@ else:
     excluded_tests = {
         "test-backsync-forever.t",  # Unknown issue
         "test-backsyncer-merges.t",  # Missing BACKSYNCER
-        "test-blobimport-inline.t",  # Illegal byte sequence and "sed -i"
         "test-blobimport-lfs.t",  # Timed out
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
         "test-blobstore_healer.t",  # PANIC not implemented in sql_ext
@@ -92,7 +91,6 @@ else:
         "test-gitimport.t",  # Issue with hggit extension
         "test-hook-tailer.t",  # Issue with hggit extension
         "test-hooks.t",  # Hooks are not in OSS yet
-        "test-inconsistent-hash.t",  # Illegal byte sequence and "sed -i"
         "test-infinitepush-lfs.t",  # Timed out
         "test-large-path-and-content.t",  # Complex bash issues
         "test-lfs-copytracing.t",  # Timed out
