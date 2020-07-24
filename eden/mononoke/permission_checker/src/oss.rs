@@ -22,8 +22,23 @@ impl MononokeIdentity {
         bail!("Decoding from JSON is not yet implemented for MononokeIdentity")
     }
 
-    pub fn try_from_x509(_: &X509) -> Result<MononokeIdentitySet> {
-        bail!("Decoding from x509 is not yet implemented for MononokeIdentity")
+    pub fn try_from_x509(cert: &X509) -> Result<MononokeIdentitySet> {
+        let subject_vec: Result<Vec<_>> = cert
+            .subject_name()
+            .entries()
+            .map(|entry| {
+                Ok(format!(
+                    "{}={}",
+                    entry.object().nid().short_name()?,
+                    entry.data().as_utf8()?
+                ))
+            })
+            .collect();
+        let subject_name = subject_vec?.as_slice().join(",");
+
+        let mut idents = MononokeIdentitySet::new();
+        idents.insert(MononokeIdentity::new("X509_SUBJECT_NAME", subject_name)?);
+        Ok(idents)
     }
 }
 

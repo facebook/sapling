@@ -53,12 +53,16 @@ eden_scm_packages = join(install_dir, "eden_scm/lib/python2.7/site-packages")
 pythonpath = env.get("PYTHONPATH")
 env["PYTHONPATH"] = eden_scm_packages + (":{}".format(pythonpath) if pythonpath else "")
 
-subprocess.run(
-    [
-        sys.executable,
-        join(repo_root, "eden/mononoke/tests/integration/integration_runner_real.py"),
-        join(build_dir, "manifest.json"),
-    ]
-    + tests,
-    env=env,
+sys.exit(
+    subprocess.run(
+        [
+            sys.executable,
+            join(
+                repo_root, "eden/mononoke/tests/integration/integration_runner_real.py"
+            ),
+            join(build_dir, "manifest.json"),
+        ]
+        + tests,
+        env=env,
+    ).returncode
 )
