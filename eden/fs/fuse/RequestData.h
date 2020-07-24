@@ -14,6 +14,7 @@
 
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
@@ -64,6 +65,16 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
 
   fuse_in_header stealReq();
 
+  /**
+   * Normally, one requestData is created for only one fetch request,
+   * so priority will only be accessed by one thread, but that is
+   * not strictly guaranteed. Atomic is used here because there
+   * might be rare cases where multiple threads access priority_
+   * at the same time.
+   */
+  std::atomic<ImportPriority> priority_{
+      ImportPriority(ImportPriorityKind::High)};
+
  public:
   static const std::string kKey;
   RequestData(const RequestData&) = delete;
@@ -100,14 +111,14 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
     return static_cast<pid_t>(fuseHeader_.pid);
   }
 
-  // Override of `ObjectFetchContext`
-  Cause getCause() const override {
-    return ObjectFetchContext::Cause::Fuse;
+  // Override of `getPriority`
+  ImportPriority getPriority() const override {
+    return priority_;
   }
 
   // Override of `ObjectFetchContext`
-  ImportPriority getPriority() const override {
-    return ImportPriority::kHigh();
+  Cause getCause() const override {
+    return ObjectFetchContext::Cause::Fuse;
   }
 
   // Returns true if the current context is being called from inside

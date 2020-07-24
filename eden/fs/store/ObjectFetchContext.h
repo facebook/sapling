@@ -6,9 +6,7 @@
  */
 
 #pragma once
-
 #include <optional>
-
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ImportPriority.h"
 
@@ -51,6 +49,7 @@ class ObjectFetchContext {
   enum Cause : unsigned { Unknown, Fuse, Thrift };
 
   ObjectFetchContext() {}
+
   virtual ~ObjectFetchContext() = default;
 
   virtual void didFetch(ObjectType, const Hash&, Origin) {}
