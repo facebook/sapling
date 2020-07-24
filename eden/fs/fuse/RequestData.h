@@ -116,6 +116,16 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
     return priority_;
   }
 
+  // Override of `deprioritize`
+  virtual void deprioritize(uint64_t delta) override {
+    ImportPriority prev = priority_.load();
+    priority_.compare_exchange_strong(prev, prev.getDeprioritized(delta));
+    if (getClientPid().has_value()) {
+      XLOG(DBG7) << "priority for " << getClientPid().value()
+                 << " has changed to: " << priority_.load().value();
+    }
+  }
+
   // Override of `ObjectFetchContext`
   Cause getCause() const override {
     return ObjectFetchContext::Cause::Fuse;

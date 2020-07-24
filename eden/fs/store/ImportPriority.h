@@ -44,6 +44,16 @@ struct ImportPriority {
         offset;
   }
 
+  /**
+   * Deprioritize ImportPriority by decreasing offset by delta.
+   * Note: this function maintains ImportPriorityKind, as jobs
+   * with higher priority kind are usually designed to be scheduled
+   * ealier and should not lower their kind even when deprioritized.
+   */
+  constexpr ImportPriority getDeprioritized(uint64_t delta) const noexcept {
+    return ImportPriority{kind, offset > delta ? offset - delta : 0};
+  }
+
   friend bool operator<(
       const ImportPriority& lhs,
       const ImportPriority& rhs) noexcept {

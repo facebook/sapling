@@ -47,7 +47,19 @@ struct PidFetchCounts {
   void clear() {
     map_.wlock()->clear();
   }
+
+  uint64_t getCountByPid(pid_t pid) {
+    auto rl = map_.rlock();
+    auto fetch_count = rl->find(pid);
+    if (fetch_count != rl->end()) {
+      return fetch_count->second;
+    } else {
+      return 0;
+    }
+  }
 };
+
+constexpr uint64_t importPriorityDeprioritizeAmount{1};
 
 /**
  * ObjectStore is a content-addressed store for eden object data.
@@ -77,6 +89,18 @@ class ObjectStore : public IObjectStore,
    * or structuredLogger_ is nullptr, this function does nothing.
    */
   void sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const;
+
+  /**
+   * Check fetch count of the process using this fetchContext before using
+   * the fetchContext in BackingStore. if fetchThreshold_ is exceeded,
+   * deprioritize the fetchContext by 1.
+   *
+   * Note: Normally, one fetchContext is created for only one fetch request,
+   * so deprioritize() should only be called once by one thread, but that is
+   * not strictly guaranteed. See comments before deprioritize() for more
+   * information
+   */
+  void deprioritizeWhenFetchHeavy(ObjectFetchContext& context) const;
 
   /**
    * Get a Tree by ID.

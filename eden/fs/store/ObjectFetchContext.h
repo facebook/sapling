@@ -67,6 +67,18 @@ class ObjectFetchContext {
   }
 
   /**
+   * Support deprioritizing in sub-classes.
+   * Note: Normally, each ObjectFetchContext is designed to be used for only one
+   * import (with NullObjectFetchContext being the only exception currenly).
+   * Therefore, this method should only be called once on each
+   * ObjectFetchContext object (when it is related to a process doing too much
+   * fetches). However, implementations of this method should write the priority
+   * change to log as debug information and watch out for unexpected uses of
+   * ObjectFetchContext that cause it to be used for more than one import.
+   */
+  virtual void deprioritize(uint64_t) {}
+
+  /**
    * Return a no-op fetch context suitable when no tracking is desired.
    */
   static ObjectFetchContext& getNullContext();

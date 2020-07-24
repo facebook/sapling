@@ -80,6 +80,17 @@ void ObjectStore::sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const {
 #endif
 }
 
+void ObjectStore::deprioritizeWhenFetchHeavy(
+    ObjectFetchContext& context) const {
+  auto pid = context.getClientPid();
+  if (pid.has_value()) {
+    auto fetch_count = pidFetchCounts_->getCountByPid(pid.value());
+    if (fetch_count >= fetchThreshold_) {
+      context.deprioritize(importPriorityDeprioritizeAmount);
+    }
+  }
+}
+
 Future<shared_ptr<const Tree>> ObjectStore::getTree(
     const Hash& id,
     ObjectFetchContext& fetchContext) const {
@@ -103,6 +114,8 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
 
       return makeFuture(std::move(tree));
     }
+
+    self->deprioritizeWhenFetchHeavy(fetchContext);
 
     // Note: We don't currently have logic here to avoid duplicate work if
     // multiple callers request the same tree at once.  We could store a map
@@ -231,6 +244,8 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
       return makeFuture(shared_ptr<const Blob>(std::move(blob)));
     }
 
+    self->deprioritizeWhenFetchHeavy(fetchContext);
+
     // Look in the BackingStore
     return self->backingStore_
         ->getBlob(id, fetchContext, fetchContext.getPriority())
@@ -318,6 +333,8 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
 
           return makeFuture(*metadata);
         }
+
+        self->deprioritizeWhenFetchHeavy(context);
 
         // Check backing store
         //
