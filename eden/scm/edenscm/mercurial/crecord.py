@@ -1618,20 +1618,24 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
             # write the initial patch
             patch = stringio()
-            patch.write(diffhelptext + hunkhelptext)
+            patch.write(pycompat.encodeutf8(diffhelptext + hunkhelptext))
             chunk.header.write(patch)
             chunk.write(patch)
 
             # start the editor and wait for it to complete
             try:
-                patch = self.ui.edit(patch.getvalue(), "", action="diff")
+                patch = pycompat.encodeutf8(
+                    self.ui.edit(
+                        pycompat.decodeutf8(patch.getvalue()), "", action="diff"
+                    )
+                )
             except error.Abort as exc:
                 self.errorstr = str(exc)
                 return None
 
             # remove comment lines
             patch = [
-                line + "\n" for line in patch.splitlines() if not line.startswith("#")
+                line + b"\n" for line in patch.splitlines() if not line.startswith(b"#")
             ]
             return patchmod.parsepatch(patch)
 
