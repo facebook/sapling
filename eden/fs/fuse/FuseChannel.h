@@ -302,9 +302,6 @@ class FuseChannel {
   size_t getRequestMetric(RequestMetricsScope::RequestMetric metric) const;
 
  private:
-  struct HandlerEntry;
-  using HandlerMap = std::unordered_map<uint32_t, HandlerEntry>;
-
   /**
    * All of our mutable state that may be accessed from the worker threads,
    * and therefore requires synchronization.
@@ -387,6 +384,7 @@ class FuseChannel {
    */
   ~FuseChannel();
 
+ public:
   folly::Future<folly::Unit> fuseRead(
       const fuse_in_header* header,
       const uint8_t* arg);
@@ -481,6 +479,7 @@ class FuseChannel {
       const fuse_in_header* header,
       const uint8_t* arg);
 
+ private:
   void setThreadSigmask();
   void initWorkerThread() noexcept;
   void fuseWorkerThread() noexcept;
@@ -595,8 +594,6 @@ class FuseChannel {
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>,
       ThreadLocalTag>
       liveRequestWatches_;
-
-  static const HandlerMap handlerMap_;
 };
 
 /**

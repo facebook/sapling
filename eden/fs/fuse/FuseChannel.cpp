@@ -33,266 +33,164 @@ namespace {
 // This is the minimum size used by libfuse so we use it too!
 constexpr size_t MIN_BUFSIZE = 0x21000;
 
-StringPiece fuseOpcodeName(FuseOpcode opcode) {
-  switch (opcode) {
-    case FUSE_LOOKUP:
-      return "FUSE_LOOKUP";
-    case FUSE_FORGET:
-      return "FUSE_FORGET";
-    case FUSE_GETATTR:
-      return "FUSE_GETATTR";
-    case FUSE_SETATTR:
-      return "FUSE_SETATTR";
-    case FUSE_READLINK:
-      return "FUSE_READLINK";
-    case FUSE_SYMLINK:
-      return "FUSE_SYMLINK";
-    case FUSE_MKNOD:
-      return "FUSE_MKNOD";
-    case FUSE_MKDIR:
-      return "FUSE_MKDIR";
-    case FUSE_UNLINK:
-      return "FUSE_UNLINK";
-    case FUSE_RMDIR:
-      return "FUSE_RMDIR";
-    case FUSE_RENAME:
-      return "FUSE_RENAME";
-    case FUSE_LINK:
-      return "FUSE_LINK";
-    case FUSE_OPEN:
-      return "FUSE_OPEN";
-    case FUSE_READ:
-      return "FUSE_READ";
-    case FUSE_WRITE:
-      return "FUSE_WRITE";
-    case FUSE_STATFS:
-      return "FUSE_STATFS";
-    case FUSE_RELEASE:
-      return "FUSE_RELEASE";
-    case FUSE_FSYNC:
-      return "FUSE_FSYNC";
-    case FUSE_SETXATTR:
-      return "FUSE_SETXATTR";
-    case FUSE_GETXATTR:
-      return "FUSE_GETXATTR";
-    case FUSE_LISTXATTR:
-      return "FUSE_LISTXATTR";
-    case FUSE_REMOVEXATTR:
-      return "FUSE_REMOVEXATTR";
-    case FUSE_FLUSH:
-      return "FUSE_FLUSH";
-    case FUSE_INIT:
-      return "FUSE_INIT";
-    case FUSE_OPENDIR:
-      return "FUSE_OPENDIR";
-    case FUSE_READDIR:
-      return "FUSE_READDIR";
-    case FUSE_RELEASEDIR:
-      return "FUSE_RELEASEDIR";
-    case FUSE_FSYNCDIR:
-      return "FUSE_FSYNCDIR";
-    case FUSE_GETLK:
-      return "FUSE_GETLK";
-    case FUSE_SETLK:
-      return "FUSE_SETLK";
-    case FUSE_SETLKW:
-      return "FUSE_SETLKW";
-    case FUSE_ACCESS:
-      return "FUSE_ACCESS";
-    case FUSE_CREATE:
-      return "FUSE_CREATE";
-    case FUSE_INTERRUPT:
-      return "FUSE_INTERRUPT";
-    case FUSE_BMAP:
-      return "FUSE_BMAP";
-    case FUSE_DESTROY:
-      return "FUSE_DESTROY";
-    case FUSE_IOCTL:
-      return "FUSE_IOCTL";
-    case FUSE_POLL:
-      return "FUSE_POLL";
-    case FUSE_NOTIFY_REPLY:
-      return "FUSE_NOTIFY_REPLY";
-    case FUSE_BATCH_FORGET:
-      return "FUSE_BATCH_FORGET";
-    case FUSE_FALLOCATE:
-      return "FUSE_FALLOCATE";
-#ifdef __linux__
-    case FUSE_READDIRPLUS:
-      return "FUSE_READDIRPLUS";
-    case FUSE_RENAME2:
-      return "FUSE_RENAME2";
-    case FUSE_LSEEK:
-      return "FUSE_LSEEK";
-#endif
-#ifdef __APPLE__
-    case FUSE_SETVOLNAME:
-      return "FUSE_SETVOLNAME";
-    case FUSE_GETXTIMES:
-      return "FUSE_GETXTIMES";
-    case FUSE_EXCHANGE:
-      return "FUSE_EXCHANGE";
-#endif
-
-    case CUSE_INIT:
-      return "CUSE_INIT";
-  }
-  return "<unknown>";
-}
-
-ProcessAccessLog::AccessType getAccessType(FuseOpcode opcode) {
-  switch (opcode) {
-    case FUSE_GETATTR:
-    case FUSE_GETXATTR:
-    case FUSE_LOOKUP:
-    case FUSE_READ:
-    case FUSE_READDIR:
-    case FUSE_READLINK:
-    case FUSE_STATFS:
-    case FUSE_OPENDIR:
-    case FUSE_RELEASEDIR:
-    case FUSE_LISTXATTR:
-#ifdef __linux__
-    case FUSE_READDIRPLUS:
-#endif
-#ifdef __APPLE__
-    case FUSE_GETXTIMES:
-#endif
-      return ProcessAccessLog::AccessType::FuseRead;
-
-    case FUSE_CREATE:
-    case FUSE_MKDIR:
-    case FUSE_RENAME:
-    case FUSE_RMDIR:
-    case FUSE_SETATTR:
-    case FUSE_SETXATTR:
-    case FUSE_UNLINK:
-    case FUSE_WRITE:
-    case FUSE_FSYNCDIR:
-    case FUSE_FSYNC:
-    case FUSE_SYMLINK:
-    case FUSE_MKNOD:
-    case FUSE_LINK:
-    case FUSE_REMOVEXATTR:
-    case FUSE_FALLOCATE:
-#ifdef __linux__
-    case FUSE_RENAME2:
-#endif
-      return ProcessAccessLog::AccessType::FuseWrite;
-
-    default:
-      return ProcessAccessLog::AccessType::FuseOther;
-  }
-}
-
 using Handler = folly::Future<folly::Unit> (
     FuseChannel::*)(const fuse_in_header* header, const uint8_t* arg);
 
-void sigusr2Handler(int /* signum */) {
-  // Do nothing.
-  // The purpose of this signal is only to interrupt the blocking read() calls
-  // in processSession() and readInitPacket()
-}
+using AccessType = ProcessAccessLog::AccessType;
 
-void installSignalHandler() {
-  // We use SIGUSR2 to wake up our worker threads when we want to shut down.
-  // Install a signal handler for this signal.  The signal handler itself is a
-  // no-op, we simply want to use it to interrupt blocking read() calls.
-  //
-  // We will re-install this handler each time a FuseChannel object is called,
-  // but that should be fine.
-  //
-  // This must be installed using sigaction() rather than signal(), so we can
-  // ensure that the SA_RESTART flag is not ste.
-  struct sigaction action = {};
-  action.sa_handler = sigusr2Handler;
-  sigemptyset(&action.sa_mask);
-  action.sa_flags = 0; // We intentionally turn off SA_RESTART
-  struct sigaction oldAction;
-  folly::checkUnixError(
-      sigaction(SIGUSR2, &action, &oldAction), "failed to set SIGUSR2 handler");
-}
+struct HandlerEntry {
+  constexpr HandlerEntry() = default;
+  /*implicit*/ constexpr HandlerEntry(StringPiece n) : name{n} {}
+  constexpr HandlerEntry(StringPiece n, AccessType at)
+      : name{n}, accessType{at} {}
+  constexpr HandlerEntry(
+      StringPiece n,
+      Handler h,
+      FuseThreadStats::HistogramPtr hist,
+      AccessType at = AccessType::FuseOther)
+      : name{n}, handler{h}, histogram{hist}, accessType{at} {}
 
-} // namespace
-
-struct FuseChannel::HandlerEntry {
-  Handler handler;
-  FuseThreadStats::HistogramPtr histogram;
+  StringPiece name;
+  Handler handler = nullptr;
+  FuseThreadStats::HistogramPtr histogram = nullptr;
+  AccessType accessType = AccessType::FuseOther;
 };
 
-const FuseChannel::HandlerMap FuseChannel::handlerMap_ = {
-    {FUSE_READ, {&FuseChannel::fuseRead, &FuseThreadStats::read}},
-    {FUSE_WRITE, {&FuseChannel::fuseWrite, &FuseThreadStats::write}},
-    {FUSE_LOOKUP, {&FuseChannel::fuseLookup, &FuseThreadStats::lookup}},
-    {FUSE_FORGET, {&FuseChannel::fuseForget, &FuseThreadStats::forget}},
-    {FUSE_GETATTR, {&FuseChannel::fuseGetAttr, &FuseThreadStats::getattr}},
-    {FUSE_SETATTR, {&FuseChannel::fuseSetAttr, &FuseThreadStats::setattr}},
-    {FUSE_READLINK, {&FuseChannel::fuseReadLink, &FuseThreadStats::readlink}},
-    {FUSE_SYMLINK, {&FuseChannel::fuseSymlink, &FuseThreadStats::symlink}},
-    {FUSE_MKNOD, {&FuseChannel::fuseMknod, &FuseThreadStats::mknod}},
-    {FUSE_MKDIR, {&FuseChannel::fuseMkdir, &FuseThreadStats::mkdir}},
-    {FUSE_UNLINK, {&FuseChannel::fuseUnlink, &FuseThreadStats::unlink}},
-    {FUSE_RMDIR, {&FuseChannel::fuseRmdir, &FuseThreadStats::rmdir}},
-    {FUSE_RENAME, {&FuseChannel::fuseRename, &FuseThreadStats::rename}},
-    {FUSE_LINK, {&FuseChannel::fuseLink, &FuseThreadStats::link}},
-    {FUSE_OPEN, {&FuseChannel::fuseOpen, &FuseThreadStats::open}},
-    {FUSE_STATFS, {&FuseChannel::fuseStatFs, &FuseThreadStats::statfs}},
-    {FUSE_RELEASE, {&FuseChannel::fuseRelease, &FuseThreadStats::release}},
-    {FUSE_FSYNC, {&FuseChannel::fuseFsync, &FuseThreadStats::fsync}},
-    {FUSE_SETXATTR, {&FuseChannel::fuseSetXAttr, &FuseThreadStats::setxattr}},
-    {FUSE_GETXATTR, {&FuseChannel::fuseGetXAttr, &FuseThreadStats::getxattr}},
-    {FUSE_LISTXATTR,
-     {&FuseChannel::fuseListXAttr, &FuseThreadStats::listxattr}},
-    {FUSE_REMOVEXATTR,
-     {&FuseChannel::fuseRemoveXAttr, &FuseThreadStats::removexattr}},
-    {FUSE_FLUSH, {&FuseChannel::fuseFlush, &FuseThreadStats::flush}},
-    {FUSE_OPENDIR, {&FuseChannel::fuseOpenDir, &FuseThreadStats::opendir}},
-    {FUSE_READDIR, {&FuseChannel::fuseReadDir, &FuseThreadStats::readdir}},
-    {FUSE_RELEASEDIR,
-     {&FuseChannel::fuseReleaseDir, &FuseThreadStats::releasedir}},
-    {FUSE_FSYNCDIR, {&FuseChannel::fuseFsyncDir, &FuseThreadStats::fsyncdir}},
-    {FUSE_ACCESS, {&FuseChannel::fuseAccess, &FuseThreadStats::access}},
-    {FUSE_CREATE, {&FuseChannel::fuseCreate, &FuseThreadStats::create}},
-    {FUSE_BMAP, {&FuseChannel::fuseBmap, &FuseThreadStats::bmap}},
-    {FUSE_BATCH_FORGET,
-     {&FuseChannel::fuseBatchForget, &FuseThreadStats::forgetmulti}},
-};
+constexpr auto kFuseHandlers = [] {
+  const auto Read = AccessType::FuseRead;
+  const auto Write = AccessType::FuseWrite;
 
-static iovec inline make_iovec(const void* addr, size_t len) {
-  iovec iov;
-  iov.iov_base = const_cast<void*>(addr);
-  iov.iov_len = len;
-  return iov;
-}
+  // Rely on assignment out of bounds to a constexpr array giving a
+  // compiler error.
+  std::array<HandlerEntry, 64> handlers;
+  handlers[FUSE_LOOKUP] = {
+      "FUSE_LOOKUP", &FuseChannel::fuseLookup, &FuseThreadStats::lookup, Read};
+  handlers[FUSE_FORGET] = {
+      "FUSE_FORGET", &FuseChannel::fuseForget, &FuseThreadStats::forget};
+  handlers[FUSE_GETATTR] = {"FUSE_GETATTR",
+                            &FuseChannel::fuseGetAttr,
+                            &FuseThreadStats::getattr,
+                            Read};
+  handlers[FUSE_SETATTR] = {"FUSE_SETATTR",
+                            &FuseChannel::fuseSetAttr,
+                            &FuseThreadStats::setattr,
+                            Write};
+  handlers[FUSE_READLINK] = {"FUSE_READLINK",
+                             &FuseChannel::fuseReadLink,
+                             &FuseThreadStats::readlink,
+                             Read};
+  handlers[FUSE_SYMLINK] = {"FUSE_SYMLINK",
+                            &FuseChannel::fuseSymlink,
+                            &FuseThreadStats::symlink,
+                            Write};
+  handlers[FUSE_MKNOD] = {
+      "FUSE_MKNOD", &FuseChannel::fuseMknod, &FuseThreadStats::mknod, Write};
+  handlers[FUSE_MKDIR] = {
+      "FUSE_MKDIR", &FuseChannel::fuseMkdir, &FuseThreadStats::mkdir, Write};
+  handlers[FUSE_UNLINK] = {
+      "FUSE_UNLINK", &FuseChannel::fuseUnlink, &FuseThreadStats::unlink, Write};
+  handlers[FUSE_RMDIR] = {
+      "FUSE_RMDIR", &FuseChannel::fuseRmdir, &FuseThreadStats::rmdir, Write};
+  handlers[FUSE_RENAME] = {
+      "FUSE_RENAME", &FuseChannel::fuseRename, &FuseThreadStats::rename, Write};
+  handlers[FUSE_LINK] = {
+      "FUSE_LINK", &FuseChannel::fuseLink, &FuseThreadStats::link, Write};
+  handlers[FUSE_OPEN] = {
+      "FUSE_OPEN", &FuseChannel::fuseOpen, &FuseThreadStats::open};
+  handlers[FUSE_READ] = {
+      "FUSE_READ", &FuseChannel::fuseRead, &FuseThreadStats::read, Read};
+  handlers[FUSE_WRITE] = {
+      "FUSE_WRITE", &FuseChannel::fuseWrite, &FuseThreadStats::write, Write};
+  handlers[FUSE_STATFS] = {
+      "FUSE_STATFS", &FuseChannel::fuseStatFs, &FuseThreadStats::statfs, Read};
+  handlers[FUSE_RELEASE] = {
+      "FUSE_RELEASE", &FuseChannel::fuseRelease, &FuseThreadStats::release};
+  handlers[FUSE_FSYNC] = {
+      "FUSE_FSYNC", &FuseChannel::fuseFsync, &FuseThreadStats::fsync, Write};
+  handlers[FUSE_SETXATTR] = {"FUSE_SETXATTR",
+                             &FuseChannel::fuseSetXAttr,
+                             &FuseThreadStats::setxattr,
+                             Write};
+  handlers[FUSE_GETXATTR] = {"FUSE_GETXATTR",
+                             &FuseChannel::fuseGetXAttr,
+                             &FuseThreadStats::getxattr,
+                             Read};
+  handlers[FUSE_LISTXATTR] = {"FUSE_LISTXATTR",
+                              &FuseChannel::fuseListXAttr,
+                              &FuseThreadStats::listxattr,
+                              Read};
+  handlers[FUSE_REMOVEXATTR] = {"FUSE_REMOVEXATTR",
+                                &FuseChannel::fuseRemoveXAttr,
+                                &FuseThreadStats::removexattr,
+                                Write};
+  handlers[FUSE_FLUSH] = {
+      "FUSE_FLUSH", &FuseChannel::fuseFlush, &FuseThreadStats::flush};
+  handlers[FUSE_INIT] = {"FUSE_INIT"};
+  handlers[FUSE_OPENDIR] = {
+      "FUSE_OPENDIR", &FuseChannel::fuseOpenDir, &FuseThreadStats::opendir};
+  handlers[FUSE_READDIR] = {"FUSE_READDIR",
+                            &FuseChannel::fuseReadDir,
+                            &FuseThreadStats::readdir,
+                            Read};
+  handlers[FUSE_RELEASEDIR] = {"FUSE_RELEASEDIR",
+                               &FuseChannel::fuseReleaseDir,
+                               &FuseThreadStats::releasedir};
+  handlers[FUSE_FSYNCDIR] = {"FUSE_FSYNCDIR",
+                             &FuseChannel::fuseFsyncDir,
+                             &FuseThreadStats::fsyncdir,
+                             Write};
+  handlers[FUSE_GETLK] = {"FUSE_GETLK"};
+  handlers[FUSE_SETLK] = {"FUSE_SETLK"};
+  handlers[FUSE_SETLKW] = {"FUSE_SETLKW"};
+  handlers[FUSE_ACCESS] = {
+      "FUSE_ACCESS", &FuseChannel::fuseAccess, &FuseThreadStats::access};
+  handlers[FUSE_CREATE] = {
+      "FUSE_CREATE", &FuseChannel::fuseCreate, &FuseThreadStats::create, Write};
+  handlers[FUSE_INTERRUPT] = {"FUSE_INTERRUPT"};
+  handlers[FUSE_BMAP] = {
+      "FUSE_BMAP", &FuseChannel::fuseBmap, &FuseThreadStats::bmap};
+  handlers[FUSE_DESTROY] = {"FUSE_DESTROY"};
+  handlers[FUSE_IOCTL] = {"FUSE_IOCTL"};
+  handlers[FUSE_POLL] = {"FUSE_POLL"};
+  handlers[FUSE_NOTIFY_REPLY] = {"FUSE_NOTIFY_REPLY"};
+  handlers[FUSE_BATCH_FORGET] = {"FUSE_BATCH_FORGET",
+                                 &FuseChannel::fuseBatchForget,
+                                 &FuseThreadStats::forgetmulti};
+  handlers[FUSE_FALLOCATE] = {"FUSE_FALLOCATE", Write};
+#ifdef __linux__
+  handlers[FUSE_READDIRPLUS] = {"FUSE_READDIRPLUS", Read};
+  handlers[FUSE_RENAME2] = {"FUSE_RENAME2", Write};
+  handlers[FUSE_LSEEK] = {"FUSE_LSEEK"};
+  handlers[FUSE_COPY_FILE_RANGE] = {"FUSE_COPY_FILE_RANGE", Write};
+#endif
+#ifdef __APPLE__
+  handlers[FUSE_SETVOLNAME] = {"FUSE_SETVOLNAME", Write};
+  handlers[FUSE_GETXTIMES] = {"FUSE_GETXTIMES", Read};
+  handlers[FUSE_EXCHANGE] = {"FUSE_EXCHANGE", Write};
+#endif
+  return handlers;
+}();
 
-template <typename T>
-static iovec inline make_iovec(const T& t) {
-  return make_iovec(&t, sizeof(t));
-}
+// Separate to avoid bloating the FUSE opcode table; CUSE_INIT is 4096.
+constexpr HandlerEntry kCuseInitHandler{"CUSE_INIT"};
 
-static std::string flagsToLabel(
-    const std::unordered_map<uint32_t, const char*>& labels,
-    uint32_t flags) {
-  std::vector<const char*> bits;
-  for (const auto& it : labels) {
-    if (it.first == 0) {
-      // Sometimes a define evaluates to zero; it's not useful so skip it
-      continue;
-    }
-    if ((flags & it.first) == it.first) {
-      bits.push_back(it.second);
-      flags &= ~it.first;
-    }
+constexpr const HandlerEntry* lookupFuseHandlerEntry(uint32_t opcode) {
+  if (CUSE_INIT == opcode) {
+    return &kCuseInitHandler;
   }
-  std::string str;
-  folly::join(" ", bits, str);
-  if (flags == 0) {
-    return str;
+  if (opcode >= std::size(kFuseHandlers)) {
+    return nullptr;
   }
-  return folly::format("{} unknown:0x{:x}", str, flags).str();
+  auto& entry = kFuseHandlers[opcode];
+  return entry.name.empty() ? nullptr : &entry;
 }
 
-static const std::unordered_map<uint32_t, const char*> capsLabels = {
+constexpr StringPiece fuseOpcodeName(uint32_t opcode) {
+  auto* entry = lookupFuseHandlerEntry(opcode);
+  return entry ? entry->name : "<unknown>";
+}
+
+constexpr std::pair<uint32_t, const char*> kCapsLabels[] = {
     {FUSE_ASYNC_READ, "ASYNC_READ"},
     {FUSE_POSIX_LOCKS, "POSIX_LOCKS"},
     {FUSE_ATOMIC_O_TRUNC, "ATOMIC_O_TRUNC"},
@@ -325,6 +223,62 @@ static const std::unordered_map<uint32_t, const char*> capsLabels = {
     {FUSE_XTIMES, "XTIMES"},
 #endif
 };
+
+std::string capsFlagsToLabel(uint32_t flags) {
+  std::vector<const char*> bits;
+  bits.reserve(std::size(kCapsLabels));
+  for (const auto& [flag, name] : kCapsLabels) {
+    if (flag == 0) {
+      // Sometimes a define evaluates to zero; it's not useful so skip it
+      continue;
+    }
+    if ((flags & flag) == flag) {
+      bits.push_back(name);
+      flags &= flag;
+    }
+  }
+  std::string str;
+  folly::join(" ", bits, str);
+  if (flags == 0) {
+    return str;
+  }
+  return folly::format("{} unknown:0x{:x}", str, flags).str();
+}
+
+void sigusr2Handler(int /* signum */) {
+  // Do nothing.
+  // The purpose of this signal is only to interrupt the blocking read() calls
+  // in processSession() and readInitPacket()
+}
+
+void installSignalHandler() {
+  // We use SIGUSR2 to wake up our worker threads when we want to shut down.
+  // Install a signal handler for this signal.  The signal handler itself is a
+  // no-op, we simply want to use it to interrupt blocking read() calls.
+  //
+  // We will re-install this handler each time a FuseChannel object is called,
+  // but that should be fine.
+  //
+  // This must be installed using sigaction() rather than signal(), so we can
+  // ensure that the SA_RESTART flag is not ste.
+  struct sigaction action = {};
+  action.sa_handler = sigusr2Handler;
+  sigemptyset(&action.sa_mask);
+  action.sa_flags = 0; // We intentionally turn off SA_RESTART
+  struct sigaction oldAction;
+  folly::checkUnixError(
+      sigaction(SIGUSR2, &action, &oldAction), "failed to set SIGUSR2 handler");
+}
+
+template <typename T>
+iovec make_iovec(const T& t) {
+  iovec iov{};
+  iov.iov_base = const_cast<T*>(&t);
+  iov.iov_len = sizeof(t);
+  return iov;
+}
+
+} // namespace
 
 FuseChannel::DataRange::DataRange(int64_t off, int64_t len)
     : offset(off), length(len) {}
@@ -520,7 +474,7 @@ FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
   dispatcher_->initConnection(connInfo);
   XLOG(DBG1) << "Takeover using max_write=" << connInfo_->max_write
              << ", max_readahead=" << connInfo_->max_readahead
-             << ", want=" << flagsToLabel(capsLabels, connInfo_->flags);
+             << ", want=" << capsFlagsToLabel(connInfo_->flags);
   startWorkerThreads();
   return sessionCompletePromise_.getFuture();
 }
@@ -1085,8 +1039,8 @@ void FuseChannel::readInitPacket() {
              << FUSE_KERNEL_MINOR_VERSION << " on mount \"" << mountPath_
              << "\", max_write=" << connInfo.max_write
              << ", max_readahead=" << connInfo.max_readahead
-             << ", capable=" << flagsToLabel(capsLabels, capable)
-             << ", want=" << flagsToLabel(capsLabels, want);
+             << ", capable=" << capsFlagsToLabel(capable)
+             << ", want=" << capsFlagsToLabel(want);
 
   if (init.init.major != FUSE_KERNEL_VERSION) {
     replyError(init.header, EPROTO);
@@ -1232,7 +1186,10 @@ void FuseChannel::processSession() {
       continue;
     }
 
-    processAccessLog_.recordAccess(header->pid, getAccessType(header->opcode));
+    auto* handlerEntry = lookupFuseHandlerEntry(header->opcode);
+    processAccessLog_.recordAccess(
+        header->pid,
+        handlerEntry ? handlerEntry->accessType : AccessType::FuseOther);
 
     switch (header->opcode) {
       case FUSE_INIT:
@@ -1300,8 +1257,7 @@ void FuseChannel::processSession() {
         break;
 
       default: {
-        const auto handlerIter = handlerMap_.find(header->opcode);
-        if (handlerIter != handlerMap_.end()) {
+        if (handlerEntry && handlerEntry->handler) {
           // Start a new request and associate it with the current thread.
           // It will be disassociated when we leave this scope, but will
           // propagate across any futures that are spawned as part of this
@@ -1324,16 +1280,16 @@ void FuseChannel::processSession() {
                 std::weak_ptr<folly::RequestContext>(
                     RequestContext::saveContext()));
           }
-          const auto& entry = handlerIter->second;
 
           request
               .catchErrors(
                   folly::makeFutureWith([&] {
                     request.startRequest(
                         dispatcher_->getStats(),
-                        entry.histogram,
+                        handlerEntry->histogram,
                         *(liveRequestWatches_.get()));
-                    return (this->*entry.handler)(&request.getReq(), arg);
+                    return (this->*handlerEntry->handler)(
+                        &request.getReq(), arg);
                   })
                       .within(requestTimeout_),
                   notifications_)
