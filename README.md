@@ -90,6 +90,9 @@ This build script will create an output directory outside of the repository
 where it will perform the build.  You can control this output directory
 location by passing a  `--scratch-path` argument to the build script.
 
+On Ubuntu, install the requirements in `requirements_ubuntu.txt`.  You will
+also need m4 and Rust installed.
+
 # Support
 
 EdenSCM is the primary source control system used at Facebook, and is used for
