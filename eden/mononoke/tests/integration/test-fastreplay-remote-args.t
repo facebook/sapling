@@ -36,7 +36,7 @@ Replay traffic using the ephemeral blobstore
 
 Delete the ephemeral blobstore data. Check that replay now fails.
   $ rm -r "$WIREPROTO_LOGGING_BLOBSTORE"
-  $ fastreplay < "$WIREPROTO_LOGGING_PATH" 2>&1 | grep -A6 "Dispatch failed"
+  $ fastreplay < "$WIREPROTO_LOGGING_PATH" 2>&1 | grep -A6 "Dispatch failed" | sed "/^--/d"
   * Dispatch failed: Error { (glob)
       context: "While parsing request",
       source: Error {
