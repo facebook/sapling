@@ -76,8 +76,7 @@ const char* GitBackingStore::getPath() const {
 
 SemiFuture<unique_ptr<Tree>> GitBackingStore::getTree(
     const Hash& id,
-    ObjectFetchContext& /*context*/,
-    ImportPriority /* priority */) {
+    ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(getTreeImpl(id));
 }
@@ -131,8 +130,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
 
 SemiFuture<unique_ptr<Blob>> GitBackingStore::getBlob(
     const Hash& id,
-    ObjectFetchContext& /*context*/,
-    ImportPriority /* priority */) {
+    ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(getBlobImpl(id));
 }

@@ -41,12 +41,10 @@ class BackingStore {
 
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
-      ObjectFetchContext& context,
-      ImportPriority priority = ImportPriority::kNormal()) = 0;
+      ObjectFetchContext& context) = 0;
   virtual folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context,
-      ImportPriority priority = ImportPriority::kNormal()) = 0;
+      ObjectFetchContext& context) = 0;
 
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) = 0;

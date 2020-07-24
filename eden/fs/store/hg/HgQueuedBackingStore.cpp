@@ -183,22 +183,20 @@ void HgQueuedBackingStore::processRequest() {
 
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     const Hash& id,
-    ObjectFetchContext& context,
-    ImportPriority priority) {
+    ObjectFetchContext& context) {
   logBackingStoreFetch(context, id);
 
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
   auto [request, future] = HgImportRequest::makeTreeImportRequest(
-      id, priority, std::move(importTracker));
+      id, context.getPriority(), std::move(importTracker));
   queue_.enqueue(std::move(request));
   return std::move(future);
 }
 
 folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     const Hash& id,
-    ObjectFetchContext& context,
-    ImportPriority priority) {
+    ObjectFetchContext& context) {
   auto proxyHash = HgProxyHash(localStore_.get(), id, "getBlob");
   auto path = proxyHash.path();
   logBackingStoreFetch(context, path);
@@ -211,7 +209,7 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
   auto [request, future] = HgImportRequest::makeBlobImportRequest(
-      id, priority, std::move(importTracker));
+      id, context.getPriority(), std::move(importTracker));
   queue_.enqueue(std::move(request));
   return std::move(future);
 }

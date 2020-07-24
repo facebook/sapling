@@ -40,8 +40,7 @@ FakeBackingStore::~FakeBackingStore() {}
 
 SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTree(
     const Hash& id,
-    ObjectFetchContext& /*context*/,
-    ImportPriority /* priority */) {
+    ObjectFetchContext& /*context*/) {
   auto data = data_.wlock();
   ++data->accessCounts[id];
   auto it = data->trees.find(id);
@@ -60,8 +59,7 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTree(
 
 SemiFuture<unique_ptr<Blob>> FakeBackingStore::getBlob(
     const Hash& id,
-    ObjectFetchContext& /*context*/,
-    ImportPriority /* priority */) {
+    ObjectFetchContext& /*context*/) {
   auto data = data_.wlock();
   ++data->accessCounts[id];
   auto it = data->blobs.find(id);

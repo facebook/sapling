@@ -44,6 +44,7 @@ struct PidFetchCounts {
     auto fetch_count = (*map_lock)[pid]++;
     return fetch_count;
   }
+
   void clear() {
     map_.wlock()->clear();
   }

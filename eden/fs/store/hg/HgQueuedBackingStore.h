@@ -50,12 +50,10 @@ class HgQueuedBackingStore : public BackingStore {
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
-      ObjectFetchContext& context,
-      ImportPriority priority = ImportPriority::kNormal()) override;
+      ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context,
-      ImportPriority priority = ImportPriority::kNormal()) override;
+      ObjectFetchContext& context) override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;

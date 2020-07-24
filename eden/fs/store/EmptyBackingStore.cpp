@@ -26,16 +26,14 @@ EmptyBackingStore::~EmptyBackingStore() {}
 
 SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTree(
     const Hash& /* id */,
-    ObjectFetchContext& /* context */,
-    ImportPriority /* priority */) {
+    ObjectFetchContext& /* context */) {
   return makeSemiFuture<unique_ptr<Tree>>(
       std::domain_error("empty backing store"));
 }
 
 SemiFuture<unique_ptr<Blob>> EmptyBackingStore::getBlob(
     const Hash& /* id */,
-    ObjectFetchContext& /* context */,
-    ImportPriority /* priority */) {
+    ObjectFetchContext& /* context */) {
   return makeSemiFuture<unique_ptr<Blob>>(
       std::domain_error("empty backing store"));
 }

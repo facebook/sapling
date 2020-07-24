@@ -252,8 +252,7 @@ void HgBackingStore::initializeTreeManifestImport(
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     const Hash& id,
-    ObjectFetchContext& /*context*/,
-    ImportPriority /* priority */) {
+    ObjectFetchContext& /*context*/) {
   HgProxyHash pathInfo(localStore_.get(), id, "importTree");
   std::optional<Hash> commitHash;
   // note: if the parent of the tree was fetched with an old version of eden
@@ -548,8 +547,7 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
 
 SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
     const Hash& id,
-    ObjectFetchContext& /*context*/,
-    ImportPriority /* priority */) {
+    ObjectFetchContext& /*context*/) {
   folly::stop_watch<std::chrono::milliseconds> watch;
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
