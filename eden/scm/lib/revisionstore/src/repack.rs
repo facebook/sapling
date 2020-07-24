@@ -22,7 +22,7 @@ use types::Key;
 use crate::{
     contentstore::ContentStore,
     datapack::{DataPack, DataPackVersion},
-    datastore::{HgIdDataStore, HgIdMutableDeltaStore},
+    datastore::{HgIdDataStore, HgIdMutableDeltaStore, StoreResult},
     historypack::{HistoryPack, HistoryPackVersion},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
     localstore::LocalStore,
@@ -64,8 +64,10 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
                 }
 
                 // If we managed to get a delta, the metadata must be present.
-                let meta = data_pack.get_meta(&delta.key)?.unwrap();
-                mut_pack.add(&delta, &meta)?;
+                match data_pack.get_meta(StoreKey::hgid(delta.key.clone()))? {
+                    StoreResult::Found(meta) => mut_pack.add(&delta, &meta)?,
+                    _ => (),
+                }
             }
         }
     }
@@ -311,11 +313,13 @@ fn repack_datapack_to_contentstore(
             for key in pack.to_keys() {
                 let key = key?;
 
-                if let Some(content) = store.get(&key)? {
-                    // If we managed to get a delta, the metadata must be present.
-                    let meta = store.get_meta(&key)?.unwrap();
-
-                    store.add_pending(&key, Bytes::from(content), meta, location)?;
+                if let StoreResult::Found(content) = store.get(StoreKey::hgid(key.clone()))? {
+                    match store.get_meta(StoreKey::hgid(key.clone()))? {
+                        StoreResult::Found(meta) => {
+                            store.add_pending(&key, Bytes::from(content), meta, location)?
+                        }
+                        _ => (),
+                    }
                 }
             }
             Ok(())

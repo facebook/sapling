@@ -8,7 +8,7 @@
 use anyhow::{format_err, Result};
 use bytes::Bytes;
 use manifest_tree::TreeStore;
-use revisionstore::{ContentStore, HgIdDataStore};
+use revisionstore::{ContentStore, HgIdDataStore, StoreKey, StoreResult};
 use types::{HgId, Key, RepoPath};
 
 pub(crate) struct TreeContentStore {
@@ -27,11 +27,15 @@ impl TreeContentStore {
 
 impl TreeStore for TreeContentStore {
     fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes> {
-        let key = Key::new(path.to_owned(), hgid);
+        let key = StoreKey::hgid(Key::new(path.to_owned(), hgid));
 
-        self.inner.get(&key).and_then(|opt| {
-            opt.ok_or_else(|| format_err!("hgid: {:?} path: {:?} is not found.", hgid, path))
-                .map(Into::into)
+        self.inner.get(key).and_then(|res| match res {
+            StoreResult::Found(data) => Ok(data.into()),
+            StoreResult::NotFound(_) => Err(format_err!(
+                "hgid: {:?} path: {:?} is not found.",
+                hgid,
+                path
+            )),
         })
     }
 

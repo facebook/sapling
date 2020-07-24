@@ -50,7 +50,7 @@ use util::path::{create_dir, create_shared_dir, remove_file};
 use crate::{
     datastore::{
         strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
-        HgIdMutableDeltaStore, Metadata, RemoteDataStore,
+        HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
     },
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     indexedlogutil::{Store, StoreOpenOptions},
@@ -214,8 +214,8 @@ impl LfsPointersStore {
     }
 
     /// Find the pointer corresponding to the passed in `Key`.
-    fn get(&self, key: &Key) -> Result<Option<LfsPointersEntry>> {
-        self.entry(&StoreKey::from(key))
+    fn get(&self, key: &StoreKey) -> Result<Option<LfsPointersEntry>> {
+        self.entry(key)
     }
 
     fn add(&mut self, entry: LfsPointersEntry) -> Result<()> {
@@ -530,17 +530,19 @@ impl LfsStore {
         LfsStore::new(pointers, blobs)
     }
 
-    fn blob_impl(&self, key: &StoreKey) -> Result<Option<(LfsPointersEntry, Bytes)>> {
-        let pointer = self.pointers.read().entry(key)?;
+    fn blob_impl(&self, key: StoreKey) -> Result<StoreResult<(LfsPointersEntry, Bytes)>> {
+        let pointer = self.pointers.read().entry(&key)?;
 
         match pointer {
-            None => Ok(None),
+            None => Ok(StoreResult::NotFound(key)),
             Some(entry) => match entry.content_hashes.get(&ContentHashType::Sha256) {
-                None => Ok(None),
-                Some(content_hash) => Ok(self
-                    .blobs
-                    .get(&content_hash.clone().unwrap_sha256())?
-                    .map(|blob| (entry, blob))),
+                None => Ok(StoreResult::NotFound(key)),
+                Some(content_hash) => {
+                    match self.blobs.get(&content_hash.clone().unwrap_sha256())? {
+                        None => Ok(StoreResult::NotFound(key)),
+                        Some(blob) => Ok(StoreResult::Found((entry, blob))),
+                    }
+                }
             },
         }
     }
@@ -552,7 +554,7 @@ impl LocalStore for LfsStore {
             .iter()
             .filter_map(|k| match k {
                 StoreKey::HgId(key) => {
-                    let entry = self.pointers.read().get(key);
+                    let entry = self.pointers.read().get(&k.clone());
                     match entry {
                         Ok(None) | Err(_) => Some(k.clone()),
                         Ok(Some(entry)) => match entry.content_hashes.get(&ContentHashType::Sha256)
@@ -639,26 +641,26 @@ fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
 }
 
 impl HgIdDataStore for LfsStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        match self.blob_impl(&StoreKey::from(key))? {
-            Some((entry, content)) => {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        match self.blob_impl(key)? {
+            StoreResult::Found((entry, content)) => {
                 let content = rebuild_metadata(content, &entry);
                 // PERF: Consider changing HgIdDataStore::get() to return Bytes to avoid copying data.
-                Ok(Some(content.as_ref().to_vec()))
+                Ok(StoreResult::Found(content.as_ref().to_vec()))
             }
-            None => Ok(None),
+            StoreResult::NotFound(key) => Ok(StoreResult::NotFound(key)),
         }
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        let entry = self.pointers.read().get(key)?;
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        let entry = self.pointers.read().get(&key)?;
         if let Some(entry) = entry {
-            Ok(Some(Metadata {
+            Ok(StoreResult::Found(Metadata {
                 size: Some(entry.size.try_into()?),
                 flags: None,
             }))
         } else {
-            Ok(None)
+            Ok(StoreResult::NotFound(key))
         }
     }
 }
@@ -707,14 +709,20 @@ impl From<LfsPointersEntry> for ContentMetadata {
 }
 
 impl ContentDataStore for LfsStore {
-    fn blob(&self, key: &StoreKey) -> Result<Option<Bytes>> {
-        Ok(self.blob_impl(key)?.map(|(_, blob)| blob))
+    fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
+        match self.blob_impl(key)? {
+            StoreResult::Found((_, blob)) => Ok(StoreResult::Found(blob)),
+            StoreResult::NotFound(key) => Ok(StoreResult::NotFound(key)),
+        }
     }
 
-    fn metadata(&self, key: &StoreKey) -> Result<Option<ContentMetadata>> {
-        let pointer = self.pointers.read().entry(key)?;
+    fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
+        let pointer = self.pointers.read().entry(&key)?;
 
-        Ok(pointer.map(Into::into))
+        match pointer {
+            None => Ok(StoreResult::NotFound(key)),
+            Some(pointer_entry) => Ok(StoreResult::Found(pointer_entry.into())),
+        }
     }
 }
 
@@ -740,11 +748,11 @@ impl LfsMultiplexer {
 }
 
 impl HgIdDataStore for LfsMultiplexer {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         self.union.get(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         self.union.get_meta(key)
     }
 }
@@ -1447,11 +1455,14 @@ impl RemoteDataStore for LfsRemoteStore {
                 let size = size.clone();
                 move |sha256| {
                     let key = StoreKey::from(ContentHash::Sha256(sha256));
-                    let opt = local_store.blob(&key)?;
-                    if let Some(blob) = opt.as_ref() {
-                        size.fetch_add(blob.len(), Ordering::Relaxed);
+
+                    match local_store.blob(key)? {
+                        StoreResult::Found(blob) => {
+                            size.fetch_add(blob.len(), Ordering::Relaxed);
+                            Ok(Some(blob))
+                        }
+                        StoreResult::NotFound(_) => Ok(None),
                     }
-                    Ok(opt)
                 }
             })?;
 
@@ -1474,19 +1485,17 @@ impl RemoteDataStore for LfsRemoteStore {
 }
 
 impl HgIdDataStore for LfsRemoteStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self.store.get(key),
-            Err(_) => Ok(None),
+            Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self.store.get_meta(key),
-            Err(_) => Ok(None),
+            Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
 }
@@ -1618,8 +1627,8 @@ mod tests {
         };
 
         store.add(&delta, &Default::default())?;
-        let stored = store.get(&k1)?;
-        assert_eq!(Some(delta.data.as_ref()), stored.as_deref());
+        let stored = store.get(StoreKey::hgid(k1))?;
+        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
 
         Ok(())
     }
@@ -1640,13 +1649,14 @@ mod tests {
         };
 
         store.add(&delta, &Default::default())?;
-        let stored = store.get(&k1)?;
-        assert_eq!(Some(delta.data.as_ref()), stored.as_deref());
+        let k = StoreKey::hgid(k1);
+        let stored = store.get(k.clone())?;
+        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
 
         store.flush()?;
 
-        let stored = store.get(&k1)?;
-        assert_eq!(Some(delta.data.as_ref()), stored.as_deref());
+        let stored = store.get(k)?;
+        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
 
         Ok(())
     }
@@ -1802,8 +1812,8 @@ mod tests {
         };
 
         store.add(&delta, &Default::default())?;
-        let stored = store.get(&k1)?;
-        assert_eq!(Some(delta.data.as_ref()), stored.as_deref());
+        let stored = store.get(StoreKey::hgid(k1))?;
+        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
 
         Ok(())
     }
@@ -1827,9 +1837,10 @@ mod tests {
         };
 
         multiplexer.add(&delta, &Default::default())?;
-        let stored = multiplexer.get(&k1)?;
-        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
-        assert_eq!(indexedlog.get_missing(&[k1.into()])?, vec![]);
+        let k = StoreKey::hgid(k1);
+        let stored = multiplexer.get(k.clone())?;
+        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
+        assert_eq!(indexedlog.get_missing(&[k])?, vec![]);
 
         Ok(())
     }
@@ -1853,11 +1864,12 @@ mod tests {
         };
 
         multiplexer.add(&delta, &Default::default())?;
-        let stored = multiplexer.get(&k1)?;
-        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
+        let k = StoreKey::hgid(k1);
+        let stored = multiplexer.get(k.clone())?;
+        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
         assert_eq!(
-            indexedlog.get_missing(&[StoreKey::from(&k1)])?,
-            vec![StoreKey::from(&k1)]
+            indexedlog.get_missing(&[k.clone()])?,
+            vec![StoreKey::from(k)]
         );
 
         Ok(())
@@ -1898,17 +1910,18 @@ mod tests {
                 flags: Some(Metadata::LFS_FLAG),
             },
         )?;
-        assert_eq!(
-            indexedlog.get_missing(&[StoreKey::from(&k1)])?,
-            vec![StoreKey::from(&k1)]
-        );
+        let k = StoreKey::hgid(k1.clone());
+        assert_eq!(indexedlog.get_missing(&[k.clone()])?, vec![k.clone()]);
         // The blob isn't present, so we cannot get it.
-        assert_eq!(multiplexer.get(&k1)?, None);
+        assert_eq!(
+            multiplexer.get(k.clone())?,
+            StoreResult::NotFound(k.clone())
+        );
 
         multiplexer.flush()?;
 
         let lfs = LfsStore::shared(&lfsdir, &config)?;
-        let entry = lfs.pointers.read().get(&k1)?;
+        let entry = lfs.pointers.read().get(&k)?;
 
         assert!(entry.is_some());
 
@@ -1964,17 +1977,18 @@ mod tests {
                 flags: Some(Metadata::LFS_FLAG),
             },
         )?;
-        assert_eq!(
-            indexedlog.get_missing(&[StoreKey::from(&k1)])?,
-            vec![StoreKey::from(&k1)]
-        );
+        let k = StoreKey::hgid(k1.clone());
+        assert_eq!(indexedlog.get_missing(&[k.clone()])?, vec![k.clone()]);
         // The blob isn't present, so we cannot get it.
-        assert_eq!(multiplexer.get(&k1)?, None);
+        assert_eq!(
+            multiplexer.get(k.clone())?,
+            StoreResult::NotFound(k.clone())
+        );
 
         multiplexer.flush()?;
 
         let lfs = LfsStore::shared(&lfsdir, &config)?;
-        let entry = lfs.pointers.read().get(&k1)?;
+        let entry = lfs.pointers.read().get(&k.clone())?;
 
         assert!(entry.is_some());
 
@@ -2031,10 +2045,9 @@ mod tests {
             },
         )?;
 
-        let read_blob = multiplexer.get(&k1)?.map(|vec| Bytes::from(vec));
-        let expected_blob = Some(Bytes::from(
-            &b"\x01\n\x01\n\x01\nTHIS IS A BLOB WITH A HEADER"[..],
-        ));
+        let read_blob = multiplexer.get(StoreKey::hgid(k1))?;
+        let expected_blob =
+            StoreResult::Found(b"\x01\n\x01\n\x01\nTHIS IS A BLOB WITH A HEADER".to_vec());
         assert_eq!(read_blob, expected_blob);
 
         Ok(())
@@ -2322,8 +2335,11 @@ mod tests {
                 key: key.clone(),
             };
 
-            let stored = remotedatastore.get(&key)?;
-            assert_eq!(stored.as_deref(), Some(expected_delta.data.as_ref()));
+            let stored = remotedatastore.get(StoreKey::hgid(key))?;
+            assert_eq!(
+                stored,
+                StoreResult::Found(expected_delta.data.as_ref().to_vec())
+            );
 
             Ok(())
         }
@@ -2448,11 +2464,15 @@ mod tests {
             &config,
         )?);
         let remote = remote.datastore(shared_lfs.clone());
-        remote.upload(&[StoreKey::from(&k1)])?;
+        let k = StoreKey::hgid(k1.clone());
+        remote.upload(&[k.clone()])?;
 
         // The blob was moved from the local store to the shared store.
-        assert_eq!(local_lfs.get(&k1)?, None);
-        assert_eq!(shared_lfs.get(&k1)?, Some(delta.data.to_vec()));
+        assert_eq!(local_lfs.get(k.clone())?, StoreResult::NotFound(k.clone()));
+        assert_eq!(
+            shared_lfs.get(k.clone())?,
+            StoreResult::Found(delta.data.to_vec())
+        );
 
         Ok(())
     }
@@ -2473,8 +2493,8 @@ mod tests {
 
         store.add(&delta, &Default::default())?;
 
-        let blob = store.blob(&StoreKey::from(k1))?;
-        assert_eq!(blob, Some(delta.data));
+        let blob = store.blob(StoreKey::from(k1))?;
+        assert_eq!(blob, StoreResult::Found(delta.data));
 
         Ok(())
     }
@@ -2496,10 +2516,10 @@ mod tests {
 
         store.add(&delta, &Default::default())?;
 
-        let metadata = store.metadata(&StoreKey::from(k1))?;
+        let metadata = store.metadata(StoreKey::from(k1))?;
         assert_eq!(
             metadata,
-            Some(ContentMetadata {
+            StoreResult::Found(ContentMetadata {
                 size: 4,
                 is_binary: false,
                 hash,

@@ -24,7 +24,7 @@ use lz4_pyframe::{compress, decompress};
 use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
 
 use crate::{
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     localstore::LocalStore,
     repack::ToKeys,
     sliceext::SliceExt,
@@ -213,19 +213,34 @@ impl LocalStore for IndexedLogHgIdDataStore {
 }
 
 impl HgIdDataStore for IndexedLogHgIdDataStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        let key = match key {
+            StoreKey::HgId(key) => key,
+            content => return Ok(StoreResult::NotFound(content)),
+        };
+
         let inner = self.inner.read();
         let mut entry = match Entry::from_log(&key, &inner.log)? {
-            None => return Ok(None),
+            None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
             Some(entry) => entry,
         };
         let content = entry.content()?;
-        Ok(Some(content.as_ref().to_vec()))
+        Ok(StoreResult::Found(content.as_ref().to_vec()))
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        let key = match key {
+            StoreKey::HgId(key) => key,
+            content => return Ok(StoreResult::NotFound(content)),
+        };
+
         let inner = self.inner.read();
-        Ok(Entry::from_log(&key, &inner.log)?.map(|entry| entry.metadata().clone()))
+        let entry = match Entry::from_log(&key, &inner.log)? {
+            None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
+            Some(entry) => entry,
+        };
+
+        Ok(StoreResult::Found(entry.metadata().clone()))
     }
 }
 
@@ -291,8 +306,8 @@ mod tests {
         log.flush().unwrap();
 
         let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
-        let read_data = log.get(&delta.key).unwrap();
-        assert_eq!(Some(delta.data.as_ref()), read_data.as_deref());
+        let read_data = log.get(StoreKey::hgid(delta.key)).unwrap();
+        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), read_data);
     }
 
     #[test]
@@ -300,8 +315,8 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
 
-        let key = key("a", "1");
-        assert!(log.get(&key).unwrap().is_none());
+        let key = StoreKey::hgid(key("a", "1"));
+        assert_eq!(log.get(key.clone()).unwrap(), StoreResult::NotFound(key));
     }
 
     #[test]

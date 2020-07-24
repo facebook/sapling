@@ -18,7 +18,9 @@ use edenapi_types::{DataEntry, HistoryEntry};
 use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
 
 use crate::{
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
+    datastore::{
+        Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
+    },
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
     localstore::LocalStore,
     remotestore::HgIdRemoteStore,
@@ -118,18 +120,16 @@ impl RemoteDataStore for FakeRemoteDataStore {
 }
 
 impl HgIdDataStore for FakeRemoteDataStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Err(_) => Ok(None),
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        match self.prefetch(&[key.clone()]) {
+            Err(_) => Ok(StoreResult::NotFound(key)),
             Ok(()) => self.store.get(key),
         }
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Err(_) => Ok(None),
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        match self.prefetch(&[key.clone()]) {
+            Err(_) => Ok(StoreResult::NotFound(key)),
             Ok(()) => self.store.get_meta(key),
         }
     }

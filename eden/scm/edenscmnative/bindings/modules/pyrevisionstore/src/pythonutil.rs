@@ -11,7 +11,10 @@ use cpython::{
 };
 
 use cpython_ext::{PyPath, PyPathBuf, ResultPyErrExt};
-use revisionstore::datastore::{Delta, Metadata};
+use revisionstore::{
+    datastore::{Delta, Metadata},
+    StoreKey,
+};
 use types::{Key, Node, RepoPathBuf};
 
 pub fn to_node(py: Python, node: &PyBytes) -> Node {
@@ -116,6 +119,6 @@ pub fn to_metadata(py: Python, meta: &PyDict) -> PyResult<Metadata> {
     })
 }
 
-pub fn key_error(py: Python, key: &Key) -> PyErr {
+pub fn key_error(py: Python, key: &StoreKey) -> PyErr {
     PyErr::new::<exc::KeyError, _>(py, format!("Key not found {:?}", key))
 }

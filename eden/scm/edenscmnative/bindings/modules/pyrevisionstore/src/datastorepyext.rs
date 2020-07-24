@@ -15,8 +15,9 @@ use cpython::{
 
 use cpython_ext::{PyPath, PyPathBuf, ResultPyErrExt};
 use revisionstore::{
-    datastore::Delta, ContentDataStore, ContentHash, HgIdDataStore, HgIdMutableDeltaStore,
-    RemoteDataStore, StoreKey, ToKeys,
+    datastore::{Delta, StoreResult},
+    ContentDataStore, ContentHash, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore, StoreKey,
+    ToKeys,
 };
 use types::Node;
 
@@ -62,22 +63,23 @@ pub trait RemoteDataStorePyExt: RemoteDataStore {
 
 impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
     fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
-        let key = to_key(py, name, node)?;
-        let result = py
-            .allow_threads(|| self.get(&key))
-            .map_pyerr(py)?
-            .ok_or_else(|| key_error(py, &key))?;
-
-        Ok(PyBytes::new(py, &result[..]))
+        let key = StoreKey::hgid(to_key(py, name, node)?);
+        let result = py.allow_threads(|| self.get(key)).map_pyerr(py)?;
+        match result {
+            StoreResult::Found(data) => Ok(PyBytes::new(py, &data[..])),
+            StoreResult::NotFound(key) => Err(key_error(py, &key)),
+        }
     }
 
     fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
+        let storekey = StoreKey::hgid(key.clone());
 
-        let data = py
-            .allow_threads(|| self.get(&key))
-            .map_pyerr(py)?
-            .ok_or_else(|| key_error(py, &key))?;
+        let res = py.allow_threads(|| self.get(storekey)).map_pyerr(py)?;
+        let data = match res {
+            StoreResult::Found(data) => data,
+            StoreResult::NotFound(key) => return Err(key_error(py, &key)),
+        };
 
         let delta = Delta {
             data: data.into(),
@@ -102,11 +104,14 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
 
     fn get_delta_chain_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyList> {
         let key = to_key(py, name, node)?;
+        let storekey = StoreKey::hgid(key.clone());
 
-        let data = py
-            .allow_threads(|| self.get(&key))
-            .map_pyerr(py)?
-            .ok_or_else(|| key_error(py, &key))?;
+        let res = py.allow_threads(|| self.get(storekey)).map_pyerr(py)?;
+
+        let data = match res {
+            StoreResult::Found(data) => data,
+            StoreResult::NotFound(key) => return Err(key_error(py, &key)),
+        };
 
         let delta = Delta {
             data: data.into(),
@@ -124,11 +129,13 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
     }
 
     fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
-        let key = to_key(py, name, node)?;
-        let metadata = py
-            .allow_threads(|| self.get_meta(&key))
-            .map_pyerr(py)?
-            .ok_or_else(|| key_error(py, &key))?;
+        let key = StoreKey::hgid(to_key(py, name, node)?);
+        let res = py.allow_threads(|| self.get_meta(key)).map_pyerr(py)?;
+
+        let metadata = match res {
+            StoreResult::Found(metadata) => metadata,
+            StoreResult::NotFound(key) => return Err(key_error(py, &key)),
+        };
 
         let metadict = PyDict::new(py);
         if let Some(size) = metadata.size {
@@ -184,20 +191,22 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
 
 impl<T: ContentDataStore + ?Sized> ContentDataStorePyExt for T {
     fn blob_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
-        let key = to_key(py, name, node)?;
-        let result = py
-            .allow_threads(|| self.blob(&StoreKey::from(&key)))
-            .map_pyerr(py)?
-            .ok_or_else(|| key_error(py, &key))?;
-        Ok(PyBytes::new(py, result.as_ref()))
+        let key = StoreKey::hgid(to_key(py, name, node)?);
+        let res = py.allow_threads(|| self.blob(key)).map_pyerr(py)?;
+        match res {
+            StoreResult::Found(blob) => Ok(PyBytes::new(py, blob.as_ref())),
+            StoreResult::NotFound(key) => Err(key_error(py, &key)),
+        }
     }
 
     fn metadata_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
-        let key = to_key(py, name, node)?;
-        let meta = py
-            .allow_threads(|| self.metadata(&StoreKey::from(&key)))
-            .map_pyerr(py)?
-            .ok_or_else(|| key_error(py, &key))?;
+        let key = StoreKey::hgid(to_key(py, name, node)?);
+        let res = py.allow_threads(|| self.metadata(key)).map_pyerr(py)?;
+
+        let meta = match res {
+            StoreResult::Found(meta) => meta,
+            StoreResult::NotFound(key) => return Err(key_error(py, &key)),
+        };
 
         let metadict = PyDict::new(py);
         metadict.set_item(py, "size", meta.size)?;
@@ -216,7 +225,11 @@ impl<T: ToKeys + HgIdDataStore + ?Sized> IterableHgIdDataStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
         let iter = py.allow_threads(|| self.to_keys()).into_iter().map(|res| {
             let key = res?;
-            let data = py.allow_threads(|| self.get(&key))?.unwrap();
+            let res = py.allow_threads(|| self.get(StoreKey::hgid(key.clone())))?;
+            let data = match res {
+                StoreResult::Found(data) => data,
+                StoreResult::NotFound(_) => return Err(format_err!("Key {:?} not found", key)),
+            };
             let delta = Delta {
                 data: data.into(),
                 base: None,

@@ -8,10 +8,9 @@
 use anyhow::Result;
 use revisionstore::{
     HgIdDataStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, LocalStore,
-    Metadata, RemoteDataStore, RemoteHistoryStore, StoreKey,
+    Metadata, RemoteDataStore, RemoteHistoryStore, StoreKey, StoreResult,
 };
 use std::sync::Arc;
-use types::Key;
 
 // TODO: Once we have EdenAPI production ready, remove this.
 pub struct FakeRemoteStore;
@@ -45,11 +44,11 @@ impl RemoteDataStore for FakeRemoteDataStore {
 }
 
 impl HgIdDataStore for FakeRemoteDataStore {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        Ok(None)
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        Ok(StoreResult::NotFound(key))
     }
-    fn get_meta(&self, _key: &Key) -> Result<Option<Metadata>> {
-        Ok(None)
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        Ok(StoreResult::NotFound(key))
     }
 }
 

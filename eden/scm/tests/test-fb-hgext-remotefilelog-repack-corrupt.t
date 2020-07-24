@@ -142,10 +142,10 @@ The local data for n is still available
 
 The history for n is lost
   $ hg log -qf n 2>&1 | grep 'KeyError'
-  KeyError: 'Key not found Key { path: RepoPathBuf("n"), hgid: HgId("c972a0820002b32c6fec4b7ca47d3aecdad8e1c5") }'
+  KeyError: 'Key not found HgId(Key { path: RepoPathBuf("n"), hgid: HgId("c972a0820002b32c6fec4b7ca47d3aecdad8e1c5") })'
 
 The local data and history for o is lost
   $ hg cat -q o 2>&1 | grep 'KeyError'
-  KeyError: 'Key not found Key { path: RepoPathBuf("o"), hgid: HgId("fd94f81d01bf8c9d960bb57abdd4e8375309ae43") }'
+  KeyError: 'Key not found HgId(Key { path: RepoPathBuf("o"), hgid: HgId("fd94f81d01bf8c9d960bb57abdd4e8375309ae43") })'
   $ hg log -qf o 2>&1 | grep 'KeyError'
-  KeyError: 'Key not found Key { path: RepoPathBuf("o"), hgid: HgId("fd94f81d01bf8c9d960bb57abdd4e8375309ae43") }'
+  KeyError: 'Key not found HgId(Key { path: RepoPathBuf("o"), hgid: HgId("fd94f81d01bf8c9d960bb57abdd4e8375309ae43") })'

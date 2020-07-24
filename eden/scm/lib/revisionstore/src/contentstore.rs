@@ -23,7 +23,7 @@ use types::Key;
 use crate::{
     datastore::{
         strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
-        HgIdMutableDeltaStore, Metadata, RemoteDataStore,
+        HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
     },
     indexedlogdatastore::IndexedLogHgIdDataStore,
     lfs::{LfsMultiplexer, LfsRemote, LfsStore},
@@ -67,7 +67,7 @@ impl ContentStore {
     /// XXX: This should only be used on `ContentStore` that are storing actual
     /// file content, tree stores should use the `get` method instead.
     pub fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
-        if let Some(vec) = self.get(key)? {
+        if let StoreResult::Found(vec) = self.get(StoreKey::hgid(key.clone()))? {
             let bytes = vec.into();
             let (bytes, _) = strip_metadata(&bytes)?;
             Ok(Some(bytes))
@@ -107,11 +107,11 @@ impl ContentStore {
 }
 
 impl HgIdDataStore for ContentStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         self.datastore.get(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         self.datastore.get_meta(key)
     }
 }
@@ -179,11 +179,11 @@ impl HgIdMutableDeltaStore for ContentStore {
 
 impl ContentDataStore for ContentStore {
     /// Fetch a raw blob from the LFS stores.
-    fn blob(&self, key: &StoreKey) -> Result<Option<Bytes>> {
+    fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
         self.blob_stores.blob(key)
     }
 
-    fn metadata(&self, key: &StoreKey) -> Result<Option<ContentMetadata>> {
+    fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
         self.blob_stores.metadata(key)
     }
 }
@@ -460,8 +460,8 @@ mod tests {
             key: k1.clone(),
         };
         store.add(&delta, &Default::default())?;
-        let stored = store.get(&k1)?;
-        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
+        let stored = store.get(StoreKey::hgid(k1))?;
+        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
         Ok(())
     }
 
@@ -483,7 +483,8 @@ mod tests {
         drop(store);
 
         let store = ContentStore::new(&localdir, &config)?;
-        assert!(store.get(&k1)?.is_none());
+        let k1 = StoreKey::hgid(k1);
+        assert_eq!(store.get(k1.clone())?, StoreResult::NotFound(k1));
         Ok(())
     }
 
@@ -503,8 +504,8 @@ mod tests {
         };
         store.add(&delta, &Default::default())?;
         store.flush()?;
-        let stored = store.get(&k1)?;
-        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
+        let stored = store.get(StoreKey::hgid(k1))?;
+        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
         Ok(())
     }
 
@@ -527,8 +528,8 @@ mod tests {
         drop(store);
 
         let store = ContentStore::new(&localdir, &config)?;
-        let stored = store.get(&k1)?;
-        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
+        let stored = store.get(StoreKey::hgid(k1))?;
+        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
         Ok(())
     }
 
@@ -550,9 +551,9 @@ mod tests {
             .local_path(&localdir)
             .remotestore(Arc::new(remotestore))
             .build()?;
-        let data_get = store.get(&k)?;
+        let data_get = store.get(StoreKey::hgid(k))?;
 
-        assert_eq!(data_get.unwrap(), data);
+        assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
         Ok(())
     }
 
@@ -575,13 +576,13 @@ mod tests {
             .local_path(&localdir)
             .remotestore(Arc::new(remotestore))
             .build()?;
-        store.get(&k)?;
+        store.get(StoreKey::hgid(k.clone()))?;
         drop(store);
 
         let store = ContentStore::new(&localdir, &config)?;
-        let data_get = store.get(&k)?;
+        let data_get = store.get(StoreKey::hgid(k))?;
 
-        assert_eq!(data_get.unwrap(), data);
+        assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
 
         Ok(())
     }
@@ -601,8 +602,8 @@ mod tests {
             .remotestore(Arc::new(remotestore))
             .build()?;
 
-        let k = key("a", "1");
-        assert_eq!(store.get(&k)?, None);
+        let k = StoreKey::hgid(key("a", "1"));
+        assert_eq!(store.get(k.clone())?, StoreResult::NotFound(k));
         Ok(())
     }
 
@@ -625,14 +626,17 @@ mod tests {
             .local_path(&localdir)
             .remotestore(Arc::new(remotestore))
             .build()?;
-        store.get(&k)?;
-        store.shared_mutabledatastore.get(&k)?;
-        assert!(store
+        store.get(StoreKey::hgid(k.clone()))?;
+        store
+            .shared_mutabledatastore
+            .get(StoreKey::hgid(k.clone()))?;
+        let k = StoreKey::hgid(k);
+        let res = store
             .local_mutabledatastore
             .as_ref()
             .unwrap()
-            .get(&k)?
-            .is_none());
+            .get(k.clone())?;
+        assert_eq!(res, StoreResult::NotFound(k));
         Ok(())
     }
 
@@ -654,7 +658,8 @@ mod tests {
         store.flush()?;
 
         let store = ContentStoreBuilder::new(&config).no_local_store().build()?;
-        assert_eq!(store.get(&k1)?, None);
+        let k = StoreKey::hgid(k1);
+        assert_eq!(store.get(k.clone())?, StoreResult::NotFound(k));
         Ok(())
     }
 
@@ -683,7 +688,10 @@ mod tests {
         lfs_store.flush()?;
 
         let store = ContentStore::new(&localdir, &config)?;
-        assert_eq!(store.get(&k1)?, Some(delta.data.as_ref().to_vec()));
+        assert_eq!(
+            store.get(StoreKey::hgid(k1))?,
+            StoreResult::Found(delta.data.as_ref().to_vec())
+        );
         Ok(())
     }
 
@@ -707,7 +715,10 @@ mod tests {
         lfs_store.flush()?;
 
         let store = ContentStore::new(&localdir, &config)?;
-        assert_eq!(store.get(&k1)?, Some(delta.data.as_ref().to_vec()));
+        assert_eq!(
+            store.get(StoreKey::hgid(k1))?,
+            StoreResult::Found(delta.data.as_ref().to_vec())
+        );
         Ok(())
     }
 
@@ -727,8 +738,8 @@ mod tests {
         let store = ContentStore::new(&localdir, &config)?;
         store.add(&delta, &Default::default())?;
 
-        let blob = store.blob(&StoreKey::from(k1))?;
-        assert_eq!(blob, Some(delta.data));
+        let blob = store.blob(StoreKey::from(k1))?;
+        assert_eq!(blob, StoreResult::Found(delta.data));
 
         Ok(())
     }
@@ -751,10 +762,10 @@ mod tests {
         let store = ContentStore::new(&localdir, &config)?;
         store.add(&delta, &Default::default())?;
 
-        let metadata = store.metadata(&StoreKey::from(k1))?;
+        let metadata = store.metadata(StoreKey::from(k1))?;
         assert_eq!(
             metadata,
-            Some(ContentMetadata {
+            StoreResult::Found(ContentMetadata {
                 size: 5,
                 is_binary: false,
                 hash,
@@ -782,8 +793,8 @@ mod tests {
         store.flush()?;
 
         let lfs_store = LfsStore::local(&localdir, &config)?;
-        let stored = lfs_store.get(&k1)?;
-        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
+        let stored = lfs_store.get(StoreKey::hgid(k1))?;
+        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
         Ok(())
     }
 
@@ -816,8 +827,8 @@ mod tests {
         )?;
 
         let store = Arc::new(ContentStore::new(&localdir, &config)?);
-        let stored = store.get(&k1)?;
-        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
+        let stored = store.get(StoreKey::hgid(k1))?;
+        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
         Ok(())
     }
 
@@ -859,9 +870,12 @@ mod tests {
                 .remotestore(Arc::new(remotestore))
                 .build()?;
 
-            let data = store.get(&k)?.map(|vec| Bytes::from(vec));
+            let data = store.get(StoreKey::hgid(k))?;
 
-            assert_eq!(data, Some(Bytes::from(&b"master"[..])));
+            assert_eq!(
+                data,
+                StoreResult::Found(Bytes::from(&b"master"[..]).as_ref().to_vec())
+            );
 
             Ok(())
         }
@@ -959,8 +973,8 @@ mod tests {
                 .remotestore(Arc::new(remotestore))
                 .memcachestore(memcache.clone())
                 .build()?;
-            let data_get = store.get(&k)?;
-            assert_eq!(data_get.unwrap(), data);
+            let data_get = store.get(StoreKey::hgid(k.clone()))?;
+            assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
 
             loop {
                 let memcache_data = memcache
@@ -1000,8 +1014,8 @@ mod tests {
                 .remotestore(Arc::new(remotestore))
                 .memcachestore(memcache.clone())
                 .build()?;
-            let data_get = store.get(&k)?;
-            assert_eq!(data_get.unwrap(), data);
+            let data_get = store.get(StoreKey::hgid(k.clone()))?;
+            assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
 
             let memcache_data = memcache.get_data_iter(&[k]).collect::<Result<Vec<_>>>()?;
             assert_eq!(memcache_data, vec![]);
@@ -1036,8 +1050,8 @@ mod tests {
                 .remotestore(Arc::new(remotestore))
                 .memcachestore(memcache)
                 .build()?;
-            let data_get = store.get(&k)?;
-            assert_eq!(data_get.unwrap(), data);
+            let data_get = store.get(StoreKey::hgid(k))?;
+            assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
 
             // Ideally, we should check that we didn't wait for memcache, but that's timing
             // related and thus a bit hard to test.
@@ -1079,8 +1093,11 @@ mod tests {
                 .memcachestore(memcache.clone())
                 .build()?;
 
-            let data = store.get(&k)?.map(Bytes::from);
-            assert_eq!(data, Some(Bytes::from(&b"master"[..])));
+            let data = store.get(StoreKey::hgid(k.clone()))?;
+            assert_eq!(
+                data,
+                StoreResult::Found(Bytes::from(&b"master"[..]).as_ref().to_vec())
+            );
 
             loop {
                 let memcache_data = memcache
@@ -1102,8 +1119,11 @@ mod tests {
                 .memcachestore(memcache)
                 .build()?;
 
-            let data = store.get(&k)?.map(Bytes::from);
-            assert_eq!(data, Some(Bytes::from(&b"master"[..])));
+            let data = store.get(StoreKey::hgid(k))?;
+            assert_eq!(
+                data,
+                StoreResult::Found(Bytes::from(&b"master"[..]).as_ref().to_vec())
+            );
 
             Ok(())
         }

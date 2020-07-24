@@ -24,7 +24,8 @@ use anyhow::Result;
 use types::{HgId, Key, RepoPath};
 
 use crate::datapack::DataPack;
-use crate::datastore::HgIdDataStore;
+use crate::datastore::{HgIdDataStore, StoreResult};
+use crate::types::StoreKey;
 use crate::uniondatastore::UnionHgIdDataStore;
 
 pub struct DataPackUnion {
@@ -111,10 +112,13 @@ impl DataPackUnion {
 
     /// Lookup Key. If the key is missing, scan for changes in the pack files and try once more.
     fn get(&mut self, key: &Key) -> Result<Option<Vec<u8>>> {
-        match self.store.get(key)? {
-            Some(data) => Ok(Some(data)),
-            None => match self.rescan_paths() {
-                ScanResult::ChangesDetected => self.store.get(key),
+        match self.store.get(StoreKey::hgid(key.clone()))? {
+            StoreResult::Found(data) => Ok(Some(data)),
+            StoreResult::NotFound(key) => match self.rescan_paths() {
+                ScanResult::ChangesDetected => match self.store.get(key)? {
+                    StoreResult::Found(data) => Ok(Some(data)),
+                    StoreResult::NotFound(_) => Ok(None),
+                },
                 ScanResult::NoChanges => Ok(None),
             },
         }

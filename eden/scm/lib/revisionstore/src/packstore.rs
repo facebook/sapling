@@ -26,7 +26,7 @@ use types::{Key, NodeInfo};
 
 use crate::{
     datapack::{DataPack, DataPackVersion},
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     historypack::{HistoryPack, HistoryPackVersion},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
     localstore::LocalStore,
@@ -349,12 +349,34 @@ impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
 }
 
 impl HgIdDataStore for DataPackStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        self.inner.lock().run(|store| store.get(key))
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        let res = self
+            .inner
+            .lock()
+            .run(|store| match store.get(key.clone())? {
+                StoreResult::Found(content) => Ok(Some(content)),
+                StoreResult::NotFound(_) => Ok(None),
+            })?;
+
+        match res {
+            None => Ok(StoreResult::NotFound(key)),
+            Some(content) => Ok(StoreResult::Found(content)),
+        }
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        self.inner.lock().run(|store| store.get_meta(key))
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        let res = self
+            .inner
+            .lock()
+            .run(|store| match store.get_meta(key.clone())? {
+                StoreResult::Found(meta) => Ok(Some(meta)),
+                StoreResult::NotFound(_) => Ok(None),
+            })?;
+
+        match res {
+            None => Ok(StoreResult::NotFound(key)),
+            Some(meta) => Ok(StoreResult::Found(meta)),
+        }
     }
 }
 
@@ -394,11 +416,11 @@ impl MutableDataPackStore {
 }
 
 impl HgIdDataStore for MutableDataPackStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         self.inner.union_store.get(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         self.inner.union_store.get_meta(key)
     }
 }
@@ -543,8 +565,11 @@ mod tests {
         make_datapack(&tempdir, &vec![revision.clone()]);
 
         let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
-        let stored = store.get(&k)?;
-        assert_eq!(stored.as_deref(), Some(revision.0.data.as_ref()));
+        let stored = store.get(StoreKey::hgid(k))?;
+        assert_eq!(
+            stored,
+            StoreResult::Found(revision.0.data.as_ref().to_vec())
+        );
         Ok(())
     }
 
@@ -585,8 +610,11 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        let stored = store.get(&k)?;
-        assert_eq!(stored.as_deref(), Some(revision.0.data.as_ref()));
+        let stored = store.get(StoreKey::hgid(k))?;
+        assert_eq!(
+            stored,
+            StoreResult::Found(revision.0.data.as_ref().to_vec())
+        );
         Ok(())
     }
 
@@ -610,7 +638,7 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        store.get(&k).unwrap();
+        store.get(StoreKey::hgid(k)).unwrap();
 
         let k = key("a", "3");
         let revision = (
@@ -623,7 +651,8 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        assert_eq!(store.get(&k).unwrap(), None);
+        let k = StoreKey::hgid(k);
+        assert_eq!(store.get(k.clone()).unwrap(), StoreResult::NotFound(k));
     }
 
     #[test]
@@ -646,7 +675,7 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        store.get(&k)?;
+        store.get(StoreKey::hgid(k))?;
 
         let k = key("a", "3");
         let revision = (
@@ -660,7 +689,10 @@ mod tests {
         make_datapack(&tempdir, &vec![revision.clone()]);
 
         store.force_rescan();
-        assert!(store.get(&k)?.is_some());
+        assert_eq!(
+            store.get(StoreKey::hgid(k))?,
+            StoreResult::Found(vec![1, 2, 3, 4])
+        );
         Ok(())
     }
 
@@ -708,14 +740,16 @@ mod tests {
 
         let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
 
-        let _ = packstore.get(&k2)?;
+        let k2 = StoreKey::hgid(k2);
+        let _ = packstore.get(k2.clone())?;
         assert!(packstore.inner.lock().packs.borrow().stores[0]
-            .get(&k2)
+            .get(k2)
             .is_ok());
 
-        let _ = packstore.get(&k1)?;
+        let k1 = StoreKey::hgid(k1);
+        let _ = packstore.get(k1.clone())?;
         assert!(packstore.inner.lock().packs.borrow().stores[0]
-            .get(&k1)
+            .get(k1)
             .is_ok());
 
         Ok(())
@@ -760,7 +794,11 @@ mod tests {
             .unwrap();
 
         let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
-        assert_eq!(packstore.get(&k1).unwrap(), None);
+        let k1 = StoreKey::hgid(k1);
+        assert_eq!(
+            packstore.get(k1.clone()).unwrap(),
+            StoreResult::NotFound(k1)
+        );
     }
 
     #[test]
@@ -791,7 +829,8 @@ mod tests {
         assert_eq!(read_dir(&tempdir)?.count(), 2);
 
         let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::IGNORE);
-        assert!(packstore.get(&k1)?.is_none());
+        let k1 = StoreKey::hgid(k1);
+        assert_eq!(packstore.get(k1.clone())?, StoreResult::NotFound(k1));
 
         assert_eq!(read_dir(&tempdir)?.count(), 2);
         Ok(())
@@ -827,8 +866,8 @@ mod tests {
         };
 
         packstore.add(&delta, &Default::default())?;
-        let stored = packstore.get(&k1)?;
-        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
+        let stored = packstore.get(StoreKey::hgid(k1))?;
+        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
         Ok(())
     }
 
@@ -846,8 +885,8 @@ mod tests {
 
         packstore.add(&delta, &Default::default())?;
         packstore.flush()?;
-        let stored = packstore.get(&k1)?;
-        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
+        let stored = packstore.get(StoreKey::hgid(k1))?;
+        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
         Ok(())
     }
 

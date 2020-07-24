@@ -12,7 +12,7 @@ use anyhow::Result;
 use types::{Key, NodeInfo};
 
 use crate::{
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
     localstore::LocalStore,
     types::StoreKey,
@@ -75,24 +75,26 @@ impl<T: HgIdMutableDeltaStore> HgIdMutableDeltaStore for MultiplexDeltaStore<T> 
 }
 
 impl<T: HgIdMutableDeltaStore> HgIdDataStore for MultiplexDeltaStore<T> {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+    fn get(&self, mut key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         for store in self.stores.iter() {
-            if let Some(result) = store.get(key)? {
-                return Ok(Some(result));
+            match store.get(key)? {
+                StoreResult::Found(data) => return Ok(StoreResult::Found(data)),
+                StoreResult::NotFound(next) => key = next,
             }
         }
 
-        Ok(None)
+        Ok(StoreResult::NotFound(key))
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
+    fn get_meta(&self, mut key: StoreKey) -> Result<StoreResult<Metadata>> {
         for store in self.stores.iter() {
-            if let Some(result) = store.get_meta(key)? {
-                return Ok(Some(result));
+            match store.get_meta(key)? {
+                StoreResult::Found(data) => return Ok(StoreResult::Found(data)),
+                StoreResult::NotFound(next) => key = next,
             }
         }
 
-        Ok(None)
+        Ok(StoreResult::NotFound(key))
     }
 }
 
@@ -198,8 +200,8 @@ mod tests {
 
         multiplex.add(&delta, &metadata)?;
         drop(multiplex);
-        let read_data = log.get(&delta.key)?;
-        assert_eq!(Some(delta.data.as_ref()), read_data.as_deref());
+        let read_data = log.get(StoreKey::hgid(delta.key))?;
+        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), read_data);
         log.flush()?;
         Ok(())
     }
@@ -224,11 +226,12 @@ mod tests {
         multiplex.add(&delta, &metadata)?;
         drop(multiplex);
 
-        let read_data = log.get(&delta.key)?;
-        assert_eq!(Some(delta.data.as_ref()), read_data.as_deref());
+        let k = StoreKey::hgid(delta.key);
+        let read_data = log.get(k.clone())?;
+        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), read_data);
 
-        let read_data = pack.get(&delta.key)?;
-        assert_eq!(Some(delta.data.as_ref()), read_data.as_deref());
+        let read_data = pack.get(k)?;
+        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), read_data);
 
         log.flush()?;
         pack.flush()?;

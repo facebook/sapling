@@ -82,7 +82,7 @@ impl<T: HgIdHistoryStore + ?Sized> HgIdHistoryStorePyExt for T {
         let info = py
             .allow_threads(|| self.get_node_info(&key))
             .map_pyerr(py)?
-            .ok_or_else(|| key_error(py, &key))?;
+            .ok_or_else(|| key_error(py, &StoreKey::hgid(key.clone())))?;
 
         Ok(from_node_info(py, &key, &info))
     }

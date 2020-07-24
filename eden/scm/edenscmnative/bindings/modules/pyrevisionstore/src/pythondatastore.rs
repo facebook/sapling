@@ -12,8 +12,7 @@ use cpython::{
 };
 
 use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{HgIdDataStore, LocalStore, Metadata, RemoteDataStore, StoreKey};
-use types::Key;
+use revisionstore::{HgIdDataStore, LocalStore, Metadata, RemoteDataStore, StoreKey, StoreResult};
 
 use crate::pythonutil::{from_key_to_tuple, from_tuple_to_key, to_metadata};
 
@@ -28,7 +27,12 @@ impl PythonHgIdDataStore {
 }
 
 impl HgIdDataStore for PythonHgIdDataStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        let key = match key {
+            StoreKey::HgId(key) => key,
+            contentkey => return Ok(StoreResult::NotFound(contentkey)),
+        };
+
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyPathBuf::from(key.path.as_repo_path());
@@ -41,7 +45,7 @@ impl HgIdDataStore for PythonHgIdDataStore {
             Ok(data) => data,
             Err(py_err) => {
                 if py_err.get_type(py) == exc::KeyError::type_object(py) {
-                    return Ok(None);
+                    return Ok(StoreResult::NotFound(StoreKey::hgid(key)));
                 } else {
                     return Err(PyErr::from(py_err).into());
                 }
@@ -50,10 +54,15 @@ impl HgIdDataStore for PythonHgIdDataStore {
 
         let py_bytes = PyBytes::extract(py, &py_data).map_err(|e| PyErr::from(e))?;
 
-        Ok(Some(py_bytes.data(py).to_vec()))
+        Ok(StoreResult::Found(py_bytes.data(py).to_vec()))
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        let key = match key {
+            StoreKey::HgId(key) => key,
+            contentkey => return Ok(StoreResult::NotFound(contentkey)),
+        };
+
         let gil = Python::acquire_gil();
         let py = gil.python();
         let py_name = PyPathBuf::from(key.path.as_repo_path());
@@ -65,7 +74,7 @@ impl HgIdDataStore for PythonHgIdDataStore {
             Ok(data) => data,
             Err(py_err) => {
                 if py_err.get_type(py) == exc::KeyError::type_object(py) {
-                    return Ok(None);
+                    return Ok(StoreResult::NotFound(StoreKey::hgid(key)));
                 } else {
                     return Err(PyErr::from(py_err).into());
                 }
@@ -74,7 +83,7 @@ impl HgIdDataStore for PythonHgIdDataStore {
         let py_dict = PyDict::extract(py, &py_meta).map_err(|e| PyErr::from(e))?;
         to_metadata(py, &py_dict)
             .map_err(|e| PyErr::from(e).into())
-            .map(Some)
+            .map(StoreResult::Found)
     }
 }
 

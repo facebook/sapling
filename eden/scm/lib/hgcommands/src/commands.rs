@@ -21,7 +21,8 @@ use blackbox::{event::Event, json, SessionId};
 use dynamicconfig::Generator;
 use edenapi::EdenApiBlocking;
 use revisionstore::{
-    CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, UnionHgIdDataStore,
+    CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, StoreKey, StoreResult,
+    UnionHgIdDataStore,
 };
 use types::{HgId, Key, RepoPathBuf};
 
@@ -240,7 +241,7 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     unionstore.add(packstore);
     unionstore.add(indexedstore);
     let k = Key::new(path, hgid);
-    if let Some(content) = unionstore.get(&k)? {
+    if let StoreResult::Found(content) = unionstore.get(StoreKey::hgid(k))? {
         io.write(content)?;
     }
     Ok(0)

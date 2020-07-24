@@ -28,7 +28,7 @@ use mpatch::mpatch::get_full_text;
 use crate::{
     dataindex::{DataIndex, DeltaLocation},
     datapack::{DataEntry, DataPackVersion},
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     error::EmptyMutablePack,
     localstore::LocalStore,
     mutablepack::MutablePack,
@@ -247,16 +247,21 @@ impl MutablePack for MutableDataPack {
 }
 
 impl HgIdDataStore for MutableDataPack {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        let delta_chain = self.get_delta_chain(key)?;
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        let key = match key {
+            StoreKey::HgId(key) => key,
+            content => return Ok(StoreResult::NotFound(content)),
+        };
+
+        let delta_chain = self.get_delta_chain(&key)?;
         let delta_chain = match delta_chain {
             Some(chain) => chain,
-            None => return Ok(None),
+            None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
         };
 
         let (basetext, deltas) = match delta_chain.split_last() {
             Some((base, delta)) => (base, delta),
-            None => return Ok(None),
+            None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
         };
 
         let deltas: Vec<&[u8]> = deltas
@@ -265,17 +270,21 @@ impl HgIdDataStore for MutableDataPack {
             .map(|delta| delta.data.as_ref())
             .collect();
 
-        Ok(Some(
+        Ok(StoreResult::Found(
             get_full_text(basetext.data.as_ref(), &deltas).map_err(Error::msg)?,
         ))
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        Ok(self
-            .inner
-            .lock()
-            .read_entry(&key)?
-            .map(|(_, metadata)| metadata))
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        let key = match key {
+            StoreKey::HgId(key) => key,
+            content => return Ok(StoreResult::NotFound(content)),
+        };
+
+        match self.inner.lock().read_entry(&key)? {
+            None => Ok(StoreResult::NotFound(StoreKey::HgId(key))),
+            Some((_, metadata)) => Ok(StoreResult::Found(metadata)),
+        }
     }
 }
 
@@ -421,16 +430,19 @@ mod tests {
         mutdatapack.add(&delta2, &meta2).unwrap();
 
         // Requesting a default metadata
-        let found_meta = mutdatapack.get_meta(&delta.key).unwrap();
-        assert_eq!(found_meta.unwrap(), Metadata::default());
+        let found_meta = mutdatapack.get_meta(StoreKey::hgid(delta.key)).unwrap();
+        assert_eq!(found_meta, StoreResult::Found(Metadata::default()));
 
         // Requesting a specified metadata
-        let found_meta = mutdatapack.get_meta(&delta2.key).unwrap();
-        assert_eq!(found_meta.unwrap(), meta2);
+        let found_meta = mutdatapack.get_meta(StoreKey::hgid(delta2.key)).unwrap();
+        assert_eq!(found_meta, StoreResult::Found(meta2));
 
         // Requesting a non-existent metadata
-        let not = key("not", "10000");
-        assert_eq!(mutdatapack.get_meta(&not).unwrap(), None);
+        let not = StoreKey::hgid(key("not", "10000"));
+        assert_eq!(
+            mutdatapack.get_meta(not.clone()).unwrap(),
+            StoreResult::NotFound(not)
+        );
     }
 
     #[test]

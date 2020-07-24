@@ -10,10 +10,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::prelude::*;
 
-use types::Key;
-
 use crate::{
-    datastore::{HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
+    datastore::{HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult},
     localstore::LocalStore,
     types::StoreKey,
 };
@@ -64,13 +62,13 @@ impl<T: EdenApiStoreKind> RemoteDataStore for EdenApiDataStore<T> {
 }
 
 impl<T: EdenApiStoreKind> HgIdDataStore for EdenApiDataStore<T> {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        self.prefetch(&[StoreKey::hgid(key.clone())])?;
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        self.prefetch(&[key.clone()])?;
         self.store.get(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        self.prefetch(&[StoreKey::hgid(key.clone())])?;
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        self.prefetch(&[key.clone()])?;
         self.store.get_meta(key)
     }
 }
@@ -119,16 +117,29 @@ mod tests {
         let edenapi_files = remote_files.datastore(local.clone());
 
         // Attempt fetch.
-        let data = edenapi_files.get(&k)?.expect("data not found");
-        let meta = edenapi_files.get_meta(&k)?.expect("metadata not found");
-        assert_eq!(&data, &d.data);
-        assert_eq!(meta.size, Some(d.data.len() as u64));
+        let k = StoreKey::hgid(k);
+        let data = edenapi_files.get(k.clone())?;
+        let meta = edenapi_files.get_meta(k.clone())?;
+        assert_eq!(data, StoreResult::Found(d.data.as_ref().to_vec()));
+        assert_eq!(
+            meta,
+            StoreResult::Found(Metadata {
+                size: Some(d.data.len() as u64),
+                flags: None
+            })
+        );
 
         // Check that data was written to the local store.
-        let data = local.get(&k)?.expect("data not found");
-        let meta = local.get_meta(&k)?.expect("metadata not found");
-        assert_eq!(&data, &d.data);
-        assert_eq!(meta.size, Some(d.data.len() as u64));
+        let data = local.get(k.clone())?;
+        let meta = local.get_meta(k.clone())?;
+        assert_eq!(data, StoreResult::Found(d.data.as_ref().to_vec()));
+        assert_eq!(
+            meta,
+            StoreResult::Found(Metadata {
+                size: Some(d.data.len() as u64),
+                flags: None
+            })
+        );
 
         // Using the same mock client, set up a store for trees.
         // Need to use a new local store since otherwise the key
@@ -137,8 +148,8 @@ mod tests {
         let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
         let edenapi_trees = remote_trees.datastore(local.clone());
 
-        // Check that the same key is not fetched by the tree store.
-        assert_eq!(edenapi_trees.get(&k)?, None);
+        // Check that the same key cannot be accessed via the tree store.
+        assert_eq!(edenapi_trees.get(k.clone())?, StoreResult::NotFound(k));
 
         Ok(())
     }
@@ -163,16 +174,29 @@ mod tests {
         let edenapi_trees = remote_trees.datastore(local.clone());
 
         // Attempt fetch.
-        let data = edenapi_trees.get(&k)?.expect("data not found");
-        let meta = edenapi_trees.get_meta(&k)?.expect("metadata not found");
-        assert_eq!(&data, &d.data);
-        assert_eq!(meta.size, Some(d.data.len() as u64));
+        let k = StoreKey::hgid(k);
+        let data = edenapi_trees.get(k.clone())?;
+        let meta = edenapi_trees.get_meta(k.clone())?;
+        assert_eq!(data, StoreResult::Found(d.data.as_ref().to_vec()));
+        assert_eq!(
+            meta,
+            StoreResult::Found(Metadata {
+                size: Some(d.data.len() as u64),
+                flags: None
+            })
+        );
 
         // Check that data was written to the local store.
-        let data = local.get(&k)?.expect("data not found");
-        let meta = local.get_meta(&k)?.expect("metadata not found");
-        assert_eq!(&data, &d.data);
-        assert_eq!(meta.size, Some(d.data.len() as u64));
+        let data = local.get(k.clone())?;
+        let meta = local.get_meta(k.clone())?;
+        assert_eq!(data, StoreResult::Found(d.data.as_ref().to_vec()));
+        assert_eq!(
+            meta,
+            StoreResult::Found(Metadata {
+                size: Some(d.data.len() as u64),
+                flags: None
+            })
+        );
 
         // Using the same mock client, set up a store for files.
         // Need to use a new local store since otherwise the key
@@ -181,8 +205,8 @@ mod tests {
         let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
         let edenapi_files = remote_files.datastore(local);
 
-        // Check that the same key is not fetched by the files store.
-        assert_eq!(edenapi_files.get(&k)?, None);
+        // Check that the same key cannot be accessed via the file store.
+        assert_eq!(edenapi_files.get(k.clone())?, StoreResult::NotFound(k));
 
         Ok(())
     }
@@ -200,8 +224,8 @@ mod tests {
         // Set up `EdenApiDataStore`.
         let edenapi = remote.datastore(store.clone());
 
-        let k = key("a", "1");
-        assert_eq!(edenapi.get(&k)?, None);
+        let k = StoreKey::hgid(key("a", "1"));
+        assert_eq!(edenapi.get(k.clone())?, StoreResult::NotFound(k));
 
         Ok(())
     }

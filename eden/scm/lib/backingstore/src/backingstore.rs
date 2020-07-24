@@ -17,7 +17,7 @@ use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
 use revisionstore::{
     ContentStore, ContentStoreBuilder, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore,
-    LocalStore, MemcacheStore, RemoteDataStore, StoreKey,
+    LocalStore, MemcacheStore, RemoteDataStore, StoreKey, StoreResult,
 };
 use std::path::Path;
 use std::sync::Arc;
@@ -76,7 +76,9 @@ impl BackingStore {
     fn get_blob_impl(&self, key: Key) -> Result<Option<Vec<u8>>> {
         // Return None for LFS blobs
         // TODO: LFS support
-        if let Ok(Some(metadata)) = self.blobstore.get_meta(&key) {
+        if let Ok(StoreResult::Found(metadata)) =
+            self.blobstore.get_meta(StoreKey::hgid(key.clone()))
+        {
             if metadata.is_lfs() {
                 return Ok(None);
             }

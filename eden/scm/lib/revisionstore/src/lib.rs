@@ -161,7 +161,8 @@ pub mod unionhistorystore;
 pub use crate::contentstore::{ContentStore, ContentStoreBuilder};
 pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
 pub use crate::datastore::{
-    ContentDataStore, ContentMetadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore,
+    ContentDataStore, ContentMetadata, Delta, HgIdDataStore, HgIdMutableDeltaStore,
+    RemoteDataStore, StoreResult,
 };
 pub use crate::edenapi::{EdenApiFileStore, EdenApiRemoteStore, EdenApiTreeStore};
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};

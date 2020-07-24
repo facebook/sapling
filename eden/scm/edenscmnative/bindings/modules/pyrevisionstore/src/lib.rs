@@ -31,6 +31,7 @@ use revisionstore::{
     HistoryPackVersion, IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore, IndexedlogRepair,
     LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
     MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey,
+    StoreResult,
 };
 use types::{Key, NodeInfo};
 
@@ -493,14 +494,14 @@ impl ExtractInnerRef for mutabledeltastore {
 }
 
 impl HgIdDataStore for mutabledeltastore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         self.store(py).get(key)
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -703,17 +704,15 @@ impl RemoteDataStore for PyRemoteDataStore {
 }
 
 impl HgIdDataStore for PyRemoteDataStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self.0.inner.read().datastore.as_ref().unwrap().get(key),
-            Err(_) => Ok(None),
+            Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self
                 .0
                 .inner
@@ -722,7 +721,7 @@ impl HgIdDataStore for PyRemoteDataStore {
                 .as_ref()
                 .unwrap()
                 .get_meta(key),
-            Err(_) => Ok(None),
+            Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
 }

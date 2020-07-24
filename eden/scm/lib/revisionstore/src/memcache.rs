@@ -17,7 +17,9 @@ use tracing::info_span;
 use types::{Key, NodeInfo};
 
 use crate::{
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
+    datastore::{
+        Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
+    },
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
     localstore::LocalStore,
     remotestore::HgIdRemoteStore,
@@ -82,12 +84,12 @@ pub use crate::facebook::MemcacheStore;
 pub use dummy::MemcacheStore;
 
 impl HgIdDataStore for MemcacheStore {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        Ok(None)
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        Ok(StoreResult::NotFound(key))
     }
 
-    fn get_meta(&self, _key: &Key) -> Result<Option<Metadata>> {
-        Ok(None)
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        Ok(StoreResult::NotFound(key))
     }
 }
 
@@ -153,19 +155,17 @@ impl MemcacheHgIdDataStore {
 }
 
 impl HgIdDataStore for MemcacheHgIdDataStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self.store.get(key),
-            Err(_) => Ok(None),
+            Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        match self.prefetch(&[key.clone()]) {
             Ok(()) => self.store.get_meta(key),
-            Err(_) => Ok(None),
+            Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
 }

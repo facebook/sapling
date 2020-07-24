@@ -20,7 +20,7 @@ use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::PythonHgIdDataStore;
-use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey};
+use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey, StoreResult};
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -38,10 +38,10 @@ impl<T> ManifestStore<T> {
 impl<T: HgIdDataStore + RemoteDataStore> manifest_tree::TreeStore for ManifestStore<T> {
     fn get(&self, path: &RepoPath, node: Node) -> Result<Bytes> {
         let key = Key::new(path.to_owned(), node);
-        self.underlying
-            .get(&key)?
-            .ok_or_else(|| format_err!("Key {:?} not found in manifest", key))
-            .map(|data| Bytes::from(data))
+        match self.underlying.get(StoreKey::hgid(key))? {
+            StoreResult::NotFound(key) => Err(format_err!("Key {:?} not found in manifest", key)),
+            StoreResult::Found(data) => Ok(Bytes::from(data)),
+        }
     }
 
     fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {

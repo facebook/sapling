@@ -23,7 +23,7 @@ use crossbeam::channel::{bounded, Receiver, Sender};
 
 use cpython_ext::{ExtractInner, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
 use pyrevisionstore::contentstore;
-use revisionstore::{ContentStore, HgIdDataStore};
+use revisionstore::{ContentStore, HgIdDataStore, StoreKey, StoreResult};
 use types::{HgId, Key, RepoPath, RepoPathBuf};
 use vfs::{UpdateFlag, VFS};
 
@@ -154,10 +154,12 @@ fn update(
         .get_file_content(&key)?
         .ok_or_else(|| format_err!("Can't find key: {}", key))?;
 
-    let meta = state
-        .store
-        .get_meta(&key)?
-        .ok_or_else(|| format_err!("Can't find metadata for key: {}", key))?;
+    let meta = match state.store.get_meta(StoreKey::hgid(key))? {
+        StoreResult::NotFound(key) => {
+            return Err(format_err!("Can't find metadata for key: {:?}", key))
+        }
+        StoreResult::Found(meta) => meta,
+    };
 
     if meta.is_lfs() {
         bail!("LFS pointers cannot be deserialized properly yet");

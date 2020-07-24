@@ -102,7 +102,7 @@ use util::path::remove_file;
 
 use crate::{
     dataindex::{DataIndex, DeltaBaseOffset},
-    datastore::{Delta, HgIdDataStore, Metadata},
+    datastore::{Delta, HgIdDataStore, Metadata, StoreResult},
     localstore::LocalStore,
     repack::{Repackable, ToKeys},
     sliceext::SliceExt,
@@ -351,16 +351,21 @@ impl DataPack {
 }
 
 impl HgIdDataStore for DataPack {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        let delta_chain = self.get_delta_chain(key)?;
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        let key = match key {
+            StoreKey::HgId(key) => key,
+            content => return Ok(StoreResult::NotFound(content)),
+        };
+
+        let delta_chain = self.get_delta_chain(&key)?;
         let delta_chain = match delta_chain {
             Some(chain) => chain,
-            None => return Ok(None),
+            None => return Ok(StoreResult::NotFound(StoreKey::hgid(key))),
         };
 
         let (basetext, deltas) = match delta_chain.split_last() {
             Some((base, delta)) => (base, delta),
-            None => return Ok(None),
+            None => return Ok(StoreResult::NotFound(StoreKey::hgid(key))),
         };
 
         let deltas: Vec<&[u8]> = deltas
@@ -369,17 +374,22 @@ impl HgIdDataStore for DataPack {
             .map(|delta| delta.data.as_ref())
             .collect();
 
-        Ok(Some(
+        Ok(StoreResult::Found(
             get_full_text(basetext.data.as_ref(), &deltas).map_err(Error::msg)?,
         ))
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        let key = match key {
+            StoreKey::HgId(key) => key,
+            content => return Ok(StoreResult::NotFound(content)),
+        };
+
         let index_entry = match self.index.get_entry(&key.hgid)? {
-            None => return Ok(None),
+            None => return Ok(StoreResult::NotFound(StoreKey::hgid(key))),
             Some(entry) => entry,
         };
-        Ok(Some(
+        Ok(StoreResult::Found(
             self.read_entry(index_entry.pack_entry_offset())?.metadata,
         ))
     }
@@ -541,9 +551,9 @@ pub mod tests {
         ];
 
         let pack = make_datapack(&tempdir, &revisions);
-        for &(ref delta, ref metadata) in revisions.iter() {
-            let meta = pack.get_meta(&delta.key).unwrap().unwrap();
-            assert_eq!(&meta, metadata);
+        for (delta, metadata) in revisions {
+            let meta = pack.get_meta(StoreKey::hgid(delta.key)).unwrap();
+            assert_eq!(meta, StoreResult::Found(metadata));
         }
     }
 
@@ -721,8 +731,13 @@ pub mod tests {
         )];
 
         let pack = Rc::new(make_datapack(&tempdir, &revisions));
-        let data = pack.get(&revisions[0].0.key).unwrap();
-        assert_eq!(data.as_deref(), Some(revisions[0].0.data.as_ref()));
+        let data = pack
+            .get(StoreKey::hgid(revisions[0].0.key.clone()))
+            .unwrap();
+        assert_eq!(
+            data,
+            StoreResult::Found(revisions[0].0.data.as_ref().to_vec())
+        );
     }
 
     quickcheck! {
