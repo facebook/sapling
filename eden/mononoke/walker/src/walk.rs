@@ -611,14 +611,23 @@ async fn fsnode_step(
     let mut edges = vec![];
     for (child, fsnode_entry) in fsnode.list() {
         // Fsnode do not have separate "file" entries, so we visit only directories
-        if let FsnodeEntry::Directory(dir) = fsnode_entry {
-            let fsnode_id = dir.id();
-            let mpath_opt = WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
+        match fsnode_entry {
+            FsnodeEntry::Directory(dir) => {
+                let fsnode_id = dir.id();
+                let mpath_opt =
+                    WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
 
-            edges.push(OutgoingEdge::new(
-                EdgeType::FsnodeToChildFsnode,
-                Node::Fsnode((WrappedPath::from(mpath_opt), *fsnode_id)),
-            ));
+                edges.push(OutgoingEdge::new(
+                    EdgeType::FsnodeToChildFsnode,
+                    Node::Fsnode((WrappedPath::from(mpath_opt), *fsnode_id)),
+                ));
+            }
+            FsnodeEntry::File(file) => {
+                edges.push(OutgoingEdge::new(
+                    EdgeType::FsnodeToFileContent,
+                    Node::FileContent(*file.content_id()),
+                ));
+            }
         }
     }
 

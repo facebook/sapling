@@ -154,6 +154,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     // Derived data
     EdgeType::BonsaiToRootFsnode,
     EdgeType::FsnodeToChildFsnode,
+    EdgeType::FsnodeToFileContent,
 ];
 
 // Does not recurse into history, edges to parents excluded
@@ -182,6 +183,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     // Derived data
     EdgeType::BonsaiToRootFsnode,
     EdgeType::FsnodeToChildFsnode,
+    EdgeType::FsnodeToFileContent,
 ];
 
 // Types that can result in loading hg data.  Useful for excludes.

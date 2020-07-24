@@ -296,6 +296,7 @@ enum EdgeType {
     // Derived data
     BonsaiToRootFsnode,
     FsnodeToChildFsnode,
+    FsnodeToFileContent,
 }
 }
 
@@ -361,6 +362,7 @@ impl EdgeType {
             // Derived data
             EdgeType::BonsaiToRootFsnode => Some(NodeType::BonsaiFsnodeMapping),
             EdgeType::FsnodeToChildFsnode => Some(NodeType::Fsnode),
+            EdgeType::FsnodeToFileContent => Some(NodeType::Fsnode),
         }
     }
     pub fn outgoing_type(&self) -> NodeType {
@@ -416,6 +418,7 @@ impl EdgeType {
             // Derived data
             EdgeType::BonsaiToRootFsnode => NodeType::Fsnode,
             EdgeType::FsnodeToChildFsnode => NodeType::Fsnode,
+            EdgeType::FsnodeToFileContent => NodeType::FileContent,
         }
     }
 }
