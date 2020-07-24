@@ -332,7 +332,7 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let corpus = add_sampling_args(corpus);
 
     let validate = setup_subcommand_args(
-        SubCommand::with_name(VALIDATE).about("estimate compression benefit"),
+        SubCommand::with_name(VALIDATE).about("walk the graph and perform checks on it"),
     )
     .arg(
         Arg::with_name(EXCLUDE_CHECK_TYPE_ARG)
