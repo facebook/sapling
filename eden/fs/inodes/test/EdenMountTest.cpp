@@ -1168,15 +1168,17 @@ TEST(EdenMountState, mountIsShuttingDownWhileInodeIsReferencedDuringShutdown) {
   auto shutdownFutures = folly::FutureSplitter<SerializedInodeMap>{
       mount.shutdown(/*doTakeover=*/false, /*allowFuseNotStarted=*/true)
           .via(executor)};
-  SCOPE_EXIT {
-    inode.reset();
-    shutdownFutures.getFuture().within(kTimeout).getVia(executor);
-  };
-  EXPECT_THROW(
-      shutdownFutures.getFuture().within(kMicroTimeout).getVia(executor),
-      folly::FutureTimeout)
-      << "shutdown should not finish while inode is referenced";
-  EXPECT_EQ(mount.getState(), EdenMount::State::SHUTTING_DOWN);
+
+  auto shutdownFuture = shutdownFutures.getFuture();
+
+  executor->drain();
+  EXPECT_FALSE(shutdownFuture.isReady());
+  EXPECT_EQ(EdenMount::State::SHUTTING_DOWN, mount.getState());
+
+  inode.reset();
+  executor->drain();
+  EXPECT_TRUE(shutdownFuture.isReady());
+  EXPECT_EQ(EdenMount::State::SHUT_DOWN, mount.getState());
 }
 
 TEST(EdenMountState, mountIsShutDownAfterShutdownCompletes) {
