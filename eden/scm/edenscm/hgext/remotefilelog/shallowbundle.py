@@ -346,7 +346,6 @@ class shallowcg1packer(changegroup.cg1packer):
 
     def nodechunk(self, flog, node, _prevnode, linknode):
         prefix = b""
-        flags = flog.flags(node)
 
         def getmeta():
             try:
@@ -360,10 +359,10 @@ class shallowcg1packer(changegroup.cg1packer):
         meta = getmeta()
         if meta is not None:
             delta = self.pointer(meta, flog, node)
-            assert flags == 0
             flags = revlog.REVIDX_EXTSTORED
         else:
             delta = flog.revision(node, raw=True)
+            flags = flog.flags(node)
 
         prefix = mdiff.trivialdiffheader(len(delta))
 
