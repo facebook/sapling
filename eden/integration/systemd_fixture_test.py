@@ -54,6 +54,8 @@ class TemporarySystemdUserServiceManagerTest(SystemdTestCaseBase):
                 "systemd-tmpfiles-setup.service",
                 "grub-boot-success.timer",
                 "systemd-tmpfiles-clean.timer",
+                "pipewire.socket",
+                "pulseaudio.socket",
             ):
                 return False
             return True
