@@ -12,7 +12,7 @@
 namespace facebook {
 namespace eden {
 
-enum class ImportPriorityKind : int16_t { Low = -1, Normal = 0, High };
+enum class ImportPriorityKind : int16_t { Low = 0, Normal = 1, High = 2 };
 
 struct ImportPriority {
   ImportPriorityKind kind;
@@ -30,10 +30,12 @@ struct ImportPriority {
     return ImportPriority{ImportPriorityKind::High};
   }
 
+  // set half of the maximum offset as default offset to allow equal
+  // space for raising and lowering priority offset.
   explicit constexpr ImportPriority()
-      : kind(ImportPriorityKind::Normal), offset(0) {}
+      : kind(ImportPriorityKind::Normal), offset(0x7FFFFFFFFFFF) {}
   explicit constexpr ImportPriority(ImportPriorityKind kind)
-      : kind(kind), offset(0) {}
+      : kind(kind), offset(0x7FFFFFFFFFFF) {}
   constexpr ImportPriority(ImportPriorityKind kind, uint64_t offset)
       : kind(kind), offset(offset) {}
 
