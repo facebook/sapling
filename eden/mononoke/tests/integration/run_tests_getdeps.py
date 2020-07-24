@@ -140,7 +140,6 @@ else:
         "test-traffic-replay.t",  # Missing TRAFFIC_REPLAY
         "test-unbundle-replay-hg-bookmark.t",  # "kill" printing problem
         "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
-        "test-walker-throttle.t",  # "date" and arithmetic problem
     }
 
     tests = [
