@@ -1490,48 +1490,6 @@ std::string EdenMount::readFile(const RelativePathPiece path) {
   return fileInode->readAll(ObjectFetchContext::getNullContext()).get();
 }
 
-void EdenMount::createFile(const RelativePathPiece path, bool isDirectory) {
-  auto inode = getInode(path.dirname()).get();
-  auto treeInode = inode.asTreePtr();
-
-  if (isDirectory) {
-    treeInode->mkdir(path.basename(), _S_IFDIR);
-  } else {
-    treeInode->mknod(path.basename(), _S_IFREG, 0);
-  }
-}
-
-void EdenMount::materializeFile(const RelativePathPiece path) {
-  auto inode = getInode(path).get();
-
-  auto fileInode = inode.asFilePtr();
-  fileInode->materialize();
-}
-
-void EdenMount::removeFile(const RelativePathPiece path, bool isDirectory) {
-  auto inode = getInode(path.dirname()).get();
-  auto treeInode = inode.asTreePtr();
-
-  if (isDirectory) {
-    treeInode->rmdir(path.basename()).get();
-  } else {
-    treeInode->unlink(path.basename()).get();
-  }
-}
-
-void EdenMount::renameFile(
-    const RelativePathPiece oldpath,
-    const RelativePathPiece newpath) {
-  auto oldInode = getInode(oldpath.dirname()).get();
-  auto oldTreeInode = oldInode.asTreePtr();
-
-  auto newInode = getInode(newpath.dirname()).get();
-  auto newTreeInode = newInode.asTreePtr();
-
-  oldTreeInode->rename(oldpath.basename(), newTreeInode, newpath.basename())
-      .get();
-}
-
 DirList EdenMount::enumerateDirectory(const RelativePathPiece path) {
   auto inode = getInode(path).get();
   auto treeInode = inode.asTreePtr();

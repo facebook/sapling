@@ -407,98 +407,26 @@ void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
   setInitialCommit(commitHash);
 }
 
-#ifdef _WIN32
-void TestMount::overwriteFile(
-    folly::StringPiece path,
-    folly::StringPiece contents) {
-  auto relPath = RelativePathPiece{path};
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
-
-  // Make sure the directory exist.
-  ensureDirectoryExists(absolutePath.dirname());
-
-  // Write the file in the File System and also update the EdenMount. In the
-  // real system with Projected FS, the closing of a modified file with send the
-  // notification which will update the EdenMount.
-  facebook::eden::writeFile(contents, absolutePath.c_str());
-
-  // Verify that what we wrote can be read back.
-  std::string newContents;
-  facebook::eden::readFile(absolutePath.c_str(), newContents);
-  EXPECT_EQ(newContents, contents);
-
-  getEdenMount()->materializeFile(relPath);
-}
-
-void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
-  auto relPath = RelativePathPiece{path};
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
-
-  // Make sure the parent exist.
-  ensureDirectoryExists(absolutePath.dirname());
-
-  // Create the file in the File System and also update the EdenMount. In the
-  // real system with Projected FS, the creation of a file with send the
-  // notification which will update the EdenMount.
-  facebook::eden::writeFile(contents, absolutePath.c_str());
-  getEdenMount()->createFile(relPath, /*isDirectory=*/false);
-}
-
-void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
-  auto srcPath = RelativePathPiece{src};
-  auto absoluteSrcPath = edenMount_->getConfig()->getMountPath() + srcPath;
-  auto destPath = RelativePathPiece{dest};
-  auto absoluteDestPath = edenMount_->getConfig()->getMountPath() + destPath;
-
-  renameWithAbsolutePath(absoluteSrcPath, absoluteDestPath);
-  getEdenMount()->renameFile(srcPath, destPath);
-}
-
-std::string TestMount::readFile(folly::StringPiece path) {
-  auto relPath = RelativePathPiece{path};
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
-  auto contents = getEdenMount()->readFile(relPath);
-
-  // Make sure the directory exist.
-  ensureDirectoryExists(absolutePath.dirname());
-
-  // Reading of a file will also end up creating the file on the mount point.
-  writeFile(contents, absolutePath.c_str());
-  return contents;
-}
-
-void TestMount::mkdir(folly::StringPiece path) {
-  auto relPath = RelativePathPiece{path};
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
-  ensureDirectoryExists(absolutePath);
-  getEdenMount()->createFile(relPath, /*isDirectory=*/true);
-}
-
-void TestMount::deleteFile(folly::StringPiece path) {
-  auto relPath = RelativePathPiece{path};
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
-  removeFileWithAbsolutePath(absolutePath);
-  getEdenMount()->removeFile(relPath, /*isDirectory=*/false);
-}
-
-void TestMount::rmdir(folly::StringPiece path) {
-  auto relPath = RelativePathPiece{path};
-  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
-
-  removeRecursively(absolutePath);
-  getEdenMount()->removeFile(relPath, /*isDirectory=*/true);
-}
-
-#else
 void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   RelativePathPiece relativePath(path);
   const auto treeInode = getTreeInode(relativePath.dirname());
   auto createResult = treeInode->mknod(
       relativePath.basename(), /*mode=*/S_IFREG | 0644, /*rdev=*/0);
+#ifdef _WIN32
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  // Make sure the directory exist.
+  ensureDirectoryExists(absolutePath.dirname());
+  // Create the file in the File System and also update the EdenMount. In the
+  // real system with Projected FS, the creation of a file with send the
+  // notification which will update the EdenMount.
+  facebook::eden::writeFile(contents, absolutePath.c_str());
+#else
   createResult->write(contents, /*off*/ 0).get(0ms);
   createResult->fsync(/*datasync*/ true);
+#endif
 }
 
+#ifndef _WIN32
 void TestMount::addSymlink(
     folly::StringPiece path,
     folly::StringPiece pointsTo) {
@@ -506,12 +434,29 @@ void TestMount::addSymlink(
   const auto parent = getTreeInode(relativePath.dirname());
   (void)parent->symlink(relativePath.basename(), pointsTo).get();
 }
+#endif
 
 void TestMount::overwriteFile(
     folly::StringPiece path,
     folly::StringPiece contents) {
-  auto file = getFileInode(path);
+  RelativePathPiece relativePath(path);
+  auto file = getFileInode(relativePath);
 
+#ifdef _WIN32
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  // Make sure the directory exist.
+  ensureDirectoryExists(absolutePath.dirname());
+  // Write the file in the File System and also update the EdenMount. In the
+  // real system with Projected FS, the closing of a modified file with send the
+  // notification which will update the EdenMount.
+  facebook::eden::writeFile(contents, absolutePath.c_str());
+  // Verify that what we wrote can be read back.
+  std::string newContents;
+  facebook::eden::readFile(absolutePath.c_str(), newContents);
+  EXPECT_EQ(newContents, contents);
+
+  file->materialize();
+#else
   fuse_setattr_in attr;
   attr.valid = FATTR_SIZE;
   attr.size = 0;
@@ -520,11 +465,19 @@ void TestMount::overwriteFile(
   off_t offset = 0;
   file->write(contents, offset).get(0ms);
   file->fsync(/*datasync*/ true);
+#endif
 }
 
 void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
   RelativePathPiece srcPath{src};
   RelativePathPiece destPath{dest};
+
+#ifdef _WIN32
+  auto absoluteSrcPath = edenMount_->getConfig()->getMountPath() + srcPath;
+  auto absoluteDestPath = edenMount_->getConfig()->getMountPath() + destPath;
+  renameWithAbsolutePath(absoluteSrcPath, absoluteDestPath);
+#endif
+
   auto future = getTreeInode(srcPath.dirname())
                     ->rename(
                         srcPath.basename(),
@@ -560,6 +513,12 @@ bool TestMount::hasFileAt(folly::StringPiece path) {
 void TestMount::mkdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getTreeInode(relativePath.dirname());
+
+#ifdef _WIN32
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  ensureDirectoryExists(absolutePath.dirname());
+#endif
+
   mode_t mode = 0755;
   (void)treeInode->mkdir(relativePath.basename(), mode).get();
 }
@@ -567,15 +526,28 @@ void TestMount::mkdir(folly::StringPiece path) {
 void TestMount::deleteFile(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getTreeInode(relativePath.dirname());
+
+#ifdef _WIN32
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  removeFileWithAbsolutePath(absolutePath);
+#endif
+
   treeInode->unlink(relativePath.basename()).get();
 }
 
 void TestMount::rmdir(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   auto treeInode = getTreeInode(relativePath.dirname());
+
+#ifdef _WIN32
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
+  removeRecursively(absolutePath);
+#endif
+
   treeInode->rmdir(relativePath.basename()).get();
 }
 
+#ifndef _WIN32
 void TestMount::chmod(folly::StringPiece path, mode_t permissions) {
   auto inode = getInode(RelativePathPiece{path});
 

@@ -13,6 +13,7 @@
 #include "ProjectedFSLib.h"
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -440,6 +441,160 @@ EdenDispatcher::readMultipleFileChunks(
   return S_OK;
 }
 
+namespace {
+folly::Future<folly::Unit> createFile(
+    const EdenMount& mount,
+    const RelativePathPiece path,
+    bool isDirectory) {
+  return mount.getInode(path.dirname()).thenValue([=](const InodePtr inode) {
+    auto treeInode = inode.asTreePtr();
+    if (isDirectory) {
+      treeInode->mkdir(path.basename(), _S_IFDIR);
+    } else {
+      treeInode->mknod(path.basename(), _S_IFREG, 0);
+    }
+
+    return folly::unit;
+  });
+}
+
+folly::Future<folly::Unit> materializeFile(
+    const EdenMount& mount,
+    const RelativePathPiece path) {
+  return mount.getInode(path).thenValue([](const InodePtr inode) {
+    auto fileInode = inode.asFilePtr();
+    fileInode->materialize();
+    return folly::unit;
+  });
+}
+
+folly::Future<folly::Unit> renameFile(
+    const EdenMount& mount,
+    const RelativePathPiece oldPath,
+    const RelativePathPiece newPath) {
+  auto oldParentInode = mount.getInode(oldPath.dirname());
+  auto newParentInode = mount.getInode(newPath.dirname());
+
+  return std::move(oldParentInode)
+      .thenValue([=, newParentInode = std::move(newParentInode)](
+                     const InodePtr oldParentInodePtr) mutable {
+        auto oldParentTreePtr = oldParentInodePtr.asTreePtr();
+        return std::move(newParentInode)
+            .thenValue([=, oldParentTreePtr = std::move(oldParentTreePtr)](
+                           const InodePtr newParentInodePtr) {
+              auto newParentTreePtr = newParentInodePtr.asTreePtr();
+              return oldParentTreePtr->rename(
+                  oldPath.basename(), newParentTreePtr, newPath.basename());
+            });
+      });
+}
+
+folly::Future<folly::Unit> removeFile(
+    const EdenMount& mount,
+    const RelativePathPiece path,
+    bool isDirectory) {
+  return mount.getInode(path.dirname()).thenValue([=](const InodePtr inode) {
+    auto treeInodePtr = inode.asTreePtr();
+    if (isDirectory) {
+      return treeInodePtr->rmdir(path.basename());
+    } else {
+      return treeInodePtr->unlink(path.basename());
+    }
+  });
+}
+
+folly::Future<folly::Unit> newFileCreated(
+    const EdenMount& mount,
+    PCWSTR path,
+    PCWSTR destPath,
+    bool isDirectory) {
+  auto relPath = wideCharToEdenRelativePath(path);
+  XLOG(DBG6) << "NEW_FILE_CREATED path=" << relPath;
+  return createFile(mount, relPath, isDirectory);
+}
+
+folly::Future<folly::Unit> fileOverwritten(
+    const EdenMount& mount,
+    PCWSTR path,
+    PCWSTR destPath,
+    bool isDirectory) {
+  auto relPath = wideCharToEdenRelativePath(path);
+  XLOG(DBG6) << "FILE_OVERWRITTEN path=" << relPath;
+  return materializeFile(mount, relPath);
+}
+
+folly::Future<folly::Unit> fileHandleClosedFileModified(
+    const EdenMount& mount,
+    PCWSTR path,
+    PCWSTR destPath,
+    bool isDirectory) {
+  auto relPath = wideCharToEdenRelativePath(path);
+  XLOG(DBG6) << "FILE_HANDLE_CLOSED_FILE_MODIFIED path=" << relPath;
+  return materializeFile(mount, relPath);
+}
+
+folly::Future<folly::Unit> fileRenamed(
+    const EdenMount& mount,
+    PCWSTR path,
+    PCWSTR destPath,
+    bool isDirectory) {
+  auto oldPath = wideCharToEdenRelativePath(path);
+  auto newPath = wideCharToEdenRelativePath(destPath);
+
+  XLOG(DBG6) << "FILE_RENAMED oldPath=" << oldPath << " newPath=" << newPath;
+
+  // When files are moved in and out of the repo, the rename paths are
+  // empty, handle these like creation/removal of files.
+  if (oldPath.empty()) {
+    return createFile(mount, newPath, isDirectory);
+  } else if (newPath.empty()) {
+    return removeFile(mount, oldPath, isDirectory);
+  } else {
+    return renameFile(mount, oldPath, newPath);
+  }
+}
+
+folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+    const EdenMount& mount,
+    PCWSTR path,
+    PCWSTR destPath,
+    bool isDirectory) {
+  auto oldPath = wideCharToEdenRelativePath(path);
+  XLOG(DBG6) << "FILE_HANDLE_CLOSED_FILE_MODIFIED path=" << oldPath;
+  return removeFile(mount, oldPath, isDirectory);
+}
+
+folly::Future<folly::Unit> preSetHardlink(
+    const EdenMount& mount,
+    PCWSTR path,
+    PCWSTR destPath,
+    bool isDirectory) {
+  auto relPath = wideCharToEdenRelativePath(path);
+  XLOG(DBG6) << "PRE_SET_HARDLINK path=" << relPath;
+  return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
+      HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
+      sformat("Hardlinks are not supported: {}", relPath)));
+}
+
+typedef folly::Future<folly::Unit> (*NotificationHandler)(
+    const EdenMount& mount,
+    PCWSTR path,
+    PCWSTR destPath,
+    bool isDirectory);
+
+const std::unordered_map<PRJ_NOTIFICATION, NotificationHandler> handlerMap = {
+    {PRJ_NOTIFICATION_NEW_FILE_CREATED, newFileCreated},
+    {PRJ_NOTIFICATION_FILE_OVERWRITTEN, fileOverwritten},
+    {PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
+     fileHandleClosedFileModified},
+    {PRJ_NOTIFICATION_FILE_RENAMED, fileRenamed},
+    {PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
+     fileHandleClosedFileDeleted},
+    {PRJ_NOTIFICATION_PRE_SET_HARDLINK, preSetHardlink},
+};
+
+} // namespace
+
 HRESULT EdenDispatcher::notification(
     const PRJ_CALLBACK_DATA& callbackData,
     bool isDirectory,
@@ -447,45 +602,16 @@ HRESULT EdenDispatcher::notification(
     PCWSTR destinationFileName,
     PRJ_NOTIFICATION_PARAMETERS& notificationParameters) noexcept {
   try {
-    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
-
-    switch (notificationType) {
-      case PRJ_NOTIFICATION_NEW_FILE_CREATED:
-        XLOGF(DBG6, "CREATED {}", relPath);
-        getMount().createFile(relPath, isDirectory);
-        break;
-
-      case PRJ_NOTIFICATION_FILE_OVERWRITTEN:
-      case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED:
-        XLOGF(DBG6, "MODIFIED {}", relPath);
-        getMount().materializeFile(relPath);
-        break;
-
-      case PRJ_NOTIFICATION_FILE_RENAMED: {
-        auto destFile = wideCharToEdenRelativePath(destinationFileName);
-        XLOGF(DBG6, "RENAMED {} -> {}", relPath, destFile);
-
-        // When files are moved in and out of the repo, the rename paths are
-        // empty, handle these like creation/removal of files.
-        if (relPath.empty()) {
-          getMount().createFile(destFile, isDirectory);
-        } else if (destFile.empty()) {
-          getMount().removeFile(relPath, isDirectory);
-        } else {
-          getMount().renameFile(relPath, destFile);
-        }
-
-        break;
-      }
-
-      case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED:
-        XLOGF(DBG6, "DELETED {}", relPath);
-        getMount().removeFile(relPath, isDirectory);
-        break;
-
-      case PRJ_NOTIFICATION_PRE_SET_HARDLINK:
-        XLOGF(DBG6, "HARDLINK {}", relPath);
-        return E_NOTIMPL;
+    auto it = handlerMap.find(notificationType);
+    if (it == handlerMap.end()) {
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    } else {
+      it->second(
+            getMount(),
+            callbackData.FilePathName,
+            destinationFileName,
+            isDirectory)
+          .get();
     }
     return S_OK;
   } catch (const std::exception&) {

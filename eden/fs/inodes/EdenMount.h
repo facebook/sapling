@@ -701,35 +701,6 @@ class EdenMount {
   void enumerateDirectory(
       const RelativePathPiece path,
       std::vector<FileMetadata>& list);
-
-  /*
-   * createFile function is to create a the file or directory in the InodeTree.
-   * This gets called in response of a new file or directory getting created by
-   * user on the FS. This will never be called for a file which exists in the
-   * backing repo.
-   */
-  void createFile(const RelativePathPiece path, bool isDirectory);
-
-  /*
-   * materializeFile is called to report that the file contents are modified.
-   * This is called by ProjectedFS when a file is closed after modification.
-   */
-  void materializeFile(const RelativePathPiece path);
-
-  /*
-   * removeFile is to remove a file or directory from the inode tree.
-   */
-  void removeFile(const RelativePathPiece path, bool isDirectory);
-
-  /**
-   * renameFile will rename a file or directory in the inode tree.
-   *
-   * This functions is called by ProjectedFS and TestMount to rename a file.
-   */
-  void renameFile(
-      const RelativePathPiece oldpath,
-      const RelativePathPiece newpath);
-
 #endif
 
  private:
