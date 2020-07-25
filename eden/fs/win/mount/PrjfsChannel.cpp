@@ -19,6 +19,14 @@ namespace {
 
 using facebook::eden::EdenDispatcher;
 
+#define BAIL_ON_RECURSIVE_CALL(callbackData)                          \
+  do {                                                                \
+    if (callbackData->TriggeringProcessId == GetCurrentProcessId()) { \
+      XLOG(ERR) << "Recursive EdenFS call are disallowed";            \
+      return E_FAIL;                                                  \
+    }                                                                 \
+  } while (false)
+
 static EdenDispatcher* getDispatcher(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
   DCHECK(callbackData);
@@ -31,6 +39,7 @@ static EdenDispatcher* getDispatcher(
 static HRESULT startEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
+  BAIL_ON_RECURSIVE_CALL(callbackData);
   return getDispatcher(callbackData)
       ->startEnumeration(*callbackData, *enumerationId);
 }
@@ -38,6 +47,7 @@ static HRESULT startEnumeration(
 static HRESULT endEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
+  BAIL_ON_RECURSIVE_CALL(callbackData);
   return getDispatcher(callbackData)->endEnumeration(*enumerationId);
 }
 
@@ -46,6 +56,7 @@ static HRESULT getEnumerationData(
     const GUID* enumerationId,
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept {
+  BAIL_ON_RECURSIVE_CALL(callbackData);
   return getDispatcher(callbackData)
       ->getEnumerationData(
           *callbackData,
@@ -56,10 +67,12 @@ static HRESULT getEnumerationData(
 
 static HRESULT getPlaceholderInfo(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
+  BAIL_ON_RECURSIVE_CALL(callbackData);
   return getDispatcher(callbackData)->getFileInfo(*callbackData);
 }
 
 static HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
+  BAIL_ON_RECURSIVE_CALL(callbackData);
   return getDispatcher(callbackData)->queryFileName(*callbackData);
 }
 
@@ -67,6 +80,7 @@ static HRESULT getFileData(
     const PRJ_CALLBACK_DATA* callbackData,
     UINT64 byteOffset,
     UINT32 length) noexcept {
+  BAIL_ON_RECURSIVE_CALL(callbackData);
   return getDispatcher(callbackData)
       ->getFileData(*callbackData, byteOffset, length);
 }
@@ -77,6 +91,7 @@ static HRESULT notification(
     PRJ_NOTIFICATION notificationType,
     PCWSTR destinationFileName,
     PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept {
+  BAIL_ON_RECURSIVE_CALL(callbackData);
   return getDispatcher(callbackData)
       ->notification(
           *callbackData,
