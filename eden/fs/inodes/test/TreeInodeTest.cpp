@@ -90,8 +90,9 @@ TEST(TreeInode, readdirTest) {
   auto root = mount.getEdenMount()->getRootInode();
   auto result = root->readdir().extract();
 
-  ASSERT_EQ(1, result.size());
-  EXPECT_EQ("file", result[0].name);
+  ASSERT_EQ(2, result.size());
+  EXPECT_EQ(".eden", result[0].name);
+  EXPECT_EQ("file", result[1].name);
 }
 
 TEST(TreeInode, updateAndReaddir) {

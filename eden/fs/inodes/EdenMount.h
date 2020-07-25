@@ -21,6 +21,7 @@
 #include <optional>
 #include <shared_mutex>
 #include <stdexcept>
+#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -787,9 +788,7 @@ class EdenMount {
   folly::Future<TreeInodePtr> createRootInode(
       const ParentCommits& parentCommits);
 
-#ifndef _WIN32
   FOLLY_NODISCARD folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
-#endif // !_WIN32
 
   folly::SemiFuture<SerializedInodeMap> shutdownImpl(bool doTakeover);
 
@@ -909,8 +908,8 @@ class EdenMount {
 
 #ifndef _WIN32
   OverlayFileAccess overlayFileAccess_;
-  InodeNumber dotEdenInodeNumber_{};
 #endif // !_WIN32
+  InodeNumber dotEdenInodeNumber_{};
 
   /**
    * A mutex around all name-changing operations in this mount point.

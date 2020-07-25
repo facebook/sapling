@@ -149,9 +149,7 @@ TEST_P(GlobNodeTest, star) {
   auto matches = doGlobIncludeDotFiles("*");
 
   std::vector<GlobResult> expect{
-#ifndef _WIN32
       GlobResult(".eden"_relpath, dtype_t::Dir),
-#endif
       GlobResult(".watchmanconfig"_relpath, dtype_t::Regular),
       GlobResult("dir"_relpath, dtype_t::Dir)};
   EXPECT_EQ(expect, matches);

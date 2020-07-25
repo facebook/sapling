@@ -7,12 +7,15 @@
 
 #include "folly/portability/Windows.h"
 
+#include <cpptoml.h>
 #include <folly/Format.h>
 #include <folly/logging/xlog.h>
 #include "ProjectedFSLib.h"
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -34,12 +37,38 @@ struct PrjAlignedBufferDeleter {
     ::PrjFreeAlignedBuffer(buffer);
   }
 };
+
+const RelativePath kDotEdenConfigPath{".eden/config"};
+const std::string kConfigRootPath{"root"};
+const std::string kConfigSocketPath{"socket"};
+const std::string kConfigClientPath{"client"};
+const std::string kConfigTable{"Config"};
+
+std::unique_ptr<folly::IOBuf> makeDotEdenConfig(EdenMount& mount) {
+  auto repoPath = mount.getPath();
+  auto socketPath = mount.getServerState()->getSocketPath();
+  auto clientPath = mount.getConfig()->getClientDirectory();
+
+  auto rootTable = cpptoml::make_table();
+  auto configTable = cpptoml::make_table();
+  configTable->insert(kConfigRootPath, repoPath.c_str());
+  configTable->insert(kConfigSocketPath, socketPath.c_str());
+  configTable->insert(kConfigClientPath, clientPath.c_str());
+  rootTable->insert(kConfigTable, configTable);
+
+  std::ostringstream stream;
+  stream << *rootTable;
+
+  return folly::IOBuf::copyBuffer(stream.str());
+}
+
 } // namespace
 
-constexpr uint32_t kMinChunkSize = 512 * 1024; // 512 KB
-constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MB
+constexpr uint32_t kMinChunkSize = 512 * 1024; // 512 KiB
+constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MiB
 
-EdenDispatcher::EdenDispatcher(EdenMount& mount) : mount_{mount} {
+EdenDispatcher::EdenDispatcher(EdenMount& mount)
+    : mount_{mount}, dotEdenConfig_{makeDotEdenConfig(mount)} {
   XLOGF(
       INFO,
       "Creating Dispatcher mount (0x{:x}) root ({}) dispatcher (0x{:x})",
@@ -175,10 +204,17 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
                 })
             .thenError(
                 folly::tag_t<std::system_error>{},
-                [](const std::system_error& ex)
+                [relPath = std::move(relPath),
+                 this](const std::system_error& ex)
                     -> folly::Future<std::optional<FileMetadata>> {
                   if (isEnoent(ex)) {
-                    return folly::makeFuture(std::nullopt);
+                    if (relPath == kDotEdenConfigPath) {
+                      auto path = edenToWinPath(relPath.stringPiece());
+                      return folly::makeFuture(
+                          FileMetadata(path, false, dotEdenConfig_->length()));
+                    } else {
+                      return folly::makeFuture(std::nullopt);
+                    }
                   }
                   return folly::makeFuture<std::optional<FileMetadata>>(ex);
                 })
@@ -231,8 +267,11 @@ EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
         .thenValue([](const InodePtr) { return S_OK; })
         .thenError(
             folly::tag_t<std::system_error>{},
-            [](const std::system_error& ex) {
+            [relPath = std::move(relPath)](const std::system_error& ex) {
               if (isEnoent(ex)) {
+                if (relPath == kDotEdenConfigPath) {
+                  return folly::makeFuture(S_OK);
+                }
                 return folly::makeFuture(
                     HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
               }
@@ -256,8 +295,18 @@ EdenDispatcher::getFileData(
   try {
     auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
 
-    auto content = getMount().readFile(relPath);
-    const auto iobuf = folly::IOBuf::wrapBuffer(content.data(), content.size());
+    std::unique_ptr<folly::IOBuf> iobuf;
+    std::string content;
+    try {
+      content = getMount().readFile(relPath);
+      iobuf = folly::IOBuf::wrapBuffer(content.data(), content.size());
+    } catch (const std::system_error& ex) {
+      if (isEnoent(ex) && relPath == kDotEdenConfigPath) {
+        iobuf = dotEdenConfig_->clone();
+      } else {
+        throw;
+      }
+    }
 
     //
     // We should return file data which is smaller than

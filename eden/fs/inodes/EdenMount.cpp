@@ -49,7 +49,6 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef _WIN32
-#include "eden/fs/inodes/win/RepoConfig.h" // @manual
 #include "eden/fs/win/mount/PrjfsChannel.h" // @manual
 #else
 #include <folly/File.h>
@@ -250,14 +249,10 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
           inodeMap_->initialize(std::move(initTreeNode));
         }
 
-#ifndef _WIN32
         // TODO: It would be nice if the .eden inode was created before
         // allocating inode numbers for the Tree's entries. This would give the
         // .eden directory inode number 2.
         return setupDotEden(getRootInode());
-#else
-        return folly::makeFuture();
-#endif
       })
       .thenTry([this](auto&& result) {
         if (result.hasException()) {
@@ -367,6 +362,7 @@ Future<Unit> ensureDotEdenSymlink(
       });
 }
 } // namespace
+#endif
 
 folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
   // Set up the magic .eden dir
@@ -383,6 +379,8 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         // Make sure all of the symlinks in the .eden directory exist and
         // have the correct contents.
         std::vector<Future<Unit>> futures;
+
+#ifndef _WIN32
         futures.emplace_back(ensureDotEdenSymlink(
             dotEdenInode,
             kDotEdenSymlinkName.copy(),
@@ -393,6 +391,7 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
             dotEdenInode, "socket"_pc.copy(), serverState_->getSocketPath()));
         futures.emplace_back(ensureDotEdenSymlink(
             dotEdenInode, "client"_pc.copy(), config_->getClientDirectory()));
+#endif
 
         // Wait until we finish setting up all of the symlinks.
         // Use collectAll() since we want to wait for everything to complete,
@@ -408,6 +407,7 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
       });
 }
 
+#ifndef _WIN32
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
     RelativePathPiece repoPath,
     AbsolutePathPiece targetPath) {
@@ -1282,11 +1282,6 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
         .thenValue([this](EdenMount::channelType&& channel) {
           createChannel(std::move(channel));
 #ifdef _WIN32
-          createRepoConfig(
-              getPath(),
-              serverState_->getSocketPath(),
-              config_->getClientDirectory());
-
           channelInitSuccessful(fsChannel_->getStopFuture());
 #else
           return channel_->initialize().thenValue(

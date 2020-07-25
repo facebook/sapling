@@ -101,6 +101,8 @@ class EdenDispatcher {
   folly::Synchronized<std::map<GUID, std::unique_ptr<Enumerator>, CompareGuid>>
       enumSessions_;
 
+  const std::unique_ptr<folly::IOBuf> dotEdenConfig_;
+
   const uint32_t verificationCode_ = kDispatcherCode;
 };
 
