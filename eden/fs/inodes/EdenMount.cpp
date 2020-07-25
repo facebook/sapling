@@ -1490,13 +1490,6 @@ std::string EdenMount::readFile(const RelativePathPiece path) {
   return fileInode->readAll(ObjectFetchContext::getNullContext()).get();
 }
 
-DirList EdenMount::enumerateDirectory(const RelativePathPiece path) {
-  auto inode = getInode(path).get();
-  auto treeInode = inode.asTreePtr();
-
-  return treeInode->readdir();
-}
-
 void EdenMount::enumerateDirectory(
     const RelativePathPiece path,
     std::vector<FileMetadata>& list) {

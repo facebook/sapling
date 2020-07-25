@@ -37,7 +37,6 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #else
-#include "eden/fs/inodes/win/DirList.h" // @manual
 #include "eden/fs/win/mount/FsChannel.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
@@ -693,11 +692,9 @@ class EdenMount {
 
   /**
    * enumerateDirectory will fetch the directory entries for the given path.
-   * Same as fetchFileInfo, the file size here will be the size from backing
-   * repo and not the current file size.
+   * The file size here will be the size from backing repo and not the current
+   * file size.
    */
-
-  FOLLY_NODISCARD DirList enumerateDirectory(const RelativePathPiece path);
   void enumerateDirectory(
       const RelativePathPiece path,
       std::vector<FileMetadata>& list);
