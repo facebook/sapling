@@ -186,38 +186,44 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
     auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
 
+    struct InodeMetadata {
+      // To ensure that the OS has a record of the canonical file name, and not
+      // just whatever case was used to lookup the file, we capture the
+      // relative path here.
+      RelativePath path;
+      size_t size;
+      bool isDir;
+    };
+
     auto metadata =
         getMount()
             .getInode(relPath)
             .thenValue(
                 [](const InodePtr inode)
-                    -> folly::Future<std::optional<FileMetadata>> {
+                    -> folly::Future<std::optional<InodeMetadata>> {
                   return inode->stat(ObjectFetchContext::getNullContext())
-                      .thenValue([inode =
-                                      std::move(inode)](struct stat&& stat) {
-                        // Ensure that the OS has a record of the canonical file
-                        // name, and not just whatever case was used to lookup
-                        // the file
-                        auto path =
-                            edenToWinPath(inode->getPath()->stringPiece());
-                        return FileMetadata(path, inode->isDir(), stat.st_size);
-                      });
+                      .thenValue(
+                          [inode = std::move(inode)](struct stat&& stat) {
+                            size_t size = stat.st_size;
+                            return InodeMetadata{
+                                *inode->getPath(), size, inode->isDir()};
+                          });
                 })
             .thenError(
                 folly::tag_t<std::system_error>{},
                 [relPath = std::move(relPath),
                  this](const std::system_error& ex)
-                    -> folly::Future<std::optional<FileMetadata>> {
+                    -> folly::Future<std::optional<InodeMetadata>> {
                   if (isEnoent(ex)) {
                     if (relPath == kDotEdenConfigPath) {
                       auto path = edenToWinPath(relPath.stringPiece());
-                      return folly::makeFuture(
-                          FileMetadata(path, false, dotEdenConfig_->length()));
+                      return folly::makeFuture(InodeMetadata{
+                          relPath, dotEdenConfig_->length(), false});
                     } else {
                       return folly::makeFuture(std::nullopt);
                     }
                   }
-                  return folly::makeFuture<std::optional<FileMetadata>>(ex);
+                  return folly::makeFuture<std::optional<InodeMetadata>>(ex);
                 })
             .get();
 
@@ -229,25 +235,25 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
     XLOGF(
         DBG6,
         "Found {} {} size= {} process {}",
-        wideToMultibyteString(metadata->name),
-        metadata->isDirectory ? "Dir" : "File",
+        metadata->path,
+        metadata->isDir ? "Dir" : "File",
         metadata->size,
         wideToMultibyteString(callbackData.TriggeringProcessImageFileName));
 
     PRJ_PLACEHOLDER_INFO placeholderInfo = {};
-    placeholderInfo.FileBasicInfo.IsDirectory = metadata->isDirectory;
+    placeholderInfo.FileBasicInfo.IsDirectory = metadata->isDir;
     placeholderInfo.FileBasicInfo.FileSize = metadata->size;
 
     HRESULT result = PrjWritePlaceholderInfo(
         callbackData.NamespaceVirtualizationContext,
-        metadata->name.c_str(),
+        edenToWinPath(metadata->path.stringPiece()).c_str(),
         &placeholderInfo,
         sizeof(placeholderInfo));
     if (FAILED(result)) {
       XLOGF(
           DBG2,
           "Failed to send the file info. file {} error {} msg {}",
-          relPath,
+          metadata->path,
           result,
           win32ErrorToString(result));
     }
