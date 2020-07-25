@@ -802,7 +802,7 @@ class HgServer(object):
         files = []
         for n in range(num_files):
             idx = n * 2
-            files.append((files_data[idx], files_data[idx + 1]))
+            files.append((pycompat.decodeutf8(files_data[idx]), files_data[idx + 1]))
 
         logging.debug("will prefetch %d files" % len(files))
         self.repo.fileservice.prefetch(files)
