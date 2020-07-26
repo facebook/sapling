@@ -17,7 +17,7 @@ use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange};
 use std::collections::BTreeMap;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ChangesetArgs {
     pub author: String,
     pub message: String,
@@ -26,13 +26,26 @@ pub struct ChangesetArgs {
     pub mark_public: bool,
 }
 
-pub async fn create_and_save_changeset(
+pub trait ChangesetArgsFactory = Fn(usize) -> ChangesetArgs;
+
+pub async fn create_save_and_generate_hg_changeset(
     ctx: &CoreContext,
     repo: &BlobRepo,
     parents: Vec<ChangesetId>,
     file_changes: BTreeMap<MPath, Option<FileChange>>,
     changeset_args: ChangesetArgs,
 ) -> Result<HgChangesetId, Error> {
+    let bcs_id = create_and_save_bonsai(ctx, repo, parents, file_changes, changeset_args).await?;
+    generate_hg_changeset(ctx, repo, bcs_id).await
+}
+
+pub async fn create_and_save_bonsai(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    parents: Vec<ChangesetId>,
+    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    changeset_args: ChangesetArgs,
+) -> Result<ChangesetId, Error> {
     let ChangesetArgs {
         author,
         message,
@@ -46,7 +59,8 @@ pub async fn create_and_save_changeset(
     if let Some(bookmark) = maybe_bookmark {
         create_bookmark(ctx, repo, bookmark, bcs_id).await?;
     }
-    generate_hg_changeset(ctx, repo, bcs_id).await
+
+    Ok(bcs_id)
 }
 
 async fn save_and_maybe_mark_public(
