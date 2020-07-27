@@ -560,6 +560,19 @@ folly::Future<folly::Unit> fileRenamed(
   }
 }
 
+folly::Future<folly::Unit> preRename(
+    const EdenMount& mount,
+    PCWSTR path,
+    PCWSTR destPath,
+    bool isDirectory) {
+  XLOGF(
+      DBG6,
+      "PRE_RENAME oldPath={} newPath={}",
+      wideCharToEdenRelativePath(path),
+      wideCharToEdenRelativePath(destPath));
+  return folly::unit;
+}
+
 folly::Future<folly::Unit> fileHandleClosedFileDeleted(
     const EdenMount& mount,
     PCWSTR path,
@@ -594,6 +607,7 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandler> handlerMap = {
     {PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
      fileHandleClosedFileModified},
     {PRJ_NOTIFICATION_FILE_RENAMED, fileRenamed},
+    {PRJ_NOTIFICATION_PRE_RENAME, preRename},
     {PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
      fileHandleClosedFileDeleted},
     {PRJ_NOTIFICATION_PRE_SET_HARDLINK, preSetHardlink},
@@ -610,6 +624,7 @@ HRESULT EdenDispatcher::notification(
   try {
     auto it = handlerMap.find(notificationType);
     if (it == handlerMap.end()) {
+      XLOG(WARN) << "Unrecognized notification: " << notificationType;
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     } else {
       it->second(
