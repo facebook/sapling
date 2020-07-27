@@ -461,6 +461,8 @@ class EdenMount {
    */
   folly::Future<CheckoutResult> checkout(
       Hash snapshotHash,
+      std::optional<pid_t> clientPid,
+      folly::StringPiece thriftMethodCaller,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 
   /**

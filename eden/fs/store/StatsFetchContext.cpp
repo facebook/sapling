@@ -11,6 +11,12 @@
 namespace facebook {
 namespace eden {
 
+StatsFetchContext::StatsFetchContext(
+    std::optional<pid_t> pid,
+    Cause cause,
+    folly::StringPiece causeDetail)
+    : clientPid_{pid}, cause_{cause}, causeDetail_{std::move(causeDetail)} {}
+
 StatsFetchContext::StatsFetchContext(const StatsFetchContext& other) {
   for (size_t y = 0; y < ObjectFetchContext::kObjectTypeEnumMax; ++y) {
     for (size_t x = 0; x < ObjectFetchContext::kOriginEnumMax; ++x) {
@@ -86,11 +92,15 @@ FetchStatistics StatsFetchContext::computeStatistics() const {
 }
 
 std::optional<pid_t> StatsFetchContext::getClientPid() const {
-  return std::nullopt;
+  return clientPid_;
 }
 
 ObjectFetchContext::Cause StatsFetchContext::getCause() const {
-  return Cause::Unknown;
+  return cause_;
+}
+
+std::optional<folly::StringPiece> StatsFetchContext::getCauseDetail() const {
+  return causeDetail_;
 }
 
 } // namespace eden

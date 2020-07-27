@@ -23,10 +23,15 @@ namespace eden {
 CheckoutContext::CheckoutContext(
     EdenMount* mount,
     folly::Synchronized<EdenMount::ParentInfo>::LockedPtr&& parentsLock,
-    CheckoutMode checkoutMode)
+    CheckoutMode checkoutMode,
+    std::optional<pid_t> clientPid,
+    folly::StringPiece thriftMethodName)
     : checkoutMode_{checkoutMode},
       mount_{mount},
-      parentsLock_(std::move(parentsLock)) {}
+      parentsLock_(std::move(parentsLock)),
+      fetchContext_{clientPid,
+                    ObjectFetchContext::Cause::Thrift,
+                    thriftMethodName} {}
 
 CheckoutContext::~CheckoutContext() {}
 

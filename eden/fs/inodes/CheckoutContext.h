@@ -7,9 +7,12 @@
 
 #pragma once
 
+#include <vector>
+
+#include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <folly/stop_watch.h>
-#include <vector>
+
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
@@ -38,7 +41,9 @@ class CheckoutContext {
   CheckoutContext(
       EdenMount* mount,
       folly::Synchronized<EdenMount::ParentInfo>::LockedPtr&& parentsLock,
-      CheckoutMode checkoutMode);
+      CheckoutMode checkoutMode,
+      std::optional<pid_t> clientPid,
+      folly::StringPiece thriftMethodName);
   ~CheckoutContext();
 
   /**

@@ -42,6 +42,10 @@ struct FetchStatistics {
 class StatsFetchContext : public ObjectFetchContext {
  public:
   StatsFetchContext() = default;
+  StatsFetchContext(
+      std::optional<pid_t> pid,
+      Cause cause,
+      folly::StringPiece causeDetail);
   StatsFetchContext(const StatsFetchContext& other);
 
   void didFetch(ObjectType type, const Hash& id, Origin origin) override;
@@ -49,6 +53,8 @@ class StatsFetchContext : public ObjectFetchContext {
   std::optional<pid_t> getClientPid() const override;
 
   Cause getCause() const override;
+
+  std::optional<folly::StringPiece> getCauseDetail() const override;
 
   uint64_t countFetchesOfType(ObjectType type) const;
   uint64_t countFetchesOfTypeAndOrigin(ObjectType type, Origin origin) const;
@@ -63,6 +69,9 @@ class StatsFetchContext : public ObjectFetchContext {
  private:
   std::atomic<uint64_t> counts_[ObjectFetchContext::kObjectTypeEnumMax]
                                [ObjectFetchContext::kOriginEnumMax] = {};
+  std::optional<pid_t> clientPid_ = std::nullopt;
+  Cause cause_ = Cause::Unknown;
+  folly::StringPiece causeDetail_;
 };
 
 } // namespace eden

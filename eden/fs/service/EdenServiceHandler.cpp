@@ -202,6 +202,10 @@ class ThriftLogHelper {
     return fetchContext_;
   }
 
+  folly::StringPiece getFunctionName() {
+    return itcFunctionName_;
+  }
+
  private:
   folly::StringPiece itcFunctionName_;
   folly::StringPiece itcFileName_;
@@ -414,7 +418,11 @@ void EdenServiceHandler::checkOutRevision(
   auto hashObj = hashFromThrift(*hash);
 
   auto edenMount = server_->getMount(*mountPoint);
-  auto checkoutFuture = edenMount->checkout(hashObj, checkoutMode);
+  auto checkoutFuture = edenMount->checkout(
+      hashObj,
+      helper->getFetchContext().getClientPid(),
+      helper->getFunctionName(),
+      checkoutMode);
   results = std::move(std::move(checkoutFuture).get().conflicts);
 }
 

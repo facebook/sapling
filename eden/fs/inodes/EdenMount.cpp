@@ -792,6 +792,8 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
 
 folly::Future<CheckoutResult> EdenMount::checkout(
     Hash snapshotHash,
+    std::optional<pid_t> clientPid,
+    folly::StringPiece thriftMethodCaller,
     CheckoutMode checkoutMode) {
   const folly::stop_watch<> stopWatch;
   auto checkoutTimes = std::make_shared<CheckoutTimes>();
@@ -821,7 +823,11 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
   auto oldParents = parentsLock->parents;
   auto ctx = std::make_shared<CheckoutContext>(
-      this, std::move(parentsLock), checkoutMode);
+      this,
+      std::move(parentsLock),
+      checkoutMode,
+      clientPid,
+      thriftMethodCaller);
   XLOG(DBG1) << "starting checkout for " << this->getPath() << ": "
              << oldParents << " to " << snapshotHash;
 
