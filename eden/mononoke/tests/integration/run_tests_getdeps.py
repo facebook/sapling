@@ -77,7 +77,6 @@ else:
         "test-backsync-forever.t",  # Unknown issue
         "test-backsyncer-merges.t",  # Missing BACKSYNCER
         "test-blobimport-derived-data.t",  # "|&" problem
-        "test-blobimport-fix-parent-order.t",  # Missing jq
         "test-blobimport-inline.t",  # Illegal byte sequence and "sed -i"
         "test-blobimport-lfs.t",  # Timed out
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
@@ -105,17 +104,14 @@ else:
         "test-inconsistent-hash.t",  # Illegal byte sequence and "sed -i"
         "test-infinitepush-hydrated.t",  # "|&" problem
         "test-infinitepush-lfs.t",  # Timed out
-        "test-infinitepush-vs-push.t",  # Missing jq
         "test-large-path-and-content.t",  # Complex bash issues
         "test-lfs-copytracing.t",  # Timed out
         "test-lfs-server-acl-check.t",  # Timed out
         "test-lfs-server-consistent-hashing.t",  # Timed out
         "test-lfs-server-disabled-hostname-resolution.t",  # Timed out
-        "test-lfs-server-error-formatting.t",  # Missing jq
         "test-lfs-server-identity-parsing-from-header.t",  # Timed out
         "test-lfs-server-identity-parsing-untrusted.t",  # Timed out
         "test-lfs-server-identity-parsing.t",  # Timed out
-        "test-lfs-server-live-config.t",  # Missing jq
         "test-lfs-server-max-upload-size.t",  # Timed out
         "test-lfs-server-proxy-skip-upstream.t",  # Complex bash issues
         "test-lfs-server-proxy-sync.t",  # Timed out
@@ -140,7 +136,6 @@ else:
         "test-mononoke-hg-sync-job.t",  # Missing MONONOKE_HG_SYNC
         "test-multiplexed-chaosblob.t",  # "wc -l" problem
         "test-multiplexed-packblob.t",  # "du --bytes" problem
-        "test-post-push-logging.t",  # Missing jq
         "test-push-protocol-lfs.t",  # Timed out
         "test-push-redirector-pushrebase-hooks.t",  # Hooks are not in OSS yet
         "test-push-redirector-pushrebase-onesided.t",  # Missing MONONOKE_X_REPO_SYNC
