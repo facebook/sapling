@@ -10,7 +10,7 @@ import os
 
 from edenscm.mercurial import error, json, pycompat
 
-from . import baseservice, error as ccerror
+from . import baseservice, error as ccerror, workspace as ccworkspace
 
 
 class LocalService(baseservice.BaseService):
@@ -26,8 +26,16 @@ class LocalService(baseservice.BaseService):
             msg = "Invalid commitcloud.servicelocation: %s" % self.path
             raise error.Abort(msg)
 
-    def _load(self):
-        filename = os.path.join(self.path, "commitcloudservicedb")
+    def _workspacefilename(self, prefix, workspacename):
+        if workspacename == ccworkspace.defaultworkspace(self._ui):
+            return prefix
+        else:
+            return prefix + "".join(x for x in workspacename if x.isalnum())
+
+    def _load(self, workspace):
+        filename = os.path.join(
+            self.path, self._workspacefilename("commitcloudservicedb", workspace)
+        )
         if os.path.exists(filename):
             with open(filename, "rb") as f:
                 data = json.load(f)
@@ -41,8 +49,10 @@ class LocalService(baseservice.BaseService):
                 "remotebookmarks": {},
             }
 
-    def _save(self, data):
-        filename = os.path.join(self.path, "commitcloudservicedb")
+    def _save(self, data, workspace):
+        filename = os.path.join(
+            self.path, self._workspacefilename("commitcloudservicedb", workspace)
+        )
         with open(filename, "wb") as f:
             f.write(pycompat.encodeutf8(json.dumps(data)))
 
@@ -58,11 +68,13 @@ class LocalService(baseservice.BaseService):
         del data["obsmarkers"]
         return data
 
-    def _injectheaddates(self, data):
+    def _injectheaddates(self, data, workspace):
         """inject a head_dates field into the data"""
         data["head_dates"] = {}
         heads = set(data["heads"])
-        filename = os.path.join(self.path, "nodedata")
+        filename = os.path.join(
+            self.path, self._workspacefilename("nodedata", workspace)
+        )
         if os.path.exists(filename):
             with open(filename, "rb") as f:
                 nodes = json.load(f)
@@ -78,7 +90,7 @@ class LocalService(baseservice.BaseService):
         return True
 
     def getreferences(self, reponame, workspace, baseversion):
-        data = self._load()
+        data = self._load(workspace)
         version = data["version"]
         if version == baseversion:
             self._ui.debug(
@@ -92,7 +104,7 @@ class LocalService(baseservice.BaseService):
                 "get_references for versions from %s to %s\n" % (baseversion, version)
             )
             data = self._filteredobsmarkers(data, baseversion)
-            data = self._injectheaddates(data)
+            data = self._injectheaddates(data, workspace)
             return self._makereferences(data)
 
     def updatereferences(
@@ -111,7 +123,7 @@ class LocalService(baseservice.BaseService):
         newsnapshots=None,
         logopts={},
     ):
-        data = self._load()
+        data = self._load(workspace)
         if version != data["version"]:
             return False, self._makereferences(self._filteredobsmarkers(data, version))
 
@@ -165,14 +177,16 @@ class LocalService(baseservice.BaseService):
                 len(data["remote_bookmarks"]),
             )
         )
-        self._save(data)
+        self._save(data, workspace)
         return (
             True,
             baseservice.References(newversion, None, None, None, None, None, None),
         )
 
     def getsmartlog(self, reponame, workspace, repo, limit):
-        filename = os.path.join(self.path, "usersmartlogdata")
+        filename = os.path.join(
+            self.path, self._workspacefilename("usersmartlogdata", workspace)
+        )
         if not os.path.exists(filename):
             return None
         try:
@@ -183,7 +197,9 @@ class LocalService(baseservice.BaseService):
             raise ccerror.UnexpectedError(self._ui, e)
 
     def getsmartlogbyversion(self, reponame, workspace, repo, date, version, limit):
-        filename = os.path.join(self.path, "usersmartlogbyversiondata")
+        filename = os.path.join(
+            self.path, self._workspacefilename("usersmartlogbyversiondata", workspace)
+        )
         if not os.path.exists(filename):
             return None
         try:
@@ -208,7 +224,9 @@ class LocalService(baseservice.BaseService):
             "shared_path": sharedpath,
             "unixname": unixname,
         }
-        filename = os.path.join(self.path, "checkoutlocations")
+        filename = os.path.join(
+            self.path, self._workspacefilename("checkoutlocations", workspace)
+        )
         with open(filename, "w+") as f:
             json.dump(data, f)
 

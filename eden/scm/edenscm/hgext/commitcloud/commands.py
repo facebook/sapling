@@ -23,6 +23,7 @@ from edenscm.mercurial import (
     scmutil,
     templatefilters,
     util,
+    visibility,
 )
 from edenscm.mercurial.i18n import _, _n
 
@@ -98,7 +99,16 @@ subcmd = cloud.subcommand(
 )
 
 
-@subcmd("join|connect", [] + workspace.workspaceopts + pullopts + remoteopts)
+@subcmd(
+    "join|connect",
+    [
+        ("", "switch", None, _("switch to another workspace")),
+        ("", "merge", None, _("merge to another workspace")),
+    ]
+    + workspace.workspaceopts
+    + pullopts
+    + remoteopts,
+)
 def cloudjoin(ui, repo, **opts):
     """connect the local repository to commit cloud
 
@@ -114,10 +124,130 @@ def cloudjoin(ui, repo, **opts):
     workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
         workspacename = workspace.defaultworkspace(ui)
-    if workspace.currentworkspace(repo):
-        subscription.remove(repo)
-    workspace.setworkspace(repo, workspacename)
 
+    currentworkspace = workspace.currentworkspace(repo)
+
+    switch = opts.get("switch")
+    merge = opts.get("merge")
+
+    if switch and merge:
+        ui.status(
+            _(
+                "'switch' and 'merge' options can not be provided together, please choose one over another\n"
+            ),
+            component="commitcloud",
+        )
+        return 1
+
+    if currentworkspace == workspacename:
+        ui.status(
+            _(
+                "this repository has been already connected to the '%s' workspace for the '%s' repo\n"
+            )
+            % (workspacename, ccutil.getreponame(repo)),
+            component="commitcloud",
+        )
+        return cloudsync(ui, repo, **opts)
+
+    # Check the current workspace and perform necessary clean up.
+    # If the local repository is already connected to some workspace,
+    # make sure that we perform correct merge or switch.
+    # If the local repository is not connected yet to any workspace,
+    # all local changes will be moved to the destination workspace (merge).
+    if currentworkspace:
+        if not switch and not merge:
+            ui.status(
+                _(
+                    "this repository is already connected to the '%s' workspace, run `hg cloud join --help`\n"
+                )
+                % currentworkspace,
+                component="commitcloud",
+            )
+            return 1
+
+        if switch:
+            # sync all the current commits and bookmarks before switching
+            cloudsync(ui, repo, **opts)
+            ui.status(
+                _(
+                    "now this repository will be switched from the '%s' to the '%s' workspace\n"
+                )
+                % (currentworkspace, workspacename),
+                component="commitcloud",
+            )
+            with backuplock.lock(repo), repo.wlock(), repo.lock(), repo.transaction(
+                "commit cloud switch workspace clean up transaction"
+            ) as tr:
+                # check uncommitted changes
+                if any(repo.status()):
+                    raise error.Abort(
+                        _(
+                            "this repository can not be switched to the '%s' workspace due to uncommitted changes"
+                        )
+                        % workspacename
+                    )
+                # check that the current location is a public commit
+                if repo["."].mutable():
+                    raise error.Abort(
+                        _(
+                            "this repository can not be switched to the '%s' workspace\n"
+                            "please update your location to a public commit first"
+                        )
+                        % workspacename
+                    )
+                # remove heads and bookmarks before connecting to a new workspace
+                visibility.setvisibleheads(repo, [])
+                # remove all local bookmarks
+                bmremove = []
+                for key in sync._getbookmarks(repo).keys():
+                    bmremove.append((key, None))
+                repo._bookmarks.applychanges(repo, tr, bmremove)
+                # remove all remote bookmarks (if sync of them enabled)
+                bmremove = {
+                    key: nodemod.nullhex
+                    for key in sync._getremotebookmarks(repo).keys()
+                }
+                sync._updateremotebookmarks(repo, tr, bmremove)
+                # erase state if the repo has been connected before to the destination workspace
+                syncstate.SyncState.erasestate(repo, workspacename)
+                # clear subscription
+                subscription.remove(repo)
+                # clear workspace
+                workspace.clearworkspace(repo)
+
+        if merge:
+            ui.status(
+                _(
+                    "this repository will be reconnected from the '%s' to the '%s' workspace\n"
+                )
+                % (currentworkspace, workspacename),
+                component="commitcloud",
+            )
+            ui.status(
+                _(
+                    "all local commits and bookmarks will be merged into '%s' workspace\n"
+                )
+                % workspacename,
+                component="commitcloud",
+            )
+            # TODO: suggest user to archive the old workspace if they want to
+            # clear subscription
+            subscription.remove(repo)
+            # clear workspace
+            workspace.clearworkspace(repo)
+    else:
+        if switch:
+            ui.status(
+                _(
+                    "this repository can not be switched to the '%s' workspace because not joined to any workspace, run `hg cloud join --help`\n"
+                )
+                % workspacename,
+                component="commitcloud",
+            )
+            return 1
+
+    # connect to a new workspace
+    workspace.setworkspace(repo, workspacename)
     ui.status(
         _("this repository is now connected to the '%s' workspace for the '%s' repo\n")
         % (workspacename, ccutil.getreponame(repo)),
