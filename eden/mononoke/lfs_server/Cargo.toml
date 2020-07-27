@@ -16,6 +16,7 @@ filestore = { path = "../filestore" }
 gotham_ext = { path = "../gotham_ext" }
 lfs_protocol = { path = "../lfs_protocol" }
 metaconfig_parser = { path = "../metaconfig/parser" }
+metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }
 permission_checker = { path = "../permission_checker" }
 redactedblobstore = { path = "../blobstore/redactedblobstore" }

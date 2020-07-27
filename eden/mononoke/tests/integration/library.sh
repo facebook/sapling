@@ -647,6 +647,12 @@ scuba_local_path="$SCUBA_LOGGING_PATH"
 CONFIG
 fi
 
+if [[ -n "${ENFORCE_LFS_ACL_CHECK:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+enforce_lfs_acl_check=true
+CONFIG
+fi
+
 # Normally point to common storageconfig, but if none passed, create per-repo
 if [[ -z "$storageconfig" ]]; then
   storageconfig="blobstore_$reponame"

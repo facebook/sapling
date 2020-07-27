@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::{Arguments, Write};
 use std::sync::{
@@ -36,6 +37,7 @@ use context::CoreContext;
 use hyper::{client::HttpConnector, Client};
 use hyper_openssl::HttpsConnector;
 use lfs_protocol::{RequestBatch, RequestObject, ResponseBatch};
+use metaconfig_types::RepoConfig;
 use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
 
@@ -49,7 +51,7 @@ pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 const ACL_CHECK_ACTION: &str = "read";
 
 struct LfsServerContextInner {
-    repositories: HashMap<String, (BlobRepo, ArcPermissionChecker)>,
+    repositories: HashMap<String, (BlobRepo, ArcPermissionChecker, RepoConfig)>,
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
     always_wait_for_upstream: bool,
@@ -65,7 +67,7 @@ pub struct LfsServerContext {
 
 impl LfsServerContext {
     pub fn new(
-        repositories: HashMap<String, (BlobRepo, ArcPermissionChecker)>,
+        repositories: HashMap<String, (BlobRepo, ArcPermissionChecker, RepoConfig)>,
         server: ServerUris,
         always_wait_for_upstream: bool,
         max_upload_size: Option<u64>,
@@ -98,11 +100,20 @@ impl LfsServerContext {
         repository: String,
         identities: Option<&MononokeIdentitySet>,
     ) -> Result<RepositoryRequestContext, LfsServerContextErrorKind> {
-        let (repo, aclchecker, client, server, always_wait_for_upstream, max_upload_size, config) = {
+        let (
+            repo,
+            aclchecker,
+            client,
+            server,
+            always_wait_for_upstream,
+            max_upload_size,
+            config,
+            enforce_acl_check,
+        ) = {
             let inner = self.inner.lock().expect("poisoned lock");
 
             match inner.repositories.get(&repository) {
-                Some((repo, aclchecker)) => (
+                Some((repo, aclchecker, repo_config)) => (
                     repo.clone(),
                     aclchecker.clone(),
                     inner.client.clone(),
@@ -110,6 +121,7 @@ impl LfsServerContext {
                     inner.always_wait_for_upstream,
                     inner.max_upload_size,
                     inner.config_handle.get(),
+                    repo_config.enforce_lfs_acl_check,
                 ),
                 None => {
                     return Err(LfsServerContextErrorKind::RepositoryDoesNotExist(
@@ -120,7 +132,8 @@ impl LfsServerContext {
         };
 
         if config.acl_check() {
-            acl_check(aclchecker, identities, config.enforce_acl_check()).await?;
+            // TODO(harveyhunt): Use the live config's enforce_acl_check() method as a killswitch.
+            acl_check(aclchecker, identities, enforce_acl_check).await?;
         }
 
         Ok(RepositoryRequestContext {
@@ -157,21 +170,19 @@ async fn acl_check(
     identities: Option<&MononokeIdentitySet>,
     enforce_acl_check: bool,
 ) -> Result<(), LfsServerContextErrorKind> {
-    if let Some(identities) = identities {
-        // Always make the request for permission even if enforce_acl_check is
-        // false, so that we get the even logged in our system
-        let acl_check = aclchecker
-            .check_set(identities, &[ACL_CHECK_ACTION])
-            .await
-            .map_err(LfsServerContextErrorKind::PermissionCheckFailed)?;
-        if !acl_check && enforce_acl_check {
-            return Err(LfsServerContextErrorKind::Forbidden.into());
-        } else {
-            return Ok(());
-        }
+    let identities: Cow<MononokeIdentitySet> = match identities {
+        Some(idents) => Cow::Borrowed(idents),
+        None => Cow::Owned(MononokeIdentitySet::new()),
+    };
+
+    let acl_check = aclchecker
+        .check_set(identities.as_ref(), &[ACL_CHECK_ACTION])
+        .await
+        .map_err(LfsServerContextErrorKind::PermissionCheckFailed)?;
+
+    if !acl_check && enforce_acl_check {
+        return Err(LfsServerContextErrorKind::Forbidden.into());
     } else {
-        // For now, allow clients to connect that don't provide an identity. Once we know
-        // all clients have idents, we can return Forbidden.
         return Ok(());
     }
 }

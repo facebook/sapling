@@ -178,6 +178,8 @@ pub struct RepoConfig {
     /// Name of this repository in hgsql ... for globalrevs. This could, in some cases, not be the
     /// same as HgsqlName.
     pub hgsql_globalrevs_name: HgsqlGlobalrevsName,
+    /// Whether to enforce strict LFS ACL checks for this repo.
+    pub enforce_lfs_acl_check: bool,
 }
 
 /// Config for derived data

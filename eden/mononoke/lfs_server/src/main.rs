@@ -38,6 +38,7 @@ use cmdlib::{
     monitoring::{start_fb303_server, AliveService},
 };
 use metaconfig_parser::RepoConfigs;
+use metaconfig_types::RepoConfig;
 
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
@@ -274,7 +275,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     &logger,
                 );
 
-                let hipster_acl = config.hipster_acl;
+                let hipster_acl = config.hipster_acl.as_ref();
                 let aclchecker = async {
                     if let Some(test_checker) = test_acl_checker {
                         Ok(test_checker.clone())
@@ -298,9 +299,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
                 let (repo, aclchecker) = try_join!(builder.build(), aclchecker)?;
 
-                Result::<(String, (BlobRepo, ArcPermissionChecker)), Error>::Ok((
+                Result::<(String, (BlobRepo, ArcPermissionChecker, RepoConfig)), Error>::Ok((
                     name,
-                    (repo, aclchecker),
+                    (repo, aclchecker, config),
                 ))
             }
         });

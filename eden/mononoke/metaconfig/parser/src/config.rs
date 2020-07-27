@@ -209,6 +209,7 @@ fn parse_repo_config(
         scuba_local_path_hooks,
         hgsql_name,
         hgsql_globalrevs_name,
+        enforce_lfs_acl_check,
         ..
     } = repo_config;
 
@@ -321,6 +322,8 @@ fn parse_repo_config(
         }
     };
 
+    let enforce_lfs_acl_check = enforce_lfs_acl_check.unwrap_or(false);
+
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -356,6 +359,7 @@ fn parse_repo_config(
         derived_data_config,
         hgsql_name,
         hgsql_globalrevs_name,
+        enforce_lfs_acl_check,
     })
 }
 
@@ -1152,6 +1156,7 @@ mod test {
                 },
                 hgsql_name: HgsqlName("fbsource".to_string()),
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("fbsource".to_string()),
+                enforce_lfs_acl_check: false,
             },
         );
 
@@ -1199,6 +1204,7 @@ mod test {
                 derived_data_config: DerivedDataConfig::default(),
                 hgsql_name: HgsqlName("www-foobar".to_string()),
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("www-barfoo".to_string()),
+                enforce_lfs_acl_check: false,
             },
         );
         assert_eq!(

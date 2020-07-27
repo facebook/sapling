@@ -141,6 +141,8 @@ impl ServerConfig {
     pub fn acl_check(&self) -> bool {
         self.raw_server_config.acl_check
     }
+    #[allow(dead_code)]
+    // TODO(harveyhunt) Use this method as a killswitch for ACL checking.
     pub fn enforce_acl_check(&self) -> bool {
         self.raw_server_config.enforce_acl_check
     }

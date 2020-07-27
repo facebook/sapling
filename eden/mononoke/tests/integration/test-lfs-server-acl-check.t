@@ -9,6 +9,8 @@
 # Create a repository
   $ setup_mononoke_config
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo1
+  $ ENFORCE_LFS_ACL_CHECK=1 REPOID=2 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo2
+
   $ LIVE_CONFIG="${TESTTMP}/live.json"
   $ cat > "$LIVE_CONFIG" << EOF
   > {
@@ -25,6 +27,7 @@
   $ LFS_LOG="$TESTTMP/lfs.log"
   $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --tls --live-config "file:${LIVE_CONFIG}" --allowed-test-identity USER:test --trusted-proxy-identity USER:myusername0)"
   $ LFS_URI="$LFS_ROOT/repo1"
+  $ LFS_URI_REPO_ENFORCE_ACL="$LFS_ROOT/repo2"
 
 # Setup constants. These headers are normally provided by proxygen, they store
 # an encoded form of the original client identity. In this case, we have
@@ -32,6 +35,7 @@
   $ ALLOWED_IDENT="x-fb-validated-client-encoded-identity: %7B%22ai%22%3A%20%22%22%2C%20%22ch%22%3A%20%22%22%2C%20%22it%22%3A%20%22user%22%2C%20%22id%22%3A%20%22test%22%7D"
   $ DISALLOWED_IDENT="x-fb-validated-client-encoded-identity: %7B%22ai%22%3A%20%22%22%2C%20%22ch%22%3A%20%22%22%2C%20%22it%22%3A%20%22user%22%2C%20%22id%22%3A%20%22invalid%22%7D"
   $ DOWNLOAD_URL="$LFS_URI/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"
+  $ DOWNLOAD_URL_REPO_ENFORCE_ACL="$LFS_URI_REPO_ENFORCE_ACL/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"
 
 # Upload a blob
   $ yes A 2>/dev/null | head -c 2KiB | ssldebuglfssend "$LFS_URI"
@@ -46,14 +50,21 @@
   $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
   200
 
-# Make a request with an invalid encoded client identity header
+# Make a request with an invalid encoded client identity header. As
+# enforce_lfs_acl_check is not set, this is allowed.
   $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$DISALLOWED_IDENT"
-  403
+  200
 
 # Make a request without specifying an identity in the header
 # NOTE: We allow this whilst we wait for all clients to get certs
   $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL"
   200
+
+# Make a request without specifying an identity in the header, as the repo is
+# configured with enforce_lfs_acl_check this request is forbidden as there is
+# no ident provided.
+  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL_REPO_ENFORCE_ACL"
+  403
 
 # Disable ACL checking
   $ sed -i 's/"enforce_acl_check": true/"enforce_acl_check": false/g' "$LIVE_CONFIG"
