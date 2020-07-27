@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, VecDeque};
-use std::fmt;
-use std::pin::Pin;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::{HashMap, VecDeque},
+    fmt,
+    future::Future,
+    pin::Pin,
+    sync::{Arc, Mutex},
+};
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::MultiplexedBlobstore;
@@ -24,11 +27,9 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     channel::oneshot,
-    future::{BoxFuture, Future, FutureExt as _, TryFutureExt},
+    future::{BoxFuture, FutureExt, TryFutureExt},
     task::{Context, Poll},
 };
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt};
-use futures_old::future::{Future as OldFuture, IntoFuture};
 use lock_ext::LockExt;
 use memblob::LazyMemblob;
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
@@ -72,7 +73,7 @@ impl<T> Tickable<T> {
 
     // Register this task on the tick queue and wait for it to progress.
 
-    pub fn on_tick(&self) -> BoxFuture<'static, Result<(), Error>> {
+    pub fn on_tick(&self) -> impl Future<Output = Result<(), Error>> {
         let (send, recv) = oneshot::channel();
         let mut queue = self.queue.lock().unwrap();
         queue.push_back(send);
@@ -83,7 +84,6 @@ impl<T> Tickable<T> {
                 Some(error) => bail!(error),
             }
         }
-        .boxed()
     }
 }
 
@@ -125,21 +125,21 @@ impl Blobstore for Tickable<BlobstoreBytes> {
 impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {
     fn on_put(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         blobstore_id: BlobstoreId,
         _multiplex_id: MultiplexId,
-        _operation_key: OperationKey,
-        key: String,
-    ) -> BoxFuture01<(), Error> {
+        _operation_key: &OperationKey,
+        key: &str,
+    ) -> BoxFuture<Result<(), Error>> {
         let storage = self.storage.clone();
+        let key = key.to_string();
         self.on_tick()
-            .compat()
-            .map(move |_| {
+            .map_ok(move |_| {
                 storage.with(|s| {
                     s.insert(key, blobstore_id);
                 })
             })
-            .boxify()
+            .boxed()
     }
 }
 
@@ -161,14 +161,15 @@ impl LogHandler {
 impl MultiplexedBlobstorePutHandler for LogHandler {
     fn on_put(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         blobstore_id: BlobstoreId,
         _multiplex_id: MultiplexId,
-        _operation_key: OperationKey,
-        key: String,
-    ) -> BoxFuture01<(), Error> {
-        self.log.with(move |log| log.push((blobstore_id, key)));
-        Ok(()).into_future().boxify()
+        _operation_key: &OperationKey,
+        key: &str,
+    ) -> BoxFuture<Result<(), Error>> {
+        self.log
+            .with(move |log| log.push((blobstore_id, key.to_string())));
+        async { Ok(()) }.boxed()
     }
 }
 
@@ -176,32 +177,27 @@ fn make_value(value: &str) -> BlobstoreBytes {
     BlobstoreBytes::from_bytes(Bytes::copy_from_slice(value.as_bytes()))
 }
 
-struct AssertPollOnce<'a, F: Future> {
+struct PollOnce<'a, F> {
     future: Pin<&'a mut F>,
-    expected: Poll<F::Output>,
 }
 
-impl<'a, F: Future> AssertPollOnce<'a, F> {
-    pub fn new(future: Pin<&'a mut F>, expected: Poll<F::Output>) -> Self {
-        Self { future, expected }
+impl<'a, F> PollOnce<'a, F> {
+    pub fn new(future: Pin<&'a mut F>) -> Self {
+        Self { future }
     }
 }
 
-impl<'a, F: Future + Unpin> Future for AssertPollOnce<'a, F>
-where
-    <F as Future>::Output: std::fmt::Debug + Eq,
-{
-    type Output = ();
+impl<'a, F: Future + Unpin> Future for PollOnce<'a, F> {
+    type Output = Poll<<F as Future>::Output>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
         // This is pin-projection; I uphold the Pin guarantees, so it's fine.
         let this = unsafe { self.get_unchecked_mut() };
-        assert_eq!(this.future.poll_unpin(cx), this.expected);
-        Poll::Ready(())
+        Poll::Ready(this.future.poll_unpin(cx))
     }
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<(), Error> {
     let bid0 = BlobstoreId::new(0);
     let bs0 = Arc::new(Tickable::new());
@@ -222,7 +218,8 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<(), Error> {
         ScrubAction::ReportOnly,
     );
 
-    let fut = bs.get(ctx.clone(), "key".to_string());
+    let mut fut = bs.get(ctx.clone(), "key".to_string());
+    assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
     // No entry for "key" - blobstores return None...
     bs0.tick(None);
@@ -244,7 +241,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn base(fb: FacebookInit) {
     let bs0 = Arc::new(Tickable::new());
     let bs1 = Arc::new(Tickable::new());
@@ -270,7 +267,7 @@ async fn base(fb: FacebookInit) {
             .put(ctx.clone(), k0.clone(), v0.clone())
             .map_err(|_| ())
             .boxed();
-        AssertPollOnce::new(Pin::new(&mut put_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(None);
         put_fut.await.unwrap();
         assert_eq!(bs0.storage.with(|s| s.get(&k0).cloned()), Some(v0.clone()));
@@ -282,7 +279,7 @@ async fn base(fb: FacebookInit) {
 
         // should succeed as it is stored in bs1
         let mut get_fut = bs.get(ctx.clone(), k0).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(None);
         bs1.tick(None);
         assert_eq!(get_fut.await.unwrap(), Some(v0.into()));
@@ -300,9 +297,9 @@ async fn base(fb: FacebookInit) {
             .put(ctx.clone(), k1.clone(), v1.clone())
             .map_err(|_| ())
             .boxed();
-        AssertPollOnce::new(Pin::new(&mut put_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(Some("case 2: bs0 failed"));
-        AssertPollOnce::new(Pin::new(&mut put_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs1.tick(None);
         put_fut.await.unwrap();
         assert!(bs0.storage.with(|s| s.get(&k1).is_none()));
@@ -312,9 +309,9 @@ async fn base(fb: FacebookInit) {
             .with(|log| log == &vec![(BlobstoreId::new(1), k1.clone())]));
 
         let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(None);
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs1.tick(None);
         assert_eq!(get_fut.await.unwrap(), Some(v1.into()));
         assert!(bs0.storage.with(|s| s.get(&k1).is_none()));
@@ -331,9 +328,9 @@ async fn base(fb: FacebookInit) {
             .put(ctx.clone(), k2.clone(), v2.clone())
             .map_err(|_| ())
             .boxed();
-        AssertPollOnce::new(Pin::new(&mut put_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(Some("case 3: bs0 failed"));
-        AssertPollOnce::new(Pin::new(&mut put_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs1.tick(Some("case 3: bs1 failed"));
         assert!(put_fut.await.is_err());
     }
@@ -342,10 +339,10 @@ async fn base(fb: FacebookInit) {
     {
         let k3 = String::from("k3");
         let mut get_fut = bs.get(ctx.clone(), k3).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(Some("case 4: bs0 failed"));
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs1.tick(None);
         assert!(get_fut.await.is_err());
@@ -355,10 +352,10 @@ async fn base(fb: FacebookInit) {
     {
         let k3 = String::from("k3");
         let mut get_fut = bs.get(ctx.clone(), k3).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs1.tick(None);
         assert_eq!(get_fut.await.unwrap(), None);
@@ -374,7 +371,7 @@ async fn base(fb: FacebookInit) {
             .put(ctx.clone(), k4.clone(), v4.clone())
             .map_err(|_| ())
             .boxed();
-        AssertPollOnce::new(Pin::new(&mut put_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(None);
         put_fut.await.unwrap();
         assert_eq!(bs0.storage.with(|s| s.get(&k4).cloned()), Some(v4.clone()));
@@ -386,7 +383,7 @@ async fn base(fb: FacebookInit) {
     }
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn multiplexed(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
@@ -408,10 +405,10 @@ async fn multiplexed(fb: FacebookInit) {
         let k0 = String::from("k0");
 
         let mut get_fut = bs.get(ctx.clone(), k0.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs1.tick(Some("case 1: bs1 failed"));
         assert_eq!(get_fut.await.unwrap(), None);
@@ -426,7 +423,7 @@ async fn multiplexed(fb: FacebookInit) {
             .put(ctx.clone(), k1.clone(), v1.clone())
             .map_err(|_| ())
             .boxed();
-        AssertPollOnce::new(Pin::new(&mut put_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(None);
         bs1.tick(Some("case 2: bs1 failed"));
         put_fut.await.expect("case 2 put_fut failed");
@@ -442,7 +439,7 @@ async fn multiplexed(fb: FacebookInit) {
         }
 
         let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("case 2: bs0 failed"));
         bs1.tick(None);
         assert!(get_fut.await.is_err());
@@ -453,14 +450,14 @@ async fn multiplexed(fb: FacebookInit) {
         let k2 = String::from("k2");
 
         let mut get_fut = bs.get(ctx.clone(), k2.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("case 3: bs0 failed"));
         bs1.tick(Some("case 3: bs1 failed"));
         assert!(get_fut.await.is_err());
     }
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
@@ -510,7 +507,7 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn scrubbed(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
@@ -534,10 +531,10 @@ async fn scrubbed(fb: FacebookInit) {
         let k0 = String::from("k0");
 
         let mut get_fut = bs.get(ctx.clone(), k0.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs1.tick(Some("bs1 failed"));
         assert_eq!(get_fut.await.unwrap(), None, "None/Err no replication");
@@ -552,9 +549,9 @@ async fn scrubbed(fb: FacebookInit) {
             .put(ctx.clone(), k1.clone(), v1.clone())
             .map_err(|_| ())
             .boxed();
-        AssertPollOnce::new(Pin::new(&mut put_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(None);
-        AssertPollOnce::new(Pin::new(&mut put_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs1.tick(Some("bs1 failed"));
         put_fut.await.unwrap();
 
@@ -564,10 +561,10 @@ async fn scrubbed(fb: FacebookInit) {
         }
 
         let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(Some("bs0 failed"));
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs1.tick(None);
         assert!(get_fut.await.is_err(), "None/Err while replicating");
@@ -578,7 +575,7 @@ async fn scrubbed(fb: FacebookInit) {
         let k2 = String::from("k2");
 
         let mut get_fut = bs.get(ctx.clone(), k2.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("bs0 failed"));
         bs1.tick(Some("bs1 failed"));
         assert!(get_fut.await.is_err(), "Err/Err");
@@ -602,10 +599,10 @@ async fn scrubbed(fb: FacebookInit) {
         let k0 = String::from("k0");
 
         let mut get_fut = bs.get(ctx.clone(), k0.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs1.tick(Some("bs1 failed"));
         assert_eq!(get_fut.await.unwrap(), None, "None/Err after replacement");
@@ -616,7 +613,7 @@ async fn scrubbed(fb: FacebookInit) {
         let k1 = String::from("k1");
 
         let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("bs0 failed"));
         bs1.tick(None);
         assert!(get_fut.await.is_err(), "Empty replacement against error");
@@ -643,12 +640,12 @@ async fn scrubbed(fb: FacebookInit) {
         assert!(bs1.storage.with(|s| s.is_empty()));
 
         let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         // tick the gets
         bs0.tick(None);
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs1.tick(None);
-        AssertPollOnce::new(Pin::new(&mut get_fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         // Tick the repairs
         bs1.tick(None);
 
@@ -660,7 +657,7 @@ async fn scrubbed(fb: FacebookInit) {
     }
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn queue_waits(fb: FacebookInit) {
     let bs0 = Arc::new(Tickable::new());
     let bs1 = Arc::new(Tickable::new());
@@ -699,13 +696,13 @@ async fn queue_waits(fb: FacebookInit) {
             .map_err(|_| ())
             .boxed();
 
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
         bs0.tick(None);
         bs1.tick(None);
         bs2.tick(None);
 
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Ready(Ok(()))).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Ready(Ok(())));
 
         clear();
     }
@@ -717,13 +714,13 @@ async fn queue_waits(fb: FacebookInit) {
             .map_err(|_| ())
             .boxed();
 
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
         bs0.tick(None);
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
         log.tick(None);
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Ready(Ok(()))).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Ready(Ok(())));
 
         clear();
     }
@@ -735,15 +732,15 @@ async fn queue_waits(fb: FacebookInit) {
             .map_err(|_| ())
             .boxed();
 
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
         bs0.tick(None);
         bs1.tick(Some("oops"));
         bs2.tick(Some("oops"));
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Pending).await; // Trigger on_put
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending); // Trigger on_put
 
         log.tick(None);
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Ready(Ok(()))).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Ready(Ok(())));
 
         clear();
     }
@@ -752,15 +749,15 @@ async fn queue_waits(fb: FacebookInit) {
     {
         let mut fut = bs.put(ctx, k, v).map_err(|_| ()).boxed();
 
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Pending).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
         bs0.tick(Some("oops"));
         bs1.tick(None);
         bs2.tick(Some("oops"));
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Pending).await; // Trigger on_put
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending); // Trigger on_put
 
         log.tick(None);
-        AssertPollOnce::new(Pin::new(&mut fut), Poll::Ready(Ok(()))).await;
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Ready(Ok(())));
 
         clear();
     }

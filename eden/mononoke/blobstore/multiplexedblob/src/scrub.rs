@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::base::{inner_put, ErrorKind};
-use crate::queue::MultiplexedBlobstore;
+use crate::{
+    base::{inner_put, ErrorKind, MultiplexedBlobstoreBase},
+    queue::MultiplexedBlobstore,
+};
 
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
@@ -14,11 +16,9 @@ use blobstore_sync_queue::BlobstoreSyncQueue;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt, TryFutureExt},
+    future::{BoxFuture, FutureExt},
+    stream::{FuturesUnordered, StreamExt},
 };
-use futures_ext::FutureExt as _;
-use futures_old::future::{self, Future};
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::BlobstoreBytes;
 use scuba::ScubaSampleBuilder;
@@ -125,140 +125,137 @@ impl fmt::Debug for ScrubBlobstore {
     }
 }
 
+// Would be a closure, but async closures are unstable
+async fn put_and_mark_repaired(
+    ctx: &CoreContext,
+    scuba: &ScubaSampleBuilder,
+    order: &AtomicUsize,
+    id: BlobstoreId,
+    store: &dyn Blobstore,
+    key: &String,
+    value: &BlobstoreGetData,
+    scrub_handler: &dyn ScrubHandler,
+) {
+    let res = inner_put(
+        ctx,
+        scuba.clone(),
+        order,
+        id,
+        store,
+        key.clone(),
+        value.as_bytes().clone(),
+    )
+    .await;
+    scrub_handler.on_repair(&ctx, id, &key, res.is_ok(), value.as_meta());
+}
+
+// Workaround for Blobstore returning a static lifetime future
+async fn blobstore_get(
+    inner_blobstore: &MultiplexedBlobstoreBase,
+    ctx: &CoreContext,
+    key: String,
+    queue: &dyn BlobstoreSyncQueue,
+    scrub_stores: &HashMap<BlobstoreId, Arc<dyn Blobstore>>,
+    scrub_handler: &dyn ScrubHandler,
+    scrub_action: ScrubAction,
+    scuba: ScubaSampleBuilder,
+) -> Result<Option<BlobstoreGetData>, Error> {
+    match inner_blobstore.scrub_get(ctx, &key).await {
+        Ok(value) => return Ok(value),
+        Err(error) => match error {
+            ErrorKind::SomeFailedOthersNone(_) => {
+                // MultiplexedBlobstore returns Ok(None) here if queue is empty for the key
+                // and Error otherwise. Scrub does likewise.
+                let entries = queue.get(ctx.clone(), key).await?;
+                if entries.is_empty() {
+                    // No pending write for the key, it really is None
+                    Ok(None)
+                } else {
+                    // Pending write, we don't know what the value is.
+                    Err(error.into())
+                }
+            }
+            ErrorKind::SomeMissingItem(missing_reads, Some(value)) => {
+                let entries = queue.get(ctx.clone(), key.clone()).await?;
+                let mut needs_repair: HashMap<BlobstoreId, &dyn Blobstore> = HashMap::new();
+
+                for k in missing_reads.iter() {
+                    match scrub_stores.get(k) {
+                        Some(s) => {
+                            // If key has no entries on the queue it needs repair.
+                            // Don't check individual stores in entries as that is a race vs multiplexed_put().
+                            //
+                            // TODO compare timestamp vs original_timestamp to still repair on
+                            // really old entries, will need schema change.
+                            if entries.is_empty() {
+                                needs_repair.insert(*k, s.as_ref());
+                            }
+                        }
+                        None => (),
+                    }
+                }
+                if scrub_action == ScrubAction::ReportOnly {
+                    for id in needs_repair.keys() {
+                        scrub_handler.on_repair(&ctx, *id, &key, false, value.as_meta());
+                    }
+                } else {
+                    // inner_put to the stores that need it.
+                    let order = AtomicUsize::new(0);
+                    let repair_puts: FuturesUnordered<_> = needs_repair
+                        .into_iter()
+                        .map(|(id, store)| {
+                            put_and_mark_repaired(
+                                ctx,
+                                &scuba,
+                                &order,
+                                id,
+                                store,
+                                &key,
+                                &value,
+                                scrub_handler,
+                            )
+                        })
+                        .collect();
+
+                    repair_puts.for_each(|_| async {}).await;
+                }
+                Ok(Some(value))
+            }
+            _ => Err(error.into()),
+        },
+    }
+}
+
 impl Blobstore for ScrubBlobstore {
     fn get(
         &self,
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
-        self.inner
-            .blobstore
-            .scrub_get(ctx.clone(), key.clone())
-            .then({
-                cloned!(
-                    ctx,
-                    self.scrub_stores,
-                    self.scrub_handler,
-                    self.scuba,
-                    self.scrub_action,
-                    self.queue,
-                );
-                move |result| {
-                    let needs_repair = match result {
-                        Ok(value) => return future::ok(value).left_future(),
-                        Err(error) => match error.clone() {
-                            ErrorKind::SomeFailedOthersNone(_) => {
-                                // MultiplexedBlobstore returns Ok(None) here if queue is empty for the key
-                                // and Error otherwise. Scrub does likewise.
-                                return queue
-                                    .get(ctx, key)
-                                    .compat()
-                                    .and_then(move |entries| {
-                                        if entries.is_empty() {
-                                            // No pending write for the key, it really is None
-                                            Ok(None)
-                                        } else {
-                                            // Pending write, we don't know what the value is.
-                                            Err(error.into())
-                                        }
-                                    })
-                                    .boxify()
-                                    .right_future();
-                            }
-                            ErrorKind::SomeMissingItem(missing_reads, value) => {
-                                let value = match value {
-                                    // If there is no value no chance of repair
-                                    None => {
-                                        return future::err(error.into()).boxify().right_future()
-                                    }
-                                    Some(value) => value,
-                                };
-                                queue
-                                    .get(ctx.clone(), key.clone())
-                                    .compat()
-                                    .map(move |entries| {
-                                        let mut needs_repair: HashMap<
-                                            BlobstoreId,
-                                            Arc<dyn Blobstore>,
-                                        > = HashMap::new();
+        cloned!(
+            ctx,
+            self.scrub_stores,
+            self.scrub_handler,
+            self.scuba,
+            self.scrub_action,
+            self.queue,
+        );
+        let inner_blobstore = self.inner.blobstore.clone();
 
-                                        for k in missing_reads.iter() {
-                                            match scrub_stores.get(k) {
-                                                Some(s) => {
-                                                    // If key has no entries on the queue it needs repair.
-                                                    // Don't check individual stores in entries as that is a race vs multiplexed_put().
-                                                    //
-                                                    // TODO compare timestamp vs original_timestamp to still repair on
-                                                    // really old entries, will need schema change.
-                                                    if entries.is_empty() {
-                                                        needs_repair.insert(*k, s.clone());
-                                                    }
-                                                }
-                                                None => (),
-                                            }
-                                        }
-                                        (needs_repair, value)
-                                    })
-                            }
-                            _ => return future::err(error.into()).boxify().right_future(),
-                        },
-                    };
-
-                    needs_repair
-                        .and_then(move |(needs_repair, value)| {
-                            if scrub_action == ScrubAction::ReportOnly {
-                                for id in needs_repair.keys() {
-                                    scrub_handler.on_repair(
-                                        &ctx,
-                                        *id,
-                                        &key,
-                                        false,
-                                        value.as_meta(),
-                                    );
-                                }
-                                future::ok(Some(value)).left_future()
-                            } else {
-                                // inner_put to the stores that need it.
-                                let order = Arc::new(AtomicUsize::new(0));
-                                let mut repair_puts = vec![];
-                                for (id, store) in needs_repair.into_iter() {
-                                    cloned!(ctx, scuba, key, value, order);
-                                    let repair = inner_put(
-                                        ctx.clone(),
-                                        scuba,
-                                        order,
-                                        id,
-                                        store,
-                                        key.clone(),
-                                        value.as_bytes().clone(),
-                                    )
-                                    .then({
-                                        cloned!(ctx, scrub_handler, key);
-                                        move |res| {
-                                            scrub_handler.on_repair(
-                                                &ctx,
-                                                id,
-                                                &key,
-                                                res.is_ok(),
-                                                value.as_meta(),
-                                            );
-                                            res
-                                        }
-                                    });
-                                    repair_puts.push(repair);
-                                }
-
-                                future::join_all(repair_puts)
-                                    .map(|_| Some(value))
-                                    .right_future()
-                            }
-                        })
-                        .boxify()
-                        .right_future()
-                }
-            })
-            .compat()
-            .boxed()
+        async move {
+            blobstore_get(
+                inner_blobstore.as_ref(),
+                &ctx,
+                key,
+                queue.as_ref(),
+                scrub_stores.as_ref(),
+                scrub_handler.as_ref(),
+                scrub_action,
+                scuba,
+            )
+            .await
+        }
+        .boxed()
     }
 
     fn put(

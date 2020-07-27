@@ -12,29 +12,30 @@ use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt, TryFutureExt},
+    future::{join_all, select, BoxFuture, Either as FutureEither, FutureExt},
+    stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
-use futures_old::future::{self, Future, Loop};
-use futures_stats::Timed;
+use futures_stats::TimedFutureExt;
 use itertools::{Either, Itertools};
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::BlobstoreBytes;
 use scuba::ScubaSampleBuilder;
-use std::collections::{HashMap, HashSet};
-use std::fmt;
-use std::num::NonZeroU64;
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
+use std::{
+    borrow::Borrow,
+    collections::{HashMap, HashSet},
+    fmt,
+    future::Future,
+    iter::Iterator,
+    num::NonZeroU64,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+    time::Duration,
 };
-use std::time::Duration;
 use thiserror::Error;
 use time_ext::DurationExt;
-use tokio_old::executor::spawn;
-use tokio_old::prelude::FutureExt as TokioFutureExt;
-use tokio_old::timer::timeout::Error as TimeoutError;
+use tokio::time::timeout;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 
@@ -62,14 +63,14 @@ pub enum ErrorKind {
 /// for put to be considered successful this handler must return success.
 /// It will be used to keep self-healing table up to date.
 pub trait MultiplexedBlobstorePutHandler: Send + Sync {
-    fn on_put(
-        &self,
-        ctx: CoreContext,
+    fn on_put<'out>(
+        &'out self,
+        ctx: &'out CoreContext,
         blobstore_id: BlobstoreId,
         multiplex_id: MultiplexId,
-        operation_key: OperationKey,
-        key: String,
-    ) -> BoxFuture01<(), Error>;
+        operation_key: &'out OperationKey,
+        key: &'out str,
+    ) -> BoxFuture<'out, Result<(), Error>>;
 }
 
 pub struct MultiplexedBlobstoreBase {
@@ -99,116 +100,202 @@ impl MultiplexedBlobstoreBase {
         }
     }
 
-    pub fn scrub_get(
+    pub async fn scrub_get(
         &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture01<Option<BlobstoreGetData>, ErrorKind> {
+        ctx: &CoreContext,
+        key: &String,
+    ) -> Result<Option<BlobstoreGetData>, ErrorKind> {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
 
-        let requests = multiplexed_get(
-            &ctx,
+        let results = join_all(multiplexed_get(
+            ctx,
             self.blobstores.as_ref(),
-            &key,
+            key,
             OperationType::ScrubGet,
             scuba,
-        )
-        .into_iter()
-        .map(|f| f.then(Ok));
+        ))
+        .await;
 
-        future::join_all(requests)
-            .and_then(|results| {
-                let (successes, errors): (HashMap<_, _>, HashMap<_, _>) =
-                    results.into_iter().partition_map(|r| match r {
-                        Ok(v) => Either::Left(v),
-                        Err(v) => Either::Right(v),
-                    });
+        let (successes, errors): (HashMap<_, _>, HashMap<_, _>) =
+            results.into_iter().partition_map(|(id, r)| match r {
+                Ok(v) => Either::Left((id, v)),
+                Err(v) => Either::Right((id, v)),
+            });
 
-                if successes.is_empty() {
-                    future::err(ErrorKind::AllFailed(errors.into()))
-                } else {
-                    let mut best_value = None;
-                    let mut missing = HashSet::new();
-                    let mut answered = HashSet::new();
-                    let mut all_same = true;
+        if successes.is_empty() {
+            return Err(ErrorKind::AllFailed(errors.into()));
+        }
 
-                    for (blobstore_id, value) in successes.into_iter() {
-                        if value.is_none() {
-                            missing.insert(blobstore_id);
-                        } else {
-                            answered.insert(blobstore_id);
-                            if best_value.is_none() {
-                                best_value = value;
-                            } else if value.as_ref().map(BlobstoreGetData::as_bytes)
-                                != best_value.as_ref().map(BlobstoreGetData::as_bytes)
-                            {
-                                all_same = false;
-                            }
-                        }
-                    }
+        let mut best_value = None;
+        let mut missing = HashSet::new();
+        let mut answered = HashSet::new();
+        let mut all_same = true;
 
-                    match (all_same, best_value.is_some(), missing.is_empty()) {
-                        (false, _, _) => future::err(ErrorKind::ValueMismatch(
-                            Arc::new(answered),
-                            Arc::new(missing),
-                        )),
-                        (true, false, _) => {
-                            if errors.is_empty() {
-                                future::ok(None)
-                            } else {
-                                future::err(ErrorKind::SomeFailedOthersNone(errors.into()))
-                            }
-                        }
-                        (true, true, false) => {
-                            future::err(ErrorKind::SomeMissingItem(Arc::new(missing), best_value))
-                        }
-                        (true, true, true) => future::ok(best_value),
-                    }
+        for (blobstore_id, value) in successes.into_iter() {
+            if value.is_none() {
+                missing.insert(blobstore_id);
+            } else {
+                answered.insert(blobstore_id);
+                if best_value.is_none() {
+                    best_value = value;
+                } else if value.as_ref().map(BlobstoreGetData::as_bytes)
+                    != best_value.as_ref().map(BlobstoreGetData::as_bytes)
+                {
+                    all_same = false;
                 }
-            })
-            .boxify()
+            }
+        }
+
+        match (all_same, best_value.is_some(), missing.is_empty()) {
+            (false, _, _) => Err(ErrorKind::ValueMismatch(
+                Arc::new(answered),
+                Arc::new(missing),
+            )),
+            (true, false, _) => {
+                if errors.is_empty() {
+                    Ok(None)
+                } else {
+                    Err(ErrorKind::SomeFailedOthersNone(errors.into()))
+                }
+            }
+            (true, true, false) => Err(ErrorKind::SomeMissingItem(Arc::new(missing), best_value)),
+            (true, true, true) => Ok(best_value),
+        }
     }
 }
 
-fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
-    match err.into_inner() {
-        Some(err) => err,
-        None => Error::msg("blobstore operation timeout"),
-    }
+fn remap_timeout_result<O>(
+    timeout_or_result: Result<Result<O, Error>, tokio::time::Elapsed>,
+) -> Result<O, Error> {
+    timeout_or_result.unwrap_or_else(|_| Err(Error::msg("blobstore operation timeout")))
 }
 
-pub fn inner_put(
-    ctx: CoreContext,
+pub async fn inner_put(
+    ctx: &CoreContext,
     mut scuba: ScubaSampleBuilder,
-    write_order: Arc<AtomicUsize>,
+    write_order: &AtomicUsize,
     blobstore_id: BlobstoreId,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: &dyn Blobstore,
     key: String,
     value: BlobstoreBytes,
-) -> impl Future<Item = BlobstoreId, Error = Error> {
+) -> Result<BlobstoreId, Error> {
     let size = value.len();
-    let session = ctx.session_id().clone();
-    blobstore
-        .put(ctx, key.clone(), value.clone())
-        .compat()
-        .timeout(REQUEST_TIMEOUT)
-        .map(move |_| blobstore_id)
-        .map_err(remap_timeout_error)
-        .timed(move |stats, result| {
-            record_put_stats(
-                &mut scuba,
-                stats,
-                result.map(|_| &()),
-                key,
-                session.to_string(),
-                OperationType::Put,
-                size,
-                Some(blobstore_id),
-                Some(write_order.fetch_add(1, Ordering::Relaxed) + 1),
-            );
-            Ok(())
-        })
+    let (stats, timeout_or_res) = timeout(
+        REQUEST_TIMEOUT,
+        blobstore.put(ctx.clone(), key.clone(), value),
+    )
+    .timed()
+    .await;
+    let result = remap_timeout_result(timeout_or_res);
+    record_put_stats(
+        &mut scuba,
+        stats,
+        result.as_ref(),
+        key,
+        ctx.session_id().to_string(),
+        OperationType::Put,
+        size,
+        Some(blobstore_id),
+        Some(write_order.fetch_add(1, Ordering::Relaxed) + 1),
+    );
+    result.map(|()| blobstore_id)
+}
+
+// Workaround for Blobstore returning a static lifetime future
+async fn blobstore_get(
+    ctx: CoreContext,
+    blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
+    key: String,
+    scuba: ScubaSampleBuilder,
+) -> Result<Option<BlobstoreGetData>, Error> {
+    let is_logged = scuba.sampling().is_logged();
+    let blobstores_count = blobstores.len();
+
+    let (stats, result) = {
+        let ctx = &ctx;
+        async move {
+            let mut errors = HashMap::new();
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::BlobGets);
+
+            let mut requests: FuturesUnordered<_> = multiplexed_get(
+                ctx.clone(),
+                blobstores.as_ref(),
+                &key,
+                OperationType::Get,
+                scuba,
+            )
+            .collect();
+            while let Some(result) = requests.next().await {
+                match result {
+                    (_, Ok(Some(mut value))) => {
+                        if is_logged {
+                            // Allow the other requests to complete so that we can record some
+                            // metrics for the blobstore.
+                            tokio::spawn(requests.for_each(|_| async {}));
+                        }
+                        // Return the blob that won the race
+                        value.remove_ctime();
+                        return Ok(Some(value));
+                    }
+                    (blobstore_id, Err(error)) => {
+                        errors.insert(blobstore_id, error);
+                    }
+                    (_, Ok(None)) => (),
+                }
+            }
+
+            if errors.is_empty() {
+                // All blobstores must have returned None, as Some would have triggered a return,
+                Ok(None)
+            } else {
+                if errors.len() == blobstores_count {
+                    Err(ErrorKind::AllFailed(Arc::new(errors)))
+                } else {
+                    Err(ErrorKind::SomeFailedOthersNone(Arc::new(errors)))
+                }
+            }
+        }
+        .timed()
+        .await
+    };
+
+    ctx.perf_counters().set_max_counter(
+        PerfCounterType::BlobGetsMaxLatency,
+        stats.completion_time.as_millis_unchecked() as i64,
+    );
+    Ok(result?)
+}
+
+fn spawn_stream_completion(s: impl StreamExt + Send + 'static) {
+    tokio::spawn(s.for_each(|_| async {}));
+}
+
+async fn select_next<F1: Future, F2: Future>(
+    left: &mut FuturesUnordered<F1>,
+    right: &mut FuturesUnordered<F2>,
+) -> Option<Either<F1::Output, F2::Output>> {
+    use Either::*;
+    // Can't use a match block because that infers the wrong Send + Sync bounds for this future
+    if left.is_empty() && right.is_empty() {
+        None
+    } else if right.is_empty() {
+        left.next().await.map(Left)
+    } else if left.is_empty() {
+        right.next().await.map(Right)
+    } else {
+        use Either::*;
+        // Although we drop the second element in the pair returned by select (which represents
+        // the unfinished future), this does not cause data loss, because until that future is
+        // awaited, it won't pull data out of the stream.
+        match select(left.next(), right.next()).await {
+            FutureEither::Left((None, other)) => other.await.map(Right),
+            FutureEither::Right((None, other)) => other.await.map(Left),
+            FutureEither::Left((Some(res), _)) => Some(Left(res)),
+            FutureEither::Right((Some(res), _)) => Some(Right(res)),
+        }
+    }
 }
 
 impl Blobstore for MultiplexedBlobstoreBase {
@@ -217,75 +304,11 @@ impl Blobstore for MultiplexedBlobstoreBase {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobGets);
-
         let mut scuba = self.scuba.clone();
+        let blobstores = self.blobstores.clone();
         scuba.sampled(self.scuba_sample_rate);
 
-        let is_logged = scuba.sampling().is_logged();
-
-        let requests = multiplexed_get(
-            &ctx,
-            self.blobstores.as_ref(),
-            &key,
-            OperationType::Get,
-            scuba,
-        );
-        let state = (
-            requests,                             // pending requests
-            HashMap::<BlobstoreId, Error>::new(), // previous errors
-        );
-        let blobstores_count = self.blobstores.len();
-        future::loop_fn(state, move |(requests, mut errors)| {
-            future::select_all(requests).then({
-                move |result| {
-                    let requests = match result {
-                        Ok(((_, Some(mut value)), _, requests)) => {
-                            if is_logged {
-                                // Allow the other requests to complete so that we can record some
-                                // metrics for the blobstore.
-                                let requests_fut = future::join_all(
-                                    requests.into_iter().map(|request| request.then(|_| Ok(()))),
-                                )
-                                .map(|_| ());
-                                spawn(requests_fut);
-                            }
-                            value.remove_ctime();
-                            return future::ok(Loop::Break(Some(value)));
-                        }
-                        Ok(((_, None), _, requests)) => requests,
-                        Err(((blobstore_id, error), _, requests)) => {
-                            errors.insert(blobstore_id, error);
-                            requests
-                        }
-                    };
-                    if requests.is_empty() {
-                        if errors.is_empty() {
-                            future::ok(Loop::Break(None))
-                        } else {
-                            let error = if errors.len() == blobstores_count {
-                                ErrorKind::AllFailed(errors.into())
-                            } else {
-                                ErrorKind::SomeFailedOthersNone(errors.into())
-                            };
-                            future::err(error.into())
-                        }
-                    } else {
-                        future::ok(Loop::Continue((requests, errors)))
-                    }
-                }
-            })
-        })
-        .timed(move |stats, _| {
-            ctx.perf_counters().set_max_counter(
-                PerfCounterType::BlobGetsMaxLatency,
-                stats.completion_time.as_millis_unchecked() as i64,
-            );
-            Ok(())
-        })
-        .compat()
-        .boxed()
+        async move { blobstore_get(ctx, blobstores, key, scuba).await }.boxed()
     }
 
     fn put(
@@ -294,101 +317,148 @@ impl Blobstore for MultiplexedBlobstoreBase {
         key: String,
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobPuts);
         let write_order = Arc::new(AtomicUsize::new(0));
         let operation_key = OperationKey::gen();
-        let puts = self
+
+        let mut puts: FuturesUnordered<_> = self
             .blobstores
             .iter()
+            .cloned()
             .map({
                 |(blobstore_id, blobstore)| {
-                    inner_put(
-                        ctx.clone(),
-                        self.scuba.clone(),
-                        write_order.clone(),
-                        *blobstore_id,
-                        blobstore.clone(),
-                        key.clone(),
-                        value.clone(),
-                    )
+                    cloned!(
+                        self.handler,
+                        self.multiplex_id,
+                        self.scuba,
+                        ctx,
+                        write_order,
+                        key,
+                        value,
+                        operation_key
+                    );
+                    async move {
+                        inner_put(
+                            &ctx,
+                            scuba,
+                            write_order.as_ref(),
+                            blobstore_id,
+                            blobstore.as_ref(),
+                            key.clone(),
+                            value,
+                        )
+                        .await?;
+                        // Return the on_put handler
+                        Ok(async move {
+                            handler
+                                .on_put(&ctx, blobstore_id, multiplex_id, &operation_key, &key)
+                                .await
+                        })
+                    }
                 }
             })
             .collect();
 
-        multiplexed_put(
-            ctx.clone(),
-            self.handler.clone(),
-            key,
-            self.multiplex_id,
-            operation_key,
-            puts,
-        )
-        .timed(move |stats, _| {
+        async move {
+            let (stats, result) = {
+                let ctx = &ctx;
+                async move {
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::BlobPuts);
+
+                    // TODO: Gather all the errors for presentation to the user in a failure case
+                    let mut last_err = None;
+                    let mut handlers = FuturesUnordered::new();
+
+                    while let Some(result) = select_next(&mut puts, &mut handlers).await {
+                        use Either::*;
+                        match result {
+                            Left(Ok(handler)) => {
+                                handlers.push(handler);
+                                // All puts have succeeded, no errors - we're done
+                                if puts.is_empty() && last_err.is_none() {
+                                    // Spawn off the handlers to ensure that all writes are logged.
+                                    spawn_stream_completion(handlers);
+                                    return Ok(());
+                                }
+                            }
+                            Left(Err(e)) => last_err = Some(e),
+                            Right(Ok(())) => {
+                                // A handler was successful. Spawn off remaining puts and handler
+                                // writes, then done
+                                spawn_stream_completion(puts.and_then(|handler| handler));
+                                spawn_stream_completion(handlers);
+                                return Ok(());
+                            }
+                            Right(Err(e)) => last_err = Some(e),
+                        }
+                    }
+                    // Unwrap is safe here, because the only way to get here is if there's an Error above
+                    Err(last_err.unwrap())
+                }
+                .timed()
+                .await
+            };
+
             ctx.perf_counters().set_max_counter(
                 PerfCounterType::BlobPutsMaxLatency,
                 stats.completion_time.as_millis_unchecked() as i64,
             );
-            Ok(())
-        })
-        .compat()
+            result
+        }
         .boxed()
     }
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobPresenceChecks);
-        let requests = self
+        let blobstores_count = self.blobstores.len();
+
+        let mut requests: FuturesUnordered<_> = self
             .blobstores
             .iter()
-            .map(|&(blobstore_id, ref blobstore)| {
-                blobstore
-                    .is_present(ctx.clone(), key.clone())
-                    .compat()
-                    .map_err(move |error| (blobstore_id, error))
+            .cloned()
+            .map(|(blobstore_id, blobstore)| {
+                let ctx = ctx.clone();
+                let key = key.clone();
+                async move { (blobstore_id, blobstore.is_present(ctx, key).await) }
             })
             .collect();
-        let state = (
-            requests,                             // pending requests
-            HashMap::<BlobstoreId, Error>::new(), // previous errors
-        );
-        let blobstores_count = self.blobstores.len();
-        future::loop_fn(state, move |(requests, mut errors)| {
-            future::select_all(requests).then({
-                move |result| {
-                    let requests = match result {
-                        Ok((true, ..)) => return future::ok(Loop::Break(true)),
-                        Ok((false, _, requests)) => requests,
-                        Err(((blobstore_id, error), _, requests)) => {
-                            errors.insert(blobstore_id, error);
-                            requests
+
+        async move {
+            let (stats, result) = {
+                let ctx = &ctx;
+                async move {
+                    let mut errors = HashMap::new();
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::BlobPresenceChecks);
+                    while let Some(result) = requests.next().await {
+                        match result {
+                            (_, Ok(true)) => {
+                                return Ok(true);
+                            }
+                            (blobstore_id, Err(error)) => {
+                                errors.insert(blobstore_id, error);
+                            }
+                            (_, Ok(false)) => (),
                         }
-                    };
-                    if requests.is_empty() {
-                        if errors.is_empty() {
-                            future::ok(Loop::Break(false))
-                        } else {
-                            let error = if errors.len() == blobstores_count {
-                                ErrorKind::AllFailed(errors.into())
-                            } else {
-                                ErrorKind::SomeFailedOthersNone(errors.into())
-                            };
-                            future::err(error.into())
-                        }
+                    }
+                    if errors.is_empty() {
+                        Ok(false)
                     } else {
-                        future::ok(Loop::Continue((requests, errors)))
+                        if errors.len() == blobstores_count {
+                            Err(ErrorKind::AllFailed(Arc::new(errors)))
+                        } else {
+                            Err(ErrorKind::SomeFailedOthersNone(Arc::new(errors)))
+                        }
                     }
                 }
-            })
-        })
-        .timed(move |stats, _| {
+                .timed()
+                .await
+            };
             ctx.perf_counters().set_max_counter(
                 PerfCounterType::BlobPresenceChecksMaxLatency,
                 stats.completion_time.as_millis_unchecked() as i64,
             );
-            Ok(())
-        })
-        .compat()
+            Ok(result?)
+        }
         .boxed()
     }
 }
@@ -406,124 +476,50 @@ impl fmt::Debug for MultiplexedBlobstoreBase {
     }
 }
 
-fn multiplexed_get(
-    ctx: &CoreContext,
-    blobstores: &[(BlobstoreId, Arc<dyn Blobstore>)],
-    key: &String,
+async fn multiplexed_get_one(
+    ctx: impl Borrow<CoreContext>,
+    blobstore: Arc<dyn Blobstore>,
+    blobstore_id: BlobstoreId,
+    key: String,
+    operation: OperationType,
+    mut scuba: ScubaSampleBuilder,
+) -> (BlobstoreId, Result<Option<BlobstoreGetData>, Error>) {
+    let (stats, timeout_or_res) = timeout(
+        REQUEST_TIMEOUT,
+        blobstore.get(ctx.borrow().clone(), key.clone()),
+    )
+    .timed()
+    .await;
+    let result = remap_timeout_result(timeout_or_res);
+    record_get_stats(
+        &mut scuba,
+        stats,
+        result.as_ref(),
+        key,
+        ctx.borrow().session_id().to_string(),
+        operation,
+        Some(blobstore_id),
+    );
+    (blobstore_id, result)
+}
+
+fn multiplexed_get<'fut: 'iter, 'iter>(
+    ctx: impl Borrow<CoreContext> + Clone + 'fut,
+    blobstores: &'iter [(BlobstoreId, Arc<dyn Blobstore>)],
+    key: &'iter String,
     operation: OperationType,
     scuba: ScubaSampleBuilder,
-) -> Vec<BoxFuture01<(BlobstoreId, Option<BlobstoreGetData>), (BlobstoreId, Error)>> {
-    blobstores
-        .iter()
-        .map(|&(blobstore_id, ref blobstore)| {
-            blobstore
-                .get(ctx.clone(), key.clone())
-                .compat()
-                .map({
-                    cloned!(blobstore_id);
-                    move |val| (blobstore_id, val)
-                })
-                .timeout(REQUEST_TIMEOUT)
-                .map_err({
-                    cloned!(blobstore_id);
-                    move |error| (blobstore_id, remap_timeout_error(error))
-                })
-                .timed({
-                    cloned!(key, mut scuba);
-                    let session = ctx.session_id().clone();
-                    move |stats, result| {
-                        record_get_stats(
-                            &mut scuba,
-                            stats,
-                            result.map(|(_, res)| res).map_err(|(_, res)| res),
-                            key,
-                            session.to_string(),
-                            operation,
-                            Some(blobstore_id),
-                        );
-                        future::ok(())
-                    }
-                })
-        })
-        .collect()
-}
-
-fn multiplexed_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
-    ctx: CoreContext,
-    handler: Arc<dyn MultiplexedBlobstorePutHandler>,
-    key: String,
-    multiplex_id: MultiplexId,
-    operation_key: OperationKey,
-    puts: Vec<F>,
-) -> impl Future<Item = (), Error = Error> {
-    future::select_ok(puts).and_then(move |(blobstore_id, other_puts)| {
-        finish_put(
-            ctx,
-            handler,
-            key,
-            blobstore_id,
-            multiplex_id,
-            operation_key,
-            other_puts,
+) -> impl Iterator<
+    Item = impl Future<Output = (BlobstoreId, Result<Option<BlobstoreGetData>, Error>)> + 'fut,
+> + 'iter {
+    blobstores.iter().map(move |(blobstore_id, blobstore)| {
+        multiplexed_get_one(
+            ctx.clone(),
+            blobstore.clone(),
+            *blobstore_id,
+            key.clone(),
+            operation,
+            scuba.clone(),
         )
     })
-}
-
-fn finish_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
-    ctx: CoreContext,
-    handler: Arc<dyn MultiplexedBlobstorePutHandler>,
-    key: String,
-    blobstore_id: BlobstoreId,
-    multiplex_id: MultiplexId,
-    operation_key: OperationKey,
-    other_puts: Vec<F>,
-) -> BoxFuture01<(), Error> {
-    // Ocne we finished a put in one blobstore, we want to return once this blob is in a position
-    // to be replicated properly to the multiplexed stores. This can happen in two cases:
-    // - We wrote it to the SQL queue that will replicate it to other blobstores.
-    // - We wrote it to all the blobstores.
-    // As soon as either of those things happen, we can report the put as successful.
-    use futures_old::future::Either;
-
-    let queue_write = handler.on_put(
-        ctx.clone(),
-        blobstore_id,
-        multiplex_id,
-        operation_key.clone(),
-        key.clone(),
-    );
-
-    let rest_put = if other_puts.len() > 0 {
-        multiplexed_put(ctx, handler, key, multiplex_id, operation_key, other_puts).left_future()
-    } else {
-        // We have no remaining puts to perform, which means we've successfully written to all
-        // blobstores.
-        future::ok(()).right_future()
-    };
-
-    queue_write
-        .select2(rest_put)
-        .then(|res| match res {
-            Ok(Either::A((_, rest_put))) => {
-                // Blobstore queue write succeeded. Spawn the rest of the puts to give them a
-                // chance to complete, but we're done.
-                spawn(rest_put.discard());
-                future::ok(()).boxify()
-            }
-            Ok(Either::B((_, queue_write))) => {
-                // Remaininig puts succeeded (note that this might mean one of them and its
-                // corresponding SQL write succeeded). Spawn the queue write, but we're done.
-                spawn(queue_write.discard());
-                future::ok(()).boxify()
-            }
-            Err(Either::A((_, rest_put))) => {
-                // Blobstore queue write failed. We might still succeed if the other puts succeed.
-                rest_put.boxify()
-            }
-            Err(Either::B((_, queue_write))) => {
-                // Remaining puts failed. We might sitll succeed if the queue write succeeds.
-                queue_write
-            }
-        })
-        .boxify()
 }

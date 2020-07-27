@@ -11,9 +11,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
-use futures_old::future::Future;
+use futures::future::{BoxFuture, FutureExt};
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use scuba::ScubaSampleBuilder;
@@ -64,28 +62,24 @@ struct QueueBlobstorePutHandler {
 }
 
 impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
-    fn on_put(
-        &self,
-        ctx: CoreContext,
+    fn on_put<'out>(
+        &'out self,
+        ctx: &'out CoreContext,
         blobstore_id: BlobstoreId,
         multiplex_id: MultiplexId,
-        operation_key: OperationKey,
-        key: String,
-    ) -> BoxFuture01<(), Error> {
-        self.queue
-            .add(
-                ctx,
-                BlobstoreSyncQueueEntry::new(
-                    key,
-                    blobstore_id,
-                    multiplex_id,
-                    DateTime::now(),
-                    operation_key,
-                ),
-            )
-            .compat()
-            .map(|_| ())
-            .boxify()
+        operation_key: &'out OperationKey,
+        key: &'out str,
+    ) -> BoxFuture<'out, Result<(), Error>> {
+        self.queue.add(
+            ctx.clone(),
+            BlobstoreSyncQueueEntry::new(
+                key.to_string(),
+                blobstore_id,
+                multiplex_id,
+                DateTime::now(),
+                operation_key.clone(),
+            ),
+        )
     }
 }
 
