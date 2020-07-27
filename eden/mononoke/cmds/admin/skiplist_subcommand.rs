@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use bulkops::fetch_all_public_changesets;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
@@ -29,13 +29,15 @@ use changesets::{ChangesetEntry, SqlChangesets};
 use cmdlib::args;
 use context::CoreContext;
 use mononoke_types::{BlobstoreBytes, ChangesetId, Generation};
-use skiplist::{deserialize_skiplist_index, SkiplistIndex, SkiplistNodeType};
+use skiplist::{deserialize_skiplist_index, sparse, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, info, Logger};
+use std::num::NonZeroU64;
 
 use crate::error::SubcommandError;
 
 pub const SKIPLIST: &str = "skiplist";
 const SKIPLIST_BUILD: &str = "build";
+const ARG_SPARSE: &str = "sparse";
 const SKIPLIST_READ: &str = "read";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -54,6 +56,11 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                     Arg::with_name("rebuild")
                         .long("rebuild")
                         .help("forces the full rebuild instead of incremental update"),
+                )
+                .arg(
+                    Arg::with_name(ARG_SPARSE)
+                        .long(ARG_SPARSE)
+                        .help("EXPERIMENTAL: build sparse skiplist. Makes skiplist smaller"),
                 ),
         )
         .subcommand(
@@ -66,6 +73,22 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .help("Blobstore key from where to read the skiplist"),
                 ),
         )
+}
+
+#[derive(Copy, Clone)]
+enum SkiplistType {
+    Full,
+    Sparse,
+}
+
+impl SkiplistType {
+    fn new(sparse: bool) -> Self {
+        if sparse {
+            SkiplistType::Sparse
+        } else {
+            SkiplistType::Full
+        }
+    }
 }
 
 pub async fn subcommand_skiplist<'a>(
@@ -81,6 +104,7 @@ pub async fn subcommand_skiplist<'a>(
                 .expect("blobstore key is not specified")
                 .to_string();
             let rebuild = sub_m.is_present("rebuild");
+            let skiplist_ty = SkiplistType::new(sub_m.is_present(ARG_SPARSE));
 
             args::init_cachelib(fb, &matches, None);
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -89,8 +113,16 @@ pub async fn subcommand_skiplist<'a>(
             repo.join(sql_changesets)
                 .and_then(move |(repo, sql_changesets)| {
                     async move {
-                        build_skiplist_index(&ctx, &repo, key, &logger, &sql_changesets, rebuild)
-                            .await
+                        build_skiplist_index(
+                            &ctx,
+                            &repo,
+                            key,
+                            &logger,
+                            &sql_changesets,
+                            rebuild,
+                            skiplist_ty,
+                        )
+                        .await
                     }
                     .boxed()
                     .compat()
@@ -139,6 +171,7 @@ async fn build_skiplist_index<'a, S: ToString>(
     logger: &'a Logger,
     sql_changesets: &'a SqlChangesets,
     force_full_rebuild: bool,
+    skiplist_ty: SkiplistType,
 ) -> Result<(), Error> {
     let blobstore = repo.get_blobstore();
     // skiplist will jump up to 2^9 changesets
@@ -186,23 +219,31 @@ async fn build_skiplist_index<'a, S: ToString>(
 
     let (heads, (cs_fetcher, skiplist_index)) = try_join(heads, cs_fetcher_skiplist_func).await?;
 
-    stream::iter(heads)
-        .map(Ok)
-        .try_for_each_concurrent(100, |head| {
-            skiplist_index.add_node(&ctx, &cs_fetcher, head, max_index_depth)
-        })
-        .await?;
+    let updated_skiplist = match skiplist_ty {
+        SkiplistType::Full => {
+            stream::iter(heads)
+                .map(Ok)
+                .try_for_each_concurrent(100, |head| {
+                    skiplist_index.add_node(&ctx, &cs_fetcher, head, max_index_depth)
+                })
+                .await?;
+            skiplist_index.get_all_skip_edges()
+        }
+        SkiplistType::Sparse => {
+            let mut index = skiplist_index.get_all_skip_edges();
+            let max_skip = NonZeroU64::new(2u64.pow(skiplist_depth - 1))
+                .ok_or(anyhow!("invalid skiplist depth"))?;
+            sparse::update_sparse_skiplist(&ctx, heads, &mut index, max_skip, &cs_fetcher).await?;
+            index
+        }
+    };
 
-    info!(
-        logger,
-        "build {} skiplist nodes",
-        skiplist_index.indexed_node_count()
-    );
+    info!(logger, "build {} skiplist nodes", updated_skiplist.len());
 
     // We store only latest skip entry (i.e. entry with the longest jump)
     // This saves us storage space
     let mut thrift_merge_graph = HashMap::new();
-    for (cs_id, skiplist_node_type) in skiplist_index.get_all_skip_edges() {
+    for (cs_id, skiplist_node_type) in updated_skiplist {
         let skiplist_node_type = if let SkiplistNodeType::SkipEdges(skip_edges) = skiplist_node_type
         {
             SkiplistNodeType::SkipEdges(skip_edges.last().cloned().into_iter().collect())
