@@ -25,6 +25,17 @@ REPONAME=repo
 COMMON_ARGS=(--skip-caching --mysql-master-only --tunables-config "file:$TESTTMP/mononoke_tunables.json")
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 
+case "$(uname -s)" in
+  # Workarounds for running tests on MacOS
+  Darwin*)
+    # Use the brew installed versions of GNU utils
+    PATH="/usr/local/opt/gnu-sed/libexec/gnubin:\
+/usr/local/opt/grep/libexec/gnubin:\
+/usr/local/opt/coreutils/libexec/gnubin:\
+$PATH"
+  ;;
+esac
+
 function get_free_socket {
 
 # From https://unix.stackexchange.com/questions/55913/whats-the-easiest-way-to-find-an-unused-local-port

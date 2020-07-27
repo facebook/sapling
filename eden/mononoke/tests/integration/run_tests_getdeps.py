@@ -71,8 +71,6 @@ if args.tests or args.rerun_failed:
     tests = list(tests)
 else:
     excluded_tests = {
-        "test-alias-verify.t",  # "wc -l" problem
-        "test-backfill-derived-data.t",  # "wc -l" problem
         "test-backfill-git-mapping.t",  # "${ENV^^}" problem
         "test-backsync-forever.t",  # Unknown issue
         "test-backsyncer-merges.t",  # Missing BACKSYNCER
@@ -82,7 +80,6 @@ else:
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
         "test-blobstore_healer.t",  # PANIC not implemented in sql_ext
         "test-bookmarks-filler.t",  # Probably missing binary
-        "test-bundle2-preservation.t",  # "wc -l" problem
         "test-cmd-manual-scrub.t",  # Just wrong outout
         "test-cross-repo-commit-sync-live.t",  # Unknown issue
         "test-cross-repo-commit-sync-merge.t",  # requires FB-specific command
@@ -93,9 +90,6 @@ else:
         "test-edenapi-server-history.t",  # Missing eden/scm's commands
         "test-edenapi-server-trees.t",  # Missing eden/scm's commands
         "test-fastreplay-inline-args.t",  # Returns different data in OSS
-        "test-fastreplay-remote-args.t",  # "grep -A" problem
-        "test-gettreepack-designated-nodes.t",  # "wc -l" problem
-        "test-gettreepack.t",  # "wc -l" problem
         "test-gitimport-octopus.t",  # Missing MONONOKE_REGENERATE_HG_FILENODES
         "test-gitimport.t",  # Issue with hggit extension
         "test-hook-tailer.t",  # Issue with hggit extension
@@ -119,7 +113,6 @@ else:
         "test-lfs-server-scuba-logging.t",  # Timed out
         "test-lfs-server.t",  # Timed out
         "test-lfs-to-mononoke.t",  # Timed out
-        "test-lfs-upload-alias-on-fetch.t",  # "wc -l" problem
         "test-lfs-wantslfspointers.t",  # Timed out
         "test-lfs.t",  # Timed out
         "test-megarepo-tool.t",  # Missing MONONOKE_HG_SYNC
@@ -133,8 +126,6 @@ else:
         "test-mononoke-hg-sync-job-sync-globalrevs.t",  # Missing MONONOKE_HG_SYNC
         "test-mononoke-hg-sync-job-with-copies.t",  # Missing MONONOKE_HG_SYNC
         "test-mononoke-hg-sync-job.t",  # Missing MONONOKE_HG_SYNC
-        "test-multiplexed-chaosblob.t",  # "wc -l" problem
-        "test-multiplexed-packblob.t",  # "du --bytes" problem
         "test-push-protocol-lfs.t",  # Timed out
         "test-push-redirector-pushrebase-hooks.t",  # Hooks are not in OSS yet
         "test-push-redirector-pushrebase-onesided.t",  # Missing MONONOKE_X_REPO_SYNC
@@ -142,7 +133,6 @@ else:
         "test-push-redirector-sync-job.t",  # Missing BACKSYNCER
         "test-pushrebase-block-casefolding.t",  # Most likely MacOS path case insensitivity
         "test-pushrebase-discovery.t",  # Hooks are not in OSS yet
-        "test-rechunker.t",  # "wc -l" problem
         "test-remotefilelog-lfs.t",  # Timed out
         "test-scs-blame.t",  # Missing SCS_SERVER
         "test-scs-common-base.t",  # Missing SCS_SERVER
@@ -156,18 +146,7 @@ else:
         "test-traffic-replay.t",  # Missing TRAFFIC_REPLAY
         "test-unbundle-replay-hg-bookmark.t",  # "kill" printing problem
         "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
-        "test-walker-compression-benefit.t",  # strip_glog problem
-        "test-walker-corpus.t",  # "du --bytes" problem
-        "test-walker-count-objects.t",  # strip_glog problem
-        "test-walker-enable-derive.t",  # strip_glog problem
-        "test-walker-error-as-data.t",  # "sed -r" problem
-        "test-walker-sample-by-node.t",  # strip_glog problem
-        "test-walker-sample-by-path.t",  # strip_glog problem
-        "test-walker-scrub-blobstore.t",  # "sed -r" problem
-        "test-walker-scrub-queue.t",  # "sed -r" problem
         "test-walker-throttle.t",  # "date" and arithmetic problem
-        "test-walker-validate-non-public.t",  # strip_glog problem
-        "test-walker-validate.t",  # strip_glog problem
     }
 
     tests = [
