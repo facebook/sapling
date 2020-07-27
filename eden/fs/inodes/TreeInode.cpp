@@ -2726,6 +2726,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       wasDirectoryListModified = true;
 #ifndef _WIN32
       invalidateFuseEntryCache(name);
+#else
+      cleanupPrjfsCache(name);
 #endif // !_WIN32
     }
 
