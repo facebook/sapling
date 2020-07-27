@@ -447,10 +447,10 @@ void EdenServiceHandler::getSHA1(
     unique_ptr<vector<string>> paths) {
   TraceBlock block("getSHA1");
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
-
   vector<Future<Hash>> futures;
   for (const auto& path : *paths) {
-    futures.emplace_back(getSHA1ForPathDefensively(*mountPoint, path));
+    futures.emplace_back(getSHA1ForPathDefensively(
+        *mountPoint, path, helper->getFetchContext()));
   }
 
   auto results = folly::collectAll(std::move(futures)).get();
@@ -467,14 +467,16 @@ void EdenServiceHandler::getSHA1(
 
 Future<Hash> EdenServiceHandler::getSHA1ForPathDefensively(
     StringPiece mountPoint,
-    StringPiece path) noexcept {
+    StringPiece path,
+    ObjectFetchContext& fetchContext) noexcept {
   return folly::makeFutureWith(
-      [&] { return getSHA1ForPath(mountPoint, path); });
+      [&] { return getSHA1ForPath(mountPoint, path, fetchContext); });
 }
 
 Future<Hash> EdenServiceHandler::getSHA1ForPath(
     StringPiece mountPoint,
-    StringPiece path) {
+    StringPiece path,
+    ObjectFetchContext& fetchContext) {
   if (path.empty()) {
     return makeFuture<Hash>(newEdenError(
         EINVAL,
@@ -484,15 +486,16 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
 
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
-  return edenMount->getInode(relativePath).thenValue([](const InodePtr& inode) {
-    auto fileInode = inode.asFilePtr();
-    if (!S_ISREG(fileInode->getMode())) {
-      // We intentionally want to refuse to compute the SHA1 of symlinks
-      return makeFuture<Hash>(
-          InodeError(EINVAL, fileInode, "file is a symlink"));
-    }
-    return fileInode->getSha1(ObjectFetchContext::getNullContext());
-  });
+  return edenMount->getInode(relativePath)
+      .thenValue([&fetchContext](const InodePtr& inode) {
+        auto fileInode = inode.asFilePtr();
+        if (!S_ISREG(fileInode->getMode())) {
+          // We intentionally want to refuse to compute the SHA1 of symlinks
+          return makeFuture<Hash>(
+              InodeError(EINVAL, fileInode, "file is a symlink"));
+        }
+        return fileInode->getSha1(fetchContext);
+      });
 }
 
 void EdenServiceHandler::getBindMounts(

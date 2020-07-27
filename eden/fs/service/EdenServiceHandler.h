@@ -24,6 +24,7 @@ class Hash;
 class EdenMount;
 class EdenServer;
 class TreeInode;
+class ObjectFetchContext;
 
 extern const char* const kServiceName;
 
@@ -239,11 +240,13 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
  private:
   folly::Future<Hash> getSHA1ForPath(
       folly::StringPiece mountPoint,
-      folly::StringPiece path);
+      folly::StringPiece path,
+      ObjectFetchContext& fetchContext);
 
   folly::Future<Hash> getSHA1ForPathDefensively(
       folly::StringPiece mountPoint,
-      folly::StringPiece path) noexcept;
+      folly::StringPiece path,
+      ObjectFetchContext& fetchContext) noexcept;
 
   /**
    * If `filename` exists in the manifest as a file (not a directory), returns
