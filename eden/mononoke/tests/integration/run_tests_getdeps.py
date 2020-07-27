@@ -81,7 +81,6 @@ else:
         "test-blobimport-lfs.t",  # Timed out
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
         "test-blobstore_healer.t",  # PANIC not implemented in sql_ext
-        "test-bookmark-hg-kind.t",  # sqlite issue with LIKE on BLOB
         "test-bookmarks-filler.t",  # Probably missing binary
         "test-bundle2-preservation.t",  # "wc -l" problem
         "test-cmd-manual-scrub.t",  # Just wrong outout
