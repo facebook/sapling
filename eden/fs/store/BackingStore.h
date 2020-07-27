@@ -52,7 +52,8 @@ class BackingStore {
       const Hash& commitID,
       const Hash& manifestID) = 0;
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& /*ids*/) {
+      const std::vector<Hash>& /*ids*/,
+      ObjectFetchContext& /*context*/) {
     return folly::unit;
   }
 

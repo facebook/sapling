@@ -156,7 +156,9 @@ void HgQueuedBackingStore::processPrefetchRequests(
     auto parameter = request.getRequest<HgImportRequest::Prefetch>();
     request.getPromise<HgImportRequest::Prefetch::Response>()->setWith(
         [store = backingStore_.get(), hashes = parameter->hashes]() {
-          return store->prefetchBlobs(hashes).getTry();
+          return store
+              ->prefetchBlobs(hashes, ObjectFetchContext::getNullContext())
+              .getTry();
         });
   }
 }
@@ -227,7 +229,11 @@ HgQueuedBackingStore::getTreeForManifest(
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
-    const std::vector<Hash>& ids) {
+    const std::vector<Hash>& ids,
+    ObjectFetchContext& context) {
+  for (auto& hash : ids) {
+    logBackingStoreFetch(context, hash);
+  }
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportPrefetchWatches_);
   auto [request, future] = HgImportRequest::makePrefetchRequest(

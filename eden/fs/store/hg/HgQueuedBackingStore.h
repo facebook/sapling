@@ -62,7 +62,8 @@ class HgQueuedBackingStore : public BackingStore {
       const Hash& manifestID) override;
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids) override;
+      const std::vector<Hash>& ids,
+      ObjectFetchContext& context) override;
 
   HgBackingStore* getHgBackingStore() const {
     return backingStore_.get();

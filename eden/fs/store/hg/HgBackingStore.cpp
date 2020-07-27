@@ -568,7 +568,8 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
 }
 
 SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
-    const std::vector<Hash>& ids) {
+    const std::vector<Hash>& ids,
+    ObjectFetchContext& /*context*/) {
   return HgProxyHash::getBatch(localStore_.get(), ids)
       .via(importThreadPool_.get())
       .thenValue([&liveImportPrefetchWatches = liveImportPrefetchWatches_](

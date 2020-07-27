@@ -82,7 +82,8 @@ class HgBackingStore : public BackingStore {
       const Hash& commitID,
       const Hash& manifestID) override;
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids) override;
+      const std::vector<Hash>& ids,
+      ObjectFetchContext& context) override;
 
   void periodicManagementTask() override;
 

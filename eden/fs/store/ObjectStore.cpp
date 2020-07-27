@@ -201,7 +201,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
 
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
     const std::vector<Hash>& ids,
-    ObjectFetchContext&) const {
+    ObjectFetchContext& fetchContext) const {
   // In theory we could/should ask the localStore_ to filter the list
   // of ids down to just the set that we need to load, but there is no
   // bulk key existence check in rocksdb, so we would need to cause it
@@ -213,7 +213,7 @@ folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
   if (ids.empty()) {
     return folly::unit;
   }
-  return backingStore_->prefetchBlobs(ids).via(executor_);
+  return backingStore_->prefetchBlobs(ids, fetchContext).via(executor_);
 }
 
 Future<shared_ptr<const Blob>> ObjectStore::getBlob(
