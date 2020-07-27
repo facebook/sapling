@@ -69,23 +69,6 @@ class EdenDispatcher {
   }
 
  private:
-  HRESULT
-  readSingleFileChunk(
-      PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
-      const GUID& dataStreamId,
-      const folly::IOBuf& iobuf,
-      uint64_t startOffset,
-      uint32_t writeLength);
-
-  HRESULT
-  readMultipleFileChunks(
-      PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
-      const GUID& dataStreamId,
-      const folly::IOBuf& iobuf,
-      uint64_t startOffset,
-      uint32_t length,
-      uint32_t writeLength);
-
   // Store a raw pointer to EdenMount. It doesn't own or maintain the lifetime
   // of Mount. Instead, at this point, Eden dispatcher is owned by the
   // mount.
@@ -101,7 +84,7 @@ class EdenDispatcher {
   folly::Synchronized<std::map<GUID, std::unique_ptr<Enumerator>, CompareGuid>>
       enumSessions_;
 
-  const std::unique_ptr<folly::IOBuf> dotEdenConfig_;
+  const std::string dotEdenConfig_;
 
   const uint32_t verificationCode_ = kDispatcherCode;
 };

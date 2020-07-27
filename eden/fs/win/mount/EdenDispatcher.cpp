@@ -45,7 +45,7 @@ const std::string kConfigSocketPath{"socket"};
 const std::string kConfigClientPath{"client"};
 const std::string kConfigTable{"Config"};
 
-std::unique_ptr<folly::IOBuf> makeDotEdenConfig(EdenMount& mount) {
+std::string makeDotEdenConfig(EdenMount& mount) {
   auto repoPath = mount.getPath();
   auto socketPath = mount.getServerState()->getSocketPath();
   auto clientPath = mount.getConfig()->getClientDirectory();
@@ -59,8 +59,7 @@ std::unique_ptr<folly::IOBuf> makeDotEdenConfig(EdenMount& mount) {
 
   std::ostringstream stream;
   stream << *rootTable;
-
-  return folly::IOBuf::copyBuffer(stream.str());
+  return stream.str();
 }
 
 } // namespace
@@ -219,7 +218,7 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
                     if (relPath == kDotEdenConfigPath) {
                       auto path = edenToWinPath(relPath.stringPiece());
                       return folly::makeFuture(InodeMetadata{
-                          relPath, dotEdenConfig_->length(), false});
+                          relPath, dotEdenConfig_.length(), false});
                     } else {
                       return folly::makeFuture(std::nullopt);
                     }
@@ -291,6 +290,74 @@ EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   }
 }
 
+namespace {
+
+HRESULT readMultipleFileChunks(
+    PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
+    const GUID& dataStreamId,
+    const std::string& content,
+    uint64_t startOffset,
+    uint64_t length,
+    uint64_t chunkSize) {
+  HRESULT result;
+  std::unique_ptr<void, PrjAlignedBufferDeleter> writeBuffer{
+      PrjAllocateAlignedBuffer(namespaceVirtualizationContext, chunkSize)};
+
+  if (writeBuffer.get() == nullptr) {
+    return E_OUTOFMEMORY;
+  }
+
+  uint64_t remainingLength = length;
+
+  while (remainingLength > 0) {
+    uint64_t copySize = std::min(remainingLength, chunkSize);
+
+    //
+    // TODO(puneetk): Once backing store has the support for chunking the file
+    // contents, we can read the chunks of large files here and then write
+    // them to FS.
+    //
+    // TODO(puneetk): Build an interface to backing store so that we can pass
+    // the aligned buffer to avoid coping here.
+    //
+    RtlCopyMemory(writeBuffer.get(), content.data() + startOffset, copySize);
+
+    // Write the data to the file in the local file system.
+    result = PrjWriteFileData(
+        namespaceVirtualizationContext,
+        &dataStreamId,
+        writeBuffer.get(),
+        startOffset,
+        folly::to_narrow(copySize));
+
+    if (FAILED(result)) {
+      return result;
+    }
+
+    remainingLength -= copySize;
+    startOffset += copySize;
+  }
+
+  return S_OK;
+}
+
+HRESULT readSingleFileChunk(
+    PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
+    const GUID& dataStreamId,
+    const std::string& content,
+    uint64_t startOffset,
+    uint64_t length) {
+  return readMultipleFileChunks(
+      namespaceVirtualizationContext,
+      dataStreamId,
+      content,
+      /*startOffset=*/startOffset,
+      /*length=*/length,
+      /*writeLength=*/length);
+}
+
+} // namespace
+
 static uint64_t BlockAlignTruncate(uint64_t ptr, uint32_t alignment) {
   return ((ptr) & (0 - (static_cast<uint64_t>(alignment))));
 }
@@ -303,18 +370,24 @@ EdenDispatcher::getFileData(
   try {
     auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
 
-    std::unique_ptr<folly::IOBuf> iobuf;
-    std::string content;
-    try {
-      content = getMount().readFile(relPath);
-      iobuf = folly::IOBuf::wrapBuffer(content.data(), content.size());
-    } catch (const std::system_error& ex) {
-      if (isEnoent(ex) && relPath == kDotEdenConfigPath) {
-        iobuf = dotEdenConfig_->clone();
-      } else {
-        throw;
-      }
-    }
+    auto content =
+        getMount()
+            .getInode(relPath)
+            .thenValue([](const InodePtr inode) {
+              auto fileInode = inode.asFilePtr();
+              return fileInode->readAll(ObjectFetchContext::getNullContext());
+            })
+            .thenError(
+                folly::tag_t<std::system_error>{},
+                [relPath = std::move(relPath),
+                 this](const std::system_error& ex) {
+                  if (isEnoent(ex) && relPath == kDotEdenConfigPath) {
+                    return folly::makeFuture<std::string>(
+                        std::string(dotEdenConfig_));
+                  }
+                  return folly::makeFuture<std::string>(ex);
+                })
+            .get();
 
     //
     // We should return file data which is smaller than
@@ -322,22 +395,16 @@ EdenDispatcher::getFileData(
     // of the virtualization instance's storage device.
     //
 
-    //
-    // Assuming that it will not be a chain of IOBUFs.
-    // TODO: The following assert fails - need to dig more into IOBuf.
-    // assert(iobuf.next() == nullptr);
-    //
-
-    if (iobuf->length() <= kMinChunkSize) {
+    if (content.length() <= kMinChunkSize) {
       //
       // If the file is small - copy the whole file in one shot.
       //
       return readSingleFileChunk(
           callbackData.NamespaceVirtualizationContext,
           callbackData.DataStreamId,
-          *iobuf,
+          content,
           /*startOffset=*/0,
-          /*writeLength=*/iobuf->length());
+          /*writeLength=*/content.length());
 
     } else if (length <= kMaxChunkSize) {
       //
@@ -346,7 +413,7 @@ EdenDispatcher::getFileData(
       return readSingleFileChunk(
           callbackData.NamespaceVirtualizationContext,
           callbackData.DataStreamId,
-          *iobuf,
+          content,
           /*startOffset=*/byteOffset,
           /*writeLength=*/length);
     } else {
@@ -368,11 +435,11 @@ EdenDispatcher::getFileData(
       DCHECK(endOffset > 0);
       DCHECK(endOffset > startOffset);
 
-      uint32_t chunkSize = endOffset - startOffset;
+      uint64_t chunkSize = endOffset - startOffset;
       return readMultipleFileChunks(
           callbackData.NamespaceVirtualizationContext,
           callbackData.DataStreamId,
-          *iobuf,
+          content,
           /*startOffset=*/startOffset,
           /*length=*/length,
           /*chunkSize=*/chunkSize);
@@ -380,72 +447,6 @@ EdenDispatcher::getFileData(
   } catch (const std::exception&) {
     return exceptionToHResult();
   }
-}
-
-HRESULT
-EdenDispatcher::readSingleFileChunk(
-    PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
-    const GUID& dataStreamId,
-    const folly::IOBuf& iobuf,
-    uint64_t startOffset,
-    uint32_t length) {
-  return readMultipleFileChunks(
-      namespaceVirtualizationContext,
-      dataStreamId,
-      iobuf,
-      /*startOffset=*/startOffset,
-      /*length=*/length,
-      /*writeLength=*/length);
-}
-
-HRESULT
-EdenDispatcher::readMultipleFileChunks(
-    PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
-    const GUID& dataStreamId,
-    const folly::IOBuf& iobuf,
-    uint64_t startOffset,
-    uint32_t length,
-    uint32_t chunkSize) {
-  HRESULT result;
-  std::unique_ptr<void, PrjAlignedBufferDeleter> writeBuffer{
-      PrjAllocateAlignedBuffer(namespaceVirtualizationContext, chunkSize)};
-
-  if (writeBuffer.get() == nullptr) {
-    return E_OUTOFMEMORY;
-  }
-
-  uint32_t remainingLength = length;
-
-  while (remainingLength > 0) {
-    uint32_t copySize = std::min(remainingLength, chunkSize);
-
-    //
-    // TODO(puneetk): Once backing store has the support for chunking the file
-    // contents, we can read the chunks of large files here and then write
-    // them to FS.
-    //
-    // TODO(puneetk): Build an interface to backing store so that we can pass
-    // the aligned buffer to avoid coping here.
-    //
-    RtlCopyMemory(writeBuffer.get(), iobuf.data() + startOffset, copySize);
-
-    // Write the data to the file in the local file system.
-    result = PrjWriteFileData(
-        namespaceVirtualizationContext,
-        &dataStreamId,
-        writeBuffer.get(),
-        startOffset,
-        copySize);
-
-    if (FAILED(result)) {
-      return result;
-    }
-
-    remainingLength -= copySize;
-    startOffset += copySize;
-  }
-
-  return S_OK;
 }
 
 namespace {

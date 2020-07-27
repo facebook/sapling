@@ -673,26 +673,6 @@ class EdenMount {
   FOLLY_NODISCARD std::optional<TreePrefetchLease> tryStartTreePrefetch(
       TreeInodePtr treeInode);
 
-#ifdef _WIN32
-  /**
-   * The following functions are to fetch and set information in the Inode
-   * Tree. These are used by the ProjectedFS and TestMount for testing.
-   */
-
-  // TODO(puneetk): The following function should be updated to future based, so
-  // that we can executed them asynchronously. This would help to implement
-  // ProjectedFs Asynchronous Callback Handling:
-  // (https://docs.microsoft.com/en-us/windows/win32/projfs/asynchronous-callback-handling).
-
-  /*
-   * readFile returns the file contents of the file. It gets the contents of the
-   * file from the backing store if it's not materialized. If the file is
-   * materialized, It will read the FS interface to fetch the file contents from
-   * ProjectedFs cache.
-   */
-  FOLLY_NODISCARD std::string readFile(const RelativePathPiece path);
-#endif
-
  private:
   friend class RenameLock;
   friend class SharedRenameLock;

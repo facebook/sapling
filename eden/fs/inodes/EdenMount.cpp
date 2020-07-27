@@ -1489,13 +1489,5 @@ bool EdenMount::MountingUnmountingState::channelUnmountStarted() const
 EdenMountCancelled::EdenMountCancelled()
     : std::runtime_error{"EdenMount was unmounted during initialization"} {}
 
-#ifdef _WIN32
-std::string EdenMount::readFile(const RelativePathPiece path) {
-  auto inode = getInode(path).get();
-  auto fileInode = inode.asFilePtr();
-  return fileInode->readAll(ObjectFetchContext::getNullContext()).get();
-}
-#endif
-
 } // namespace eden
 } // namespace facebook
