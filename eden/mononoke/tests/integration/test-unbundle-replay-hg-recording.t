@@ -97,6 +97,7 @@ Check history again. We're back to where we were:
       "hooks_execution_time_us": *, (glob)
       "pushrebase_completion_time_us": *, (glob)
       "pushrebase_recorded_time_us": 123000,
+      "seq": *, (glob)
       "time": *, (glob)
       "unbundle_changeset_count": 2,
       "unbundle_completion_time_us": * (glob)

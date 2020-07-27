@@ -53,6 +53,7 @@ Check logging structure
       "replay_delay_s": * (glob)
       "replay_response_size": *, (glob)
       "sample_rate": 1,
+      "seq": *, (glob)
       "time": * (glob)
     },
     "normal": {

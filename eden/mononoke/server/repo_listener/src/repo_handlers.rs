@@ -223,6 +223,7 @@ pub fn repo_handlers(
                 if let Some(scuba_local_path) = scuba_local_path {
                     scuba_logger = scuba_logger.with_log_file(scuba_local_path)?;
                 }
+                scuba_logger = scuba_logger.with_seq("seq");
 
                 let mut hooks_scuba = ScubaSampleBuilder::with_opt_table(fb, hooks_scuba_table);
                 hooks_scuba.add("repo", reponame.clone());

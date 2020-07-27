@@ -65,6 +65,7 @@
       "request_load": *, (glob)
       "response_bytes_sent": *, (glob)
       "response_content_length": *, (glob)
+      "seq": 0,
       "time": * (glob)
     },
     "normal": {
@@ -112,6 +113,7 @@
       "request_load": *, (glob)
       "response_bytes_sent": 0,
       "response_content_length": 0,
+      "seq": 1,
       "time": * (glob)
     },
     "normal": {
@@ -163,6 +165,7 @@
       "request_load": *, (glob)
       "response_bytes_sent": *, (glob)
       "response_content_length": *, (glob)
+      "seq": 2,
       "time": * (glob)
     },
     "normal": {
@@ -212,6 +215,7 @@
       "request_load": *, (glob)
       "response_bytes_sent": 2048,
       "response_content_length": 2048,
+      "seq": 3,
       "time": * (glob)
     },
     "normal": {
@@ -255,6 +259,7 @@
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_load": *, (glob)
+      "seq": 4,
       "time": * (glob)
     },
     "normal": {

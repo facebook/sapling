@@ -826,6 +826,7 @@ pub fn get_scuba_sample_builder<'a>(
     if let Some(scuba_log_file) = matches.value_of("scuba-log-file") {
         scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
     }
+    let scuba_logger = scuba_logger.with_seq("seq");
     Ok(scuba_logger)
 }
 
