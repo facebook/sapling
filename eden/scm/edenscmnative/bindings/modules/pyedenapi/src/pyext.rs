@@ -36,9 +36,9 @@ pub trait EdenApiPyExt: EdenApi {
     fn files_py(
         self: Arc<Self>,
         py: Python,
+        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        store: PyObject,
         progress: Option<PyObject>,
     ) -> PyResult<stats> {
         let keys = to_keys(py, &keys)?;
@@ -61,9 +61,9 @@ pub trait EdenApiPyExt: EdenApi {
     fn history_py(
         self: Arc<Self>,
         py: Python,
+        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        store: PyObject,
         length: Option<u32>,
         progress: Option<PyObject>,
     ) -> PyResult<stats> {
@@ -87,9 +87,9 @@ pub trait EdenApiPyExt: EdenApi {
     fn trees_py(
         self: Arc<Self>,
         py: Python,
+        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        store: PyObject,
         progress: Option<PyObject>,
     ) -> PyResult<stats> {
         let keys = to_keys(py, &keys)?;
@@ -112,11 +112,11 @@ pub trait EdenApiPyExt: EdenApi {
     fn complete_trees_py(
         self: Arc<Self>,
         py: Python,
+        store: PyObject,
         repo: String,
         rootdir: PyPathBuf,
         mfnodes: Vec<PyBytes>,
         basemfnodes: Vec<PyBytes>,
-        store: PyObject,
         depth: Option<usize>,
         progress: Option<PyObject>,
     ) -> PyResult<stats> {

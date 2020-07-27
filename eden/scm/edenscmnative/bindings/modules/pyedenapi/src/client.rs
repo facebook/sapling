@@ -41,52 +41,52 @@ py_class!(pub class client |py| {
 
     def files(
         &self,
+        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        store: PyObject,
         progress: Option<PyObject> = None
     ) -> PyResult<stats> {
-        self.inner(py).clone().files_py(py, repo, keys, store, progress)
+        self.inner(py).clone().files_py(py, store, repo, keys, progress)
     }
 
     def history(
         &self,
+        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        store: PyObject,
         length: Option<u32> = None,
         progress: Option<PyObject> = None
     ) -> PyResult<stats> {
-        self.inner(py).clone().history_py(py, repo, keys, store, length, progress)
+        self.inner(py).clone().history_py(py, store, repo, keys, length, progress)
     }
 
     def trees(
         &self,
+        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        store: PyObject,
         progress: Option<PyObject> = None
     ) -> PyResult<stats> {
-        self.inner(py).clone().trees_py(py, repo, keys, store, progress)
+        self.inner(py).clone().trees_py(py, store, repo, keys, progress)
     }
 
     def complete_trees(
         &self,
+        store: PyObject,
         repo: String,
         rootdir: PyPathBuf,
         mfnodes: Vec<PyBytes>,
         basemfnodes: Vec<PyBytes>,
-        store: PyObject,
         depth: Option<usize> = None,
         progress: Option<PyObject> = None
     )  -> PyResult<stats> {
         self.inner(py).clone().complete_trees_py(
             py,
+            store,
             repo,
             rootdir,
             mfnodes,
             basemfnodes,
-            store,
             depth,
             progress,
         )
