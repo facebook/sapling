@@ -424,8 +424,8 @@ class localrepository(object):
             # Load the primary config after the dynamic one, so it overwrites it
             self.ui.readconfig(self.localvfs.join("hgrc"), self.root)
             uiconfig.validatedynamicconfig(self.ui)
-        else:
-            # If the repo does not already exists, load the dynamic configs in
+        elif create:
+            # If we're in the process of creating the repo, load the dynamic configs in
             # memory only. They will be written to disk later once the localvfs
             # is created.
             uiconfig.applydynamicconfig(self.ui, reponame, self.path)
