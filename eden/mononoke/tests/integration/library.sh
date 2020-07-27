@@ -495,7 +495,7 @@ EOF
   cat > common/common.toml <<CONFIG
 [[whitelist_entry]]
 identity_type = "$ALLOWED_IDENTITY_TYPE"
-identity_data = "$ALLOWED_IDENTITY_DATA"
+identity_data = "${OVERRIDE_ALLOWED_IDDATA:-$ALLOWED_IDENTITY_DATA}"
 CONFIG
 
   echo "# Start new config" > common/storage.toml
