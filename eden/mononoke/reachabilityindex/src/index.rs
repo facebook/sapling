@@ -116,13 +116,14 @@ impl NodeFrontier {
         self.generations.peek().cloned()
     }
 
-    pub fn remove_max_gen(&mut self) -> Option<HashSet<ChangesetId>> {
+    pub fn remove_max_gen(&mut self) -> Option<(Generation, HashSet<ChangesetId>)> {
         let max_gen = self.generations.pop()?;
-        Some(
+        Some((
+            max_gen,
             self.gen_map
                 .remove(&max_gen)
                 .expect("inconsistent frontier state"),
-        )
+        ))
     }
 
     pub fn len(&self) -> usize {

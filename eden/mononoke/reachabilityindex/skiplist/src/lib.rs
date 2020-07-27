@@ -34,6 +34,8 @@ use reachabilityindex::{errors::*, LeastCommonAncestorsHint, NodeFrontier, Reach
 
 use fbthrift::compact_protocol;
 
+pub mod sparse;
+
 const DEFAULT_EDGE_COUNT: u32 = 10;
 
 // Each indexed node fits into one of two categories:
@@ -739,7 +741,7 @@ async fn process_frontier_single_skip(
         return Err(ErrorKind::ProgrammingError("frontier can't be empty").into());
     };
 
-    let all_cs_ids = node_frontier
+    let (_, all_cs_ids) = node_frontier
         .remove_max_gen()
         .ok_or_else(|| ErrorKind::ProgrammingError("frontier can't be empty"))?;
     let (no_skiplist_edges, skipped_frontier) = move_skippable_nodes(
@@ -980,7 +982,7 @@ impl SkiplistIndex {
                 .process_frontiers(&ctx, &changeset_fetcher, &frontier1, &frontier2, gen)
                 .await?;
             let mut intersection = candidate_frontier1.intersection(&candidate_frontier2);
-            if let Some(lca) = intersection.remove_max_gen() {
+            if let Some((_, lca)) = intersection.remove_max_gen() {
                 let mut lca: Vec<_> = lca.into_iter().collect();
                 lca.sort();
                 return Ok(lca);

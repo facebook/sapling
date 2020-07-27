@@ -8,6 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 blobstore = { path = "../../blobstore" }
+bulkops = { path = "../../bulkops" }
 changeset_fetcher = { path = "../../blobrepo/changeset_fetcher" }
 common = { path = "../common" }
 context = { path = "../../server/context" }
@@ -28,10 +29,12 @@ tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
 blobrepo = { path = "../../blobrepo" }
+blobrepo_factory = { path = "../../blobrepo/factory" }
 bookmarks = { path = "../../bookmarks" }
 fixtures = { path = "../../tests/fixtures" }
 revset = { path = "../../revset" }
 test-helpers = { path = "../test-helpers" }
+tests_utils = { path = "../../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

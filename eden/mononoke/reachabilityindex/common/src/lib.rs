@@ -20,6 +20,34 @@ use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
 use reachabilityindex::errors::*;
 
+/// Fetches parents of the commit together with their generation numbers
+pub async fn fetch_parents_and_generations(
+    ctx: &CoreContext,
+    cs_fetcher: &Arc<dyn ChangesetFetcher>,
+    cs_id: ChangesetId,
+) -> Result<Vec<(ChangesetId, Generation)>, Error> {
+    let parents = cs_fetcher.get_parents(ctx.clone(), cs_id).compat().await?;
+
+    fetch_generations(ctx, cs_fetcher, parents).await
+}
+
+pub async fn fetch_generations(
+    ctx: &CoreContext,
+    cs_fetcher: &Arc<dyn ChangesetFetcher>,
+    cs_ids: Vec<ChangesetId>,
+) -> Result<Vec<(ChangesetId, Generation)>, Error> {
+    let cs_ids_with_gens = iter(cs_ids)
+        .map(|cs_id| async move {
+            let gen = fetch_generation(ctx, cs_fetcher, cs_id).await?;
+            Result::<_, Error>::Ok((cs_id, gen))
+        })
+        .buffered(10)
+        .try_collect()
+        .await?;
+
+    Ok(cs_ids_with_gens)
+}
+
 /// Attempts to fetch the generation number of the hash. Succeeds with the Generation value
 /// of the node if the node exists, else fails with ErrorKind::NodeNotFound.
 pub async fn fetch_generation(
