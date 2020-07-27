@@ -14,7 +14,7 @@
 #include <folly/test/TestUtils.h>
 #include <gflags/gflags.h>
 #ifdef _WIN32
-#include "eden/fs/inodes/win/DirList.h" // @manual
+#include "eden/fs/win/mount/Enumerator.h" // @manual
 #else
 #include "eden/fs/fuse/DirList.h"
 #endif // _WIN32
@@ -88,11 +88,11 @@ TEST(TreeInode, readdirTest) {
   TestMount mount{builder};
 
   auto root = mount.getEdenMount()->getRootInode();
-  auto result = root->readdir().extract();
+  auto result = root->readdir().get(0ms);
 
   ASSERT_EQ(2, result.size());
-  EXPECT_EQ(".eden", result[0].name);
-  EXPECT_EQ("file", result[1].name);
+  EXPECT_EQ(L".eden", result[0].name);
+  EXPECT_EQ(L"file", result[1].name);
 }
 
 TEST(TreeInode, updateAndReaddir) {
@@ -104,34 +104,34 @@ TEST(TreeInode, updateAndReaddir) {
 
   // Test creating a new file
   auto somedir = mount.getTreeInode("somedir"_relpath);
-  auto result = somedir->readdir().extract();
+  auto result = somedir->readdir().get(0ms);
 
   ASSERT_EQ(3, result.size());
-  EXPECT_EQ("file1", result[0].name);
-  EXPECT_EQ("file2", result[1].name);
-  EXPECT_EQ("file3", result[2].name);
+  EXPECT_EQ(L"file1", result[0].name);
+  EXPECT_EQ(L"file2", result[1].name);
+  EXPECT_EQ(L"file3", result[2].name);
 
   auto resultInode = somedir->mknod("newfile.txt"_pc, S_IFREG, 0);
-  result = somedir->readdir().extract();
+  result = somedir->readdir().get(0ms);
   ASSERT_EQ(4, result.size());
-  EXPECT_EQ("file1", result[0].name);
-  EXPECT_EQ("file2", result[1].name);
-  EXPECT_EQ("file3", result[2].name);
-  EXPECT_EQ("newfile.txt", result[3].name);
+  EXPECT_EQ(L"file1", result[0].name);
+  EXPECT_EQ(L"file2", result[1].name);
+  EXPECT_EQ(L"file3", result[2].name);
+  EXPECT_EQ(L"newfile.txt", result[3].name);
 
   somedir->unlink("file2"_pc).get(0ms);
-  result = somedir->readdir().extract();
+  result = somedir->readdir().get(0ms);
   ASSERT_EQ(3, result.size());
-  EXPECT_EQ("file1", result[0].name);
-  EXPECT_EQ("file3", result[1].name);
-  EXPECT_EQ("newfile.txt", result[2].name);
+  EXPECT_EQ(L"file1", result[0].name);
+  EXPECT_EQ(L"file3", result[1].name);
+  EXPECT_EQ(L"newfile.txt", result[2].name);
 
   somedir->rename("file3"_pc, somedir, "renamedfile.txt"_pc).get(0ms);
-  result = somedir->readdir().extract();
+  result = somedir->readdir().get(0ms);
   ASSERT_EQ(3, result.size());
-  EXPECT_EQ("file1", result[0].name);
-  EXPECT_EQ("newfile.txt", result[1].name);
-  EXPECT_EQ("renamedfile.txt", result[2].name);
+  EXPECT_EQ(L"file1", result[0].name);
+  EXPECT_EQ(L"newfile.txt", result[1].name);
+  EXPECT_EQ(L"renamedfile.txt", result[2].name);
 }
 #else
 TEST(TreeInode, readdirReturnsSelfAndParentBeforeEntries) {

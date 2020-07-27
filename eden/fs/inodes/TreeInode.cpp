@@ -1855,62 +1855,44 @@ TreeInode::readdir(DirList&& list, off_t off, ObjectFetchContext& /*context*/) {
 
   return std::move(list);
 }
+
 #else
 
-DirList TreeInode::readdir() {
-  auto dir = contents_.rlock();
-  auto& entries = dir->entries;
-  DirList list;
-  for (auto& entry : entries) {
-    list.add(
-        entry.first.stringPiece(),
-        entry.second.getInodeNumber().get(),
-        entry.second.getDtype());
-  }
-  return list;
-}
-
-void TreeInode::readdir(std::vector<FileMetadata>& list) {
-  // We expect an empty list, verify that.
-  CHECK(list.empty());
-  vector<Future<std::pair<uint32_t, uint64_t>>> futures;
+folly::Future<std::vector<FileMetadata>> TreeInode::readdir() {
+  vector<Future<FileMetadata>> futures;
   {
-    uint32_t index = 0;
     auto dir = contents_.rlock();
     auto& entries = dir->entries;
+    futures.reserve(entries.size());
 
-    for (auto& entry : entries) {
-      if (entry.second.getDtype() != dtype_t::Dir) {
-        auto hash = entry.second.getOptionalHash();
+    for (auto& [name, entry] : entries) {
+      auto isDir = entry.getDtype() == dtype_t::Dir;
+      auto winName = edenToWinName(name.stringPiece());
+
+      if (!isDir) {
+        // We only populates the file size for non-materialized files. For
+        // the materialized files, ProjectedFS will use the on-disk size.
+        auto hash = entry.getOptionalHash();
         if (hash.has_value()) {
-          // We only populates the file size for non-materialized files. For the
-          // materialized files the file size is overwritten by the ProjectedFs.
-
           futures.emplace_back(
               getMount()
                   ->getObjectStore()
                   ->getBlobSize(
                       hash.value(), ObjectFetchContext::getNullContext())
-                  .thenValue([index](auto size) {
-                    return std::make_pair(index, size);
+                  .thenValue([winName = std::move(winName)](uint64_t size) {
+                    return FileMetadata(winName, false, size);
                   }));
+          continue;
         }
       }
-      list.emplace_back(
-          edenToWinName(entry.first.stringPiece()),
-          entry.second.getDtype() == dtype_t::Dir ? true : false,
-          0 /* fileSize is populated in the future loop below*/);
-      index++;
+      futures.emplace_back(FileMetadata(winName, isDir, 0));
     }
 
     // We can release the content lock here.
   }
 
-  auto results = folly::collectAll(std::move(futures)).get();
-  for (auto& result : results) {
-    // Populate the size in the list for the non-materialized files.
-    list[result->first].size = result->second;
-  }
+  return folly::collect(std::move(futures))
+      .via(getMount()->getServerState()->getThreadPool().get());
 }
 #endif // _WIN32
 

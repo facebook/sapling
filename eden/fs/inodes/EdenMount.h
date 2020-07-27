@@ -691,15 +691,6 @@ class EdenMount {
    * ProjectedFs cache.
    */
   FOLLY_NODISCARD std::string readFile(const RelativePathPiece path);
-
-  /**
-   * enumerateDirectory will fetch the directory entries for the given path.
-   * The file size here will be the size from backing repo and not the current
-   * file size.
-   */
-  void enumerateDirectory(
-      const RelativePathPiece path,
-      std::vector<FileMetadata>& list);
 #endif
 
  private:

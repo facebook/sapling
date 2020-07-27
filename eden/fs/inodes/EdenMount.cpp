@@ -1495,15 +1495,6 @@ std::string EdenMount::readFile(const RelativePathPiece path) {
   auto fileInode = inode.asFilePtr();
   return fileInode->readAll(ObjectFetchContext::getNullContext()).get();
 }
-
-void EdenMount::enumerateDirectory(
-    const RelativePathPiece path,
-    std::vector<FileMetadata>& list) {
-  auto inode = getInode(path).get();
-  auto treeInode = inode.asTreePtr();
-
-  treeInode->readdir(list);
-}
 #endif
 
 } // namespace eden

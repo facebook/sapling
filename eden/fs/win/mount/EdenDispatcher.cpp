@@ -82,24 +82,25 @@ HRESULT EdenDispatcher::startEnumeration(
     const PRJ_CALLBACK_DATA& callbackData,
     const GUID& enumerationId) noexcept {
   try {
-    std::vector<FileMetadata> list;
-    wstring path{callbackData.FilePathName};
+    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
 
     XLOGF(
         DBG6,
-        "startEnumeration mount (0x{:x}) root ({}) path ({}) process ({})",
-        reinterpret_cast<uintptr_t>(&getMount()),
+        "startEnumeration mount ({}) path ({}) process ({})",
         getMount().getPath(),
-        wideToMultibyteString(path),
+        relPath,
         wideToMultibyteString(callbackData.TriggeringProcessImageFileName));
 
-    auto relPath = wideCharToEdenRelativePath(path);
-    getMount().enumerateDirectory(relPath.piece(), list);
+    auto list = getMount()
+                    .getInode(relPath)
+                    .thenValue([](const InodePtr inode) {
+                      auto treePtr = inode.asTreePtr();
+                      return treePtr->readdir();
+                    })
+                    .get();
 
     auto [iterator, inserted] = enumSessions_.wlock()->emplace(
-        enumerationId,
-        make_unique<Enumerator>(
-            enumerationId, std::move(path), std::move(list)));
+        enumerationId, make_unique<Enumerator>(enumerationId, std::move(list)));
     DCHECK(inserted);
     return S_OK;
   } catch (const std::exception&) {

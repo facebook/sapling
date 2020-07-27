@@ -61,10 +61,7 @@ class Enumerator {
   Enumerator(const Enumerator&) = delete;
   Enumerator& operator=(const Enumerator&) = delete;
 
-  Enumerator(
-      const GUID& enumerationId,
-      const std::wstring& path,
-      std::vector<FileMetadata> entryList);
+  Enumerator(const GUID& enumerationId, std::vector<FileMetadata> entryList);
 
   explicit Enumerator() = delete;
 
@@ -87,7 +84,6 @@ class Enumerator {
   }
 
  private:
-  std::wstring path_;
   std::wstring searchExpression_;
   std::vector<FileMetadata> metadataList_;
 

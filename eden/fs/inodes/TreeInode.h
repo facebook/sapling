@@ -145,23 +145,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   DirList readdir(DirList&& list, off_t off, ObjectFetchContext& context);
 #else
   /**
-   * The following readdir() is similar to the one in the POSIX code and is
-   * mainly used in the unit test code. It returns the DirList containing entry
-   * name, inode number and dtype.
-   */
-  DirList readdir();
-
-  /**
    * The following readdir() is for responding to Projected FS's directory
    * enumeration requests. This API populates the list with the wide char names,
    * dtype, and size for the non-materialized files. The size field for
    * materialized files is stored in the ProjectedFS and there is no efficient
    * way to get it, so in this function as an optimization we don't populate the
    * size of materialized files.
-   *
-   * The list argument is expected to be an empty list.
    */
-  void readdir(std::vector<FileMetadata>& list);
+  FOLLY_NODISCARD folly::Future<std::vector<FileMetadata>> readdir();
 #endif
 
   const folly::Synchronized<TreeInodeState>& getContents() const {

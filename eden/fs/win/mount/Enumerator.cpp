@@ -15,9 +15,8 @@ namespace eden {
 
 Enumerator::Enumerator(
     const GUID& enumerationId,
-    const std::wstring& path,
     std::vector<FileMetadata> entryList)
-    : path_(path), metadataList_(std::move(entryList)) {
+    : metadataList_(std::move(entryList)) {
   std::sort(
       metadataList_.begin(),
       metadataList_.end(),
