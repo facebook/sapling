@@ -795,33 +795,32 @@ EdenServiceHandler::semifuture_getFileInformation(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
-
+  auto& fetchContext = helper->getFetchContext();
   // TODO: applyToInodes currently forces allocation of inodes for all specified
   // paths. It's possible to resolve this request directly from source control
   // data. In the future, this should be changed to avoid allocating inodes when
   // possible.
-
   return wrapSemiFuture(
       std::move(helper),
-      collectAll(applyToInodes(
-                     rootInode,
-                     *paths,
-                     [](InodePtr inode) {
-                       return inode->stat(ObjectFetchContext::getNullContext())
-                           .thenValue([](struct stat st) {
-                             FileInformation info;
-                             *info.size_ref() = st.st_size;
-                             auto ts = stMtime(st);
-                             *info.mtime_ref()->seconds_ref() = ts.tv_sec;
-                             *info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
-                             *info.mode_ref() = st.st_mode;
+      collectAll(
+          applyToInodes(
+              rootInode,
+              *paths,
+              [&fetchContext](InodePtr inode) {
+                return inode->stat(fetchContext).thenValue([](struct stat st) {
+                  FileInformation info;
+                  *info.size_ref() = st.st_size;
+                  auto ts = stMtime(st);
+                  *info.mtime_ref()->seconds_ref() = ts.tv_sec;
+                  *info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
+                  *info.mode_ref() = st.st_mode;
 
-                             FileInformationOrError result;
-                             result.set_info(info);
+                  FileInformationOrError result;
+                  result.set_info(info);
 
-                             return result;
-                           });
-                     }))
+                  return result;
+                });
+              }))
           .deferValue([](vector<Try<FileInformationOrError>>&& done) {
             auto out = std::make_unique<vector<FileInformationOrError>>();
             out->reserve(done.size());
