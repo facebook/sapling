@@ -71,12 +71,10 @@ const std::error_category& HResultErrorCategory::get() noexcept {
   return cat;
 }
 
-HRESULT exceptionToHResult() noexcept {
-  try {
-    throw;
-  } catch (const std::system_error& ex) {
-    auto code = ex.code();
-    XLOG(ERR) << ex.what() << " : " << ex.code();
+HRESULT exceptionToHResult(const std::exception& ex) noexcept {
+  if (auto e = dynamic_cast<const std::system_error*>(&ex)) {
+    auto code = e->code();
+    XLOG(ERR) << e->what() << ": " << code;
     if (code.category() == HResultErrorCategory::get()) {
       return code.value();
     }
@@ -84,20 +82,10 @@ HRESULT exceptionToHResult() noexcept {
       return HRESULT_FROM_WIN32(code.value());
     }
     return ERROR_ERRORS_ENCOUNTERED;
-
-  } catch (std::bad_alloc const&) {
+  } else if (auto e = dynamic_cast<const std::bad_alloc*>(&ex)) {
     return E_OUTOFMEMORY;
-
-  } catch (const std::exception& ex) {
+  } else {
     XLOG(ERR) << ex.what();
-    return ERROR_ERRORS_ENCOUNTERED;
-
-  } catch (...) {
-    // Make sure not to leak any exception out of here. I don't think we will
-    // hit this though. Break in debug build if we do.
-#ifndef NDEBUG
-    DebugBreak();
-#endif
     return ERROR_ERRORS_ENCOUNTERED;
   }
 }

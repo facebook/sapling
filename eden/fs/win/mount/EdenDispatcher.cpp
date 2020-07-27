@@ -102,8 +102,8 @@ HRESULT EdenDispatcher::startEnumeration(
         enumerationId, make_unique<Enumerator>(enumerationId, std::move(list)));
     DCHECK(inserted);
     return S_OK;
-  } catch (const std::exception&) {
-    return exceptionToHResult();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
   }
 }
 
@@ -112,8 +112,8 @@ HRESULT EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
     auto erasedCount = enumSessions_.wlock()->erase(enumerationId);
     DCHECK(erasedCount == 1);
     return S_OK;
-  } catch (const std::exception&) {
-    return exceptionToHResult();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
   }
 }
 
@@ -176,8 +176,8 @@ HRESULT EdenDispatcher::getEnumerationData(
       }
     }
     return S_OK;
-  } catch (const std::exception&) {
-    return exceptionToHResult();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
   }
 }
 
@@ -259,8 +259,8 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
     }
 
     return result;
-  } catch (const std::exception&) {
-    return exceptionToHResult();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
   }
 }
 
@@ -285,8 +285,8 @@ EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
               return folly::makeFuture<HRESULT>(ex);
             })
         .get();
-  } catch (const std::exception&) {
-    return exceptionToHResult();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
   }
 }
 
@@ -444,8 +444,8 @@ EdenDispatcher::getFileData(
           /*length=*/length,
           /*chunkSize=*/chunkSize);
     }
-  } catch (const std::exception&) {
-    return exceptionToHResult();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
   }
 }
 
@@ -622,8 +622,8 @@ HRESULT EdenDispatcher::notification(
           .get();
     }
     return S_OK;
-  } catch (const std::exception&) {
-    return exceptionToHResult();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
   }
 }
 

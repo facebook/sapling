@@ -63,18 +63,18 @@ std::string win32ErrorToString(uint32_t error);
 // exceptionToHResult is called inside a catch. It will try to return an
 // appropriate HRESULT code for the exception. again and catch the right
 //
-HRESULT exceptionToHResult() noexcept;
+HRESULT exceptionToHResult(const std::exception& ex) noexcept;
 
 // This function can take a function with no args and run it under a try catch
 // block. It will catch the exception and return a HRESULT for that. Use a
 // lambda if you need to pass args.
 //
 template <typename Callable>
-static HRESULT exceptionToHResultWrapper(Callable&& f) {
+static HRESULT exceptionToHResultWrapper(Callable&& f) noexcept {
   try {
     return f();
-  } catch (...) {
-    return exceptionToHResult();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
   }
 }
 

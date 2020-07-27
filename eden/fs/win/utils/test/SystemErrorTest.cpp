@@ -89,16 +89,16 @@ TEST(WinErrorTest, testexceptionToHResultWrapper_E_OUTOFMEMORY) {
 TEST(WinErrorTest, testexceptionToHResult_E_OUTOFMEMORY) {
   try {
     throw makeHResultErrorExplicit(E_OUTOFMEMORY, "Test throw");
-  } catch (...) {
-    EXPECT_EQ(exceptionToHResult(), E_OUTOFMEMORY);
+  } catch (const std::exception& ex) {
+    EXPECT_EQ(exceptionToHResult(ex), E_OUTOFMEMORY);
   }
 }
 
 TEST(WinErrorTest, testexceptionToHResult_ERROR_ACCESS_DENIED) {
   try {
     throw makeWin32ErrorExplicit(ERROR_ACCESS_DENIED, "Test throw");
-  } catch (...) {
-    EXPECT_EQ(exceptionToHResult(), HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED));
+  } catch (const std::exception& ex) {
+    EXPECT_EQ(exceptionToHResult(ex), HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED));
   }
 }
 
@@ -127,8 +127,8 @@ TEST(WinErrorTest, testexceptionToHResultWrapper_ERROR_FILE_NOT_FOUND) {
 TEST(WinErrorTest, testexceptionToHResult_ERROR_FILE_NOT_FOUND) {
   try {
     throw makeWin32ErrorExplicit(ERROR_FILE_NOT_FOUND, "Test throw");
-  } catch (...) {
-    EXPECT_EQ(exceptionToHResult(), HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+  } catch (const std::exception& ex) {
+    EXPECT_EQ(exceptionToHResult(ex), HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
   }
 }
 
@@ -157,7 +157,7 @@ TEST(WinErrorTest, testexceptionToHResultWrapper_EACCES) {
 TEST(WinErrorTest, testexceptionToHResult_EACCES) {
   try {
     throw std::system_error(EEXIST, std::generic_category(), "Test Throw");
-  } catch (...) {
-    EXPECT_EQ(exceptionToHResult(), ERROR_ERRORS_ENCOUNTERED);
+  } catch (const std::exception& ex) {
+    EXPECT_EQ(exceptionToHResult(ex), ERROR_ERRORS_ENCOUNTERED);
   }
 }
