@@ -161,39 +161,12 @@ class ThriftLogHelper {
         itcLogger_(logger) {}
 
   ~ThriftLogHelper() {
-    if (wrapperExecuted_) {
-      // Logging of future creation at folly::LogLevel::DBG3.
-      TLOG(itcLogger_, folly::LogLevel::DBG3, itcFileName_, itcLineNumber_)
-          << folly::format(
-                 "{}() created future {:,} " EDEN_MICRO,
-                 itcFunctionName_,
-                 itcTimer_.elapsed().count());
-    } else {
-      // If this object was not used for future creation
-      // log the elaped time here.
-      TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << folly::format(
-          "{}() took {:,} " EDEN_MICRO,
-          itcFunctionName_,
-          itcTimer_.elapsed().count());
-    }
-  }
-
-  template <typename ReturnType>
-  Future<ReturnType> wrapFuture(folly::Future<ReturnType>&& f) {
-    wrapperExecuted_ = true;
-    return std::move(f).thenTry(
-        [timer = itcTimer_,
-         logger = this->itcLogger_,
-         funcName = itcFunctionName_,
-         level = level_,
-         filename = itcFileName_,
-         linenumber = itcLineNumber_](folly::Try<ReturnType>&& ret) {
-          // Logging completion time for the request
-          // The line number points to where the object was originally created
-          TLOG(logger, level, filename, linenumber) << folly::format(
-              "{}() took {:,} " EDEN_MICRO, funcName, timer.elapsed().count());
-          return std::forward<folly::Try<ReturnType>>(ret);
-        });
+    // Logging completion time for the request
+    // The line number points to where the object was originally created
+    TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << folly::format(
+        "{}() took {:,} " EDEN_MICRO,
+        itcFunctionName_,
+        itcTimer_.elapsed().count());
   }
 
  private:
@@ -203,8 +176,24 @@ class ThriftLogHelper {
   folly::LogLevel level_;
   folly::Logger itcLogger_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
-  bool wrapperExecuted_ = false;
 };
+
+template <typename ReturnType>
+Future<ReturnType> wrapFuture(
+    std::unique_ptr<ThriftLogHelper> logHelper,
+    folly::Future<ReturnType>&& f) {
+  return std::move(f).ensure([logHelper = std::move(logHelper)]() {});
+}
+
+template <typename ReturnType>
+folly::SemiFuture<ReturnType> wrapSemiFuture(
+    std::unique_ptr<ThriftLogHelper> logHelper,
+    folly::SemiFuture<ReturnType>&& f) {
+  return std::move(f).defer(
+      [logHelper = std::move(logHelper)](folly::Try<ReturnType>&& ret) {
+        return std::forward<folly::Try<ReturnType>>(ret);
+      });
+}
 
 #undef EDEN_MICRO
 
@@ -226,7 +215,6 @@ facebook::eden::InodePtr inodeFromUserPath(
 
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
-
 #define INSTRUMENT_THRIFT_CALL(level, ...)                                   \
   ([&](folly::StringPiece functionName,                                      \
        folly::StringPiece fileName,                                          \
@@ -234,7 +222,7 @@ facebook::eden::InodePtr inodeFromUserPath(
     static folly::Logger logger("eden.thrift." + functionName.str());        \
     TLOG(logger, folly::LogLevel::level, fileName, lineNumber)               \
         << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")";        \
-    return ThriftLogHelper(                                                  \
+    return std::make_unique<ThriftLogHelper>(                                \
         logger, folly::LogLevel::level, functionName, fileName, lineNumber); \
   }(__func__, __FILE__, __LINE__))
 
@@ -248,7 +236,7 @@ facebook::eden::InodePtr inodeFromUserPath(
         "eden.thrift." + folly::to<string>(functionName));                   \
     TLOG(logger, folly::LogLevel::level, fileName, lineNumber)               \
         << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")";        \
-    return ThriftLogHelper(                                                  \
+    return std::make_unique<ThriftLogHelper>(                                \
         logger, folly::LogLevel::level, functionName, fileName, lineNumber); \
   }(__FILE__, __LINE__))
 
@@ -760,40 +748,41 @@ EdenServiceHandler::semifuture_getFileInformation(
   // data. In the future, this should be changed to avoid allocating inodes when
   // possible.
 
-  return collectAll(
-             applyToInodes(
-                 rootInode,
-                 *paths,
-                 [](InodePtr inode) {
-                   return inode->stat(ObjectFetchContext::getNullContext())
-                       .thenValue([](struct stat st) {
-                         FileInformation info;
-                         *info.size_ref() = st.st_size;
-                         auto ts = stMtime(st);
-                         *info.mtime_ref()->seconds_ref() = ts.tv_sec;
-                         *info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
-                         *info.mode_ref() = st.st_mode;
+  return wrapSemiFuture(
+      std::move(helper),
+      collectAll(applyToInodes(
+                     rootInode,
+                     *paths,
+                     [](InodePtr inode) {
+                       return inode->stat(ObjectFetchContext::getNullContext())
+                           .thenValue([](struct stat st) {
+                             FileInformation info;
+                             *info.size_ref() = st.st_size;
+                             auto ts = stMtime(st);
+                             *info.mtime_ref()->seconds_ref() = ts.tv_sec;
+                             *info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
+                             *info.mode_ref() = st.st_mode;
 
-                         FileInformationOrError result;
-                         result.set_info(info);
+                             FileInformationOrError result;
+                             result.set_info(info);
 
-                         return result;
-                       });
-                 }))
-      .deferValue([](vector<Try<FileInformationOrError>>&& done) {
-        auto out = std::make_unique<vector<FileInformationOrError>>();
-        out->reserve(done.size());
-        for (auto& item : done) {
-          if (item.hasException()) {
-            FileInformationOrError result;
-            result.set_error(newEdenError(item.exception()));
-            out->emplace_back(std::move(result));
-          } else {
-            out->emplace_back(item.value());
-          }
-        }
-        return out;
-      });
+                             return result;
+                           });
+                     }))
+          .deferValue([](vector<Try<FileInformationOrError>>&& done) {
+            auto out = std::make_unique<vector<FileInformationOrError>>();
+            out->reserve(done.size());
+            for (auto& item : done) {
+              if (item.hasException()) {
+                FileInformationOrError result;
+                result.set_error(newEdenError(item.exception()));
+                out->emplace_back(std::move(result));
+              } else {
+                out->emplace_back(item.value());
+              }
+            }
+            return out;
+          }));
 }
 
 void EdenServiceHandler::glob(
@@ -859,7 +848,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
       : nullptr;
 
   // and evaluate it against the root
-  return helper.wrapFuture(
+  return wrapFuture(
+      std::move(helper),
       globRoot
           ->evaluate(
               edenMount->getObjectStore(),
@@ -999,7 +989,8 @@ void EdenServiceHandler::async_tm_getScmStatusV2(
                                      ->getReloadableConfig()
                                      .getEdenConfig()
                                      ->enforceParents.getValue();
-    return helper.wrapFuture(
+    return wrapFuture(
+        std::move(helper),
         mount->diff(hash, *params->listIgnored_ref(), enforceParents, request)
             .thenValue([this, mount](std::unique_ptr<ScmStatus>&& status) {
               auto result = std::make_unique<GetScmStatusResult>();
@@ -1036,8 +1027,10 @@ void EdenServiceHandler::async_tm_getScmStatus(
     // callers of this method can deal with the error.
     auto mount = server_->getMount(*mountPoint);
     auto hash = hashFromThrift(*commitHash);
-    return helper.wrapFuture(mount->diff(
-        hash, listIgnored, /*enforceCurrentParent=*/false, request));
+    return wrapFuture(
+        std::move(helper),
+        mount->diff(
+            hash, listIgnored, /*enforceCurrentParent=*/false, request));
   })
       .thenTry([cb = std::move(callback)](
                    folly::Try<std::unique_ptr<ScmStatus>>&& result) mutable {
@@ -1059,7 +1052,8 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
   auto id1 = hashFromThrift(*oldHash);
   auto id2 = hashFromThrift(*newHash);
   auto mount = server_->getMount(*mountPoint);
-  return helper.wrapFuture(
+  return wrapFuture(
+      std::move(helper),
       diffCommitsForStatus(mount->getObjectStore(), id1, id2));
 }
 
