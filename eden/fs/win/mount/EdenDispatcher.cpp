@@ -195,70 +195,68 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
       bool isDir;
     };
 
-    auto metadata =
-        getMount()
-            .getInode(relPath)
-            .thenValue(
-                [](const InodePtr inode)
-                    -> folly::Future<std::optional<InodeMetadata>> {
-                  return inode->stat(ObjectFetchContext::getNullContext())
-                      .thenValue(
-                          [inode = std::move(inode)](struct stat&& stat) {
-                            size_t size = stat.st_size;
-                            return InodeMetadata{
-                                *inode->getPath(), size, inode->isDir()};
-                          });
-                })
-            .thenError(
-                folly::tag_t<std::system_error>{},
-                [relPath = std::move(relPath),
-                 this](const std::system_error& ex)
-                    -> folly::Future<std::optional<InodeMetadata>> {
-                  if (isEnoent(ex)) {
-                    if (relPath == kDotEdenConfigPath) {
-                      auto path = edenToWinPath(relPath.stringPiece());
-                      return folly::makeFuture(InodeMetadata{
-                          relPath, dotEdenConfig_.length(), false});
-                    } else {
-                      return folly::makeFuture(std::nullopt);
-                    }
-                  }
-                  return folly::makeFuture<std::optional<InodeMetadata>>(ex);
-                })
-            .get();
+    return getMount()
+        .getInode(relPath)
+        .thenValue(
+            [](const InodePtr inode)
+                -> folly::Future<std::optional<InodeMetadata>> {
+              return inode->stat(ObjectFetchContext::getNullContext())
+                  .thenValue([inode = std::move(inode)](struct stat&& stat) {
+                    // Ensure that the OS has a record of the canonical
+                    // file name, and not just whatever case was used to
+                    // lookup the file
+                    size_t size = stat.st_size;
+                    return InodeMetadata{
+                        *inode->getPath(), size, inode->isDir()};
+                  });
+            })
+        .thenError(
+            folly::tag_t<std::system_error>{},
+            [relPath = std::move(relPath), this](const std::system_error& ex)
+                -> folly::Future<std::optional<InodeMetadata>> {
+              if (isEnoent(ex)) {
+                if (relPath == kDotEdenConfigPath) {
+                  return folly::makeFuture(
+                      InodeMetadata{relPath, dotEdenConfig_.length(), false});
+                } else {
+                  XLOG(DBG6) << relPath << ": File not found";
+                  return folly::makeFuture(std::nullopt);
+                }
+              }
+              return folly::makeFuture<std::optional<InodeMetadata>>(ex);
+            })
+        .thenValue([context = callbackData.NamespaceVirtualizationContext](
+                       const std::optional<InodeMetadata>&& metadata) {
+          if (!metadata) {
+            return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+          }
 
-    if (!metadata) {
-      XLOGF(DBG6, "{} : File not Found", relPath);
-      return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-    }
+          PRJ_PLACEHOLDER_INFO placeholderInfo{};
+          placeholderInfo.FileBasicInfo.IsDirectory = metadata->isDir;
+          placeholderInfo.FileBasicInfo.FileSize = metadata->size;
+          auto inodeName = edenToWinPath(metadata->path.stringPiece());
 
-    XLOGF(
-        DBG6,
-        "Found {} {} size= {} process {}",
-        metadata->path,
-        metadata->isDir ? "Dir" : "File",
-        metadata->size,
-        wideToMultibyteString(callbackData.TriggeringProcessImageFileName));
+          HRESULT result = PrjWritePlaceholderInfo(
+              context,
+              inodeName.c_str(),
+              &placeholderInfo,
+              sizeof(placeholderInfo));
 
-    PRJ_PLACEHOLDER_INFO placeholderInfo = {};
-    placeholderInfo.FileBasicInfo.IsDirectory = metadata->isDir;
-    placeholderInfo.FileBasicInfo.FileSize = metadata->size;
+          if (FAILED(result)) {
+            XLOGF(
+                DBG6,
+                "{}: {:x} ({})",
+                metadata->path,
+                result,
+                win32ErrorToString(result));
+          }
 
-    HRESULT result = PrjWritePlaceholderInfo(
-        callbackData.NamespaceVirtualizationContext,
-        edenToWinPath(metadata->path.stringPiece()).c_str(),
-        &placeholderInfo,
-        sizeof(placeholderInfo));
-    if (FAILED(result)) {
-      XLOGF(
-          DBG2,
-          "Failed to send the file info. file {} error {} msg {}",
-          metadata->path,
-          result,
-          win32ErrorToString(result));
-    }
-
-    return result;
+          return result;
+        })
+        .thenError(
+            folly::tag_t<std::exception>{},
+            [](const std::exception& ex) { return exceptionToHResult(ex); })
+        .get();
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
