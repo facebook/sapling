@@ -168,25 +168,12 @@ async fn build_skiplist_index<'a, S: ToString>(
             None => {
                 info!(logger, "creating a skiplist from scratch");
                 let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
-
-                let fetched_changesets = fetch_all_public_changesets(
-                    &ctx,
-                    repo.get_repoid(),
-                    &sql_changesets,
-                    repo.get_phases().get_sql_phases(),
+                let cs_fetcher = fetch_all_public_changesets_and_build_changeset_fetcher(
+                    ctx,
+                    repo,
+                    sql_changesets,
                 )
-                .try_collect::<Vec<_>>()
                 .await?;
-
-                let fetched_changesets: HashMap<_, _> = fetched_changesets
-                    .into_iter()
-                    .map(|cs_entry| (cs_entry.cs_id, cs_entry))
-                    .collect();
-                let cs_fetcher: Arc<dyn ChangesetFetcher> = Arc::new(InMemoryChangesetFetcher {
-                    fetched_changesets: Arc::new(fetched_changesets),
-                    inner: changeset_fetcher,
-                });
-
                 Ok((cs_fetcher, skiplist_index))
             }
         }
@@ -231,6 +218,32 @@ async fn build_skiplist_index<'a, S: ToString>(
     blobstore
         .put(ctx.clone(), key, BlobstoreBytes::from_bytes(bytes))
         .await
+}
+
+async fn fetch_all_public_changesets_and_build_changeset_fetcher(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    sql_changesets: &SqlChangesets,
+) -> Result<Arc<dyn ChangesetFetcher>, Error> {
+    let fetched_changesets = fetch_all_public_changesets(
+        &ctx,
+        repo.get_repoid(),
+        &sql_changesets,
+        repo.get_phases().get_sql_phases(),
+    )
+    .try_collect::<Vec<_>>()
+    .await?;
+
+    let fetched_changesets: HashMap<_, _> = fetched_changesets
+        .into_iter()
+        .map(|cs_entry| (cs_entry.cs_id, cs_entry))
+        .collect();
+    let cs_fetcher: Arc<dyn ChangesetFetcher> = Arc::new(InMemoryChangesetFetcher {
+        fetched_changesets: Arc::new(fetched_changesets),
+        inner: repo.get_changeset_fetcher(),
+    });
+
+    Ok(cs_fetcher)
 }
 
 fn read_skiplist_index<S: ToString>(
