@@ -885,9 +885,6 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
   auto edenMount = server_->getMount(*params->mountPoint_ref());
   auto rootInode = edenMount->getRootInode();
 
-  // TODO: Track and report object fetches required for this glob.
-  auto& context = ObjectFetchContext::getNullContext();
-
   // Compile the list of globs into a tree
   auto globRoot = std::make_shared<GlobNode>(*params->includeDotfiles_ref());
   try {
@@ -902,21 +899,24 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
       ? std::make_shared<folly::Synchronized<std::vector<Hash>>>()
       : nullptr;
 
+  auto& fetchContext = helper->getFetchContext();
+
   // and evaluate it against the root
   return wrapFuture(
       std::move(helper),
       globRoot
           ->evaluate(
               edenMount->getObjectStore(),
-              context,
+              fetchContext,
               RelativePathPiece(),
               rootInode,
               fileBlobsToPrefetch)
           .thenValue([edenMount,
                       wantDtype = *params->wantDtype_ref(),
                       fileBlobsToPrefetch,
-                      suppressFileList = *params->suppressFileList_ref()](
-                         std::vector<GlobNode::GlobResult>&& results) {
+                      suppressFileList = *params->suppressFileList_ref(),
+                      &fetchContext](
+                         std::vector<GlobNode::GlobResult>&& results) mutable {
             auto out = std::make_unique<Glob>();
 
             if (!suppressFileList) {
@@ -935,10 +935,6 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               }
             }
             if (fileBlobsToPrefetch) {
-              // TODO: It would be worth tracking and logging glob fetches,
-              // since they're often used by watchman.
-              auto& context = ObjectFetchContext::getNullContext();
-
               std::vector<folly::Future<folly::Unit>> futures;
 
               auto store = edenMount->getObjectStore();
@@ -947,13 +943,14 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
 
               for (auto& hash : *blobs) {
                 if (batch.size() >= 20480) {
-                  futures.emplace_back(store->prefetchBlobs(batch, context));
+                  futures.emplace_back(
+                      store->prefetchBlobs(batch, fetchContext));
                   batch.clear();
                 }
                 batch.emplace_back(hash);
               }
               if (!batch.empty()) {
-                futures.emplace_back(store->prefetchBlobs(batch, context));
+                futures.emplace_back(store->prefetchBlobs(batch, fetchContext));
               }
 
               return folly::collectUnsafe(futures).thenValue(
