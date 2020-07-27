@@ -15,7 +15,7 @@ use blobrepo_override::DangerousOverride;
 use bookmarks::{BookmarkKind, BookmarkPagination, BookmarkPrefix, Freshness};
 use bulkops::fetch_all_public_changesets;
 use bytes::Bytes;
-use cacheblob::{dummy::DummyLease, LeaseOps};
+use cacheblob::{dummy::DummyLease, InProcessLease, LeaseOps};
 use changesets::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, SqlChangesets};
 use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
@@ -72,6 +72,7 @@ const ARG_LIMIT: &str = "limit";
 const ARG_REGENERATE: &str = "regenerate";
 const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 const ARG_CHANGESET: &str = "changeset";
+const ARG_USE_SHARED_LEASES: &str = "use-shared-leases";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
 const SUBCOMMAND_TAIL: &str = "tail";
@@ -172,6 +173,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .possible_values(POSSIBLE_DERIVED_TYPES)
                         // TODO(stash): T66492899 remove unused value
                         .help("Unused, will be deleted soon"),
+                )
+                .arg(
+                    Arg::with_name(ARG_USE_SHARED_LEASES)
+                        .long(ARG_USE_SHARED_LEASES)
+                        .takes_value(false)
+                        .required(false)
+                        .help(
+                            "By default derived_data_tailers doesn't compete with other mononoke services
+                             for a derived data lease, so it will derive the data even if another mononoke services
+                             (e.g. mononoke_server, scs_serve etc) are already deriving it.
+                             This flag disables this behaviour and that means that this subcommand would compete \
+                             for derived data lease with other mononoke services and start deriving only if the lock \
+                             is taken"
+                        ),
                 ),
         )
         .subcommand(
@@ -327,12 +342,12 @@ async fn run_subcmd<'a>(
             )
             .await
         }
-        (SUBCOMMAND_TAIL, Some(_sub_m)) => {
+        (SUBCOMMAND_TAIL, Some(sub_m)) => {
             let unredacted_repo = args::open_repo_unredacted(fb, &logger, &matches)
                 .compat()
                 .await?;
-
-            subcommand_tail(&ctx, &unredacted_repo).await
+            let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
+            subcommand_tail(&ctx, unredacted_repo, use_shared_leases).await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
             let out_filename = sub_m
@@ -482,7 +497,24 @@ async fn subcommand_backfill(
     Ok(())
 }
 
-async fn subcommand_tail(ctx: &CoreContext, unredacted_repo: &BlobRepo) -> Result<(), Error> {
+async fn subcommand_tail(
+    ctx: &CoreContext,
+    unredacted_repo: BlobRepo,
+    use_shared_leases: bool,
+) -> Result<(), Error> {
+    let unredacted_repo = if use_shared_leases {
+        // "shared" leases are the default - so we don't need to do anything.
+        unredacted_repo
+    } else {
+        // We use a separate derive data lease for derived_data_tailer
+        // so that it could continue deriving even if all other services are failing.
+        // Note that we could've removed the lease completely, but that would've been
+        // problematic for unodes. Blame, fastlog and deleted_file_manifest all want
+        // to derive unodes, so with no leases at all we'd derive unodes 4 times.
+        let lease = InProcessLease::new();
+        unredacted_repo.dangerous_override(|_| Arc::new(lease) as Arc<dyn LeaseOps>)
+    };
+
     let derive_utils: Vec<Arc<dyn DerivedUtils>> = unredacted_repo
         .get_derived_data_config()
         .derived_data_types
@@ -492,7 +524,7 @@ async fn subcommand_tail(ctx: &CoreContext, unredacted_repo: &BlobRepo) -> Resul
         .collect::<Result<_, Error>>()?;
 
     loop {
-        tail_one_iteration(ctx, unredacted_repo, &derive_utils).await?;
+        tail_one_iteration(ctx, &unredacted_repo, &derive_utils).await?;
     }
 }
 
