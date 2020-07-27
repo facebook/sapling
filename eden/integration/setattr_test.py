@@ -166,16 +166,18 @@ class SetAttrTest(testcase.EdenRepoTest):
         subprocess.check_call(["touch", filename])
         st = os.lstat(filename)
 
-        self.assertGreaterEqual(st.st_atime, now)
-        self.assertGreaterEqual(st.st_mtime, now)
+        # Subtract by an epsilon of 1 second since time.time() on has a worst
+        # case senario of one second precision
+        self.assertGreaterEqual(st.st_atime, now - 1)
+        self.assertGreaterEqual(st.st_mtime, now - 1)
 
         newfile = os.path.join(self.mount, "touched-new-file")
         now = time.time()
         subprocess.check_call(["touch", newfile])
         st = os.lstat(newfile)
 
-        self.assertGreaterEqual(st.st_atime, now)
-        self.assertGreaterEqual(st.st_mtime, now)
+        self.assertGreaterEqual(st.st_atime, now - 1)
+        self.assertGreaterEqual(st.st_mtime, now - 1)
 
     def test_umask(self) -> None:
         original_umask = os.umask(0o177)
