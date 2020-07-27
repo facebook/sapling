@@ -227,6 +227,15 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       EdenConfigData& result,
       std::unique_ptr<GetConfigParams> params) override;
 
+  /**
+   * Returns the pid that caused the Thrift request running on the calling
+   * Thrift worker thread and registers it with the ProcessNameCache.
+   *
+   * This must be run from a Thrift worker thread, because the calling pid is
+   * stored in a thread local variable.
+   */
+  std::optional<pid_t> getAndRegisterClientPid();
+
  private:
   folly::Future<Hash> getSHA1ForPath(
       folly::StringPiece mountPoint,

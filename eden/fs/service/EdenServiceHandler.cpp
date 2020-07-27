@@ -55,6 +55,7 @@
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
@@ -73,6 +74,8 @@ using std::unique_ptr;
 using std::vector;
 
 namespace {
+using namespace facebook::eden;
+
 /*
  * We need a version of folly::toDelim() that accepts zero, one, or many
  * arguments so it can be used with __VA_ARGS__ in the INSTRUMENT_THRIFT_CALL()
@@ -134,6 +137,30 @@ namespace /* anonymous namespace for helper functions */ {
 
 #define EDEN_MICRO u8"\u00B5s"
 
+class ThriftFetchContext : public ObjectFetchContext {
+ public:
+  explicit ThriftFetchContext(
+      std::optional<pid_t> pid,
+      folly::StringPiece endpoint)
+      : pid_(pid), endpoint_(endpoint) {}
+
+  std::optional<pid_t> getClientPid() const override {
+    return pid_;
+  }
+
+  Cause getCause() const override {
+    return ObjectFetchContext::Cause::Thrift;
+  }
+
+  std::optional<folly::StringPiece> getCauseDetail() const override {
+    return endpoint_;
+  }
+
+ private:
+  std::optional<pid_t> pid_;
+  folly::StringPiece endpoint_;
+};
+
 // Helper class to log where the request completes in Future
 class ThriftLogHelper {
  public:
@@ -153,12 +180,14 @@ class ThriftLogHelper {
       folly::LogLevel level,
       folly::StringPiece itcFunctionName,
       folly::StringPiece itcFileName,
-      uint32_t itcLineNumber)
+      uint32_t itcLineNumber,
+      std::optional<pid_t> pid)
       : itcFunctionName_(itcFunctionName),
         itcFileName_(itcFileName),
         itcLineNumber_(itcLineNumber),
         level_(level),
-        itcLogger_(logger) {}
+        itcLogger_(logger),
+        fetchContext_{pid, itcFunctionName} {}
 
   ~ThriftLogHelper() {
     // Logging completion time for the request
@@ -169,6 +198,10 @@ class ThriftLogHelper {
         itcTimer_.elapsed().count());
   }
 
+  ObjectFetchContext& getFetchContext() {
+    return fetchContext_;
+  }
+
  private:
   folly::StringPiece itcFunctionName_;
   folly::StringPiece itcFileName_;
@@ -176,6 +209,7 @@ class ThriftLogHelper {
   folly::LogLevel level_;
   folly::Logger itcLogger_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
+  ThriftFetchContext fetchContext_;
 };
 
 template <typename ReturnType>
@@ -215,29 +249,40 @@ facebook::eden::InodePtr inodeFromUserPath(
 
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
-#define INSTRUMENT_THRIFT_CALL(level, ...)                                   \
-  ([&](folly::StringPiece functionName,                                      \
-       folly::StringPiece fileName,                                          \
-       uint32_t lineNumber) {                                                \
-    static folly::Logger logger("eden.thrift." + functionName.str());        \
-    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)               \
-        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")";        \
-    return std::make_unique<ThriftLogHelper>(                                \
-        logger, folly::LogLevel::level, functionName, fileName, lineNumber); \
+#define INSTRUMENT_THRIFT_CALL(level, ...)                            \
+  ([&](folly::StringPiece functionName,                               \
+       folly::StringPiece fileName,                                   \
+       uint32_t lineNumber) {                                         \
+    static folly::Logger logger("eden.thrift." + functionName.str()); \
+    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
+        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
+    return std::make_unique<ThriftLogHelper>(                         \
+        logger,                                                       \
+        folly::LogLevel::level,                                       \
+        functionName,                                                 \
+        fileName,                                                     \
+        lineNumber,                                                   \
+        getAndRegisterClientPid());                                   \
   }(__func__, __FILE__, __LINE__))
 
 // INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME works in the same way as
 // INSTRUMENT_THRIFT_CALL but takes the function name as a parameter in case of
 // using inside of a lambda (in which case __func__ is "()")
 
-#define INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(level, functionName, ...)  \
-  ([&](folly::StringPiece fileName, uint32_t lineNumber) {                   \
-    static folly::Logger logger(                                             \
-        "eden.thrift." + folly::to<string>(functionName));                   \
-    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)               \
-        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")";        \
-    return std::make_unique<ThriftLogHelper>(                                \
-        logger, folly::LogLevel::level, functionName, fileName, lineNumber); \
+#define INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(                    \
+    level, functionName, pid, ...)                                    \
+  ([&](folly::StringPiece fileName, uint32_t lineNumber) {            \
+    static folly::Logger logger(                                      \
+        "eden.thrift." + folly::to<string>(functionName));            \
+    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)        \
+        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; \
+    return std::make_unique<ThriftLogHelper>(                         \
+        logger,                                                       \
+        folly::LogLevel::level,                                       \
+        functionName,                                                 \
+        fileName,                                                     \
+        lineNumber,                                                   \
+        pid);                                                         \
   }(__FILE__, __LINE__))
 
 namespace facebook {
@@ -975,10 +1020,11 @@ void EdenServiceHandler::async_tm_getScmStatusV2(
         callback,
     unique_ptr<GetScmStatusParams> params) {
   auto* request = callback->getRequest();
-  folly::makeFutureWith([&, func = __func__] {
+  folly::makeFutureWith([&, func = __func__, pid = getAndRegisterClientPid()] {
     auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(
         DBG2,
         func,
+        pid,
         *params->mountPoint_ref(),
         folly::to<string>("commitHash=", logHash(*params->commit_ref())),
         folly::to<string>("listIgnored=", *params->listIgnored_ref()));
@@ -1013,10 +1059,11 @@ void EdenServiceHandler::async_tm_getScmStatus(
     bool listIgnored,
     unique_ptr<string> commitHash) {
   auto* request = callback->getRequest();
-  folly::makeFutureWith([&, func = __func__] {
+  folly::makeFutureWith([&, func = __func__, pid = getAndRegisterClientPid()] {
     auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(
         DBG2,
         func,
+        pid,
         *mountPoint,
         folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
         folly::to<string>("commitHash=", logHash(*commitHash)));
@@ -1565,6 +1612,27 @@ void EdenServiceHandler::getConfig(
   auto config = state->getEdenConfig(*params->reload_ref());
 
   result = config->toThriftConfigData();
+}
+
+std::optional<pid_t> EdenServiceHandler::getAndRegisterClientPid() {
+#ifndef _WIN32
+  // The ConnectionContext for a thrift request is kept in a thread local
+  // on the thread which the request originates. This means this must be run
+  // on the Thread in which a thrift request originates in order to correctly
+  // get the ConnectionContext for that request.
+  auto connectionContext = getConnectionContext();
+  // if connectionContext will be a null pointer in an async method, so we need
+  // to check for this
+  if (connectionContext) {
+    pid_t clientPid =
+        connectionContext->getConnectionContext()->getPeerEffectiveCreds()->pid;
+    server_->getServerState()->getProcessNameCache()->add(clientPid);
+    return clientPid;
+  }
+  return std::nullopt;
+#else
+  return std::nullopt;
+#endif
 }
 
 } // namespace eden

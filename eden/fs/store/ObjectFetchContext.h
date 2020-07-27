@@ -7,6 +7,9 @@
 
 #pragma once
 #include <optional>
+
+#include <folly/Range.h>
+
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ImportPriority.h"
 
@@ -60,6 +63,10 @@ class ObjectFetchContext {
 
   virtual Cause getCause() const {
     return ObjectFetchContext::Cause::Unknown;
+  }
+
+  virtual std::optional<folly::StringPiece> getCauseDetail() const {
+    return std::nullopt;
   }
 
   virtual ImportPriority getPriority() const {

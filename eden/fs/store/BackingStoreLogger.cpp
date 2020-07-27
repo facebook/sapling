@@ -53,6 +53,10 @@ void BackingStoreLogger::logImport(
     case ObjectFetchContext::Unknown:
       cause_string = "Unknown";
   }
+  if (auto causeDetail = context.getCauseDetail()) {
+    cause_string =
+        folly::to<std::string>(cause_string, " - ", causeDetail.value());
+  }
 
   logger_->logEvent(ServerDataFetch{std::move(cause_string),
                                     pid,
