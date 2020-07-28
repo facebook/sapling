@@ -168,7 +168,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       folly::StringPiece contents,
       InvalidationRequired invalidate);
 
-  TreeInodePtr mkdir(PathComponentPiece name, mode_t mode);
+  TreeInodePtr
+  mkdir(PathComponentPiece name, mode_t mode, InvalidationRequired invalidate);
   FOLLY_NODISCARD folly::Future<folly::Unit> unlink(
       PathComponentPiece name,
       InvalidationRequired invalidate);

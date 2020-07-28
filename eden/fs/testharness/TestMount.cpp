@@ -525,7 +525,9 @@ void TestMount::mkdir(folly::StringPiece path) {
 #endif
 
   mode_t mode = 0755;
-  (void)treeInode->mkdir(relativePath.basename(), mode).get();
+  (void)treeInode
+      ->mkdir(relativePath.basename(), mode, InvalidationRequired::No)
+      .get();
 }
 
 void TestMount::deleteFile(folly::StringPiece path) {

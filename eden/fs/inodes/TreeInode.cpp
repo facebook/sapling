@@ -1032,7 +1032,10 @@ FileInodePtr TreeInode::mknod(
   }
 }
 
-TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
+TreeInodePtr TreeInode::mkdir(
+    PathComponentPiece name,
+    mode_t mode,
+    InvalidationRequired invalidate) {
 #ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     throw InodeError(EPERM, inodePtrFromThis(), name);
@@ -1102,8 +1105,10 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
   }
 
 #ifndef _WIN32
-  invalidateFuseEntryCacheIfRequired(name);
-  invalidateFuseInodeCacheIfRequired();
+  if (InvalidationRequired::Yes == invalidate) {
+    invalidateChannelEntryCache(name);
+    invalidateFuseInodeCache();
+  }
 #endif
   getMount()->getJournal().recordCreated(targetName);
 

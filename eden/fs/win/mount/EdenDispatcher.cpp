@@ -455,7 +455,7 @@ folly::Future<folly::Unit> createFile(
   return mount.getInode(path.dirname()).thenValue([=](const InodePtr inode) {
     auto treeInode = inode.asTreePtr();
     if (isDirectory) {
-      treeInode->mkdir(path.basename(), _S_IFDIR);
+      treeInode->mkdir(path.basename(), _S_IFDIR, InvalidationRequired::No);
     } else {
       treeInode->mknod(path.basename(), _S_IFREG, 0, InvalidationRequired::No);
     }

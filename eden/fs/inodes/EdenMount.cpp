@@ -379,8 +379,10 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         if (lookupResult.hasValue()) {
           dotEdenInode = *lookupResult;
         } else {
-          dotEdenInode =
-              getRootInode()->mkdir(PathComponentPiece{kDotEdenName}, 0755);
+          dotEdenInode = getRootInode()->mkdir(
+              PathComponentPiece{kDotEdenName},
+              0755,
+              InvalidationRequired::Yes);
         }
 
         // Make sure all of the symlinks in the .eden directory exist and
@@ -1442,7 +1444,7 @@ Future<Unit> ensureDirectoryExistsHelper(
   contents.unlock();
   TreeInodePtr child;
   try {
-    child = parent->mkdir(childName, S_IFDIR | 0755);
+    child = parent->mkdir(childName, S_IFDIR | 0755, InvalidationRequired::Yes);
   } catch (std::system_error& e) {
     // If two threads are racing to create the subdirectory, that's fine,
     // just try again.

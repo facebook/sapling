@@ -346,7 +346,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::mkdir(
       mode);
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}, mode](const TreeInodePtr& inode) {
-        auto child = inode->mkdir(childName, mode);
+        auto child = inode->mkdir(childName, mode, InvalidationRequired::No);
         return child->stat(ObjectFetchContext::getNullContext())
             .thenValue([child](struct stat st) {
               child->incFuseRefcount();
