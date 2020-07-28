@@ -6,7 +6,7 @@
  */
 
 use crate::setup::{RepoWalkDatasources, RepoWalkParams};
-use crate::walk::{walk_exact, WalkVisitor};
+use crate::walk::{walk_exact, StepRoute, WalkVisitor};
 
 use anyhow::Error;
 use cloned::cloned;
@@ -15,7 +15,6 @@ use fbinit::FacebookInit;
 use futures::{future::Future, stream::BoxStream};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
-use std::fmt::Debug;
 use tokio::time::{Duration, Instant};
 
 #[derive(Clone)]
@@ -39,7 +38,7 @@ where
     SinkOut: Future<Output = Result<(), Error>> + 'static + Send,
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
     VOut: 'static + Send,
-    Route: 'static + Send + Clone + Debug,
+    Route: 'static + Send + Clone + StepRoute,
 {
     let scuba_builder = datasources.scuba_builder;
     let repo = datasources.blobrepo;

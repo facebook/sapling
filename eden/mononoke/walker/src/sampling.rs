@@ -7,7 +7,7 @@
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::state::{StepStats, WalkState};
-use crate::walk::{OutgoingEdge, WalkVisitor};
+use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, WalkVisitor};
 
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
@@ -57,6 +57,16 @@ pub struct PathTrackingRoute {
     /// When did this route see this path was updated.
     /// Taken from the last bonsai or hg changset stepped through.
     pub mtime: Option<DateTime>,
+}
+
+// No useful node info held.  TODO(ahornby) be nice to expand StepRoute logging to show path if present
+impl StepRoute for PathTrackingRoute {
+    fn source_node(&self) -> Option<&Node> {
+        None
+    }
+    fn via_node(&self) -> Option<&Node> {
+        None
+    }
 }
 
 // Only certain node types can have repo paths associated
@@ -193,7 +203,8 @@ where
                 }
             }
         }
-        self.inner.start_step(ctx, route.map(|_| &()), step)
+        self.inner
+            .start_step(ctx, route.map(|_| &EmptyRoute {}), step)
     }
 
     fn visit(
@@ -208,7 +219,7 @@ where
         PathTrackingRoute,
         Vec<OutgoingEdge>,
     ) {
-        let inner_route = route.as_ref().map(|_| ());
+        let inner_route = route.as_ref().map(|_| EmptyRoute {});
 
         let mtime = match &node_data {
             Some(NodeData::BonsaiChangeset(bcs)) => {
@@ -241,14 +252,15 @@ where
 }
 
 // Super simple sampling visitor impl for scrubbing
-impl<T> WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for SamplingWalkVisitor<T>
+impl<T> WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute>
+    for SamplingWalkVisitor<T>
 where
     T: SampleTrigger<Node>,
 {
     fn start_step(
         &self,
         mut ctx: CoreContext,
-        route: Option<&()>,
+        route: Option<&EmptyRoute>,
         step: &OutgoingEdge,
     ) -> CoreContext {
         if self.sample_node_types.contains(&step.target.get_type()) {
@@ -269,7 +281,7 @@ where
                 self.sampler.map_keys(sampling_key, step.target.clone());
             }
         }
-        self.inner.start_step(ctx, route.map(|_| &()), step)
+        self.inner.start_step(ctx, route, step)
     }
 
     fn visit(
@@ -277,11 +289,11 @@ where
         ctx: &CoreContext,
         resolved: OutgoingEdge,
         node_data: Option<NodeData>,
-        route: Option<()>,
+        route: Option<EmptyRoute>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
         (Node, Option<NodeData>, Option<StepStats>),
-        (),
+        EmptyRoute,
         Vec<OutgoingEdge>,
     ) {
         self.inner.visit(ctx, resolved, node_data, route, outgoing)

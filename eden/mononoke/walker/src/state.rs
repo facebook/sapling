@@ -6,7 +6,7 @@
  */
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
-use crate::walk::{expand_checked_nodes, OutgoingEdge, WalkVisitor};
+use crate::walk::{expand_checked_nodes, EmptyRoute, OutgoingEdge, WalkVisitor};
 use array_init::array_init;
 use context::CoreContext;
 use dashmap::DashMap;
@@ -157,11 +157,11 @@ impl WalkState {
     }
 }
 
-impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkState {
+impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for WalkState {
     fn start_step(
         &self,
         ctx: CoreContext,
-        _route: Option<&()>,
+        _route: Option<&EmptyRoute>,
         _step: &OutgoingEdge,
     ) -> CoreContext {
         ctx
@@ -172,11 +172,11 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkState 
         _ctx: &CoreContext,
         resolved: OutgoingEdge,
         node_data: Option<NodeData>,
-        _route: Option<()>,
+        _route: Option<EmptyRoute>,
         mut outgoing: Vec<OutgoingEdge>,
     ) -> (
         (Node, Option<NodeData>, Option<StepStats>),
-        (),
+        EmptyRoute,
         Vec<OutgoingEdge>,
     ) {
         // Filter things we don't want to enter the WalkVisitor at all.
@@ -209,6 +209,6 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkState 
             visited_of_type: self.get_visit_count(&node.get_type()),
         };
 
-        ((node, node_data, Some(stats)), (), outgoing)
+        ((node, node_data, Some(stats)), EmptyRoute {}, outgoing)
     }
 }

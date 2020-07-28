@@ -23,7 +23,7 @@ use crate::setup::{
 };
 use crate::state::{StepStats, WalkState};
 use crate::tail::{walk_exact_tail, RepoWalkRun};
-use crate::walk::{OutgoingEdge, WalkVisitor};
+use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, WalkVisitor};
 
 use anyhow::{format_err, Error};
 use clap::ArgMatches;
@@ -277,6 +277,15 @@ impl ValidateRoute {
     }
 }
 
+impl StepRoute for ValidateRoute {
+    fn source_node(&self) -> Option<&Node> {
+        Some(&self.src_node)
+    }
+    fn via_node(&self) -> Option<&Node> {
+        self.via.last()
+    }
+}
+
 impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
     for ValidatingVisitor
 {
@@ -286,7 +295,8 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
         route: Option<&ValidateRoute>,
         step: &OutgoingEdge,
     ) -> CoreContext {
-        self.inner.start_step(ctx, route.map(|_| &()), step)
+        self.inner
+            .start_step(ctx, route.map(|_| &EmptyRoute {}), step)
     }
 
     fn visit(
@@ -344,7 +354,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
             &ctx,
             resolved,
             node_data,
-            route.as_ref().map(|_| ()),
+            route.as_ref().map(|_| EmptyRoute {}),
             outgoing,
         );
 

@@ -43,6 +43,26 @@ use std::{
 };
 use thiserror::Error;
 
+pub trait StepRoute: Debug {
+    /// Where we stepped from, useful for immediate reproductions with --walk-root
+    fn source_node(&self) -> Option<&Node>;
+
+    /// What the check thinks is an interesting node on the route to here (e.g. the affected changeset)
+    fn via_node(&self) -> Option<&Node>;
+}
+
+#[derive(Clone, Debug)]
+pub struct EmptyRoute();
+// No useful node info held.
+impl StepRoute for EmptyRoute {
+    fn source_node(&self) -> Option<&Node> {
+        None
+    }
+    fn via_node(&self) -> Option<&Node> {
+        None
+    }
+}
+
 // Holds type of edge and target Node that we want to load in next step(s)
 // Combined with current node, this forms an complegte edge.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -675,7 +695,7 @@ pub fn walk_exact<V, VOut, Route>(
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
     VOut: 'static + Send,
-    Route: 'static + Send + Clone + Debug,
+    Route: 'static + Send + Clone + StepRoute,
 {
     // Build lookups
     let published_bookmarks = repo
@@ -763,7 +783,7 @@ async fn walk_one<V, VOut, Route>(
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
     VOut: 'static + Send,
-    Route: 'static + Send + Clone + Debug,
+    Route: 'static + Send + Clone + StepRoute,
 {
     let logger = ctx.logger().clone();
 
@@ -842,22 +862,29 @@ where
     let step_output = match step_result {
         Ok(s) => Ok(s),
         Err(e) => {
+            let msg = format!(
+                "Could not step to {:?}, due to {:?}, via {:?}",
+                &walk_item, e, via
+            );
             // Log to scuba regardless
-            add_node_to_scuba(None, None, &walk_item.target, &mut scuba);
+            add_node_to_scuba(
+                via.as_ref().and_then(|v| v.source_node()),
+                via.as_ref().and_then(|v| v.via_node()),
+                &walk_item.target,
+                &mut scuba,
+            );
             scuba
                 .add(EDGE_TYPE, edge_label.to_str())
                 .add(CHECK_TYPE, "step")
                 .add(CHECK_FAIL, 1)
+                .add("error_msg", msg.clone())
                 .log();
             // Optionally attempt to continue
             if error_as_data_node_types.contains(&walk_item.target.get_type()) {
                 if error_as_data_edge_types.is_empty()
                     || error_as_data_edge_types.contains(&walk_item.label)
                 {
-                    warn!(
-                        logger,
-                        "Could not step to {:?}, due to: {:?} via {:?}", &walk_item, e, via
-                    );
+                    warn!(logger, "{}", msg);
                     Ok(StepOutput(
                         NodeData::ErrorAsData(walk_item.target.clone()),
                         vec![],

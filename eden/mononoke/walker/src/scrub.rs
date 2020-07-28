@@ -21,6 +21,7 @@ use crate::setup::{
 use crate::sizing::SizingSample;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::validate::TOTAL;
+use crate::walk::EmptyRoute;
 
 use anyhow::Error;
 use clap::ArgMatches;
@@ -390,7 +391,7 @@ pub async fn scrub_objects<'a>(
         sample_rate,
         sample_offset,
     ));
-    walk_exact_tail::<_, _, _, _, _, ()>(
+    walk_exact_tail::<_, _, _, _, _, EmptyRoute>(
         fb,
         logger,
         datasources,
