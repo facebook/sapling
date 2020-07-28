@@ -263,7 +263,7 @@ class HgServer(object):
 
     def _is_mononoke_supported(self, name):
         # type: (str) -> bool
-        return name in ["fbsource", "www"]
+        return name in ["fbsource", "www", "ovrsource"]
 
     def _gen_options(self):
         # type: () -> bytes
