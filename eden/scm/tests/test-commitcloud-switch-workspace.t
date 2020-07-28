@@ -390,15 +390,11 @@ Bookmark feature should disappear in w2 but master will stay as it is a protecte
   @  0 base: public
   
 
-Bookmark feature reappear here due to a bug in selectivepullaccessedbookmarks
-TODO: fix selectivepullaccessedbookmarks
   $ hg pull -B stable -q
   $ showgraph
   o  7 S: public  remote/stable
   |
   | o  6 M: public  remote/master
-  |/
-  | o  5 F: public  remote/feature
   |/
   | o  4 D (W2): draft book (W2)
   | |
@@ -427,8 +423,6 @@ Switch one more time. Bookmark stable should return and feature disappear.
   o  7 S: public  remote/stable
   |
   | o  6 M: public  remote/master
-  |/
-  | o  5 F: public  remote/feature
   |/
   | o  4 D (W2): draft book (W2)
   | |
