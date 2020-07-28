@@ -738,18 +738,7 @@ std::vector<fuse_in_header> FuseChannel::getOutstandingRequests() {
   std::vector<fuse_in_header> outstandingCalls;
 
   for (const auto& entry : requests) {
-    auto ctx = entry.second.lock();
-    if (ctx) {
-      // Get the fuse_in_header from the ctx and push a copy of it on the
-      // outstandingCalls collection
-      auto rdata = boost::polymorphic_downcast<RequestData*>(
-          ctx->getContextData(RequestData::kKey));
-      // rdata should never be null here and if it - it's most likely a bug
-      const fuse_in_header& fuseHeader = rdata->examineReq();
-      if (fuseHeader.opcode != 0) {
-        outstandingCalls.push_back(fuseHeader);
-      }
-    }
+    outstandingCalls.push_back(entry.second);
   }
   return outstandingCalls;
 }
@@ -1283,10 +1272,7 @@ void FuseChannel::processSession() {
             // lifecycle of our state here.
             auto state = state_.wlock();
             requestId = state->nextRequestId++;
-            state->requests.emplace(
-                requestId,
-                std::weak_ptr<folly::RequestContext>(
-                    RequestContext::saveContext()));
+            state->requests.emplace(requestId, *header);
           }
 
           request

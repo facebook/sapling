@@ -308,7 +308,7 @@ class FuseChannel {
    */
   struct State {
     uint64_t nextRequestId{1};
-    std::unordered_map<uint64_t, std::weak_ptr<folly::RequestContext>> requests;
+    std::unordered_map<uint64_t, fuse_in_header> requests;
     std::vector<std::thread> workerThreads;
 
     /*
