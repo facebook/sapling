@@ -115,7 +115,6 @@ if sys.platform == "win32":
         "hg.doctor_test.DoctorTestTreeOnly": True,
         "hg.files_test.FilesTestTreeOnly": True,
         "hg.fold_test.FoldTestTreeOnly": True,
-        "hg.graft_test.GraftTestTreeOnly": True,
         "hg.grep_test.GrepTestTreeOnly": True,
         "hg.histedit_test.HisteditTestTreeOnly": True,
         "hg.journal_test.JournalTestTreeOnly": True,
