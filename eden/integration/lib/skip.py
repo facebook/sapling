@@ -127,7 +127,6 @@ if sys.platform == "win32":
             "test_rebase_commit_with_independent_folder",
             "test_rebase_stack_with_conflicts",
         ],
-        "hg.revert_test.RevertTestTreeOnly": True,
         "hg.rm_test.RmTestTreeOnly": True,
         "hg.rollback_test.RollbackTestTreeOnly": True,
         "hg.sparse_test.SparseTestTreeOnly": True,
