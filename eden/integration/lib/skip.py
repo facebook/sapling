@@ -121,7 +121,6 @@ if sys.platform == "win32":
         ],
         "hg.move_test.MoveTestTreeOnly": True,
         "hg.negative_caching_test.NegativeCachingTestTreeOnly": True,
-        "hg.non_eden_operation_test.NonEdenOperationTestTreeOnly": True,
         "hg.post_clone_test.SymlinkTestTreeOnly": True,
         "hg.pull_test.PullTestTreeOnly": True,
         "hg.rebase_test.RebaseTestTreeOnly": True,
