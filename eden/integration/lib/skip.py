@@ -106,7 +106,6 @@ if sys.platform == "win32":
             "test_add_nonexistent_directory",
             "test_debugdirstate",
         ],
-        "hg.commit_test.CommitTestTreeOnly": True,
         "hg.copy_test.CopyTestTreeOnly": True,
         "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnly": True,
         "hg.debug_get_parents.DebugGetParentsTestTreeOnly": True,
