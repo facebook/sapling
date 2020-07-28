@@ -26,7 +26,7 @@ use crate::{
         HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
     },
     indexedlogdatastore::IndexedLogHgIdDataStore,
-    lfs::{LfsMultiplexer, LfsRemote, LfsStore},
+    lfs::{LfsFallbackRemoteStore, LfsMultiplexer, LfsRemote, LfsStore},
     localstore::LocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexDeltaStore,
@@ -390,13 +390,9 @@ impl<'a> ContentStoreBuilder<'a> {
                     )?);
                     remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
 
-                    // Fallback store if the LFS one is dead. In `ContentStore::get_missing`, when
-                    // the LFS pointers are available locally, a `StoreKey::Content` will be
-                    // returned, preventing the first `filenode_remotestore` from trying to fetch
-                    // the blob. However, in this situation, when the LFS server is down, the
-                    // `LfsStore::get_missing` will return a `StoreKey::HgId`, that can then be
-                    // fetched by the following store.
-                    remotestores.add(filenode_remotestore);
+                    // Fallback store if the LFS one is dead.
+                    let lfs_fallback = LfsFallbackRemoteStore::new(filenode_remotestore);
+                    remotestores.add(lfs_fallback);
                 }
 
                 let remotestores = Arc::new(remotestores);
@@ -838,6 +834,8 @@ mod tests {
 
         use std::str::FromStr;
 
+        use reqwest::Url;
+
         use types::Sha256;
 
         #[test]
@@ -884,7 +882,15 @@ mod tests {
         fn test_lfs_fallback_on_missing_blob() -> Result<()> {
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let mut config = make_lfs_config(&cachedir);
+
+            let lfsdir = TempDir::new()?;
+            config.set(
+                "lfs",
+                "url",
+                Some(Url::from_file_path(&lfsdir).unwrap()),
+                &Default::default(),
+            );
 
             let k = key("a", "1");
             // This should be a missing blob.
@@ -928,7 +934,10 @@ mod tests {
 
             assert_eq!(
                 store.get_missing(&[StoreKey::from(k.clone())])?,
-                vec![StoreKey::from(k.clone())]
+                vec![StoreKey::Content(
+                    ContentHash::Sha256(sha256),
+                    Some(k.clone())
+                )]
             );
             store.prefetch(&[StoreKey::from(k.clone())])?;
             // Even though the blob was missing, we got it!

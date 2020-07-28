@@ -583,34 +583,10 @@ impl LocalStore for LfsStore {
                         },
                     }
                 }
-                StoreKey::Content(content_hash, key) => match content_hash {
+                StoreKey::Content(content_hash, _) => match content_hash {
                     ContentHash::Sha256(hash) => match self.blobs.contains(&hash) {
                         Ok(true) => None,
-                        Ok(false) | Err(_) => {
-                            // WARNING: Hack!
-                            //
-                            // For now, the only Content addressed store is the LfsStore, as such,
-                            // returning a StoreKey::Content when we get here isn't going to help
-                            // in finding the missing blob.
-                            //
-                            // If for any reason, the LFS server is turned off, we will end up in
-                            // here for blobs where we have the pointer locally, but not the blob.
-                            // In this case, we want the code to fallback to fetching the blob with
-                            // the regular non-LFS protocol, hence we need to pretend that what is
-                            // missing isn't the content hash, but the filenode hash.
-                            //
-                            // Obviously, the above doesn't apply for local blobs, as having these
-                            // missing should be fatal.
-                            let pointers = self.pointers.read();
-                            if pointers.0.is_local() {
-                                Some(k.clone())
-                            } else {
-                                match key {
-                                    None => Some(StoreKey::from(content_hash)),
-                                    Some(key) => Some(StoreKey::from(key)),
-                                }
-                            }
-                        }
+                        Ok(false) | Err(_) => Some(k.clone()),
                     },
                 },
             })
@@ -1550,6 +1526,74 @@ impl HgIdDataStore for LfsRemoteStore {
 impl LocalStore for LfsRemoteStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.store.get_missing(keys)
+    }
+}
+
+/// Wraps another remote store to retry fetching content-keys from their HgId keys.
+///
+/// If for any reason, the LFS server is turned off, we will end up in here for blobs where we have
+/// the pointer locally, but not the blob.  In this case, we want the code to fallback to fetching
+/// the blob with the regular non-LFS protocol, hence this stores merely translates
+/// `StoreKey::Content` onto `StoreKey::HgId` before asking the non-LFS remote store to fetch data
+/// for these.
+pub struct LfsFallbackRemoteStore(Arc<dyn RemoteDataStore>);
+
+impl LfsFallbackRemoteStore {
+    pub fn new(wrapped_store: Arc<dyn RemoteDataStore>) -> Arc<dyn RemoteDataStore> {
+        Arc::new(Self(wrapped_store))
+    }
+}
+
+impl RemoteDataStore for LfsFallbackRemoteStore {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        let mut not_found = Vec::new();
+        let not_prefetched = self.0.prefetch(
+            &keys
+                .iter()
+                .filter_map(|key| match key {
+                    StoreKey::HgId(_) => {
+                        not_found.push(key.clone());
+                        None
+                    }
+                    StoreKey::Content(_, hgid) => match hgid {
+                        None => {
+                            not_found.push(key.clone());
+                            None
+                        }
+                        Some(hgid) => Some(StoreKey::hgid(hgid.clone())),
+                    },
+                })
+                .collect::<Vec<_>>(),
+        )?;
+
+        not_found.extend(not_prefetched.into_iter());
+        Ok(not_found)
+    }
+
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        Ok(keys.to_vec())
+    }
+}
+
+impl HgIdDataStore for LfsFallbackRemoteStore {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        match self.prefetch(&[key.clone()]) {
+            Ok(_) => self.0.get(key),
+            Err(_) => Ok(StoreResult::NotFound(key)),
+        }
+    }
+
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        match self.prefetch(&[key.clone()]) {
+            Ok(_) => self.0.get_meta(key),
+            Err(_) => Ok(StoreResult::NotFound(key)),
+        }
+    }
+}
+
+impl LocalStore for LfsFallbackRemoteStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.0.get_missing(keys)
     }
 }
 

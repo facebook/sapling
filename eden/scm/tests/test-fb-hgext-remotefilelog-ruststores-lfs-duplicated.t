@@ -25,6 +25,6 @@
   $ switchrepo shallow2
   $ setconfig remotefilelog.lfs=True lfs.url=file:$TESTTMP/lfs-server lfs.threshold=10GB
 
-# XXX: unbundling doesn't work properly
-#  $ hg unbundle -u $TESTTMP/test-bundle
-#  $ cat x
+  $ hg unbundle -q -u $TESTTMP/test-bundle
+  $ cat x
+  THIS IS AN LFS BLOB
