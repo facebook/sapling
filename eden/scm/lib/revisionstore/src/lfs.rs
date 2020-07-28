@@ -1375,18 +1375,27 @@ impl RemoteDataStore for LfsRemoteStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let mut not_found = Vec::new();
 
+        let stores = if let Some(local_store) = self.remote.local.as_ref() {
+            vec![self.remote.shared.clone(), local_store.clone()]
+        } else {
+            vec![self.remote.shared.clone()]
+        };
+
         let mut obj_set = HashMap::new();
         let objs = keys
             .iter()
             .map(|k| {
-                if let Some(pointer) = self.remote.shared.pointers.read().entry(k)? {
-                    if let Some(content_hash) = pointer.content_hashes.get(&ContentHashType::Sha256)
-                    {
-                        obj_set.insert(content_hash.clone().unwrap_sha256(), k.clone());
-                        return Ok(Some((
-                            content_hash.clone().unwrap_sha256(),
-                            pointer.size.try_into()?,
-                        )));
+                for store in &stores {
+                    if let Some(pointer) = store.pointers.read().entry(k)? {
+                        if let Some(content_hash) =
+                            pointer.content_hashes.get(&ContentHashType::Sha256)
+                        {
+                            obj_set.insert(content_hash.clone().unwrap_sha256(), k.clone());
+                            return Ok(Some((
+                                content_hash.clone().unwrap_sha256(),
+                                pointer.size.try_into()?,
+                            )));
+                        }
                     }
                 }
 
