@@ -77,4 +77,4 @@
   $ truncate -s 0 "$scuba_proxy"
 
 # Kill nc, otherwise we don't exit properly :/
-  $ kill -KILL "$nc_pid"
+  $ killandwait "$nc_pid"

@@ -89,7 +89,7 @@ Censor the redacted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb
   * changeset resolved as: * (glob)
 
 Restart mononoke
-  $ kill $MONONOKE_PID
+  $ killandwait $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"
   $ setup_common_config blob_files
   $ mononoke
@@ -110,7 +110,7 @@ Should gives us the tombstone file since it is redacted
   This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
 
 Restart mononoke and disable redaction verification
-  $ kill $MONONOKE_PID
+  $ killandwait $MONONOKE_PID
   $ rm -rf "$TESTTMP/mononoke-config"
   $ export REDACTION_DISABLED=1
   $ setup_common_config blob_files

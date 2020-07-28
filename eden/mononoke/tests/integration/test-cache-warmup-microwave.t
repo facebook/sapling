@@ -20,7 +20,7 @@ Check that Mononoke booted despite the lack of microwave snapshot
 
 Kill Mononoke
 
-  $ kill "$MONONOKE_PID"
+  $ killandwait "$MONONOKE_PID"
   $ truncate -s 0 "$TESTTMP/mononoke.out"
 
 Delete filenodes
