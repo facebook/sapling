@@ -131,10 +131,6 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
     return ObjectFetchContext::Cause::Fuse;
   }
 
-  // Returns true if the current context is being called from inside
-  // a FUSE request, false otherwise.
-  static bool isFuseRequest();
-
   void startRequest(
       EdenStats* stats,
       FuseThreadStats::HistogramPtr histogram,

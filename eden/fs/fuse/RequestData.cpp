@@ -29,10 +29,6 @@ RequestData::RequestData(
     Dispatcher* dispatcher)
     : channel_(channel), fuseHeader_(fuseHeader), dispatcher_(dispatcher) {}
 
-bool RequestData::isFuseRequest() {
-  return folly::RequestContext::get()->getContextData(kKey) != nullptr;
-}
-
 RequestData& RequestData::get() {
   const auto data = folly::RequestContext::get()->getContextData(kKey);
   if (UNLIKELY(!data)) {
