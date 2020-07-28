@@ -44,7 +44,6 @@ if sys.platform == "win32":
         "edenclient_test.EdenClientTestHg": True,
         "fsck_test.FsckTest": True,
         "fsck_test.FsckTestNoEdenfs": True,
-        "glob_test.GlobTestHg": True,
         "health_test.HealthOfFakeEdenFSTestAdHoc": True,
         "health_test.HealthOfFakeEdenFSTestManaged": True,
         "health_test.HealthOfFakeEdenFSTestSystemdEdenCLI": True,
