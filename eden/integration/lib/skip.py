@@ -101,7 +101,6 @@ if sys.platform == "win32":
         #
         # Test classes from the hg integration test binary
         #
-        "hg.absorb_test.AbsorbTestTreeOnly": True,
         "hg.add_test.AddTestTreeOnly": True,
         "hg.commit_test.CommitTestTreeOnly": True,
         "hg.copy_test.CopyTestTreeOnly": True,
