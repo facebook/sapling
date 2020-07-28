@@ -226,6 +226,8 @@ struct fuse_file_lock {
 #define FUSE_BIG_WRITES		(1 << 5)
 #define FUSE_DONT_MASK		(1 << 6)
 #define FUSE_FLOCK_LOCKS	(1 << 10)
+#define FUSE_NO_OPEN_SUPPORT	(1 << 17)
+#define FUSE_NO_OPENDIR_SUPPORT (1 << 24)
 #ifdef __APPLE__
 #  define FUSE_ALLOCATE		(1 << 27)
 #  define FUSE_EXCHANGE_DATA	(1 << 28)
@@ -233,6 +235,7 @@ struct fuse_file_lock {
 #  define FUSE_VOL_RENAME	(1 << 30)
 #  define FUSE_XTIMES		(1u << 31)
 #endif
+
 
 /**
  * CUSE INIT request/reply flags

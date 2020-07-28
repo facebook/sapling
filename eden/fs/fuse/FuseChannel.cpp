@@ -208,12 +208,10 @@ constexpr std::pair<uint32_t, const char*> kCapsLabels[] = {
     {FUSE_READDIRPLUS_AUTO, "READDIRPLUS_AUTO"},
     {FUSE_ASYNC_DIO, "ASYNC_DIO"},
     {FUSE_WRITEBACK_CACHE, "WRITEBACK_CACHE"},
-    {FUSE_NO_OPEN_SUPPORT, "NO_OPEN_SUPPORT"},
     {FUSE_PARALLEL_DIROPS, "PARALLEL_DIROPS"},
     {FUSE_HANDLE_KILLPRIV, "HANDLE_KILLPRIV"},
     {FUSE_POSIX_ACL, "POSIX_ACL"},
     {FUSE_CACHE_SYMLINKS, "CACHE_SYMLINKS"},
-    {FUSE_NO_OPENDIR_SUPPORT, "NO_OPENDIR_SUPPORT"},
 #endif
 #ifdef __APPLE__
     {FUSE_ALLOCATE, "ALLOCATE"},
@@ -221,6 +219,12 @@ constexpr std::pair<uint32_t, const char*> kCapsLabels[] = {
     {FUSE_CASE_INSENSITIVE, "CASE_INSENSITIVE"},
     {FUSE_VOL_RENAME, "VOL_RENAME"},
     {FUSE_XTIMES, "XTIMES"},
+#endif
+#ifdef FUSE_NO_OPEN_SUPPORT
+    {FUSE_NO_OPEN_SUPPORT, "NO_OPEN_SUPPORT"},
+#endif
+#ifdef FUSE_NO_OPENDIR_SUPPORT
+    {FUSE_NO_OPENDIR_SUPPORT, "NO_OPENDIR_SUPPORT"},
 #endif
 };
 
@@ -1023,9 +1027,13 @@ void FuseChannel::readInitPacket() {
   want |= FUSE_CACHE_SYMLINKS;
   // We can handle almost any request in parallel.
   want |= FUSE_PARALLEL_DIROPS;
+#endif
+#ifdef FUSE_NO_OPEN_SUPPORT
   // File handles are stateless so the kernel does not need to send open() and
   // release().
   want |= FUSE_NO_OPEN_SUPPORT;
+#endif
+#ifdef FUSE_NO_OPENDIR_SUPPORT
   // File handles are stateless so the kernel does not need to send
   // open() and release().
   want |= FUSE_NO_OPENDIR_SUPPORT;
