@@ -305,14 +305,14 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   auto dir1ino = dir1->getNodeId();
   auto dir2ino = dir2->getNodeId();
 
-  dir1->unlink("file.txt"_pc).get(0ms);
-  dir2->unlink("file.txt"_pc).get(0ms);
+  dir1->unlink("file.txt"_pc, InvalidationRequired::No).get(0ms);
+  dir2->unlink("file.txt"_pc, InvalidationRequired::No).get(0ms);
 
   // Test both having a positive and zero fuse reference counts.
   dir2->incFuseRefcount();
 
-  root->rmdir("dir1"_pc).get(0ms);
-  root->rmdir("dir2"_pc).get(0ms);
+  root->rmdir("dir1"_pc, InvalidationRequired::No).get(0ms);
+  root->rmdir("dir2"_pc, InvalidationRequired::No).get(0ms);
 
   dir1.reset();
   dir2.reset();
@@ -354,8 +354,10 @@ TEST(InodeMap, unloadedFileMetadataIsForgotten) {
   file1.reset();
   file2.reset();
 
-  dir1->unlink(PathComponentPiece{"file.txt"}).get(0ms);
-  dir2->unlink(PathComponentPiece{"file.txt"}).get(0ms);
+  dir1->unlink(PathComponentPiece{"file.txt"}, InvalidationRequired::No)
+      .get(0ms);
+  dir2->unlink(PathComponentPiece{"file.txt"}, InvalidationRequired::No)
+      .get(0ms);
 
   EXPECT_TRUE(mount.hasMetadata(file1ino));
   EXPECT_FALSE(mount.hasMetadata(file2ino));

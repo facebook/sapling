@@ -345,9 +345,10 @@ Future<Unit> ensureDotEdenSymlink(
             directory->symlink(symlinkName, symlinkTarget.stringPiece());
             return folly::unit;
           case Action::UnlinkThenSymlink:
-            return directory->unlink(symlinkName).thenValueInline([=](Unit&&) {
-              directory->symlink(symlinkName, symlinkTarget.stringPiece());
-            });
+            return directory->unlink(symlinkName, InvalidationRequired::Yes)
+                .thenValueInline([=](Unit&&) {
+                  directory->symlink(symlinkName, symlinkTarget.stringPiece());
+                });
         }
         EDEN_BUG() << "unexpected action type when configuring .eden directory";
       })

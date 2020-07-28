@@ -11,6 +11,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/TreeEntry.h"
 
@@ -25,11 +26,6 @@ class Blob;
 class CheckoutContext;
 class ObjectStore;
 class Tree;
-
-enum class InvalidationRequired : bool {
-  No,
-  Yes,
-};
 
 /**
  * A helper class representing an action that must be taken as part of a

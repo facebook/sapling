@@ -10,6 +10,7 @@
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>
 #include <optional>
+#include "eden/fs/fuse/Invalidation.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 
@@ -32,7 +33,6 @@ class Tree;
 class TreeEntry;
 class TreeInodeDebugInfo;
 struct FileMetadata;
-enum class InvalidationRequired : bool;
 
 constexpr folly::StringPiece kDotEdenName{".eden"};
 
@@ -165,8 +165,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   FileInodePtr symlink(PathComponentPiece name, folly::StringPiece contents);
 
   TreeInodePtr mkdir(PathComponentPiece name, mode_t mode);
-  FOLLY_NODISCARD folly::Future<folly::Unit> unlink(PathComponentPiece name);
-  FOLLY_NODISCARD folly::Future<folly::Unit> rmdir(PathComponentPiece name);
+  FOLLY_NODISCARD folly::Future<folly::Unit> unlink(
+      PathComponentPiece name,
+      InvalidationRequired invalidate);
+  FOLLY_NODISCARD folly::Future<folly::Unit> rmdir(
+      PathComponentPiece name,
+      InvalidationRequired invalidate);
 
   /**
    * Create a filesystem node.
@@ -503,8 +507,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * retry the remove again (hence the attemptNum parameter).
    */
   template <typename InodePtrType>
-  FOLLY_NODISCARD folly::Future<folly::Unit>
-  removeImpl(PathComponent name, InodePtr child, unsigned int attemptNum);
+  FOLLY_NODISCARD folly::Future<folly::Unit> removeImpl(
+      PathComponent name,
+      InodePtr child,
+      InvalidationRequired invalidate,
+      unsigned int attemptNum);
 
   /**
    * tryRemoveChild() actually unlinks a child from our entry list.
@@ -546,7 +553,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const RenameLock& renameLock,
       PathComponentPiece name,
       InodePtrType child,
-      bool flushKernelCache);
+      InvalidationRequired invalidate);
 
   /**
    * checkPreRemove() is called by tryRemoveChild() for file or directory

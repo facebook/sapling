@@ -360,7 +360,8 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
   FB_LOGF(mount_->getStraceLogger(), DBG7, "unlink({}, {})", parent, name);
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}](const TreeInodePtr& inode) {
-        return inode->unlink(childName);
+        // No need to flush the kernel cache because FUSE will do that for us.
+        return inode->unlink(childName, InvalidationRequired::No);
       });
 }
 
@@ -370,7 +371,8 @@ folly::Future<folly::Unit> EdenDispatcher::rmdir(
   FB_LOGF(mount_->getStraceLogger(), DBG7, "rmdir({}, {})", parent, name);
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}](const TreeInodePtr& inode) {
-        return inode->rmdir(childName);
+        // No need to flush the kernel cache because FUSE will do that for us.
+        return inode->rmdir(childName, InvalidationRequired::No);
       });
 }
 

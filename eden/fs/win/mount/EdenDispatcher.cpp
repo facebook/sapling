@@ -502,9 +502,9 @@ folly::Future<folly::Unit> removeFile(
   return mount.getInode(path.dirname()).thenValue([=](const InodePtr inode) {
     auto treeInodePtr = inode.asTreePtr();
     if (isDirectory) {
-      return treeInodePtr->rmdir(path.basename());
+      return treeInodePtr->rmdir(path.basename(), InvalidationRequired::No);
     } else {
-      return treeInodePtr->unlink(path.basename());
+      return treeInodePtr->unlink(path.basename(), InvalidationRequired::No);
     }
   });
 }

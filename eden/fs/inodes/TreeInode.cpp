@@ -1102,19 +1102,25 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
   return newChild;
 }
 
-folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
+folly::Future<folly::Unit> TreeInode::unlink(
+    PathComponentPiece name,
+    InvalidationRequired invalidate) {
   return getOrLoadChild(name).thenValue(
-      [self = inodePtrFromThis(),
-       childName = PathComponent{name}](const InodePtr& child) {
-        return self->removeImpl<FileInodePtr>(std::move(childName), child, 1);
+      [self = inodePtrFromThis(), childName = PathComponent{name}, invalidate](
+          const InodePtr& child) mutable {
+        return self->removeImpl<FileInodePtr>(
+            std::move(childName), child, invalidate, 1);
       });
 }
 
-folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
+folly::Future<folly::Unit> TreeInode::rmdir(
+    PathComponentPiece name,
+    InvalidationRequired invalidate) {
   return getOrLoadChild(name).thenValue(
-      [self = inodePtrFromThis(),
-       childName = PathComponent{name}](const InodePtr& child) {
-        return self->removeImpl<TreeInodePtr>(std::move(childName), child, 1);
+      [self = inodePtrFromThis(), childName = PathComponent{name}, invalidate](
+          const InodePtr& child) mutable {
+        return self->removeImpl<TreeInodePtr>(
+            std::move(childName), child, invalidate, 1);
       });
 }
 
@@ -1122,6 +1128,7 @@ template <typename InodePtrType>
 folly::Future<folly::Unit> TreeInode::removeImpl(
     PathComponent name,
     InodePtr childBasePtr,
+    InvalidationRequired invalidate,
     unsigned int attemptNum) {
   // Make sure the child is of the desired type
   auto child = childBasePtr.asSubclassPtrOrNull<InodePtrType>();
@@ -1158,16 +1165,7 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // Therefore leave the child parameter for tryRemoveChild() as null, and let
   // it remove whatever it happens to find with this name.
   const InodePtrType nullChildPtr;
-  // Set the flushKernelCache parameter to true unless this was triggered by a
-  // FUSE request, in which case the kernel will automatically update its
-  // cache correctly.
-#ifndef _WIN32
-  bool flushKernelCache = !RequestData::isFuseRequest();
-#else
-  bool flushKernelCache = false;
-#endif
-  int errnoValue =
-      tryRemoveChild(renameLock, name, nullChildPtr, flushKernelCache);
+  int errnoValue = tryRemoveChild(renameLock, name, nullChildPtr, invalidate);
   if (errnoValue == 0) {
     // We successfully removed the child.
     // Record the change in the journal.
@@ -1206,9 +1204,10 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   return std::move(childFuture)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{std::move(name)},
+                  invalidate,
                   attemptNum](const InodePtr& loadedChild) {
         return self->removeImpl<InodePtrType>(
-            childName, loadedChild, attemptNum + 1);
+            childName, loadedChild, invalidate, attemptNum + 1);
       });
 }
 
@@ -1217,7 +1216,7 @@ int TreeInode::tryRemoveChild(
     const RenameLock& renameLock,
     PathComponentPiece name,
     InodePtrType child,
-    bool flushKernelCache) {
+    InvalidationRequired invalidate) {
   materialize(&renameLock);
 
 #ifndef _WIN32
@@ -1289,7 +1288,7 @@ int TreeInode::tryRemoveChild(
 #else
   // We have successfully removed the entry.
   // Flush the kernel cache for this entry if requested.
-  if (flushKernelCache) {
+  if (InvalidationRequired::Yes == invalidate) {
     invalidateFuseInodeCache();
     invalidateChannelEntryCache(name);
   }
@@ -3154,9 +3153,11 @@ bool TreeInode::checkoutTryRemoveEmptyDir(CheckoutContext* ctx) {
     return false;
   }
 
-  bool flushKernelCache = true;
   auto errnoValue = location.parent->tryRemoveChild(
-      ctx->renameLock(), location.name, inodePtrFromThis(), flushKernelCache);
+      ctx->renameLock(),
+      location.name,
+      inodePtrFromThis(),
+      InvalidationRequired::Yes);
   return (errnoValue == 0);
 }
 
