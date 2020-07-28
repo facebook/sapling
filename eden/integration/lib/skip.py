@@ -119,7 +119,6 @@ if sys.platform == "win32":
             "test_grep_directory_from_root",
             "test_grep_directory_from_subdirectory",
         ],
-        "hg.merge_test.MergeTestTreeOnly": True,
         "hg.move_test.MoveTestTreeOnly": True,
         "hg.negative_caching_test.NegativeCachingTestTreeOnly": True,
         "hg.non_eden_operation_test.NonEdenOperationTestTreeOnly": True,
