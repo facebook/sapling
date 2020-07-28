@@ -141,7 +141,6 @@ if sys.platform == "win32":
             "test_truncation_upon_open_modifies_file",
         ],
         "hg.symlink_test.SymlinkTestTreeOnly": True,
-        "hg.undo_test.UndoTestTreeOnly": True,
         "hg.update_test.UpdateCacheInvalidationTestTreeOnly": True,
         "hg.update_test.UpdateTestTreeOnly": [
             # TODO: HGPLAIN=1 hg status uses forward slashes
