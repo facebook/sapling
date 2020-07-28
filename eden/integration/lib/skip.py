@@ -54,7 +54,9 @@ if sys.platform == "win32":
         "mount_test.MountTestHg": True,
         "oexcl_test.OpenExclusiveTestHg": True,
         "patch_test.PatchTestHg": True,
-        "persistence_test.PersistenceTestHg": True,
+        "persistence_test.PersistenceTestHg": [
+            "test_does_not_reuse_inode_numbers_after_cold_restart"
+        ],
         "rage_test.RageTest": True,
         "rc_test.RCTestHg": True,
         "redirect_test.RedirectTestHg": True,
