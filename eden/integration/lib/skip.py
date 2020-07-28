@@ -115,7 +115,10 @@ if sys.platform == "win32":
         "hg.doctor_test.DoctorTestTreeOnly": True,
         "hg.files_test.FilesTestTreeOnly": True,
         "hg.fold_test.FoldTestTreeOnly": True,
-        "hg.grep_test.GrepTestTreeOnly": True,
+        "hg.grep_test.GrepTestTreeOnly": [
+            "test_grep_directory_from_root",
+            "test_grep_directory_from_subdirectory",
+        ],
         "hg.histedit_test.HisteditTestTreeOnly": True,
         "hg.journal_test.JournalTestTreeOnly": True,
         "hg.merge_test.MergeTestTreeOnly": True,
