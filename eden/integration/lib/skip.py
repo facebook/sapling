@@ -123,7 +123,10 @@ if sys.platform == "win32":
         "hg.negative_caching_test.NegativeCachingTestTreeOnly": True,
         "hg.post_clone_test.SymlinkTestTreeOnly": True,
         "hg.pull_test.PullTestTreeOnly": True,
-        "hg.rebase_test.RebaseTestTreeOnly": True,
+        "hg.rebase_test.RebaseTestTreeOnly": [
+            "test_rebase_commit_with_independent_folder",
+            "test_rebase_stack_with_conflicts",
+        ],
         "hg.revert_test.RevertTestTreeOnly": True,
         "hg.rm_test.RmTestTreeOnly": True,
         "hg.rollback_test.RollbackTestTreeOnly": True,
