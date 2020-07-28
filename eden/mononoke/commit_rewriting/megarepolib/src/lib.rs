@@ -26,16 +26,17 @@ use mercurial_types::{
 use mononoke_types::{ChangesetId, ContentId, FileChange, FileType};
 use movers::Mover;
 use slog::info;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::num::NonZeroU64;
 
 pub mod chunking;
 pub mod common;
-use crate::chunking::Chunker;
+pub mod pre_merge_deletes;
+
 use crate::common::{
-    create_and_save_bonsai, create_save_and_generate_hg_changeset, ChangesetArgs,
-    ChangesetArgsFactory,
+    create_save_and_generate_hg_changeset, ChangesetArgs, ChangesetArgsFactory, StackPosition,
 };
+pub use pre_merge_deletes::create_sharded_delete_commit_stacks;
 
 const BUFFER_SIZE: usize = 100;
 const REPORTING_INTERVAL_FILES: usize = 10000;
@@ -206,7 +207,7 @@ where
             &repo,
             vec![parent_bcs_id],
             file_changes,
-            resulting_changeset_args(idx),
+            resulting_changeset_args(StackPosition(idx)),
         )
         .await?;
 
@@ -221,160 +222,6 @@ where
     Ok(res)
 }
 
-async fn get_all_working_copy_paths(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    cs_id: ChangesetId,
-) -> Result<Vec<MPath>, Error> {
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .compat()
-        .await?;
-
-    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
-    let paths_sorted = {
-        let mut paths = hg_cs
-            .manifestid()
-            .list_leaf_entries(ctx.clone(), repo.blobstore().clone())
-            .compat()
-            .map_ok(|(mpath, _)| mpath)
-            .try_collect::<Vec<MPath>>()
-            .await?;
-
-        paths.sort();
-        paths
-    };
-
-    Ok(paths_sorted)
-}
-
-/// Create pre-merge delete commits
-/// Our gradual merge approach is like this:
-/// ```text
-///   M1
-///   . \
-///   .  D1
-///   M2   \
-///   . \   |
-///   .  D2 |
-///   o    \|
-///   |     |
-///   o    PM
-///
-///   ^     ^
-///   |      \
-/// main DAG   merged repo's DAG
-/// ```
-/// Where:
-/// - `M1`, `M2` - merge commits, each of which merges only a chunk
-///   of the merged repo's DAG
-/// - `PM` is a pre-merge master of the merged repo's DAG
-/// - `D1` and `D2` are commits, which delete everything except
-///   for a chunk of working copy each. These commits are needed
-///   to make partial merge possible. The union of `D1`, `D2`, ...
-///   working copies must equal the whole `PM` working copy. These
-///   deletion commits do not form a stack, they are all parented
-///   by `PM`
-///
-/// This function creates a set of such commits, parented
-/// by `parent_bcs_id`. Files in the working copy are sharded
-/// according to the `chunker` fn.
-pub async fn create_sharded_delete_commits<'a>(
-    ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
-    parent_bcs_id: ChangesetId,
-    chunker: Chunker<MPath>,
-    resulting_changeset_args: impl ChangesetArgsFactory,
-) -> Result<Vec<ChangesetId>, Error> {
-    let all_mpaths: Vec<MPath> = get_all_working_copy_paths(ctx, repo, parent_bcs_id).await?;
-
-    let chunked_mpaths = {
-        let chunked_mpaths = chunker(all_mpaths.clone());
-        // Sanity check: total number of files before and after chunking is the same
-        // (together with a check below this also ensures that we didn't duplicate
-        // any file)
-        let before_count = all_mpaths.len();
-        let after_count = chunked_mpaths
-            .iter()
-            .map(|chunk| chunk.len())
-            .sum::<usize>();
-        if before_count != after_count {
-            return Err(anyhow!(
-                "File counts before ({}) and after ({}) chunking are different",
-                before_count,
-                after_count,
-            ));
-        }
-
-        // Sanity check that we have not dropped any file
-        let before: HashSet<&MPath> = all_mpaths.iter().collect();
-        let after: HashSet<&MPath> = chunked_mpaths
-            .iter()
-            .map(|chunk| chunk.iter())
-            .flatten()
-            .collect();
-        if before != after {
-            let lost_paths: Vec<&MPath> = before.difference(&after).take(5).map(|mp| *mp).collect();
-            return Err(anyhow!(
-                "Chunker lost some paths, for example: {:?}",
-                lost_paths
-            ));
-        }
-
-        chunked_mpaths
-    };
-
-    let delete_commit_creation_futs = chunked_mpaths.into_iter().enumerate().map(|(i, chunk)| {
-        let changeset_args = resulting_changeset_args(i);
-        create_delete_commit(
-            ctx,
-            repo,
-            &parent_bcs_id,
-            &all_mpaths,
-            chunk.into_iter().collect(),
-            changeset_args,
-        )
-    });
-
-    future::try_join_all(delete_commit_creation_futs).await
-}
-
-async fn create_delete_commit(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    parent_bcs_id: &ChangesetId,
-    all_files: &Vec<MPath>,
-    files_to_keep: HashSet<MPath>,
-    changeset_args: ChangesetArgs,
-) -> Result<ChangesetId, Error> {
-    let file_changes: BTreeMap<MPath, Option<FileChange>> = all_files
-        .iter()
-        .filter_map(|mpath| {
-            if files_to_keep.contains(mpath) {
-                None
-            } else {
-                Some((mpath.clone(), None))
-            }
-        })
-        .collect();
-
-    info!(
-        ctx.logger(),
-        "Creating a delete commit for {} files with {:?}",
-        file_changes.len(),
-        changeset_args
-    );
-
-    create_and_save_bonsai(
-        ctx,
-        repo,
-        vec![parent_bcs_id.clone()],
-        file_changes,
-        changeset_args,
-    )
-    .await
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -385,7 +232,7 @@ mod test {
     use fixtures::{linear, many_files_dirs};
     use futures::{compat::Future01CompatExt, future::TryFutureExt};
     use futures_old::{stream::Stream, Future};
-    use maplit::{btreemap, hashset};
+    use maplit::btreemap;
     use mercurial_types::HgChangesetId;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime};
     use std::str::FromStr;
@@ -618,9 +465,9 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
 
         let old_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-        let create_cs_args = |num| ChangesetArgs {
+        let create_cs_args = |num: StackPosition| ChangesetArgs {
             author: "user".to_string(),
-            message: format!("I like to delete it: {}", num),
+            message: format!("I like to delete it: {}", num.0),
             datetime: DateTime::from_rfc3339("1985-04-12T23:20:50.52Z").unwrap(),
             bookmark: None,
             mark_public: false,
@@ -665,239 +512,6 @@ mod test {
         for (leaf, _) in &leaf_entries {
             assert!(prefix.is_prefix_of(leaf));
         }
-
-        Ok(())
-    }
-
-    #[fbinit::compat_test]
-    async fn test_create_delete_commit(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
-        let ctx = CoreContext::test_mock(fb);
-
-        let master_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-
-        let changeset_args = ChangesetArgs {
-            author: "user".to_string(),
-            message: "I like to delete it".to_string(),
-            datetime: DateTime::from_rfc3339("1985-04-12T23:20:50.52Z").unwrap(),
-            bookmark: None,
-            mark_public: false,
-        };
-
-        let all_mpaths = get_all_working_copy_paths(&ctx, &repo, master_bcs_id).await?;
-        let files_to_keep = hashset!(MPath::new("6")?);
-        let deletion_cs_id = create_delete_commit(
-            &ctx,
-            &repo,
-            &master_bcs_id,
-            &all_mpaths,
-            files_to_keep.clone(),
-            changeset_args,
-        )
-        .await?;
-        let new_all_mpaths: HashSet<_> = get_all_working_copy_paths(&ctx, &repo, deletion_cs_id)
-            .await?
-            .into_iter()
-            .collect();
-        assert_eq!(files_to_keep, new_all_mpaths);
-        Ok(())
-    }
-
-    #[fbinit::compat_test]
-    async fn test_create_delete_commits_one_per_file(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
-        let ctx = CoreContext::test_mock(fb);
-
-        let master_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-
-        let changeset_args_factory = |num| ChangesetArgs {
-            author: "user".to_string(),
-            message: format!("I like to delete it: {}", num),
-            datetime: DateTime::from_rfc3339("1985-04-12T23:20:50.52Z").unwrap(),
-            bookmark: None,
-            mark_public: false,
-        };
-
-        let chunker: Chunker<MPath> = Box::new(|files: Vec<MPath>| {
-            files
-                .into_iter()
-                .map(|file| vec![file])
-                .collect::<Vec<Vec<MPath>>>()
-        });
-        let commits = create_sharded_delete_commits(
-            &ctx,
-            &repo,
-            master_bcs_id,
-            chunker,
-            changeset_args_factory,
-        )
-        .await?;
-
-        let all_mpaths_at_master: HashSet<_> =
-            get_all_working_copy_paths(&ctx, &repo, master_bcs_id)
-                .await?
-                .into_iter()
-                .collect();
-        let all_mpaths_at_commits = future::try_join_all(
-            commits
-                .iter()
-                .map(|cs_id| get_all_working_copy_paths(&ctx, &repo, *cs_id)),
-        )
-        .await?;
-
-        for mpaths_at_commit in &all_mpaths_at_commits {
-            assert_eq!(mpaths_at_commit.len(), 1);
-        }
-
-        let all_mpaths_at_commits: HashSet<MPath> = all_mpaths_at_commits
-            .into_iter()
-            .map(|mpaths_at_commit| mpaths_at_commit.into_iter())
-            .flatten()
-            .collect();
-        assert_eq!(all_mpaths_at_commits, all_mpaths_at_master);
-
-        Ok(())
-    }
-
-    #[fbinit::compat_test]
-    async fn test_create_delete_commits_two_commits(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
-        let ctx = CoreContext::test_mock(fb);
-
-        let master_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-
-        let changeset_args_factory = |num| ChangesetArgs {
-            author: "user".to_string(),
-            message: format!("I like to delete it: {}", num),
-            datetime: DateTime::from_rfc3339("1985-04-12T23:20:50.52Z").unwrap(),
-            bookmark: None,
-            mark_public: false,
-        };
-
-        let chunker: Chunker<MPath> = Box::new(|files: Vec<MPath>| {
-            let (v1, v2) = files.split_at(1);
-            vec![v1.to_vec(), v2.to_vec()]
-        });
-
-        let commits = create_sharded_delete_commits(
-            &ctx,
-            &repo,
-            master_bcs_id,
-            chunker,
-            changeset_args_factory,
-        )
-        .await?;
-
-        let all_mpaths_at_master: HashSet<_> =
-            get_all_working_copy_paths(&ctx, &repo, master_bcs_id)
-                .await?
-                .into_iter()
-                .collect();
-        let all_mpaths_at_commits = future::try_join_all(
-            commits
-                .iter()
-                .map(|cs_id| get_all_working_copy_paths(&ctx, &repo, *cs_id)),
-        )
-        .await?;
-
-        assert_eq!(all_mpaths_at_commits[0].len(), 1);
-        assert_eq!(
-            all_mpaths_at_commits[1].len(),
-            all_mpaths_at_master.len() - 1
-        );
-
-        let all_mpaths_at_commits: HashSet<MPath> = all_mpaths_at_commits
-            .into_iter()
-            .map(|mpaths_at_commit| mpaths_at_commit.into_iter())
-            .flatten()
-            .collect();
-        assert_eq!(all_mpaths_at_commits, all_mpaths_at_master);
-
-        Ok(())
-    }
-
-    #[fbinit::compat_test]
-    async fn test_create_delete_commits_invalid_chunker(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
-        let ctx = CoreContext::test_mock(fb);
-
-        let master_bcs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-
-        let changeset_args_factory = |num| ChangesetArgs {
-            author: "user".to_string(),
-            message: format!("I like to delete it: {}", num),
-            datetime: DateTime::from_rfc3339("1985-04-12T23:20:50.52Z").unwrap(),
-            bookmark: None,
-            mark_public: false,
-        };
-
-        // fewer files
-        let chunker: Chunker<MPath> = Box::new(|files: Vec<MPath>| {
-            let (_, v2) = files.split_at(1);
-            vec![v2.to_vec()]
-        });
-
-        let commits_res = create_sharded_delete_commits(
-            &ctx,
-            &repo,
-            master_bcs_id,
-            chunker,
-            changeset_args_factory,
-        )
-        .await;
-
-        assert!(commits_res.is_err());
-
-        // more files
-        let chunker: Chunker<MPath> = Box::new(|files: Vec<MPath>| {
-            let (_, v2) = files.split_at(1);
-            vec![v2.to_vec(), v2.to_vec()]
-        });
-
-        let commits_res = create_sharded_delete_commits(
-            &ctx,
-            &repo,
-            master_bcs_id,
-            chunker,
-            changeset_args_factory,
-        )
-        .await;
-
-        assert!(commits_res.is_err());
-
-        // correct number, but unrelated files
-        let chunker: Chunker<MPath> = Box::new(|files: Vec<MPath>| {
-            let (_, v2) = files.split_at(1);
-            vec![vec![MPath::new("ababagalamaga").unwrap()], v2.to_vec()]
-        });
-
-        let commits_res = create_sharded_delete_commits(
-            &ctx,
-            &repo,
-            master_bcs_id,
-            chunker,
-            changeset_args_factory,
-        )
-        .await;
-
-        assert!(commits_res.is_err());
-
-        // duplicated files
-        let chunker: Chunker<MPath> = Box::new(|files: Vec<MPath>| {
-            let (_, v2) = files.split_at(1);
-            vec![v2.to_vec(), files]
-        });
-
-        let commits_res = create_sharded_delete_commits(
-            &ctx,
-            &repo,
-            master_bcs_id,
-            chunker,
-            changeset_args_factory,
-        )
-        .await;
-
-        assert!(commits_res.is_err());
 
         Ok(())
     }
