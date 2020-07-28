@@ -539,7 +539,17 @@ impl LfsStore {
                 None => Ok(StoreResult::NotFound(key)),
                 Some(content_hash) => {
                     match self.blobs.get(&content_hash.clone().unwrap_sha256())? {
-                        None => Ok(StoreResult::NotFound(key)),
+                        None => {
+                            let hgid = match key {
+                                StoreKey::HgId(hgid) => Some(hgid),
+                                StoreKey::Content(_, hgid) => hgid,
+                            };
+
+                            Ok(StoreResult::NotFound(StoreKey::Content(
+                                content_hash.clone(),
+                                hgid,
+                            )))
+                        }
                         Some(blob) => Ok(StoreResult::Found((entry, blob))),
                     }
                 }
@@ -1386,11 +1396,15 @@ impl RemoteDataStore for LfsRemoteStore {
             .iter()
             .map(|k| {
                 for store in &stores {
-                    if let Some(pointer) = store.pointers.read().entry(k)? {
+                    let pointers = store.pointers.read();
+                    if let Some(pointer) = pointers.entry(k)? {
                         if let Some(content_hash) =
                             pointer.content_hashes.get(&ContentHashType::Sha256)
                         {
-                            obj_set.insert(content_hash.clone().unwrap_sha256(), k.clone());
+                            obj_set.insert(
+                                content_hash.clone().unwrap_sha256(),
+                                (k.clone(), pointers.0.is_local()),
+                            );
                             return Ok(Some((
                                 content_hash.clone().unwrap_sha256(),
                                 pointer.size.try_into()?,
@@ -1426,14 +1440,23 @@ impl RemoteDataStore for LfsRemoteStore {
 
             move |sha256, data| {
                 size.fetch_add(data.len(), Ordering::Relaxed);
-                obj_set.lock().remove(&sha256);
-                remote.shared.blobs.add(&sha256, data)
+                let (_, is_local) = obj_set
+                    .lock()
+                    .remove(&sha256)
+                    .ok_or_else(|| format_err!("Cannot find {}", sha256))?;
+
+                if is_local {
+                    // Safe to unwrap as the sha256 is coming from a local LFS pointer.
+                    remote.local.as_ref().unwrap().blobs.add(&sha256, data)
+                } else {
+                    remote.shared.blobs.add(&sha256, data)
+                }
             }
         })?;
         span.record("size", &size.load(Ordering::Relaxed));
 
         let obj_set = mem::take(&mut *obj_set.lock());
-        not_found.extend(obj_set.into_iter().map(|(sha256, k)| match k {
+        not_found.extend(obj_set.into_iter().map(|(sha256, (k, _))| match k {
             StoreKey::Content(content, hgid) => StoreKey::Content(content, hgid),
             StoreKey::HgId(hgid) => StoreKey::Content(ContentHash::Sha256(sha256), Some(hgid)),
         }));
@@ -1939,7 +1962,10 @@ mod tests {
         // The blob isn't present, so we cannot get it.
         assert_eq!(
             multiplexer.get(k.clone())?,
-            StoreResult::NotFound(k.clone())
+            StoreResult::NotFound(StoreKey::Content(
+                ContentHash::Sha256(sha256.clone()),
+                Some(k1.clone())
+            ))
         );
 
         multiplexer.flush()?;
@@ -2006,7 +2032,10 @@ mod tests {
         // The blob isn't present, so we cannot get it.
         assert_eq!(
             multiplexer.get(k.clone())?,
-            StoreResult::NotFound(k.clone())
+            StoreResult::NotFound(StoreKey::Content(
+                ContentHash::Sha256(sha256.clone()),
+                Some(k1.clone())
+            ))
         );
 
         multiplexer.flush()?;
@@ -2491,8 +2520,10 @@ mod tests {
         let k = StoreKey::hgid(k1.clone());
         remote.upload(&[k.clone()])?;
 
+        let contentk = StoreKey::Content(ContentHash::sha256(&delta.data), Some(k1));
+
         // The blob was moved from the local store to the shared store.
-        assert_eq!(local_lfs.get(k.clone())?, StoreResult::NotFound(k.clone()));
+        assert_eq!(local_lfs.get(k.clone())?, StoreResult::NotFound(contentk));
         assert_eq!(
             shared_lfs.get(k.clone())?,
             StoreResult::Found(delta.data.to_vec())
