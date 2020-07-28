@@ -71,10 +71,8 @@ if args.tests or args.rerun_failed:
     tests = list(tests)
 else:
     excluded_tests = {
-        "test-backfill-git-mapping.t",  # "${ENV^^}" problem
         "test-backsync-forever.t",  # Unknown issue
         "test-backsyncer-merges.t",  # Missing BACKSYNCER
-        "test-blobimport-derived-data.t",  # "|&" problem
         "test-blobimport-inline.t",  # Illegal byte sequence and "sed -i"
         "test-blobimport-lfs.t",  # Timed out
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
@@ -95,7 +93,6 @@ else:
         "test-hook-tailer.t",  # Issue with hggit extension
         "test-hooks.t",  # Hooks are not in OSS yet
         "test-inconsistent-hash.t",  # Illegal byte sequence and "sed -i"
-        "test-infinitepush-hydrated.t",  # "|&" problem
         "test-infinitepush-lfs.t",  # Timed out
         "test-large-path-and-content.t",  # Complex bash issues
         "test-lfs-copytracing.t",  # Timed out
@@ -129,7 +126,6 @@ else:
         "test-push-protocol-lfs.t",  # Timed out
         "test-push-redirector-pushrebase-hooks.t",  # Hooks are not in OSS yet
         "test-push-redirector-pushrebase-onesided.t",  # Missing MONONOKE_X_REPO_SYNC
-        "test-push-redirector-pushrebase.t",  # "[[ -v ... ]]" in library-push-redirector.sh and "ls" problem
         "test-push-redirector-sync-job.t",  # Missing BACKSYNCER
         "test-pushrebase-block-casefolding.t",  # Most likely MacOS path case insensitivity
         "test-pushrebase-discovery.t",  # Hooks are not in OSS yet
