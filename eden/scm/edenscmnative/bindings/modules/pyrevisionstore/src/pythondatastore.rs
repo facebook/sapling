@@ -88,11 +88,11 @@ impl HgIdDataStore for PythonHgIdDataStore {
 }
 
 impl RemoteDataStore for PythonHgIdDataStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let keys = keys
-            .into_iter()
+        let py_keys = keys
+            .iter()
             .filter_map(|key| match key {
                 StoreKey::HgId(key) => {
                     let py_name = PyPathBuf::from(key.path.as_repo_path());
@@ -104,10 +104,10 @@ impl RemoteDataStore for PythonHgIdDataStore {
             .collect::<Vec<_>>();
 
         self.py_store
-            .call_method(py, "prefetch", (keys,), None)
+            .call_method(py, "prefetch", (py_keys,), None)
             .map_err(|e| PyErr::from(e))?;
 
-        Ok(())
+        self.get_missing(&keys)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {

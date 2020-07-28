@@ -694,8 +694,9 @@ impl HgIdRemoteStore for PyHgIdRemoteStore {
 }
 
 impl RemoteDataStore for PyRemoteDataStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
-        self.0.prefetch(keys)
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.0.prefetch(keys)?;
+        self.get_missing(keys)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
@@ -706,14 +707,14 @@ impl RemoteDataStore for PyRemoteDataStore {
 impl HgIdDataStore for PyRemoteDataStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         match self.prefetch(&[key.clone()]) {
-            Ok(()) => self.0.inner.read().datastore.as_ref().unwrap().get(key),
+            Ok(_) => self.0.inner.read().datastore.as_ref().unwrap().get(key),
             Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         match self.prefetch(&[key.clone()]) {
-            Ok(()) => self
+            Ok(_) => self
                 .0
                 .inner
                 .read()

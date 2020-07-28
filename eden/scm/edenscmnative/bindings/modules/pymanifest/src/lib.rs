@@ -52,7 +52,7 @@ impl<T: HgIdDataStore + RemoteDataStore> manifest_tree::TreeStore for ManifestSt
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         let keys = keys.iter().map(|k| StoreKey::from(k)).collect::<Vec<_>>();
-        self.underlying.prefetch(&keys)
+        self.underlying.prefetch(&keys).map(|_| ())
     }
 }
 

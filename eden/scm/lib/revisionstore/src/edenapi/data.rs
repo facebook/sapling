@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use anyhow::Result;
 use futures::prelude::*;
@@ -38,17 +38,21 @@ impl<T: EdenApiStoreKind> EdenApiDataStore<T> {
 }
 
 impl<T: EdenApiStoreKind> RemoteDataStore for EdenApiDataStore<T> {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let client = self.remote.client.clone();
         let repo = self.remote.repo.clone();
+        let all_keys = keys.iter().cloned().collect::<HashSet<_>>();
         let keys = hgid_keys(keys);
 
         let fetch = async move {
             let mut response = T::prefetch(client, repo, keys, None).await?;
+            let mut fetched = HashSet::new();
             while let Some(entry) = response.entries.try_next().await? {
                 self.store.add_entry(&entry)?;
+                fetched.insert(StoreKey::hgid(entry.key().clone()));
             }
-            Ok(())
+            let not_fetched = &all_keys - &fetched;
+            Ok(not_fetched.into_iter().collect::<Vec<_>>())
         };
 
         let mut rt = self.remote.runtime.lock();

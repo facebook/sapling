@@ -12,7 +12,7 @@ use std::{
     env::var_os,
     fs::File,
     io::{ErrorKind, Read, Write},
-    iter,
+    iter, mem,
     ops::Range,
     path::{Path, PathBuf},
     str::{self, FromStr},
@@ -1372,28 +1372,33 @@ struct LfsRemoteStore {
 }
 
 impl RemoteDataStore for LfsRemoteStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        let mut not_found = Vec::new();
+
+        let mut obj_set = HashMap::new();
         let objs = keys
             .iter()
             .map(|k| {
                 if let Some(pointer) = self.remote.shared.pointers.read().entry(k)? {
-                    match pointer.content_hashes.get(&ContentHashType::Sha256) {
-                        None => Ok(None),
-                        Some(content_hash) => Ok(Some((
+                    if let Some(content_hash) = pointer.content_hashes.get(&ContentHashType::Sha256)
+                    {
+                        obj_set.insert(content_hash.clone().unwrap_sha256(), k.clone());
+                        return Ok(Some((
                             content_hash.clone().unwrap_sha256(),
                             pointer.size.try_into()?,
-                        ))),
+                        )));
                     }
-                } else {
-                    Ok(None)
                 }
+
+                not_found.push(k.clone());
+                Ok(None)
             })
             .filter_map(|res| res.transpose())
             .collect::<Result<Vec<_>>>()?;
 
         // If there are no objects involved at all, then don't make an (expensive) remote request!
         if objs.is_empty() {
-            return Ok(());
+            return Ok(not_found);
         }
 
         let span = info_span!(
@@ -1404,17 +1409,27 @@ impl RemoteDataStore for LfsRemoteStore {
         let _guard = span.enter();
 
         let size = Arc::new(AtomicUsize::new(0));
+        let obj_set = Arc::new(Mutex::new(obj_set));
         self.remote.batch_fetch(&objs, {
             let remote = self.remote.clone();
             let size = size.clone();
+            let obj_set = obj_set.clone();
+
             move |sha256, data| {
                 size.fetch_add(data.len(), Ordering::Relaxed);
+                obj_set.lock().remove(&sha256);
                 remote.shared.blobs.add(&sha256, data)
             }
         })?;
         span.record("size", &size.load(Ordering::Relaxed));
 
-        Ok(())
+        let obj_set = mem::take(&mut *obj_set.lock());
+        not_found.extend(obj_set.into_iter().map(|(sha256, k)| match k {
+            StoreKey::Content(content, hgid) => StoreKey::Content(content, hgid),
+            StoreKey::HgId(hgid) => StoreKey::Content(ContentHash::Sha256(sha256), Some(hgid)),
+        }));
+
+        Ok(not_found)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
@@ -1487,14 +1502,14 @@ impl RemoteDataStore for LfsRemoteStore {
 impl HgIdDataStore for LfsRemoteStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         match self.prefetch(&[key.clone()]) {
-            Ok(()) => self.store.get(key),
+            Ok(_) => self.store.get(key),
             Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         match self.prefetch(&[key.clone()]) {
-            Ok(()) => self.store.get_meta(key),
+            Ok(_) => self.store.get_meta(key),
             Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }

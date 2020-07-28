@@ -51,7 +51,7 @@ pub trait RemoteDataStore: HgIdDataStore + Send + Sync {
     /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch
     /// everything that was asked. On a higher level store, such as the `ContentStore`, this will
     /// avoid fetching data that is already present locally.
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()>;
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>>;
 
     /// Send all the blobs referenced by the keys to the remote store.
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>>;
@@ -109,7 +109,7 @@ impl<T: HgIdDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdDataStor
 /// Implement `RemoteDataStore` for all types that can be `Deref` into a `RemoteDataStore`. This
 /// includes all the smart pointers like `Box`, `Rc`, `Arc`.
 impl<T: RemoteDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteDataStore for U {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         T::prefetch(self, keys)
     }
 

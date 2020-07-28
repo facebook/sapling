@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+    sync::Arc,
+};
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
@@ -89,7 +93,9 @@ struct FakeRemoteDataStore {
 }
 
 impl RemoteDataStore for FakeRemoteDataStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        let mut not_found = keys.iter().collect::<HashSet<_>>();
+
         for k in keys {
             match k {
                 StoreKey::HgId(k) => {
@@ -106,12 +112,13 @@ impl RemoteDataStore for FakeRemoteDataStore {
                             flags: *flags,
                         },
                     )?;
+                    not_found.remove(&StoreKey::hgid(delta.key));
                 }
                 StoreKey::Content(_, _) => continue,
             }
         }
 
-        Ok(())
+        Ok(not_found.into_iter().cloned().collect())
     }
 
     fn upload(&self, _keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
@@ -123,14 +130,14 @@ impl HgIdDataStore for FakeRemoteDataStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         match self.prefetch(&[key.clone()]) {
             Err(_) => Ok(StoreResult::NotFound(key)),
-            Ok(()) => self.store.get(key),
+            Ok(_) => self.store.get(key),
         }
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         match self.prefetch(&[key.clone()]) {
             Err(_) => Ok(StoreResult::NotFound(key)),
-            Ok(()) => self.store.get_meta(key),
+            Ok(_) => self.store.get_meta(key),
         }
     }
 }

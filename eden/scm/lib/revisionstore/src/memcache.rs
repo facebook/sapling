@@ -7,7 +7,7 @@
 
 //! Adapters around Memcache to be transparently used as HgIdDataStore or HgIdHistoryStore.
 
-use std::{mem::size_of, path::PathBuf, sync::Arc};
+use std::{collections::HashSet, mem::size_of, path::PathBuf, sync::Arc};
 
 use anyhow::Result;
 use bytes::Bytes;
@@ -157,14 +157,14 @@ impl MemcacheHgIdDataStore {
 impl HgIdDataStore for MemcacheHgIdDataStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         match self.prefetch(&[key.clone()]) {
-            Ok(()) => self.store.get(key),
+            Ok(_) => self.store.get(key),
             Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         match self.prefetch(&[key.clone()]) {
-            Ok(()) => self.store.get_meta(key),
+            Ok(_) => self.store.get_meta(key),
             Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
@@ -177,7 +177,7 @@ impl LocalStore for MemcacheHgIdDataStore {
 }
 
 impl RemoteDataStore for MemcacheHgIdDataStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let span = info_span!(
             "MemcacheHgIdDataStore::prefetch",
             key_count = keys.len(),
@@ -188,6 +188,8 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
 
         let mut hits = 0;
         let mut size = 0;
+
+        let mut not_found = keys.iter().collect::<HashSet<_>>();
 
         let keys = keys
             .iter()
@@ -210,13 +212,14 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
                 size += delta.data.len() + size_of::<Key>();
 
                 self.store.add(&delta, &metadata)?;
+                not_found.remove(&StoreKey::hgid(delta.key));
             }
         }
 
         span.record("hit_count", &hits);
         span.record("size", &size);
 
-        Ok(())
+        Ok(not_found.into_iter().cloned().collect())
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {

@@ -117,17 +117,17 @@ impl HgIdDataStore for ContentStore {
 }
 
 impl RemoteDataStore for ContentStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         if let Some(remote_store) = self.remote_store.as_ref() {
             let missing = self.get_missing(keys)?;
             if missing == vec![] {
-                Ok(())
+                Ok(vec![])
             } else {
                 remote_store.prefetch(&missing)
             }
         } else {
             // There is no remote store, let's pretend everything is fine.
-            Ok(())
+            Ok(vec![])
         }
     }
 

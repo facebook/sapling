@@ -34,8 +34,8 @@ impl HgIdRemoteStore for FakeRemoteStore {
 }
 
 impl RemoteDataStore for FakeRemoteDataStore {
-    fn prefetch(&self, _keys: &[StoreKey]) -> Result<()> {
-        Ok(())
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        Ok(keys.to_vec())
     }
 
     fn upload(&self, _keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
