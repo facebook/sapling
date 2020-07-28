@@ -127,7 +127,10 @@ TEST(TreeInode, updateAndReaddir) {
   EXPECT_EQ(L"file3", result[1].name);
   EXPECT_EQ(L"newfile.txt", result[2].name);
 
-  somedir->rename("file3"_pc, somedir, "renamedfile.txt"_pc).get(0ms);
+  somedir
+      ->rename(
+          "file3"_pc, somedir, "renamedfile.txt"_pc, InvalidationRequired::No)
+      .get(0ms);
   result = somedir->readdir().get(0ms);
   ASSERT_EQ(3, result.size());
   EXPECT_EQ(L"file1", result[0].name);
@@ -308,7 +311,8 @@ void runConcurrentModificationAndReaddirIteration(
             break;
           }
           case 2: { // rename
-            root->rename(pickName(), root, pickName()).get(0ms);
+            root->rename(pickName(), root, pickName(), InvalidationRequired::No)
+                .get(0ms);
             break;
           }
         }

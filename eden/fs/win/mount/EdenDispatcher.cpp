@@ -490,7 +490,10 @@ folly::Future<folly::Unit> renameFile(
                            const InodePtr newParentInodePtr) {
               auto newParentTreePtr = newParentInodePtr.asTreePtr();
               return oldParentTreePtr->rename(
-                  oldPath.basename(), newParentTreePtr, newPath.basename());
+                  oldPath.basename(),
+                  newParentTreePtr,
+                  newPath.basename(),
+                  InvalidationRequired::No);
             });
       });
 }

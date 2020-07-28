@@ -425,7 +425,8 @@ folly::Future<folly::Unit> EdenDispatcher::rename(
                      const TreeInodePtr& parent) mutable {
         return std::move(npFuture).thenValue(
             [parent, name, newName](const TreeInodePtr& newParent) {
-              return parent->rename(name, newParent, newName);
+              return parent->rename(
+                  name, newParent, newName, InvalidationRequired::No);
             });
       });
 }

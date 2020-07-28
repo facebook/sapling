@@ -140,7 +140,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   FOLLY_NODISCARD folly::Future<folly::Unit> rename(
       PathComponentPiece name,
       TreeInodePtr newParent,
-      PathComponentPiece newName);
+      PathComponentPiece newName,
+      InvalidationRequired invalidate);
 
 #ifndef _WIN32
   DirList readdir(DirList&& list, off_t off, ObjectFetchContext& context);
@@ -446,7 +447,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece srcName,
       PathMap<DirEntry>::iterator srcIter,
       TreeInodePtr destParent,
-      PathComponentPiece destName);
+      PathComponentPiece destName,
+      InvalidationRequired invalidate);
 
   Overlay* getOverlay() const;
 
@@ -664,21 +666,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * known to FUSE, which is not true for new entries.
    */
   void invalidateFuseInodeCache();
-
-  /**
-   * If running outside of a FUSE request (in which case the kernel already
-   * knows to flush the appropriate caches), call invalidateFuseInodeCache().
-   */
-  void invalidateFuseInodeCacheIfRequired();
-
-  /**
-   * Invalidate the kernel FUSE cache for this entry name only if we are not
-   * being called from inside a FUSE request handler.
-   *
-   * If we are being invoked because of a FUSE request for this entry we don't
-   * need to tell the kernel about the change--it will automatically know.
-   */
-  void invalidateFuseEntryCacheIfRequired(PathComponentPiece name);
 #endif
 
   /**

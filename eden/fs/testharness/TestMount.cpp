@@ -487,7 +487,8 @@ void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
                     ->rename(
                         srcPath.basename(),
                         getTreeInode(destPath.dirname()),
-                        destPath.basename());
+                        destPath.basename(),
+                        InvalidationRequired::No);
   std::move(future).get();
 }
 

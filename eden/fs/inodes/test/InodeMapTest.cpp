@@ -230,7 +230,8 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
 
   // Rename c to x after the recursive resolution should have
   // already looked it up
-  auto renameFuture = bInode->rename("c"_pc, bInode, "x"_pc);
+  auto renameFuture =
+      bInode->rename("c"_pc, bInode, "x"_pc, InvalidationRequired::No);
   ASSERT_TRUE(renameFuture.isReady());
   EXPECT_FALSE(fileFuture.isReady());
 
@@ -272,7 +273,8 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
 
   // Rename c to x while the recursive resolution is still trying
   // to look it up.
-  auto renameFuture = bInode->rename("c"_pc, bInode, "x"_pc);
+  auto renameFuture =
+      bInode->rename("c"_pc, bInode, "x"_pc, InvalidationRequired::No);
   // The rename will not complete until C becomes ready
   EXPECT_FALSE(renameFuture.isReady());
   EXPECT_FALSE(fileFuture.isReady());

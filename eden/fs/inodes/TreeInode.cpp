@@ -1431,7 +1431,8 @@ class TreeInode::TreeRenameLocks {
 Future<Unit> TreeInode::rename(
     PathComponentPiece name,
     TreeInodePtr destParent,
-    PathComponentPiece destName) {
+    PathComponentPiece destName,
+    InvalidationRequired invalidate) {
 #ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     return makeFuture<Unit>(InodeError(EPERM, inodePtrFromThis(), name));
@@ -1513,7 +1514,8 @@ Future<Unit> TreeInode::rename(
     // If we don't have to load anything now, we can immediately perform the
     // rename.
     if (!needSrc && !needDest) {
-      return doRename(std::move(locks), name, srcIter, destParent, destName);
+      return doRename(
+          std::move(locks), name, srcIter, destParent, destName, invalidate);
     }
 
     // If we are still here we have to load either the source or destination,
@@ -1531,8 +1533,9 @@ Future<Unit> TreeInode::rename(
   auto onLoadFinished = [self = inodePtrFromThis(),
                          nameCopy = name.copy(),
                          destParent,
-                         destNameCopy = destName.copy()](auto&&) {
-    return self->rename(nameCopy, destParent, destNameCopy);
+                         destNameCopy = destName.copy(),
+                         invalidate](auto&&) {
+    return self->rename(nameCopy, destParent, destNameCopy, invalidate);
   };
 
   if (needSrc && needDest) {
@@ -1568,7 +1571,8 @@ Future<Unit> TreeInode::doRename(
     PathComponentPiece srcName,
     PathMap<DirEntry>::iterator srcIter,
     TreeInodePtr destParent,
-    PathComponentPiece destName) {
+    PathComponentPiece destName,
+    InvalidationRequired invalidate) {
   DirEntry& srcEntry = srcIter->second;
 
   // If the source and destination refer to exactly the same file,
@@ -1669,12 +1673,14 @@ Future<Unit> TreeInode::doRename(
 #ifndef _WIN32
   // If the rename occurred outside of a FUSE request (unlikely), make sure to
   // invalidate the kernel caches.
-  invalidateFuseInodeCacheIfRequired();
-  if (destParent.get() != this) {
-    destParent->invalidateFuseInodeCacheIfRequired();
+  if (InvalidationRequired::Yes == invalidate) {
+    invalidateFuseInodeCache();
+    if (destParent.get() != this) {
+      destParent->invalidateFuseInodeCache();
+    }
+    invalidateChannelEntryCache(srcName);
+    destParent->invalidateChannelEntryCache(destName);
   }
-  invalidateFuseEntryCacheIfRequired(srcName);
-  destParent->invalidateFuseEntryCacheIfRequired(destName);
 #endif
 
   return folly::unit;
@@ -3010,22 +3016,6 @@ void TreeInode::invalidateFuseInodeCache() {
     // added, the inode itself must be invalidated.
     fuseChannel->invalidateInode(getNodeId(), 0, 0);
   }
-}
-
-void TreeInode::invalidateFuseInodeCacheIfRequired() {
-  if (RequestData::isFuseRequest()) {
-    // no need to flush the cache if we are inside a FUSE request handler
-    return;
-  }
-  invalidateFuseInodeCache();
-}
-
-void TreeInode::invalidateFuseEntryCacheIfRequired(PathComponentPiece name) {
-  if (RequestData::isFuseRequest()) {
-    // no need to flush the cache if we are inside a FUSE request handler
-    return;
-  }
-  invalidateChannelEntryCache(name);
 }
 #endif
 
