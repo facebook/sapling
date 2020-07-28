@@ -885,7 +885,8 @@ FileInodePtr TreeInode::createImpl(
     folly::Synchronized<TreeInodeState>::LockedPtr contents,
     PathComponentPiece name,
     mode_t mode,
-    ByteRange fileContents) {
+    ByteRange fileContents,
+    InvalidationRequired invalidate) {
 #ifndef _WIN32
   // This relies on the fact that the dotEdenInodeNumber field of EdenMount is
   // not defined until after EdenMount finishes configuring the .eden directory.
@@ -966,8 +967,10 @@ FileInodePtr TreeInode::createImpl(
   }
 
 #ifndef _WIN32
-  invalidateFuseEntryCacheIfRequired(name);
-  invalidateFuseInodeCacheIfRequired();
+  if (InvalidationRequired::Yes == invalidate) {
+    invalidateChannelEntryCache(name);
+    invalidateFuseInodeCache();
+  }
 #endif // !_WIN32
 
   getMount()->getJournal().recordCreated(targetName);
@@ -976,11 +979,12 @@ FileInodePtr TreeInode::createImpl(
 }
 
 #ifndef _WIN32
-// Eden doesn't support symlinks support on Windows
+// Eden doesn't support symlinks on Windows
 
 FileInodePtr TreeInode::symlink(
     PathComponentPiece name,
-    folly::StringPiece symlinkTarget) {
+    folly::StringPiece symlinkTarget,
+    InvalidationRequired invalidate) {
   validatePathComponentLength(name);
   materialize();
 
@@ -989,12 +993,16 @@ FileInodePtr TreeInode::symlink(
     auto contents = contents_.wlock();
     const mode_t mode = S_IFLNK | 0770;
     return createImpl(
-        std::move(contents), name, mode, ByteRange{symlinkTarget});
+        std::move(contents), name, mode, ByteRange{symlinkTarget}, invalidate);
   }
 }
 #endif
 
-FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
+FileInodePtr TreeInode::mknod(
+    PathComponentPiece name,
+    mode_t mode,
+    dev_t dev,
+    InvalidationRequired invalidate) {
   validatePathComponentLength(name);
 
   // Compute the effective name of the node they want to create.
@@ -1020,7 +1028,7 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
   {
     // Acquire our contents lock
     auto contents = contents_.wlock();
-    return createImpl(std::move(contents), name, mode, ByteRange{});
+    return createImpl(std::move(contents), name, mode, ByteRange{}, invalidate);
   }
 }
 

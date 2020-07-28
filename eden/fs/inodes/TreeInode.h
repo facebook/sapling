@@ -11,6 +11,7 @@
 #include <folly/Synchronized.h>
 #include <optional>
 #include "eden/fs/fuse/Invalidation.h"
+#include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 
@@ -162,7 +163,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
     return contents_;
   }
 
-  FileInodePtr symlink(PathComponentPiece name, folly::StringPiece contents);
+  FileInodePtr symlink(
+      PathComponentPiece name,
+      folly::StringPiece contents,
+      InvalidationRequired invalidate);
 
   TreeInodePtr mkdir(PathComponentPiece name, mode_t mode);
   FOLLY_NODISCARD folly::Future<folly::Unit> unlink(
@@ -177,7 +181,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Only unix domain sockets and regular files are supported; attempting to
    * create any other kind of node will fail.
    */
-  FileInodePtr mknod(PathComponentPiece name, mode_t mode, dev_t rdev);
+  FileInodePtr mknod(
+      PathComponentPiece name,
+      mode_t mode,
+      dev_t rdev,
+      InvalidationRequired invalidate);
 
   /**
    * Compute differences between a source control Tree and the current inode
@@ -496,7 +504,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
       PathComponentPiece name,
       mode_t mode,
-      folly::ByteRange fileContents);
+      folly::ByteRange fileContents,
+      InvalidationRequired invalidate);
 
   /**
    * removeImpl() is the actual implementation used for unlink() and rmdir().

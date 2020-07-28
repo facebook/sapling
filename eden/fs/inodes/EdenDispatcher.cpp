@@ -210,7 +210,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::create(
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [=](const TreeInodePtr& inode) {
         auto childName = PathComponent{name};
-        auto child = inode->mknod(childName, mode, 0);
+        auto child = inode->mknod(childName, mode, 0, InvalidationRequired::No);
         return child->stat(ObjectFetchContext::getNullContext())
             .thenValue([child](struct stat st) -> fuse_entry_out {
               child->incFuseRefcount();
@@ -323,7 +323,8 @@ folly::Future<fuse_entry_out> EdenDispatcher::mknod(
       rdev);
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}, mode, rdev](const TreeInodePtr& inode) {
-        auto child = inode->mknod(childName, mode, rdev);
+        auto child =
+            inode->mknod(childName, mode, rdev, InvalidationRequired::No);
         return child->stat(ObjectFetchContext::getNullContext())
             .thenValue([child](struct stat st) -> fuse_entry_out {
               child->incFuseRefcount();
@@ -390,7 +391,8 @@ folly::Future<fuse_entry_out> EdenDispatcher::symlink(
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [linkContents = link.str(),
        childName = PathComponent{name}](const TreeInodePtr& inode) {
-        auto symlinkInode = inode->symlink(childName, linkContents);
+        auto symlinkInode =
+            inode->symlink(childName, linkContents, InvalidationRequired::No);
         symlinkInode->incFuseRefcount();
         return symlinkInode->stat(ObjectFetchContext::getNullContext())
             .thenValue([symlinkInode](struct stat st) {

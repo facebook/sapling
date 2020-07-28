@@ -111,7 +111,8 @@ TEST(TreeInode, updateAndReaddir) {
   EXPECT_EQ(L"file2", result[1].name);
   EXPECT_EQ(L"file3", result[2].name);
 
-  auto resultInode = somedir->mknod("newfile.txt"_pc, S_IFREG, 0);
+  auto resultInode =
+      somedir->mknod("newfile.txt"_pc, S_IFREG, 0, InvalidationRequired::No);
   result = somedir->readdir().get(0ms);
   ASSERT_EQ(4, result.size());
   EXPECT_EQ(L"file1", result[0].name);
@@ -299,7 +300,8 @@ void runConcurrentModificationAndReaddirIteration(
       try {
         switch (folly::Random::rand32(3)) {
           case 0: // create
-            root->symlink(randomName(), "symlink-target");
+            root->symlink(
+                randomName(), "symlink-target", InvalidationRequired::No);
             break;
           case 1: { // unlink
             root->unlink(pickName(), InvalidationRequired::No).get(0ms);
@@ -357,7 +359,8 @@ TEST(TreeInode, create) {
 
   // Test creating a new file
   auto somedir = mount.getTreeInode("somedir"_relpath);
-  auto resultInode = somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0);
+  auto resultInode = somedir->mknod(
+      "newfile.txt"_pc, S_IFREG | 0740, 0, InvalidationRequired::No);
 
   EXPECT_EQ(mount.getFileInode("somedir/newfile.txt"_relpath), resultInode);
 
@@ -374,7 +377,9 @@ TEST(TreeInode, createExists) {
   // Test creating a new file
   auto somedir = mount.getTreeInode("somedir"_relpath);
 
-  EXPECT_THROW_ERRNO(somedir->mknod("foo.txt"_pc, S_IFREG | 0600, 0), EEXIST);
+  EXPECT_THROW_ERRNO(
+      somedir->mknod("foo.txt"_pc, S_IFREG | 0600, 0, InvalidationRequired::No),
+      EEXIST);
 #ifndef _WIN32 // getPermissions are not a part of Inode on Windows
   EXPECT_FILE_INODE(
       mount.getFileInode("somedir/foo.txt"_relpath), "test\n", 0644);
@@ -394,6 +399,8 @@ TEST(TreeInode, createOverlayWriteError) {
   auto somedir = mount.getTreeInode("somedir"_relpath);
 
   EXPECT_THROW_ERRNO(
-      somedir->mknod("newfile.txt"_pc, S_IFREG | 0600, 0), ENOSPC);
+      somedir->mknod(
+          "newfile.txt"_pc, S_IFREG | 0600, 0, InvalidationRequired::No),
+      ENOSPC);
 }
 #endif

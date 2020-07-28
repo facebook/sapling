@@ -411,7 +411,10 @@ void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   RelativePathPiece relativePath(path);
   const auto treeInode = getTreeInode(relativePath.dirname());
   auto createResult = treeInode->mknod(
-      relativePath.basename(), /*mode=*/S_IFREG | 0644, /*rdev=*/0);
+      relativePath.basename(),
+      /*mode=*/S_IFREG | 0644,
+      /*rdev=*/0,
+      InvalidationRequired::No);
 #ifdef _WIN32
   auto absolutePath = edenMount_->getConfig()->getMountPath() + relativePath;
   // Make sure the directory exist.
@@ -432,7 +435,9 @@ void TestMount::addSymlink(
     folly::StringPiece pointsTo) {
   const RelativePathPiece relativePath{path};
   const auto parent = getTreeInode(relativePath.dirname());
-  (void)parent->symlink(relativePath.basename(), pointsTo).get();
+  (void)parent
+      ->symlink(relativePath.basename(), pointsTo, InvalidationRequired::No)
+      .get();
 }
 #endif
 

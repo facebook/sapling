@@ -457,7 +457,7 @@ folly::Future<folly::Unit> createFile(
     if (isDirectory) {
       treeInode->mkdir(path.basename(), _S_IFDIR);
     } else {
-      treeInode->mknod(path.basename(), _S_IFREG, 0);
+      treeInode->mknod(path.basename(), _S_IFREG, 0, InvalidationRequired::No);
     }
 
     return folly::unit;

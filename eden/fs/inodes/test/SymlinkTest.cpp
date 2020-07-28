@@ -45,7 +45,8 @@ TEST_F(SymlinkTest, makeSymlink) {
   StringPiece target{"foo!"}; // the value we want readlink to return
 
   auto root = mount_.getTreeInode(RelativePathPiece());
-  auto inode = root->symlink(PathComponentPiece{name}, target);
+  auto inode =
+      root->symlink(PathComponentPiece{name}, target, InvalidationRequired::No);
   EXPECT_EQ(dtype_t::Symlink, inode->getType());
   EXPECT_EQ(
       inode->readlink(ObjectFetchContext::getNullContext()).get(), target);
@@ -62,7 +63,9 @@ TEST_F(SymlinkTest, makeSymlinkCollisionFile) {
 
   auto root = mount_.getTreeInode(RelativePathPiece());
   // Name already exists, so we expect this to fail
-  EXPECT_THROW_ERRNO(root->symlink(PathComponentPiece{name}, target), EEXIST);
+  EXPECT_THROW_ERRNO(
+      root->symlink(PathComponentPiece{name}, target, InvalidationRequired::No),
+      EEXIST);
 }
 
 TEST_F(SymlinkTest, makeSymlinkCollisionDir) {
@@ -71,5 +74,7 @@ TEST_F(SymlinkTest, makeSymlinkCollisionDir) {
 
   auto root = mount_.getTreeInode(RelativePathPiece());
   // Name already exists, so we expect this to fail
-  EXPECT_THROW_ERRNO(root->symlink(PathComponentPiece{name}, target), EEXIST);
+  EXPECT_THROW_ERRNO(
+      root->symlink(PathComponentPiece{name}, target, InvalidationRequired::No),
+      EEXIST);
 }
