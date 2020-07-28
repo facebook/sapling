@@ -140,7 +140,6 @@ mod types;
 mod unionstore;
 mod util;
 
-pub mod c_api;
 pub mod datapack;
 pub mod datastore;
 pub mod edenapi;
