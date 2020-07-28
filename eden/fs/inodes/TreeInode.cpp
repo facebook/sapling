@@ -44,7 +44,6 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef _WIN32
-#include "eden/fs/inodes/win/DirList.h" // @manual
 #include "eden/fs/win/mount/Enumerator.h" // @manual
 #include "eden/fs/win/utils/StringConv.h" // @manual
 #else

@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 if(WIN32)
-  file(GLOB INODES_SRCS "*.cpp" "win/*.cpp" "sqliteoverlay/*.cpp")
+  file(GLOB INODES_SRCS "*.cpp" "sqliteoverlay/*.cpp")
   list(
     REMOVE_ITEM
     INODES_SRCS
@@ -12,7 +12,6 @@ if(WIN32)
     ${CMAKE_CURRENT_SOURCE_DIR}/OverlayFile.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/OverlayFileAccess.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/InodeMetadata.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/win/EdenMount.cpp
   )
   list(
     APPEND
