@@ -142,7 +142,14 @@ if sys.platform == "win32":
         "hg.symlink_test.SymlinkTestTreeOnly": True,
         "hg.undo_test.UndoTestTreeOnly": True,
         "hg.update_test.UpdateCacheInvalidationTestTreeOnly": True,
-        "hg.update_test.UpdateTestTreeOnly": True,
+        "hg.update_test.UpdateTestTreeOnly": [
+            # TODO: HGPLAIN=1 hg status uses forward slashes
+            "test_dir_locking",
+            # TODO: A \r\n is used
+            "test_mount_state_during_unmount_with_in_progress_checkout",
+            # TODO: Wrong status reported.
+            "test_update_replace_untracked_dir",
+        ],
     }
 elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-release"):
     # The ChownTest.setUp() code tries to look up the "nobody" group, which doesn't
