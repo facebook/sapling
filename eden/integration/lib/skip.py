@@ -127,7 +127,10 @@ if sys.platform == "win32":
             "test_rebase_commit_with_independent_folder",
             "test_rebase_stack_with_conflicts",
         ],
-        "hg.rm_test.RmTestTreeOnly": True,
+        "hg.rm_test.RmTestTreeOnly": [
+            "test_rm_directory_with_modification",
+            "test_rm_modified_file_permissions",
+        ],
         "hg.rollback_test.RollbackTestTreeOnly": True,
         "hg.sparse_test.SparseTestTreeOnly": True,
         "hg.split_test.SplitTestTreeOnly": True,
