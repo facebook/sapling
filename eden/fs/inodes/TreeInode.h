@@ -655,20 +655,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   void invalidateFuseInodeCacheIfRequired();
 
   /**
-   * Send a request to the kernel to invalidate the dcache entry for the given
-   * child entry name. The dcache caches name lookups to child inodes.
-   *
-   * This should be called when an entry is added, removed, or changed.
-   * Invalidating upon removal is required because the kernel maintains a
-   * negative cache on lookup failures.
-   *
-   * This is safe to call while holding the contents_ lock, but it is not
-   * required.  Calling it without the contents_ lock held is preferable when
-   * possible.
-   */
-  void invalidateFuseEntryCache(PathComponentPiece name);
-
-  /**
    * Invalidate the kernel FUSE cache for this entry name only if we are not
    * being called from inside a FUSE request handler.
    *
@@ -676,13 +662,23 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * need to tell the kernel about the change--it will automatically know.
    */
   void invalidateFuseEntryCacheIfRequired(PathComponentPiece name);
-#else
-  /**
-   * On Windows, Eden manages ProjectedFS cache. This function is to remove a
-   * file or folder from the cache.
-   */
-  void cleanupPrjfsCache(PathComponentPiece name);
 #endif
+
+  /**
+   * Send a request to the kernel to invalidate its cache for the given child
+   * entry name. On unices this corresponds to the dcache entry which caches
+   * name lookups to child inodes. On Windows, this removes the on-disk
+   * placeholder.
+   *
+   * This should be called when an entry is added, removed, or changed.
+   * Invalidating upon removal is required because the kernel maintains a
+   * negative cache on lookup failures on Unices.
+   *
+   * This is safe to call while holding the contents_ lock, but it is not
+   * required.  Calling it without the contents_ lock held is preferable when
+   * possible.
+   */
+  void invalidateChannelEntryCache(PathComponentPiece name);
 
   /**
    * Attempt to remove an empty directory during a checkout operation.

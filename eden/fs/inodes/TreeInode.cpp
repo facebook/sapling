@@ -1284,13 +1284,15 @@ int TreeInode::tryRemoveChild(
   deletedInode.reset();
 
 #ifdef _WIN32
-  cleanupPrjfsCache(name);
+  // TODO(xavierd): remove the ifdef once we know if we are called from
+  // ProjectedFS
+  invalidateChannelEntryCache(name);
 #else
   // We have successfully removed the entry.
   // Flush the kernel cache for this entry if requested.
   if (flushKernelCache) {
     invalidateFuseInodeCache();
-    invalidateFuseEntryCache(name);
+    invalidateChannelEntryCache(name);
   }
 #endif
 
@@ -2706,11 +2708,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       // after this inode processes all of its checkout actions. But we
       // do want to invalidate the kernel's dcache and inode caches.
       wasDirectoryListModified = true;
-#ifndef _WIN32
-      invalidateFuseEntryCache(name);
-#else
-      cleanupPrjfsCache(name);
-#endif // !_WIN32
+      invalidateChannelEntryCache(name);
     }
 
     // Nothing else to do when there is no local inode.
@@ -2821,19 +2819,14 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
                << ")";
     getOverlay()->recursivelyRemoveOverlayData(oldEntryInodeNumber);
   }
+#endif
 
   // TODO: contents have changed: we probably should propagate
   // this information up to our caller so it can mark us
   // materialized if necessary.
 
   // We removed or replaced an entry - invalidate it.
-  auto* fuseChannel = getMount()->getFuseChannel();
-  if (fuseChannel) {
-    fuseChannel->invalidateEntry(getNodeId(), name);
-  }
-#else
-  cleanupPrjfsCache(name);
-#endif // !_WIN32
+  invalidateChannelEntryCache(name);
 
   return nullptr;
 }
@@ -2888,12 +2881,9 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       }
     }
 
-    // Tell FUSE to invalidate its cache for this entry.
-#ifndef _WIN32
-    invalidateFuseEntryCache(name);
-#else
-    cleanupPrjfsCache(name);
-#endif
+    // Tell the OS to invalidate its cache for this entry.
+    invalidateChannelEntryCache(name);
+
     // We don't save our own overlay data right now:
     // we'll wait to do that until the checkout operation finishes touching all
     // of our children in checkout().
@@ -2986,6 +2976,21 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
           });
 }
 
+void TreeInode::invalidateChannelEntryCache(PathComponentPiece name) {
+#ifndef _WIN32
+  if (auto* fuseChannel = getMount()->getFuseChannel()) {
+    fuseChannel->invalidateEntry(getNodeId(), name);
+  }
+#else
+  if (auto* fsChannel = getMount()->getFsChannel()) {
+    const auto path = getPath();
+    if (path.has_value()) {
+      fsChannel->removeCachedFile(path.value() + name);
+    }
+  }
+#endif
+}
+
 #ifndef _WIN32
 void TreeInode::invalidateFuseInodeCache() {
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
@@ -3004,28 +3009,12 @@ void TreeInode::invalidateFuseInodeCacheIfRequired() {
   invalidateFuseInodeCache();
 }
 
-void TreeInode::invalidateFuseEntryCache(PathComponentPiece name) {
-  if (auto* fuseChannel = getMount()->getFuseChannel()) {
-    fuseChannel->invalidateEntry(getNodeId(), name);
-  }
-}
-
 void TreeInode::invalidateFuseEntryCacheIfRequired(PathComponentPiece name) {
   if (RequestData::isFuseRequest()) {
     // no need to flush the cache if we are inside a FUSE request handler
     return;
   }
-  invalidateFuseEntryCache(name);
-}
-#else
-
-void TreeInode::cleanupPrjfsCache(PathComponentPiece name) {
-  if (auto* fsChannel = getMount()->getFsChannel()) {
-    const auto path = getPath();
-    if (path.has_value()) {
-      fsChannel->removeCachedFile(path.value() + name);
-    }
-  }
+  invalidateChannelEntryCache(name);
 }
 #endif
 
