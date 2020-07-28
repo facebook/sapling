@@ -30,7 +30,6 @@ pub struct RawServerConfig {
     pub enable_consistent_routing: bool,
     pub disable_hostname_logging: bool,
     pub throttle_limits: Vec<RawLimit>,
-    pub acl_check: bool,
     pub enforce_acl_check: bool,
     /// SCS counter category to use for blob popularity.
     pub object_popularity_category: Option<String>,
@@ -109,7 +108,6 @@ impl Default for RawServerConfig {
             enable_consistent_routing: false,
             disable_hostname_logging: false,
             throttle_limits: vec![],
-            acl_check: false,
             enforce_acl_check: false,
             object_popularity_category: None,
             object_popularity_threshold: None,
@@ -138,11 +136,6 @@ impl ServerConfig {
     pub fn throttle_limits(&self) -> Vec<Limit> {
         self.throttle_limits.clone()
     }
-    pub fn acl_check(&self) -> bool {
-        self.raw_server_config.acl_check
-    }
-    #[allow(dead_code)]
-    // TODO(harveyhunt) Use this method as a killswitch for ACL checking.
     pub fn enforce_acl_check(&self) -> bool {
         self.raw_server_config.enforce_acl_check
     }

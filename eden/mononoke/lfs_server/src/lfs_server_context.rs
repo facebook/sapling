@@ -131,10 +131,9 @@ impl LfsServerContext {
             }
         };
 
-        if config.acl_check() {
-            // TODO(harveyhunt): Use the live config's enforce_acl_check() method as a killswitch.
-            acl_check(aclchecker, identities, enforce_acl_check).await?;
-        }
+        let enforce_acl_check = enforce_acl_check && config.enforce_acl_check();
+
+        acl_check(aclchecker, identities, enforce_acl_check).await?;
 
         Ok(RepositoryRequestContext {
             ctx,

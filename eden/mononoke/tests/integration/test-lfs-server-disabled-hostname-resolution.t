@@ -16,7 +16,6 @@
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": true,
   >   "throttle_limits": [],
-  >   "acl_check": false,
   >   "enforce_acl_check": false
   > }
   > EOF
@@ -29,7 +28,6 @@
 # Get the config
   $ curl -fs "${lfs_root}/config" | jq -S .
   {
-    "acl_check": false,
     "disable_hostname_logging": true,
     "enable_consistent_routing": false,
     "enforce_acl_check": false,
@@ -57,7 +55,6 @@
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": false,
   >   "throttle_limits": [],
-  >   "acl_check": false,
   >   "enforce_acl_check": false
   > }
   > EOF

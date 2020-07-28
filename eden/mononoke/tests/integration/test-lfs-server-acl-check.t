@@ -6,9 +6,12 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-# Create a repository
   $ setup_mononoke_config
+
+# Create a repository without ACL checking enforcement
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo1
+
+# Create a repository with ACL checking enforcement
   $ ENFORCE_LFS_ACL_CHECK=1 REPOID=2 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo2
 
   $ LIVE_CONFIG="${TESTTMP}/live.json"
@@ -18,7 +21,6 @@
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": false,
   >   "throttle_limits": [],
-  >   "acl_check": true,
   >   "enforce_acl_check": false
   > }
   > EOF
@@ -37,50 +39,51 @@
   $ DOWNLOAD_URL="$LFS_URI/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"
   $ DOWNLOAD_URL_REPO_ENFORCE_ACL="$LFS_URI_REPO_ENFORCE_ACL/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"
 
-# Upload a blob
+# Upload a blob to both repos
+  $ yes A 2>/dev/null | head -c 2KiB | ssldebuglfssend "$LFS_URI_REPO_ENFORCE_ACL"
+  ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
+
   $ yes A 2>/dev/null | head -c 2KiB | ssldebuglfssend "$LFS_URI"
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746 2048
 
-# Enable ACL checking
+# Make a request with a valid encoded client identity header, but acl
+# enforcement disabled at both the global and repo level.
+  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
+  200
+
+# Enable ACL enforcement killswitch
   $ sed -i 's/"enforce_acl_check": false/"enforce_acl_check": true/g' "$LIVE_CONFIG"
   $ sleep 2
 
-# Make a request with a valid encoded client identity header
-# NOTE: The LFS Server trusts the identity sslcurl passes as a trusted proxy
+# Make a request with a valid encoded client identity header, but acl
+# enforcement enabled at the global but not repo level.
   $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
   200
 
-# Make a request with an invalid encoded client identity header. As
-# enforce_lfs_acl_check is not set, this is allowed.
-  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$DISALLOWED_IDENT"
+# Make a request with a valid encoded client identity header
+# NOTE: The LFS Server trusts the identity sslcurl passes as a trusted proxy
+  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL_REPO_ENFORCE_ACL" --header "$ALLOWED_IDENT"
   200
 
 # Make a request without specifying an identity in the header
-# NOTE: We allow this whilst we wait for all clients to get certs
-  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL"
-  200
-
-# Make a request without specifying an identity in the header, as the repo is
-# configured with enforce_lfs_acl_check this request is forbidden as there is
-# no ident provided.
   $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL_REPO_ENFORCE_ACL"
   403
 
-# Disable ACL checking
+# Disable ACL enforcement killswitch
   $ sed -i 's/"enforce_acl_check": true/"enforce_acl_check": false/g' "$LIVE_CONFIG"
   $ sleep 2
 
-# Make a request with a valid encoded client identity header, but acl checking
-# disabled
-  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$ALLOWED_IDENT"
+# Make a request with a valid encoded client identity header, but acl
+# enforcement disabled
+  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL_REPO_ENFORCE_ACL" --header "$ALLOWED_IDENT"
   200
 
-# Make a request with an invalid encoded client identity header, but acl checking
-# disabled
-  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL" --header "$DISALLOWED_IDENT"
+# Make a request with an invalid encoded client identity header, but acl
+# enforcement disabled
+  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL_REPO_ENFORCE_ACL" --header "$DISALLOWED_IDENT"
   200
 
 # Make a request without an identity in the header, but an identity provided by
 # the cert curl uses
-  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL"
+  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL_REPO_ENFORCE_ACL"
   200
