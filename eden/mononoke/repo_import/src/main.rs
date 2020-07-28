@@ -8,6 +8,7 @@
 #![type_length_limit = "4522397"]
 use anyhow::{format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use clap::Arg;
 use cmdlib::args;
@@ -22,19 +23,55 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
 };
 use import_tools::{GitimportPreferences, GitimportTarget};
-use mercurial_types::MPath;
+use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use movers::DefaultAction;
+use serde::{Deserialize, Serialize};
+use serde_json;
 use slog::info;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::path::Path;
+use tokio::{process, time};
 use topo_sort::sort_topological;
 
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
 const ARG_DEST_PATH: &str = "dest-path";
 const ARG_BATCH_SIZE: &str = "batch-size";
 const ARG_BOOKMARK_SUFFIX: &str = "bookmark-suffix";
+const ARG_CALL_SIGN: &str = "call-sign";
+const ARG_PHAB_CHECK_DISABLED: &str = "disable-phabricator-check";
+const ARG_X_REPO_CHECK_DISABLED: &str = "disable-x-repo-check";
+const ARG_HG_SYNC_CHECK_DISABLED: &str = "disable-hg-sync-check";
+const ARG_SLEEP_TIME: &str = "sleep-time";
+
+#[derive(Deserialize, Clone, Debug)]
+struct GraphqlQueryObj {
+    differential_commit_query: Vec<GraphqlCommitQueryObj>,
+}
+#[derive(Deserialize, Clone, Debug)]
+struct GraphqlCommitQueryObj {
+    results: GraphqlResultsObj,
+}
+#[derive(Deserialize, Clone, Debug)]
+struct GraphqlResultsObj {
+    nodes: Vec<GraphqlImportedObj>,
+}
+#[derive(Deserialize, Clone, Debug)]
+struct GraphqlImportedObj {
+    imported: bool,
+}
+#[derive(Debug, Serialize)]
+struct GraphqlInputVariables {
+    commit: String,
+}
+#[derive(Debug)]
+struct CheckerFlags<'a> {
+    phab_check_disabled: bool,
+    x_repo_check_disabled: bool,
+    hg_sync_check_disabled: bool,
+    call_sign: Option<&'a str>,
+}
 
 async fn rewrite_file_paths(
     ctx: &CoreContext,
@@ -117,6 +154,8 @@ async fn move_bookmark(
     shifted_bcs: &[BonsaiChangeset],
     batch_size: usize,
     bookmark_suffix: &str,
+    checker_flags: &CheckerFlags<'_>,
+    sleep_time: u64,
 ) -> Result<(), Error> {
     if shifted_bcs.is_empty() {
         return Err(format_err!("There is no bonsai changeset present"));
@@ -162,9 +201,73 @@ async fn move_bookmark(
             ctx.logger(),
             "Set bookmark {:?} to point to {:?}", bookmark, curr_csid
         );
+
+        // if a check is disabled, we have already passed the check
+        let mut passed_phab_check = checker_flags.phab_check_disabled;
+        let mut _passed_x_repo_check = checker_flags.x_repo_check_disabled;
+        let mut _passed_hg_sync_check = checker_flags.hg_sync_check_disabled;
+        let hg_csid = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid)
+            .compat()
+            .await?;
+        while !passed_phab_check {
+            let call_sign = checker_flags.call_sign.as_ref().unwrap();
+            passed_phab_check = phabricator_commit_check(&call_sign, &hg_csid).await?;
+            if !passed_phab_check {
+                info!(
+                    ctx.logger(),
+                    "Phabricator hasn't parsed commit: {:?}", hg_csid
+                );
+                time::delay_for(time::Duration::from_secs(sleep_time)).await;
+            }
+        }
         old_csid = curr_csid;
     }
     Ok(())
+}
+
+async fn phabricator_commit_check(call_sign: &str, hg_csid: &HgChangesetId) -> Result<bool, Error> {
+    let commit_id = format!("r{}{}", call_sign, hg_csid);
+    let query = "query($commit: String!) {
+                    differential_commit_query(query_params:{commits:[$commit]}) {
+                        results {
+                            nodes {
+                                imported
+                            }
+                        }
+                    }
+                }";
+    let variables = serde_json::to_string(&GraphqlInputVariables { commit: commit_id }).unwrap();
+    let output = process::Command::new("jf")
+        .arg("graphql")
+        .arg("--query")
+        .arg(query)
+        .arg("--variables")
+        .arg(variables)
+        .output()
+        .await?;
+    if !output.status.success() {
+        let e = format_err!(
+            "Failed to fetch graphql commit: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return Err(e);
+    }
+    let query: GraphqlQueryObj = serde_json::from_str(&String::from_utf8_lossy(&output.stdout))?;
+    let first_query = match query.differential_commit_query.first() {
+        Some(first) => first,
+        None => {
+            return Err(format_err!(
+                "No results were found when checking phabricator"
+            ));
+        }
+    };
+    let nodes = &first_query.results.nodes;
+    let imported = match nodes.first() {
+        Some(imp_obj) => imp_obj.imported,
+        None => return Ok(false),
+    };
+    Ok(imported)
 }
 
 fn is_valid_bookmark_suffix(bookmark_suffix: &str) -> bool {
@@ -232,6 +335,39 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .required(true)
                 .takes_value(true)
                 .help("Suffix of the bookmark (repo_import_<suffix>)"),
+        )
+        .arg(
+            Arg::with_name(ARG_CALL_SIGN)
+                .long(ARG_CALL_SIGN)
+                .takes_value(true)
+                .help("Call sign to get commit info from Phabricator. e.g. FBS for fbsource"),
+        )
+        .arg(
+            Arg::with_name(ARG_PHAB_CHECK_DISABLED)
+                .long(ARG_PHAB_CHECK_DISABLED)
+                .takes_value(false)
+                .help("Disable waiting for Phabricator to parse commits."),
+        )
+        .arg(
+            Arg::with_name(ARG_X_REPO_CHECK_DISABLED)
+                .long(ARG_X_REPO_CHECK_DISABLED)
+                .takes_value(false)
+                .help("Disable x_repo sync check after moving the bookmark"),
+        )
+        .arg(
+            Arg::with_name(ARG_HG_SYNC_CHECK_DISABLED)
+                .long(ARG_HG_SYNC_CHECK_DISABLED)
+                .takes_value(false)
+                .help("Disable hg sync check after moving the bookmark"),
+        )
+        .arg(
+            Arg::with_name(ARG_SLEEP_TIME)
+                .long(ARG_SLEEP_TIME)
+                .takes_value(true)
+                .default_value("1")
+                .help(
+                    "Sleep time, if we fail dependent system (phabricator, hg_sync ...) checkers",
+                ),
         );
 
     let matches = app.get_matches();
@@ -240,13 +376,29 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let prefix = matches.value_of(ARG_DEST_PATH).unwrap();
     let bookmark_suffix = matches.value_of(ARG_BOOKMARK_SUFFIX).unwrap();
     let batch_size = matches.value_of(ARG_BATCH_SIZE).unwrap();
-    let batch_size = batch_size.parse::<NonZeroUsize>()?;
+    let batch_size = batch_size.parse::<NonZeroUsize>()?.get();
     if !is_valid_bookmark_suffix(&bookmark_suffix) {
         return Err(format_err!(
             "The bookmark suffix contains invalid character(s).
             You can only use alphanumeric and \"./-_\" characters"
         ));
     }
+
+    let phab_check_disabled = matches.is_present(ARG_PHAB_CHECK_DISABLED);
+    let x_repo_check_disabled = matches.is_present(ARG_X_REPO_CHECK_DISABLED);
+    let hg_sync_check_disabled = matches.is_present(ARG_HG_SYNC_CHECK_DISABLED);
+    let call_sign = matches.value_of(ARG_CALL_SIGN);
+    if !phab_check_disabled && call_sign.is_none() {
+        return Err(format_err!("Call sign was not specified"));
+    }
+    let checker_flags = CheckerFlags {
+        phab_check_disabled,
+        x_repo_check_disabled,
+        hg_sync_check_disabled,
+        call_sign,
+    };
+    let sleep_time = matches.value_of(ARG_SLEEP_TIME).unwrap();
+    let sleep_time = sleep_time.parse::<u64>()?;
 
     args::init_cachelib(fb, &matches, None);
 
@@ -263,8 +415,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 &ctx,
                 &repo,
                 &shifted_bcs,
-                batch_size.get(),
+                batch_size,
                 &bookmark_suffix,
+                &checker_flags,
+                sleep_time,
             )
             .await
         },
@@ -278,8 +432,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::move_bookmark;
-    use crate::sort_bcs;
+    use crate::{move_bookmark, sort_bcs, CheckerFlags};
 
     use anyhow::Result;
     use blobstore::Loadable;
@@ -294,6 +447,14 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
         let batch_size: usize = 2;
+        let call_sign = Some("FBS");
+        let checker_flags = CheckerFlags {
+            phab_check_disabled: true,
+            x_repo_check_disabled: true,
+            hg_sync_check_disabled: true,
+            call_sign,
+        };
+        let sleep_time = 1;
         let changesets = create_from_dag(
             &ctx,
             &blob_repo,
@@ -307,7 +468,16 @@ mod tests {
             bonsais.push(csid.load(ctx.clone(), &blob_repo.get_blobstore()).await?);
         }
         bonsais = sort_bcs(&bonsais)?;
-        move_bookmark(&ctx, &blob_repo, &bonsais, batch_size, "test_repo").await?;
+        move_bookmark(
+            &ctx,
+            &blob_repo,
+            &bonsais,
+            batch_size,
+            "test_repo",
+            &checker_flags,
+            sleep_time,
+        )
+        .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
         let entries = blob_repo
             .attribute_expected::<dyn BookmarkUpdateLog>()
