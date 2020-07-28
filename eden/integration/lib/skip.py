@@ -66,7 +66,6 @@ if sys.platform == "win32":
         "restart_test.RestartTestManaged": True,
         "restart_test.RestartTestSystemdEdenCLI": True,
         "restart_test.RestartWithSystemdTestSystemdEdenCLI": True,
-        "rocksdb_store_test.RocksDBStoreTest": True,
         "sed_test.SedTestHg": True,
         "service_log_test.ServiceLogFakeEdenFSTestAdHoc": True,
         "service_log_test.ServiceLogFakeEdenFSTestManaged": True,
