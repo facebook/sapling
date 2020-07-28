@@ -119,7 +119,6 @@ if sys.platform == "win32":
             "test_grep_directory_from_root",
             "test_grep_directory_from_subdirectory",
         ],
-        "hg.histedit_test.HisteditTestTreeOnly": True,
         "hg.journal_test.JournalTestTreeOnly": True,
         "hg.merge_test.MergeTestTreeOnly": True,
         "hg.move_test.MoveTestTreeOnly": True,
