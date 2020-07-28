@@ -131,7 +131,6 @@ if sys.platform == "win32":
             "test_rm_directory_with_modification",
             "test_rm_modified_file_permissions",
         ],
-        "hg.rollback_test.RollbackTestTreeOnly": True,
         "hg.sparse_test.SparseTestTreeOnly": True,
         "hg.split_test.SplitTestTreeOnly": True,
         "hg.status_deadlock_test.StatusDeadlockTestTreeOnly": True,
