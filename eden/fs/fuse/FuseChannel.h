@@ -280,6 +280,8 @@ class FuseChannel {
    */
   template <typename T>
   void sendReply(const fuse_in_header& request, const T& payload) const {
+    static_assert(std::is_standard_layout_v<T>);
+    static_assert(std::is_trivial_v<T>);
     sendReply(
         request,
         folly::ByteRange{reinterpret_cast<const uint8_t*>(&payload),

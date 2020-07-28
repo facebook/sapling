@@ -190,6 +190,8 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
 
   template <typename T>
   void sendReply(const T& payload) {
+    static_assert(std::is_standard_layout_v<T>);
+    static_assert(std::is_trivial_v<T>);
     channel_->sendReply(stealReq(), payload);
   }
 

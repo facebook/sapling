@@ -276,6 +276,8 @@ void installSignalHandler() {
 
 template <typename T>
 iovec make_iovec(const T& t) {
+  static_assert(std::is_standard_layout_v<T>);
+  static_assert(std::is_trivial_v<T>);
   iovec iov{};
   iov.iov_base = const_cast<T*>(&t);
   iov.iov_len = sizeof(t);
