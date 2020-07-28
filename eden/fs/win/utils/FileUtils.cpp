@@ -18,7 +18,6 @@
 #include "eden/fs/win/utils/WinError.h"
 
 using folly::ByteRange;
-using folly::MutableByteRange;
 
 namespace facebook {
 namespace eden {
@@ -128,84 +127,6 @@ Hash getFileSha1(const wchar_t* filePath) {
   std::vector<uint8_t> data;
   readFile(filePath, data);
   return Hash::sha1(folly::ByteRange{data});
-}
-
-struct EnumerationHandleTraits {
-  using Type = HANDLE;
-
-  static Type invalidHandleValue() noexcept {
-    return INVALID_HANDLE_VALUE;
-  }
-  static void close(Type handle) noexcept {
-    FindClose(handle);
-  }
-};
-
-using EnumerationHandle = HandleBase<EnumerationHandleTraits>;
-
-std::vector<DirectoryEntryW> getEnumerationEntries(
-    const std::wstring& dirPath) {
-  std::vector<DirectoryEntryW> entries;
-
-  DirectoryEntryW entry;
-  EnumerationHandle enumHandle{FindFirstFileW(dirPath.c_str(), &entry.data)};
-  if (!enumHandle) {
-    DWORD error = GetLastError();
-    if (error == ERROR_NO_MORE_FILES) {
-      return entries;
-    }
-    throw makeWin32ErrorExplicit(
-        error,
-        folly::sformat("Enumeration failed for: ", winToEdenPath(dirPath)));
-  }
-
-  do {
-    if ((std::wstring_view(entry.data.cFileName) != std::wstring_view(L".")) &&
-        (std::wstring_view(entry.data.cFileName) != std::wstring_view(L".."))) {
-      entries.emplace_back(entry);
-    }
-  } while (FindNextFileW(enumHandle.get(), &entry.data));
-
-  DWORD error = GetLastError();
-  if (error != ERROR_NO_MORE_FILES) {
-    throw makeWin32ErrorExplicit(
-        error,
-        folly::sformat(
-            "Failed to get enumeration entries for: {}",
-            winToEdenPath(dirPath)));
-  }
-  return entries;
-}
-
-std::vector<DirectoryEntryA> getEnumerationEntries(const std::string& dirPath) {
-  std::vector<DirectoryEntryA> entries;
-
-  DirectoryEntryA entry;
-  EnumerationHandle enumHandle{FindFirstFileA(dirPath.c_str(), &entry.data)};
-  if (!enumHandle) {
-    DWORD error = GetLastError();
-    if (error == ERROR_NO_MORE_FILES) {
-      return entries;
-    }
-    throw makeWin32ErrorExplicit(
-        error, folly::sformat("Enumeration failed for: ", dirPath));
-  }
-
-  do {
-    if ((folly::StringPiece(entry.data.cFileName) != folly::StringPiece(".")) &&
-        (folly::StringPiece(entry.data.cFileName) !=
-         folly::StringPiece(".."))) {
-      entries.emplace_back(entry);
-    }
-  } while (FindNextFileA(enumHandle.get(), &entry.data));
-
-  DWORD error = GetLastError();
-  if (error != ERROR_NO_MORE_FILES) {
-    throw makeWin32ErrorExplicit(
-        error,
-        folly::sformat("Failed to get enumeration entries for: ", dirPath));
-  }
-  return entries;
 }
 
 } // namespace eden

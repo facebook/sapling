@@ -33,20 +33,6 @@ struct FileHandleTraits {
 
 using FileHandle = HandleBase<FileHandleTraits>;
 
-struct DirectoryEntryA {
-  WIN32_FIND_DATAA data;
-  bool isDirectory() const {
-    return data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
-  }
-};
-
-struct DirectoryEntryW {
-  WIN32_FIND_DATAW data;
-  bool isDirectory() const {
-    return data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
-  }
-};
-
 /*
  * This readFile will read the bytesToRead number of bytes or the entire file,
  * which ever is shorter. The buffer should be atleast bytesToRead long.
@@ -163,17 +149,6 @@ Hash getFileSha1(const wchar_t* filePath);
 static inline Hash getFileSha1(char const* filePath) {
   return getFileSha1(multibyteToWideString(filePath).c_str());
 }
-
-/*
- * getEnumerationEntries will return a vector containing the directory enteries.
- * It will filter out the . and .. directory before returning the vecotor of
- * directory entries.
- *
- * There are two overloads - one for wide char paths and another for char paths.
- */
-
-std::vector<DirectoryEntryA> getEnumerationEntries(const std::string& dirPath);
-std::vector<DirectoryEntryW> getEnumerationEntries(const std::wstring& dirPath);
 
 } // namespace eden
 } // namespace facebook
