@@ -57,7 +57,7 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
 
     /// Adds create() operation to the transaction set.
     /// Creates a bookmark. BookmarkName should not already exist, otherwise committing the
-    /// transaction will fail. The resulting Bookmark will be PushDefault.
+    /// transaction will fail. The resulting Bookmark will be PullDefault.
     fn create(
         &mut self,
         bookmark: &BookmarkName,
@@ -106,7 +106,7 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     ) -> Result<()>;
 
     /// Adds a scratch bookmark create operation to the transaction set.
-    /// Creates a new bookmark, configured as scratch. It shuld not exist already.
+    /// Creates a new bookmark, configured as scratch. It should not exist already.
     fn create_scratch(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()>;
 
     /// Commits the transaction. Future succeeds if transaction has been
