@@ -38,14 +38,18 @@ sh % "cd client"
 sh % "cat" << r"""
 { "workspaces_data" : { "workspaces": [ { "name": "user/test/old", "archived": true }, { "name": "user/test/default", "archived": false }  ] } }
 """ >> "$TESTTMP/userworkspacesdata"
+
 sh % "hg cloud list" == r"""
 workspaces:
         default
 run `hg cloud sl -w <workspace name>` to view the commits
+run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
 """
+
 sh % "hg cloud list --all" == r"""
 workspaces:
         old (archived)
         default
 run `hg cloud sl -w <workspace name>` to view the commits
+run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
 """

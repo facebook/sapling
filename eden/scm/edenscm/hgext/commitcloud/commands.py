@@ -704,6 +704,7 @@ def cloudlistworspaces(ui, repo, **opts):
 
     user = opts.get("user")
     workspacenameprefix = workspace.userworkspaceprefix(ui, user if user else None)
+    currentworkspace = workspace.currentworkspace(repo)
     reponame = ccutil.getreponame(repo)
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
     winfos = serv.getworkspaces(reponame, workspacenameprefix)
@@ -714,15 +715,20 @@ def cloudlistworspaces(ui, repo, **opts):
     else:
         ui.write(_("workspaces:\n"))
         for winfo in winfos:
+            fullname = winfo.name
+            shortname = winfo.name[len(workspacenameprefix) :]
+            isconnected = " (connected)" if fullname == currentworkspace else ""
             if winfo.archived:
                 if opts.get("all"):
-                    ui.write(
-                        _("        %s (archived)\n")
-                        % winfo.name[len(workspacenameprefix) :]
-                    )
+                    ui.write(_("        %s%s (archived)\n") % (shortname, isconnected))
             else:
-                ui.write(_("        %s\n") % winfo.name[len(workspacenameprefix) :])
+                ui.write(_("        %s%s\n") % (shortname, isconnected))
         ui.status(_("run `hg cloud sl -w <workspace name>` to view the commits\n"))
+        ui.status(
+            _(
+                "run `hg cloud join -w <workspace name> --switch` to switch to a different workspace\n"
+            )
+        )
 
 
 @subcmd(
