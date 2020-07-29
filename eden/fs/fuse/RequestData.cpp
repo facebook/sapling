@@ -69,7 +69,7 @@ void RequestData::finishRequest() {
   const auto diff_us = duration_cast<microseconds>(diff);
   const auto diff_ns = duration_cast<nanoseconds>(diff);
 
-  stats_->getFuseStatsForCurrentThread().recordLatency(
+  stats_->getChannelStatsForCurrentThread().recordLatency(
       latencyHistogram_, diff_us, now_since_epoch);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;

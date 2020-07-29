@@ -17,6 +17,7 @@ namespace facebook {
 namespace eden {
 
 class FuseThreadStats;
+class PrjFSThreadStats;
 class ObjectStoreThreadStats;
 class HgBackingStoreThreadStats;
 class HgImporterThreadStats;
@@ -24,12 +25,18 @@ class JournalThreadStats;
 
 class EdenStats {
  public:
+#ifndef _WIN32
+  using ChannelThreadStats = FuseThreadStats;
+#else
+  using ChannelThreadStats = PrjFSThreadStats;
+#endif
+
   /**
    * This function can be called on any thread.
    *
    * The returned object can be used only on the current thread.
    */
-  FuseThreadStats& getFuseStatsForCurrentThread();
+  ChannelThreadStats& getChannelStatsForCurrentThread();
 
   /**
    * This function can be called on any thread.
@@ -67,8 +74,8 @@ class EdenStats {
  private:
   class ThreadLocalTag {};
 
-  folly::ThreadLocal<FuseThreadStats, ThreadLocalTag, void>
-      threadLocalFuseStats_;
+  folly::ThreadLocal<ChannelThreadStats, ThreadLocalTag, void>
+      threadLocalChannelStats_;
   folly::ThreadLocal<ObjectStoreThreadStats, ThreadLocalTag, void>
       threadLocalObjectStoreStats_;
   folly::ThreadLocal<HgBackingStoreThreadStats, ThreadLocalTag, void>
@@ -159,6 +166,11 @@ class FuseThreadStats : public EdenThreadStatsBase {
       HistogramPtr item,
       std::chrono::microseconds elapsed,
       std::chrono::seconds now);
+};
+
+class PrjFSThreadStats : public EdenThreadStatsBase {
+ public:
+  Timeseries outOfOrderCreate{createTimeseries("prjfs.out_of_order_create")};
 };
 
 /**

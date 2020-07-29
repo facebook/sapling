@@ -448,20 +448,80 @@ EdenDispatcher::getFileData(
 }
 
 namespace {
+folly::Future<TreeInodePtr> createDirInode(
+    const EdenMount& mount,
+    const RelativePathPiece path) {
+  return mount.getInode(path)
+      .thenValue([](const InodePtr inode) { return inode.asTreePtr(); })
+      .thenError(
+          folly::tag_t<std::system_error>{},
+          [=, &mount](const std::system_error& ex) {
+            if (!isEnoent(ex)) {
+              return folly::makeFuture<TreeInodePtr>(ex);
+            }
+
+            mount.getStats()
+                ->getChannelStatsForCurrentThread()
+                .outOfOrderCreate.addValue(1);
+            XLOG(DBG2) << "Out of order directory creation notification for: "
+                       << path;
+
+            /*
+             * ProjectedFS notifications are asynchronous and sent after the
+             * fact. This means that we can get a notification on a
+             * file/directory before the parent directory notification has been
+             * completed. This should be a very rare event and thus the code
+             * below is pessimistic and will try to create all parent
+             * directories.
+             */
+
+            auto fut = folly::makeFuture(mount.getRootInode());
+            for (auto parent : path.paths()) {
+              fut = std::move(fut).thenValue([parent](TreeInodePtr treeInode) {
+                try {
+                  treeInode->mkdir(
+                      parent.basename(), _S_IFDIR, InvalidationRequired::No);
+                } catch (std::system_error& ex) {
+                  if (ex.code().value() != EEXIST) {
+                    throw;
+                  }
+                }
+
+                return treeInode->getOrLoadChildTree(parent.basename());
+              });
+            }
+
+            return fut;
+          });
+}
+
 folly::Future<folly::Unit> createFile(
     const EdenMount& mount,
     const RelativePathPiece path,
     bool isDirectory) {
-  return mount.getInode(path.dirname()).thenValue([=](const InodePtr inode) {
-    auto treeInode = inode.asTreePtr();
-    if (isDirectory) {
-      treeInode->mkdir(path.basename(), _S_IFDIR, InvalidationRequired::No);
-    } else {
-      treeInode->mknod(path.basename(), _S_IFREG, 0, InvalidationRequired::No);
-    }
+  return createDirInode(mount, path.dirname())
+      .thenValue([=](const TreeInodePtr treeInode) {
+        if (isDirectory) {
+          try {
+            treeInode->mkdir(
+                path.basename(), _S_IFDIR, InvalidationRequired::No);
+          } catch (std::system_error& ex) {
+            /*
+             * If a concurrent createFile for a child of this directory finished
+             * before this one, the directory will already exist. This is not an
+             * error.
+             */
+            if (ex.code().value() != EEXIST) {
+              return folly::makeFuture<folly::Unit>(ex);
+            }
+          }
+        } else {
+          treeInode->mknod(
+              path.basename(), _S_IFREG, 0, InvalidationRequired::No);
+        }
 
-    return folly::unit;
-  });
+        return folly::makeFuture(folly::unit);
+      });
 }
 
 folly::Future<folly::Unit> materializeFile(
@@ -478,17 +538,25 @@ folly::Future<folly::Unit> renameFile(
     const EdenMount& mount,
     const RelativePathPiece oldPath,
     const RelativePathPiece newPath) {
-  auto oldParentInode = mount.getInode(oldPath.dirname());
-  auto newParentInode = mount.getInode(newPath.dirname());
+  auto oldParentInode = createDirInode(mount, oldPath.dirname());
+  auto newParentInode = createDirInode(mount, newPath.dirname());
 
   return std::move(oldParentInode)
       .thenValue([=, newParentInode = std::move(newParentInode)](
-                     const InodePtr oldParentInodePtr) mutable {
-        auto oldParentTreePtr = oldParentInodePtr.asTreePtr();
+                     const TreeInodePtr oldParentTreePtr) mutable {
         return std::move(newParentInode)
             .thenValue([=, oldParentTreePtr = std::move(oldParentTreePtr)](
-                           const InodePtr newParentInodePtr) {
-              auto newParentTreePtr = newParentInodePtr.asTreePtr();
+                           const TreeInodePtr newParentTreePtr) {
+              // TODO(xavierd): In the case where the oldPath is actually being
+              // created in another thread, EdenFS simply might not know about
+              // it at this point. Creating the file and renaming it at this
+              // point won't help as the other thread will re-create it. In the
+              // future, we may want to try, wait a bit and retry, or re-think
+              // this and somehow order requests so the file creation always
+              // happens before the rename.
+              //
+              // This should be *extremely* rare, for now let's just let it
+              // error out.
               return oldParentTreePtr->rename(
                   oldPath.basename(),
                   newParentTreePtr,
