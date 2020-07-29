@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# (c) Facebook, Inc. and its affiliates. Confidential and proprietary.
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 
 set -x
 
