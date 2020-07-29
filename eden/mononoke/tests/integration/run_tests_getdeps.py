@@ -109,21 +109,13 @@ else:
         "test-lfs-to-mononoke.t",  # Timed out
         "test-lfs-wantslfspointers.t",  # Timed out
         "test-lfs.t",  # Timed out
-        "test-megarepo-tool.t",  # Missing MONONOKE_HG_SYNC
+        "test-megarepo-tool.t",  # Missing MEGAREPO_TOOL
         "test-mononoke-admin.t",  # Missing MEGAREPO_TOOL
-        "test-mononoke-hg-sync-job-generate-bundles-force.t",  # Missing MONONOKE_HG_SYNC
         "test-mononoke-hg-sync-job-generate-bundles-lfs-verification.t",  # Timed out
         "test-mononoke-hg-sync-job-generate-bundles-lfs.t",  # Timed out
-        "test-mononoke-hg-sync-job-generate-bundles-loop.t",  # Missing MONONOKE_HG_SYNC
-        "test-mononoke-hg-sync-job-generate-bundles-other-books.t",  # Missing MONONOKE_HG_SYNC
-        "test-mononoke-hg-sync-job-generate-bundles.t",  # Missing MONONOKE_HG_SYNC
-        "test-mononoke-hg-sync-job-sync-globalrevs.t",  # Missing MONONOKE_HG_SYNC
-        "test-mononoke-hg-sync-job-with-copies.t",  # Missing MONONOKE_HG_SYNC
-        "test-mononoke-hg-sync-job.t",  # Missing MONONOKE_HG_SYNC
         "test-push-protocol-lfs.t",  # Timed out
         "test-push-redirector-pushrebase-hooks.t",  # Hooks are not in OSS yet
         "test-push-redirector-pushrebase-onesided.t",  # Missing MONONOKE_X_REPO_SYNC
-        "test-push-redirector-sync-job.t",  # Missing MONONOKE_HG_SYNC
         "test-pushrebase-block-casefolding.t",  # Most likely MacOS path case insensitivity
         "test-pushrebase-discovery.t",  # Hooks are not in OSS yet
         "test-remotefilelog-lfs.t",  # Timed out

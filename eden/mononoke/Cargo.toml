@@ -118,7 +118,7 @@ mercurial_derived_data = { path = "derived_data/mercurial_derived_data" }
 mercurial_revlog = { path = "mercurial/revlog" }
 mercurial_types = { path = "mercurial/types" }
 metaconfig_types = { path = "metaconfig/types" }
-mononoke_hg_sync_job_helper_lib = { path = "mononoke_hg_sync_job_helper_lib" }
+mononoke_hg_sync_job_helper_lib = { path = "mononoke_hg_sync_job" }
 mononoke_types = { path = "mononoke_types" }
 movers = { path = "commit_rewriting/movers" }
 mutable_counters = { path = "mutable_counters" }
@@ -298,7 +298,7 @@ members = [
     "microwave/builder",
     "microwave/if",
     "mononoke_api",
-    "mononoke_hg_sync_job_helper_lib",
+    "mononoke_hg_sync_job",
     "mononoke_types",
     "mononoke_types/if",
     "mononoke_types/mocks",

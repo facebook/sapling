@@ -1,0 +1,78 @@
+[package]
+name = "mononoke_hg_sync_job_helper_lib"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["helper_lib/**/*.rs", "schemas/**/*.sql", "src/**/*.py", "src/**/*.rs"]
+
+[lib]
+path = "helper_lib/lib.rs"
+
+[[bin]]
+name = "mononoke_hg_sync_job"
+path = "src/main.rs"
+
+[dependencies]
+blobrepo = { path = "../blobrepo" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
+blobstore = { path = "../blobstore" }
+bookmarks = { path = "../bookmarks" }
+cmdlib = { path = "../cmdlib" }
+context = { path = "../server/context" }
+dbbookmarks = { path = "../bookmarks/dbbookmarks" }
+getbundle_response = { path = "../repo_client/getbundle_response" }
+hgserver_config = { path = "../../../configerator/structs/scm/mononoke/hgserverconf" }
+lfs_protocol = { path = "../lfs_protocol" }
+mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data" }
+mercurial_bundles = { path = "../mercurial/bundles" }
+mercurial_revlog = { path = "../mercurial/revlog" }
+mercurial_types = { path = "../mercurial/types" }
+metaconfig_types = { path = "../metaconfig/types" }
+mononoke_types = { path = "../mononoke_types" }
+mutable_counters = { path = "../mutable_counters" }
+reachabilityindex = { path = "../reachabilityindex" }
+repo_read_write_status = { path = "../repo_client/repo_read_write_status" }
+revset = { path = "../revset" }
+scuba_ext = { path = "../common/scuba_ext" }
+skiplist = { path = "../reachabilityindex/skiplist" }
+sql_construct = { path = "../common/sql_construct" }
+sql_ext = { path = "../common/rust/sql_ext" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+base64 = "0.11.0"
+bytes = { version = "0.5", features = ["serde"] }
+bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
+clap = "2.33"
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+http = "0.1"
+hyper = "0.12"
+hyper-openssl = "0.7"
+itertools = "0.8"
+maplit = "1.0"
+parking_lot = "0.10.2"
+regex = "1.3.7"
+serde_json = "1.0"
+slog = { version = "2.5", features = ["max_level_debug"] }
+tempfile = "3.1"
+thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
+tokio-io = "0.1"
+tokio-old = { package = "tokio", version = "0.1" }
+tokio-process = "0.2"
+tokio-timer = "0.2"
+
+[dev-dependencies]
+blobrepo_factory = { path = "../blobrepo/factory" }
+bonsai_globalrev_mapping = { path = "../bonsai_globalrev_mapping" }
+mercurial_types-mocks = { path = "../mercurial/types/mocks" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+assert_matches = "1.3"
+tokio-compat = "0.1"
