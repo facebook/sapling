@@ -96,11 +96,7 @@ DEFINE_bool(
     false,
     "Enable the fault injection framework.");
 
-#ifndef _WIN32
 #define DEFAULT_STORAGE_ENGINE "rocksdb"
-#else
-#define DEFAULT_STORAGE_ENGINE "sqlite"
-#endif
 #define SUPPORTED_STORAGE_ENGINES "rocksdb|sqlite|memory"
 
 DEFINE_string(
