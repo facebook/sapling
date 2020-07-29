@@ -4,6 +4,7 @@
 # The values here should correspond to both the name of binary as builded by
 # getdeps.py's Mononoke project and the buck target. Those names must be unique.
 MONONOKE_BINS = {
+    "BACKSYNCER": "backsyncer_cmd",
     "EDENAPI_SERVER": "edenapi_server",
     "LFS_SERVER": "lfs_server",
     "MONONOKE_ADMIN": "admin",
