@@ -13,9 +13,13 @@
 # Start a LFS server for this repository (no upstream)
   $ lfs_uri="$(lfs_server --tls)/health_check"
 
-# Connecting without a client certificate fails (note: we use -k here to see the server closing the conection)
-  $ curl -sk "$lfs_uri"
-  [35]
+# Connecting without a client certificate fails
+#
+# Note: We use -k here to see the server closing the conection. Depending on the
+# version of curl (and in particular, the version TLS it uses), the return code
+# may be either 35 (CURLE_SSL_CONNECT_ERROR) or 56 (CURLE_RECV_ERROR).
+  $ curl -sk "$lfs_uri" || echo "$?"
+  (35|56) (re)
 
 # Connecting with a client certificate succeeds
   $ sslcurl -s "$lfs_uri"
