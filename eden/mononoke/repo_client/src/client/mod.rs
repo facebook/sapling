@@ -87,10 +87,12 @@ use tunables::tunables;
 
 mod logging;
 mod monitor;
+mod session_bookmarks_cache;
 
 use logging::CommandLogger;
 pub use logging::WireprotoLogging;
 use monitor::Monitor;
+use session_bookmarks_cache::SessionBookmarkCache;
 
 define_stats! {
     prefix = "mononoke.repo_client";
@@ -208,7 +210,7 @@ lazy_static! {
     static ref SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(1);
 }
 
-fn process_timeout_error(err: TimeoutError<Error>) -> Error {
+pub(crate) fn process_timeout_error(err: TimeoutError<Error>) -> Error {
     match err.into_inner() {
         Some(err) => err,
         None => Error::msg("timeout"),
@@ -363,52 +365,11 @@ pub struct RepoClient {
     // The client then gets a bookmark that points to a commit it does not yet have, and ignores it.
     // We currently fix it by caching bookmarks at the beginning of discovery.
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
-    cached_publishing_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
+    session_bookmarks_cache: Arc<SessionBookmarkCache>,
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
     force_lfs: Arc<AtomicBool>,
     maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
-}
-
-fn get_publishing_maybe_stale_raw(
-    ctx: CoreContext,
-    repo: BlobRepo,
-) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
-    repo.get_publishing_bookmarks_maybe_stale(ctx)
-        .fold(HashMap::new(), |mut map, item| {
-            map.insert(item.0, item.1);
-            let ret: Result<_, Error> = Ok(map);
-            ret
-        })
-        .timeout(*BOOKMARKS_TIMEOUT)
-        .map_err(process_timeout_error)
-}
-
-fn update_publishing_bookmarks_maybe_stale_cache_raw(
-    cache: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
-    bookmarks: HashMap<Bookmark, HgChangesetId>,
-) {
-    let mut maybe_cache = cache.lock().expect("lock poisoned");
-    *maybe_cache = Some(bookmarks);
-}
-
-fn update_publishing_bookmarks_maybe_stale_cache(
-    ctx: CoreContext,
-    cache: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
-    repo: BlobRepo,
-) -> impl Future<Item = (), Error = Error> {
-    get_publishing_maybe_stale_raw(ctx, repo)
-        .map(move |bookmarks| update_publishing_bookmarks_maybe_stale_cache_raw(cache, bookmarks))
-}
-
-fn get_publishing_bookmarks_maybe_stale_updating_cache(
-    ctx: CoreContext,
-    cache: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
-    repo: BlobRepo,
-) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
-    get_publishing_maybe_stale_raw(ctx, repo).inspect(move |bookmarks| {
-        update_publishing_bookmarks_maybe_stale_cache_raw(cache, bookmarks.clone())
-    })
 }
 
 impl RepoClient {
@@ -422,13 +383,14 @@ impl RepoClient {
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
     ) -> Self {
+        let blobrepo = repo.blobrepo().clone();
         Self {
             repo,
             session,
             logging,
             hash_validation_percentage,
             preserve_raw_bundle2,
-            cached_publishing_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
+            session_bookmarks_cache: Arc::new(SessionBookmarkCache::new(blobrepo)),
             wireproto_logging,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
@@ -483,21 +445,7 @@ impl RepoClient {
         &self,
         ctx: CoreContext,
     ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
-        let maybe_cache = self
-            .cached_publishing_bookmarks_maybe_stale
-            .lock()
-            .expect("lock poisoned")
-            .clone();
-
-        match maybe_cache {
-            None => get_publishing_bookmarks_maybe_stale_updating_cache(
-                ctx,
-                self.cached_publishing_bookmarks_maybe_stale.clone(),
-                self.repo.blobrepo().clone(),
-            )
-            .left_future(),
-            Some(bookmarks) => future_old::ok(bookmarks).right_future(),
-        }
+        self.session_bookmarks_cache.get_publishing_bookmarks(ctx)
     }
 
     fn get_pull_default_bookmarks_maybe_stale(
@@ -1549,7 +1497,7 @@ impl HgCommands for RepoClient {
     ) -> HgCommandRes<BytesOld> {
         let reponame = self.repo.reponame().clone();
         cloned!(
-            self.cached_publishing_bookmarks_maybe_stale,
+            self.session_bookmarks_cache,
             self as repoclient,
             self.repo as mononoke_repo
         );
@@ -1558,11 +1506,7 @@ impl HgCommands for RepoClient {
 
         // Kill the saved set of bookmarks here - the unbundle may change them, and the next
         // command in sequence will need to fetch a new set
-        let _ = self
-            .cached_publishing_bookmarks_maybe_stale
-            .lock()
-            .expect("lock poisoned")
-            .take();
+        self.session_bookmarks_cache.drop_cache();
 
         let lfs_params = self.lfs_params();
 
@@ -1693,13 +1637,10 @@ impl HgCommands for RepoClient {
                                     //
                                     // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
                                     // depend on the reply part with a bookmark change in - T57874233
-                                    update_publishing_bookmarks_maybe_stale_cache(
-                                        ctx.clone(),
-                                        cached_publishing_bookmarks_maybe_stale,
-                                        blobrepo.clone(),
-                                    )
-                                    .compat()
-                                    .await?;
+                                    session_bookmarks_cache
+                                        .update_publishing_bookmarks_maybe_stale_cache(ctx.clone())
+                                        .compat()
+                                        .await?;
                                 }
                                 response
                             }
