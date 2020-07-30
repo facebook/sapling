@@ -18,6 +18,7 @@ MONONOKE_BINS = {
     "MONONOKE_FASTREPLAY": "fastreplay",
     "MONONOKE_GITIMPORT": "gitimport",
     "MONONOKE_HGCLI": "hgcli",
+    "MONONOKE_HG_SYNC": "mononoke_hg_sync_job",
     "MONONOKE_HOOK_TAILER": "hook_tailer",
     "MONONOKE_LFS_IMPORT": "lfs_import",
     "MONONOKE_MANUAL_SCRUB": "manual_scrub",

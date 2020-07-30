@@ -9,7 +9,8 @@ use crate::{facebook::*, *};
 
 use anyhow::Error;
 use fbinit::FacebookInit;
-use futures_ext::BoxFuture;
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::ok;
 use slog::Logger;
 
 macro_rules! fb_unimplemented {
@@ -40,7 +41,15 @@ pub fn create_myrouter_connections(
     fb_unimplemented!()
 }
 
-pub fn myrouter_ready(_: Option<String>, _: MysqlOptions, _: Logger) -> BoxFuture<(), Error> {
+pub fn myrouter_ready(
+    db_addr_opt: Option<String>,
+    mysql_options: MysqlOptions,
+    _: Logger,
+) -> BoxFuture<(), Error> {
+    if db_addr_opt.is_none() || mysql_options.myrouter_port.is_none() {
+        return ok(()).boxify();
+    };
+
     fb_unimplemented!()
 }
 
