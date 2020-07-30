@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use dns_lookup::lookup_addr;
+use futures::Future;
 use gotham::state::{client_addr, FromState, State};
 use gotham_derive::StateData;
 use hyper::header::HeaderMap;
@@ -14,6 +16,7 @@ use percent_encoding::percent_decode;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
+use tokio::task;
 
 use super::Middleware;
 
@@ -39,6 +42,21 @@ pub struct ClientIdentity {
 impl ClientIdentity {
     pub fn address(&self) -> &Option<IpAddr> {
         &self.address
+    }
+
+    /// Perform a reverse DNS lookup of the client's IP address to determine
+    /// its hostname. This involves potentially expensive blocking I/O, so
+    /// the lookup is performed asynchronously in another thread.
+    pub fn hostname(&self) -> impl Future<Output = Option<String>> + 'static {
+        // XXX: Can't make this an async fn because the resulting Future would
+        // have a non-'static lifetime (due to the &self argument).
+        let address = self.address.clone();
+        async move {
+            task::spawn_blocking(move || lookup_addr(&address?).ok())
+                .await
+                .ok()
+                .flatten()
+        }
     }
 
     pub fn identities(&self) -> &Option<MononokeIdentitySet> {

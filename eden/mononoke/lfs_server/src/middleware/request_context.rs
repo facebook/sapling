@@ -7,9 +7,11 @@
 
 use cached_config::ConfigHandle;
 use context::{CoreContext, PerfCounters, SessionContainer};
-use dns_lookup::lookup_addr;
 use fbinit::FacebookInit;
-use futures::channel::oneshot::{self, Receiver, Sender};
+use futures::{
+    channel::oneshot::{self, Receiver, Sender},
+    prelude::*,
+};
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use gotham_ext::{
@@ -20,7 +22,6 @@ use hyper::{body::Body, Response};
 use scuba::ScubaSampleBuilder;
 use slog::{o, Logger};
 use std::fmt;
-use std::net::IpAddr;
 use std::time::{Duration, Instant};
 use tokio::task;
 
@@ -110,12 +111,10 @@ impl RequestContext {
         sender
     }
 
-    fn dispatch_post_request(
-        self,
-        client_address: Option<IpAddr>,
-        content_length: Option<u64>,
-        disable_hostname_logging: bool,
-    ) {
+    fn dispatch_post_request<H>(self, content_length: Option<u64>, client_hostname: H)
+    where
+        H: Future<Output = Option<String>> + Send + 'static,
+    {
         let Self {
             ctx,
             start_time,
@@ -123,27 +122,6 @@ impl RequestContext {
             checkpoint,
             ..
         } = self;
-
-        // We get the client hostname asynchronously in post request, because that might be a little slow.
-        let client_hostname = async move {
-            if disable_hostname_logging {
-                return None;
-            }
-
-            let hostname = task::spawn_blocking(move || {
-                client_address
-                    .as_ref()
-                    .map(lookup_addr)
-                    .transpose()
-                    .ok()
-                    .flatten()
-            })
-            .await
-            .ok()
-            .flatten();
-
-            hostname
-        };
 
         let fut = async move {
             let bytes_sent = if let Some(checkpoint) = checkpoint {
@@ -157,6 +135,7 @@ impl RequestContext {
             // Capture elapsed time before waiting for the client hostname to resolve.
             let elapsed = start_time.elapsed();
 
+            // Resolve client hostname. Querying DNS might be slow.
             let client_hostname = client_hostname.await;
 
             for callback in post_request_callbacks.into_iter() {
@@ -208,19 +187,17 @@ impl Middleware for RequestContextMiddleware {
     }
 
     async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
-        let client_address = ClientIdentity::try_borrow_from(&state)
-            .map(|client_identity| *client_identity.address())
-            .flatten();
-
         let content_length = ResponseContentLength::try_borrow_from(&state).map(|l| l.0);
 
         let config = self.config_handle.get();
+        let client_identity = ClientIdentity::try_borrow_from(&state);
+        let client_hostname = match client_identity {
+            Some(id) if !config.disable_hostname_logging() => id.hostname().left_future(),
+            _ => future::ready(None).right_future(),
+        };
+
         if let Some(ctx) = state.try_take::<RequestContext>() {
-            ctx.dispatch_post_request(
-                client_address,
-                content_length,
-                config.disable_hostname_logging(),
-            );
+            ctx.dispatch_post_request(content_length, client_hostname);
         }
     }
 }

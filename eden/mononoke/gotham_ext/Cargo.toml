@@ -11,6 +11,7 @@ permission_checker = { path = "../permission_checker" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
+dns-lookup = "1.0"
 failure = "0.1"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 gotham = { version = "=0.5.0-dev", default-features = false }
