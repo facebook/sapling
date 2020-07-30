@@ -362,7 +362,7 @@ pub struct RepoClient {
     // The client then gets a bookmark that points to a commit it does not yet have, and ignores it.
     // We currently fix it by caching bookmarks at the beginning of discovery.
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
-    cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
+    cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
     force_lfs: Arc<AtomicBool>,
@@ -372,12 +372,8 @@ pub struct RepoClient {
 fn get_pull_default_bookmarks_maybe_stale_raw(
     ctx: CoreContext,
     repo: BlobRepo,
-) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
+) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
     repo.get_pull_default_bookmarks_maybe_stale(ctx)
-        .map(|(book, cs): (Bookmark, HgChangesetId)| {
-            let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-            (book.into_name().into_byte_vec(), hash)
-        })
         .fold(HashMap::new(), |mut map, item| {
             map.insert(item.0, item.1);
             let ret: Result<_, Error> = Ok(map);
@@ -388,8 +384,8 @@ fn get_pull_default_bookmarks_maybe_stale_raw(
 }
 
 fn update_pull_default_bookmarks_maybe_stale_cache_raw(
-    cache: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
-    bookmarks: HashMap<Vec<u8>, Vec<u8>>,
+    cache: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
+    bookmarks: HashMap<Bookmark, HgChangesetId>,
 ) {
     let mut maybe_cache = cache.lock().expect("lock poisoned");
     *maybe_cache = Some(bookmarks);
@@ -397,7 +393,7 @@ fn update_pull_default_bookmarks_maybe_stale_cache_raw(
 
 fn update_pull_default_bookmarks_maybe_stale_cache(
     ctx: CoreContext,
-    cache: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
+    cache: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
     repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
     get_pull_default_bookmarks_maybe_stale_raw(ctx, repo)
@@ -406,9 +402,9 @@ fn update_pull_default_bookmarks_maybe_stale_cache(
 
 fn get_pull_default_bookmarks_maybe_stale_updating_cache(
     ctx: CoreContext,
-    cache: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
+    cache: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
     repo: BlobRepo,
-) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
+) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
     get_pull_default_bookmarks_maybe_stale_raw(ctx, repo).inspect(move |bookmarks| {
         update_pull_default_bookmarks_maybe_stale_cache_raw(cache, bookmarks.clone())
     })
@@ -501,6 +497,15 @@ impl RepoClient {
             .left_future(),
             Some(bookmarks) => future_old::ok(bookmarks).right_future(),
         }
+        .map(|bookmarks| {
+            bookmarks
+                .into_iter()
+                .map(|(book, cs)| {
+                    let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
+                    (book.into_name().into_byte_vec(), hash)
+                })
+                .collect()
+        })
     }
 
     fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
