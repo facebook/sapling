@@ -52,6 +52,16 @@ class StartupLogger {
   }
 
   /**
+   * Log a verbose message
+   */
+  template <typename... Args>
+  void logVerbose(Args&&... args) {
+    writeMessage(
+        folly::LogLevel::DBG7,
+        folly::to<std::string>(std::forward<Args>(args)...));
+  }
+
+  /**
    * Log a warning message.
    */
   template <typename... Args>

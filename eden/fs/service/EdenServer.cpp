@@ -464,7 +464,7 @@ void EdenServer::ProgressManager::printProgresses(
       break;
     }
   }
-  logger->log(prepare + content);
+  logger->logVerbose(prepare + content);
   totalLinesPrinted++;
 }
 
