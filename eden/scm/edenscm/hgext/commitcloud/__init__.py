@@ -91,9 +91,6 @@ Configs::
     # path can contains ${USER} or %i to substitute with the user identity
     scm_daemon_log_path = /path/to/%i/logfile
 
-    # Use secrets_tool for token backup between machines
-    use_secrets_tool = true
-
     # Maximum age (in days) of commits to pull when syncing
     max_sync_age = 14
 

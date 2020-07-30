@@ -249,40 +249,6 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
                 }
             }
         }
-        // try to read token from secrets tool
-        if token.is_none() {
-            // try to read from secrets_tool
-            info!("Token Lookup: reading commitcloud OAuth token from secrets_tool...");
-            let user = env::var("USER")?.to_uppercase();
-            let key = format!("COMMITCLOUD_{}", user);
-            let output = Command::new("secrets_tool")
-                .args(vec!["get", key.as_str()])
-                .output();
-
-            match output {
-                Err(e) => {
-                    if let io::ErrorKind::NotFound = e.kind() {
-                        info!("`secrets_tool` executable is not found");
-                    }
-                }
-                Ok(output) => {
-                    if !output.status.success() {
-                        error!("OAuth token: failed to retrieve from secrets using key {}, process exited with: {}", key, output.status);
-                    } else {
-                        let token = str::from_utf8(&output.stdout)?.trim().to_string();
-                        if token.is_empty() {
-                            error!("OAuth token not found in secrets");
-                        } else {
-                            info!("OAuth token is found in secrets");
-                            return Ok(Token {
-                                token,
-                                token_type: TokenType::OAuth,
-                            });
-                        }
-                    }
-                }
-            }
-        }
     }
     token
         .map(|token| Token {

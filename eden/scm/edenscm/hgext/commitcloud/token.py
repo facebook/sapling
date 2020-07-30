@@ -22,107 +22,25 @@ class TokenLocator(object):
         self.ui = ui
         self.vfs = vfsmod.vfs(ccutil.getuserconfigpath(self.ui, "user_token_path"))
         self.vfs.createmode = 0o600
-        # using platform username
-        self.secretname = (self.servicename + "_" + util.getuser()).upper()
-        self.usesecretstool = self.ui.configbool("commitcloud", "use_secrets_tool")
 
     def _gettokenfromfile(self):
         """On platforms except macOS tokens are stored in a file"""
         if not self.vfs.exists(self.filename):
-            if self.usesecretstool:
-                # check if token has been backed up and recover it if possible
-                try:
-                    token = self._gettokenfromsecretstool()
-                    if token:
-                        self._settokentofile(token, isbackedup=True)
-                    return token
-                except Exception:
-                    pass
             return None
 
         with self.vfs.open(self.filename, r"rb") as f:
             tokenconfig = config.config()
             tokenconfig.read(self.filename, f)
             token = tokenconfig.get("commitcloud", "user_token")
-            if self.usesecretstool:
-                isbackedup = tokenconfig.get("commitcloud", "backedup")
-                if not isbackedup:
-                    self._settokentofile(token)
             return token
 
     def _settokentofile(self, token, isbackedup=False):
         """On platforms except macOS tokens are stored in a file"""
-        # backup token if optional backup is enabled
-        if self.usesecretstool and not isbackedup:
-            try:
-                self._settokeninsecretstool(token)
-                isbackedup = True
-            except Exception:
-                pass
         with self.vfs.open(self.filename, "wb") as configfile:
             configfile.write(
                 b"[commitcloud]\nuser_token=%s\nbackedup=%s\n"
                 % (pycompat.encodeutf8(token), pycompat.encodeutf8(str(isbackedup)))
             )
-
-    def _gettokenfromsecretstool(self):
-        """Token stored in keychain as individual secret"""
-        try:
-            p = subprocess.Popen(
-                ["secrets_tool", "get", self.secretname],
-                close_fds=util.closefds,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            (stdoutdata, stderrdata) = p.communicate()
-            rc = p.returncode
-            if rc != 0:
-                return None
-            text = stdoutdata.strip()
-            return text or None
-
-        except OSError as e:
-            raise ccerror.UnexpectedError(self.ui, e)
-        except ValueError as e:
-            raise ccerror.UnexpectedError(self.ui, e)
-
-    def _settokeninsecretstool(self, token, update=False):
-        """Token stored in keychain as individual secrets"""
-        action = "update" if update else "create"
-        try:
-            p = subprocess.Popen(
-                [
-                    "secrets_tool",
-                    action,
-                    "--read_contents_from_stdin",
-                    self.secretname,
-                    "Mercurial commitcloud token",
-                ],
-                close_fds=util.closefds,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                stdin=subprocess.PIPE,
-            )
-            (stdoutdata, stderrdata) = p.communicate(token)
-            rc = p.returncode
-
-            if rc != 0:
-                if action == "create":
-                    # Try updating token instead
-                    self._settokeninsecretstool(token, update=True)
-                else:
-                    raise ccerror.SubprocessError(self.ui, rc, stderrdata)
-
-            else:
-                self.ui.debug(
-                    "access token is backup up in secrets tool in %s\n"
-                    % self.secretname
-                )
-
-        except OSError as e:
-            raise ccerror.UnexpectedError(self.ui, e)
-        except ValueError as e:
-            raise ccerror.UnexpectedError(self.ui, e)
 
     def _gettokenosx(self):
         """On macOS tokens are stored in keychain
