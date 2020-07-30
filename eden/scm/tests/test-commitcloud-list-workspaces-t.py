@@ -40,14 +40,16 @@ sh % "cat" << r"""
 """ >> "$TESTTMP/workspacesdata"
 
 sh % "hg cloud list" == r"""
-workspaces:
+commitcloud: searching workspaces for the 'server' repo
+Workspaces:
         default
 run `hg cloud sl -w <workspace name>` to view the commits
 run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
 """
 
 sh % "hg cloud list --all" == r"""
-workspaces:
+commitcloud: searching workspaces for the 'server' repo
+Workspaces:
         old (archived)
         default
 run `hg cloud sl -w <workspace name>` to view the commits

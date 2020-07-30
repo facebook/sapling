@@ -723,6 +723,12 @@ def cloudlistworspaces(ui, repo, **opts):
     workspacenameprefix = workspace.userworkspaceprefix(ui, user if user else None)
     currentworkspace = workspace.currentworkspace(repo)
     reponame = ccutil.getreponame(repo)
+
+    ui.status(
+        _("searching workspaces for the '%s' repo\n") % reponame,
+        component="commitcloud",
+    )
+
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
     winfos = serv.getworkspaces(reponame, workspacenameprefix)
     if not winfos:
@@ -730,11 +736,13 @@ def cloudlistworspaces(ui, repo, **opts):
             _("no active workspaces found with the prefix %s\n") % workspacenameprefix
         )
     else:
-        ui.write(_("workspaces:\n"))
+        ui.write(_("Workspaces:\n"))
         for winfo in winfos:
             fullname = winfo.name
             shortname = winfo.name[len(workspacenameprefix) :]
             isconnected = " (connected)" if fullname == currentworkspace else ""
+            if isconnected:
+                shortname = ui.label(shortname, "bold")
             if winfo.archived:
                 if opts.get("all"):
                     ui.write(_("        %s%s (archived)\n") % (shortname, isconnected))
