@@ -7,6 +7,7 @@ MONONOKE_BINS = {
     "BACKSYNCER": "backsyncer_cmd",
     "EDENAPI_SERVER": "edenapi_server",
     "LFS_SERVER": "lfs_server",
+    "MEGAREPO_TOOL": "megarepotool",
     "MONONOKE_ADMIN": "admin",
     "MONONOKE_ALIAS_VERIFY": "aliasverify",
     "MONONOKE_BACKFILL_DERIVED_DATA": "backfill_derived_data",

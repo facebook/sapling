@@ -108,8 +108,6 @@ else:
         "test-lfs-to-mononoke.t",  # Timed out
         "test-lfs-wantslfspointers.t",  # Timed out
         "test-lfs.t",  # Timed out
-        "test-megarepo-tool.t",  # Missing MEGAREPO_TOOL
-        "test-mononoke-admin.t",  # Missing MEGAREPO_TOOL
         "test-mononoke-hg-sync-job-generate-bundles-lfs-verification.t",  # Timed out
         "test-mononoke-hg-sync-job-generate-bundles-lfs.t",  # Timed out
         "test-push-protocol-lfs.t",  # Timed out

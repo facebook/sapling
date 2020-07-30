@@ -4,29 +4,45 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["src/**/*.rs"]
+include = ["src/**/*.rs", "tool/**/*.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "megarepotool"
+path = "tool/main.rs"
 
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
+blobrepo_utils = { path = "../../blobrepo_utils" }
 blobstore = { path = "../../blobstore" }
 bookmarks = { path = "../../bookmarks" }
+cmdlib = { path = "../../cmdlib" }
 context = { path = "../../server/context" }
+cross_repo_sync = { path = "../cross_repo_sync" }
 manifest = { path = "../../manifest" }
 mercurial_types = { path = "../../mercurial/types" }
+metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 movers = { path = "../movers" }
+revset = { path = "../../revset" }
+skiplist = { path = "../../reachabilityindex/skiplist" }
+synced_commit_mapping = { path = "../synced_commit_mapping" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
+clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
 itertools = "0.8"
+maplit = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
 
 [dev-dependencies]
 fixtures = { path = "../../tests/fixtures" }
 tests_utils = { path = "../../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures-old = { package = "futures", version = "0.1" }
-maplit = "1.0"
 tokio-compat = "0.1"
