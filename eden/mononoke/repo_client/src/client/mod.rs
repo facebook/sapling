@@ -16,6 +16,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
+use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
 use bytes_old::{BufMut as BufMutOld, Bytes as BytesOld, BytesMut as BytesMutOld};
 use cloned::cloned;
@@ -362,18 +363,18 @@ pub struct RepoClient {
     // The client then gets a bookmark that points to a commit it does not yet have, and ignores it.
     // We currently fix it by caching bookmarks at the beginning of discovery.
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
-    cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
+    cached_publishing_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
     force_lfs: Arc<AtomicBool>,
     maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
 }
 
-fn get_pull_default_bookmarks_maybe_stale_raw(
+fn get_publishing_maybe_stale_raw(
     ctx: CoreContext,
     repo: BlobRepo,
 ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
-    repo.get_pull_default_bookmarks_maybe_stale(ctx)
+    repo.get_publishing_bookmarks_maybe_stale(ctx)
         .fold(HashMap::new(), |mut map, item| {
             map.insert(item.0, item.1);
             let ret: Result<_, Error> = Ok(map);
@@ -383,7 +384,7 @@ fn get_pull_default_bookmarks_maybe_stale_raw(
         .map_err(process_timeout_error)
 }
 
-fn update_pull_default_bookmarks_maybe_stale_cache_raw(
+fn update_publishing_bookmarks_maybe_stale_cache_raw(
     cache: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
     bookmarks: HashMap<Bookmark, HgChangesetId>,
 ) {
@@ -391,22 +392,22 @@ fn update_pull_default_bookmarks_maybe_stale_cache_raw(
     *maybe_cache = Some(bookmarks);
 }
 
-fn update_pull_default_bookmarks_maybe_stale_cache(
+fn update_publishing_bookmarks_maybe_stale_cache(
     ctx: CoreContext,
     cache: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
     repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
-    get_pull_default_bookmarks_maybe_stale_raw(ctx, repo)
-        .map(move |bookmarks| update_pull_default_bookmarks_maybe_stale_cache_raw(cache, bookmarks))
+    get_publishing_maybe_stale_raw(ctx, repo)
+        .map(move |bookmarks| update_publishing_bookmarks_maybe_stale_cache_raw(cache, bookmarks))
 }
 
-fn get_pull_default_bookmarks_maybe_stale_updating_cache(
+fn get_publishing_bookmarks_maybe_stale_updating_cache(
     ctx: CoreContext,
     cache: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
     repo: BlobRepo,
 ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
-    get_pull_default_bookmarks_maybe_stale_raw(ctx, repo).inspect(move |bookmarks| {
-        update_pull_default_bookmarks_maybe_stale_cache_raw(cache, bookmarks.clone())
+    get_publishing_maybe_stale_raw(ctx, repo).inspect(move |bookmarks| {
+        update_publishing_bookmarks_maybe_stale_cache_raw(cache, bookmarks.clone())
     })
 }
 
@@ -427,7 +428,7 @@ impl RepoClient {
             logging,
             hash_validation_percentage,
             preserve_raw_bundle2,
-            cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
+            cached_publishing_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
             wireproto_logging,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
@@ -478,34 +479,45 @@ impl RepoClient {
         (ctx, command_logger)
     }
 
-    fn get_pull_default_bookmarks_maybe_stale(
+    fn get_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
+    ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
         let maybe_cache = self
-            .cached_pull_default_bookmarks_maybe_stale
+            .cached_publishing_bookmarks_maybe_stale
             .lock()
             .expect("lock poisoned")
             .clone();
 
         match maybe_cache {
-            None => get_pull_default_bookmarks_maybe_stale_updating_cache(
+            None => get_publishing_bookmarks_maybe_stale_updating_cache(
                 ctx,
-                self.cached_pull_default_bookmarks_maybe_stale.clone(),
+                self.cached_publishing_bookmarks_maybe_stale.clone(),
                 self.repo.blobrepo().clone(),
             )
             .left_future(),
             Some(bookmarks) => future_old::ok(bookmarks).right_future(),
         }
-        .map(|bookmarks| {
-            bookmarks
-                .into_iter()
-                .map(|(book, cs)| {
-                    let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
-                    (book.into_name().into_byte_vec(), hash)
-                })
-                .collect()
-        })
+    }
+
+    fn get_pull_default_bookmarks_maybe_stale(
+        &self,
+        ctx: CoreContext,
+    ) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
+        self.get_publishing_bookmarks_maybe_stale(ctx)
+            .map(|bookmarks| {
+                bookmarks
+                    .into_iter()
+                    .filter_map(|(book, cs)| {
+                        let hash: Vec<u8> = cs.into_nodehash().to_hex().into();
+                        if book.kind() == &BookmarkKind::PullDefaultPublishing {
+                            Some((book.into_name().into_byte_vec(), hash))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            })
     }
 
     fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
@@ -1120,20 +1132,10 @@ impl HgCommands for RepoClient {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
         self.command_future(ops::HEADS, |ctx, command_logger| {
-            // We get all bookmarks while handling heads to fix the race demonstrated in
-            // test-bookmark-race.t - this fixes bookmarks at the moment the client starts discovery
-            // NB: Getting bookmarks is only done here to ensure that they are cached at the beginning
-            // of discovery - this function is meant to get heads only.
-            self.get_pull_default_bookmarks_maybe_stale(ctx.clone())
-                .join(
-                    self.repo
-                        .blobrepo()
-                        .get_heads_maybe_stale(ctx.clone())
-                        .collect()
-                        .map(|v| v.into_iter().collect())
-                        .from_err(),
-                )
-                .map(|(_, r)| r)
+            // Heads are all the commits that has a publishing bookmarks
+            // that points to it.
+            self.get_publishing_bookmarks_maybe_stale(ctx)
+                .map(|map| map.into_iter().map(|(_, hg_cs_id)| hg_cs_id).collect())
                 .timeout(*TIMEOUT)
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::HEADS, trace_args!())
@@ -1547,7 +1549,7 @@ impl HgCommands for RepoClient {
     ) -> HgCommandRes<BytesOld> {
         let reponame = self.repo.reponame().clone();
         cloned!(
-            self.cached_pull_default_bookmarks_maybe_stale,
+            self.cached_publishing_bookmarks_maybe_stale,
             self as repoclient,
             self.repo as mononoke_repo
         );
@@ -1557,7 +1559,7 @@ impl HgCommands for RepoClient {
         // Kill the saved set of bookmarks here - the unbundle may change them, and the next
         // command in sequence will need to fetch a new set
         let _ = self
-            .cached_pull_default_bookmarks_maybe_stale
+            .cached_publishing_bookmarks_maybe_stale
             .lock()
             .expect("lock poisoned")
             .take();
@@ -1691,9 +1693,9 @@ impl HgCommands for RepoClient {
                                     //
                                     // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
                                     // depend on the reply part with a bookmark change in - T57874233
-                                    update_pull_default_bookmarks_maybe_stale_cache(
+                                    update_publishing_bookmarks_maybe_stale_cache(
                                         ctx.clone(),
-                                        cached_pull_default_bookmarks_maybe_stale,
+                                        cached_publishing_bookmarks_maybe_stale,
                                         blobrepo.clone(),
                                     )
                                     .compat()

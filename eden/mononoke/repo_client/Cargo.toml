@@ -11,6 +11,7 @@ blobrepo = { path = "../blobrepo" }
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 blobstore = { path = "../blobstore" }
 bookmarks = { path = "../bookmarks" }
+bookmarks_types = { path = "../bookmarks/bookmarks_types" }
 context = { path = "../server/context" }
 filenodes = { path = "../filenodes" }
 getbundle_response = { path = "getbundle_response" }
