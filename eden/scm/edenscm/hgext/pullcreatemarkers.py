@@ -41,11 +41,15 @@ def _cleanuplanded(repo, dryrun=False):
 
     This uses mutation and visibility directly.
     """
+    limit = repo.ui.configint("pullcreatemarkers", "diff-limit", 100)
     difftodraft = {}  # {str: node}
-    for ctx in repo.set("draft() - obsolete()"):
+    for ctx in repo.set("sort(draft() - obsolete(), -rev)"):
         diffid = diffprops.parserevfromcommitmsg(ctx.description())  # str or None
         if diffid:
             difftodraft.setdefault(diffid, []).append(ctx.node())
+            # Bound the number of diffs we query from Phabricator.
+            if len(difftodraft) >= limit:
+                break
 
     ui = repo.ui
     try:
