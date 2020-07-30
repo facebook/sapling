@@ -449,7 +449,6 @@ impl ChangesetPathContext {
         )
         .await
         .map_err(|error| match error {
-            FastlogError::NoSuchPath(_) => MononokeError::InvalidRequest(error.to_string()),
             FastlogError::InternalError(e) => MononokeError::from(format_err!(e)),
             FastlogError::DeriveError(e) => MononokeError::from(e),
             FastlogError::LoadableError(e) => MononokeError::from(e),

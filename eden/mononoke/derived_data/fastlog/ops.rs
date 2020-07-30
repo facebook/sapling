@@ -41,8 +41,6 @@ define_stats! {
 
 #[derive(Debug, Error)]
 pub enum FastlogError {
-    #[error("No such path: {0}")]
-    NoSuchPath(MPath),
     #[error("Internal error: {0}")]
     InternalError(String),
     #[error("{0}")]
@@ -67,6 +65,9 @@ pub enum HistoryAcrossDeletions {
 ///
 /// This is the public API of this crate i.e. what clients should use if they want to
 /// fetch the history.
+///
+/// If the path doesn't exist (or if the path never existed with history_across_deletions on) the
+/// returned stream is empty.
 ///
 /// Given a unode representing a commit-path `list_file_history` traverses commit history
 /// in BFS order.
@@ -105,13 +106,6 @@ pub async fn list_file_history(
 ) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError> {
     let mut top_history = vec![];
     // get unode entry
-    let not_found_err = || {
-        if let Some(p) = path.clone() {
-            FastlogError::NoSuchPath(p)
-        } else {
-            FastlogError::InternalError("cannot find unode for the repo root".to_string())
-        }
-    };
     let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
 
     let mut visited = HashSet::new();
@@ -129,9 +123,7 @@ pub async fn list_file_history(
             fetch_linknodes_and_update_graph(&ctx, &repo, vec![unode_entry], &mut history_graph)
                 .await?
         }
-        None => {
-            return Err(not_found_err());
-        }
+        None => return Ok(stream::iter(vec![]).boxed()),
     };
 
     let mut bfs = VecDeque::new();
