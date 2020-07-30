@@ -72,7 +72,6 @@ if args.tests or args.rerun_failed:
 else:
     excluded_tests = {
         "test-backsync-forever.t",  # Unknown issue
-        "test-backsyncer-merges.t",  # Missing BACKSYNCER
         "test-blobimport-lfs.t",  # Timed out
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
         "test-blobstore_healer.t",  # PANIC not implemented in sql_ext
@@ -124,7 +123,7 @@ else:
         "test-push-protocol-lfs.t",  # Timed out
         "test-push-redirector-pushrebase-hooks.t",  # Hooks are not in OSS yet
         "test-push-redirector-pushrebase-onesided.t",  # Missing MONONOKE_X_REPO_SYNC
-        "test-push-redirector-sync-job.t",  # Missing BACKSYNCER
+        "test-push-redirector-sync-job.t",  # Missing MONONOKE_HG_SYNC
         "test-pushrebase-block-casefolding.t",  # Most likely MacOS path case insensitivity
         "test-pushrebase-discovery.t",  # Hooks are not in OSS yet
         "test-remotefilelog-lfs.t",  # Timed out
