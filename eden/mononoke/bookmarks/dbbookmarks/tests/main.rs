@@ -1128,3 +1128,76 @@ fn test_list_bookmark_log_entries(fb: FacebookInit) {
         );
     })
 }
+
+#[fbinit::test]
+fn test_get_largest_log_id(fb: FacebookInit) {
+    async_unit::tokio_unit_test(async move {
+        let ctx = CoreContext::test_mock(fb);
+        let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .with_repo_id(REPO_ZERO);
+        let name_1 = create_bookmark_name("book");
+
+        let mut txn = bookmarks.create_transaction(ctx.clone());
+        txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+            .unwrap();
+
+        assert!(txn.commit().await.is_ok());
+        assert_eq!(
+            bookmarks
+                .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
+                .await
+                .unwrap(),
+            Some(1)
+        );
+
+        let mut txn = bookmarks.create_transaction(ctx.clone());
+        txn.update(
+            &name_1,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+            None,
+        )
+        .unwrap();
+        txn.commit().await.unwrap();
+
+        assert_eq!(
+            bookmarks
+                .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
+                .await
+                .unwrap(),
+            Some(2)
+        );
+
+        let mut txn = bookmarks.create_transaction(ctx.clone());
+        txn.update(
+            &name_1,
+            THREES_CSID,
+            TWOS_CSID,
+            BookmarkUpdateReason::TestMove,
+            None,
+        )
+        .unwrap();
+        txn.commit().await.unwrap();
+
+        let mut txn = bookmarks.create_transaction(ctx.clone());
+        txn.update(
+            &name_1,
+            FOURS_CSID,
+            THREES_CSID,
+            BookmarkUpdateReason::TestMove,
+            None,
+        )
+        .unwrap();
+        txn.commit().await.unwrap();
+
+        assert_eq!(
+            bookmarks
+                .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
+                .await
+                .unwrap(),
+            Some(4)
+        );
+    })
+}

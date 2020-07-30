@@ -93,6 +93,12 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         id: u64,
         reason: BookmarkUpdateReason,
     ) -> BoxFuture<'static, Result<Option<u64>>>;
+
+    fn get_largest_log_id(
+        &self,
+        ctx: CoreContext,
+        freshness: Freshness,
+    ) -> BoxFuture<'static, Result<Option<u64>>>;
 }
 
 /// Describes why a bookmark was moved

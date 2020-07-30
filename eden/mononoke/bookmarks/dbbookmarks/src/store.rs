@@ -184,6 +184,11 @@ queries! {
          OFFSET {offset}"
       }
 
+    read GetLargestLogId(repo_id: RepositoryId) -> (u64) {
+        "SELECT MAX(id)
+         FROM bookmarks_update_log
+         WHERE repo_id = {repo_id}"
+    }
 }
 
 #[derive(Clone)]
@@ -536,6 +541,27 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 })
             })
             .try_flatten_stream()
+            .boxed()
+    }
+
+    fn get_largest_log_id(
+        &self,
+        ctx: CoreContext,
+        freshness: Freshness,
+    ) -> BoxFuture<'static, Result<Option<u64>>> {
+        let connection = if freshness == Freshness::MostRecent {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            &self.connections.read_master_connection
+        } else {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsReplica);
+            &self.connections.read_connection
+        };
+
+        GetLargestLogId::query(&connection, &self.repo_id)
+            .compat()
+            .map_ok(|entries| entries.first().map(|entry| entry.0))
             .boxed()
     }
 }
