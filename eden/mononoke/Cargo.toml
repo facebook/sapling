@@ -312,6 +312,7 @@ members = [
     "reachabilityindex/if",
     "reachabilityindex/skiplist",
     "reachabilityindex/test-helpers",
+    "regenerate_hg_filenodes",
     "repo_client",
     "repo_client/getbundle_response",
     "repo_client/mononoke_repo",

@@ -25,6 +25,7 @@ MONONOKE_BINS = {
     "MONONOKE_MANUAL_SCRUB": "manual_scrub",
     "MONONOKE_MICROWAVE_BUILDER": "builder",
     "MONONOKE_RECHUNKER": "rechunker",
+    "MONONOKE_REGENERATE_HG_FILENODES": "regenerate_hg_filenodes",
     "MONONOKE_REPO_IMPORT": "repo_import",
     "MONONOKE_SERVER": "mononoke",
     "MONONOKE_UNBUNDLE_REPLAY": "unbundle_replay",
