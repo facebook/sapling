@@ -238,7 +238,7 @@ std::string capsFlagsToLabel(uint32_t flags) {
     }
     if ((flags & flag) == flag) {
       bits.push_back(name);
-      flags &= flag;
+      flags &= ~flag;
     }
   }
   std::string str;
