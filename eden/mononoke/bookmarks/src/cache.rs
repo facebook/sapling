@@ -368,6 +368,18 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         self.transaction.create_scratch(bookmark, new_cs)
     }
 
+    fn create_publishing(
+        &mut self,
+        bookmark: &BookmarkName,
+        new_cs: ChangesetId,
+        reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
+    ) -> Result<()> {
+        self.dirty = true;
+        self.transaction
+            .create_publishing(bookmark, new_cs, reason, bundle_replay)
+    }
+
     fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
         let CachedBookmarksTransaction {
             transaction,
@@ -578,6 +590,16 @@ mod tests {
         }
 
         fn create_scratch(&mut self, _bookmark: &BookmarkName, _new_cs: ChangesetId) -> Result<()> {
+            Ok(())
+        }
+
+        fn create_publishing(
+            &mut self,
+            _bookmark: &BookmarkName,
+            _new_cs: ChangesetId,
+            _reason: BookmarkUpdateReason,
+            _bundle_replay: Option<&dyn BundleReplay>,
+        ) -> Result<()> {
             Ok(())
         }
 

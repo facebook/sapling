@@ -1201,3 +1201,65 @@ fn test_get_largest_log_id(fb: FacebookInit) {
         );
     })
 }
+
+#[fbinit::test]
+fn test_creating_publishing_bookmarks(fb: FacebookInit) {
+    async_unit::tokio_unit_test(async move {
+        let ctx = CoreContext::test_mock(fb);
+        let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .with_repo_id(REPO_ZERO);
+        let name_1 = create_bookmark_name("book");
+
+        let mut txn = bookmarks.create_transaction(ctx.clone());
+        txn.create_publishing(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+            .unwrap();
+        assert!(txn.commit().await.unwrap());
+        assert_eq!(
+            bookmarks
+                .list(
+                    ctx.clone(),
+                    Freshness::MostRecent,
+                    &BookmarkPrefix::empty(),
+                    BookmarkKind::ALL,
+                    &BookmarkPagination::FromStart,
+                    std::u64::MAX
+                )
+                .try_collect::<HashMap<_, _>>()
+                .await
+                .unwrap(),
+            hashmap! {
+                Bookmark::new(name_1.clone(), BookmarkKind::Publishing) => ONES_CSID,
+            }
+        );
+
+        let mut txn = bookmarks.create_transaction(ctx.clone());
+        txn.update(
+            &name_1,
+            TWOS_CSID,
+            ONES_CSID,
+            BookmarkUpdateReason::TestMove,
+            None,
+        )
+        .unwrap();
+        assert!(txn.commit().await.unwrap());
+
+        assert_eq!(
+            bookmarks
+                .list(
+                    ctx.clone(),
+                    Freshness::MostRecent,
+                    &BookmarkPrefix::empty(),
+                    BookmarkKind::ALL,
+                    &BookmarkPagination::FromStart,
+                    std::u64::MAX
+                )
+                .try_collect::<HashMap<_, _>>()
+                .await
+                .unwrap(),
+            hashmap! {
+                Bookmark::new(name_1.clone(), BookmarkKind::Publishing) => TWOS_CSID,
+            }
+        );
+    })
+}

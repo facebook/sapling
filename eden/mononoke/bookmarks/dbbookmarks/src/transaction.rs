@@ -492,6 +492,24 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         Ok(())
     }
 
+    fn create_publishing(
+        &mut self,
+        bookmark: &BookmarkName,
+        new_cs: ChangesetId,
+        reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
+    ) -> Result<()> {
+        self.check_not_seen(bookmark)?;
+        self.payload
+            .creates
+            .insert(bookmark.clone(), (new_cs, BookmarkKind::Publishing));
+        self.payload.log.insert(
+            bookmark.clone(),
+            NewUpdateLogEntry::new(None, Some(new_cs), reason, bundle_replay)?,
+        );
+        Ok(())
+    }
+
     fn commit(self: Box<Self>) -> BoxFuture<'static, Result<bool>> {
         self.commit_with_hook(Arc::new(|_ctx, txn| future::ok(txn).boxed()))
     }

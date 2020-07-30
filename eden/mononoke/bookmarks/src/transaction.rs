@@ -109,6 +109,16 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// Creates a new bookmark, configured as scratch. It should not exist already.
     fn create_scratch(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()>;
 
+    /// Adds a publishing bookmark create operation to the transaction set.
+    /// Creates a new bookmark, configured as publishing. It should not exist already.
+    fn create_publishing(
+        &mut self,
+        bookmark: &BookmarkName,
+        new_cs: ChangesetId,
+        reason: BookmarkUpdateReason,
+        bundle_replay: Option<&dyn BundleReplay>,
+    ) -> Result<()>;
+
     /// Commits the transaction. Future succeeds if transaction has been
     /// successful, or errors if transaction has failed. Logical failure is indicated by
     /// returning a successful `false` value; infrastructure failure is reported via an Error.
