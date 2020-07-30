@@ -13,6 +13,7 @@ path = "lib.rs"
 blame = { path = "../../derived_data/blame" }
 blobrepo = { path = "../../blobrepo" }
 bookmarks = { path = ".." }
+bookmarks_types = { path = "../bookmarks_types" }
 changeset_info = { path = "../../derived_data/changeset_info" }
 context = { path = "../../server/context" }
 deleted_files_manifest = { path = "../../derived_data/deleted_files_manifest" }

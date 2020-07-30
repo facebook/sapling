@@ -15,6 +15,7 @@ use anyhow::Error;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Freshness};
+use bookmarks_types::{Bookmark, BookmarkKind};
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
@@ -46,7 +47,7 @@ define_stats! {
 }
 
 pub struct WarmBookmarksCache {
-    bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    bookmarks: Arc<RwLock<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>>>,
     terminate: Option<oneshot::Sender<()>>,
 }
 
@@ -130,10 +131,15 @@ impl WarmBookmarksCache {
     }
 
     pub fn get(&self, bookmark: &BookmarkName) -> Option<ChangesetId> {
-        self.bookmarks.read().unwrap().get(bookmark).cloned()
+        self.bookmarks
+            .read()
+            .unwrap()
+            .get(bookmark)
+            .map(|(cs_id, _)| cs_id)
+            .cloned()
     }
 
-    pub fn get_all(&self) -> HashMap<BookmarkName, ChangesetId> {
+    pub fn get_all(&self) -> HashMap<BookmarkName, (ChangesetId, BookmarkKind)> {
         self.bookmarks.read().unwrap().clone()
     }
 }
@@ -151,7 +157,7 @@ async fn init_bookmarks(
     ctx: &CoreContext,
     repo: &BlobRepo,
     warmers: &Arc<Vec<Warmer>>,
-) -> Result<HashMap<BookmarkName, ChangesetId>, Error> {
+) -> Result<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>, Error> {
     let all_bookmarks = repo
         .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
         .compat()
@@ -161,6 +167,7 @@ async fn init_bookmarks(
     all_bookmarks
         .into_iter()
         .map(|(book, cs_id)| async move {
+            let kind = *book.kind();
             if !is_derived(ctx, repo, &cs_id, warmers).await {
                 let book_name = book.into_name();
                 let maybe_cs_id =
@@ -171,9 +178,9 @@ async fn init_bookmarks(
                     ctx.logger(),
                     "moved {} back in history to {:?}", book_name, maybe_cs_id
                 );
-                Ok(maybe_cs_id.map(|cs_id| (book_name, cs_id)))
+                Ok(maybe_cs_id.map(|cs_id| (book_name, (cs_id, kind))))
             } else {
-                Ok(Some((book.into_name(), cs_id)))
+                Ok(Some((book.into_name(), (cs_id, kind))))
             }
         })
         .collect::<FuturesUnordered<_>>()
@@ -316,7 +323,7 @@ pub async fn find_all_underived_and_latest_derived(
 
 // Loop that finds bookmarks that were modified and spawns separate bookmark updaters for them
 fn spawn_bookmarks_coordinator(
-    bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    bookmarks: Arc<RwLock<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>>>,
     terminate: oneshot::Receiver<()>,
     ctx: CoreContext,
     repo: BlobRepo,
@@ -341,7 +348,10 @@ fn spawn_bookmarks_coordinator(
                 let res = repo
                     .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
                     .compat()
-                    .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+                    .map_ok(|(book, cs_id)| {
+                        let kind = *book.kind();
+                        (book.into_name(), (cs_id, kind))
+                    })
                     .try_collect::<HashMap<_, _>>()
                     .await;
 
@@ -357,23 +367,34 @@ fn spawn_bookmarks_coordinator(
                 let mut changed_bookmarks = vec![];
                 // Find bookmarks that were moved/created and spawn an updater
                 // for them
-                for (key, value) in &new_bookmarks {
-                    if cur_bookmarks.get(key) != Some(value) {
-                        changed_bookmarks.push(key);
+                for (key, new_value) in &new_bookmarks {
+                    let cur_value = cur_bookmarks.get(key);
+                    if Some(new_value) != cur_value {
+                        let book = Bookmark::new(key.clone(), new_value.1);
+                        changed_bookmarks.push(book);
                     }
                 }
 
                 // Find bookmarks that were deleted
-                for key in cur_bookmarks.keys() {
-                    if !new_bookmarks.contains_key(&key) {
-                        changed_bookmarks.push(key);
+                for (key, cur_value) in &cur_bookmarks {
+                    // There's a potential race condition if a bookmark was deleted
+                    // and then immediately recreated with another kind (e.g. Publishing instead of
+                    // PullDefault). Because of the race WarmBookmarkCache might store a
+                    // bookmark with an old Kind.
+                    // I think this is acceptable because it's going to be fixed on next iteration
+                    // of the loop, and because fixing it properly is hard if not impossible -
+                    // change of bookmark kind is not reflected in update log.
+                    if !new_bookmarks.contains_key(key) {
+                        let book = Bookmark::new(key.clone(), cur_value.1);
+                        changed_bookmarks.push(book);
                     }
                 }
 
                 for book in changed_bookmarks {
                     let need_spawning = live_updaters.with_write(|live_updaters| {
-                        if !live_updaters.contains_key(&book) {
-                            live_updaters.insert(book.clone(), BookmarkUpdaterState::Started);
+                        if !live_updaters.contains_key(book.name()) {
+                            live_updaters
+                                .insert(book.name().clone(), BookmarkUpdaterState::Started);
                             true
                         } else {
                             false
@@ -384,7 +405,7 @@ fn spawn_bookmarks_coordinator(
                     // but that's not a big deal though - we'll do it on the next iteration
                     // of the loop
                     if need_spawning {
-                        cloned!(ctx, repo, book, bookmarks, live_updaters, warmers);
+                        cloned!(ctx, repo, bookmarks, live_updaters, warmers);
                         let _ = tokio::spawn(async move {
                             let res = single_bookmark_updater(
                                 &ctx,
@@ -395,7 +416,7 @@ fn spawn_bookmarks_coordinator(
                                 |ts: Timestamp| {
                                     live_updaters.with_write(|live_updaters| {
                                         live_updaters.insert(
-                                            book.clone(),
+                                            book.name().clone(),
                                             BookmarkUpdaterState::InProgress {
                                                 oldest_underived_ts: ts,
                                             },
@@ -406,13 +427,14 @@ fn spawn_bookmarks_coordinator(
                             .await;
                             if let Err(ref err) = res {
                                 STATS::bookmark_update_failures.add_value(1);
-                                warn!(ctx.logger(), "update of {} failed: {:?}", book, err);
+                                warn!(ctx.logger(), "update of {} failed: {:?}", book.name(), err);
                             };
 
                             live_updaters.with_write(|live_updaters| {
-                                let maybe_state = live_updaters.remove(&book);
+                                let maybe_state = live_updaters.remove(&book.name());
                                 if let Some(state) = maybe_state {
-                                    live_updaters.insert(book.clone(), state.into_finished(&res));
+                                    live_updaters
+                                        .insert(book.name().clone(), state.into_finished(&res));
                                 }
                             });
                         });
@@ -530,13 +552,14 @@ impl BookmarkUpdaterState {
 async fn single_bookmark_updater(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    bookmark: &BookmarkName,
-    bookmarks: &Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    bookmark: &Bookmark,
+    bookmarks: &Arc<RwLock<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>>>,
     warmers: &Arc<Vec<Warmer>>,
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
     let (latest_derived, underived_history) =
-        find_all_underived_and_latest_derived(&ctx, &repo, &bookmark, warmers.as_ref()).await?;
+        find_all_underived_and_latest_derived(&ctx, &repo, &bookmark.name(), warmers.as_ref())
+            .await?;
 
     let delay_secs = tunables().get_warm_bookmark_cache_delay();
     if delay_secs < 0 {
@@ -555,7 +578,10 @@ async fn single_bookmark_updater(
             );
             tokio::time::delay_for(Duration::from_secs(to_sleep)).await;
         }
-        bookmarks.with_write(|bookmarks| bookmarks.insert(bookmark.clone(), cs_id));
+        bookmarks.with_write(|bookmarks| {
+            let name = bookmark.name().clone();
+            bookmarks.insert(name, (cs_id, *bookmark.kind()))
+        });
     };
 
     match latest_derived {
@@ -565,13 +591,14 @@ async fn single_bookmark_updater(
                 update_bookmark(ts, cs_id).await;
             }
             None => {
-                bookmarks.with_write(|bookmarks| bookmarks.remove(&bookmark));
+                bookmarks.with_write(|bookmarks| bookmarks.remove(bookmark.name()));
             }
         },
         LatestDerivedBookmarkEntry::NotFound => {
             warn!(
                 ctx.logger(),
-                "Haven't found previous derived version of {}! Will try to derive anyway", bookmark
+                "Haven't found previous derived version of {}! Will try to derive anyway",
+                bookmark.name()
             );
         }
     }
@@ -589,7 +616,7 @@ async fn single_bookmark_updater(
                     ctx.logger(),
                     "failed to derive data for {} while updating {}: {}",
                     underived_cs_id,
-                    bookmark,
+                    bookmark.name(),
                     err
                 );
                 break;
@@ -637,7 +664,7 @@ mod tests {
         let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkName::new("master")? => master_cs_id}
+            hashmap! {BookmarkName::new("master")? => (master_cs_id, BookmarkKind::PullDefaultPublishing)}
         );
         Ok(())
     }
@@ -683,14 +710,17 @@ mod tests {
         let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkName::new("master")? => derived_master}
+            hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
         );
 
         RootUnodeManifestId::derive(ctx.clone(), repo.clone(), master)
             .compat()
             .await?;
         let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
-        assert_eq!(bookmarks, hashmap! {BookmarkName::new("master")? => master});
+        assert_eq!(
+            bookmarks,
+            hashmap! {BookmarkName::new("master")? => (master, BookmarkKind::PullDefaultPublishing)}
+        );
 
         Ok(())
     }
@@ -721,7 +751,7 @@ mod tests {
         let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkName::new("master")? => derived_master}
+            hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
         );
 
         Ok(())
@@ -760,7 +790,7 @@ mod tests {
         let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkName::new("master")? => derived_master}
+            hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
         );
 
         Ok(())
@@ -774,7 +804,10 @@ mod tests {
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
             .compat()
-            .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+            .map_ok(|(book, cs_id)| {
+                let kind = *book.kind();
+                (book.into_name(), (cs_id, kind))
+            })
             .try_collect::<HashMap<_, _>>()
             .await?;
         let bookmarks = Arc::new(RwLock::new(bookmarks));
@@ -800,7 +833,12 @@ mod tests {
         );
 
         let master_book = BookmarkName::new("master")?;
-        wait_for_bookmark(&bookmarks, &master_book, Some(master)).await?;
+        wait_for_bookmark(
+            &bookmarks,
+            &master_book,
+            Some((master, BookmarkKind::PullDefaultPublishing)),
+        )
+        .await?;
 
         bookmark(&ctx, &repo, "master").delete().await?;
         wait_for_bookmark(&bookmarks, &master_book, None).await?;
@@ -818,7 +856,10 @@ mod tests {
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
             .compat()
-            .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+            .map_ok(|(book, cs_id)| {
+                let kind = *book.kind();
+                (book.into_name(), (cs_id, kind))
+            })
             .try_collect::<HashMap<_, _>>()
             .await?;
         let bookmarks = Arc::new(RwLock::new(bookmarks));
@@ -839,21 +880,25 @@ mod tests {
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         info!(ctx.logger(), "created the whole stack of commits");
 
-        let master_book = BookmarkName::new("master")?;
+        let master_book_name = BookmarkName::new("master")?;
+        let master_book = Bookmark::new(
+            master_book_name.clone(),
+            BookmarkKind::PullDefaultPublishing,
+        );
         single_bookmark_updater(&ctx, &repo, &master_book, &bookmarks, &warmers, |_| {}).await?;
 
         assert_eq!(
-            bookmarks.with_read(|bookmarks| bookmarks.get(&master_book).cloned()),
-            Some(master_cs_id)
+            bookmarks.with_read(|bookmarks| bookmarks.get(&master_book_name).cloned()),
+            Some((master_cs_id, BookmarkKind::PullDefaultPublishing))
         );
 
         Ok(())
     }
 
     async fn wait_for_bookmark(
-        bookmarks: &Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+        bookmarks: &Arc<RwLock<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>>>,
         book: &BookmarkName,
-        expected_value: Option<ChangesetId>,
+        expected_value: Option<(ChangesetId, BookmarkKind)>,
     ) -> Result<(), Error> {
         wait(|| async move {
             Ok(bookmarks.with_read(|bookmarks| bookmarks.get(book).cloned()) == expected_value)
@@ -892,7 +937,10 @@ mod tests {
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
             .compat()
-            .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+            .map_ok(|(book, cs_id)| {
+                let kind = *book.kind();
+                (book.into_name(), (cs_id, kind))
+            })
             .try_collect::<HashMap<_, _>>()
             .await?;
         let bookmarks = Arc::new(RwLock::new(bookmarks));
@@ -948,7 +996,12 @@ mod tests {
         );
 
         let master_book = BookmarkName::new("master")?;
-        wait_for_bookmark(&bookmarks, &master_book, Some(master)).await?;
+        wait_for_bookmark(
+            &bookmarks,
+            &master_book,
+            Some((master, BookmarkKind::PullDefaultPublishing)),
+        )
+        .await?;
         let _ = cancel.send(());
 
         let failing_book = BookmarkName::new("failingbook")?;
@@ -971,7 +1024,12 @@ mod tests {
             warmers,
             TEST_LOOP_SLEEP,
         );
-        wait_for_bookmark(&bookmarks, &failing_book, Some(failing_cs_id)).await?;
+        wait_for_bookmark(
+            &bookmarks,
+            &failing_book,
+            Some((failing_cs_id, BookmarkKind::PullDefaultPublishing)),
+        )
+        .await?;
 
         let _ = cancel.send(());
 
@@ -1031,7 +1089,10 @@ mod tests {
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
             .compat()
-            .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+            .map_ok(|(book, cs_id)| {
+                let kind = *book.kind();
+                (book.into_name(), (cs_id, kind))
+            })
             .try_collect::<HashMap<_, _>>()
             .await?;
         let bookmarks = Arc::new(RwLock::new(bookmarks));
@@ -1069,6 +1130,73 @@ mod tests {
         how_many_derived.with_read(|derived| {
             assert_eq!(derived.get(&master), Some(&1));
         });
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_spawn_bookmarks_coordinator_with_publishing_bookmarks(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+
+        let bookmarks = repo
+            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .compat()
+            .map_ok(|(book, cs_id)| {
+                let kind = *book.kind();
+                (book.into_name(), (cs_id, kind))
+            })
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+
+        let bookmarks = Arc::new(RwLock::new(bookmarks));
+
+        let mut warmers: Vec<Warmer> = Vec::new();
+        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        let warmers = Arc::new(warmers);
+
+        let new_cs_id = CreateCommitContext::new(&ctx, &repo, vec!["master"])
+            .add_file("somefile", "content")
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, "publishing")
+            .create_publishing(new_cs_id)
+            .await?;
+
+        let (cancel, receiver_cancel) = oneshot::channel();
+        spawn_bookmarks_coordinator(
+            bookmarks.clone(),
+            receiver_cancel,
+            ctx.clone(),
+            repo.clone(),
+            warmers,
+            TEST_LOOP_SLEEP,
+        );
+
+        let publishing_book = BookmarkName::new("publishing")?;
+        wait_for_bookmark(
+            &bookmarks,
+            &publishing_book,
+            Some((new_cs_id, BookmarkKind::Publishing)),
+        )
+        .await?;
+
+        // Now recreate a bookmark with the same name but different kind
+        bookmark(&ctx, &repo, "publishing").delete().await?;
+        bookmark(&ctx, &repo, "publishing")
+            .set_to(new_cs_id)
+            .await?;
+
+        wait_for_bookmark(
+            &bookmarks,
+            &publishing_book,
+            Some((new_cs_id, BookmarkKind::PullDefaultPublishing)),
+        )
+        .await?;
+
+        let _ = cancel.send(());
 
         Ok(())
     }

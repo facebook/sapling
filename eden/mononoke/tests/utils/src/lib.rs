@@ -306,6 +306,23 @@ impl UpdateBookmarkContext {
         Ok(bookmark)
     }
 
+    pub async fn create_publishing(
+        self,
+        cs_ident: impl Into<CommitIdentifier>,
+    ) -> Result<BookmarkName, Error> {
+        use BookmarkIdentifier::*;
+        let bookmark = match self.book_ident {
+            Bookmark(bookmark) => bookmark,
+            String(s) => BookmarkName::new(s)?,
+        };
+
+        let cs_id = resolve_cs_id(&self.ctx, &self.repo, cs_ident).await?;
+        let mut book_txn = self.repo.update_bookmark_transaction(self.ctx);
+        book_txn.create_publishing(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)?;
+        book_txn.commit().await?;
+        Ok(bookmark)
+    }
+
     pub async fn delete(self) -> Result<(), Error> {
         use BookmarkIdentifier::*;
         let bookmark = match self.book_ident {
