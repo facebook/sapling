@@ -178,6 +178,17 @@ class LocalService(baseservice.BaseService):
             )
         )
         self._save(data, workspace)
+        allworkspaces = [
+            winfo
+            for winfo in self.getworkspaces(reponame, None)
+            if winfo.name != workspace
+        ]
+        allworkspaces.append(
+            baseservice.WorkspaceInfo(
+                name=workspace, archived=False, version=newversion
+            )
+        )
+        self._saveworkspaces(allworkspaces)
         return (
             True,
             baseservice.References(newversion, None, None, None, None, None, None),
@@ -231,12 +242,40 @@ class LocalService(baseservice.BaseService):
             json.dump(data, f)
 
     def getworkspaces(self, reponame, prefix):
-        filename = os.path.join(self.path, "userworkspacesdata")
+        if prefix is None:
+            prefix = ""
+        filename = os.path.join(self.path, "workspacesdata")
         if not os.path.exists(filename):
-            return None
+            return []
         try:
             with open(filename, "rb") as f:
                 data = json.load(f)
-                return self._makeworkspacesinfo(data["workspaces_data"])
+                return [
+                    winfo
+                    for winfo in self._makeworkspacesinfo(data["workspaces_data"])
+                    if winfo.name.startswith(prefix)
+                ]
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
+
+    def _saveworkspaces(self, data):
+        filename = os.path.join(self.path, "workspacesdata")
+        with open(filename, "wb") as f:
+            f.write(
+                pycompat.encodeutf8(
+                    json.dumps(
+                        {
+                            "workspaces_data": {
+                                "workspaces": [
+                                    {
+                                        "name": item.name,
+                                        "archived": item.archived,
+                                        "version": item.version,
+                                    }
+                                    for item in data
+                                ]
+                            }
+                        }
+                    )
+                )
+            )

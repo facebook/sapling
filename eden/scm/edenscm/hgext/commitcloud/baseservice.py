@@ -37,7 +37,7 @@ NodeInfo = collections.namedtuple(
 SmartlogInfo = collections.namedtuple(
     "SmartlogInfo", "dag public draft version timestamp nodeinfos"
 )
-WorkspaceInfo = collections.namedtuple("WorkspaceInfo", "name archived")
+WorkspaceInfo = collections.namedtuple("WorkspaceInfo", "name archived version")
 
 PUBLICPHASE = "public"
 
@@ -300,6 +300,7 @@ class BaseService(pycompat.ABC):
             WorkspaceInfo(
                 name=ensurestr(workspacesinfo["name"]),
                 archived=bool(workspacesinfo["archived"]),
+                version=int(workspacesinfo["version"]),
             )
             for workspacesinfo in workspacesinfos["workspaces"]
         ]

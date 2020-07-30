@@ -135,8 +135,6 @@ Configs::
 
 from __future__ import absolute_import
 
-import socket
-
 from edenscm.mercurial import (
     extensions,
     localrepo,
@@ -248,10 +246,8 @@ def reposetup(ui, repo):
             if automigrate and not workspace.disconnected(self):
                 workspacename = None
                 if self.ui.configbool("commitcloud", "automigratehostworkspace"):
-                    workspacename = self.ui.config(
-                        "commitcloud", "hostname", socket.gethostname()
-                    )
-                cccommands.cloudrejoin(self.ui, self, workspace=workspacename)
+                    workspacename = workspace.hostnameworkspace(self.ui)
+                cccommands.cloudrejoin(self.ui, self, raw_workspace=workspacename)
 
     repo.__class__ = commitcloudrepo
 
@@ -293,6 +289,15 @@ def hintcommitcloudeducation(ui):
             )
             % education
         )
+
+
+@hint("commitcloud-switch")
+def hintcommitcloudswitch():
+    return _(
+        "if you would like to switch to the default workspace\n"
+        "run `hg cloud join --switch -w default` inside the repo\n"
+        "run `hg cloud list` to see all your workspaces and learn how to switch between them\n"
+    )
 
 
 @revsetpredicate("cloudremote([set])")

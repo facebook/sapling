@@ -16,6 +16,7 @@ from edenscm.mercurial import (
     error,
     extensions,
     graphmod,
+    hintutil,
     lock as lockmod,
     node as nodemod,
     progress,
@@ -277,13 +278,29 @@ def cloudrejoin(ui, repo, **opts):
 
     workspacename = workspace.parseworkspace(ui, opts)
     if workspacename is None:
-        workspacename = workspace.defaultworkspace(ui)
+        # If the workspace name is not given, figure out the sensible default.
+        # The specific hostname workspace will be preferred over the default workspace.
+        reponame = ccutil.getreponame(repo)
+        hostnameworkspace = workspace.hostnameworkspace(ui)
+        winfos = service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
+            reponame, hostnameworkspace
+        )
+        if winfos and any([winfo.name == hostnameworkspace for winfo in winfos]):
+            workspacename = hostnameworkspace
+            hintutil.trigger("commitcloud-switch")
+        else:
+            workspacename = workspace.defaultworkspace(ui)
+
     ui.status(
         _("attempting to connect to the '%s' workspace for the '%s' repo\n")
         % (workspacename, ccutil.getreponame(repo)),
         component="commitcloud",
     )
     try:
+        # update the raw_workspace option as workspacename has been already parsed
+        for opt in workspace.workspaceopts:
+            opts.pop(opt[1], None)
+        opts.update({"raw_workspace": workspacename})
         cloudjoin(ui, repo, **opts)
     except ccerror.RegistrationError:
         ui.status(

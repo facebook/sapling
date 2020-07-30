@@ -36,8 +36,8 @@ sh % "cd client"
 
 
 sh % "cat" << r"""
-{ "workspaces_data" : { "workspaces": [ { "name": "user/test/old", "archived": true }, { "name": "user/test/default", "archived": false }  ] } }
-""" >> "$TESTTMP/userworkspacesdata"
+{ "workspaces_data" : { "workspaces": [ { "name": "user/test/old", "archived": true, "version": 0 }, { "name": "user/test/default", "archived": false, "version": 0 }  ] } }
+""" >> "$TESTTMP/workspacesdata"
 
 sh % "hg cloud list" == r"""
 workspaces:

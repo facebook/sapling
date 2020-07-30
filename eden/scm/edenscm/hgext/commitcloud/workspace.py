@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import socket
+
 from edenscm.mercurial import config, error, pycompat, util
 from edenscm.mercurial.i18n import _
 
@@ -89,6 +91,17 @@ def userworkspaceprefix(ui, user=None):
         domain = ui.config("commitcloud", "email_domain")
         user = util.emaildomainuser(ui.username(), domain)
     return "user/%s/" % user
+
+
+def hostnameworkspace(ui, user=None):
+    """Returns the host workspace for the given or current user for the current host"""
+    if user is None:
+        domain = ui.config("commitcloud", "email_domain")
+        user = util.emaildomainuser(ui.username(), domain)
+    return "user/%s/%s" % (
+        user,
+        ui.config("commitcloud", "hostname", socket.gethostname()),
+    )
 
 
 filename = "commitcloudrc"

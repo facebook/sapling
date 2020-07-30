@@ -1220,7 +1220,7 @@ Reconnect to a service where the workspace is brand new.  This should work.
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
-  finished in 0.00 sec
+  finished in * (glob)
 
   $ hg cloud disconnect
   commitcloud: this repository is now disconnected from Commit Cloud Sync
@@ -1277,7 +1277,7 @@ This should also reconnect.
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
-  finished in 0.00 sec
+  finished in * (glob)
 
 But not if already connected.
   $ hg pull --config commitcloud.automigrate=true
@@ -1305,4 +1305,28 @@ Pull with automigrate enabled and host-specific workspaces
   commitcloud: this repository is now connected to the 'user/test/testhost' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/testhost'
   commitcloud: commits synchronized
-  finished in 0.00 sec
+  finished in * (glob)
+
+Host-specific workspace now exists, so it should be chosen as the one to connect to
+  $ hg cloud leave
+  commitcloud: this repository is now disconnected from Commit Cloud Sync
+  $ hg cloud reconnect
+  commitcloud: attempting to connect to the 'user/test/testhost' workspace for the 'server' repo
+  commitcloud: this repository is now connected to the 'user/test/testhost' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/testhost'
+  commitcloud: commits synchronized
+  finished in * (glob)
+  hint[commitcloud-switch]: if you would like to switch to the default workspace
+  run `hg cloud join --switch -w default` inside the repo
+  run `hg cloud list` to see all your workspaces and learn how to switch between them
+  hint[hint-ack]: use 'hg hint --ack commitcloud-switch' to silence these hints
+
+  $ hg cloud join --switch -w default
+  commitcloud: synchronizing 'server' with 'user/test/testhost'
+  commitcloud: commits synchronized
+  finished in * (glob)
+  commitcloud: now this repository will be switched from the 'user/test/testhost' to the 'user/test/default' workspace
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
