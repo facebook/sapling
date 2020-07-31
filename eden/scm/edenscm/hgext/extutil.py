@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import contextlib
 import errno
+import gc
 import os
 import subprocess
 import time
@@ -55,6 +56,11 @@ else:
         #    "os.fork()".
         # 2. The "pid" variable cannot be used in the "finally" block.
         try:
+            # Disable gc so the child process doesn't accidentally trigger it
+            # and try to collect native objects that might depend on locks held
+            # by other threads.
+            gc.disable()
+
             # double-fork to completely detach from the parent process
             # based on http://code.activestate.com/recipes/278731
             pid = os.fork()
@@ -116,6 +122,7 @@ else:
                 # mission accomplished, this child needs to exit and not
                 # continue the hg process here.
                 os._exit(returncode)
+            gc.enable()
 
 
 def runshellcommand(script, env):
