@@ -441,17 +441,25 @@ class changelog(revlog.revlog):
     def tip(self):
         # type: () -> bytes
         """filtered version of revlog.tip"""
+        if self.userust("tip"):
+            return self.dag.all().first() or nullid
         for i in range(len(self) - 1, -2, -1):
             # pyre-fixme[7]: Expected `bytes` but got implicit return value of `None`.
             return self.node(i)
 
     def __contains__(self, rev):
         """filtered version of revlog.__contains__"""
-        return rev is not None and 0 <= rev < len(self)
+        if self.userust("contains"):
+            return rev is not None and rev in self.torevs(self.dag.all())
+        else:
+            return rev is not None and 0 <= rev < len(self)
 
     def __iter__(self):
         """filtered version of revlog.__iter__"""
-        return revlog.revlog.__iter__(self)
+        if self.userust("iter"):
+            return self.torevs(self.dag.all()).iterasc()
+        else:
+            return revlog.revlog.__iter__(self)
 
     def __len__(self):
         if self.userust("len"):
@@ -461,6 +469,16 @@ class changelog(revlog.revlog):
 
     def revs(self, start=0, stop=None):
         """filtered version of revlog.revs"""
+        if self.userust("revs"):
+            allrevs = self.torevs(self.dag.all())
+            if stop is not None:
+                # exclusive -> inclusive
+                stop = stop - 1
+            revs = bindings.dag.spans.unsaferange(start, stop) & allrevs
+            for i in revs.iterasc():
+                yield i
+            return
+
         for i in super(changelog, self).revs(start, stop):
             yield i
 
