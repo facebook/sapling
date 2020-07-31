@@ -6,6 +6,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.20"
 bit-vec = "0.6"
+byteorder = "1"
 dag = { path = "../dag" }
 indexedlog = { path = "../indexedlog" }
 lz4-pyframe = { path = "../lz4-pyframe" }

@@ -13,6 +13,8 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
 use bit_vec::BitVec;
+use byteorder::ReadBytesExt;
+use byteorder::BE;
 use dag::nameset::hints::Flags;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
@@ -326,6 +328,29 @@ impl RevlogIndex {
 
         reachable
     }
+
+    /// Whether "general delta" is enabled for this revlog.
+    ///
+    /// - If general_delta is true: `RevlogEntry.base` specifies the delta base.
+    /// - If general_delta is false: `RevlogEntry.base` specifies the delta chain
+    ///   `base..=rev`.
+    ///
+    /// Revlog written by this crate won't use deltas. This is only useful for
+    /// reading ancient revisions in ancient revlogs.
+    fn is_general_delta(&self) -> bool {
+        match self.changelogi_data.get(0..4) {
+            None => {
+                // Empty revlog. Does not matter if it's general delta or not.
+                true
+            }
+            Some(mut entry) => {
+                // First 4 bytes: Revlog flags.
+                let flags = entry.read_u32::<BE>().unwrap();
+                const FLAG_GENERALDELTA: u32 = 1 << 17;
+                flags & FLAG_GENERALDELTA != 0
+            }
+        }
+    }
 }
 
 /// Minimal code to read the DAG (i.e. parents) stored in non-inlined revlog.
@@ -505,14 +530,6 @@ impl RevlogIndex {
             return Ok(result.clone());
         }
         let entry = self.data()[rev as usize];
-        let base = i32::from_be(entry.base);
-        ensure!(
-            base == rev as i32 || base == -1,
-            "delta-chain (base {}, rev {}) is unsupported when reading changelog",
-            base,
-            rev,
-        );
-
         let offset = if rev == 0 {
             0
         } else {
@@ -532,13 +549,35 @@ impl RevlogIndex {
 
         file.seek(io::SeekFrom::Start(offset))?;
         file.read_exact(&mut chunk)?;
+        drop(locked);
+
         let decompressed = match chunk.get(0) {
-            None => Bytes::new(),
-            Some(b'u') | Some(b'\0') => Bytes::copy_from_slice(&chunk[1..]),
-            Some(b'4') => Bytes::from(lz4_pyframe::decompress(&chunk[1..])?),
+            None => chunk,
+            Some(b'u') | Some(b'\0') => {
+                chunk.drain(0..1);
+                chunk
+            }
+            Some(b'4') => lz4_pyframe::decompress(&chunk[1..])?,
             Some(&c) => bail!("unsupported header: {:?}", c as char),
         };
-        Ok(decompressed)
+
+        let base = i32::from_be(entry.base);
+        let result = if base != rev as i32 && base >= 0 {
+            // Has a delta base. Load it recursively.
+            // PERF: this is very inefficient (no caching, no folding delta chains), but is only
+            // used for ancient data.
+            let base = if self.is_general_delta() {
+                base as u32
+            } else {
+                rev - 1
+            };
+            let base_text = self.raw_data(base)?;
+            apply_deltas(&base_text, &decompressed)?
+        } else {
+            decompressed
+        };
+
+        Ok(Bytes::from(result))
     }
 
     /// Insert a new revision with given parents at the end.
@@ -708,6 +747,43 @@ impl RevlogIndex {
             }
         }
     }
+}
+
+fn apply_deltas(base_text: &[u8], delta_text: &[u8]) -> Result<Vec<u8>> {
+    struct Delta {
+        start: usize,
+        end: usize,
+        data: Vec<u8>,
+    }
+    let mut deltas = Vec::new();
+    let mut cursor = &delta_text[..];
+    while !cursor.is_empty() {
+        let start = cursor.read_u32::<BE>()?;
+        let end = cursor.read_u32::<BE>()?;
+        let len = cursor.read_u32::<BE>()?;
+        let mut data = vec![0u8; len as usize];
+        cursor.read_exact(&mut data)?;
+        deltas.push(Delta {
+            start: start as _,
+            end: end as _,
+            data,
+        });
+    }
+    let mut result: Vec<u8> = Vec::new();
+    let mut base_text_pos = 0;
+    for delta in deltas {
+        if base_text_pos < delta.start {
+            result.extend_from_slice(&base_text[base_text_pos..delta.start]);
+        }
+        if !delta.data.is_empty() {
+            result.extend(delta.data);
+        }
+        base_text_pos = delta.end;
+    }
+    if base_text_pos < base_text.len() {
+        result.extend_from_slice(&base_text[base_text_pos..]);
+    }
+    Ok(result)
 }
 
 fn read_path(path: &Path, fallback: Bytes) -> io::Result<Bytes> {
@@ -1391,36 +1467,34 @@ mod tests {
         // 00changelog.i and 00changelog.d are created by real hg commands.
         let changelog_i = from_xxd(
             r#"
-00000000: 0000 0001 0000 0000 0000 003d 0000 0059  ...........=...Y
-00000010: 0000 0000 0000 0000 ffff ffff ffff ffff  ................
-00000020: 5d97 babb c8ff 796c c63e 3d1b d85d 303c  ].....yl.>=..]0<
-00000030: 6741 d574 0000 0000 0000 0000 0000 0000  gA.t............
-00000040: 0000 0000 003d 0000 0000 0046 0000 00c4  .....=.....F....
-00000050: 0000 0001 0000 0001 0000 0000 ffff ffff  ................
-00000060: 116d 9f6f fa04 e925 47bd 7a4c e3d2 6bb2  .m.o...%G.zL..k.
-00000070: fe3e aa71 0000 0000 0000 0000 0000 0000  .>.q............
-00000080: 0000 0000 0083 0000 0000 005c 0000 005b  ...........\...[
-00000090: 0000 0002 0000 0002 0000 0001 ffff ffff  ................
-000000a0: d9ab b672 e662 0779 042a 5309 f250 60f1  ...r.b.y.*S..P`.
-000000b0: 0f6a bf0d 0000 0000 0000 0000 0000 0000  .j..............
+0000000: 0000 0001 0000 0000 0000 002c 0000 0048  ...........,...H
+0000010: 0000 0000 0000 0000 ffff ffff ffff ffff  ................
+0000020: 785b 4df8 9f24 f67f fdd3 eec2 2cc4 c51f  x[M..$......,...
+0000030: ca90 cc44 0000 0000 0000 0000 0000 0000  ...D............
+0000040: 0000 0000 002c 0000 0000 0044 0000 0083  .....,.....D....
+0000050: 0000 0001 0000 0001 0000 0000 ffff ffff  ................
+0000060: 4028 e6d9 355e 415f ef6b 7a2b f8cf 4b53  @(..5^A_.kz+..KS
+0000070: 0d66 2906 0000 0000 0000 0000 0000 0000  .f).............
+0000080: 0000 0000 0070 0000 0000 004b 0000 004a  .....p.....K...J
+0000090: 0000 0002 0000 0002 0000 0001 ffff ffff  ................
+00000a0: ab7a efa7 ec2d 5e85 0295 6b2c 8fb4 2590  .z...-^...k,..%.
+00000b0: 9c57 9822 0000 0000 0000 0000 0000 0000  .W."............
 "#,
         );
         let changelog_d = from_xxd(
             r#"
-00000000: 3459 0000 001f 3001 0014 f022 0a4a 756e  4Y....0....".Jun
-00000010: 2057 7520 3c71 7561 726b 4066 622e 636f   Wu <quark@fb.co
-00000020: 6d3e 0a31 3539 3131 3336 3439 3420 3235  m>.1591136494 25
-00000030: 3230 300a 0a63 6f6d 6d69 7420 3134 c400  200..commit 14..
-00000040: 0000 1f30 0100 14ff 220a 4a75 6e20 5775  ...0....".Jun Wu
-00000050: 203c 7175 6172 6b40 6662 2e63 6f6d 3e0a   <quark@fb.com>.
-00000060: 3135 3931 3133 3635 3036 2032 3532 3030  1591136506 25200
-00000070: 0a0a 636f 6d6d 6974 2032 0100 5350 3232  ..commit 2..SP22
-00000080: 3232 3275 3835 3135 6434 6266 6461 3736  222u8515d4bfda76
-00000090: 3865 3034 6166 3463 3133 6136 3961 3732  8e04af4c13a69a72
-000000a0: 6532 3863 3765 6666 6265 6137 0a4a 756e  e28c7effbea7.Jun
-000000b0: 2057 7520 3c71 7561 726b 4066 622e 636f   Wu <quark@fb.co
-000000c0: 6d3e 0a31 3539 3131 3339 3531 3620 3235  m>.1591139516 25
-000000d0: 3230 300a 610a 0a63 6f6d 6d69 7420 33    200.a..commit 3
+0000000: 3448 0000 001f 3001 0014 f011 0a74 6573  4H....0......tes
+0000010: 740a 3135 3936 3038 3335 3534 2032 3532  t.1596083554 252
+0000020: 3030 0a0a 636f 6d6d 6974 2031 3483 0000  00..commit 14...
+0000030: 001f 3001 0014 ff14 0a74 6573 740a 3135  ..0......test.15
+0000040: 3936 3038 3335 3834 2032 3532 3030 0a0a  96083584 25200..
+0000050: 636f 6d6d 6974 2032 3a20 3201 0015 f001  commit 2: 2.....
+0000060: 2069 7320 636f 6d70 7265 7373 6962 6c65   is compressible
+0000070: 7538 3531 3564 3462 6664 6137 3638 6530  u8515d4bfda768e0
+0000080: 3461 6634 6331 3361 3639 6137 3265 3238  4af4c13a69a72e28
+0000090: 6337 6566 6662 6561 370a 7465 7374 0a31  c7effbea7.test.1
+00000a0: 3539 3630 3833 3631 3420 3235 3230 300a  596083614 25200.
+00000b0: 610a 0a63 6f6d 6d69 7420 33              a..commit 3
 "#,
         );
 
@@ -1444,29 +1518,245 @@ mod tests {
         };
         assert_eq!(
             read(0)?,
-            r#"0000000000000000000000000000000000000000
-Jun Wu <quark@fb.com>
-1591136494 25200
-
-commit 1"#
+            "0000000000000000000000000000000000000000\ntest\n1596083554 25200\n\ncommit 1"
         );
         assert_eq!(
             read(1)?,
             r#"0000000000000000000000000000000000000000
-Jun Wu <quark@fb.com>
-1591136506 25200
+test
+1596083584 25200
 
-commit 222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"#
+commit 2: 22222222222222222222222222222222222222222 is compressible"#
         );
         // commit 3 is not lz4 compressed.
         assert_eq!(
             read(2)?,
             r#"8515d4bfda768e04af4c13a69a72e28c7effbea7
-Jun Wu <quark@fb.com>
-1591139516 25200
+test
+1596083614 25200
 a
 
 commit 3"#
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_delta_application() -> Result<()> {
+        // util.py.i and util.py.d come from mercurial/util.py cloned from
+        // https://www.mercurial-scm.org/repo/hg with lz4revlog enabled.
+        // Truncated to first 3 revs.
+        let util_py_i = from_xxd(
+            r#"
+0000000: 0002 0001 0000 0000 0000 016c 0000 0199  ...........l....
+0000010: 0000 0000 0000 01a3 ffff ffff ffff ffff  ................
+0000020: 83c9 892d 2313 c88d c0ae d198 5930 91ea  ...-#.......Y0..
+0000030: 4c33 4f5f 0000 0000 0000 0000 0000 0000  L3O_............
+0000040: 0000 0000 016c 0000 0000 0071 0000 0230  .....l.....q...0
+0000050: 0000 0000 0000 01a5 0000 0000 ffff ffff  ................
+0000060: fa42 82a9 8aaf 93c9 0c4c 89d0 e835 336f  .B.......L...53o
+0000070: 875e f671 0000 0000 0000 0000 0000 0000  .^.q............
+0000080: 0000 0000 01dd 0000 0000 00d4 0000 0393  ................
+0000090: 0000 0001 0000 01a6 0000 0001 ffff ffff  ................
+00000a0: 3326 e39d 9781 4b34 7c5b 4542 fc55 65c9  3&....K4|[EB.Ue.
+00000b0: 7e6f b53d 0000 0000 0000 0000 0000 0000  ~o.=............
+00000c0: 0000 0000 02b1 0000 0000 013e 0000 05c5  ...........>....
+"#,
+        );
+        let util_py_d = from_xxd(
+            r#"
+0000000: 3499 0100 00b1 2320 7574 696c 2e70 7920  4.....# util.py 
+0000010: 2d0a 00f1 1e69 7479 2066 756e 6374 696f  -....ity functio
+0000020: 6e73 2061 6e64 2070 6c61 7466 6f72 6d20  ns and platform 
+0000030: 7370 6563 6669 6320 696d 706c 656d 656e  specfic implemen
+0000040: 7461 2500 f217 0a23 0a23 2043 6f70 7972  ta%....#.# Copyr
+0000050: 6967 6874 2032 3030 3520 4b2e 2054 6861  ight 2005 K. Tha
+0000060: 6e61 6e63 6861 7961 6e20 3c74 0e00 c16b  nanchayan <t...k
+0000070: 4079 6168 6f6f 2e63 6f6d 3e38 00f1 0a54  @yahoo.com>8...T
+0000080: 6869 7320 736f 6674 7761 7265 206d 6179  his software may
+0000090: 2062 6520 7573 6564 7b00 9064 6973 7472   be used{..distr
+00000a0: 6962 7574 1000 f10b 6363 6f72 6469 6e67  ibut....ccording
+00000b0: 2074 6f20 7468 6520 7465 726d 730a 2320   to the terms.# 
+00000c0: 6f66 0f00 f016 474e 5520 4765 6e65 7261  of....GNU Genera
+00000d0: 6c20 5075 626c 6963 204c 6963 656e 7365  l Public License
+00000e0: 2c20 696e 636f 7270 6f72 6149 00f2 3c68  , incorporaI..<h
+00000f0: 6572 6569 6e20 6279 2072 6566 6572 656e  erein by referen
+0000100: 6365 2e0a 0a69 6d70 6f72 7420 6f73 0a0a  ce...import os..
+0000110: 6966 206f 732e 6e61 6d65 203d 3d20 276e  if os.name == 'n
+0000120: 7427 3a0a 2020 2020 6465 6620 7063 6f6e  t':.    def pcon
+0000130: 7665 7274 2870 6174 6829 1800 0001 0070  vert(path).....p
+0000140: 7265 7475 726e 2016 00ff 092e 7265 706c  return .....repl
+0000150: 6163 6528 225c 5c22 2c20 222f 2229 0a65  ace("\\", "/").e
+0000160: 6c73 6545 0017 5061 7468 0a0a 34a3 0000  lseE..Path..4...
+0000170: 0042 0000 0113 0400 f210 0097 6465 6620  .B..........def 
+0000180: 7265 6e61 6d65 2873 7263 2c20 6473 7429  rename(src, dst)
+0000190: 3a0a 2020 2020 7472 7909 0000 0100 3c6f  :.    try.....<o
+00001a0: 732e 2600 011c 0069 6578 6365 7074 2800  s.&....iexcept(.
+00001b0: 7575 6e6c 696e 6b28 2300 0f3f 0005 f00e  uunlink(#..?....
+00001c0: 0a23 2050 6c61 7466 6f72 2073 7065 6369  .# Platfor speci
+00001d0: 6669 6320 7661 7269 656e 7473 0a34 7b01  fic varients.4{.
+00001e0: 0000 4200 0001 fd04 00f3 1700 da0a 2020  ..B...........  
+00001f0: 2020 6465 6620 6d61 6b65 6c6f 636b 2869    def makelock(i
+0000200: 6e66 6f2c 2070 6174 686e 616d 6529 3a0a  nfo, pathname):.
+0000210: 2001 00d4 6c64 203d 206f 732e 6f70 656e   ...ld = os.open
+0000220: 2820 0010 2c12 0092 4f5f 4352 4541 5420  ( ..,...O_CREAT 
+0000230: 7c0d 0064 5752 4f4e 4c59 0e00 5545 5843  |..dWRONLY..UEXC
+0000240: 4c29 4500 d06f 732e 7772 6974 6528 6c64  L)E..os.write(ld
+0000250: 2c20 6b00 091b 0040 636c 6f73 1b00 2529  , k....@clos..%)
+0000260: 0a98 0041 7265 6164 9800 0f92 0000 b672  ...Aread.......r
+0000270: 6574 7572 6e20 6669 6c65 1f00 102e 3200  eturn file....2.
+0000280: 7228 290a 0000 0230 0400 2f00 89e5 0017  r()....0../.....
+0000290: 9d6f 732e 7379 6d6c 696e 2400 0f93 001a  .os.symlin$.....
+00002a0: 216f 7387 0001 4800 0326 0050 6529 0a0a  !os...H..&.Pe)..
+00002b0: 0a34 4a02 0000 4200 0001 be04 00f3 0e00  .4J...B.........
+00002c0: 5c20 2020 2064 6566 2069 735f 6578 6563  \    def is_exec
+"#,
+        );
+
+        let dir = tempdir()?;
+        let dir = dir.path();
+        let i_path = dir.join("util.py.i");
+        fs::write(&i_path, util_py_i)?;
+        let d_path = dir.join("util.py.d");
+        fs::write(&d_path, util_py_d)?;
+        let nodemap_path = dir.join("util.py.nodemap");
+        let index = RevlogIndex::new(&i_path, &nodemap_path)?;
+        let read = |rev: u32| -> Result<Bytes> { index.raw_data(rev) };
+
+        assert_eq!(
+            to_xxd(&read(0)?),
+            r#"
+00000000: 2320 7574 696c 2e70 7920 2d20 7574 696c  # util.py - util
+00000010: 6974 7920 6675 6e63 7469 6f6e 7320 616e  ity functions an
+00000020: 6420 706c 6174 666f 726d 2073 7065 6366  d platform specf
+00000030: 6963 2069 6d70 6c65 6d65 6e74 6174 696f  ic implementatio
+00000040: 6e73 0a23 0a23 2043 6f70 7972 6967 6874  ns.#.# Copyright
+00000050: 2032 3030 3520 4b2e 2054 6861 6e61 6e63   2005 K. Thananc
+00000060: 6861 7961 6e20 3c74 6861 6e61 6e63 6b40  hayan <thananck@
+00000070: 7961 686f 6f2e 636f 6d3e 0a23 0a23 2054  yahoo.com>.#.# T
+00000080: 6869 7320 736f 6674 7761 7265 206d 6179  his software may
+00000090: 2062 6520 7573 6564 2061 6e64 2064 6973   be used and dis
+000000a0: 7472 6962 7574 6564 2061 6363 6f72 6469  tributed accordi
+000000b0: 6e67 2074 6f20 7468 6520 7465 726d 730a  ng to the terms.
+000000c0: 2320 6f66 2074 6865 2047 4e55 2047 656e  # of the GNU Gen
+000000d0: 6572 616c 2050 7562 6c69 6320 4c69 6365  eral Public Lice
+000000e0: 6e73 652c 2069 6e63 6f72 706f 7261 7465  nse, incorporate
+000000f0: 6420 6865 7265 696e 2062 7920 7265 6665  d herein by refe
+00000100: 7265 6e63 652e 0a0a 696d 706f 7274 206f  rence...import o
+00000110: 730a 0a69 6620 6f73 2e6e 616d 6520 3d3d  s..if os.name ==
+00000120: 2027 6e74 273a 0a20 2020 2064 6566 2070   'nt':.    def p
+00000130: 636f 6e76 6572 7428 7061 7468 293a 0a20  convert(path):. 
+00000140: 2020 2020 2020 2072 6574 7572 6e20 7061         return pa
+00000150: 7468 2e72 6570 6c61 6365 2822 5c5c 222c  th.replace("\\",
+00000160: 2022 2f22 290a 656c 7365 3a0a 2020 2020   "/").else:.    
+00000170: 6465 6620 7063 6f6e 7665 7274 2870 6174  def pconvert(pat
+00000180: 6829 3a0a 2020 2020 2020 2020 7265 7475  h):.        retu
+00000190: 726e 2070 6174 680a 0a                   rn path..
+"#
+        );
+        assert_eq!(
+            to_xxd(&read(1)?),
+            r#"
+00000000: 2320 7574 696c 2e70 7920 2d20 7574 696c  # util.py - util
+00000010: 6974 7920 6675 6e63 7469 6f6e 7320 616e  ity functions an
+00000020: 6420 706c 6174 666f 726d 2073 7065 6366  d platform specf
+00000030: 6963 2069 6d70 6c65 6d65 6e74 6174 696f  ic implementatio
+00000040: 6e73 0a23 0a23 2043 6f70 7972 6967 6874  ns.#.# Copyright
+00000050: 2032 3030 3520 4b2e 2054 6861 6e61 6e63   2005 K. Thananc
+00000060: 6861 7961 6e20 3c74 6861 6e61 6e63 6b40  hayan <thananck@
+00000070: 7961 686f 6f2e 636f 6d3e 0a23 0a23 2054  yahoo.com>.#.# T
+00000080: 6869 7320 736f 6674 7761 7265 206d 6179  his software may
+00000090: 2062 6520 7573 6564 2061 6e64 2064 6973   be used and dis
+000000a0: 7472 6962 7574 6564 2061 6363 6f72 6469  tributed accordi
+000000b0: 6e67 2074 6f20 7468 6520 7465 726d 730a  ng to the terms.
+000000c0: 2320 6f66 2074 6865 2047 4e55 2047 656e  # of the GNU Gen
+000000d0: 6572 616c 2050 7562 6c69 6320 4c69 6365  eral Public Lice
+000000e0: 6e73 652c 2069 6e63 6f72 706f 7261 7465  nse, incorporate
+000000f0: 6420 6865 7265 696e 2062 7920 7265 6665  d herein by refe
+00000100: 7265 6e63 652e 0a0a 696d 706f 7274 206f  rence...import o
+00000110: 730a 0a64 6566 2072 656e 616d 6528 7372  s..def rename(sr
+00000120: 632c 2064 7374 293a 0a20 2020 2074 7279  c, dst):.    try
+00000130: 3a0a 2020 2020 2020 2020 6f73 2e72 656e  :.        os.ren
+00000140: 616d 6528 7372 632c 2064 7374 290a 2020  ame(src, dst).  
+00000150: 2020 6578 6365 7074 3a0a 2020 2020 2020    except:.      
+00000160: 2020 6f73 2e75 6e6c 696e 6b28 6473 7429    os.unlink(dst)
+00000170: 0a20 2020 2020 2020 206f 732e 7265 6e61  .        os.rena
+00000180: 6d65 2873 7263 2c20 6473 7429 0a0a 2320  me(src, dst)..# 
+00000190: 506c 6174 666f 7220 7370 6563 6966 6963  Platfor specific
+000001a0: 2076 6172 6965 6e74 730a 6966 206f 732e   varients.if os.
+000001b0: 6e61 6d65 203d 3d20 276e 7427 3a0a 2020  name == 'nt':.  
+000001c0: 2020 6465 6620 7063 6f6e 7665 7274 2870    def pconvert(p
+000001d0: 6174 6829 3a0a 2020 2020 2020 2020 7265  ath):.        re
+000001e0: 7475 726e 2070 6174 682e 7265 706c 6163  turn path.replac
+000001f0: 6528 225c 5c22 2c20 222f 2229 0a65 6c73  e("\\", "/").els
+00000200: 653a 0a20 2020 2064 6566 2070 636f 6e76  e:.    def pconv
+00000210: 6572 7428 7061 7468 293a 0a20 2020 2020  ert(path):.     
+00000220: 2020 2072 6574 7572 6e20 7061 7468 0a0a     return path..
+"#
+        );
+        assert_eq!(
+            to_xxd(&read(2)?),
+            r#"
+00000000: 2320 7574 696c 2e70 7920 2d20 7574 696c  # util.py - util
+00000010: 6974 7920 6675 6e63 7469 6f6e 7320 616e  ity functions an
+00000020: 6420 706c 6174 666f 726d 2073 7065 6366  d platform specf
+00000030: 6963 2069 6d70 6c65 6d65 6e74 6174 696f  ic implementatio
+00000040: 6e73 0a23 0a23 2043 6f70 7972 6967 6874  ns.#.# Copyright
+00000050: 2032 3030 3520 4b2e 2054 6861 6e61 6e63   2005 K. Thananc
+00000060: 6861 7961 6e20 3c74 6861 6e61 6e63 6b40  hayan <thananck@
+00000070: 7961 686f 6f2e 636f 6d3e 0a23 0a23 2054  yahoo.com>.#.# T
+00000080: 6869 7320 736f 6674 7761 7265 206d 6179  his software may
+00000090: 2062 6520 7573 6564 2061 6e64 2064 6973   be used and dis
+000000a0: 7472 6962 7574 6564 2061 6363 6f72 6469  tributed accordi
+000000b0: 6e67 2074 6f20 7468 6520 7465 726d 730a  ng to the terms.
+000000c0: 2320 6f66 2074 6865 2047 4e55 2047 656e  # of the GNU Gen
+000000d0: 6572 616c 2050 7562 6c69 6320 4c69 6365  eral Public Lice
+000000e0: 6e73 652c 2069 6e63 6f72 706f 7261 7465  nse, incorporate
+000000f0: 6420 6865 7265 696e 2062 7920 7265 6665  d herein by refe
+00000100: 7265 6e63 652e 0a0a 696d 706f 7274 206f  rence...import o
+00000110: 730a 0a64 6566 2072 656e 616d 6528 7372  s..def rename(sr
+00000120: 632c 2064 7374 293a 0a20 2020 2074 7279  c, dst):.    try
+00000130: 3a0a 2020 2020 2020 2020 6f73 2e72 656e  :.        os.ren
+00000140: 616d 6528 7372 632c 2064 7374 290a 2020  ame(src, dst).  
+00000150: 2020 6578 6365 7074 3a0a 2020 2020 2020    except:.      
+00000160: 2020 6f73 2e75 6e6c 696e 6b28 6473 7429    os.unlink(dst)
+00000170: 0a20 2020 2020 2020 206f 732e 7265 6e61  .        os.rena
+00000180: 6d65 2873 7263 2c20 6473 7429 0a0a 2320  me(src, dst)..# 
+00000190: 506c 6174 666f 7220 7370 6563 6966 6963  Platfor specific
+000001a0: 2076 6172 6965 6e74 730a 6966 206f 732e   varients.if os.
+000001b0: 6e61 6d65 203d 3d20 276e 7427 3a0a 2020  name == 'nt':.  
+000001c0: 2020 6465 6620 7063 6f6e 7665 7274 2870    def pconvert(p
+000001d0: 6174 6829 3a0a 2020 2020 2020 2020 7265  ath):.        re
+000001e0: 7475 726e 2070 6174 682e 7265 706c 6163  turn path.replac
+000001f0: 6528 225c 5c22 2c20 222f 2229 0a0a 2020  e("\\", "/")..  
+00000200: 2020 6465 6620 6d61 6b65 6c6f 636b 2869    def makelock(i
+00000210: 6e66 6f2c 2070 6174 686e 616d 6529 3a0a  nfo, pathname):.
+00000220: 2020 2020 2020 2020 6c64 203d 206f 732e          ld = os.
+00000230: 6f70 656e 2870 6174 686e 616d 652c 206f  open(pathname, o
+00000240: 732e 4f5f 4352 4541 5420 7c20 6f73 2e4f  s.O_CREAT | os.O
+00000250: 5f57 524f 4e4c 5920 7c20 6f73 2e4f 5f45  _WRONLY | os.O_E
+00000260: 5843 4c29 0a20 2020 2020 2020 206f 732e  XCL).        os.
+00000270: 7772 6974 6528 6c64 2c20 696e 666f 290a  write(ld, info).
+00000280: 2020 2020 2020 2020 6f73 2e63 6c6f 7365          os.close
+00000290: 286c 6429 0a0a 2020 2020 6465 6620 7265  (ld)..    def re
+000002a0: 6164 6c6f 636b 2870 6174 686e 616d 6529  adlock(pathname)
+000002b0: 3a0a 2020 2020 2020 2020 7265 7475 726e  :.        return
+000002c0: 2066 696c 6528 7061 7468 6e61 6d65 292e   file(pathname).
+000002d0: 7265 6164 2829 0a65 6c73 653a 0a20 2020  read().else:.   
+000002e0: 2064 6566 2070 636f 6e76 6572 7428 7061   def pconvert(pa
+000002f0: 7468 293a 0a20 2020 2020 2020 2072 6574  th):.        ret
+00000300: 7572 6e20 7061 7468 0a0a 2020 2020 6465  urn path..    de
+00000310: 6620 6d61 6b65 6c6f 636b 2869 6e66 6f2c  f makelock(info,
+00000320: 2070 6174 686e 616d 6529 3a0a 2020 2020   pathname):.    
+00000330: 2020 2020 6f73 2e73 796d 6c69 6e6b 2869      os.symlink(i
+00000340: 6e66 6f2c 2070 6174 686e 616d 6529 0a0a  nfo, pathname)..
+00000350: 2020 2020 6465 6620 7265 6164 6c6f 636b      def readlock
+00000360: 2870 6174 686e 616d 6529 3a0a 2020 2020  (pathname):.    
+00000370: 2020 2020 7265 7475 726e 206f 732e 7265      return os.re
+00000380: 6164 6c69 6e6b 2870 6174 686e 616d 6529  adlink(pathname)
+00000390: 0a0a 0a                                  ...
+"#
         );
 
         Ok(())
@@ -1566,6 +1856,32 @@ commit 3"#
                     })
             })
             .collect()
+    }
+
+    fn to_xxd(data: &[u8]) -> String {
+        let mut result = String::with_capacity((data.len() + 15) / 16 * 67 + 1);
+        result.push('\n');
+        for (i, chunk) in data.chunks(16).enumerate() {
+            result += &format!("{:08x}: ", i * 16);
+            for slice in chunk.chunks(2) {
+                match slice {
+                    [b1, b2] => result += &format!("{:02x}{:02x} ", b1, b2),
+                    [b1] => result += &format!("{:02x}   ", b1),
+                    _ => (),
+                }
+            }
+            result += &"     ".repeat(8 - (chunk.len() + 1) / 2);
+            result += &" ";
+            for &byte in chunk {
+                let ch = match byte {
+                    0x20..=0x7e => byte as char,
+                    _ => '.',
+                };
+                result.push(ch);
+            }
+            result += "\n";
+        }
+        result
     }
 
     #[test]
