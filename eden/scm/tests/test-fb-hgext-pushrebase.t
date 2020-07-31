@@ -99,9 +99,6 @@ Stack of non-conflicting commits should be accepted
   0e3997dc073308e42715a44d345466690abfd09a
   sending unbundle command
   adding changesets
-  add changeset add0c792bfce
-  add changeset 6a6d9484552c
-  add changeset 4cfedb0dc25f
   adding manifests
   adding file changes
   adding a revisions

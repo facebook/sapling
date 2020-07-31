@@ -143,8 +143,6 @@ check unhydrated infinitepush pulls
   bundle2-input-bundle: 1 params with-transaction
   bundle2-input-part: "changegroup" (params: 1 mandatory) supported
   adding changesets
-  add changeset 895414f853ef
-  add changeset c5564d074f73
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
@@ -226,8 +224,6 @@ check hydrated infinitepush pulls
   bundle2-input-bundle: 1 params with-transaction
   bundle2-input-part: "changegroup" (params: 1 mandatory) supported
   adding changesets
-  add changeset 895414f853ef
-  add changeset c5564d074f73
   adding manifests
   adding file changes
   adding newfile revisions

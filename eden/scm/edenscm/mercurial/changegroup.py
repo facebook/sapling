@@ -326,7 +326,6 @@ class cg1unpacker(object):
         """
 
         def csmap(x):
-            repo.ui.debug("add changeset %s\n" % short(x))
             return len(cl)
 
         def revmap(x):
