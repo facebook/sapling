@@ -397,10 +397,10 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   for (const auto& edenMount : server_->getAllMountPoints()) {
     MountInfo info;
-    *info.mountPoint_ref() = edenMount->getPath().value();
-    *info.edenClientPath_ref() =
+    info.mountPoint_ref() = edenMount->getPath().value();
+    info.edenClientPath_ref() =
         edenMount->getConfig()->getClientDirectory().value();
-    *info.state_ref() = edenMount->getState();
+    info.state_ref() = edenMount->getState();
     results.push_back(info);
   }
 }
@@ -544,11 +544,11 @@ void EdenServiceHandler::getCurrentJournalPosition(
 
   *out.mountGeneration_ref() = edenMount->getMountGeneration();
   if (latest) {
-    *out.sequenceNumber_ref() = latest->sequenceID;
-    *out.snapshotHash_ref() = thriftHash(latest->toHash);
+    out.sequenceNumber_ref() = latest->sequenceID;
+    out.snapshotHash_ref() = thriftHash(latest->toHash);
   } else {
-    *out.sequenceNumber_ref() = 0;
-    *out.snapshotHash_ref() = thriftHash(kZeroHash);
+    out.sequenceNumber_ref() = 0;
+    out.snapshotHash_ref() = thriftHash(kZeroHash);
   }
 }
 
@@ -620,13 +620,13 @@ EdenServiceHandler::subscribeStreamTemporary(
 
       auto latest = journal.getLatest();
       if (latest) {
-        *pos.sequenceNumber_ref() = latest->sequenceID;
-        *pos.snapshotHash_ref() = StringPiece(latest->toHash.getBytes()).str();
+        pos.sequenceNumber_ref() = latest->sequenceID;
+        pos.snapshotHash_ref() = StringPiece(latest->toHash.getBytes()).str();
       } else {
-        *pos.sequenceNumber_ref() = 0;
-        *pos.snapshotHash_ref() = StringPiece(kZeroHash.getBytes()).str();
+        pos.sequenceNumber_ref() = 0;
+        pos.snapshotHash_ref() = StringPiece(kZeroHash.getBytes()).str();
       }
-      *pos.mountGeneration_ref() = mount->getMountGeneration();
+      pos.mountGeneration_ref() = mount->getMountGeneration();
       stream->publisher.next(pos);
     }
   };
@@ -663,13 +663,12 @@ void EdenServiceHandler::getFilesChangedSince(
       *fromPosition->sequenceNumber_ref() + 1);
 
   // We set the default toPosition to be where we where if summed is null
-  *out.toPosition_ref()->sequenceNumber_ref() =
+  out.toPosition_ref()->sequenceNumber_ref() =
       *fromPosition->sequenceNumber_ref();
-  *out.toPosition_ref()->snapshotHash_ref() = *fromPosition->snapshotHash_ref();
-  *out.toPosition_ref()->mountGeneration_ref() =
-      edenMount->getMountGeneration();
+  out.toPosition_ref()->snapshotHash_ref() = *fromPosition->snapshotHash_ref();
+  out.toPosition_ref()->mountGeneration_ref() = edenMount->getMountGeneration();
 
-  *out.fromPosition_ref() = *out.toPosition_ref();
+  out.fromPosition_ref() = *out.toPosition_ref();
 
   if (summed) {
     if (summed->isTruncated) {
@@ -678,14 +677,14 @@ void EdenServiceHandler::getFilesChangedSince(
           EdenErrorType::JOURNAL_TRUNCATED,
           "Journal entry range has been truncated.");
     }
-    *out.toPosition_ref()->sequenceNumber_ref() = summed->toSequence;
-    *out.toPosition_ref()->snapshotHash_ref() = thriftHash(summed->toHash);
-    *out.toPosition_ref()->mountGeneration_ref() =
+    out.toPosition_ref()->sequenceNumber_ref() = summed->toSequence;
+    out.toPosition_ref()->snapshotHash_ref() = thriftHash(summed->toHash);
+    out.toPosition_ref()->mountGeneration_ref() =
         edenMount->getMountGeneration();
 
-    *out.fromPosition_ref()->sequenceNumber_ref() = summed->fromSequence;
-    *out.fromPosition_ref()->snapshotHash_ref() = thriftHash(summed->fromHash);
-    *out.fromPosition_ref()->mountGeneration_ref() =
+    out.fromPosition_ref()->sequenceNumber_ref() = summed->fromSequence;
+    out.fromPosition_ref()->snapshotHash_ref() = thriftHash(summed->fromHash);
+    out.fromPosition_ref()->mountGeneration_ref() =
         *out.toPosition_ref()->mountGeneration_ref();
 
     for (const auto& entry : summed->changedFilesInOverlay) {
@@ -752,7 +751,7 @@ void EdenServiceHandler::debugGetRawJournal(
     limitopt = static_cast<size_t>(*limit);
   }
 
-  *out.allDeltas_ref() = edenMount->getJournal().getDebugRawJournalInfo(
+  out.allDeltas_ref() = edenMount->getJournal().getDebugRawJournalInfo(
       *params->fromSequenceNumber_ref(), limitopt, mountGeneration);
 }
 
@@ -812,11 +811,11 @@ EdenServiceHandler::semifuture_getFileInformation(
               [&fetchContext](InodePtr inode) {
                 return inode->stat(fetchContext).thenValue([](struct stat st) {
                   FileInformation info;
-                  *info.size_ref() = st.st_size;
+                  info.size_ref() = st.st_size;
                   auto ts = stMtime(st);
-                  *info.mtime_ref()->seconds_ref() = ts.tv_sec;
-                  *info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
-                  *info.mode_ref() = st.st_mode;
+                  info.mtime_ref()->seconds_ref() = ts.tv_sec;
+                  info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
+                  info.mode_ref() = st.st_mode;
 
                   FileInformationOrError result;
                   result.set_info(info);
@@ -1140,9 +1139,9 @@ void EdenServiceHandler::debugGetScmTree(
   for (const auto& entry : tree->getTreeEntries()) {
     entries.emplace_back();
     auto& out = entries.back();
-    *out.name_ref() = entry.getName().stringPiece().str();
-    *out.mode_ref() = modeFromTreeEntryType(entry.getType());
-    *out.id_ref() = thriftHash(entry.getHash());
+    out.name_ref() = entry.getName().stringPiece().str();
+    out.mode_ref() = modeFromTreeEntryType(entry.getType());
+    out.id_ref() = thriftHash(entry.getHash());
   }
 }
 
@@ -1204,8 +1203,8 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
         "no blob metadata found for id ",
         id.toString());
   }
-  *result.size_ref() = metadata->size;
-  *result.contentsSha1_ref() = thriftHash(metadata->sha1);
+  result.size_ref() = metadata->size;
+  result.contentsSha1_ref() = thriftHash(metadata->sha1);
 }
 
 void EdenServiceHandler::debugInodeStatus(
@@ -1236,13 +1235,13 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
     // Conversion is done here to avoid building a dependency between
     // FuseChannel and thrift
 
-    *fuseCall.len_ref() = call.len;
-    *fuseCall.opcode_ref() = call.opcode;
-    *fuseCall.unique_ref() = call.unique;
-    *fuseCall.nodeid_ref() = call.nodeid;
-    *fuseCall.uid_ref() = call.uid;
-    *fuseCall.gid_ref() = call.gid;
-    *fuseCall.pid_ref() = call.pid;
+    fuseCall.len_ref() = call.len;
+    fuseCall.opcode_ref() = call.opcode;
+    fuseCall.unique_ref() = call.unique;
+    fuseCall.nodeid_ref() = call.nodeid;
+    fuseCall.uid_ref() = call.uid;
+    fuseCall.gid_ref() = call.gid;
+    fuseCall.pid_ref() = call.pid;
 
     outstandingCalls.push_back(fuseCall);
   }
@@ -1261,10 +1260,10 @@ void EdenServiceHandler::debugGetInodePath(
 
   auto relativePath = inodeMap->getPathForInode(inodeNum);
   // Check if the inode is loaded
-  *info.loaded_ref() = inodeMap->lookupLoadedInode(inodeNum) != nullptr;
+  info.loaded_ref() = inodeMap->lookupLoadedInode(inodeNum) != nullptr;
   // If getPathForInode returned none then the inode is unlinked
-  *info.linked_ref() = relativePath != std::nullopt;
-  *info.path_ref() = relativePath ? relativePath->stringPiece().str() : "";
+  info.linked_ref() = relativePath != std::nullopt;
+  info.path_ref() = relativePath ? relativePath->stringPiece().str() : "";
 }
 
 void EdenServiceHandler::clearFetchCounts() {
@@ -1297,7 +1296,7 @@ void EdenServiceHandler::getAccessCounts(
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
 
-  *result.cmdsByPid_ref() =
+  result.cmdsByPid_ref() =
       server_->getServerState()->getProcessNameCache()->getAllProcessNames();
 
   auto seconds = std::chrono::seconds{duration};
@@ -1364,21 +1363,20 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
     // Set LoadedInde Count and unloaded Inode count for the mountPoint.
     MountInodeInfo mountInodeInfo;
     auto counts = inodeMap->getInodeCounts();
-    *mountInodeInfo.unloadedInodeCount_ref() = counts.unloadedInodeCount;
-    *mountInodeInfo.loadedFileCount_ref() = counts.fileCount;
-    *mountInodeInfo.loadedTreeCount_ref() = counts.treeCount;
+    mountInodeInfo.unloadedInodeCount_ref() = counts.unloadedInodeCount;
+    mountInodeInfo.loadedFileCount_ref() = counts.fileCount;
+    mountInodeInfo.loadedTreeCount_ref() = counts.treeCount;
 
     JournalInfo journalThrift;
     if (auto journalStats = mount->getJournal().getStats()) {
-      *journalThrift.entryCount_ref() = journalStats->entryCount;
-      *journalThrift.durationSeconds_ref() =
+      journalThrift.entryCount_ref() = journalStats->entryCount;
+      journalThrift.durationSeconds_ref() =
           journalStats->getDurationInSeconds();
     } else {
-      *journalThrift.entryCount_ref() = 0;
-      *journalThrift.durationSeconds_ref() = 0;
+      journalThrift.entryCount_ref() = 0;
+      journalThrift.durationSeconds_ref() = 0;
     }
-    *journalThrift.memoryUsage_ref() =
-        mount->getJournal().estimateMemoryUsage();
+    journalThrift.memoryUsage_ref() = mount->getJournal().estimateMemoryUsage();
     result.mountPointJournalInfo_ref()[mount->getPath().stringPiece().str()] =
         journalThrift;
 
@@ -1386,36 +1384,36 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
         mountInodeInfo;
   }
   // Get the counters and set number of inodes unloaded by periodic unload job.
-  *result.counters_ref() = fb303::ServiceData::get()->getCounters();
-  *result.periodicUnloadCount_ref() =
+  result.counters_ref() = fb303::ServiceData::get()->getCounters();
+  result.periodicUnloadCount_ref() =
       result.counters_ref()[kPeriodicUnloadCounterKey.toString()];
 
   auto privateDirtyBytes = facebook::eden::proc_util::calculatePrivateBytes();
   if (privateDirtyBytes) {
-    *result.privateBytes_ref() = privateDirtyBytes.value();
+    result.privateBytes_ref() = privateDirtyBytes.value();
   }
 
   auto memoryStats = facebook::eden::proc_util::readMemoryStats();
   if (memoryStats) {
-    *result.vmRSSBytes_ref() = memoryStats->resident;
+    result.vmRSSBytes_ref() = memoryStats->resident;
   }
 
   // Note: this will be removed in a subsequent commit.
   // We now report periodically via ServiceData
   std::string smaps;
   if (folly::readFile("/proc/self/smaps", smaps)) {
-    *result.smaps_ref() = std::move(smaps);
+    result.smaps_ref() = std::move(smaps);
   }
 
   const auto blobCacheStats = server_->getBlobCache()->getStats();
-  *result.blobCacheStats_ref()->entryCount_ref() = blobCacheStats.blobCount;
-  *result.blobCacheStats_ref()->totalSizeInBytes_ref() =
+  result.blobCacheStats_ref()->entryCount_ref() = blobCacheStats.blobCount;
+  result.blobCacheStats_ref()->totalSizeInBytes_ref() =
       blobCacheStats.totalSizeInBytes;
-  *result.blobCacheStats_ref()->hitCount_ref() = blobCacheStats.hitCount;
-  *result.blobCacheStats_ref()->missCount_ref() = blobCacheStats.missCount;
-  *result.blobCacheStats_ref()->evictionCount_ref() =
+  result.blobCacheStats_ref()->hitCount_ref() = blobCacheStats.hitCount;
+  result.blobCacheStats_ref()->missCount_ref() = blobCacheStats.missCount;
+  result.blobCacheStats_ref()->evictionCount_ref() =
       blobCacheStats.evictionCount;
-  *result.blobCacheStats_ref()->dropCount_ref() = blobCacheStats.dropCount;
+  result.blobCacheStats_ref()->dropCount_ref() = blobCacheStats.dropCount;
 }
 
 void EdenServiceHandler::flushStatsNow() {
