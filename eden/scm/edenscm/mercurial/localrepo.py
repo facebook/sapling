@@ -2634,7 +2634,7 @@ class localrepository(object):
             # headrevs is already in DESC.
             reverse = not reverse
         else:
-            headrevs = cl.index.headrevs()
+            headrevs = cl.rawheadrevs()
         if start is not None:
             startrev = cl.rev(start)
             headrevs = [r for r in headrevs if r > startrev]
