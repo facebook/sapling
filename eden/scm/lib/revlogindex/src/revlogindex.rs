@@ -949,6 +949,9 @@ impl DagAlgorithm for RevlogIndex {
                     new_revs.extend(gcas);
                 }
             }
+            // gca_revs needs de-duplicated revs to work.
+            new_revs.sort_unstable();
+            new_revs.dedup();
             revs = new_revs;
         }
         if revs.is_empty() {

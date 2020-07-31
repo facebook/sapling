@@ -428,6 +428,19 @@ def ancestor(repo, subset, x):
             for r in revs:
                 yield r
 
+    cl = repo.changelog
+    if cl.userust("revsetancestor"):
+        nodes = cl.tonodes(yieldrevs(repo, rl, l))
+        anc = cl.dag.gcaone(nodes)
+        if anc is None:
+            return baseset()
+        else:
+            ancrev = cl.rev(anc)
+            if ancrev in subset:
+                return baseset([ancrev])
+            else:
+                return baseset()
+
     # see https://ruby-doc.org/core-2.2.0/Enumerable.html#method-i-each_slice
     def eachslice(iterable, n):
         buf = []

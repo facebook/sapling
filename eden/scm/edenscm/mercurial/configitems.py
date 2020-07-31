@@ -319,6 +319,7 @@ coreconfigitem("experimental", "rust-commits:rawheadrevs", default=True)
 coreconfigitem("experimental", "rust-commits:reachableroots", default=True)
 coreconfigitem("experimental", "rust-commits:rev", default=True)
 coreconfigitem("experimental", "rust-commits:revision", default=True)
+coreconfigitem("experimental", "rust-commits:revsetancestor", default=True)
 coreconfigitem("experimental", "rust-commits:strip", default=True)
 
 coreconfigitem("experimental", "single-head-per-branch", default=False)
