@@ -19,12 +19,12 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
-                        read : { bytes : 1539},
-                        write : { bytes : 830}}}}
+                        read : { bytes : 1538},
+                        write : { bytes : 788}}}}
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 914},
-                        write : { bytes : 683}}}}
+                        read : { bytes : 913},
+                        write : { bytes : 641}}}}
 
 We should see the remotefilelog capability here, which advertises that
 the server supports our custom getfiles method.
@@ -51,8 +51,8 @@ the server supports our custom getfiles method.
   adding file changes
   added 1 changesets with 0 changes to 0 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1030},
-                        write : { bytes : 660}}}}
+                        read : { bytes : 1029},
+                        write : { bytes : 618}}}}
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -107,8 +107,8 @@ the server supports our custom getfiles method.
   remote:                       write : { bytes : 147}}}}
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 1},
-                        read : { bytes : 2903},
-                        write : { bytes : 807}}}}
+                        read : { bytes : 2902},
+                        write : { bytes : 765}}}}
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -133,8 +133,8 @@ the server supports our custom getfiles method.
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 613},
-                        write : { bytes : 1033}}}}
+                        read : { bytes : 612},
+                        write : { bytes : 991}}}}
 
   $ cd ../shallow2
   $ hg up
@@ -166,8 +166,8 @@ the server supports our custom getfiles method.
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 2 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 590},
-                        write : { bytes : 1496}}}}
+                        read : { bytes : 589},
+                        write : { bytes : 1454}}}}
 
   $ cd ../master
   $ hg log -l 1 -r 'desc(a)' --style compact
@@ -206,12 +206,12 @@ the server supports our custom getfiles method.
   $ hginit multimf-master
   $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 529},
-                        write : { bytes : 602}}}}
+                        read : { bytes : 528},
+                        write : { bytes : 521}}}}
   $ hgcloneshallow ssh://user@dummy/multimf-master multimf-shallow2 -q
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 570},
-                        write : { bytes : 602}}}}
+                        read : { bytes : 569},
+                        write : { bytes : 521}}}}
   $ cd multimf-shallow
   $ echo a > a
   $ hg commit -qAm a
@@ -249,8 +249,8 @@ the server supports our custom getfiles method.
   adding file changes
   added 5 changesets with 4 changes to 3 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 2962},
-                        write : { bytes : 701}}}}
+                        read : { bytes : 2961},
+                        write : { bytes : 618}}}}
 
   $ hg up -q 'desc(c22)'
   $ hg log -f -T '{rev}\n' c

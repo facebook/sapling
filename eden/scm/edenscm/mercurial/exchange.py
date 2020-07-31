@@ -1583,7 +1583,7 @@ def _pullbundle2(pullop):
         pullop.repo.ui.status(_("no changes found\n"))
         pullop.cgresult = 0
     else:
-        if pullop.heads is None and list(pullop.common) == [nullid]:
+        if pullop.heads is None and set(pullop.common).issubset({nullid}):
             pullop.repo.ui.status(_("requesting all changes\n"))
     if obsolete.isenabled(pullop.repo, obsolete.exchangeopt):
         remoteversions = bundle2.obsmarkersversion(pullop.remotebundle2caps)

@@ -1,5 +1,9 @@
   $ disable treemanifest
 
+Stabilize test
+
+  $ PYTHONHASHSEED=0
+
 Function to test discovery between two repos in both directions, using both the local shortcut
 (which is currently not activated by default) and the full remotable protocol:
 
@@ -76,8 +80,9 @@ Many new:
   comparing with b
   query 1; heads
   searching for changes
-  taking initial sample
-  progress: searching: 2 queries
+  sampling from both directions (2 of 2)
+  sampling undecided commits (29 of 29)
+  progress: searching: checking 29 commits, 0 left 2 queries
   query 2; still undecided: 29, sample size is: 29
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -87,8 +92,8 @@ Many new:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (31 of 31)
+  progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -98,8 +103,9 @@ Many new:
   comparing with a
   query 1; heads
   searching for changes
-  taking initial sample
-  progress: searching: 2 queries
+  sampling from both directions (2 of 2)
+  sampling undecided commits (2 of 2)
+  progress: searching: checking 2 commits, 0 left 2 queries
   query 2; still undecided: 2, sample size is: 2
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -109,8 +115,9 @@ Many new:
   comparing with a
   query 1; heads
   searching for changes
-  taking initial sample
-  progress: searching: 2 queries
+  sampling from both directions (2 of 2)
+  sampling undecided commits (2 of 2)
+  progress: searching: checking 2 commits, 0 left 2 queries
   query 2; still undecided: 2, sample size is: 2
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -126,8 +133,9 @@ Both sides many new with stub:
   comparing with b
   query 1; heads
   searching for changes
-  taking initial sample
-  progress: searching: 2 queries
+  sampling from both directions (2 of 2)
+  sampling undecided commits (29 of 29)
+  progress: searching: checking 29 commits, 0 left 2 queries
   query 2; still undecided: 29, sample size is: 29
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -137,8 +145,8 @@ Both sides many new with stub:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (31 of 31)
+  progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -148,8 +156,9 @@ Both sides many new with stub:
   comparing with a
   query 1; heads
   searching for changes
-  taking initial sample
-  progress: searching: 2 queries
+  sampling from both directions (2 of 2)
+  sampling undecided commits (29 of 29)
+  progress: searching: checking 29 commits, 0 left 2 queries
   query 2; still undecided: 29, sample size is: 29
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -159,8 +168,9 @@ Both sides many new with stub:
   comparing with a
   query 1; heads
   searching for changes
-  taking initial sample
-  progress: searching: 2 queries
+  sampling from both directions (2 of 2)
+  sampling undecided commits (29 of 29)
+  progress: searching: checking 29 commits, 0 left 2 queries
   query 2; still undecided: 29, sample size is: 29
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -177,8 +187,8 @@ Both many new:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (31 of 31)
+  progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -188,8 +198,8 @@ Both many new:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (31 of 31)
+  progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -199,8 +209,8 @@ Both many new:
   comparing with a
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (31 of 31)
+  progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -210,8 +220,8 @@ Both many new:
   comparing with a
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (31 of 31)
+  progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -228,8 +238,8 @@ Both many new skewed:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (51 of 51)
+  progress: searching: checking 51 commits, 0 left 2 queries
   query 2; still undecided: 51, sample size is: 51
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -239,8 +249,8 @@ Both many new skewed:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (51 of 51)
+  progress: searching: checking 51 commits, 0 left 2 queries
   query 2; still undecided: 51, sample size is: 51
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -250,8 +260,8 @@ Both many new skewed:
   comparing with a
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (31 of 31)
+  progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -261,8 +271,8 @@ Both many new skewed:
   comparing with a
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
+  sampling undecided commits (31 of 31)
+  progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
   progress: searching (end)
   2 total queries in *.????s (glob)
@@ -279,12 +289,13 @@ Both many new on top of long history:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
-  query 2; still undecided: 1049, sample size is: 11
-  sampling from both directions
-  progress: searching: 3 queries
-  query 3; still undecided: 31, sample size is: 31
+  sampling undecided commits (200 of 1049)
+  progress: searching: checking 200 commits, 849 left 2 queries
+  query 2; still undecided: 1049, sample size is: 200
+  sampling from both directions (2 of 2)
+  sampling undecided commits (8 of 8)
+  progress: searching: checking 8 commits, 0 left 3 queries
+  query 3; still undecided: 8, sample size is: 8
   progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
@@ -293,12 +304,13 @@ Both many new on top of long history:
   comparing with b
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
-  query 2; still undecided: 1049, sample size is: 11
-  sampling from both directions
-  progress: searching: 3 queries
-  query 3; still undecided: 31, sample size is: 31
+  sampling undecided commits (200 of 1049)
+  progress: searching: checking 200 commits, 849 left 2 queries
+  query 2; still undecided: 1049, sample size is: 200
+  sampling from both directions (2 of 2)
+  sampling undecided commits (8 of 8)
+  progress: searching: checking 8 commits, 0 left 3 queries
+  query 3; still undecided: 8, sample size is: 8
   progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
@@ -307,12 +319,13 @@ Both many new on top of long history:
   comparing with a
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
-  query 2; still undecided: 1029, sample size is: 11
-  sampling from both directions
-  progress: searching: 3 queries
-  query 3; still undecided: 15, sample size is: 15
+  sampling undecided commits (200 of 1029)
+  progress: searching: checking 200 commits, 829 left 2 queries
+  query 2; still undecided: 1029, sample size is: 200
+  sampling from both directions (2 of 2)
+  sampling undecided commits (14 of 14)
+  progress: searching: checking 14 commits, 0 left 3 queries
+  query 3; still undecided: 14, sample size is: 14
   progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
@@ -321,12 +334,13 @@ Both many new on top of long history:
   comparing with a
   query 1; heads
   searching for changes
-  taking quick initial sample
-  progress: searching: 2 queries
-  query 2; still undecided: 1029, sample size is: 11
-  sampling from both directions
-  progress: searching: 3 queries
-  query 3; still undecided: 15, sample size is: 15
+  sampling undecided commits (200 of 1029)
+  progress: searching: checking 200 commits, 829 left 2 queries
+  query 2; still undecided: 1029, sample size is: 200
+  sampling from both directions (2 of 2)
+  sampling undecided commits (14 of 14)
+  progress: searching: checking 14 commits, 0 left 3 queries
+  query 3; still undecided: 14, sample size is: 14
   progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838

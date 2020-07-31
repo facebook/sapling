@@ -85,7 +85,7 @@ Stack of non-conflicting commits should be accepted
   query 1; heads
   sending batch command
   searching for changes
-  taking quick initial sample
+  sampling undecided commits (2 of 2)
   query 2; still undecided: 2, sample size is: 2
   sending known command
   2 total queries in *s (glob)

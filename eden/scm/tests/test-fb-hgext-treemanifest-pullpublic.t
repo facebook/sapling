@@ -28,8 +28,8 @@ Clone it
                         gettreepack : { basemfnodes : 0,
                                         calls : 1,
                                         mfnodes : 1},
-                        read : { bytes : 2405},
-                        write : { bytes : 1045}}}}
+                        read : { bytes : 2404},
+                        write : { bytes : 1003}}}}
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -76,8 +76,8 @@ Pull exactly up to d into the client
   adding file changes
   added 2 changesets with 0 changes to 0 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1125},
-                        write : { bytes : 732}}}}
+                        read : { bytes : 1124},
+                        write : { bytes : 690}}}}
 
 Test error message about MissingNodesError
   $ drawdag --config paths.default=ssh://user@dummy/master-lagged --config remotefilelog.debug=0 --config devel.print-metrics=0 << 'EOS'

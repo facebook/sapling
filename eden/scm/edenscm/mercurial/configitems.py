@@ -277,6 +277,7 @@ coreconfigitem(
 coreconfigitem("experimental", "evolution.exchange", default=None)
 coreconfigitem("experimental", "evolution.bundle-obsmarker", default=False)
 coreconfigitem("experimental", "evolution.track-operation", default=True)
+coreconfigitem("experimental", "findcommonheadsnew", default=util.istest())
 coreconfigitem("experimental", "worddiff", default=False)
 coreconfigitem("experimental", "mmapindexthreshold", default=1)
 coreconfigitem("experimental", "new-clone-path", default=True)

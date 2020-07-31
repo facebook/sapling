@@ -15,7 +15,7 @@ Set up extension and repos to clone over wire protocol
 
   $ hg init repo1
   $ hg clone  ssh://user@dummy/repo1 repo2
-  requesting all changes
+  no changes found
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo2

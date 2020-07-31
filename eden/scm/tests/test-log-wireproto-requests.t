@@ -22,7 +22,7 @@
   remote: wireproto_requests:  (args=[], command=hello, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=[], command=batch, duration=*, reponame=unknown, responselen=*) (glob)
-  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '1'), ('common', '0000000000000000000000000000000000000000'), ('heads', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('listkeys', 'bookmarks'), ('phases', '1')], command=getbundle, duration=*, reponame=unknown, responselen=*) (glob)
+  remote: wireproto_requests:  (args=[('bookmarks', '1'), ('bundlecaps', 'HG20,$USUAL_BUNDLE2_CAPS$%0Aremotefilelog%3DTrue,remotefilelog'), ('cg', '1'), ('common', ''), ('heads', 'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b'), ('listkeys', 'bookmarks'), ('phases', '1')], command=getbundle, duration=*, reponame=unknown, responselen=*) (glob)
   $ cd ../repo
   $ echo b > b && hg add b && hg ci -m b
   $ echo c > c && hg add c && hg ci -m c
