@@ -83,7 +83,7 @@ although the second one became non-merge commit
   
 
 Make sure we have directory from the first move, but not from the second
-  $ LC_ALL=C ls
+  $ ls
   file.txt
   filetoremove
   newrepo
