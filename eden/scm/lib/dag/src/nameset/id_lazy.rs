@@ -367,7 +367,10 @@ pub(crate) mod tests {
         assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
         let mut iter = set.iter().unwrap();
         iter.next();
-        assert_eq!(format!("{:?}", &set), "<lazy [0100000000000000+1] + ? more>");
+        assert_eq!(
+            format!("{:?}", &set),
+            "<lazy [0100000000000000+1] + ? more>"
+        );
         iter.next();
         assert_eq!(
             format!("{:?}", &set),
