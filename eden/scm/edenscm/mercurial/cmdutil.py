@@ -1168,7 +1168,8 @@ def openrevlog(repo, cmd, file_, opts):
     r = None
     if repo:
         if cl:
-            r = repo.changelog
+            cl = repo.changelog
+            r = revlog.revlog(cl.opener, cl.indexfile)
         elif dir:
             if "treemanifest" not in repo.requirements:
                 raise error.Abort(
