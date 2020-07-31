@@ -43,8 +43,7 @@ sh % "cat" << r"""
 [commitcloud]
 servicetype = local
 servicelocation = $TESTTMP
-user_token_path = $TESTTMP
-auth_help = visit https://localhost/oauth to generate a registration token
+token_enforced = False
 education_page = https://someurl.com/wiki/CommitCloud
 owner_team = The Test Team @ FB
 """ >> "shared.rc"
@@ -53,9 +52,6 @@ owner_team = The Test Team @ FB
 sh % "hg clone 'ssh://user@dummy/server' client1 -q"
 sh % "cd client1"
 sh % "cat ../shared.rc" >> ".hg/hgrc"
-sh % "hg cloud auth -t xxxxxx" == r"""
-    setting authentication token
-    authentication successful"""
 
 # Check generation of default workspace name based on user name and email
 sh % "hg cloud join" == r"""

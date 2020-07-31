@@ -44,11 +44,14 @@ Configs::
     # TODO: It is also possible to implement a wrapper for ssl.match_hostname method instead of disabling the check.
     tls.check_hostname = False
 
-    # set true if TLS authentication is enough for the https endpoint port serving commit cloud requests
-    # this option definetely require the path to a valid client certificate in tls.client_certs option
-    # Try openssl to verify your TLS handshake
-    # Example: `openssl s_client -connect host:port -cert <tls.client_certs> -CAfile <tls.ca_certs>
-    tls.notoken = False
+    # set False if
+    #   * TLS certs should be used to authenticate with the Commit Cloud Service
+    #     This requires the path to a valid client cert in 'tls.client_certs' option to be set as well,
+    #     and possibly 'tls.ca_certs' option if not default.
+    #     check TLS handshake: `openssl s_client -connect host:port -cert <tls.client_certs> -CAfile <tls.ca_certs>'
+    #   * for testing purposes
+    #   * if the Commit Cloud Service doesn't require any authentication
+    token_enforced = True
 
     # help message to provide instruction on registration process
     auth_help = please obtain an authentication token from https://example.com/
@@ -173,7 +176,7 @@ configitem = registrar.configitem(configtable)
 
 configitem("commitcloud", "servicetype", default="remote")
 configitem("commitcloud", "remote_port", default=443)
-configitem("commitcloud", "tls.notoken", default=False)
+configitem("commitcloud", "token_enforced", default=True)
 configitem("commitcloud", "tls.check_hostname", default=True)
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
 configitem("commitcloud", "backuplimitnocheck", default=4)

@@ -17,6 +17,7 @@ class TokenLocator(object):
     filename = ".commitcloudrc"
     servicename = "commitcloud"
     accountname = "commitcloud"
+    faketoken = "fake_token"
 
     def __init__(self, ui):
         self.ui = ui
@@ -143,15 +144,19 @@ class TokenLocator(object):
             raise ccerror.UnexpectedError(self.ui, e)
 
     @property
+    def tokenenforced(self):
+        return self.ui.configbool("commitcloud", "token_enforced")
+
+    @property
     def token(self):
         """Public API
             get token
                 returns None if token is not found
-                "not-required" is token is not needed
+                'faketoken' is token is not enforced
                 it can throw only in case of unexpected error
         """
-        if self.ui.configbool("commitcloud", "tls.notoken"):
-            return "not-required"
+        if not self.tokenenforced:
+            return self.faketoken
         if self.ui.config("commitcloud", "user_token_path"):
             token = self._gettokenfromfile()
         elif pycompat.isdarwin:

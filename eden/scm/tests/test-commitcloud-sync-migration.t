@@ -45,7 +45,7 @@ Make shared part of client config
   > hostname = testhost
   > servicetype = local
   > servicelocation = $TESTTMP
-  > tls.notoken=True
+  > token_enforced=False
   > EOF
 
 Make the first clone of the server

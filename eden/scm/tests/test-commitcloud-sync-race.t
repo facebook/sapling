@@ -19,15 +19,10 @@
 
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
-  $ setconfig commitcloud.servicetype=local
-  $ setconfig commitcloud.servicelocation="$TESTTMP"
-  $ setconfig commitcloud.user_token_path="$TESTTMP"
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ setconfig extensions.extralog="$TESTDIR/extralog.py"
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
-  $ hg cloud auth -t XXXXXX
-  setting authentication token
-  authentication successful
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   visibility: read 1 heads: df4f53cec30a
@@ -39,15 +34,10 @@
 
   $ hg clone ssh://user@dummy/server client2 -q
   $ cd client2
-  $ setconfig commitcloud.servicetype=local
-  $ setconfig commitcloud.servicelocation="$TESTTMP"
-  $ setconfig commitcloud.user_token_path="$TESTTMP"
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ setconfig extensions.extralog="$TESTDIR/extralog.py"
   $ setconfig extralog.events="visibility, commitcloud_sync"
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
-  $ hg cloud auth -t XXXXXX
-  updating authentication token
-  authentication successful
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   visibility: read 1 heads: df4f53cec30a

@@ -98,7 +98,6 @@ EOF
   fi
 
   if [ -n "$COMMITCLOUD" ]; then
-    hg --cwd $clientname cloud auth -t xxxxxx -q
     hg --cwd $clientname cloud join -q
   fi
 }
@@ -144,8 +143,7 @@ configure() {
       commitcloud)
         enable commitcloud infinitepush
         setconfig commitcloud.hostname=testhost
-        setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
-        setconfig commitcloud.user_token_path=$TESTTMP
+        setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
         setconfig commitcloud.remotebookmarkssync=True
         COMMITCLOUD=1
         ;;

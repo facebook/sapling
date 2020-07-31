@@ -58,11 +58,7 @@ Setup first client repo
   $ cd client1
   $ hg pull -B stable -B warm -q
   $ hg up 'desc(a2)' -q
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
-  $ setconfig commitcloud.user_token_path=$TESTTMP
-  $ hg cloud auth -t xxxxxx
-  setting authentication token
-  authentication successful
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -83,11 +79,7 @@ Setup second client repo
   $ cd ..
   $ hg clone -q ssh://user@dummy/remoterepo client2
   $ cd client2
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
-  $ setconfig commitcloud.user_token_path=$TESTTMP
-  $ hg cloud auth -t xxxxxx
-  updating authentication token
-  authentication successful
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -98,12 +90,8 @@ Setup third client repo but do not enable remote bookmarks sync
   $ cd ..
   $ hg clone -q ssh://user@dummy/remoterepo client3
   $ cd client3
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
-  $ setconfig commitcloud.user_token_path=$TESTTMP
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ setconfig commitcloud.remotebookmarkssync=False
-  $ hg cloud auth -t xxxxxx
-  updating authentication token
-  authentication successful
   $ hg cloud join -q
 
 Common case of unsynchronized remote bookmarks

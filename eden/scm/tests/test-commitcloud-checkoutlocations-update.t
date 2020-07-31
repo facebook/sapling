@@ -17,15 +17,10 @@
 Make the clone of the server
   $ hg clone ssh://user@dummy/server client -q
   $ cd client
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation="$TESTTMP" commitcloud.user_token_path="$TESTTMP"
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation="$TESTTMP" commitcloud.token_enforced=False
 
 Enable syncing checkout locations
   $ setconfig commitcloud.synccheckoutlocations=True
-
-Registration
-  $ hg cloud auth -t '****************'
-  setting authentication token
-  authentication successful
 
 Utility script to dump json of the checkoutlocation being sent
   $ cat > $TESTTMP/dumpdata.py <<EOF

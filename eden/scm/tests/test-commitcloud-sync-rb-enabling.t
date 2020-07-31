@@ -25,11 +25,7 @@
   $ setconfig remotenames.selectivepulldefault=master,base
   $ setconfig remotenames.selectivepullaccessedbookmarks=True
   $ setconfig commitcloud.remotebookmarkssync=True
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
-  $ setconfig commitcloud.user_token_path=$TESTTMP
-  $ hg cloud auth -t xxxxxx
-  setting authentication token
-  authentication successful
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -44,8 +40,7 @@
   $ setconfig remotenames.selectivepull=True
   $ setconfig remotenames.selectivepulldefault=master,base
   $ setconfig remotenames.selectivepullaccessedbookmarks=True
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
-  $ setconfig commitcloud.user_token_path=$TESTTMP
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'

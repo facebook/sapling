@@ -336,22 +336,41 @@ def cloudleave(ui, repo, **opts):
 
 @subcmd("authenticate|auth", [("t", "token", "", _("set or update token"))])
 def cloudauth(ui, repo, **opts):
-    """authenticate this host with the commit cloud service
+    """authenticate this host with the commit cloud service and validate the authentication
+
+    Token may not be required by the configuration but it is still possible to set it with -t option.
+    Commit Cloud token may still be required for SCM Daemon to authenticate.
     """
     tokenlocator = tokenmod.TokenLocator(ui)
 
     token = opts.get("token")
     if token:
-        # The user has provided a token, so just store it.
-        if tokenlocator.token:
+        if tokenlocator.tokenenforced and tokenlocator.token:
             ui.status(_("updating authentication token\n"))
         else:
             ui.status(_("setting authentication token\n"))
-        # check token actually works
-        service.get(ui, token).check()
-        tokenlocator.settoken(token)
-        ui.status(_("authentication successful\n"))
+
+        if tokenlocator.tokenenforced:
+            # check authentication
+            service.get(ui, token).check()
+            ui.status(_("token has been validated\n"))
+            tokenlocator.settoken(token)
+            ui.status(_("authentication successful\n"))
+        else:
+            ui.status(
+                _("token will be set but not used in the current configuration\n")
+            )
+            tokenlocator.settoken(token)
+            # check authentication
+            service.get(ui, token).check()
+            ui.status(_("authentication successful for the current configuration\n"))
     else:
+
+        if not tokenlocator.tokenenforced:
+            service.get(ui).check()
+            ui.status(_("authentication successful for the current configuration\n"))
+            return
+
         token = tokenlocator.token
         if token:
             try:
@@ -363,7 +382,7 @@ def cloudauth(ui, repo, **opts):
         if token:
             ui.status(_("authentication successful\n"))
         else:
-            # Run through interactive authentication
+            # Run through interactive authentication to obtain a token
             authenticate(ui, repo, tokenlocator)
 
 
@@ -613,14 +632,14 @@ def cloudhide(ui, repo, *revs, **opts):
 
 def authenticate(ui, repo, tokenlocator):
     """interactive authentication"""
-    if not ui.interactive():
+    if not ui.interactive() or not tokenlocator.tokenenforced:
         msg = _("authentication with commit cloud required")
-        hint = _("use 'hg cloud auth --token TOKEN' to set a token")
-        raise ccerror.RegistrationError(ui, msg, hint=hint)
+        raise ccerror.RegistrationError(ui, msg)
 
     authhelp = ui.config("commitcloud", "auth_help")
     if authhelp:
         ui.status(authhelp + "\n")
+
     # ui.prompt doesn't set up the prompt correctly, so pasting long lines
     # wraps incorrectly in the terminal.  Print the prompt on its own line
     # to avoid this.

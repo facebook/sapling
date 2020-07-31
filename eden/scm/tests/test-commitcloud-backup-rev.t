@@ -95,17 +95,13 @@ Check that backup doesn't interfere with commit cloud
   > [commitcloud]
   > servicetype = local
   > servicelocation = $TESTTMP
-  > user_token_path = $TESTTMP
-  > auth_help = visit https://localhost/oauth to generate a registration token
+  > token_enforced = False
   > education_page = https://someurl.com/wiki/CommitCloud
   > owner_team = The Test Team @ FB
   > EOF
 
   $ cd shallow
   $ cat ../shared.rc >> .hg/hgrc
-  $ hg cloud auth -t xxxxxx
-  setting authentication token
-  authentication successful
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'master' repo
   commitcloud: synchronizing 'master' with 'user/test/default'

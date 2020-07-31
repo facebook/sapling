@@ -147,9 +147,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 self.connection.request("POST", path, rdata, self.headers)
                 resp = self.connection.getresponse()
                 if resp.status == httplib.UNAUTHORIZED:
-                    raise ccerror.RegistrationError(
-                        self.ui, _("unauthorized client (token is invalid)")
-                    )
+                    raise ccerror.RegistrationError(self.ui, _("unauthorized client"))
+                if resp.status == httplib.FORBIDDEN:
+                    raise ccerror.RegistrationError(self.ui, _("forbidden client"))
                 if resp.status != httplib.OK:
                     raise ccerror.ServiceError(
                         self.ui, "%d %s" % (resp.status, resp.reason)

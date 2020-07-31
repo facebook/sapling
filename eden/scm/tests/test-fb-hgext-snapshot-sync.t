@@ -31,12 +31,8 @@
 # Setup clients
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
-  $ setconfig commitcloud.user_token_path=$TESTTMP
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ hg debugvisibility start
-  $ hg cloud auth -t xxxxxx
-  setting authentication token
-  authentication successful
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -45,8 +41,7 @@
   $ cd ..
   $ hg clone ssh://user@dummy/server client2 -q
   $ cd client2
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
-  $ setconfig commitcloud.user_token_path=$TESTTMP
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'

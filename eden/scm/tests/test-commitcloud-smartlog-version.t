@@ -16,14 +16,7 @@
 Make the clone of the server
   $ hg clone ssh://user@dummy/server client -q
   $ cd client
-  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation="$TESTTMP" commitcloud.user_token_path="$TESTTMP"
-
-
-Registration
-  $ hg cloud auth -t '****************'
-  setting authentication token
-  authentication successful
-
+  $ setconfig commitcloud.servicetype=local commitcloud.servicelocation="$TESTTMP" commitcloud.token_enforced=False
 
 Tests for hg cloud sl --date "2019-06-23 19:34:39"
   $ cat > $TESTTMP/usersmartlogbyversiondata << EOF

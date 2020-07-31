@@ -30,8 +30,7 @@ Make shared part of config
   > [commitcloud]
   > servicetype = local
   > servicelocation = $TESTTMP
-  > user_token_path = $TESTTMP
-  > auth_help = visit https://localhost/oauth to generate a registration token
+  > token_enforced = False
   > education_page = https://someurl.com/wiki/CommitCloud
   > owner_team = The Test Team @ FB
   > EOF
@@ -60,9 +59,6 @@ Make a clone of the server
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
   $ cat ../shared.rc >> .hg/hgrc
-  $ hg cloud auth -t xxxxxx
-  setting authentication token
-  authentication successful
 
 Connect the first client
   $ hg cloud join

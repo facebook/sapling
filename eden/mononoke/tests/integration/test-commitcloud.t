@@ -40,7 +40,7 @@ mononoke + local commit cloud backend
   > hostname = testhost
   > servicetype = local
   > servicelocation = $TESTTMP
-  > user_token_path = $TESTTMP
+  > token_enforced = False
   > owner_team = The Test Team
   > updateonmove = true
   > EOF
@@ -73,9 +73,6 @@ start mononoke
 
 
   $ cd client1
-  $ hgmn cloud auth -t xxxxxx
-  setting authentication token
-  authentication successful
   $ hgmn cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'client1' repo
   commitcloud: synchronizing 'client1' with 'user/test/default'
@@ -83,9 +80,6 @@ start mononoke
   finished in * (glob)
   $ hgmn up master_bookmark -q
   $ cd ../client2
-  $ hgmn cloud auth -t xxxxxx
-  updating authentication token
-  authentication successful
   $ hgmn cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'client2' repo
   commitcloud: synchronizing 'client2' with 'user/test/default'

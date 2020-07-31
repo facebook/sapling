@@ -37,7 +37,7 @@ Make shared part of config
   > [commitcloud]
   > servicetype = local
   > servicelocation = $TESTTMP
-  > user_token_path = $TESTTMP
+  > token_enforced = False
   > owner_team = The Test Team @ FB
   > EOF
 
@@ -45,7 +45,6 @@ Make the first clone of the server
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
   $ cat ../shared.rc >> .hg/hgrc
-  $ hg cloud auth -t xxxxxx -q
   $ hg cloud join -q
 
   $ cd ..
@@ -54,7 +53,6 @@ Make the second clone of the server
   $ hg clone ssh://user@dummy/server client2 -q
   $ cd client2
   $ cat ../shared.rc >> .hg/hgrc
-  $ hg cloud auth -q
   $ hg cloud join -q
 
   $ cd ..
@@ -63,7 +61,6 @@ Make the third clone of the server
   $ hg clone ssh://user@dummy/server client3 -q
   $ cd client3
   $ cat ../shared.rc >> .hg/hgrc
-  $ hg cloud auth -q
   $ hg cloud join -q
 
   $ cd ..

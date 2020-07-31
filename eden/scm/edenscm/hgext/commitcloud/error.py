@@ -35,19 +35,13 @@ class RegistrationError(error.Abort):
         authenticationhelp = ui.config("commitcloud", "auth_help")
         if authenticationhelp:
             details += (
-                _("authentication instructions:\n%s\n") % authenticationhelp.strip()
+                _("authentication instructions:\n%s") % authenticationhelp.strip()
             )
-        details += _(
-            "(please read 'hg cloud authenticate --help' for more information)"
-        )
         contact = _(
             "(please contact %s if you are unable to authenticate)"
         ) % getownerteam(ui)
         message = "registration error: %s\n%s\n%s" % (message, details, contact)
-        ui.log(
-            "commitcloud_error",
-            commitcloud_sync_error="registration error (oauth token)",
-        )
+        ui.log("commitcloud_error", commitcloud_sync_error="registration error")
         super(RegistrationError, self).__init__(
             message, *args, component="commitcloud", **kwargs
         )

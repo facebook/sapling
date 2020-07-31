@@ -61,21 +61,28 @@ Make the first clone of the server
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
   $ cat ../shared.rc >> .hg/hgrc
-Registration:
+
+Test registration with the different settings
   $ hg cloud auth
   abort: commitcloud: registration error: authentication with commit cloud required
   authentication instructions:
   visit https://localhost/oauth to generate a registration token
-  (please read 'hg cloud authenticate --help' for more information)
   (please contact The Test Team @ FB if you are unable to authenticate)
-  (use 'hg cloud auth --token TOKEN' to set a token)
   [255]
   $ hg cloud auth -t xxxxxx
   setting authentication token
+  token has been validated
   authentication successful
   $ hg cloud auth -t xxxxxx --config "commitcloud.user_token_path=$TESTTMP/somedir"
   abort: commitcloud: config error: invalid commitcloud.user_token_path '$TESTTMP/somedir'
   [255]
+  $ hg cloud auth -t xxxxxx --config commitcloud.token_enforced=False
+  setting authentication token
+  token will be set but not used in the current configuration
+  authentication successful for the current configuration
+  $ hg cloud auth --config commitcloud.token_enforced=False
+  authentication successful for the current configuration
+
 Joining:
   $ hg cloud sync
   abort: commitcloud: workspace error: undefined workspace
@@ -125,6 +132,7 @@ Registration:
   authentication successful
   $ hg cloud auth -t yyyyy
   updating authentication token
+  token has been validated
   authentication successful
 Joining:
   $ hg cloud join
