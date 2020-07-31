@@ -1655,6 +1655,11 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             # and branch bits
             ui.warn(_("warning: can't check exact import with --no-commit\n"))
         elif opts.get("exact") and hex(n) != nodeid:
+            # Write the commit out. The "Abort" should not cancel the transaction.
+            # This is the behavior tested by test-import-merge.t (issue3616).
+            # It's a questionable behavior, though.
+            tr = repo.currenttransaction()
+            tr.close()
             raise error.Abort(_("patch is damaged or loses information"))
         msg = _("applied to working directory")
         if n:

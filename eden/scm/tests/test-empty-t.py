@@ -73,6 +73,8 @@ sh % "ls .hg" == r"""
 # It's not really empty, though.
 
 sh % "ls .hg/store" == r"""
+    00changelog.d
+    00changelog.i
     allheads
     metalog
     requires

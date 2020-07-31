@@ -482,11 +482,21 @@ class changelog(revlog.revlog):
         for i in super(changelog, self).revs(start, stop):
             yield i
 
-    @util.propertycache
+    @property
     def nodemap(self):
-        # XXX need filtering too
-        self.rev(self.node(0))
-        return self._nodecache
+        if self.userust("nodemap"):
+            # self.idmap might change, do not cache this nodemap result
+            return nodemap(self)
+        else:
+            self.rev(self.node(0))
+            return self._nodecache
+
+    @nodemap.setter
+    def nodemap(self, value):
+        if self.userust("nodemap"):
+            pass
+        else:
+            self._nodecache = value
 
     def reachableroots(self, minroot, heads, roots, includepath=False):
         if self.userust("reachableroots"):
@@ -997,6 +1007,38 @@ class changelog(revlog.revlog):
             return 0
         else:
             return super(changelog, self).flags(rev)
+
+
+class nodemap(object):
+    def __init__(self, changelog):
+        self.changelog = changelog
+
+    def __getitem__(self, node):
+        rev = self.get(node)
+        if rev is None:
+            raise error.RevlogError(_("cannot find rev for %s") % hex(node))
+        else:
+            return rev
+
+    def __setitem__(self, node, rev):
+        if self.get(node) != rev:
+            raise error.ProgrammingError("nodemap by Rust DAG is immutable")
+
+    def __delitem__(self, node):
+        raise error.ProgrammingError("nodemap by Rust DAG is immutable")
+
+    def __contains__(self, node):
+        return node in self.changelog.idmap
+
+    def get(self, node, default=None):
+        idmap = self.changelog.idmap
+        if node not in idmap:
+            return default
+        else:
+            return idmap.node2id(node)
+
+    def destroying(self):
+        pass
 
 
 def readfiles(text):

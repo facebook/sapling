@@ -314,7 +314,7 @@ incoming changes no longer there after
   rollback completed
   abort: pretxnchangegroup.forbid1 hook exited with status 1
   [255]
-  $ hg -q tip
+  $ hg log -r 'max(all())' -T '{node|short}\n'
   07f3376c1e65
 
 outgoing hooks can see env vars
@@ -328,12 +328,7 @@ outgoing hooks can see env vars
   $ hg pull ../a
   pulling from ../a
   searching for changes
-  preoutgoing hook: HG_HOOKNAME=preoutgoing HG_HOOKTYPE=preoutgoing HG_SOURCE=pull
-  outgoing hook: HG_HOOKNAME=outgoing HG_HOOKTYPE=outgoing HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_SOURCE=pull
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
+  no changes found
   adding remote bookmark quux
   $ hg debugstrip -q tip
 
@@ -530,7 +525,7 @@ different between Python 2.6 and Python 2.7.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
+  added 1 changesets with 1 changes to 1 files
 
 post- python hooks that fail to *run* don't cause an abort
   $ rm ../a/.hg/hgrc

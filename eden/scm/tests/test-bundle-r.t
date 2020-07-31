@@ -199,9 +199,7 @@ revision 2
   4ce51a113780
   $ hg unbundle ../test-bundle-should-fail.hg
   adding changesets
-  transaction abort!
-  rollback completed
-  abort: 00changelog.i@93ee6ab32777: unknown parent!
+  abort: 00changelog.i@93ee6ab3: not found!
   [255]
 
 revision 2

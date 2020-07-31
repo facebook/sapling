@@ -8,7 +8,8 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "setconfig format.inline-changelog=1 visibility.enabled=true mutation.enabled=true"
+# Disable rust-commits. Need low-level revlog access.
+sh % "setconfig format.inline-changelog=1 experimental.rust-commits=0"
 sh % "newrepo"
 sh % "echo A" | "hg debugdrawdag"
 sh % 'hg dbsh -c "ui.write(str(repo.svfs.exists(\\"00changelog.d\\")))"' == "False"

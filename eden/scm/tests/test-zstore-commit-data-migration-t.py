@@ -12,7 +12,7 @@ sh.setmodernconfig()
 
 # Incompatible with full RustIndex
 
-sh % "setconfig experimental.rust-commits:revision=off"
+sh % "setconfig experimental.rust-commits=off"
 
 # Test turning zstore-commit-data on and off
 

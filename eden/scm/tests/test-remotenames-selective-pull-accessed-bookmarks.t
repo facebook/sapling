@@ -89,8 +89,10 @@ Check used remote bookmarks tracking
      default/C_bookmark        4:d91e2f962bff
      default/master            1:206754acf7d8
 
+('master' is accessed by changelog to de-fragment the "main branch")
   $ checkaccessedbookmarks
-  No contents!
+  206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
+  accessedremotenames_totalnum : 1
   $ hg pull -B master
   pulling from ssh://user@dummy/remoterepo
   no changes found

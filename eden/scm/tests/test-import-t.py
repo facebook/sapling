@@ -631,7 +631,7 @@ sh % "hg import a.patch empty.patch" == r"""
     applying empty.patch
     abort: empty.patch: no diffs found
     [255]"""
-sh % "hg tip --template '{rev}  {desc|firstline}\\n'" == "1  add a, b"
+sh % "hg tip --template '{rev}  {desc|firstline}\\n'" == "0  commit"
 sh % "hg -q status" == "M a"
 sh % "cd .."
 

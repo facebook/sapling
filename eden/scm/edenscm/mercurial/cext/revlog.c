@@ -423,6 +423,8 @@ static Py_ssize_t add_roots_get_min(
   PyObject* iter = NULL;
   PyObject* iter_item = NULL;
   Py_ssize_t min_idx = index_length(self) + 1;
+
+  long len = index_length(self) - 1;
   long iter_item_long;
 
   if (PyList_GET_SIZE(list) != 0) {
@@ -431,6 +433,10 @@ static Py_ssize_t add_roots_get_min(
       return -2;
     while ((iter_item = PyIter_Next(iter))) {
       iter_item_long = PyInt_AS_LONG(iter_item);
+      if (iter_item_long >= len) {
+        // Ignore bogus roots
+        continue;
+      }
       Py_DECREF(iter_item);
       if (iter_item_long < min_idx)
         min_idx = iter_item_long;
