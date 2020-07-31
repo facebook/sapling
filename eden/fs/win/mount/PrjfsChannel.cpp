@@ -196,6 +196,7 @@ folly::SemiFuture<FsChannel::StopData> PrjfsChannel::getStopFuture() {
 void PrjfsChannel::deleteFile(
     RelativePathPiece path,
     PRJ_UPDATE_TYPES updateFlags) {
+  XLOG(DBG6) << "Invalidating: " << path;
   auto winPath = edenToWinPath(path.stringPiece());
   PRJ_UPDATE_FAILURE_CAUSES failureReason;
   HRESULT hr = PrjDeleteFile(
@@ -203,10 +204,10 @@ void PrjfsChannel::deleteFile(
   if (hr != S_OK) {
     XLOGF(
         DBG6,
-        "Failed to delete disk file {} reason: {} error: {}",
+        "Failed to delete disk file {} reason: {}, error: {:x}",
         path,
-        static_cast<uint32_t>(failureReason),
-        hr);
+        failureReason,
+        static_cast<uint32_t>(hr));
     // We aren't maintainting the information about which files were created
     // by the user vs through Eden backing store. The Projected FS will not
     // create tombstones when the user created files are renamed or deleted.
