@@ -1,0 +1,46 @@
+[package]
+name = "commit_validator"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+blobrepo_factory = { path = "../../blobrepo/factory" }
+blobstore = { path = "../../blobstore" }
+bookmarks = { path = "../../bookmarks" }
+cmdlib = { path = "../../cmdlib" }
+context = { path = "../../server/context" }
+cross_repo_sync = { path = "../cross_repo_sync" }
+live_commit_sync_config = { path = "../live_commit_sync_config" }
+manifest = { path = "../../manifest" }
+mercurial_types = { path = "../../mercurial/types" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_types = { path = "../../mononoke_types" }
+movers = { path = "../movers" }
+mutable_counters = { path = "../../mutable_counters" }
+reachabilityindex = { path = "../../reachabilityindex" }
+revset = { path = "../../revset" }
+scuba_ext = { path = "../../common/scuba_ext" }
+skiplist = { path = "../../reachabilityindex/skiplist" }
+sql_construct = { path = "../../common/sql_construct" }
+sql_ext = { path = "../../common/rust/sql_ext" }
+synced_commit_mapping = { path = "../synced_commit_mapping" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+clap = "2.33"
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+ref-cast = "1.0.2"
+slog = { version = "2.5", features = ["max_level_debug"] }
+tokio = { version = "=0.2.13", features = ["full"] }
+
+[dev-dependencies]
+cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils" }
+tests_utils = { path = "../../tests/utils" }
+maplit = "1.0"
+tokio-compat = "0.1"

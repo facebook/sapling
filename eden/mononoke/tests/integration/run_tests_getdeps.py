@@ -76,10 +76,6 @@ else:
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
         "test-bookmarks-filler.t",  # Probably missing binary
         "test-cmd-manual-scrub.t",  # Just wrong outout
-        "test-cross-repo-commit-sync-live.t",  # Unknown issue
-        "test-cross-repo-commit-sync-merge.t",  # requires FB-specific command
-        "test-cross-repo-commit-sync.t",  # requires FB-specific command
-        "test-cross-repo-commit-validator.t",  # requires FB-specific command
         "test-edenapi-server-complete-trees.t",  # Missing eden/scm's commands
         "test-edenapi-server-files.t",  # Missing eden/scm's commands
         "test-edenapi-server-history.t",  # Missing eden/scm's commands
@@ -112,7 +108,6 @@ else:
         "test-mononoke-hg-sync-job-generate-bundles-lfs.t",  # Timed out
         "test-push-protocol-lfs.t",  # Timed out
         "test-push-redirector-pushrebase-hooks.t",  # Hooks are not in OSS yet
-        "test-push-redirector-pushrebase-onesided.t",  # Missing MONONOKE_X_REPO_SYNC
         "test-pushrebase-block-casefolding.t",  # Most likely MacOS path case insensitivity
         "test-pushrebase-discovery.t",  # Hooks are not in OSS yet
         "test-remotefilelog-lfs.t",  # Timed out
