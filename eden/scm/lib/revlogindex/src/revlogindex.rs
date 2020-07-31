@@ -837,11 +837,16 @@ impl DagAlgorithm for RevlogIndex {
         } else {
             IdSet::from(Id(0)..=Id(self.len() as u64 - 1))
         };
-        Ok(Set::from_spans_idmap(id_set, self.get_snapshot()))
+        let result = Set::from_spans_idmap(id_set, self.get_snapshot());
+        result.hints().add_flags(Flags::FULL);
+        Ok(result)
     }
 
     /// Calculates all ancestors reachable from any name from the given set.
     fn ancestors(&self, set: Set) -> Result<Set> {
+        if set.hints().contains(Flags::ANCESTORS) {
+            return Ok(set);
+        }
         let id_set = self.to_id_set(&set)?;
         if id_set.is_empty() {
             return Ok(Set::empty());
@@ -871,7 +876,8 @@ impl DagAlgorithm for RevlogIndex {
 
         let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
         let set = Set::from_iter_idmap(iter, map);
-        set.hints().add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
+        set.hints()
+            .add_flags(Flags::ID_DESC | Flags::TOPO_DESC | Flags::ANCESTORS);
         set.hints().set_max_id(max_id);
 
         Ok(set)
@@ -1077,6 +1083,15 @@ impl DagAlgorithm for RevlogIndex {
         Ok(Set::from_spans_idmap(result_id_set, self.get_snapshot()))
     }
 
+    /// Calculate the heads of the set.
+    fn heads(&self, set: Set) -> Result<Set> {
+        if set.hints().contains(Flags::ANCESTORS) {
+            self.heads_ancestors(set)
+        } else {
+            Ok(set.clone() - self.parents(set)?)
+        }
+    }
+
     /// Calculates the "dag range" - vertexes reachable from both sides.
     fn range(&self, roots: Set, heads: Set) -> Result<Set> {
         let root_ids = self.to_id_set(&roots)?;
@@ -1167,10 +1182,10 @@ impl DagAlgorithm for RevlogIndex {
         // This is a same problem to head-based public/draft phase calculation.
         let (result_unreachable_id_set, result_reachable_id_set) =
             self.phasesets(unreachable_revs, reachable_revs);
-        Ok((
-            Set::from_spans_idmap(result_reachable_id_set, self.get_snapshot()),
-            Set::from_spans_idmap(result_unreachable_id_set, self.get_snapshot()),
-        ))
+        let only = Set::from_spans_idmap(result_reachable_id_set, self.get_snapshot());
+        let ancestors = Set::from_spans_idmap(result_unreachable_id_set, self.get_snapshot());
+        ancestors.hints().add_flags(Flags::ANCESTORS);
+        Ok((only, ancestors))
     }
 
     /// Calculates the descendants of the given set.
