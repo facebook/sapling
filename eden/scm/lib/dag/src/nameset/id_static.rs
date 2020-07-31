@@ -253,6 +253,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_dag_no_fast_paths() -> Result<()> {
+        let f = |s: NameSet| -> String { format!("{:?}", s) };
         with_dag(|dag1| -> Result<()> {
             with_dag(|dag2| -> Result<()> {
                 let abcd = dag1.ancestors("D".into())?;
@@ -285,6 +286,34 @@ pub(crate) mod tests {
                     "<diff <spans [A:D+0:3]> <spans [E:G+4:6, A:B+0:1]>>"
                 );
 
+                // Should not use FULL hint fast paths for "&, |, -" operations, because
+                // dag1 and dag2 are not considered compatible.
+                let a1 = || dag1.all().unwrap();
+                let a2 = || dag2.all().unwrap();
+                assert_eq!(f(a1() & a2()), "<and <spans [A:G+0:6]> <spans [A:G+0:6]>>");
+                assert_eq!(f(a1() | a2()), "<or <spans [A:G+0:6]> <spans [A:G+0:6]>>");
+                assert_eq!(f(a1() - a2()), "<diff <spans [A:G+0:6]> <spans [A:G+0:6]>>");
+
+                // No fast path for manually constructed StaticSet either, because
+                // the StaticSets do not have DAG associated to test compatibility.
+                // However, "all & z" is changed to "z & all" for performance.
+                let z = || NameSet::from("Z");
+                assert_eq!(f(z() & a2()), "<and <static [Z]> <spans [A:G+0:6]>>");
+                assert_eq!(f(z() | a2()), "<or <static [Z]> <spans [A:G+0:6]>>");
+                assert_eq!(f(z() - a2()), "<diff <static [Z]> <spans [A:G+0:6]>>");
+                assert_eq!(f(a1() & z()), "<and <static [Z]> <spans [A:G+0:6]>>");
+                assert_eq!(f(a1() | z()), "<or <spans [A:G+0:6]> <static [Z]>>");
+                assert_eq!(f(a1() - z()), "<diff <spans [A:G+0:6]> <static [Z]>>");
+
+                // EMPTY fast paths can still be used.
+                let e = || NameSet::empty();
+                assert_eq!(f(e() & a1()), "<empty>");
+                assert_eq!(f(e() | a1()), "<spans [A:G+0:6]>");
+                assert_eq!(f(e() - a1()), "<empty>");
+                assert_eq!(f(a1() & e()), "<empty>");
+                assert_eq!(f(a1() | e()), "<spans [A:G+0:6]>");
+                assert_eq!(f(a1() - e()), "<spans [A:G+0:6]>");
+
                 Ok(())
             })
         })
@@ -296,7 +325,9 @@ pub(crate) mod tests {
             let all = dag.all()?;
             assert_eq!(format!("{:?}", &all), "<spans [A:G+0:6]>");
 
-            let ac = "A C".into();
+            let ac: NameSet = "A C".into();
+            ac.hints().set_dag(dag);
+
             let intersection = all.intersection(&ac);
             // should not be "<and ...>"
             assert_eq!(format!("{:?}", &intersection), "<static [A, C]>");
@@ -322,9 +353,6 @@ pub(crate) mod tests {
             let f: NameSet = "F".into();
             let all = dag.all()?;
 
-            let has_ancestors_flag =
-                |set: NameSet| -> bool { set.hints().contains(Flags::ANCESTORS) };
-
             assert!(has_ancestors_flag(abc.clone()));
             assert!(has_ancestors_flag(abe.clone()));
             assert!(has_ancestors_flag(all.clone()));
@@ -340,6 +368,30 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn test_dag_hints_ancestors_inheritance() -> Result<()> {
+        with_dag(|dag1| -> Result<()> {
+            with_dag(|dag2| -> Result<()> {
+                let abc = dag1.ancestors("B C".into())?;
+
+                // The ANCESTORS flag is kept by 'sort', 'parents', 'roots' on
+                // the same dag.
+                assert!(has_ancestors_flag(dag1.sort(&abc)?));
+                assert!(has_ancestors_flag(dag1.parents(abc.clone())?));
+                assert!(has_ancestors_flag(dag1.roots(abc.clone())?));
+
+                // The ANCESTORS flag is removed on a different dag, since the
+                // different dag does not assume same graph / ancestry
+                // relationship.
+                assert!(!has_ancestors_flag(dag2.sort(&abc)?));
+                assert!(!has_ancestors_flag(dag2.parents(abc.clone())?));
+                assert!(!has_ancestors_flag(dag2.roots(abc.clone())?));
+
+                Ok(())
+            })
+        })
+    }
+
+    #[test]
     fn test_dag_hints_ancestors_fast_paths() -> Result<()> {
         with_dag(|dag| -> Result<()> {
             let bfg: NameSet = "B F G".into();
@@ -347,16 +399,35 @@ pub(crate) mod tests {
             // Set the ANCESTORS flag. It's incorrect but make it easier to test fast paths.
             bfg.hints().add_flags(Flags::ANCESTORS);
 
+            // Fast paths are not used if the set is not "bound" to the dag.
+            assert_eq!(
+                format!("{:?}", dag.ancestors(bfg.clone())?),
+                "<spans [E:G+4:6, A:B+0:1]>"
+            );
+            assert_eq!(
+                format!("{:?}", dag.heads(bfg.clone())?),
+                "<spans [G+6, B+1]>"
+            );
+
+            // Binding to the Dag enables fast paths.
+            bfg.hints().set_dag(dag);
+
+            // 'heads' has a fast path that uses 'heads_ancestors' to do the calculation.
+            // (in this case the result is incorrect because the hints are wrong).
+            assert_eq!(format!("{:?}", dag.heads(bfg.clone())?), "<spans [G+6]>");
+
             // 'ancestors' has a fast path that returns set as-is.
+            // (in this case the result is incorrect because the hints are wrong).
             assert_eq!(
                 format!("{:?}", dag.ancestors(bfg.clone())?),
                 "<static [B, F, G]>"
             );
 
-            // 'heads' has a fast path that uses 'heads_ancestors' to do the calculation.
-            assert_eq!(format!("{:?}", dag.heads(bfg.clone())?), "<spans [G+6]>");
-
             Ok(())
         })
+    }
+
+    fn has_ancestors_flag(set: NameSet) -> bool {
+        set.hints().contains(Flags::ANCESTORS)
     }
 }

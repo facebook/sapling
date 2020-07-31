@@ -46,17 +46,30 @@ impl StopCondition {
 
 impl IntersectionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
+        // More efficient if `lhs` is smaller. Swap `lhs` and `rhs` if `lhs` is `FULL`.
+        let (lhs, rhs) = if lhs.hints().contains(Flags::FULL)
+            && !rhs.hints().contains(Flags::FULL)
+            && !rhs.hints().contains(Flags::FILTER)
+        {
+            (rhs, lhs)
+        } else {
+            (lhs, rhs)
+        };
+
         let hints = Hints::default();
         hints.add_flags(
             lhs.hints().flags()
-                & ((Flags::EMPTY
+                & (Flags::EMPTY
                     | Flags::ID_DESC
                     | Flags::ID_ASC
                     | Flags::TOPO_DESC
-                    | Flags::FILTER)
-                    | (rhs.hints().flags() & Flags::ANCESTORS)),
+                    | Flags::FILTER),
         );
-        hints.inherit_id_map(&lhs.hints());
+        // Only keep the ANCESTORS flag if lhs and rhs use a compatible Dag.
+        if lhs.hints().is_dag_compatible(rhs.hints()) {
+            hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
+        }
+        hints.inherit_id_map(&lhs.hints()).inherit_dag(&lhs.hints());
         let compatible = hints.is_id_map_compatible(&rhs.hints());
         match (lhs.hints().min_id(), rhs.hints().min_id(), compatible) {
             (Some(id), None, _) | (Some(id), Some(_), false) | (None, Some(id), true) => {

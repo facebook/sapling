@@ -24,6 +24,7 @@ use crate::idmap::IdMapWrite;
 use crate::idmap::MemIdMap;
 use crate::idmap::SyncableIdMap;
 use crate::nameset::hints::Flags;
+use crate::nameset::hints::Hints;
 use crate::nameset::id_static::IdStaticSet;
 use crate::nameset::NameSet;
 use crate::nameset::NameSetQuery;
@@ -328,17 +329,19 @@ impl DagAddHeads for MemNameDag {
 impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     /// Sort a `NameSet` topologically.
     fn sort(&self, set: &NameSet) -> Result<NameSet> {
-        if set.hints().contains(Flags::TOPO_DESC) {
+        if set.hints().contains(Flags::TOPO_DESC)
+            && set.hints().is_dag_compatible(self as &dyn DagAlgorithm)
+        {
             Ok(set.clone())
         } else {
-            let flags = set.hints().flags() & Flags::ANCESTORS;
+            let flags = extract_ancestor_flag_if_compatible(set.hints(), self);
             let mut spans = SpanSet::empty();
             for name in set.iter()? {
                 let id = self.map().vertex_id(name?)?;
                 spans.push(id);
             }
             let result = NameSet::from_spans_idmap(spans, self.clone_map());
-            result.hints().add_flags(flags);
+            result.hints().add_flags(flags).set_dag(self);
             Ok(result)
         }
     }
@@ -357,13 +360,17 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     fn all(&self) -> Result<NameSet> {
         let spans = self.dag().all()?;
         let query = IdStaticSet::from_spans_idmap(spans, self.clone_map());
-        query.hints().add_flags(Flags::FULL);
-        Ok(NameSet::from_query(query))
+        let hints = query.hints();
+        hints.add_flags(Flags::FULL).set_dag(self);
+        let result = NameSet::from_query(query);
+        Ok(result)
     }
 
     /// Calculates all ancestors reachable from any name from the given set.
     fn ancestors(&self, set: NameSet) -> Result<NameSet> {
-        if set.hints().contains(Flags::ANCESTORS) {
+        if set.hints().contains(Flags::ANCESTORS)
+            && set.hints().is_dag_compatible(self as &dyn DagAlgorithm)
+        {
             return Ok(set);
         }
         let spans = self.to_id_set(&set)?;
@@ -373,7 +380,7 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
         }
         let spans = self.dag().ancestors(spans)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
-        result.hints().add_flags(Flags::ANCESTORS);
+        result.hints().add_flags(Flags::ANCESTORS).set_dag(self);
         Ok(result)
     }
 
@@ -383,7 +390,7 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     /// to preserve order.
     fn parents(&self, set: NameSet) -> Result<NameSet> {
         // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
-        let flags = set.hints().flags() & Flags::ANCESTORS;
+        let flags = extract_ancestor_flag_if_compatible(set.hints(), self);
         let spans = self.dag().parents(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
         result.hints().add_flags(flags);
@@ -411,12 +418,15 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
 
     /// Calculates heads of the given set.
     fn heads(&self, set: NameSet) -> Result<NameSet> {
-        if set.hints().contains(Flags::ANCESTORS) {
+        if set.hints().contains(Flags::ANCESTORS)
+            && set.hints().is_dag_compatible(self as &dyn DagAlgorithm)
+        {
             // heads_ancestors is faster.
             return self.heads_ancestors(set);
         }
         let spans = self.dag().heads(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().set_dag(self);
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::heads(self, set)?);
@@ -427,15 +437,17 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     /// Calculates children of the given set.
     fn children(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().children(self.to_id_set(&set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
+        let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().set_dag(self);
+        Ok(result)
     }
 
     /// Calculates roots of the given set.
     fn roots(&self, set: NameSet) -> Result<NameSet> {
-        let flags = set.hints().flags() & Flags::ANCESTORS;
+        let flags = extract_ancestor_flag_if_compatible(set.hints(), self);
         let spans = self.dag().roots(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
-        result.hints().add_flags(flags);
+        result.hints().add_flags(flags).set_dag(self);
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::roots(self, set)?);
@@ -465,6 +477,7 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     fn gca_all(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().gca_all(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().set_dag(self);
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::gca_all(self, set)?);
@@ -476,7 +489,7 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().common_ancestors(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
-        result.hints().add_flags(Flags::ANCESTORS);
+        result.hints().add_flags(Flags::ANCESTORS).set_dag(self);
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::common_ancestors(self, set)?);
@@ -510,6 +523,7 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().heads_ancestors(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().set_dag(self);
         #[cfg(test)]
         {
             // default_impl::heads_ancestors calls `heads` if `Flags::ANCESTORS`
@@ -526,13 +540,27 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
         let roots = self.to_id_set(&roots)?;
         let heads = self.to_id_set(&heads)?;
         let spans = self.dag().range(roots, heads)?;
-        Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
+        let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().set_dag(self);
+        Ok(result)
     }
 
     /// Calculates the descendants of the given set.
     fn descendants(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().descendants(self.to_id_set(&set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
+        let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().set_dag(self);
+        Ok(result)
+    }
+}
+
+/// Extract the ANCESTORS flag if the set with the `hints` is bound to a
+/// compatible DAG.
+fn extract_ancestor_flag_if_compatible(hints: &Hints, dag: &dyn DagAlgorithm) -> Flags {
+    if hints.is_dag_compatible(dag) {
+        hints.flags() & Flags::ANCESTORS
+    } else {
+        Flags::empty()
     }
 }
 

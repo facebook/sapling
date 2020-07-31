@@ -39,7 +39,7 @@ impl DifferenceSet {
                     | Flags::TOPO_DESC
                     | Flags::FILTER),
         );
-        hints.inherit_id_map(&lhs.hints());
+        hints.inherit_id_map(&lhs.hints()).inherit_dag(&lhs.hints());
         if let Some(id) = lhs.hints().min_id() {
             hints.set_min_id(id);
         }

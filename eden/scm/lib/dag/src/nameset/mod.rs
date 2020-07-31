@@ -81,7 +81,7 @@ impl NameSet {
 
     /// Calculates the subset that is only in self, not in other.
     pub fn difference(&self, other: &NameSet) -> NameSet {
-        if other.hints().contains(Flags::FULL) {
+        if other.hints().contains(Flags::FULL) && other.hints().is_dag_compatible(self.hints()) {
             return Self::empty();
         }
         if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::EMPTY) {
@@ -93,10 +93,13 @@ impl NameSet {
         ) {
             if Arc::ptr_eq(&this.map, &other.map) {
                 // Fast path for IdStaticSet
-                return Self::from_spans_idmap(
-                    this.spans.difference(&other.spans),
-                    this.map.clone(),
-                );
+                let result =
+                    Self::from_spans_idmap(this.spans.difference(&other.spans), this.map.clone());
+                result
+                    .hints()
+                    .inherit_id_map(self.hints())
+                    .inherit_dag(self.hints());
+                return result;
             }
         }
         Self::from_query(difference::DifferenceSet::new(self.clone(), other.clone()))
@@ -104,10 +107,10 @@ impl NameSet {
 
     /// Calculates the intersection of two sets.
     pub fn intersection(&self, other: &NameSet) -> NameSet {
-        if self.hints().contains(Flags::FULL) {
+        if self.hints().contains(Flags::FULL) && other.hints().is_dag_compatible(self.hints()) {
             return other.clone();
         }
-        if other.hints().contains(Flags::FULL) {
+        if other.hints().contains(Flags::FULL) && other.hints().is_dag_compatible(self.hints()) {
             return self.clone();
         }
         if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::EMPTY) {
@@ -119,10 +122,13 @@ impl NameSet {
         ) {
             if Arc::ptr_eq(&this.map, &other.map) {
                 // Fast path for IdStaticSet
-                return Self::from_spans_idmap(
-                    this.spans.intersection(&other.spans),
-                    this.map.clone(),
-                );
+                let result =
+                    Self::from_spans_idmap(this.spans.intersection(&other.spans), this.map.clone());
+                result
+                    .hints()
+                    .inherit_id_map(self.hints())
+                    .inherit_dag(self.hints());
+                return result;
             }
         }
         Self::from_query(intersection::IntersectionSet::new(
@@ -133,10 +139,15 @@ impl NameSet {
 
     /// Calculates the union of two sets.
     pub fn union(&self, other: &NameSet) -> NameSet {
-        if self.hints().contains(Flags::FULL) || other.hints().contains(Flags::EMPTY) {
+        if (self.hints().contains(Flags::FULL) && self.hints().is_dag_compatible(other.hints()))
+            || other.hints().contains(Flags::EMPTY)
+        {
             return self.clone();
         }
-        if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::FULL) {
+        if self.hints().contains(Flags::EMPTY)
+            || (other.hints().contains(Flags::FULL)
+                && self.hints().is_dag_compatible(other.hints()))
+        {
             return other.clone();
         }
         if let (Some(this), Some(other)) = (
@@ -145,7 +156,13 @@ impl NameSet {
         ) {
             if Arc::ptr_eq(&this.map, &other.map) {
                 // Fast path for IdStaticSet
-                return Self::from_spans_idmap(this.spans.union(&other.spans), this.map.clone());
+                let result =
+                    Self::from_spans_idmap(this.spans.union(&other.spans), this.map.clone());
+                result
+                    .hints()
+                    .inherit_id_map(self.hints())
+                    .inherit_dag(self.hints());
+                return result;
             }
         }
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
@@ -522,8 +539,8 @@ pub(crate) mod tests {
                 "  Hints((empty))",
                 "& Hints((empty))",
                 "  Hints((empty))",
-                "| Hints(ANCESTORS)",
-                "  Hints(ANCESTORS)"
+                "| Hints((empty))",
+                "  Hints((empty))"
             ]
         );
 

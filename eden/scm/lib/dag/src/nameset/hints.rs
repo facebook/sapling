@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::Id;
 use bitflags::bitflags;
@@ -15,7 +16,9 @@ use std::sync::Arc;
 
 bitflags! {
     pub struct Flags: u32 {
-        /// Full. A full Set & other set X results in X.
+        /// Full. A full Set & other set X with compatible Dag results in X.
+        /// Use `set_dag` to set the Dag pointer to avoid fast paths
+        /// intersecting incompatible Dags.
         const FULL = 0x1;
 
         /// Empty (also implies ID_DESC | ID_ASC | TOPO_DESC).
@@ -52,6 +55,7 @@ pub struct Hints {
     min_id: AtomicU64,
     max_id: AtomicU64,
     id_map_ptr: AtomicUsize,
+    dag_ptr: AtomicUsize,
 }
 
 impl Hints {
@@ -80,7 +84,7 @@ impl Hints {
         }
     }
 
-    pub fn update_flags_with(&self, func: impl Fn(Flags) -> Flags) {
+    pub fn update_flags_with(&self, func: impl Fn(Flags) -> Flags) -> &Self {
         let mut flags = func(self.flags());
         // Automatically add "derived" flags.
         if flags.contains(Flags::EMPTY) {
@@ -89,43 +93,86 @@ impl Hints {
         if flags.contains(Flags::FULL) {
             flags.insert(Flags::ANCESTORS);
         }
-        self.flags.store(flags.bits(), Relaxed)
+        self.flags.store(flags.bits(), Relaxed);
+        self
     }
 
-    pub fn add_flags(&self, flags: Flags) {
-        self.update_flags_with(|f| f | flags)
+    pub fn add_flags(&self, flags: Flags) -> &Self {
+        self.update_flags_with(|f| f | flags);
+        self
     }
 
-    pub fn remove_flags(&self, flags: Flags) {
-        self.update_flags_with(|f| f - flags)
+    pub fn remove_flags(&self, flags: Flags) -> &Self {
+        self.update_flags_with(|f| f - flags);
+        self
     }
 
-    pub fn set_min_id(&self, min_id: Id) {
+    pub fn set_min_id(&self, min_id: Id) -> &Self {
         self.min_id.store(min_id.0, Release);
         self.add_flags(Flags::HAS_MIN_ID);
+        self
     }
 
-    pub fn set_max_id(&self, max_id: Id) {
+    pub fn set_max_id(&self, max_id: Id) -> &Self {
         self.max_id.store(max_id.0, Release);
         self.add_flags(Flags::HAS_MAX_ID);
+        self
     }
 
-    pub fn set_id_map(&self, ptr: &Arc<dyn IdConvert + Send + Sync>) {
+    pub fn set_id_map(&self, ptr: &Arc<dyn IdConvert + Send + Sync>) -> &Self {
         let map_ref: &dyn IdConvert = ptr.as_ref();
         // std::raw::TraitObject is not stable yet.
         let vptr: [usize; 2] = unsafe { std::mem::transmute(map_ref) };
         self.id_map_ptr.store(vptr[0], Release);
+        self
     }
 
-    pub fn inherit_id_map(&self, other: &Hints) {
+    pub fn set_dag(&self, ptr: &dyn DagAlgorithm) -> &Self {
+        // std::raw::TraitObject is not stable yet.
+        let ptr: DagPtr = ptr.into();
+        self.dag_ptr.store(ptr.0, Release);
+        self
+    }
+
+    pub fn inherit_id_map(&self, other: &Hints) -> &Self {
         let ptr = other.id_map_ptr.load(Acquire);
         self.id_map_ptr.store(ptr, Release);
+        self
+    }
+
+    pub fn inherit_dag(&self, other: &Hints) -> &Self {
+        let ptr = other.dag_ptr.load(Acquire);
+        self.dag_ptr.store(ptr, Release);
+        self
     }
 
     pub fn is_id_map_compatible(&self, other: &Hints) -> bool {
         let ptr1 = self.id_map_ptr.load(Acquire);
         let ptr2 = other.id_map_ptr.load(Acquire);
         ptr1 == ptr2
+    }
+
+    pub fn is_dag_compatible(&self, other: impl Into<DagPtr>) -> bool {
+        let ptr1 = self.dag_ptr.load(Acquire);
+        let ptr2 = other.into().0;
+        ptr1 == ptr2
+    }
+}
+
+pub struct DagPtr(usize);
+
+impl From<&Hints> for DagPtr {
+    fn from(hints: &Hints) -> Self {
+        DagPtr(hints.dag_ptr.load(Acquire))
+    }
+}
+
+impl From<&dyn DagAlgorithm> for DagPtr {
+    fn from(ptr: &dyn DagAlgorithm) -> Self {
+        // std::raw::TraitObject is not stable yet.
+        // XXX: This is in theory unsound because pointer address can be reused.
+        let vptr: [usize; 2] = unsafe { std::mem::transmute(ptr) };
+        DagPtr(vptr[0])
     }
 }
 
@@ -136,6 +183,7 @@ impl Clone for Hints {
             min_id: AtomicU64::new(self.min_id.load(Acquire)),
             max_id: AtomicU64::new(self.max_id.load(Acquire)),
             id_map_ptr: AtomicUsize::new(self.id_map_ptr.load(Acquire)),
+            dag_ptr: AtomicUsize::new(self.dag_ptr.load(Acquire)),
         }
     }
 }
