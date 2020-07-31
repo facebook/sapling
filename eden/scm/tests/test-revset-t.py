@@ -202,7 +202,7 @@ sh % "try '0:1'" == r"""
       (symbol '0')
       (symbol '1'))
     * set:
-    <spanset+ 0:2>
+    <idset+ [0 1]>
     0
     1"""
 sh % "try --optimize ':'" == r"""
@@ -212,7 +212,7 @@ sh % "try --optimize ':'" == r"""
     (rangeall
       None)
     * set:
-    <spanset+ 0:10>
+    <idset+ [0..=9]>
     0
     1
     2
@@ -309,7 +309,7 @@ sh % "try '+a+b+c+:'" == r"""
     (rangepost
       (symbol '+a+b+c+'))
     * set:
-    <spanset+ 3:10>
+    <idset+ [3..=9]>
     3
     4
     5
@@ -321,7 +321,7 @@ sh % "try ':+a+b+c+'" == r"""
     (rangepre
       (symbol '+a+b+c+'))
     * set:
-    <spanset+ 0:4>
+    <idset+ [0..=3]>
     0
     1
     2
@@ -331,7 +331,7 @@ sh % "try -- '-a-b-c-:+a+b+c+'" == r"""
       (symbol '-a-b-c-')
       (symbol '+a+b+c+'))
     * set:
-    <spanset- 3:5>
+    <idset- [3 4]>
     4
     3"""
 sh % "log '-a-b-c-:+a+b+c+'" == r"""
@@ -810,7 +810,7 @@ sh % "try -p parsed -p analyzed ':'" == r"""
     (rangeall
       None)
     * set:
-    <spanset+ 0:10>
+    <idset+ [0..=9]>
     0
     1
     2
@@ -826,7 +826,7 @@ sh % "try -p analyzed ':1'" == r"""
     (rangepre
       (symbol '1'))
     * set:
-    <spanset+ 0:2>
+    <idset+ [0 1]>
     0
     1"""
 sh % "try -p analyzed ':(1|2)'" == r"""
@@ -837,7 +837,7 @@ sh % "try -p analyzed ':(1|2)'" == r"""
           (symbol '1')
           (symbol '2'))))
     * set:
-    <spanset+ 0:3>
+    <idset+ [0 1 2]>
     0
     1
     2"""
@@ -860,7 +860,7 @@ sh % "try '1^:2'" == r"""
         (symbol '1'))
       (symbol '2'))
     * set:
-    <spanset+ 0:3>
+    <idset+ [0 1 2]>
     0
     1
     2"""
@@ -881,7 +881,7 @@ sh % "try '9^:'" == r"""
       (parentpost
         (symbol '9')))
     * set:
-    <spanset+ 8:10>
+    <idset+ [8 9]>
     8
     9"""
 
@@ -906,7 +906,7 @@ sh % "try 'sort(1^:2)'" == r"""
           (symbol '1'))
         (symbol '2')))
     * set:
-    <spanset+ 0:3>
+    <idset+ [0 1 2]>
     0
     1
     2"""
@@ -921,7 +921,7 @@ sh % "try '(3^:4)^:2'" == r"""
             (symbol '4'))))
       (symbol '2'))
     * set:
-    <spanset+ 0:3>
+    <idset+ [0 1 2]>
     0
     1
     2"""
@@ -949,7 +949,7 @@ sh % "try '(9^:)^:'" == r"""
             (parentpost
               (symbol '9'))))))
     * set:
-    <spanset+ 4:10>
+    <idset+ [4..=9]>
     4
     5
     6
@@ -967,7 +967,7 @@ sh % "try A --config 'revsetalias.A=1^:2'" == r"""
         (symbol '1'))
       (symbol '2'))
     * set:
-    <spanset+ 0:3>
+    <idset+ [0 1 2]>
     0
     1
     2"""
@@ -982,7 +982,7 @@ sh % "try 'A:2' --config 'revsetalias.A=1^'" == r"""
         (symbol '1'))
       (symbol '2'))
     * set:
-    <spanset+ 0:3>
+    <idset+ [0 1 2]>
     0
     1
     2"""
@@ -1308,7 +1308,7 @@ sh % "try 'grep(\"\\bissue\\\\d+\")'" == r"""
       (string '\x08issue\\d+'))
     * set:
     <filteredset
-      <fullreposet+ 0:10>,
+      <fullreposet+ [0..=9]>,
       <grep '\x08issue\\d+'>>"""
 sh % "try 'grep(r\"\\bissue\\d+\")'" == r"""
     (func
@@ -1316,7 +1316,7 @@ sh % "try 'grep(r\"\\bissue\\d+\")'" == r"""
       (string '\\bissue\\d+'))
     * set:
     <filteredset
-      <fullreposet+ 0:10>,
+      <fullreposet+ [0..=9]>,
       <grep '\\bissue\\d+'>>
     6"""
 sh % "try 'grep(r\"\\\")'" == r"""
@@ -1363,9 +1363,7 @@ sh % "log 'last(all(), 2)'" == r"""
 
 sh % "hg debugrevspec --no-show-revs -s '0:7 & all()'" == r"""
     * set:
-    <filteredset
-      <spanset+ 0:8>,
-      <spanset+ 0:10>>"""
+    <idset+ [0..=7]>"""
 sh % "log 'limit(0:7 & all(), 3, 4)'" == r"""
     4
     5
@@ -1425,7 +1423,7 @@ sh % "hg debugrevspec -s 'limit(0::7, 0)'" == r"""
 
 sh % "hg debugrevspec --no-show-revs -s '0:7'" == r"""
     * set:
-    <spanset+ 0:8>"""
+    <idset+ [0..=7]>"""
 sh % "log 'limit(0:7, 3, 4)'" == r"""
     4
     5
@@ -1445,55 +1443,58 @@ sh % "log 'last(0:7, 2)'" == r"""
     7"""
 sh % "hg debugrevspec -s 'limit(0:7, 3, 6)'" == r"""
     * set:
-    <spanset+ 6:8>
+    <baseset slice=6:9
+      <idset+ [0..=7]>>
     6
     7"""
 sh % "hg debugrevspec -s 'limit(0:7, 3, 9)'" == r"""
     * set:
-    <spanset+ 8:8>"""
+    <baseset slice=9:12
+      <idset+ [0..=7]>>"""
 sh % "hg debugrevspec -s 'limit(7:0, 3, 6)'" == r"""
     * set:
-    <spanset- 0:2>
+    <baseset slice=6:9
+      <idset- [0..=7]>>
     1
     0"""
 sh % "hg debugrevspec -s 'limit(7:0, 3, 9)'" == r"""
     * set:
-    <spanset- 0:0>"""
+    <baseset slice=9:12
+      <idset- [0..=7]>>"""
 sh % "hg debugrevspec -s 'limit(0:7, 0)'" == r"""
     * set:
-    <spanset+ 0:0>"""
+    <baseset slice=0:0
+      <idset+ [0..=7]>>"""
 
 # Test order of first/last revisions
 
 sh % "hg debugrevspec -s 'first(4:0, 3) & 3:'" == r"""
     * set:
     <filteredset
-      <spanset- 2:5>,
-      <spanset+ 3:10>>
+      <baseset slice=0:3
+        <idset- [0..=4]>>,
+      <idset+ [3..=9]>>
     4
     3"""
 
 sh % "hg debugrevspec -s '3: & first(4:0, 3)'" == r"""
     * set:
-    <filteredset
-      <spanset+ 3:10>,
-      <spanset- 2:5>>
+    <idset+ [3 4]>
     3
     4"""
 
 sh % "hg debugrevspec -s 'last(4:0, 3) & :1'" == r"""
     * set:
     <filteredset
-      <spanset- 0:3>,
-      <spanset+ 0:2>>
+      <baseset slice=0:3
+        <idset+ [0..=4]>>,
+      <idset+ [0 1]>>
     1
     0"""
 
 sh % "hg debugrevspec -s ':1 & last(4:0, 3)'" == r"""
     * set:
-    <filteredset
-      <spanset+ 0:2>,
-      <spanset+ 0:3>>
+    <idset+ [0 1]>
     0
     1"""
 
@@ -1925,12 +1926,7 @@ sh % "try -p optimized '3:0 & 0:3 & not 2:1'" == r"""
         (symbol '2')
         (symbol '1')))
     * set:
-    <filteredset
-      <filteredset
-        <spanset- 0:4>,
-        <spanset+ 0:4>>,
-      <not
-        <spanset+ 1:3>>>
+    <idset- [0 3]>
     3
     0"""
 
@@ -1957,9 +1953,7 @@ sh % "try --optimize '2:0 & (0 + 1 + 2)'" == r"""
         (symbol '_list')
         (string '0\x001\x002')))
     * set:
-    <filteredset
-      <spanset- 0:3>,
-      <baseset [0, 1, 2]>>
+    <idset- [0 1 2]>
     2
     1
     0"""
@@ -1990,11 +1984,7 @@ sh % "try --optimize '2:0 & (0:1 + 2)'" == r"""
             (symbol '1'))
           (symbol '2'))))
     * set:
-    <filteredset
-      <spanset- 0:3>,
-      <addset
-        <spanset+ 0:2>,
-        <baseset [2]>>>
+    <idset- [0 1 2]>
     2
     1
     0"""
@@ -2018,9 +2008,7 @@ sh % "trylist --optimize '2:0 & %ld' 0 1 2" == r"""
         (symbol '_intlist')
         (string '0\x001\x002')))
     * set:
-    <filteredset
-      <spanset- 0:3>,
-      <baseset+ [0, 1, 2]>>
+    <idset- [0 1 2]>
     2
     1
     0"""
@@ -2044,7 +2032,7 @@ sh % "trylist --optimize '%ld & 2:0' 0 2 1" == r"""
     * set:
     <filteredset
       <baseset [0, 2, 1]>,
-      <spanset- 0:3>>
+      <idset- [0 1 2]>>
     0
     2
     1"""
@@ -2071,9 +2059,7 @@ sh % (
         (symbol '_hexlist')
         (string '*'))) (glob)
     * set:
-    <filteredset
-      <spanset- 0:3>,
-      <baseset [0, 1, 2]>>
+    <idset- [0 1 2]>
     2
     1
     0"""
@@ -2116,10 +2102,7 @@ sh % "try -p optimized '2:0 & not (0 + 1)'" == r"""
         (symbol '_list')
         (string '0\x001')))
     * set:
-    <filteredset
-      <spanset- 0:3>,
-      <not
-        <baseset [0, 1]>>>
+    <idset- [2]>
     2"""
 
 sh % "try -p optimized '2:0 & not (0:2 & (0 + 1))'" == r"""
@@ -2136,10 +2119,7 @@ sh % "try -p optimized '2:0 & not (0:2 & (0 + 1))'" == r"""
           (symbol '_list')
           (string '0\x001'))))
     * set:
-    <filteredset
-      <spanset- 0:3>,
-      <not
-        <baseset [0, 1]>>>
+    <idset- [2]>
     2"""
 
 #  because 'present()' does nothing other than suppressing an error, the
@@ -2181,9 +2161,7 @@ sh % "try --optimize '2:0 & present(0 + 1 + 2)'" == r"""
           (symbol '_list')
           (string '0\x001\x002'))))
     * set:
-    <filteredset
-      <spanset- 0:3>,
-      <baseset [0, 1, 2]>>
+    <idset- [0 1 2]>
     2
     1
     0"""
@@ -2211,9 +2189,7 @@ sh % "try --optimize '0:2 & reverse(all())'" == r"""
           (symbol 'all')
           None)))
     * set:
-    <filteredset
-      <spanset+ 0:3>,
-      <spanset+ 0:10>>
+    <idset+ [0 1 2]>
     0
     1
     2"""
@@ -2246,9 +2222,7 @@ sh % "try --optimize '0:2 & sort(all(), -rev)'" == r"""
             None)
           (string '-rev'))))
     * set:
-    <filteredset
-      <spanset+ 0:3>,
-      <spanset+ 0:10>>
+    <idset+ [0 1 2]>
     0
     1
     2"""
@@ -2289,7 +2263,7 @@ sh % "try --optimize '2:0 & first(1 + 0 + 2)'" == r"""
     * set:
     <filteredset
       <baseset [1]>,
-      <spanset- 0:3>>
+      <idset- [0 1 2]>>
     1"""
 
 sh % "try --optimize '2:0 & not last(0 + 2 + 1)'" == r"""
@@ -2316,10 +2290,7 @@ sh % "try --optimize '2:0 & not last(0 + 2 + 1)'" == r"""
           (symbol '_list')
           (string '0\x002\x001'))))
     * set:
-    <filteredset
-      <spanset- 0:3>,
-      <not
-        <baseset [1]>>>
+    <idset- [0 2]>
     2
     0"""
 
@@ -2356,7 +2327,7 @@ sh % "try --optimize '2:0 & (1 + 0 + 2):(0 + 2 + 1)'" == r"""
           (symbol '_list')
           (string '0\x002\x001'))))
     * set:
-    <baseset [1]>
+    <idset- [1]>
     1"""
 
 #  'A & B' can be rewritten as 'flipand(B, A)' by weight.

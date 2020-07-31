@@ -40,7 +40,7 @@ py_class!(pub class spans |py| {
     /// This is unsafe because there are no validation that Ids in this
     /// range are valid.
     ///
-    /// Use `tonodes(range) & torevs(dag.all())` to get a valid Set.
+    /// Use `range & torevs(dag.all())` to get a valid Set.
     ///
     /// This should only be used to be compatible with legacy revsets like
     /// "x:", ":y", "x:y", ":", or for fast paths of lazy sets (ex. ancestors

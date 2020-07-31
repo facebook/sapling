@@ -39,7 +39,7 @@
     (symbol 'parents')
     None)
   * set:
-  <baseset+ []>
+  <baseset- []>
 
 null revision
   $ log 'p1()'

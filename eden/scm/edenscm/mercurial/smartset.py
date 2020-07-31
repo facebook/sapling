@@ -15,10 +15,12 @@ from __future__ import absolute_import
 import bindings
 
 from . import error, util
+from .node import nullrev, wdirrev
 from .pycompat import range
 
 
 maxrev = bindings.dag.MAX_ID
+dagmod = bindings.dag
 
 
 def _formatsetrepr(r):
@@ -476,8 +478,36 @@ class idset(abstractsmartset):
 
     def __init__(self, spans):
         """data: a dag.spans object, or an iterable of revs"""
-        self._spans = bindings.dag.spans(spans)
+        self._spans = dagmod.spans(spans)
         self._ascending = False
+
+    @staticmethod
+    def range(repo, start, end, ascending=False):
+        """start and end are inclusive, repo is used to filter out invalid revs
+
+        If start > end, an empty set will be returned.
+        """
+        if start > end:
+            spans = dagmod.spans([])
+        else:
+            spans = dagmod.spans.unsaferange(start, end)
+            # Filter by the fullreposet to remove invalid revs.
+            cl = repo.changelog
+            dag = cl.dag
+            if dag is not None:
+                allspans = cl.torevs(dag.all())
+            else:
+                # legacy revlog
+                repolen = len(repo)
+                if repolen == 0:
+                    allspans = dagmod.spans([])
+                else:
+                    allspans = dagmod.spans.unsaferange(0, repolen - 1)
+            spans = spans & allspans
+        # Convert from Rust to Python object.
+        s = idset(spans)
+        s._ascending = ascending
+        return s
 
     def __iter__(self):
         if self._ascending:
@@ -562,7 +592,16 @@ class idset(abstractsmartset):
         if type(other) is idset:
             s = idset(getattr(self._spans, op)(other._spans))
             s._ascending = self._ascending
+        elif type(other) is baseset and (
+            op != "__add__" or all(r not in other for r in (nullrev, wdirrev))
+        ):
+            # baseset is cheap to convert. convert it on the fly, but do not
+            # convert if it has troublesome virtual revs and the operation is
+            # "__add__" (union).
+            s = idset(getattr(self._spans, op)(dagmod.spans(other)))
+            s._ascending = self._ascending
         else:
+            # slow path
             s = getattr(super(idset, self), op)(other)
         return s
 
@@ -1160,123 +1199,17 @@ def spanset(repo, start=0, end=maxrev):
     ascending = start <= end
     if not ascending:
         start, end = min(end, maxrev - 1) + 1, min(start, maxrev - 1) + 1
-    # XXX: This assumes 0..len(repo) are valid revs,
-    # it is not true with segmented changelog.
-    end = min(len(repo), end)
-    return _spanset(start, end, ascending)
-
-
-class _spanset(abstractsmartset):
-    """Duck type for baseset class which represents a range of revisions and
-    can work lazily and without having all the range in memory
-
-    Note that spanset(x, y) behave almost like range(x, y) except for two
-    notable points:
-    - when x < y it will be automatically descending,
-
-    """
-
-    def __init__(self, start, end, ascending):
-        self._start = start
-        self._end = end
-        self._ascending = ascending
-
-    def sort(self, reverse=False):
-        self._ascending = not reverse
-
-    def reverse(self):
-        self._ascending = not self._ascending
-
-    def istopo(self):
-        # not worth the trouble asserting if the two sets combined are still
-        # in topographical order. Use the sort() predicate to explicitly sort
-        # again instead.
-        return False
-
-    def __iter__(self):
-        if self._ascending:
-            return self.fastasc()
+    s = idset.range(repo, start, end - 1, ascending)
+    # special handling of nullrev
+    if start == nullrev:
+        if ascending:
+            s = baseset([nullrev]) + s
         else:
-            return self.fastdesc()
-
-    def fastasc(self):
-        iterrange = range(self._start, self._end)
-        return iter(iterrange)
-
-    def fastdesc(self):
-        iterrange = range(self._end - 1, self._start - 1, -1)
-        return iter(iterrange)
-
-    def __contains__(self, rev):
-        return self._start <= rev < self._end
-
-    def __nonzero__(self):
-        for r in self:
-            return True
-        return False
-
-    __bool__ = __nonzero__
-
-    def __len__(self):
-        return abs(self._end - self._start)
-
-    def isascending(self):
-        return self._ascending
-
-    def isdescending(self):
-        return not self._ascending
-
-    def first(self):
-        if self._ascending:
-            it = self.fastasc
-        else:
-            it = self.fastdesc
-        for x in it():
-            return x
-        return None
-
-    def last(self):
-        if self._ascending:
-            it = self.fastdesc
-        else:
-            it = self.fastasc
-        for x in it():
-            return x
-        return None
-
-    def _slice(self, start, stop):
-        if self._ascending:
-            x = min(self._start + start, self._end)
-            y = min(self._start + stop, self._end)
-        else:
-            x = max(self._end - stop, self._start)
-            y = max(self._end - start, self._start)
-        return _spanset(x, y, self._ascending)
-
-    def __repr__(self):
-        d = {False: "-", True: "+"}[self._ascending]
-        return "<%s%s %d:%d>" % (
-            type(self).__name__.lstrip("_"),
-            d,
-            self._start,
-            self._end,
-        )
-
-    def __and__(self, rhs):
-        if (
-            isinstance(rhs, abstractsmartset)
-            and self.isdescending()
-            and self._start == 0
-            and rhs.isdescending()
-        ):
-            # fast path: spanset is a superset of the rhs.
-            rhsmax = next(iter(rhs), None)
-            if rhsmax is None or rhsmax <= self._end:
-                return rhs
-        return super(_spanset, self).__and__(rhs)
+            s = s + baseset([nullrev])
+    return s
 
 
-class fullreposet(_spanset):
+class fullreposet(idset):
     """a set containing all revisions in the repo
 
     This class exists to host special optimization and magic to handle virtual
@@ -1284,7 +1217,7 @@ class fullreposet(_spanset):
     """
 
     def __new__(cls, repo):
-        s = spanset(repo, 0, maxrev)
+        s = idset.range(repo, 0, maxrev, True)
         s.__class__ = cls
         return s
 

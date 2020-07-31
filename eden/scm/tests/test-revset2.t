@@ -173,18 +173,19 @@ test intersecting something with an addset
   5
   8
 
-test that `or` operation combines elements in the right order:
+test that `or` operation:
+order is no longer preserved with `idset`, which enforces DESC order internally.
 
   $ log '3:4 or 2:5'
+  2
   3
   4
-  2
   5
   $ log '3:4 or 5:2'
+  2
   3
   4
   5
-  2
   $ log 'sort(3:4 or 2:5)'
   2
   3
@@ -299,7 +300,7 @@ test optimization of trivial `or` operation
   * set:
   <addset
     <baseset [0, 1]>,
-    <spanset+ 2:4>>
+    <idset+ [2 3]>>
   0
   1
   2
@@ -331,13 +332,7 @@ test optimization of trivial `or` operation
         (symbol '_list')
         (string '5\x006'))))
   * set:
-  <addset
-    <addset
-      <spanset+ 0:2>,
-      <baseset [2]>>,
-    <addset
-      <spanset+ 3:5>,
-      <baseset [5, 6]>>>
+  <idset+ [0..=6]>
   0
   1
   2
@@ -448,15 +443,7 @@ test that chained `or` operations make balanced addsets
         (symbol '4')
         (symbol '5'))))
   * set:
-  <addset
-    <addset
-      <spanset+ 0:2>,
-      <spanset+ 1:3>>,
-    <addset
-      <spanset+ 2:4>,
-      <addset
-        <spanset+ 3:5>,
-        <spanset+ 4:6>>>>
+  <idset+ [0..=5]>
   0
   1
   2
@@ -807,14 +794,15 @@ Undocumented functions aren't suggested as similar either
   [255]
 
 multiple revspecs
+(idset does not preserve '+' order for optimization)
 
   $ hg log -r 'tip~1:tip' -r 'tip~2:tip~1' --template '{rev}\n'
-  8
-  9
   4
   5
   6
   7
+  8
+  9
 
 test usage in revpair (with "+")
 
@@ -878,7 +866,7 @@ aliases:
     None)
   * set:
   <filteredset
-    <fullreposet+ 0:10>,
+    <fullreposet+ [0..=9]>,
     <merge>>
   6
 
@@ -899,7 +887,7 @@ aliases:
     None)
   * set:
   <filteredset
-    <fullreposet+ 0:10>,
+    <fullreposet+ [0..=9]>,
     <merge>>
   6
 
@@ -1016,8 +1004,8 @@ test nesting and variable passing
   * set:
   <baseset
     <max
-      <fullreposet+ 0:10>,
-      <spanset+ 2:6>>>
+      <fullreposet+ [0..=9]>,
+      <idset+ [2..=5]>>>
   5
 
 test chained `or` operations are flattened at parsing phase
@@ -1049,11 +1037,7 @@ test chained `or` operations are flattened at parsing phase
         (symbol '2')
         (symbol '3'))))
   * set:
-  <addset
-    <spanset+ 0:2>,
-    <addset
-      <spanset+ 1:3>,
-      <spanset+ 2:4>>>
+  <idset+ [0..=3]>
   0
   1
   2
@@ -1098,7 +1082,7 @@ but 'all()' should never be substituted to '0()'.
   * set:
   <filteredset
     <baseset [0]>,
-    <spanset+ 0:10>>
+    <idset+ [0..=9]>>
   0
 
 test unknown reference:
@@ -1147,7 +1131,7 @@ test unknown reference:
   <addset
     <baseset [9]>,
     <filteredset
-      <fullreposet+ 0:10>,
+      <fullreposet+ [0..=9]>,
       <desc '$1'>>>
   9
 
@@ -1336,7 +1320,7 @@ issue2549 - correct optimizations
   <filteredset
     <baseset
       <max
-        <fullreposet+ 0:10>,
+        <fullreposet+ [0..=9]>,
         <baseset [1, 2]>>>,
     <not
       <baseset [2]>>>
@@ -1354,7 +1338,7 @@ issue2549 - correct optimizations
   <filteredset
     <baseset
       <min
-        <fullreposet+ 0:10>,
+        <fullreposet+ [0..=9]>,
         <baseset [1, 2]>>>,
     <not
       <baseset [1]>>>
