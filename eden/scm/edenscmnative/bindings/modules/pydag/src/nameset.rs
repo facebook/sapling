@@ -49,6 +49,12 @@ py_class!(pub class nameset |py| {
         Ok(Names(lhs.0.union(&rhs.0)))
     }
 
+    def __or__(lhs, rhs) -> PyResult<Names> {
+        let lhs = Names::extract(py, lhs)?;
+        let rhs = Names::extract(py, rhs)?;
+        Ok(Names(lhs.0.union(&rhs.0)))
+    }
+
     def __and__(lhs, rhs) -> PyResult<Names> {
         let lhs = Names::extract(py, lhs)?;
         let rhs = Names::extract(py, rhs)?;
