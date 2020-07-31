@@ -416,9 +416,9 @@ pub(crate) mod tests {
             hints_ops(&partial, &empty),
             [
                 "- Hints(ID_ASC)",
-                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
-                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
-                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
+                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
+                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
+                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
                 "| Hints(ID_ASC)",
                 "  Hints(ID_ASC)"
             ]
@@ -426,23 +426,23 @@ pub(crate) mod tests {
         assert_eq!(
             hints_ops(&partial, &full),
             [
-                "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
+                "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
                 "  Hints(ID_DESC)",
                 "& Hints(ID_ASC)",
                 "  Hints(ID_ASC)",
-                "| Hints(FULL | ID_DESC)",
-                "  Hints(FULL | ID_DESC)"
+                "| Hints(FULL | ID_DESC | ANCESTORS)",
+                "  Hints(FULL | ID_DESC | ANCESTORS)"
             ]
         );
         assert_eq!(
             hints_ops(&empty, &full),
             [
-                "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
-                "  Hints(FULL | ID_DESC)",
-                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
-                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC)",
-                "| Hints(FULL | ID_DESC)",
-                "  Hints(FULL | ID_DESC)"
+                "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
+                "  Hints(FULL | ID_DESC | ANCESTORS)",
+                "& Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
+                "  Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
+                "| Hints(FULL | ID_DESC | ANCESTORS)",
+                "  Hints(FULL | ID_DESC | ANCESTORS)"
             ]
         );
     }
@@ -480,6 +480,38 @@ pub(crate) mod tests {
                 "  Hints(ID_ASC, 20..=30)",
                 "| Hints((empty), 10..=40)",
                 "  Hints((empty), 10..=40)"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_hints_ancestors() {
+        let a: NameSet = "a".into();
+        a.hints().add_flags(Flags::ANCESTORS);
+
+        let b: NameSet = "b".into();
+        assert_eq!(
+            hints_ops(&a, &b),
+            [
+                "- Hints((empty))",
+                "  Hints((empty))",
+                "& Hints((empty))",
+                "  Hints((empty))",
+                "| Hints(ANCESTORS)",
+                "  Hints(ANCESTORS)"
+            ]
+        );
+
+        b.hints().add_flags(Flags::ANCESTORS);
+        assert_eq!(
+            hints_ops(&a, &b),
+            [
+                "- Hints((empty))",
+                "  Hints((empty))",
+                "& Hints(ANCESTORS)",
+                "  Hints(ANCESTORS)",
+                "| Hints(ANCESTORS)",
+                "  Hints(ANCESTORS)"
             ]
         );
     }

@@ -31,11 +31,12 @@ impl IntersectionSet {
         let hints = Hints::default();
         hints.add_flags(
             lhs.hints().flags()
-                & (Flags::EMPTY
+                & ((Flags::EMPTY
                     | Flags::ID_DESC
                     | Flags::ID_ASC
                     | Flags::TOPO_DESC
-                    | Flags::FILTER),
+                    | Flags::FILTER)
+                    | (rhs.hints().flags() & Flags::ANCESTORS)),
         );
         hints.inherit_id_map(&lhs.hints());
         let compatible = hints.is_id_map_compatible(&rhs.hints());

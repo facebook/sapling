@@ -56,7 +56,7 @@ impl IdStaticSet {
         hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
         hints.set_id_map(&map);
         if spans.is_empty() {
-            hints.add_flags(Flags::EMPTY | Flags::ID_ASC);
+            hints.add_flags(Flags::EMPTY);
         } else {
             hints.set_min_id(spans.min().unwrap());
             hints.set_max_id(spans.max().unwrap());
@@ -136,6 +136,7 @@ impl NameSetQuery for IdStaticSet {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::super::tests::*;
+    use super::super::NameSet;
     use super::*;
     use crate::tests::build_segments;
     use crate::DagAlgorithm;
@@ -254,6 +255,49 @@ pub(crate) mod tests {
             let set = "G C A E".into();
             let sorted = dag.sort(&set)?;
             assert_eq!(format!("{:?}", &sorted), "<dag [0 2 4 6]>");
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_dag_hints_ancestors() -> Result<()> {
+        with_dag(|dag| -> Result<()> {
+            let abc = dag.ancestors("B C".into())?;
+            let abe = dag.common_ancestors("E".into())?;
+            let f: NameSet = "F".into();
+            let all = dag.all()?;
+
+            let has_ancestors_flag =
+                |set: NameSet| -> bool { set.hints().contains(Flags::ANCESTORS) };
+
+            assert!(has_ancestors_flag(abc.clone()));
+            assert!(has_ancestors_flag(abe.clone()));
+            assert!(has_ancestors_flag(all.clone()));
+            assert!(has_ancestors_flag(dag.roots(abc.clone())?));
+            assert!(has_ancestors_flag(dag.parents(all.clone())?));
+
+            assert!(!has_ancestors_flag(f.clone()));
+            assert!(!has_ancestors_flag(dag.roots(f.clone())?));
+            assert!(!has_ancestors_flag(dag.parents(f.clone())?));
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_dag_hints_ancestors_fast_paths() -> Result<()> {
+        with_dag(|dag| -> Result<()> {
+            let bfg: NameSet = "B F G".into();
+
+            // Set the ANCESTORS flag. It's incorrect but make it easier to test fast paths.
+            bfg.hints().add_flags(Flags::ANCESTORS);
+
+            // 'ancestors' has a fast path that returns set as-is.
+            assert_eq!(format!("{:?}", dag.ancestors(bfg.clone())?), "<[B F G]>");
+
+            // 'heads' has a fast path that uses 'heads_ancestors' to do the calculation.
+            assert_eq!(format!("{:?}", dag.heads(bfg.clone())?), "<dag [6]>");
+
             Ok(())
         })
     }

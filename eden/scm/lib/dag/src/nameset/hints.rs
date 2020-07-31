@@ -38,6 +38,9 @@ bitflags! {
 
         /// A "filter" set. It provides "contains" but iteration is inefficient.
         const FILTER = 0x80;
+
+        /// The set contains ancestors. If X in set, any ancestor of X is also in set.
+        const ANCESTORS = 0x100;
     }
 }
 
@@ -78,7 +81,14 @@ impl Hints {
     }
 
     pub fn update_flags_with(&self, func: impl Fn(Flags) -> Flags) {
-        let flags = func(self.flags());
+        let mut flags = func(self.flags());
+        // Automatically add "derived" flags.
+        if flags.contains(Flags::EMPTY) {
+            flags.insert(Flags::ID_ASC | Flags::ID_DESC | Flags::TOPO_DESC | Flags::ANCESTORS);
+        }
+        if flags.contains(Flags::FULL) {
+            flags.insert(Flags::ANCESTORS);
+        }
         self.flags.store(flags.bits(), Relaxed)
     }
 

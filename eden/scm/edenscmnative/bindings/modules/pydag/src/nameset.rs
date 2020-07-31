@@ -110,6 +110,9 @@ py_class!(pub class nameset |py| {
         if flags.contains(Flags::FULL) {
             result.insert("full", py.True().into_object());
         }
+        if flags.contains(Flags::ANCESTORS) {
+            result.insert("ancestors", py.True().into_object());
+        }
         Ok(result)
     }
 });

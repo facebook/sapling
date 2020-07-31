@@ -27,6 +27,9 @@ impl UnionSet {
         if lhs.hints().contains(Flags::FILTER) || rhs.hints().contains(Flags::FILTER) {
             hints.add_flags(Flags::FILTER);
         }
+        if lhs.hints().contains(Flags::ANCESTORS) || rhs.hints().contains(Flags::ANCESTORS) {
+            hints.add_flags(Flags::ANCESTORS);
+        }
         if hints.is_id_map_compatible(&rhs.hints()) {
             hints.inherit_id_map(&lhs.hints());
             if let (Some(id1), Some(id2)) = (lhs.hints().min_id(), rhs.hints().min_id()) {

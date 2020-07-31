@@ -331,12 +331,15 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
         if set.hints().contains(Flags::TOPO_DESC) {
             Ok(set.clone())
         } else {
+            let flags = set.hints().flags() & Flags::ANCESTORS;
             let mut spans = SpanSet::empty();
             for name in set.iter()? {
                 let id = self.map().vertex_id(name?)?;
                 spans.push(id);
             }
-            Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
+            let result = NameSet::from_spans_idmap(spans, self.clone_map());
+            result.hints().add_flags(flags);
+            Ok(result)
         }
     }
 
@@ -360,13 +363,18 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
 
     /// Calculates all ancestors reachable from any name from the given set.
     fn ancestors(&self, set: NameSet) -> Result<NameSet> {
+        if set.hints().contains(Flags::ANCESTORS) {
+            return Ok(set);
+        }
         let spans = self.to_id_set(&set)?;
         #[cfg(test)]
         {
             self.to_set(&spans)?.assert_eq(set.clone());
         }
         let spans = self.dag().ancestors(spans)?;
-        Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
+        let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().add_flags(Flags::ANCESTORS);
+        Ok(result)
     }
 
     /// Calculates parents of the given set.
@@ -374,8 +382,11 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
     /// to preserve order.
     fn parents(&self, set: NameSet) -> Result<NameSet> {
+        // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
+        let flags = set.hints().flags() & Flags::ANCESTORS;
         let spans = self.dag().parents(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().add_flags(flags);
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::parents(self, set)?);
@@ -400,6 +411,10 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
 
     /// Calculates heads of the given set.
     fn heads(&self, set: NameSet) -> Result<NameSet> {
+        if set.hints().contains(Flags::ANCESTORS) {
+            // heads_ancestors is faster.
+            return self.heads_ancestors(set);
+        }
         let spans = self.dag().heads(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
         #[cfg(test)]
@@ -417,8 +432,10 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
 
     /// Calculates roots of the given set.
     fn roots(&self, set: NameSet) -> Result<NameSet> {
+        let flags = set.hints().flags() & Flags::ANCESTORS;
         let spans = self.dag().roots(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().add_flags(flags);
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::roots(self, set)?);
@@ -459,6 +476,7 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
     fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().common_ancestors(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
+        result.hints().add_flags(Flags::ANCESTORS);
         #[cfg(test)]
         {
             result.assert_eq(crate::default_impl::common_ancestors(self, set)?);
@@ -494,7 +512,11 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
         #[cfg(test)]
         {
-            result.assert_eq(crate::default_impl::heads_ancestors(self, set)?);
+            // default_impl::heads_ancestors calls `heads` if `Flags::ANCESTORS`
+            // is set. Prevent infinite loop.
+            if !set.hints().contains(Flags::ANCESTORS) {
+                result.assert_eq(crate::default_impl::heads_ancestors(self, set)?);
+            }
         }
         Ok(result)
     }

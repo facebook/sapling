@@ -21,7 +21,7 @@ impl StaticSet {
         let names: IndexSet<VertexName> = names.into_iter().collect();
         let hints = Hints::default();
         if names.is_empty() {
-            hints.add_flags(Flags::EMPTY | Flags::ID_DESC | Flags::ID_ASC | Flags::TOPO_DESC);
+            hints.add_flags(Flags::EMPTY);
         }
         Self(names, hints)
     }
@@ -29,7 +29,7 @@ impl StaticSet {
     pub fn empty() -> Self {
         let names: IndexSet<VertexName> = Default::default();
         let hints = Hints::default();
-        hints.add_flags(Flags::EMPTY | Flags::ID_DESC | Flags::ID_ASC | Flags::TOPO_DESC);
+        hints.add_flags(Flags::EMPTY);
         Self(names, hints)
     }
 }
