@@ -1328,6 +1328,16 @@ def _readremotenamesfrom(vfs, filename):
             yield node, nametype, remote, rname
 
 
+def mainbookmark(repo):
+    """Get the "main" bookmark that represents the main commit history."""
+    names = repo.ui.configlist("remotenames", "selectivepulldefault")
+    if not names:
+        # Fallback
+        return "main"
+    else:
+        return names[0]
+
+
 def cleanselectivepullaccessedbookmarks(repo):
     vfs = repo.sharedvfs
     with lockmod.lock(vfs, _selectivepullaccessedbookmarkslock):

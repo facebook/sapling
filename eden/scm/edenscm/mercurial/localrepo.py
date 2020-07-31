@@ -1487,6 +1487,16 @@ class localrepository(object):
 
             repo.hook("pretxnclose", throw=True, txnname=desc, **(tr.hookargs))
 
+        def flushchangelog(tr):
+            repo = reporef()
+            cl = repo.changelog
+            if cl.userust("addrevision"):
+                main = bookmarks.mainbookmark(repo)
+                mainnodes = []
+                if main in repo:
+                    mainnodes.append(repo[main].node())
+                cl.inner.flush(mainnodes)
+
         def releasefn(tr, success):
             repo = reporef()
             # Flush changelog zstore unconditionally. This makes the commit
@@ -1501,6 +1511,7 @@ class localrepository(object):
                 # dirstate.write or so) isn't invoked while
                 # transaction running
                 repo.dirstate.write(None)
+                flushchangelog(tr)
             else:
                 # discard all changes (including ones already written
                 # out) in this transaction
@@ -1549,6 +1560,7 @@ class localrepository(object):
         tr.addfinalize("notransaction", commitnotransaction)
         tr.addabort("notransaction", abortnotransaction)
         tr.addpending("notransaction", writependingnotransaction)
+        tr.addpending("flushchangelog", flushchangelog)
 
         # If any writes happened outside the transaction, go ahead and flush
         # them before opening the new transaction.
@@ -1826,7 +1838,7 @@ class localrepository(object):
             if (
                 k == "changelog"
                 and self.currenttransaction()
-                and self.changelog._delayed
+                and (self.changelog._delayed or self.changelog.userust("addrevision"))
             ):
                 # The changelog object may store unwritten revisions. We don't
                 # want to lose them.

@@ -692,6 +692,15 @@ class changelog(revlog.revlog):
     ):
         text = hgcommittext(manifest, files, desc, user, date, extra)
         btext = encodeutf8(text)
+        if self.userust("addrevision"):
+            node = revlog.hash(btext, p1, p2)
+            parents = [p for p in (p1, p2) if p != nullid]
+            self.inner.addcommits([(node, parents, btext)])
+            nodes = transaction.changes.get("nodes")
+            if nodes is not None:
+                nodes.append(node)
+            return node
+
         result = self.addrevision(btext, transaction, len(self), p1, p2)
 
         zstore = self.zstore
@@ -699,8 +708,25 @@ class changelog(revlog.revlog):
             zstore.flush()
         return result
 
-    def addgroup(self, *args, **kwargs):
-        result = super(changelog, self).addgroup(*args, **kwargs)
+    def addgroup(self, deltas, linkmapper, transaction, addrevisioncb=None):
+        if self.userust("addrevision"):
+            nodes = []
+            for node, p1, p2, linknode, deltabase, delta, flags in deltas:
+                assert flags == 0, "changelog flags cannot be non-zero"
+                parents = [p for p in (p1, p2) if p != nullid]
+                basetext = self.revision(deltabase)
+                rawtext = bytes(mdiff.patch(basetext, delta))
+                self.inner.addcommits([(node, parents, rawtext)])
+                if addrevisioncb:
+                    addrevisioncb(self, node)
+                nodes.append(node)
+            trnodes = transaction.changes.get("nodes")
+            if trnodes is not None:
+                trnodes += nodes
+            return nodes
+        result = super(changelog, self).addgroup(
+            deltas, linkmapper, transaction, addrevisioncb
+        )
         zstore = self.zstore
         if zstore is not None:
             zstore.flush()
@@ -728,6 +754,14 @@ class changelog(revlog.revlog):
         dfh,
         **kwargs
     ):
+        if self.userust("addrevision"):
+            if rawtext is None:
+                baserev, delta = cachedelta
+                basetext = self.revision(baserev, _df=dfh, raw=False)
+                rawtext = bytes(mdiff.patch(basetext, delta))
+            parents = [p for p in (p1, p2) if p != nullid]
+            self.inner.addcommits([(node, parents, rawtext)])
+            return node
         # overlay over the standard revlog._addrevision to track the new
         # revision on the transaction.
         rev = len(self)
