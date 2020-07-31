@@ -286,7 +286,7 @@ class changelogrevision(object):
 
 
 class changelog(revlog.revlog):
-    def __init__(self, opener, uiconfig, trypending=False, zstore=None, userust=True):
+    def __init__(self, opener, uiconfig, trypending=False, zstore=None):
         """Load a changelog revlog using an opener.
 
         If ``trypending`` is true, we attempt to load the index from a
@@ -306,20 +306,6 @@ class changelog(revlog.revlog):
         else:
             indexfile = "00changelog.i"
 
-        if (
-            uiconfig.configbool("experimental", "rust-commits")
-            and bypasstransaction
-            and userust
-        ):
-            # self.inner: The Rust object that handles all changelog
-            # operations. Currently it is used in parallel with the
-            # existing revlog logic. Eventually it will replace all
-            # operations here with modern setup.
-            self.inner = bindings.dag.commits.openrevlog(opener.join(""))
-        else:
-            self.inner = None
-        self._userustcache = {}
-
         datafile = "00changelog.d"
         revlog.revlog.__init__(
             self,
@@ -328,11 +314,8 @@ class changelog(revlog.revlog):
             datafile=datafile,
             checkambig=True,
             mmaplargeindex=True,
-            index2=not self.userust("index2"),
+            index2=True,
         )
-
-        if self.userust("disableindex"):
-            self.index = None
 
         if self._initempty:
             # changelogs don't benefit from generaldelta
@@ -364,83 +347,12 @@ class changelog(revlog.revlog):
         self.zstore = zstore
 
     def userust(self, name):
-        """Test whether to use rust-commit structure for a particular job
-
-        Eventually (after migrating narrow-heads repos, and killing hgsql) this
-        should always return True.
-        """
-        cache = self._userustcache
-        value = cache.get(name)
-        if value is None:
-            if self.inner is None:
-                value = False
-            else:
-                value = self._uiconfig.configbool(
-                    "experimental", "rust-commits:%s" % name
-                )
-            cache[name] = value
-        return value
+        return False
 
     @property
     def dag(self):
         """Get the DAG with algorithms. Require rust-commit."""
-        inner = self.inner
-        if inner is None:
-            return None
-        return inner.dagalgo()
-
-    def dageval(self, func, extraenv=None):
-        """Evaluate func with the current DAG context.
-
-        Example:
-
-            cl.dageval(lambda: roots(ancestors([x])))
-
-        is equivalent to:
-
-            dag = cl.dag
-            dag.roots(dag.ancestors([x]))
-
-        'extraenv' is optionally a dict. It sets extra names. For example,
-        providing revset-like functions like `draft`, `public`, `bookmarks`.
-        """
-        env = dict(func.func_globals)
-        dag = self.dag
-        for name in func.func_code.co_names:
-            # name is potentially a string used by LOAD_GLOBAL bytecode.
-            if extraenv is not None and name in extraenv:
-                # Provided by 'extraenv'.
-                env[name] = extraenv[name]
-            else:
-                # Provided by 'dag'.
-                value = getattr(dag, name, None)
-                if value is not None:
-                    env[name] = value
-        code = func.func_code
-        argdefs = func.func_defaults
-        freevars = func.func_closure
-        # Create a new function that uses the same logic except for different
-        # env (globals).
-        newfunc = type(func)(code, env, argdefs, freevars)
-        return newfunc()
-
-    @property
-    def idmap(self):
-        """Get the IdMap. Require rust-commit."""
-        return self.inner.idmap()
-
-    @property
-    def torevs(self):
-        """Convert a Set using commit hashes to an IdSet using numbers
-
-        The Set is usually obtained via `self.dag` APIs.
-        """
-        return self.inner.torevs
-
-    @property
-    def tonodes(self):
-        """Convert an IdSet to Set. The reverse of torevs."""
-        return self.inner.tonodes
+        return None
 
     def _loadvisibleheads(self, opener):
         return visibility.visibleheads(opener)
@@ -448,84 +360,30 @@ class changelog(revlog.revlog):
     def tip(self):
         # type: () -> bytes
         """filtered version of revlog.tip"""
-        if self.userust("tip"):
-            return self.dag.all().first() or nullid
         for i in range(len(self) - 1, -2, -1):
             # pyre-fixme[7]: Expected `bytes` but got implicit return value of `None`.
             return self.node(i)
 
     def __contains__(self, rev):
         """filtered version of revlog.__contains__"""
-        if self.userust("contains"):
-            return rev is not None and rev in self.torevs(self.dag.all())
-        else:
-            return rev is not None and 0 <= rev < len(self)
-
-    def __iter__(self):
-        """filtered version of revlog.__iter__"""
-        if self.userust("iter"):
-            return self.torevs(self.dag.all()).iterasc()
-        else:
-            return revlog.revlog.__iter__(self)
-
-    def __len__(self):
-        if self.userust("len"):
-            return len(self.dag.all())
-        else:
-            return super(changelog, self).__len__()
+        return rev is not None and 0 <= rev < len(self)
 
     def revs(self, start=0, stop=None):
         """filtered version of revlog.revs"""
-        if self.userust("revs"):
-            allrevs = self.torevs(self.dag.all())
-            if stop is not None:
-                # exclusive -> inclusive
-                stop = stop - 1
-            revs = bindings.dag.spans.unsaferange(start, stop) & allrevs
-            for i in revs.iterasc():
-                yield i
-            return
-
         for i in super(changelog, self).revs(start, stop):
             yield i
 
     @property
     def nodemap(self):
-        if self.userust("nodemap"):
-            # self.idmap might change, do not cache this nodemap result
-            return nodemap(self)
-        else:
-            self.rev(self.node(0))
-            return self._nodecache
+        self.rev(self.node(0))
+        return self._nodecache
 
     @nodemap.setter
     def nodemap(self, value):
-        if self.userust("nodemap"):
-            pass
-        else:
-            self._nodecache = value
+        self._nodecache = value
 
     def reachableroots(self, minroot, heads, roots, includepath=False):
-        if self.userust("reachableroots"):
-            tonodes = self.tonodes
-            headnodes = tonodes(heads)
-            rootnodes = tonodes(roots)
-            dag = self.dag
-            # special case: null::X -> ::X
-            if len(rootnodes) == 0 and nullrev in roots:
-                nodes = dag.ancestors(headnodes)
-            else:
-                nodes = dag.range(rootnodes, headnodes)
-            if not includepath:
-                nodes = nodes & rootnodes
-                # The old code path with includepath=False filters "roots"
-                # out. Emulate that filtering by headsancestors.
-                # It has subtle differences, though. See
-                # test-log-filenode-conflict.t change of this commit.
-                nodes = dag.headsancestors(nodes)
-            return list(self.torevs(nodes))
-        else:
-            return self.index.reachableroots2(minroot, heads, roots, includepath)
+        return self.index.reachableroots2(minroot, heads, roots, includepath)
 
     def heads(self, start=None, stop=None):
         raise error.ProgrammingError(
@@ -548,60 +406,14 @@ class changelog(revlog.revlog):
         heads in a consistent way, then discovery can just use references as
         heads isntead.
         """
-        if self.userust("rawheadrevs"):
-            dag = self.dag
-            heads = dag.headsancestors(dag.all())
-            # Be compatible with C index headrevs: Return in ASC order.
-            revs = self.torevs(heads)
-            return list(revs.iterasc())
-        else:
-            return self.index.headrevs()
+        return self.index.headrevs()
 
     def strip(self, minlink, transaction):
         # Invalidate on-disk nodemap.
         if self.indexfile.startswith("00changelog"):
             self.opener.tryunlink("00changelog.nodemap")
             self.opener.tryunlink("00changelog.i.nodemap")
-        if self.userust("strip"):
-            self.inner.strip([self.node(minlink)])
-        else:
-            super(changelog, self).strip(minlink, transaction)
-
-    def rev(self, node):
-        """filtered version of revlog.rev"""
-        if self.userust("rev"):
-            if node == wdirid:
-                raise error.WdirUnsupported
-            try:
-                return self.idmap.node2id(node)
-            except error.CommitLookupError:
-                raise error.LookupError(node, self.indexfile, _("no node"))
-        r = super(changelog, self).rev(node)
-        return r
-
-    def node(self, rev):
-        """filtered version of revlog.node"""
-        if self.userust("node"):
-            if rev == wdirrev:
-                raise error.WdirUnsupported
-            try:
-                return self.idmap.id2node(rev)
-            except error.CommitLookupError:
-                raise IndexError("revlog index out of range")
-        else:
-            return super(changelog, self).node(rev)
-
-    def linkrev(self, rev):
-        """filtered version of revlog.linkrev"""
-        return super(changelog, self).linkrev(rev)
-
-    def parentrevs(self, rev):
-        """filtered version of revlog.parentrevs"""
-        return super(changelog, self).parentrevs(rev)
-
-    def flags(self, rev):
-        """filtered version of revlog.flags"""
-        return super(changelog, self).flags(rev)
+        super(changelog, self).strip(minlink, transaction)
 
     def delayupdate(self, tr):
         "delay visibility of index updates to other readers"
@@ -709,15 +521,6 @@ class changelog(revlog.revlog):
     ):
         text = hgcommittext(manifest, files, desc, user, date, extra)
         btext = encodeutf8(text)
-        if self.userust("addrevision"):
-            node = revlog.hash(btext, p1, p2)
-            parents = [p for p in (p1, p2) if p != nullid]
-            self.inner.addcommits([(node, parents, btext)])
-            nodes = transaction.changes.get("nodes")
-            if nodes is not None:
-                nodes.append(node)
-            return node
-
         result = self.addrevision(btext, transaction, len(self), p1, p2)
 
         zstore = self.zstore
@@ -726,21 +529,6 @@ class changelog(revlog.revlog):
         return result
 
     def addgroup(self, deltas, linkmapper, transaction, addrevisioncb=None):
-        if self.userust("addrevision"):
-            nodes = []
-            for node, p1, p2, linknode, deltabase, delta, flags in deltas:
-                assert flags == 0, "changelog flags cannot be non-zero"
-                parents = [p for p in (p1, p2) if p != nullid]
-                basetext = self.revision(deltabase)
-                rawtext = bytes(mdiff.patch(basetext, delta))
-                self.inner.addcommits([(node, parents, rawtext)])
-                if addrevisioncb:
-                    addrevisioncb(self, node)
-                nodes.append(node)
-            trnodes = transaction.changes.get("nodes")
-            if trnodes is not None:
-                trnodes += nodes
-            return nodes
         result = super(changelog, self).addgroup(
             deltas, linkmapper, transaction, addrevisioncb
         )
@@ -771,14 +559,6 @@ class changelog(revlog.revlog):
         dfh,
         **kwargs
     ):
-        if self.userust("addrevision"):
-            if rawtext is None:
-                baserev, delta = cachedelta
-                basetext = self.revision(baserev, _df=dfh, raw=False)
-                rawtext = bytes(mdiff.patch(basetext, delta))
-            parents = [p for p in (p1, p2) if p != nullid]
-            self.inner.addcommits([(node, parents, rawtext)])
-            return node
         # overlay over the standard revlog._addrevision to track the new
         # revision on the transaction.
         rev = len(self)
@@ -818,33 +598,12 @@ class changelog(revlog.revlog):
             zstorenode = zstore.insert(sha1text, [p1])
             assert zstorenode == node, "zstore SHA1 should match node"
 
-        inner = self.inner
-        if inner is not None:
-            if rawtext is None:
-                baserev, delta = cachedelta
-                basetext = self.revision(baserev, _df=dfh, raw=False)
-                rawtext = mdiff.patch(basetext, delta)
-            parentnodes = [p for p in (p1, p2) if p != nullid]
-            inner.addcommits([(node, parentnodes, bytes(rawtext))])
-
         nodes = transaction.changes.get("nodes")
         if nodes is not None:
             nodes.append(node)
         return node
 
     def revision(self, nodeorrev, _df=None, raw=False):
-        if self.userust("revision"):
-            if nodeorrev in {nullid, nullrev}:
-                return b""
-            if isinstance(nodeorrev, int):
-                node = self.node(nodeorrev)
-            else:
-                node = nodeorrev
-            text = self.inner.getcommitrawtext(node)
-            if text is None:
-                raise error.LookupError(node, self.indexfile, _("no node"))
-            return text
-
         # type: (Union[int, bytes], Optional[IO], bool) -> bytes
         # "revision" is the single API that reads `.d` from revlog.
         # Use zstore if possible.
@@ -866,154 +625,6 @@ class changelog(revlog.revlog):
                 raise error.LookupError(node, self.indexfile, _("no data for node"))
             # Strip the p1, p2 header
             return text[40:]
-
-    def nodesbetween(self, roots, heads):
-        """Calculate (roots::heads, roots & (roots::heads), heads & (roots::heads))"""
-        if self.userust("nodesbetween"):
-            result = self.dag.range(roots, heads)
-            roots = roots & result
-            heads = heads & result
-            # Return in ASC order to be compatible with the old logic.
-            return list(result.iterrev()), list(roots.iterrev()), list(heads.iterrev())
-        else:
-            return super(changelog, self).nodesbetween(roots, heads)
-
-    def children(self, node):
-        """Return children(node)"""
-        if self.userust("children"):
-            nodes = self.dag.children([node])
-            return list(nodes)
-        else:
-            return super(changelog, self).children(node)
-
-    def descendants(self, revs):
-        """Return ((revs::) - roots(revs)) in revs."""
-        if self.userust("descendants"):
-            dag = self.dag
-            # nullrev special case.
-            if nullrev in revs:
-                result = dag.all()
-            else:
-                nodes = self.tonodes(revs)
-                result = dag.descendants(nodes) - dag.roots(nodes)
-            for rev in self.torevs(result).iterasc():
-                yield rev
-        else:
-            for rev in super(changelog, self).descendants(revs):
-                yield rev
-
-    def findcommonmissing(self, common, heads):
-        """Return (torevs(::common), (::heads) - (::common))"""
-        if self.userust("findcommonmissing"):
-            # "::heads - ::common" is "heads % common", aka. the "only"
-            # operation.
-            onlyheads, commonancestors = self.dag.onlyboth(heads, common)
-            # commonancestors can be large, do not convert to list
-            return self.torevs(commonancestors), list(onlyheads.iterrev())
-        else:
-            return super(changelog, self).findcommonmissing(common, heads)
-
-    def isancestor(self, a, b):
-        """Test if a (in node) is an ancestor of b (in node)"""
-        if self.userust("isancestor"):
-            if a == nullid or b == nullid:
-                return False
-            return self.dag.isancestor(a, b)
-        else:
-            return super(changelog, self).isancestor(a, b)
-
-    def ancestor(self, a, b):
-        """Return the common ancestor, or nullid if there are no common
-        ancestors.
-
-        Common ancestors are defined as heads(::a & ::b).
-
-        When there are multiple common ancestors, a "random" one is returned.
-        """
-        if self.userust("ancestor"):
-            if nullid == a or nullid == b:
-                return nullid
-            return self.dag.gcaone([a, b]) or nullid
-        else:
-            return super(changelog, self).ancestor(a, b)
-
-    def descendant(self, start, end):
-        """Test if start (in rev) is an ancestor of end (in rev)"""
-        return self.isancestor(self.node(start), self.node(end))
-
-    def _partialmatch(self, hexprefix):
-        if self.userust("partialmatch"):
-            matched = self.idmap.hexprefixmatch(hexprefix)
-            if len(matched) > 1:
-                # TODO: Add hints about possible matches.
-                raise error.LookupError(
-                    hexprefix, self.indexfile, _("ambiguous identifier")
-                )
-            elif len(matched) == 1:
-                return matched[0]
-            else:
-                return None
-        else:
-            return super(changelog, self)._partialmatch(hexprefix)
-
-    def ancestors(self, revs, stoprev=0, inclusive=False):
-        """Return ::revs (in revs) if inclusive is True.
-
-        If inclusive is False, return ::parents(revs).
-        If stoprev is not zero, filter the result.
-        stoprev is ignored in the Rust implementation.
-        """
-        if self.userust("ancestors"):
-            nodes = self.tonodes(revs)
-            dag = self.dag
-            if not inclusive:
-                nodes = dag.parents(nodes)
-            ancestornodes = dag.ancestors(nodes)
-            return self.torevs(ancestornodes)
-        else:
-            return super(changelog, self).ancestors(revs, stoprev, inclusive)
-
-    def commonancestorsheads(self, a, b):
-        """Return heads(::a & ::b)"""
-        if self.userust("commonancestorsheads"):
-            # null special case
-            if nullid == a or nullid == b:
-                return []
-            return list(self.dag.gcaall([a, b]))
-        else:
-            return super(changelog, self).commonancestorsheads(a, b)
-
-    def parents(self, node):
-        if self.userust("parents"):
-            # special case for null
-            if node == nullid:
-                return (nullid, nullid)
-            parents = list(self.dag.parentnames(node))
-            while len(parents) < 2:
-                parents.append(nullid)
-            return parents
-        else:
-            return super(changelog, self).parents(node)
-
-    def parentrevs(self, rev):
-        if self.userust("parents"):
-            return list(map(self.rev, self.parents(self.node(rev))))
-        else:
-            return super(changelog, self).parentrevs(rev)
-
-    def deltaparent(self, rev):
-        if self.userust("bypassrevlog"):
-            # Changelog does not have deltaparent
-            return nullrev
-        else:
-            return super(changelog, self).deltaparent(rev)
-
-    def flags(self, rev):
-        if self.userust("bypassrevlog"):
-            # Changelog does not have deltaparent
-            return 0
-        else:
-            return super(changelog, self).flags(rev)
 
 
 class nodemap(object):

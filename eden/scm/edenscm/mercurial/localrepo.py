@@ -1034,7 +1034,7 @@ class localrepository(object):
 
             if (
                 self.ui.configbool("experimental", "rust-commits")
-                and self.ui.configbool("experimental", "rust-commits:all")
+                and self.ui.configbool("experimental", "rust-commits")
                 and getattr(self.svfs, "options", {}).get("bypass-revlog-transaction")
                 and not "hgsql" in self.requirements
             ):

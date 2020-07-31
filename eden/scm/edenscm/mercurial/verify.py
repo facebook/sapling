@@ -197,7 +197,7 @@ class verifier(object):
         cl = repo.changelog
         # Need low-level access to revlog. Bypass the Rust DAG layer.
         svfs = getattr(cl, "opener", getattr(cl, "svfs", None))
-        cl = changelogmod.changelog(svfs, cl._uiconfig, userust=False)
+        cl = changelogmod.changelog(svfs, cl._uiconfig)
 
         ui.status(_("checking changesets\n"))
         mflinkrevs = {}
