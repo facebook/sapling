@@ -45,11 +45,8 @@ perfstatus
   $ hg perfancestors
   $ hg perfancestorset 2
   $ hg perfannotate a
-  $ hg perfbdiff -c 1
-  $ hg perfbdiff --alldata 1
   $ hg perfbookmarks
   $ hg perfcca
-  $ hg perfchangegroupchangelog
   $ hg perfchangeset 2
   $ hg perfctxfiles 2
   $ hg perfdiffwd
@@ -72,10 +69,6 @@ perfstatus
   $ hg perfnodelookup 2
   $ hg perfpathcopies 1 2
   $ hg perfrawfiles 2
-  $ hg perfrevlogindex -c
-  $ hg perfrevlogrevisions .hg/store/data/a.i
-  $ hg perfrevlogrevision -m 0
-  $ hg perfrevlogchunks -c
   $ hg perfrevrange
   $ hg perfrevset 'all()'
   $ hg perfstartup
