@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use super::hints::Flags;
 use super::id_static::IdStaticSet;
 use super::{Hints, NameIter, NameSetQuery};
 use crate::ops::IdConvert;
@@ -245,6 +246,19 @@ impl NameSetQuery for IdLazySet {
         } else {
             let mut loaded = Vec::new();
             while !inner.is_completed()? {
+                // Fast paths.
+                if let Some(&last_id) = inner.visited.iter().rev().next() {
+                    let hints = self.hints();
+                    if hints.contains(Flags::ID_DESC) {
+                        if last_id < id {
+                            return Ok(false);
+                        }
+                    } else if hints.contains(Flags::ID_ASC) {
+                        if last_id > id {
+                            return Ok(false);
+                        }
+                    }
+                }
                 loaded.clear();
                 inner.load_more(1, Some(&mut loaded))?;
                 debug_assert!(loaded.len() <= 1);
@@ -320,6 +334,25 @@ pub(crate) mod tests {
         assert_eq!(set.count()?, 5);
         assert_eq!(shorten_name(set.first()?.unwrap()), "11");
         assert_eq!(shorten_name(set.last()?.unwrap()), "55");
+        Ok(())
+    }
+
+    #[test]
+    fn test_hints_fast_paths() -> Result<()> {
+        let set = lazy_set(&[0x20, 0x50, 0x30, 0x70]);
+
+        // Incorrect hints, but useful for testing.
+        set.hints().add_flags(Flags::ID_ASC);
+
+        let v = |i: u64| -> VertexName { StrIdMap.vertex_name(Id(i)).unwrap() };
+        assert!(set.contains(&v(0x20))?);
+        assert!(set.contains(&v(0x50))?);
+        assert!(!set.contains(&v(0x30))?);
+
+        set.hints().add_flags(Flags::ID_DESC);
+        assert!(set.contains(&v(0x30))?);
+        assert!(!set.contains(&v(0x70))?);
+
         Ok(())
     }
 
