@@ -1244,6 +1244,73 @@ impl DagAlgorithm for RevlogIndex {
             .set_dag(self);
         Ok(set)
     }
+
+    fn reachable_roots(&self, roots: Set, heads: Set) -> Result<Set> {
+        let id_roots = self.to_id_set(&roots)?;
+        if id_roots.is_empty() {
+            return Ok(Set::empty());
+        }
+
+        let id_heads = self.to_id_set(&heads)?;
+        if id_heads.is_empty() {
+            return Ok(Set::empty());
+        }
+
+        let max_rev = id_heads.max().unwrap().0;
+        let min_rev = id_roots.min().unwrap().0;
+        if max_rev < min_rev {
+            return Ok(Set::empty());
+        }
+        let mut reachable = BitVec::from_elem((max_rev + 1 - min_rev) as usize, false);
+        let mut is_root = BitVec::from_elem((max_rev + 1 - min_rev) as usize, false);
+        let mut result = IdSet::empty();
+
+        // alive: count of "id"s that have unexplored parents.
+        // alive == 0 indicates all parents are checked and iteration can be stopped.
+        let mut alive = 0;
+        for rev in id_heads.iter() {
+            let rev = rev.0;
+            if rev <= max_rev && rev >= min_rev {
+                reachable.set((rev - min_rev) as _, true);
+                alive += 1;
+            }
+        }
+        for rev in id_roots.iter() {
+            let rev = rev.0;
+            if rev <= max_rev && rev >= min_rev {
+                is_root.set((rev - min_rev) as _, true);
+            }
+        }
+
+        for rev in (min_rev..=max_rev).rev() {
+            if alive == 0 {
+                break;
+            }
+            if !reachable[(rev - min_rev) as _] {
+                continue;
+            }
+            alive -= 1;
+            if is_root[(rev - min_rev) as _] {
+                result.push(Id(rev as _));
+                continue;
+            }
+            let parent_revs = self.parent_revs(rev as _);
+            for parent_rev in parent_revs.as_revs() {
+                let parent_rev = *parent_rev as u64;
+                if parent_rev >= min_rev as _ && parent_rev <= max_rev as _ {
+                    let idx = (parent_rev - min_rev) as usize;
+                    if !reachable[idx] {
+                        reachable.set(idx, true);
+                        alive += 1;
+                    }
+                }
+            }
+        }
+
+        let result = Set::from_spans_idmap(result, self.get_snapshot());
+        result.hints().set_dag(self);
+        Ok(result)
+    }
 }
 
 impl IdMapEq for RevlogIndex {
