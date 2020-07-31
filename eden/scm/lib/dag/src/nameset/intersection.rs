@@ -7,9 +7,11 @@
 
 use super::hints::Flags;
 use super::{Hints, NameIter, NameSet, NameSetQuery};
+use crate::Id;
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
+use std::cmp::Ordering;
 use std::fmt;
 
 /// Intersection of 2 sets.
@@ -24,6 +26,21 @@ pub struct IntersectionSet {
 struct Iter {
     iter: Box<dyn NameIter>,
     rhs: NameSet,
+    ended: bool,
+
+    /// Optional fast path for stop.
+    stop_condition: Option<StopCondition>,
+}
+
+struct StopCondition {
+    order: Ordering,
+    id: Id,
+}
+
+impl StopCondition {
+    fn should_stop_with_id(&self, id: Id) -> bool {
+        id.cmp(&self.id) == self.order
+    }
 }
 
 impl IntersectionSet {
@@ -64,17 +81,65 @@ impl IntersectionSet {
 
 impl NameSetQuery for IntersectionSet {
     fn iter(&self) -> Result<Box<dyn NameIter>> {
+        let stop_condition = if self.lhs.hints().contains(Flags::ID_ASC) {
+            if let Some(id) = self.rhs.hints().max_id() {
+                Some(StopCondition {
+                    id,
+                    order: Ordering::Greater,
+                })
+            } else {
+                None
+            }
+        } else if self.lhs.hints().contains(Flags::ID_DESC) {
+            if let Some(id) = self.rhs.hints().min_id() {
+                Some(StopCondition {
+                    id,
+                    order: Ordering::Less,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let iter = Iter {
             iter: self.lhs.iter()?,
             rhs: self.rhs.clone(),
+            ended: false,
+            stop_condition,
         };
         Ok(Box::new(iter))
     }
 
     fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+        let stop_condition = if self.lhs.hints().contains(Flags::ID_DESC) {
+            if let Some(id) = self.rhs.hints().max_id() {
+                Some(StopCondition {
+                    id,
+                    order: Ordering::Greater,
+                })
+            } else {
+                None
+            }
+        } else if self.lhs.hints().contains(Flags::ID_ASC) {
+            if let Some(id) = self.rhs.hints().min_id() {
+                Some(StopCondition {
+                    id,
+                    order: Ordering::Less,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let iter = Iter {
             iter: self.lhs.iter_rev()?,
             rhs: self.rhs.clone(),
+            ended: false,
+            stop_condition,
         };
         Ok(Box::new(iter))
     }
@@ -102,12 +167,28 @@ impl Iterator for Iter {
     type Item = Result<VertexName>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.ended {
+            return None;
+        }
         loop {
             let result = NameIter::next(self.iter.as_mut());
             if let Some(Ok(ref name)) = result {
                 match self.rhs.contains(&name) {
                     Err(err) => break Some(Err(err)),
-                    Ok(false) => continue,
+                    Ok(false) => {
+                        // Check if we can stop iteration early using hints.
+                        if let Some(ref cond) = self.stop_condition {
+                            if let Some(id_convert) = self.rhs.id_convert() {
+                                if let Ok(Some(id)) = id_convert.vertex_id_optional(&name) {
+                                    if cond.should_stop_with_id(id) {
+                                        self.ended = true;
+                                        return None;
+                                    }
+                                }
+                            }
+                        }
+                        continue;
+                    }
                     Ok(true) => (),
                 }
             }
@@ -118,8 +199,10 @@ impl Iterator for Iter {
 
 #[cfg(test)]
 mod tests {
+    use super::super::id_lazy::tests::lazy_set;
     use super::super::tests::*;
     use super::*;
+    use crate::Id;
     use std::collections::HashSet;
 
     fn intersection(a: &[u8], b: &[u8]) -> IntersectionSet {
@@ -142,6 +225,30 @@ mod tests {
             assert!(!set.contains(&to_name(b))?);
         }
         Ok(())
+    }
+
+    #[test]
+    fn test_intersection_min_max_id_fast_path() {
+        // The min_ids are intentionally wrong to test the fast paths.
+        let a = NameSet::from_query(lazy_set(&[0x70, 0x60, 0x50, 0x40, 0x30, 0x20]));
+        a.hints().add_flags(Flags::ID_DESC);
+        let b = NameSet::from_query(lazy_set(&[0x70, 0x65, 0x50, 0x40, 0x35, 0x20]));
+        b.hints().set_min_id(Id(0x40));
+        b.hints().set_max_id(Id(0x50));
+        let set = IntersectionSet::new(a, b.clone());
+        // No "20" - filtered out by min id fast path.
+        assert_eq!(shorten_iter(set.iter()), ["70", "50", "40"]);
+        // No "70" - filtered out by max id fast path.
+        assert_eq!(shorten_iter(set.iter_rev()), ["20", "40", "50"]);
+
+        // Test the reversed sort order.
+        let a = NameSet::from_query(lazy_set(&[0x20, 0x30, 0x40, 0x50, 0x60, 0x70]));
+        a.hints().add_flags(Flags::ID_ASC);
+        let set = IntersectionSet::new(a, b.clone());
+        // No "70".
+        assert_eq!(shorten_iter(set.iter()), ["20", "40", "50"]);
+        // No "20".
+        assert_eq!(shorten_iter(set.iter_rev()), ["70", "50", "40"]);
     }
 
     quickcheck::quickcheck! {

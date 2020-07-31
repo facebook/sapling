@@ -129,6 +129,17 @@ impl Hints {
     }
 }
 
+impl Clone for Hints {
+    fn clone(&self) -> Self {
+        Self {
+            flags: AtomicU32::new(self.flags.load(Acquire)),
+            min_id: AtomicU64::new(self.min_id.load(Acquire)),
+            max_id: AtomicU64::new(self.max_id.load(Acquire)),
+            id_map_ptr: AtomicUsize::new(self.id_map_ptr.load(Acquire)),
+        }
+    }
+}
+
 impl fmt::Debug for Hints {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(

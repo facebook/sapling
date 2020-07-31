@@ -310,6 +310,9 @@ pub trait IdConvert {
     fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>>;
     fn vertex_name(&self, id: Id) -> Result<VertexName>;
     fn contains_vertex_name(&self, name: &VertexName) -> Result<bool>;
+    fn vertex_id_optional(&self, name: &VertexName) -> Result<Option<Id>> {
+        self.vertex_id_with_max_group(name, Group::NON_MASTER)
+    }
 }
 
 impl<T> ImportAscii for T

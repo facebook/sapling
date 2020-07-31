@@ -243,6 +243,11 @@ pub trait NameSetQuery: Any + Debug + Send + Sync {
 
     /// Get or set optimization hints.
     fn hints(&self) -> &Hints;
+
+    /// Get an optional IdConvert interface to check hints.
+    fn id_convert(&self) -> Option<&dyn IdConvert> {
+        None
+    }
 }
 
 /// Iterator of [`NameSet`].

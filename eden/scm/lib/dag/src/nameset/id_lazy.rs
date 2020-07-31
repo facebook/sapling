@@ -229,16 +229,20 @@ impl NameSetQuery for IdLazySet {
     fn hints(&self) -> &Hints {
         &self.hints
     }
+
+    fn id_convert(&self) -> Option<&dyn IdConvert> {
+        Some(self.map.as_ref() as &dyn IdConvert)
+    }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::super::tests::*;
     use super::*;
     use std::collections::HashSet;
     use std::convert::TryInto;
 
-    fn lazy_set(a: &[u64]) -> IdLazySet {
+    pub fn lazy_set(a: &[u64]) -> IdLazySet {
         let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();
         IdLazySet::from_iter_idmap(ids.into_iter().map(Ok), Arc::new(StrIdMap))
     }

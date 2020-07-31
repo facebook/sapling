@@ -131,6 +131,10 @@ impl NameSetQuery for IdStaticSet {
     fn hints(&self) -> &Hints {
         &self.hints
     }
+
+    fn id_convert(&self) -> Option<&dyn IdConvert> {
+        Some(self.map.as_ref() as &dyn IdConvert)
+    }
 }
 
 #[cfg(test)]
