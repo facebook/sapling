@@ -378,6 +378,8 @@ def consumev1(repo, fp, filecount, bytecount):
                 # force @filecache properties to be reloaded from
                 # streamclone-ed file at next access
                 repo.invalidate(clearfilecache=True)
+                # Force reload changelog from disk.
+                repo.invalidatechangelog()
 
         elapsed = util.timer() - start
         if elapsed <= 0:

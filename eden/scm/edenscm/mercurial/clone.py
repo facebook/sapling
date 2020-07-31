@@ -46,6 +46,7 @@ def shallowclone(source, repo):
             streamclone.consumev1(repo, fp, filecount, bytecount)
             # repo.changelog needs to be reloaded.
             repo.invalidate()
+            repo.invalidatechangelog()
 
         # Fetch selected remote bookmarks.
         repo.ui.status(_("fetching selected remote bookmarks\n"))
