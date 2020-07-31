@@ -237,6 +237,11 @@ impl DagAlgorithm for commits {
         let py = unsafe { Python::assume_gil_acquired() };
         self.inner(py).borrow().descendants(set)
     }
+
+    fn reachable_roots(&self, roots: Set, heads: Set) -> Result<Set> {
+        let py = unsafe { Python::assume_gil_acquired() };
+        self.inner(py).borrow().reachable_roots(roots, heads)
+    }
 }
 
 impl IdConvert for commits {

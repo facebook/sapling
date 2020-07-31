@@ -223,6 +223,9 @@ impl DagAlgorithm for HgCommits {
     fn descendants(&self, set: Set) -> Result<Set> {
         self.dag.descendants(set)
     }
+    fn reachable_roots(&self, roots: Set, heads: Set) -> Result<Set> {
+        self.dag.reachable_roots(roots, heads)
+    }
 }
 
 impl ToIdSet for HgCommits {

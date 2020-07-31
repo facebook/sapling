@@ -163,6 +163,9 @@ impl DagAlgorithm for RevlogCommits {
     fn descendants(&self, set: Set) -> Result<Set> {
         self.revlog.descendants(set)
     }
+    fn reachable_roots(&self, roots: Set, heads: Set) -> Result<Set> {
+        self.revlog.reachable_roots(roots, heads)
+    }
 }
 
 impl ToIdSet for RevlogCommits {
