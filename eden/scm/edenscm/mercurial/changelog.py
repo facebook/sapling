@@ -286,7 +286,7 @@ class changelogrevision(object):
 
 
 class changelog(revlog.revlog):
-    def __init__(self, opener, uiconfig, trypending=False, zstore=None):
+    def __init__(self, opener, uiconfig, trypending=False, zstore=None, userust=True):
         """Load a changelog revlog using an opener.
 
         If ``trypending`` is true, we attempt to load the index from a
@@ -306,7 +306,11 @@ class changelog(revlog.revlog):
         else:
             indexfile = "00changelog.i"
 
-        if uiconfig.configbool("experimental", "rust-commits") and bypasstransaction:
+        if (
+            uiconfig.configbool("experimental", "rust-commits")
+            and bypasstransaction
+            and userust
+        ):
             # self.inner: The Rust object that handles all changelog
             # operations. Currently it is used in parallel with the
             # existing revlog logic. Eventually it will replace all
@@ -326,6 +330,9 @@ class changelog(revlog.revlog):
             mmaplargeindex=True,
             index2=not self.userust("index2"),
         )
+
+        if self.userust("disableindex"):
+            self.index = None
 
         if self._initempty:
             # changelogs don't benefit from generaldelta

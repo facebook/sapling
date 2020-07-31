@@ -14,7 +14,15 @@ from __future__ import absolute_import
 
 import os
 
-from . import error, progress, pycompat, revlog, scmutil, util
+from . import (
+    changelog as changelogmod,
+    error,
+    progress,
+    pycompat,
+    revlog,
+    scmutil,
+    util,
+)
 from .i18n import _
 from .node import nullid, short
 
@@ -187,6 +195,8 @@ class verifier(object):
         repo = self.repo
         match = self.match
         cl = repo.changelog
+        # Need low-level access to revlog. Bypass the Rust DAG layer.
+        cl = changelogmod.changelog(cl.opener, cl._uiconfig, userust=False)
 
         ui.status(_("checking changesets\n"))
         mflinkrevs = {}

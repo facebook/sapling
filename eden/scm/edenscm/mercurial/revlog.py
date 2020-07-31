@@ -2075,7 +2075,8 @@ class revlog(object):
             base = chainbase = curr
 
         e = (offset_type(offset, flags), l, textlen, base, link, p1r, p2r, node)
-        self.index.insert(-1, e)
+        if self.index is not None:
+            self.index.insert(-1, e)
         index2 = getattr(self, "index2", None)
         if index2 is not None:
             index2.insert(node, [p for p in (p1r, p2r) if p >= 0])

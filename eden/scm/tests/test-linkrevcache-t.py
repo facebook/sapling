@@ -11,6 +11,9 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 sh % "cat" << r"""
 [extensions]
 linkrevcache=
+
+[experimental]
+rust-commits=false
 """ >> "$HGRCPATH"
 
 sh % "hg init repo"
