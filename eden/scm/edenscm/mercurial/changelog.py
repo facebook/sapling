@@ -776,14 +776,9 @@ class changelog(revlog.revlog):
             parentnodes = [p for p in (p1, p2) if p != nullid]
             inner.addcommits([(node, parentnodes, bytes(rawtext))])
 
-        revs = transaction.changes.get("revs")
-        if revs is not None:
-            if revs:
-                assert revs[-1] + 1 == rev
-                revs = range(revs[0], rev + 1)
-            else:
-                revs = range(rev, rev + 1)
-            transaction.changes["revs"] = revs
+        nodes = transaction.changes.get("nodes")
+        if nodes is not None:
+            nodes.append(node)
         return node
 
     def revision(self, nodeorrev, _df=None, raw=False):

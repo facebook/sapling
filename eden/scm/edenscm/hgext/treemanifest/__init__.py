@@ -483,17 +483,16 @@ def wraprepo(repo):
             if self.ui.cmdname == "debugstrip" or "strip" in tr.desc:
                 return
 
-            revs = tr.changes.get("revs")
-            if not revs:
+            nodes = tr.changes.get("nodes")
+            if not nodes:
                 return
 
             # If any draft commits were added, prefetch their public parents.
             # Note that shelve could've produced a hidden commit, so
             # we need an unfiltered repo to evaluate the revset
             try:
-                revset = "parents(%ld & draft() - hidden()) & public()"
-                with self.ui.configoverride({("devel", "legacy.revnum"): ""}):
-                    draftparents = list(self.set(revset, revs))
+                revset = "parents(%ln & draft() - hidden()) & public()"
+                draftparents = list(self.set(revset, nodes))
 
                 if draftparents:
                     self.prefetchtrees([c.manifestnode() for c in draftparents])
