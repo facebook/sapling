@@ -2148,11 +2148,13 @@ class revlog(object):
         ifh = self.opener(self.indexfile, "a+", checkambig=self._checkambig)
         isize = r * self._io.size
         if self._inline:
-            transaction.add(self.indexfile, end + isize, r)
+            if not self._bypasstransaction:
+                transaction.add(self.indexfile, end + isize, r)
             dfh = None
         else:
-            transaction.add(self.indexfile, isize, r)
-            transaction.add(self.datafile, end)
+            if not self._bypasstransaction:
+                transaction.add(self.indexfile, isize, r)
+                transaction.add(self.datafile, end)
             dfh = self.opener(self.datafile, "a+")
 
         def flush():
@@ -2299,6 +2301,9 @@ class revlog(object):
         removed and that it'll re-add them after this truncation.
         """
         if len(self) == 0:
+            return
+
+        if self._bypasstransaction:
             return
 
         rev, _ = self.getstrippoint(minlink)

@@ -526,8 +526,6 @@ remote hook failure is attributed to remote
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: hook failure!
-  remote: transaction abort!
-  remote: rollback completed
   [255]
 
 abort during pull is properly reported as such

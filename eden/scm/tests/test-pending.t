@@ -96,8 +96,6 @@ test python hook
   $ dotest
   push 29b62aeb769fdf78d8d9c5f28b017f76d7ef824b
   hook 29b62aeb769fdf78d8d9c5f28b017f76d7ef824b
-  transaction abort!
-  rollback completed
   abort: pretxnchangegroup hook failed
   pull 0000000000000000000000000000000000000000
 
@@ -111,8 +109,6 @@ test external hook
   $ dotest
   push 29b62aeb769fdf78d8d9c5f28b017f76d7ef824b
   hook 29b62aeb769fdf78d8d9c5f28b017f76d7ef824b
-  transaction abort!
-  rollback completed
   abort: pretxnchangegroup hook exited with status 1
   pull 0000000000000000000000000000000000000000
 

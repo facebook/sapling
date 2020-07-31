@@ -371,8 +371,6 @@ Hash digest mismatch throws an error
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  transaction abort!
-  rollback completed
   abort: bundle at http://localhost:$HGPORT/bundle6.hg is corrupted: (glob)
   sha1 mismatch: expected 0000000000000000000000000000000000000000, got 2c880cfec23cff7d8f80c2f12958d1563cbdaba6
   [255]
@@ -405,8 +403,6 @@ If either of the multiple hash digests mismatches, an error is thrown
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  transaction abort!
-  rollback completed
   abort: bundle at http://localhost:$HGPORT/bundle6.hg is corrupted: (glob)
   md5 mismatch: expected 00000000000000000000000000000000, got e22172c2907ef88794b7bea6642c2394
   [255]
@@ -421,8 +417,6 @@ If either of the multiple hash digests mismatches, an error is thrown
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  transaction abort!
-  rollback completed
   abort: bundle at http://localhost:$HGPORT/bundle6.hg is corrupted: (glob)
   sha1 mismatch: expected 0000000000000000000000000000000000000000, got 2c880cfec23cff7d8f80c2f12958d1563cbdaba6
   [255]
@@ -455,8 +449,6 @@ Corruption tests
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
-  transaction abort!
-  rollback completed
   abort: bundle at http://localhost:$HGPORT/bundle5.hg is corrupted: (glob)
   sha1 mismatch: expected 0000000000000000000000000000000000000000, got f29485d6bfd37db99983cfc95ecb52f8ca396106
   [255]
@@ -519,9 +511,7 @@ Size mismatch
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
-  transaction abort!
-  rollback completed
+  added 2 changesets with 0 changes to 2 files
   abort: bundle at http://localhost:$HGPORT/bundle4.hg is corrupted: (glob)
   size mismatch: expected 42, got 581
   [255]

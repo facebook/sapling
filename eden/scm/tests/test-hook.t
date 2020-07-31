@@ -310,8 +310,6 @@ incoming changes no longer there after
   added 1 changesets with 1 changes to 1 files
   dbd0abf46c19
   pretxnchangegroup.forbid hook: HG_HOOKNAME=pretxnchangegroup.forbid1 HG_HOOKTYPE=pretxnchangegroup HG_NODE=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_NODE_LAST=dbd0abf46c19f379dcb1964594ee71a3ec9947da HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
-  transaction abort!
-  rollback completed
   abort: pretxnchangegroup.forbid1 hook exited with status 1
   [255]
   $ hg log -r 'max(all())' -T '{node|short}\n'
@@ -525,7 +523,7 @@ different between Python 2.6 and Python 2.7.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 1 changesets with 0 changes to 1 files
 
 post- python hooks that fail to *run* don't cause an abort
   $ rm ../a/.hg/hgrc

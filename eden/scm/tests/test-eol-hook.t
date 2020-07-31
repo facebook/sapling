@@ -47,8 +47,6 @@ Create repo
   added 1 changesets with 1 changes to 1 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     a.txt in a8ee6548cd86 should not have CRLF line endings
-  transaction abort!
-  rollback completed
   abort: end-of-line check failed:
     a.txt in a8ee6548cd86 should not have CRLF line endings
   [255]
@@ -61,7 +59,7 @@ Create repo
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
+  added 2 changesets with 1 changes to 1 files
 
   $ printf "first\nsecond\nthird\n" > crlf.txt
   $ hg add crlf.txt
@@ -75,8 +73,6 @@ Create repo
   added 1 changesets with 1 changes to 1 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     crlf.txt in 004ba2132725 should not have LF line endings
-  transaction abort!
-  rollback completed
   abort: end-of-line check failed:
     crlf.txt in 004ba2132725 should not have LF line endings
   [255]
@@ -89,7 +85,7 @@ Create repo
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
+  added 2 changesets with 1 changes to 1 files
 
   $ printf "first\r\nsecond" > b.txt
   $ hg add b.txt
@@ -103,8 +99,6 @@ Create repo
   added 1 changesets with 1 changes to 1 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
-  transaction abort!
-  rollback completed
   abort: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   [255]
@@ -120,11 +114,9 @@ Create repo
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
+  added 2 changesets with 1 changes to 2 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
-  transaction abort!
-  rollback completed
   abort: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   [255]
@@ -141,11 +133,9 @@ Test checkheadshook alias
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
+  added 2 changesets with 0 changes to 2 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
-  transaction abort!
-  rollback completed
   abort: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   [255]
@@ -163,7 +153,7 @@ We can fix the head and push again
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 2 files
+  added 3 changesets with 1 changes to 2 files
 
 Test it still fails with checkallhook
 
@@ -177,11 +167,9 @@ Test it still fails with checkallhook
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 2 files
+  added 3 changesets with 1 changes to 2 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
-  transaction abort!
-  rollback completed
   abort: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   [255]
@@ -194,7 +182,7 @@ But we can push the clean head
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 1 changesets with 0 changes to 1 files
 
 Test multiple files/revisions output
 
@@ -207,12 +195,10 @@ Test multiple files/revisions output
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 2 files
+  added 3 changesets with 1 changes to 2 files
   error: pretxnchangegroup hook failed: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
     d.txt in a7040e68714f should not have CRLF line endings
-  transaction abort!
-  rollback completed
   abort: end-of-line check failed:
     b.txt in fbcf9b1025f5 should not have CRLF line endings
     d.txt in a7040e68714f should not have CRLF line endings

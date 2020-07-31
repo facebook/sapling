@@ -856,9 +856,11 @@ class localrepository(object):
         treemanifestserver = self.ui.configbool("treemanifest", "server")
         self.svfs.options["treemanifest-server"] = treemanifestserver
 
-        bypassrevlogtransaction = self.ui.configbool(
-            "experimental", "narrow-heads"
-        ) and self.ui.configbool("experimental", "head-based-commit-transaction")
+        bypassrevlogtransaction = (
+            self.ui.configbool("experimental", "narrow-heads")
+            and self.ui.configbool("experimental", "head-based-commit-transaction")
+            and self.ui.configbool("experimental", "rust-commits")
+        )
         self.svfs.options["bypass-revlog-transaction"] = bypassrevlogtransaction
 
     def _writerequirements(self):
