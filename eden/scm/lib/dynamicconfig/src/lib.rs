@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::fs;
 use std::hash::{Hash, Hasher};
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -232,12 +233,12 @@ impl Generator {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn in_timeshard(&self, start: HgTime, end: HgTime) -> Result<bool> {
+    pub(crate) fn in_timeshard(&self, range: Range<HgTime>) -> Result<bool> {
         let now = HgTime::now()
             .ok_or_else(|| anyhow!("invalid HgTime::now()"))?
             .to_utc();
-        let start = start.to_utc();
-        let end = end.to_utc();
+        let start = range.start.to_utc();
+        let end = range.end.to_utc();
 
         let rollout = (end - start).num_seconds() as f64;
         let now = (now - start).num_seconds() as f64;
