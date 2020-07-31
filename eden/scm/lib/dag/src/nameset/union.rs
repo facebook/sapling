@@ -7,6 +7,7 @@
 
 use super::hints::Flags;
 use super::{Hints, NameIter, NameSet, NameSetQuery};
+use crate::fmt::write_debug;
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
@@ -115,7 +116,10 @@ impl NameSetQuery for UnionSet {
 
 impl fmt::Debug for UnionSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<or {:?} {:?}>", &self.sets[0], &self.sets[1])
+        write!(f, "<or")?;
+        write_debug(f, &self.sets[0])?;
+        write_debug(f, &self.sets[1])?;
+        write!(f, ">")
     }
 }
 

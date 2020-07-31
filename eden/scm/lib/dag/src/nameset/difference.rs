@@ -7,6 +7,7 @@
 
 use super::hints::Flags;
 use super::{Hints, NameIter, NameSet, NameSetQuery};
+use crate::fmt::write_debug;
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
@@ -81,7 +82,10 @@ impl NameSetQuery for DifferenceSet {
 
 impl fmt::Debug for DifferenceSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<difference {:?} {:?}>", &self.lhs, &self.rhs)
+        write!(f, "<diff")?;
+        write_debug(f, &self.lhs)?;
+        write_debug(f, &self.rhs)?;
+        write!(f, ">")
     }
 }
 

@@ -49,8 +49,8 @@ mod tests {
             )
                 .into();
             let set2: NameSet = (L, spans.clone(), dag).into();
-            assert_eq!(format!("{:?}", &set1), "<dag [0 1 4 5 6]>");
-            assert_eq!(format!("{:?}", &set2), "<dag [0 1 4 5 6]>");
+            assert_eq!(format!("{:?}", &set1), "<spans [E:G+4:6, A:B+0:1]>");
+            assert_eq!(format!("{:?}", &set2), "<spans [E:G+4:6, A:B+0:1]>");
             assert_eq!(format!("{:?}", &spans), "0 1 4 5 6");
             Ok(())
         })

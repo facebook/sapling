@@ -103,7 +103,21 @@ impl Iterator for Iter {
 
 impl fmt::Debug for LazySet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<lazy>")
+        f.write_str("<lazy ")?;
+        let inner = self.inner.lock().unwrap();
+        let limit = f.width().unwrap_or(3);
+        f.debug_list()
+            .entries(inner.visited.iter().take(limit))
+            .finish()?;
+        let remaining = inner.visited.len().max(limit) - limit;
+        match (remaining, inner.state) {
+            (0, State::Incomplete) => f.write_str(" + ? more")?,
+            (n, State::Incomplete) => write!(f, "+ {} + ? more", n)?,
+            (0, _) => (),
+            (n, _) => write!(f, " + {} more", n)?,
+        }
+        f.write_str(">")?;
+        Ok(())
     }
 }
 
@@ -209,7 +223,21 @@ mod tests {
     #[test]
     fn test_debug() {
         let set = lazy_set(b"");
-        assert_eq!(format!("{:?}", set), "<lazy>");
+        assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
+        set.count().unwrap();
+        assert_eq!(format!("{:?}", &set), "<lazy []>");
+
+        let set = lazy_set(b"\x11\x33\x22");
+        assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
+        let mut iter = set.iter().unwrap();
+        iter.next();
+        assert_eq!(format!("{:?}", &set), "<lazy [1111] + ? more>");
+        iter.next();
+        assert_eq!(format!("{:?}", &set), "<lazy [1111, 3333] + ? more>");
+        iter.next();
+        assert_eq!(format!("{:2.2?}", &set), "<lazy [11, 33]+ 1 + ? more>");
+        iter.next();
+        assert_eq!(format!("{:1.3?}", &set), "<lazy [111] + 2 more>");
     }
 
     quickcheck::quickcheck! {

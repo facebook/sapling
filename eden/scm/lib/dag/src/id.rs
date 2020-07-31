@@ -81,7 +81,14 @@ impl fmt::Debug for VertexName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.0.len() >= 2 {
             // Use hex format for long names (ex. binary commit hashes).
-            write!(f, "{}", self.to_hex())
+            let hex = self.to_hex();
+            // Truncate to specified width (ex. '{:#.12}').
+            if let Some(width) = f.precision() {
+                let truncated = hex.get(..width).unwrap_or(&hex);
+                f.write_str(truncated)
+            } else {
+                f.write_str(&hex)
+            }
         } else {
             // Do not use hex if it's a valid utf-8 name.
             match std::str::from_utf8(self.as_ref()) {

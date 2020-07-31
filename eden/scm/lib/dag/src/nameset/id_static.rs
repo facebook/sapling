@@ -8,6 +8,7 @@
 use super::hints::Flags;
 use super::{Hints, NameIter, NameSetQuery};
 use crate::ops::IdConvert;
+use crate::spanset::Span;
 use crate::spanset::{SpanSet, SpanSetIter};
 use crate::Group;
 use crate::VertexName;
@@ -44,9 +45,59 @@ impl Iterator for Iter {
     }
 }
 
+struct DebugSpan {
+    span: Span,
+    low_name: Option<VertexName>,
+    high_name: Option<VertexName>,
+}
+
+impl fmt::Debug for DebugSpan {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match (
+            self.span.low == self.span.high,
+            &self.low_name,
+            &self.high_name,
+        ) {
+            (true, Some(name), _) => {
+                fmt::Debug::fmt(&name, f)?;
+                write!(f, "+{:?}", self.span.low)?;
+            }
+            (true, None, _) => {
+                write!(f, "{:?}", self.span.low)?;
+            }
+            (false, Some(low), Some(high)) => {
+                fmt::Debug::fmt(&low, f)?;
+                write!(f, ":")?;
+                fmt::Debug::fmt(&high, f)?;
+                write!(f, "+{:?}:{:?}", self.span.low, self.span.high)?;
+            }
+            (false, _, _) => {
+                write!(f, "{:?}:{:?}", self.span.low, self.span.high)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 impl fmt::Debug for IdStaticSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<dag [{:?}]>", &self.spans)
+        write!(f, "<spans ")?;
+        let spans = self.spans.as_spans();
+        let limit = f.width().unwrap_or(3);
+        f.debug_list()
+            .entries(spans.iter().take(limit).map(|span| DebugSpan {
+                span: *span,
+                low_name: self.map.vertex_name(span.low).ok(),
+                high_name: self.map.vertex_name(span.high).ok(),
+            }))
+            .finish()?;
+        match spans.len().max(limit) - limit {
+            0 => (),
+            1 => write!(f, " + 1 span")?,
+            n => write!(f, " + {} spans", n)?,
+        }
+        write!(f, ">")?;
+        Ok(())
     }
 }
 
@@ -184,17 +235,17 @@ pub(crate) mod tests {
             assert!(!abcd.contains(&vec![b'E'].into())?);
 
             // should not be "<and <...> <...>>"
-            assert_eq!(format!("{:?}", &ab), "<dag [0 1]>");
+            assert_eq!(format!("{:?}", &ab), "<spans [A:B+0:1]>");
 
             let abcdefg = abcd.union(&abefg);
             check_invariants(abcd.deref())?;
             // should not be "<or <...> <...>>"
-            assert_eq!(format!("{:?}", &abcdefg), "<dag [0..=6]>");
+            assert_eq!(format!("{:?}", &abcdefg), "<spans [A:G+0:6]>");
 
             let cd = abcd.difference(&abefg);
             check_invariants(cd.deref())?;
             // should not be "<difference <...> <...>>"
-            assert_eq!(format!("{:?}", &cd), "<dag [2 3]>");
+            assert_eq!(format!("{:?}", &cd), "<spans [C:D+2:3]>");
 
             Ok(())
         })
@@ -212,26 +263,26 @@ pub(crate) mod tests {
 
                 let ab = abcd.intersection(&abefg);
                 check_invariants(ab.deref())?;
-                // should not be "<dag ...>"
+                // should not be "<spans ...>"
                 assert_eq!(
                     format!("{:?}", &ab),
-                    "<and <dag [0..=3]> <dag [0 1 4 5 6]>>"
+                    "<and <spans [A:D+0:3]> <spans [E:G+4:6, A:B+0:1]>>"
                 );
 
                 let abcdefg = abcd.union(&abefg);
                 check_invariants(abcd.deref())?;
-                // should not be "<dag ...>"
+                // should not be "<spans ...>"
                 assert_eq!(
                     format!("{:?}", &abcdefg),
-                    "<or <dag [0..=3]> <dag [0 1 4 5 6]>>"
+                    "<or <spans [A:D+0:3]> <spans [E:G+4:6, A:B+0:1]>>"
                 );
 
                 let cd = abcd.difference(&abefg);
                 check_invariants(cd.deref())?;
-                // should not be "<dag ...>"
+                // should not be "<spans ...>"
                 assert_eq!(
                     format!("{:?}", &cd),
-                    "<difference <dag [0..=3]> <dag [0 1 4 5 6]>>"
+                    "<diff <spans [A:D+0:3]> <spans [E:G+4:6, A:B+0:1]>>"
                 );
 
                 Ok(())
@@ -243,12 +294,12 @@ pub(crate) mod tests {
     fn test_dag_all() -> Result<()> {
         with_dag(|dag| {
             let all = dag.all()?;
-            assert_eq!(format!("{:?}", &all), "<dag [0..=6]>");
+            assert_eq!(format!("{:?}", &all), "<spans [A:G+0:6]>");
 
             let ac = "A C".into();
             let intersection = all.intersection(&ac);
             // should not be "<and ...>"
-            assert_eq!(format!("{:?}", &intersection), "<[A C]>");
+            assert_eq!(format!("{:?}", &intersection), "<static [A, C]>");
             Ok(())
         })
     }
@@ -258,7 +309,7 @@ pub(crate) mod tests {
         with_dag(|dag| -> Result<()> {
             let set = "G C A E".into();
             let sorted = dag.sort(&set)?;
-            assert_eq!(format!("{:?}", &sorted), "<dag [0 2 4 6]>");
+            assert_eq!(format!("{:?}", &sorted), "<spans [G+6, E+4, C+2] + 1 span>");
             Ok(())
         })
     }
@@ -297,10 +348,13 @@ pub(crate) mod tests {
             bfg.hints().add_flags(Flags::ANCESTORS);
 
             // 'ancestors' has a fast path that returns set as-is.
-            assert_eq!(format!("{:?}", dag.ancestors(bfg.clone())?), "<[B F G]>");
+            assert_eq!(
+                format!("{:?}", dag.ancestors(bfg.clone())?),
+                "<static [B, F, G]>"
+            );
 
             // 'heads' has a fast path that uses 'heads_ancestors' to do the calculation.
-            assert_eq!(format!("{:?}", dag.heads(bfg.clone())?), "<dag [6]>");
+            assert_eq!(format!("{:?}", dag.heads(bfg.clone())?), "<spans [G+6]>");
 
             Ok(())
         })

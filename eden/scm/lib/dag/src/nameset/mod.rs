@@ -394,8 +394,28 @@ pub(crate) mod tests {
                     .intersection(&NameSet::from_static_names(vec![to_name(2), to_name(3)])),
             );
         assert_eq!(
-            format!("{:?}", set),
-            "<difference <or <[0202]> <[0101]>> <and <[0303]> <[0202 0303]>>>"
+            format!("{:?}", &set),
+            "<diff <or <static [0202]> <static [0101]>> <and <static [0303]> <static [0202, 0303]>>>"
+        );
+        assert_eq!(
+            format!("\n{:#?}", &set),
+            r#"
+<diff
+  <or
+    <static [
+        0202,
+    ]>
+    <static [
+        0101,
+    ]>>
+  <and
+    <static [
+        0303,
+    ]>
+    <static [
+        0202,
+        0303,
+    ]>>>"#
         );
     }
 

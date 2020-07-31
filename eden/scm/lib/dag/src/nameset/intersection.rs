@@ -7,6 +7,7 @@
 
 use super::hints::Flags;
 use super::{Hints, NameIter, NameSet, NameSetQuery};
+use crate::fmt::write_debug;
 use crate::Id;
 use crate::VertexName;
 use anyhow::Result;
@@ -159,7 +160,10 @@ impl NameSetQuery for IntersectionSet {
 
 impl fmt::Debug for IntersectionSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<and {:?} {:?}>", &self.lhs, &self.rhs)
+        write!(f, "<and")?;
+        write_debug(f, &self.lhs)?;
+        write_debug(f, &self.rhs)?;
+        write!(f, ">")
     }
 }
 

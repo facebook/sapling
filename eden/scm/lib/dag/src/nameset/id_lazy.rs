@@ -117,9 +117,43 @@ impl Iterator for Iter {
     }
 }
 
+struct DebugId {
+    id: Id,
+    name: Option<VertexName>,
+}
+
+impl fmt::Debug for DebugId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(name) = &self.name {
+            fmt::Debug::fmt(&name, f)?;
+            write!(f, "+{:?}", self.id)?;
+        } else {
+            write!(f, "{:?}", self.id)?;
+        }
+        Ok(())
+    }
+}
+
 impl fmt::Debug for IdLazySet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<lazy-id>")
+        f.write_str("<lazy ")?;
+        let inner = self.inner.lock().unwrap();
+        let limit = f.width().unwrap_or(3);
+        f.debug_list()
+            .entries(inner.visited.iter().take(limit).map(|&id| DebugId {
+                id,
+                name: self.map.vertex_name(id).ok(),
+            }))
+            .finish()?;
+        let remaining = inner.visited.len().max(limit) - limit;
+        match (remaining, inner.state) {
+            (0, State::Incomplete) => f.write_str(" + ? more")?,
+            (n, State::Incomplete) => write!(f, "+ {} + ? more", n)?,
+            (0, _) => (),
+            (n, _) => write!(f, " + {} more", n)?,
+        }
+        f.write_str(">")?;
+        Ok(())
     }
 }
 
@@ -292,7 +326,24 @@ pub(crate) mod tests {
     #[test]
     fn test_debug() {
         let set = lazy_set(&[0]);
-        assert_eq!(format!("{:?}", set), "<lazy-id>");
+        assert_eq!(format!("{:?}", set), "<lazy [] + ? more>");
+        set.count().unwrap();
+        assert_eq!(format!("{:?}", set), "<lazy [0000000000000000+0]>");
+
+        let set = lazy_set(&[1, 3, 2]);
+        assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
+        let mut iter = set.iter().unwrap();
+        iter.next();
+        assert_eq!(format!("{:?}", &set), "<lazy [0100000000000000+1] + ? more>");
+        iter.next();
+        assert_eq!(
+            format!("{:?}", &set),
+            "<lazy [0100000000000000+1, 0300000000000000+3] + ? more>"
+        );
+        iter.next();
+        assert_eq!(format!("{:2.2?}", &set), "<lazy [01+1, 03+3]+ 1 + ? more>");
+        iter.next();
+        assert_eq!(format!("{:1.3?}", &set), "<lazy [010+1] + 2 more>");
     }
 
     quickcheck::quickcheck! {
