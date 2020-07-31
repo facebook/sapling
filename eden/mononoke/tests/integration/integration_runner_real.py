@@ -184,6 +184,12 @@ def _hg_runner(
         env.update(
             {
                 "HGPYTHONPATH": manifest_env["RUN_TESTS_LIBRARY"],
+                # Use native byte values when sorting or manipulating data.
+                # Notice that the en_US.UTF-8 locale doesn't behave the same on
+                # all systems and trying to run commands like "sed" or "tr" on
+                # non-utf8 data will result in "Illegal byte sequence" error.
+                # That is why we are forcing the "C" locale.
+                "HGTEST_LOCALE": "C",
                 "PYTHON_SYS_EXECUTABLE": manifest_env["BINARY_HGPYTHON"],
             }
         )

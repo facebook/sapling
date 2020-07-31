@@ -175,9 +175,9 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
    99c848e3f5ff3ab7746fb71816748e2ba0d7da36 fbsource commit 2
    b0474d400edddcabef0a27ead293a6b99ae59490 ovrsource commit 2
    b06de5da9e40e0da6eda1f7b5c891711106d707b fbsource commit 3
+   e0cb430152c2dcc47b93a516344e3814ece60d4b fbsource commit 10
   default/fbsource/somebook d692e38644b938ccccc4192bd2f507955f3888c5 non-master commit
   default/master_bookmark 8d01dd2e0e909e21d3131b7929787db006de999e fbsource commit resume
-   e0cb430152c2dcc47b93a516344e3814ece60d4b fbsource commit 10
 
 -- Validate the synced entries
   $ REPOIDLARGE=0 validate_commit_sync 17 |& grep "Validated entry"

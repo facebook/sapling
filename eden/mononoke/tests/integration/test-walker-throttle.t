@@ -30,7 +30,7 @@ Base case, check can walk fine
   Walked* (glob)
 
 Check reads throttle
-  $ START_SECS=$(date "+%s")
+  $ START_SECS=$(/bin/date "+%s")
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore --blobstore-read-qps=5 scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
@@ -38,7 +38,7 @@ Check reads throttle
   Final count: (40, 40)
   Bytes/s,* (glob)
   Walked* (glob)
-  $ END_SECS=$(date "+%s")
+  $ END_SECS=$(/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
   $ if [[ "$ELAPSED_SECS" -ge 4 ]]; then echo Took Long Enough Read; else echo "Too short: $ELAPSED_SECS"; fi
   Took Long Enough Read
@@ -49,7 +49,7 @@ Delete all data from one side of the multiplex
   $ rm blobstore/0/blobs/*
 
 Check writes throttle in Repair mode
-  $ START_SECS=$(date "+%s")
+  $ START_SECS=$(/bin/date "+%s")
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore --blobstore-write-qps=5 scrub --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
@@ -58,7 +58,7 @@ Check writes throttle in Repair mode
   1 Final count: (40, 40)
   1 Bytes/s,* (glob)
   1 Walked* (glob)
-  $ END_SECS=$(date "+%s")
+  $ END_SECS=$(/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
   $ if [[ "$ELAPSED_SECS" -ge 4 ]]; then echo Took Long Enough Repair; else echo "Too short: $ELAPSED_SECS"; fi
   Took Long Enough Repair

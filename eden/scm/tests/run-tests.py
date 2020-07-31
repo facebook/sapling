@@ -315,6 +315,7 @@ defaults = {
     "slowtimeout": ("HGTEST_SLOWTIMEOUT", 1000),
     "port": ("HGTEST_PORT", 20059),
     "shell": ("HGTEST_SHELL", "bash"),
+    "locale": ("HGTEST_LOCALE", "en_US.UTF-8"),
     "maxdifflines": ("HGTEST_MAXDIFFLINES", 200),
 }
 
@@ -471,6 +472,9 @@ def getparser():
     )
     harness.add_argument(
         "--shell", help="shell to use (default: $%s or %s)" % defaults["shell"]
+    )
+    harness.add_argument(
+        "--locale", help="locale to use (default: $%s or %s)" % defaults["locale"]
     )
     harness.add_argument(
         "--showchannels", action="store_true", help="show scheduling channels"
@@ -1516,7 +1520,7 @@ class Test(unittest.TestCase):
 
         # Reset some environment variables to well-known values so that
         # the tests produce repeatable output.
-        env["LANG"] = env["LC_ALL"] = env["LANGUAGE"] = "en_US.UTF-8"
+        env["LANG"] = env["LC_ALL"] = env["LANGUAGE"] = self._options.locale
         env["TZ"] = "GMT"
         env["EMAIL"] = "Foo Bar <foo.bar@example.com>"
         env["COLUMNS"] = "80"
