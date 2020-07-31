@@ -557,7 +557,7 @@ class changelog(revlog.revlog):
                 raise error.WdirUnsupported
             try:
                 return self.idmap.node2id(node)
-            except error.RustError:
+            except error.CommitLookupError:
                 raise error.LookupError(node, self.indexfile, _("no node"))
         r = super(changelog, self).rev(node)
         return r
@@ -569,7 +569,7 @@ class changelog(revlog.revlog):
                 raise error.WdirUnsupported
             try:
                 return self.idmap.id2node(rev)
-            except error.RustError:
+            except error.CommitLookupError:
                 raise IndexError("revlog index out of range")
         else:
             return super(changelog, self).node(rev)

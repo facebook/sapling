@@ -187,6 +187,8 @@ def callcatch(ui, func):
             ui.warn("\n%r\n" % util.ellipsis(inst.args[1]))
     except error.CensoredNodeError as inst:
         ui.warn(_("file censored %s!\n") % inst, error=_("abort"))
+    except error.CommitLookupError as inst:
+        ui.warn(_("%s!\n") % inst.args[0], error=_("abort"))
     except error.RevlogError as inst:
         ui.warn(_("%s!\n") % inst, error=_("abort"))
         inst.printcontext(ui)

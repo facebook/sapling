@@ -15,6 +15,7 @@ py_exception!(error, MetaLogError);
 py_exception!(error, RustError);
 py_exception!(error, RevisionstoreError);
 py_exception!(error, NonUTF8Path);
+py_exception!(error, CommitLookupError, exc::KeyError);
 
 py_class!(pub class TaggedExceptionData |py| {
     data metadata: CommonMetadata;
@@ -57,6 +58,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "error"].join(".");
     let m = PyModule::new(py, &name)?;
 
+    m.add(py, "CommitLookupError", py.get_type::<CommitLookupError>())?;
     m.add(py, "IndexedLogError", py.get_type::<IndexedLogError>())?;
     m.add(py, "MetaLogError", py.get_type::<MetaLogError>())?;
     m.add(py, "RustError", py.get_type::<RustError>())?;
@@ -95,6 +97,16 @@ fn register_error_handlers() {
             Some(PyErr::new::<RevisionstoreError, _>(
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
+            ))
+        } else if e.is::<revlogindex::errors::CommitNotFound>() {
+            Some(PyErr::new::<CommitLookupError, _>(
+                py,
+                cpython_ext::Str::from(e.to_string()),
+            ))
+        } else if e.is::<revlogindex::errors::RevNotFound>() {
+            Some(PyErr::new::<CommitLookupError, _>(
+                py,
+                cpython_ext::Str::from(e.to_string()),
             ))
         } else if e.is::<cpython_ext::Error>() {
             Some(PyErr::new::<NonUTF8Path, _>(

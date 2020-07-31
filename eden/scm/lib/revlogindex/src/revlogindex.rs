@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use crate::errors::CommitNotFound;
+use crate::errors::RevNotFound;
 use crate::nodemap;
 use crate::NodeRevMap;
 use anyhow::bail;
@@ -768,7 +770,7 @@ impl IdConvert for RevlogIndex {
         } else if let Some(id) = self.nodemap.node_to_rev(vertex.as_ref())? {
             Ok(Id(id as _))
         } else {
-            bail!("not found in revlog: {:?}", &vertex)
+            Err(CommitNotFound(vertex).into())
         }
     }
     fn vertex_id_with_max_group(&self, vertex: &Vertex, _max_group: Group) -> Result<Option<Id>> {
@@ -788,7 +790,7 @@ impl IdConvert for RevlogIndex {
         } else {
             match self.pending_nodes.get(id - self.data_len()) {
                 Some(node) => Ok(node.clone()),
-                None => bail!("rev {} not found", id),
+                None => Err(RevNotFound(id as _).into()),
             }
         }
     }

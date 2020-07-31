@@ -7,6 +7,7 @@
 
 #![allow(dead_code)]
 
+pub mod errors;
 pub mod nodemap;
 mod revlogindex;
 
