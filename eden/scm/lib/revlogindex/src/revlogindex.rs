@@ -877,6 +877,44 @@ impl DagAlgorithm for RevlogIndex {
         Ok(set)
     }
 
+    /// Calculates parents.
+    fn parents(&self, set: Set) -> Result<Set> {
+        let id_set = self.to_id_set(&set)?;
+        if id_set.is_empty() {
+            return Ok(Set::empty());
+        }
+
+        let max_id = id_set.max().unwrap();
+        let dag = self.get_snapshot();
+        let min_parent = id_set.iter().fold(max_id.0 as u32, |min, id| {
+            let rev = id.0 as u32;
+            dag.parent_revs(rev)
+                .as_revs()
+                .iter()
+                .fold(min, |min, &p| p.min(min))
+        }) as usize;
+
+        let mut included = BitVec::from_elem(max_id.0 as usize - min_parent + 1, false);
+        for id in id_set {
+            let rev = id.0 as u32;
+            for &p in dag.parent_revs(rev).as_revs() {
+                included.set(p as usize - min_parent, true);
+            }
+        }
+
+        // IdSet::push is O(1) if pushed in DESC order, otherwise it's O(N).
+        let mut id_spans: IdSet = IdSet::empty();
+        for rev in (min_parent..=max_id.0 as usize).rev() {
+            if included[rev - min_parent] {
+                id_spans.push(Id(rev as _));
+            }
+        }
+
+        let idmap = dag;
+        let result = Set::from_spans_idmap(id_spans, idmap);
+        Ok(result)
+    }
+
     /// Calculates children of the given set.
     fn children(&self, set: Set) -> Result<Set> {
         let id_set = self.to_id_set(&set)?;
