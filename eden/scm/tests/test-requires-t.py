@@ -16,7 +16,7 @@ sh % "hg add a"
 sh % "hg commit -m test"
 sh % "rm .hg/requires"
 sh % "hg tip" == r"""
-    abort: index 00changelog.i is corrupted!
+    abort: legacy dirstate implementations are no longer supported!
     [255]"""
 sh % "echo indoor-pool" > ".hg/requires"
 sh % "hg tip" == r"""

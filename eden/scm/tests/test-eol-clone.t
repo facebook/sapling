@@ -28,7 +28,12 @@ setup repository
 Clone
 
   $ cd ..
-  $ hg clone repo repo-2
+  $ hg clone repo repo-2 --pull
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-2
@@ -47,7 +52,12 @@ Clone
 
 Test clone of repo with .hgeol in working dir, but no .hgeol in tip
 
-  $ hg clone repo repo-3
+  $ hg clone repo repo-3 --pull
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-3
@@ -60,7 +70,7 @@ Test clone of repo with .hgeol in working dir, but no .hgeol in tip
 Test clone of revision with .hgeol
 
   $ cd ..
-  $ hg clone -r 0 repo repo-4
+  $ hg clone -r 0 repo repo-4 --pull
   adding changesets
   adding manifests
   adding file changes

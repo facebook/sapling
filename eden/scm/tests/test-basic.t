@@ -10,7 +10,7 @@ Create a repository:
   experimental.metalog=true
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=!
-  format.use-zstore-commit-data=true
+  format.use-zstore-commit-data=false
   fsmonitor.detectrace=1 (fsmonitor !)
   mutation.record=False
   remotefilelog.reponame=reponame-default

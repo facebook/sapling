@@ -158,7 +158,6 @@ more there after
   allheads
   data
   fncache
-  hgcommits
   journal.bookmarks
   journal.phaseroots
   journal.visibleheads
