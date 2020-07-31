@@ -7,11 +7,11 @@
 
 #![deny(warnings)]
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Freshness};
@@ -82,52 +82,62 @@ pub fn create_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
 }
 
 impl WarmBookmarksCache {
-    pub fn new(ctx: CoreContext, repo: BlobRepo) -> impl Future<Item = Self, Error = Error> {
+    pub async fn new(ctx: &CoreContext, repo: &BlobRepo) -> Result<Self, Error> {
+        let derived_data_types = &repo.get_derived_data_config().derived_data_types;
+        Self::new_with_types(ctx, repo, derived_data_types).await
+    }
+
+    pub async fn new_with_types(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        types: &BTreeSet<String>,
+    ) -> Result<Self, Error> {
         let derived_data_types = &repo.get_derived_data_config().derived_data_types;
         let mut warmers: Vec<Warmer> = Vec::new();
+        for ty in types {
+            if !derived_data_types.contains(ty) {
+                return Err(anyhow!("{} is not enabled for {}", ty, repo.name()));
+            }
+        }
 
         warmers.push(create_warmer::<MappedHgChangesetId>(&ctx));
 
-        if derived_data_types.contains(RootUnodeManifestId::NAME) {
+        if types.contains(RootUnodeManifestId::NAME) {
             warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
         }
-        if derived_data_types.contains(RootFsnodeId::NAME) {
+        if types.contains(RootFsnodeId::NAME) {
             warmers.push(create_warmer::<RootFsnodeId>(&ctx));
         }
-        if derived_data_types.contains(BlameRoot::NAME) {
+        if types.contains(BlameRoot::NAME) {
             warmers.push(create_warmer::<BlameRoot>(&ctx));
         }
-        if derived_data_types.contains(ChangesetInfo::NAME) {
+        if types.contains(ChangesetInfo::NAME) {
             warmers.push(create_warmer::<ChangesetInfo>(&ctx));
         }
-        if derived_data_types.contains(RootDeletedManifestId::NAME) {
+        if types.contains(RootDeletedManifestId::NAME) {
             warmers.push(create_warmer::<RootDeletedManifestId>(&ctx));
         }
 
         let warmers = Arc::new(warmers);
         let (sender, receiver) = oneshot::channel();
 
-        async move {
-            info!(ctx.logger(), "Starting warm bookmark cache updater");
-            let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
-            let bookmarks = Arc::new(RwLock::new(bookmarks));
+        info!(ctx.logger(), "Starting warm bookmark cache updater");
+        let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
+        let bookmarks = Arc::new(RwLock::new(bookmarks));
 
-            let loop_sleep = Duration::from_millis(1000);
-            spawn_bookmarks_coordinator(
-                bookmarks.clone(),
-                receiver,
-                ctx.clone(),
-                repo.clone(),
-                warmers.clone(),
-                loop_sleep,
-            );
-            Ok(Self {
-                bookmarks,
-                terminate: Some(sender),
-            })
-        }
-        .boxed()
-        .compat()
+        let loop_sleep = Duration::from_millis(1000);
+        spawn_bookmarks_coordinator(
+            bookmarks.clone(),
+            receiver,
+            ctx.clone(),
+            repo.clone(),
+            warmers.clone(),
+            loop_sleep,
+        );
+        Ok(Self {
+            bookmarks,
+            terminate: Some(sender),
+        })
     }
 
     pub fn get(&self, bookmark: &BookmarkName) -> Option<ChangesetId> {

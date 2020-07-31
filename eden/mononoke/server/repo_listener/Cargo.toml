@@ -15,12 +15,14 @@ blobstore_factory = { path = "../../blobstore/factory" }
 cache_warmup = { path = "../../cache_warmup" }
 cmdlib = { path = "../../cmdlib" }
 context = { path = "../context" }
+derived_data = { path = "../../derived_data" }
 hgproto = { path = "../../hgproto" }
 hooks = { path = "../../hooks" }
 hooks_content_stores = { path = "../../hooks/content-stores" }
 limits = { path = "../../../../configerator/structs/scm/mononoke/loadshedding" }
 live_commit_sync_config = { path = "../../commit_rewriting/live_commit_sync_config" }
 load_limiter = { path = "../../load_limiter" }
+mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 permission_checker = { path = "../../permission_checker" }
@@ -33,6 +35,7 @@ sql_ext = { path = "../../common/rust/sql_ext" }
 sshrelay = { path = "../../sshrelay" }
 synced_commit_mapping = { path = "../../commit_rewriting/synced_commit_mapping" }
 tunables = { path = "../../tunables" }
+warm_bookmarks_cache = { path = "../../bookmarks/warm_bookmarks_cache" }
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

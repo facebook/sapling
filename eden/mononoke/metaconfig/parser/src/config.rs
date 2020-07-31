@@ -210,6 +210,7 @@ fn parse_repo_config(
         hgsql_name,
         hgsql_globalrevs_name,
         enforce_lfs_acl_check,
+        repo_client_use_warm_bookmarks_cache,
         ..
     } = repo_config;
 
@@ -323,6 +324,8 @@ fn parse_repo_config(
     };
 
     let enforce_lfs_acl_check = enforce_lfs_acl_check.unwrap_or(false);
+    let repo_client_use_warm_bookmarks_cache =
+        repo_client_use_warm_bookmarks_cache.unwrap_or(false);
 
     Ok(RepoConfig {
         enabled,
@@ -360,6 +363,7 @@ fn parse_repo_config(
         hgsql_name,
         hgsql_globalrevs_name,
         enforce_lfs_acl_check,
+        repo_client_use_warm_bookmarks_cache,
     })
 }
 
@@ -864,6 +868,7 @@ mod test {
             list_keys_patterns_max=123
             hook_max_file_size=456
             hipster_acl="foo/test"
+            repo_client_use_warm_bookmarks_cache=true
 
             [wireproto_logging]
             scribe_category="category"
@@ -1157,6 +1162,7 @@ mod test {
                 hgsql_name: HgsqlName("fbsource".to_string()),
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("fbsource".to_string()),
                 enforce_lfs_acl_check: false,
+                repo_client_use_warm_bookmarks_cache: true,
             },
         );
 
@@ -1205,6 +1211,7 @@ mod test {
                 hgsql_name: HgsqlName("www-foobar".to_string()),
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("www-barfoo".to_string()),
                 enforce_lfs_acl_check: false,
+                repo_client_use_warm_bookmarks_cache: false,
             },
         );
         assert_eq!(

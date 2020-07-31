@@ -59,6 +59,7 @@ impl FastReplayDispatcher {
             self.wireproto_logging.clone(),
             None, // Don't push redirect (we don't push)
             None, // No need to query live commit sync config
+            None, // No need to use WarmBookmarksCache
         )
     }
 

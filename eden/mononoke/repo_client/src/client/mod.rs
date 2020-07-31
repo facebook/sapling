@@ -84,6 +84,7 @@ use tokio_old::timer::timeout::Error as TimeoutError;
 use tokio_old::util::FutureExt as TokioFutureExt;
 use tracing::{trace_args, Traced};
 use tunables::tunables;
+use warm_bookmarks_cache::WarmBookmarksCache;
 
 mod logging;
 mod monitor;
@@ -382,6 +383,7 @@ impl RepoClient {
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
+        maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
     ) -> Self {
         let blobrepo = repo.blobrepo().clone();
         Self {
@@ -390,7 +392,10 @@ impl RepoClient {
             logging,
             hash_validation_percentage,
             preserve_raw_bundle2,
-            session_bookmarks_cache: Arc::new(SessionBookmarkCache::new(blobrepo)),
+            session_bookmarks_cache: Arc::new(SessionBookmarkCache::new(
+                blobrepo,
+                maybe_warm_bookmarks_cache,
+            )),
             wireproto_logging,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
@@ -1638,7 +1643,7 @@ impl HgCommands for RepoClient {
                                     // Ultimately, it would be better to not have the client `listkeys` after the push, but instead
                                     // depend on the reply part with a bookmark change in - T57874233
                                     session_bookmarks_cache
-                                        .update_publishing_bookmarks_maybe_stale_cache(ctx.clone())
+                                        .update_publishing_bookmarks_after_push(ctx.clone())
                                         .compat()
                                         .await?;
                                 }

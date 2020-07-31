@@ -180,6 +180,8 @@ pub struct RepoConfig {
     pub hgsql_globalrevs_name: HgsqlGlobalrevsName,
     /// Whether to enforce strict LFS ACL checks for this repo.
     pub enforce_lfs_acl_check: bool,
+    /// Whether to use warm bookmark cache while serving data hg wireprotocol
+    pub repo_client_use_warm_bookmarks_cache: bool,
 }
 
 /// Config for derived data

@@ -196,14 +196,7 @@ impl Repo {
 
         let blobstore = blob_repo.get_blobstore().boxed();
         let skiplist_index = fetch_skiplist_index(&ctx, &skiplist_index_blobstore_key, &blobstore);
-
-        let warm_bookmarks_cache = async {
-            Ok(Arc::new(
-                WarmBookmarksCache::new(ctx.clone(), blob_repo.clone())
-                    .compat()
-                    .await?,
-            ))
-        };
+        let warm_bookmarks_cache = WarmBookmarksCache::new(&ctx, &blob_repo);
 
         let (
             repo_permission_checker,
@@ -221,7 +214,7 @@ impl Repo {
             name,
             blob_repo,
             skiplist_index,
-            warm_bookmarks_cache,
+            warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             synced_commit_mapping,
             config,
             repo_permission_checker,
@@ -280,11 +273,8 @@ impl Repo {
             },
             ..Default::default()
         };
-        let warm_bookmarks_cache = Arc::new(
-            WarmBookmarksCache::new(ctx.clone(), blob_repo.clone())
-                .compat()
-                .await?,
-        );
+        let warm_bookmarks_cache = WarmBookmarksCache::new(&ctx, &blob_repo).await?;
+        let warm_bookmarks_cache = Arc::new(warm_bookmarks_cache);
 
         let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = match live_commit_sync_config {
             Some(live_commit_sync_config) => live_commit_sync_config,

@@ -16,6 +16,7 @@ use blobstore_factory::make_blobstore;
 use cache_warmup::cache_warmup;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
@@ -25,6 +26,8 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::{future, Future};
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::blobrepo_text_only_fetcher;
+use maplit::btreeset;
+use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{CommitSyncConfig, RepoConfig, WireprotoLoggingConfig};
 use mononoke_types::RepositoryId;
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirectorArgs, WireprotoLogging};
@@ -34,6 +37,7 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use warm_bookmarks_cache::WarmBookmarksCache;
 
 use crate::errors::ErrorKind;
 
@@ -52,6 +56,7 @@ struct IncompleteRepoHandler {
     hash_validation_percentage: usize,
     preserve_raw_bundle2: bool,
     maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
+    maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
 }
 
 #[derive(Clone)]
@@ -104,6 +109,7 @@ impl IncompleteRepoHandler {
             hash_validation_percentage,
             preserve_raw_bundle2,
             maybe_incomplete_push_redirector_args,
+            maybe_warm_bookmarks_cache,
         } = self;
 
         let maybe_push_redirector_args = match maybe_incomplete_push_redirector_args {
@@ -121,6 +127,7 @@ impl IncompleteRepoHandler {
             hash_validation_percentage,
             preserve_raw_bundle2,
             maybe_push_redirector_args,
+            maybe_warm_bookmarks_cache,
         })
     }
 }
@@ -134,6 +141,7 @@ pub struct RepoHandler {
     pub hash_validation_percentage: usize,
     pub preserve_raw_bundle2: bool,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
+    pub maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
 }
 
 pub fn repo_handlers(
@@ -179,6 +187,7 @@ pub fn repo_handlers(
             let record_infinitepush_writes: bool =
                 config.infinitepush.populate_reverse_filler_queue
                     && config.infinitepush.allow_writes;
+            let repo_client_use_warm_bookmarks_cache = config.repo_client_use_warm_bookmarks_cache;
 
             // TODO: Don't require full config in load_hooks so we can avoid cloning the entire
             // config here.
@@ -269,19 +278,45 @@ pub fn repo_handlers(
                     mysql_options,
                     readonly_storage,
                 );
+                let maybe_warm_bookmarks_cache = async {
+                    if repo_client_use_warm_bookmarks_cache {
+                        info!(
+                            ctx.logger(),
+                            "Starting Warm bookmarks cache for {}",
+                            blobrepo.name()
+                        );
+                        Ok(Some(Arc::new(
+                            WarmBookmarksCache::new_with_types(
+                                &ctx,
+                                &blobrepo,
+                                &btreeset! { MappedHgChangesetId::NAME.to_string() },
+                            )
+                            .await?,
+                        )))
+                    } else {
+                        Ok(None)
+                    }
+                };
 
                 info!(
                     logger,
-                    "Creating MononokeRepo, CommitSyncMapping, WireprotoLogging, TargetRepoDbs"
+                    "Creating MononokeRepo, CommitSyncMapping, WireprotoLogging, TargetRepoDbs, \
+                    WarmBookmarksCache"
                 );
-                let (repo, sql_commit_sync_mapping, wireproto_logging, backsyncer_dbs) =
-                    futures::future::try_join4(
-                        repo,
-                        sql_commit_sync_mapping,
-                        wireproto_logging,
-                        backsyncer_dbs,
-                    )
-                    .await?;
+                let (
+                    repo,
+                    sql_commit_sync_mapping,
+                    wireproto_logging,
+                    backsyncer_dbs,
+                    maybe_warm_bookmarks_cache,
+                ) = futures::future::try_join5(
+                    repo,
+                    sql_commit_sync_mapping,
+                    wireproto_logging,
+                    backsyncer_dbs,
+                    maybe_warm_bookmarks_cache,
+                )
+                .await?;
 
                 let maybe_incomplete_push_redirector_args = commit_sync_config.and_then({
                     cloned!(logger);
@@ -322,6 +357,7 @@ pub fn repo_handlers(
                         hash_validation_percentage,
                         preserve_raw_bundle2,
                         maybe_incomplete_push_redirector_args,
+                        maybe_warm_bookmarks_cache,
                     },
                 ))
             };

@@ -674,6 +674,12 @@ enforce_lfs_acl_check=true
 CONFIG
 fi
 
+if [[ -n "${REPO_CLIENT_USE_WARM_BOOKMARKS_CACHE:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+repo_client_use_warm_bookmarks_cache=true
+CONFIG
+fi
+
 # Normally point to common storageconfig, but if none passed, create per-repo
 if [[ -z "$storageconfig" ]]; then
   storageconfig="blobstore_$reponame"

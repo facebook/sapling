@@ -500,7 +500,7 @@ impl BlobRepoHg for BlobRepo {
     }
 }
 
-fn to_hg_bookmark_stream(
+pub fn to_hg_bookmark_stream(
     repo: &BlobRepo,
     ctx: &CoreContext,
     stream: BoxStream<(Bookmark, ChangesetId), Error>,
