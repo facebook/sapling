@@ -370,7 +370,7 @@ def copystore(ui, srcrepo, destpath):
     destlock = None
     try:
         with progress.bar(ui, _("linking")) as prog:
-            hardlink = None
+            hardlink = False
             num = 0
             srcpublishing = srcrepo.publishing()
             srcvfs = vfsmod.vfs(srcrepo.sharedpath)

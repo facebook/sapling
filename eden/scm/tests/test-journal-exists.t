@@ -27,9 +27,9 @@ Check that zero-size journals are correctly aborted:
 
   $ hg -R foo unbundle repo.hg
   adding changesets
-  abort: Permission denied: $TESTTMP/foo/.hg/store/.00changelog.i-* (glob)
+  abort: Permission denied: $TESTTMP/foo/.hg/store/*00changelog.i* (glob)
   (current process runs with uid 42)
-  ($TESTTMP/foo/.hg/store/.00changelog.i*: mode 0o52, uid 42, gid 42) (glob)
+  ($TESTTMP/foo/.hg/store/*00changelog.i*: mode 0o52, uid 42, gid 42) (glob)
   ($TESTTMP/foo/.hg/store: mode 0o52, uid 42, gid 42)
   [255]
 
