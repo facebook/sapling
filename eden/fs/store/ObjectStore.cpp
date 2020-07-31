@@ -72,7 +72,7 @@ ObjectStore::~ObjectStore() {}
 
 void ObjectStore::sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const {
 #ifndef _WIN32
-  auto processName = processNameCache_->getProcessName(pid);
+  auto processName = processNameCache_->getSpacedProcessName(pid);
   if (processName.has_value()) {
     structuredLogger_->logEvent(
         FetchHeavy{processName.value(), pid, fetch_count});

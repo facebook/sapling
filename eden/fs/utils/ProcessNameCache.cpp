@@ -104,6 +104,15 @@ folly::StringPiece extractCommandLineFromProcArgs(
   return folly::StringPiece{cmdline, end};
 }
 
+std::string getSpacedName(std::string cmd) {
+  for (char& i : cmd) {
+    if (i == '\x00') {
+      i = ' ';
+    }
+  }
+  return cmd;
+}
+
 std::string readPidName(pid_t pid) {
 #ifdef __APPLE__
   // a Meyers Singleton to compute and cache this system parameter
@@ -369,6 +378,14 @@ std::optional<std::string> ProcessNameCache::getProcessName(pid_t pid) {
   auto state = state_.rlock();
   if (auto* processName = folly::get_ptr(state->names, pid)) {
     return processName->name;
+  }
+  return std::nullopt;
+}
+
+std::optional<std::string> ProcessNameCache::getSpacedProcessName(pid_t pid) {
+  auto state = state_.rlock();
+  if (auto* processName = folly::get_ptr(state->names, pid)) {
+    return detail::getSpacedName(processName->name);
   }
   return std::nullopt;
 }

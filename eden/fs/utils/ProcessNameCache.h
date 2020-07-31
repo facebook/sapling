@@ -54,6 +54,12 @@ class ProcessNameCache {
    */
   std::optional<std::string> getProcessName(pid_t pid);
 
+  /**
+   * Have the same functionality as getProcessName except that spaces are added
+   * between each part of the command line.
+   */
+  std::optional<std::string> getSpacedProcessName(pid_t pid);
+
  private:
   struct ProcessName {
     ProcessName(std::string n, std::chrono::steady_clock::duration d)
