@@ -11,17 +11,11 @@ Function to test discovery between two repos in both directions, using both the 
   >     hg clone . a $1 --quiet
   >     hg clone . b $2 --quiet
   >     echo
-  >     echo "% -- a -> b tree"
-  >     hg -R a debugdiscovery b --verbose --old
-  >     echo
   >     echo "% -- a -> b set"
   >     hg -R a debugdiscovery b --verbose --debug --config progress.debug=true
   >     echo
   >     echo "% -- a -> b set (tip only)"
   >     hg -R a debugdiscovery b --verbose --debug --config progress.debug=true --rev tip
-  >     echo
-  >     echo "% -- b -> a tree"
-  >     hg -R b debugdiscovery a --verbose --old
   >     echo
   >     echo "% -- b -> a set"
   >     hg -R b debugdiscovery a --verbose --debug --config progress.debug=true
@@ -40,13 +34,6 @@ Small superset:
   > +5 :b2
   > <f +3 :b3'
   
-  % -- a -> b tree
-  comparing with b
-  searching for changes
-  unpruned common: 01241442b3c2 66f7d451a68b b5714e113bc0
-  common heads: 01241442b3c2 b5714e113bc0
-  local is subset
-  
   % -- a -> b set
   comparing with b
   query 1; heads
@@ -61,13 +48,6 @@ Small superset:
   searching for changes
   all local heads known remotely
   common heads: b5714e113bc0
-  
-  % -- b -> a tree
-  comparing with a
-  searching for changes
-  unpruned common: 01241442b3c2 b5714e113bc0
-  common heads: 01241442b3c2 b5714e113bc0
-  remote is subset
   
   % -- b -> a set
   comparing with a
@@ -92,12 +72,6 @@ Many new:
   > +2:f +3:a1 +3:b
   > <f +30 :a2'
   
-  % -- a -> b tree
-  comparing with b
-  searching for changes
-  unpruned common: bebd167eb94d
-  common heads: bebd167eb94d
-  
   % -- a -> b set
   comparing with b
   query 1; heads
@@ -119,12 +93,6 @@ Many new:
   progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
-  
-  % -- b -> a tree
-  comparing with a
-  searching for changes
-  unpruned common: 66f7d451a68b bebd167eb94d
-  common heads: bebd167eb94d
   
   % -- b -> a set
   comparing with a
@@ -154,12 +122,6 @@ Both sides many new with stub:
   > +2:f +2:a1 +30 :b
   > <f +30 :a2'
   
-  % -- a -> b tree
-  comparing with b
-  searching for changes
-  unpruned common: 2dc09a01254d
-  common heads: 2dc09a01254d
-  
   % -- a -> b set
   comparing with b
   query 1; heads
@@ -181,12 +143,6 @@ Both sides many new with stub:
   progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
-  
-  % -- b -> a tree
-  comparing with a
-  searching for changes
-  unpruned common: 2dc09a01254d 66f7d451a68b
-  common heads: 2dc09a01254d
   
   % -- b -> a set
   comparing with a
@@ -217,12 +173,6 @@ Both many new:
   > +2:f +30 :b
   > <f +30 :a'
   
-  % -- a -> b tree
-  comparing with b
-  searching for changes
-  unpruned common: 66f7d451a68b
-  common heads: 66f7d451a68b
-  
   % -- a -> b set
   comparing with b
   query 1; heads
@@ -243,12 +193,6 @@ Both many new:
   query 2; still undecided: 31, sample size is: 31
   progress: searching (end)
   2 total queries in *.????s (glob)
-  common heads: 66f7d451a68b
-  
-  % -- b -> a tree
-  comparing with a
-  searching for changes
-  unpruned common: 66f7d451a68b
   common heads: 66f7d451a68b
   
   % -- b -> a set
@@ -280,12 +224,6 @@ Both many new skewed:
   > +2:f +30 :b
   > <f +50 :a'
   
-  % -- a -> b tree
-  comparing with b
-  searching for changes
-  unpruned common: 66f7d451a68b
-  common heads: 66f7d451a68b
-  
   % -- a -> b set
   comparing with b
   query 1; heads
@@ -306,12 +244,6 @@ Both many new skewed:
   query 2; still undecided: 51, sample size is: 51
   progress: searching (end)
   2 total queries in *.????s (glob)
-  common heads: 66f7d451a68b
-  
-  % -- b -> a tree
-  comparing with a
-  searching for changes
-  unpruned common: 66f7d451a68b
   common heads: 66f7d451a68b
   
   % -- b -> a set
@@ -343,12 +275,6 @@ Both many new on top of long history:
   > +1000:f +30 :b
   > <f +50 :a'
   
-  % -- a -> b tree
-  comparing with b
-  searching for changes
-  unpruned common: 7ead0cba2838
-  common heads: 7ead0cba2838
-  
   % -- a -> b set
   comparing with b
   query 1; heads
@@ -375,12 +301,6 @@ Both many new on top of long history:
   query 3; still undecided: 31, sample size is: 31
   progress: searching (end)
   3 total queries in *.????s (glob)
-  common heads: 7ead0cba2838
-  
-  % -- b -> a tree
-  comparing with a
-  searching for changes
-  unpruned common: 7ead0cba2838
   common heads: 7ead0cba2838
   
   % -- b -> a set

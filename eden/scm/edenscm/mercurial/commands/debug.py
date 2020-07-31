@@ -38,7 +38,6 @@ from .. import (
     color,
     context,
     dagparser,
-    dagutil,
     detectissues,
     drawdag,
     edenfs,
@@ -76,7 +75,6 @@ from .. import (
     sslutil,
     streamclone,
     templater,
-    treediscovery,
     treestate,
     upgrade,
     util,
@@ -973,12 +971,7 @@ def debugdifftree(ui, repo, *pats, **opts):
 
 @command(
     "debugdiscovery",
-    [
-        ("", "old", None, _("use old-style discovery")),
-        ("", "nonheads", None, _("use old-style discovery with non-heads included")),
-        ("", "rev", [], "restrict discovery to this set of revs"),
-    ]
-    + cmdutil.remoteopts,
+    [("", "rev", [], "restrict discovery to this set of revs")] + cmdutil.remoteopts,
     _("[--rev REV] [OTHER]"),
 )
 def debugdiscovery(ui, repo, remoteurl="default", **opts):
@@ -991,30 +984,13 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
     random.seed(12323)
 
     def doit(pushedrevs, remoteheads, remote=remote):
-        if opts.get("old"):
-            if not util.safehasattr(remote, "branches"):
-                # enable in-client legacy support
-                remote = localrepo.locallegacypeer(remote.local())
-            common, _in, hds = treediscovery.findcommonincoming(
-                repo, remote, force=True
-            )
-            common = set(common)
-            if not opts.get("nonheads"):
-                ui.write(
-                    _x("unpruned common: %s\n")
-                    % " ".join(sorted(short(n) for n in common))
-                )
-                dag = dagutil.revlogdag(repo.changelog)
-                all = dag.ancestorset(dag.internalizeall(common))
-                common = dag.externalizeall(dag.headsetofconnecteds(all))
-        else:
-            nodes = None
-            if pushedrevs:
-                revs = scmutil.revrange(repo, pushedrevs)
-                nodes = [repo[r].node() for r in revs]
-            common, any, hds = setdiscovery.findcommonheads(
-                ui, repo, remote, ancestorsof=nodes
-            )
+        nodes = None
+        if pushedrevs:
+            revs = scmutil.revrange(repo, pushedrevs)
+            nodes = [repo[r].node() for r in revs]
+        common, any, hds = setdiscovery.findcommonheads(
+            ui, repo, remote, ancestorsof=nodes
+        )
         common = set(common)
         rheads = set(hds)
         lheads = set(repo.heads())

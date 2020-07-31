@@ -122,7 +122,6 @@ No changes
   [1]
   $ hg outgoing
   comparing with $TESTTMP/gitremoterepo
-  searching for changes
   no changes found
   [1]
   $ hg outgoing -B
@@ -211,7 +210,6 @@ This changed in 3.4 to start showing changed and deleted bookmarks again.
      b4                        fcfd2c0262db
   $ hg outgoing
   comparing with $TESTTMP/gitremoterepo
-  searching for changes
   no changes found
   [1]
 As of 2.3, Mercurial's outgoing -B doesn't actually show changed bookmarks

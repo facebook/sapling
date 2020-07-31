@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import functools
 
-from . import bookmarks, branchmap, phases, pycompat, setdiscovery, treediscovery, util
+from . import bookmarks, branchmap, phases, pycompat, setdiscovery, util
 from .node import hex, nullid
 
 
@@ -44,9 +44,6 @@ def findcommonincoming(
     Please use findcommonoutgoing to compute the set of outgoing nodes to give
     extensions a good hook into outgoing.
     """
-
-    if not remote.capable("getbundle"):
-        return treediscovery.findcommonincoming(repo, remote, heads, force)
 
     if heads:
         allknown = True

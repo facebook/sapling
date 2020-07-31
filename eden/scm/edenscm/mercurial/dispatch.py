@@ -238,7 +238,6 @@ def _preimportmodules():
         "templatekw",
         "templater",
         "transaction",
-        "treediscovery",
         "txnutil",
         "url",
         "urllibcompat",

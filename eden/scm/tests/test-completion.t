@@ -391,7 +391,7 @@ Show all commands + options
   debugdifftree: rev, include, exclude, style, template
   debugdirs: rev, print0
   debugdirstate: nodates, datesort, json
-  debugdiscovery: old, nonheads, rev, ssh, remotecmd, insecure
+  debugdiscovery: rev, ssh, remotecmd, insecure
   debugdrawdag: print
   debugdynamicconfig: canary
   debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, get-file-size, fetch-tree
