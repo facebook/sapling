@@ -147,7 +147,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         .arg(
             Arg::with_name("destination-blobstore-id")
                 .long("destination-blobstore-id")
-                .short("d")
+                .short("D")
                 .takes_value(true)
                 .value_name("DESTINATION")
                 .help("destination blobstore identifier"),
