@@ -610,13 +610,13 @@ class cg1packer(object):
     def _sortgroup(self, revlog, nodelist, lookup):
         # type: (Any, Sequence[bytes], Any) -> List[int]
         """Sort nodes for change group and turn them into revnums."""
-        # for generaldelta revlogs, we linearize the revs; this will both be
-        # much quicker and generate a much smaller bundle
-        if (revlog._generaldelta and self._reorder is None) or self._reorder:
-            dag = dagutil.revlogdag(revlog)
-            return dag.linearize(set(revlog.rev(n) for n in nodelist))
-        else:
-            return sorted([revlog.rev(n) for n in nodelist])
+        # This used to do a "linearize" operation to make it harder to "jump
+        # between branches" to reduce bundle size. It's less relevant with
+        # segmented changelog, remotefilelog, and selectivepull. Remotefilelog
+        # uses a separate path that is node-based. Segmented changelog enforces
+        # such "linearize" at its IdMap layer. Selective pull limits the count
+        # of branches so we won't have bundles that jumps across branches.
+        return sorted([revlog.rev(n) for n in nodelist])
 
     def group(self, nodelist, revlog, lookup, prog=None):
         # type: (Sequence[bytes], Any, Callable[..., Any], Optional[Any]) -> Iterable[bytes]
