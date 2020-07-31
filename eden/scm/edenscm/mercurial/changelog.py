@@ -603,7 +603,7 @@ class changelog(revlog.revlog):
                     self._realopener, self.indexfile, self._delaybuf
                 )
         self._delayed = True
-        tr.addpending("cl-%i" % id(self), self._writepending)
+        tr.addpending("cl-%i" % id(self), self._writepending, onetime=True)
         tr.addfinalize("cl-%i" % id(self), self._finalize)
 
     def _finalize(self, tr):
