@@ -925,7 +925,18 @@ impl LfsRemoteInner {
                 .error_for_status();
 
             let (err, status) = match reply {
-                Ok(response) => return Ok(Some(response.bytes().await?)),
+                Ok(mut response) => {
+                    let mut chunks = vec![];
+                    while let Some(chunk) = timeout(request_timeout, response.chunk()).await?? {
+                        chunks.push(chunk);
+                    }
+
+                    let mut result = BytesMut::with_capacity(chunks.iter().map(|c| c.len()).sum());
+                    for chunk in chunks.into_iter() {
+                        result.extend_from_slice(&chunk);
+                    }
+                    return Ok(Some(result.freeze()));
+                }
                 Err(e) => match e.status() {
                     None => return Err(e.into()),
                     Some(status) => (e, status),
