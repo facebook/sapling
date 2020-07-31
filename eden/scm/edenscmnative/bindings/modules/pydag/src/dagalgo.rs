@@ -110,6 +110,12 @@ py_class!(pub class dagalgo |py| {
         Ok(Names(self.dag(py).descendants(set.0).map_pyerr(py)?))
     }
 
+    /// Calculate `roots & (heads | parents(only(heads, roots & ancestors(heads))))`.
+    def reachableroots(&self, roots: Names, heads: Names) -> PyResult<Names> {
+        let result = self.dag(py).reachable_roots(roots.0, heads.0).map_pyerr(py)?;
+        Ok(Names(result))
+    }
+
     /// Beautify the graph so `render` might look better.
     def beautify(&self, mainbranch: Option<Names> = None) -> PyResult<Self> {
         let dag = self.dag(py).beautify(mainbranch.map(|h| h.0)).map_pyerr(py)?;
