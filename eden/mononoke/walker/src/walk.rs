@@ -643,9 +643,13 @@ async fn fsnode_step(
                 ));
             }
             FsnodeEntry::File(file) => {
-                edges.push(OutgoingEdge::new(
+                edges.push(OutgoingEdge::new_with_path(
                     EdgeType::FsnodeToFileContent,
                     Node::FileContent(*file.content_id()),
+                    Some(WrappedPath::from(MPath::join_element_opt(
+                        path.as_ref(),
+                        Some(child),
+                    ))),
                 ));
             }
         }

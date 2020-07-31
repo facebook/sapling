@@ -48,23 +48,26 @@ Check the corpus dumped to disk agrees with the walk stats
   full/HgManifest 444
 
 Repeat but using the sample-offset to slice.  Offset zero will tend to be larger as root paths sample as zero. 2000+475+611=3086
-  $ for i in {0..2}; do mkdir -p slice/$i; mononoke_walker --storage-id=blobstore --readonly-storage corpus -q --bookmark master_bookmark -I deep --output-dir=slice/$i --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
+  $ for i in {0..2}; do mkdir -p slice/$i; echo slice $i; mononoke_walker --storage-id=blobstore --readonly-storage corpus -q --bookmark master_bookmark -I deep --output-dir=slice/$i --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
+  slice 0
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: * (glob)
+  Final count: (43, 43)
   * Run */s,*/s,2000,17,*s; * (glob)
   Walked/s,* (glob)
+  slice 1
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: * (glob)
+  Final count: (43, 43)
   * Run */s,*/s,475,9,*s; * (glob)
   Walked/s,* (glob)
+  slice 2
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: * (glob)
+  Final count: (43, 43)
   * Run */s,*/s,611,10,*s; * (glob)
   Walked/s,* (glob)
 
