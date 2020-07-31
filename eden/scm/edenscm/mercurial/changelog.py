@@ -955,6 +955,20 @@ class changelog(revlog.revlog):
         else:
             return super(changelog, self).parentrevs(rev)
 
+    def deltaparent(self, rev):
+        if self.userust("bypassrevlog"):
+            # Changelog does not have deltaparent
+            return nullrev
+        else:
+            return super(changelog, self).deltaparent(rev)
+
+    def flags(self, rev):
+        if self.userust("bypassrevlog"):
+            # Changelog does not have deltaparent
+            return 0
+        else:
+            return super(changelog, self).flags(rev)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
