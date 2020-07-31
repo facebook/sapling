@@ -177,7 +177,13 @@ def _cleanuptemppacks(ui, packpath):
         if os.path.isdir(f) or os.path.basename(f) == "repacklock":
             return True
 
-        stat = os.lstat(f)
+        try:
+            stat = os.lstat(f)
+        except OSError:
+            # If we can't access the file, it's either being removed, or we
+            # don't have access to it, either way there is nothing we can do
+            # about it, ignore them.
+            return True
         return time.gmtime(stat.st_atime + 24 * 3600) > time.gmtime()
 
     with progress.spinner(ui, _("cleaning old temporary files")):
