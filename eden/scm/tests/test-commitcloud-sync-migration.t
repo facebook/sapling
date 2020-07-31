@@ -45,7 +45,6 @@ Make shared part of client config
   > hostname = testhost
   > servicetype = local
   > servicelocation = $TESTTMP
-  > user_token_path = $TESTTMP
   > tls.notoken=True
   > EOF
 

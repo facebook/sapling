@@ -173,6 +173,7 @@ configitem = registrar.configitem(configtable)
 
 configitem("commitcloud", "servicetype", default="remote")
 configitem("commitcloud", "remote_port", default=443)
+configitem("commitcloud", "tls.notoken", default=False)
 configitem("commitcloud", "tls.check_hostname", default=True)
 configitem("commitcloud", "scm_daemon_tcp_port", default=15432)
 configitem("commitcloud", "backuplimitnocheck", default=4)
