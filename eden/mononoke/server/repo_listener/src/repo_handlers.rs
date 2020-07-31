@@ -37,7 +37,7 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use synced_commit_mapping::SqlSyncedCommitMapping;
-use warm_bookmarks_cache::WarmBookmarksCache;
+use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCache};
 
 use crate::errors::ErrorKind;
 
@@ -290,6 +290,7 @@ pub fn repo_handlers(
                                 &ctx,
                                 &blobrepo,
                                 &btreeset! { MappedHgChangesetId::NAME.to_string() },
+                                BookmarkUpdateDelay::Disallow,
                             )
                             .await?,
                         )))
