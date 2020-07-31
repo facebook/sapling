@@ -253,6 +253,36 @@ pub trait DagAlgorithm {
 
     /// Calculates the descendants of the given set.
     fn descendants(&self, set: NameSet) -> Result<NameSet>;
+
+    /// Calculates `roots` that are reachable from `heads` without going
+    /// through other `roots`. For example, given the following graph:
+    ///
+    /// ```plain,ignore
+    ///   F
+    ///   |\
+    ///   C E
+    ///   | |
+    ///   B D
+    ///   |/
+    ///   A
+    /// ```
+    ///
+    /// `reachable_roots(roots=[A, B, C], heads=[F])` returns `[A, C]`.
+    /// `B` is not included because it cannot be reached without going
+    /// through another root `C` from `F`. `A` is included because it
+    /// can be reached via `F -> E -> D -> A` that does not go through
+    /// other roots.
+    ///
+    /// The can be calculated as
+    /// `roots & (heads | parents(only(heads, roots & ancestors(heads))))`.
+    /// Actual implementation might have faster paths.
+    ///
+    /// The `roots & ancestors(heads)` portion filters out bogus roots for
+    /// compatibility, if the callsite does not provide bogus roots, it
+    /// could be simplified to just `roots`.
+    fn reachable_roots(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
+        default_impl::reachable_roots(self, roots, heads)
+    }
 }
 
 /// Add vertexes recursively to the DAG.

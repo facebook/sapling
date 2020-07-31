@@ -45,6 +45,17 @@ pub(crate) fn roots(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result
     Ok(set.clone() - this.children(set)?)
 }
 
+pub(crate) fn reachable_roots(
+    this: &(impl DagAlgorithm + ?Sized),
+    roots: NameSet,
+    heads: NameSet,
+) -> Result<NameSet> {
+    let heads_ancestors = this.ancestors(heads.clone())?;
+    let roots = roots & heads_ancestors.clone(); // Filter out "bogus" roots.
+    let only = heads_ancestors - this.ancestors(roots.clone())?;
+    Ok(roots.clone() & (heads.clone() | this.parents(only)?))
+}
+
 pub(crate) fn heads_ancestors(
     this: &(impl DagAlgorithm + ?Sized),
     set: NameSet,

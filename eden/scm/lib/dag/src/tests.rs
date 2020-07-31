@@ -145,6 +145,54 @@ fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -
     Ok(())
 }
 
+fn test_generic_dag_reachable_roots(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
+    let ascii = r#"
+         Z
+         |\
+         D |
+         | F
+         C |
+         | E
+         B |
+         |/
+         A
+         "#;
+    let dag = from_ascii_with_heads(dag, ascii, Some(&["Z"][..]));
+
+    // B is not reachable without going through other roots (C).
+    // A is reachable through Z -> F -> E -> A.
+    assert_eq!(
+        expand(dag.reachable_roots(nameset("A B C"), nameset("Z"))?),
+        "A C"
+    );
+
+    // A, E are not reachable without going through other roots (C, F).
+    assert_eq!(
+        expand(dag.reachable_roots(nameset("A C E F"), nameset("Z"))?),
+        "C F"
+    );
+
+    // roots and heads overlap.
+    assert_eq!(
+        expand(dag.reachable_roots(nameset("A B C D E F Z"), nameset("D F"))?),
+        "D F"
+    );
+
+    // E, F are not reachable.
+    assert_eq!(
+        expand(dag.reachable_roots(nameset("A B E F"), nameset("D"))?),
+        "B"
+    );
+
+    // "Bogus" root "Z".
+    assert_eq!(
+        expand(dag.reachable_roots(nameset("A Z"), nameset("C"))?),
+        "A"
+    );
+
+    Ok(())
+}
+
 fn test_generic_dag2(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     let ascii = r#"
             J K
@@ -193,6 +241,11 @@ fn test_mem_namedag() {
 #[test]
 fn test_inverse_dag() {
     test_generic_dag_inverse(MemNameDag::new()).unwrap()
+}
+
+#[test]
+fn test_dag_reachable_roots() {
+    test_generic_dag_reachable_roots(MemNameDag::new()).unwrap()
 }
 
 #[test]
@@ -1046,5 +1099,6 @@ pub fn test_generic_dag<D: DagAddHeads + DagAlgorithm + Send + Sync + 'static>(
     test_generic_dag1(new_dag()).unwrap();
     test_generic_dag2(new_dag()).unwrap();
     test_generic_dag_inverse(new_dag()).unwrap();
+    test_generic_dag_reachable_roots(new_dag()).unwrap();
     test_generic_dag_beautify(new_dag).unwrap()
 }
