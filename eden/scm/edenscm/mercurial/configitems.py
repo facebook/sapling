@@ -304,6 +304,7 @@ coreconfigitem("experimental", "remotenames", default=False)
 # load Rust-based HgCommits on changelog.
 coreconfigitem("experimental", "rust-commits", default=util.istest())
 coreconfigitem("experimental", "rust-commits:addrevision", default=True)
+coreconfigitem("experimental", "rust-commits:all", default=True)
 coreconfigitem("experimental", "rust-commits:ancestor", default=True)
 coreconfigitem("experimental", "rust-commits:ancestors", default=True)
 coreconfigitem("experimental", "rust-commits:bypassrevlog", default=True)

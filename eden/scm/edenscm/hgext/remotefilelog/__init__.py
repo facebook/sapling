@@ -137,6 +137,7 @@ from edenscm.mercurial import (
     bundle2,
     changegroup,
     changelog,
+    changelog2,
     cmdutil,
     commands,
     context,
@@ -633,6 +634,7 @@ def onetimeclientsetup(ui):
         return node
 
     wrapfunction(changelog.changelog, "add", changelogadd)
+    wrapfunction(changelog2.changelog, "add", changelogadd)
 
     # changectx wrappers
     def filectx(orig, self, path, fileid=None, filelog=None):

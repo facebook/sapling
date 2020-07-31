@@ -562,7 +562,7 @@ Test clone from the repository in (emulated) revlog format 0 (issue4203):
   abort: legacy dirstate implementations are no longer supported!
   [255]
   $ hg clone -U -q src dst
-  abort: repo is corrupted: 00changelog.i
+  abort: legacy dirstate implementations are no longer supported!
   [255]
   $ hg -R dst log -q
   abort: repository dst not found!

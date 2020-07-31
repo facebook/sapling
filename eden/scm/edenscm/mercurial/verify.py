@@ -52,7 +52,7 @@ class verifier(object):
         self.warnings = 0
         self.havecl = bool(repo.changelog)
         self.havemf = bool(repo.manifestlog)
-        self.revlogv1 = repo.changelog.version != revlog.REVLOGV0
+        self.revlogv1 = getattr(repo.changelog, "version", None) != revlog.REVLOGV0
         self.lrugetctx = util.lrucachefunc(repo.changectx)
         self.refersmf = False
         self.fncachewarned = False
@@ -196,7 +196,8 @@ class verifier(object):
         match = self.match
         cl = repo.changelog
         # Need low-level access to revlog. Bypass the Rust DAG layer.
-        cl = changelogmod.changelog(cl.opener, cl._uiconfig, userust=False)
+        svfs = getattr(cl, "opener", getattr(cl, "svfs", None))
+        cl = changelogmod.changelog(svfs, cl._uiconfig, userust=False)
 
         ui.status(_("checking changesets\n"))
         mflinkrevs = {}

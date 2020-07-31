@@ -29,6 +29,7 @@ from . import (
     bundle2,
     changegroup,
     changelog,
+    changelog2,
     color,
     connectionpool,
     context,
@@ -551,9 +552,7 @@ class localrepository(object):
             # unconditionally for hgsql.
             self.ui.setconfig("experimental", "evolution", "obsolete", "hgsql")
             self.ui.setconfig("experimental", "narrow-heads", "false", "hgsql")
-            self.ui.setconfig(
-                "experimental", "rust-commits-changelog", "false", "hgsql"
-            )
+            self.ui.setconfig("experimental", "rust-commits", "false", "hgsql")
             self.ui.setconfig("format", "use-zstore-commit-data", "false", "hgsql")
             self.ui.setconfig("visibility", "enabled", "false", "hgsql")
 
@@ -1033,6 +1032,15 @@ class localrepository(object):
             if deleted:
                 self.ui.log("features", feature="remove-svfs-dottmp")
 
+            if (
+                self.ui.configbool("experimental", "rust-commits")
+                and self.ui.configbool("experimental", "rust-commits:all")
+                and getattr(self.svfs, "options", {}).get("bypass-revlog-transaction")
+                and not "hgsql" in self.requirements
+            ):
+                # Use the new changelog directly.
+                return changelog2.changelog.openrevlog(self.svfs, self.ui.uiconfig())
+
             if "zstorecommitdata" in self.storerequirements:
                 zstore = bindings.zstore.zstore(self.svfs.join("hgcommits/v1"))
             else:
@@ -1048,7 +1056,9 @@ class localrepository(object):
 
         # Migrate from inline to non-inline
         # internal config: format.inline-changelog
-        if cl._inline and not self.ui.configbool("format", "inline-changelog"):
+        if getattr(cl, "_inline", False) and not self.ui.configbool(
+            "format", "inline-changelog"
+        ):
             self.ui.write_err(_("(migrating to non-inlined changelog)\n"))
             with self.lock():
                 cl = loadchangelog(self)
@@ -1503,7 +1513,7 @@ class localrepository(object):
             repo = reporef()
             # Flush changelog zstore unconditionally. This makes the commit
             # data available even if the transaction gets rolled back.
-            zstore = repo.changelog.zstore
+            zstore = getattr(repo.changelog, "zstore", None)
             if zstore is not None:
                 zstore.flush()
             if success:

@@ -2,6 +2,7 @@
 
   $ hg init empty-repo
   $ cd empty-repo
+  $ setconfig experimental.rust-commits=false
 
 Flags on revlog version 0 are rejected
 

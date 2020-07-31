@@ -163,6 +163,7 @@ from edenscm.mercurial import (
     bundlerepo,
     changegroup,
     changelog,
+    changelog2,
     commands,
     encoding,
     error,
@@ -398,6 +399,7 @@ def uisetup(ui):
         return node
 
     extensions.wrapfunction(changelog.changelog, "add", changelogadd)
+    extensions.wrapfunction(changelog2.changelog, "add", changelogadd)
 
 
 def showmanifest(orig, **args):
