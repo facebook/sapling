@@ -10,6 +10,7 @@ mod blobstore;
 mod facebook;
 mod sql;
 
+pub use cacheblob::CachelibBlobstoreOptions;
 pub use chaosblob::ChaosOptions;
 pub use packblob::PackOptions;
 pub use throttledblob::ThrottleOptions;

@@ -17,7 +17,7 @@ use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
     SqlBonsaiHgMapping,
 };
-use cacheblob::{dummy::DummyLease, new_cachelib_blobstore};
+use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
 use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
@@ -73,6 +73,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
             delayed,
             Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::msg("no cache pool"))?),
             Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::msg("no cache pool"))?),
+            CachelibBlobstoreOptions::default(),
         ))
     };
 

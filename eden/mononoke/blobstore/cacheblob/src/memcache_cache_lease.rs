@@ -187,7 +187,7 @@ where
     let cache_ops = MemcacheOps::new(fb, backing_store_name, backing_store_params)?;
     Ok(CountedBlobstore::new(
         "memcache".to_string(),
-        CacheBlobstore::new(cache_ops, DummyLease {}, blobstore),
+        CacheBlobstore::new(cache_ops, DummyLease {}, blobstore, true),
     ))
 }
 
@@ -203,7 +203,7 @@ where
     let cache_ops = MemcacheOps::new(fb, backing_store_name, backing_store_params)?;
     Ok(CountedBlobstore::new(
         "memcache".to_string(),
-        CacheBlobstore::new(cache_ops, DummyLease {}, blobstore),
+        CacheBlobstore::new(cache_ops, DummyLease {}, blobstore, true),
     ))
 }
 

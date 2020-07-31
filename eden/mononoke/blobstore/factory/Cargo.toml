@@ -13,7 +13,6 @@ cacheblob = { path = "../cacheblob" }
 chaosblob = { path = "../chaosblob" }
 fileblob = { path = "../fileblob" }
 logblob = { path = "../logblob" }
-memblob = { path = "../memblob" }
 metaconfig_types = { path = "../../metaconfig/types" }
 multiplexedblob = { path = "../multiplexedblob" }
 packblob = { path = "../packblob" }

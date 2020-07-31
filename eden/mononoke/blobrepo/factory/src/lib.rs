@@ -16,7 +16,8 @@ use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping
 use bonsai_hg_mapping::{BonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{BookmarkUpdateLog, Bookmarks, CachedBookmarks};
 use cacheblob::{
-    new_cachelib_blobstore_no_lease, new_memcache_blobstore, InProcessLease, LeaseOps, MemcacheOps,
+    new_cachelib_blobstore_no_lease, new_memcache_blobstore, CachelibBlobstoreOptions,
+    InProcessLease, LeaseOps, MemcacheOps,
 };
 use changeset_info::ChangesetInfo;
 use changesets::{CachingChangesets, Changesets, SqlChangesets};
@@ -177,6 +178,7 @@ impl<'a> BlobrepoBuilder<'a> {
             readonly_storage,
             derived_data_config,
             reponame,
+            blobstore_options.cachelib_options,
         )
         .await
     }
@@ -196,6 +198,7 @@ pub async fn open_blobrepo_given_datasources(
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
     reponame: String,
+    cachelib_options: CachelibBlobstoreOptions,
 ) -> Result<BlobRepo, Error> {
     let redacted_blobs = match redaction {
         Redaction::Enabled => {
@@ -228,7 +231,7 @@ pub async fn open_blobrepo_given_datasources(
     let repo = match caching {
         Caching::Disabled | Caching::CachelibOnlyBlobstore(_) => {
             let blobstore = if let Caching::CachelibOnlyBlobstore(cache_shards) = caching {
-                get_cachelib_blobstore(blobstore, cache_shards)?
+                get_cachelib_blobstore(blobstore, cache_shards, cachelib_options)?
             } else {
                 blobstore
             };
@@ -248,6 +251,9 @@ pub async fn open_blobrepo_given_datasources(
             .await?
         }
         Caching::Enabled(cache_shards) => {
+            let blobstore = new_memcache_blobstore(fb, blobstore, "multiplexed", "")?;
+            let blobstore = get_cachelib_blobstore(blobstore, cache_shards, cachelib_options)?;
+
             new_production(
                 fb,
                 &sql_factory,
@@ -260,7 +266,6 @@ pub async fn open_blobrepo_given_datasources(
                 readonly_storage,
                 derived_data_config,
                 reponame,
-                cache_shards,
             )
             .await?
         }
@@ -617,11 +622,7 @@ async fn new_production(
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
     reponame: String,
-    cache_shards: usize,
 ) -> Result<BlobRepo, Error> {
-    let blobstore = new_memcache_blobstore(fb, blobstore, "multiplexed", "")?;
-    let blobstore = get_cachelib_blobstore(blobstore, cache_shards)?;
-
     let filenodes_pool = get_volatile_pool("filenodes")?;
     let filenodes_history_pool = get_volatile_pool("filenodes_history")?;
     let changesets_cache_pool = get_volatile_pool("changesets")?;
@@ -749,6 +750,7 @@ fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
 pub fn get_cachelib_blobstore<B: Blobstore + Clone>(
     blobstore: B,
     cache_shards: usize,
+    options: CachelibBlobstoreOptions,
 ) -> Result<Arc<dyn Blobstore>, Error> {
     let blobstore = match NonZeroUsize::new(cache_shards) {
         Some(cache_shards) => {
@@ -762,6 +764,7 @@ pub fn get_cachelib_blobstore<B: Blobstore + Clone>(
                 // Semaphores are quite cheap compared to the size of the underlying cache.
                 // This is at most a few MB.
                 cache_shards,
+                options,
             )) as Arc<dyn Blobstore>
         }
         None => {
@@ -772,6 +775,7 @@ pub fn get_cachelib_blobstore<B: Blobstore + Clone>(
                 blobstore,
                 Arc::new(blob_pool),
                 Arc::new(presence_pool),
+                options,
             )) as Arc<dyn Blobstore>
         }
     };

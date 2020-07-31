@@ -209,6 +209,7 @@ where
     blobstore: T,
     cache: C,
     lease: L,
+    lazy_cache_put: bool,
 }
 
 impl<C, L, T> CacheBlobstore<C, L, T>
@@ -217,11 +218,12 @@ where
     L: LeaseOps + Clone,
     T: Blobstore + Clone,
 {
-    pub fn new(cache: C, lease: L, blobstore: T) -> Self {
+    pub fn new(cache: C, lease: L, blobstore: T, lazy_cache_put: bool) -> Self {
         Self {
             blobstore,
             cache,
             lease,
+            lazy_cache_put,
         }
     }
 
@@ -304,18 +306,20 @@ where
         let can_put = self.take_put_lease(&key).compat();
         let cache_put = CacheOpsUtil::put(&self.cache, &key, value.clone().into());
 
-        cloned!(self.blobstore, self.lease);
+        cloned!(self.blobstore, self.lease, self.lazy_cache_put);
         async move {
             if can_put.await? {
                 let () = blobstore.put(ctx, key.clone(), value).await?;
 
-                tokio::spawn(
-                    cache_put
-                        .then(move |_: Result<(), ()>| lease.release_lease(&key))
-                        .compat(),
-                );
+                let cache_put = cache_put
+                    .then(move |_: Result<(), ()>| lease.release_lease(&key))
+                    .compat();
+                if lazy_cache_put {
+                    tokio::spawn(cache_put);
+                } else {
+                    let _ = cache_put.await;
+                }
             }
-
             Ok(())
         }
         .boxed()

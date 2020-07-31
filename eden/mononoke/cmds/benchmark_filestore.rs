@@ -247,7 +247,7 @@ async fn get_blob<'a>(
         Some(size) => {
             #[cfg(fbcode_build)]
             {
-                use cacheblob::new_cachelib_blobstore_no_lease;
+                use cacheblob::{new_cachelib_blobstore_no_lease, CachelibBlobstoreOptions};
 
                 let cache_size_bytes = size.parse()?;
                 cachelib::init_cache_once(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
@@ -263,6 +263,7 @@ async fn get_blob<'a>(
                     blob,
                     Arc::new(blob_pool),
                     Arc::new(presence_pool),
+                    CachelibBlobstoreOptions::default(),
                 ))
             }
             #[cfg(not(fbcode_build))]

@@ -158,21 +158,51 @@ fn create_cache(fb: FacebookInit) -> Result<(), Error> {
 
 #[cfg(fbcode_build)]
 #[fbinit::compat_test]
-async fn test_cache_blob(fb: FacebookInit) -> Result<(), Error> {
+async fn test_cache_blob_maybe_zstd(fb: FacebookInit) -> Result<(), Error> {
+    cache_blob_tests(fb, true).await
+}
+
+#[cfg(fbcode_build)]
+#[fbinit::compat_test]
+async fn test_cache_blob_no_zstd(fb: FacebookInit) -> Result<(), Error> {
+    cache_blob_tests(fb, false).await
+}
+
+#[cfg(fbcode_build)]
+async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Error> {
+    let options = cacheblob::CachelibBlobstoreOptions::new_eager(Some(expect_zstd));
+    let suffix = if expect_zstd { "_maybe_zstd" } else { "_raw" };
+
     let ctx = CoreContext::test_mock(fb);
     create_cache(fb)?;
-    let blob_pool = cachelib::get_or_create_pool("blob_pool", 20 * 1024 * 1024)?;
-    let presence_pool = cachelib::get_or_create_pool("presence_pool", 20 * 1024 * 1024)?;
+    let blob_pool = Arc::new(cachelib::get_or_create_pool(
+        &["blob_pool", suffix].concat(),
+        20 * 1024 * 1024,
+    )?);
+    let presence_pool = Arc::new(cachelib::get_or_create_pool(
+        &["presence_pool", suffix].concat(),
+        20 * 1024 * 1024,
+    )?);
 
-    let inner = LazyMemblob::new();
+    let inner = Arc::new(LazyMemblob::new());
     let cache_blob =
-        cacheblob::new_cachelib_blobstore(inner, Arc::new(blob_pool), Arc::new(presence_pool));
+        cacheblob::new_cachelib_blobstore(inner.clone(), blob_pool.clone(), presence_pool, options);
 
     let small_key = "small_key".to_string();
     let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"smalldata"));
     cache_blob
         .put(ctx.clone(), small_key.clone(), value.clone())
         .await?;
+
+    // Peek into cachelib to check its as expected
+    let cachelib_len = blob_pool
+        .get(small_key.clone())
+        .map(|bytes| bytes.map(|b| b.len()))?;
+    assert!(cachelib_len.is_some());
+    assert!(
+        cachelib_len.unwrap() > value.as_bytes().len(),
+        "Expected cachelib value to be larger due to framing"
+    );
 
     assert_eq!(
         cache_blob
@@ -194,6 +224,33 @@ async fn test_cache_blob(fb: FacebookInit) -> Result<(), Error> {
         .put(ctx.clone(), large_key.clone(), large_value.clone())
         .await?;
 
+    // Peek into cachelib to check its as expected
+    let cachelib_len = blob_pool
+        .get(large_key.clone())
+        .map(|bytes| bytes.map(|b| b.len()))?;
+
+    if expect_zstd {
+        assert!(cachelib_len.is_some());
+        assert!(
+            cachelib_len < Some(large_value.len()),
+            "Expected cachelib value to be smaller due to compression"
+        );
+    } else {
+        assert!(
+            cachelib_len.is_none(),
+            "Cachelib value is too large, so should not be in cachelib"
+        );
+    }
+
+    // Check that inner blob is same size after put
+    let inner_blob = inner.get(ctx.clone(), large_key.clone()).await?;
+    assert_eq!(
+        inner_blob.map(|b| b.as_bytes().len()),
+        Some(large_value.len())
+    );
+
+    // Check that blob is the same when read through cache_blob's cachelib
+    // layer
     assert_eq!(
         cache_blob
             .get(ctx, large_key)

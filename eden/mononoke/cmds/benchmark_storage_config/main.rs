@@ -16,7 +16,7 @@ use tokio_compat::runtime::Runtime;
 use blobrepo_factory::{get_cachelib_blobstore, Caching};
 use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
-use cacheblob::new_memcache_blobstore_no_lease;
+use cacheblob::{new_memcache_blobstore_no_lease, CachelibBlobstoreOptions};
 use cmdlib::args;
 use context::CoreContext;
 
@@ -120,12 +120,16 @@ fn main(fb: fbinit::FacebookInit) {
         match caching {
             Caching::Disabled => blobstore,
             Caching::CachelibOnlyBlobstore(cache_shards) => {
-                get_cachelib_blobstore(blobstore, cache_shards)
+                get_cachelib_blobstore(blobstore, cache_shards, CachelibBlobstoreOptions::default())
                     .expect("get_cachelib_blobstore failed")
             }
             Caching::Enabled(cache_shards) => {
-                let cachelib_blobstore = get_cachelib_blobstore(blobstore, cache_shards)
-                    .expect("get_cachelib_blobstore failed");
+                let cachelib_blobstore = get_cachelib_blobstore(
+                    blobstore,
+                    cache_shards,
+                    CachelibBlobstoreOptions::default(),
+                )
+                .expect("get_cachelib_blobstore failed");
                 Arc::new(
                     new_memcache_blobstore_no_lease(fb, cachelib_blobstore, "benchmark", "")
                         .expect("Memcache blobstore issues"),

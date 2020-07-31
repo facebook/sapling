@@ -8,6 +8,7 @@
 use anyhow::{Context, Error};
 use blobstore::{Blobstore, DisabledBlob, ErrorKind};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
+use cacheblob::CachelibBlobstoreOptions;
 use chaosblob::{ChaosBlobstore, ChaosOptions};
 use fbinit::FacebookInit;
 use fileblob::Fileblob;
@@ -40,6 +41,7 @@ pub struct BlobstoreOptions {
     pub throttle_options: ThrottleOptions,
     pub manifold_api_key: Option<String>,
     pub pack_options: PackOptions,
+    pub cachelib_options: CachelibBlobstoreOptions,
 }
 
 impl BlobstoreOptions {
@@ -48,12 +50,14 @@ impl BlobstoreOptions {
         throttle_options: ThrottleOptions,
         manifold_api_key: Option<String>,
         pack_options: PackOptions,
+        cachelib_options: CachelibBlobstoreOptions,
     ) -> Self {
         Self {
             chaos_options,
             throttle_options,
             manifold_api_key,
             pack_options,
+            cachelib_options,
         }
     }
 }
@@ -65,6 +69,7 @@ impl Default for BlobstoreOptions {
             ThrottleOptions::new(None, None),
             None,
             PackOptions::default(),
+            CachelibBlobstoreOptions::default(),
         )
     }
 }

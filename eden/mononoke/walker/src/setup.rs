@@ -810,7 +810,7 @@ pub fn setup_common<'a>(
             scuba_builder.clone(),
             walk_stats_key,
             repo_name.clone(),
-            blobstore_options,
+            blobstore_options.clone(),
             logger.clone(),
         );
 
@@ -838,6 +838,7 @@ pub fn setup_common<'a>(
             readonly_storage,
             config.derived_data_config,
             repo_name.clone(),
+            blobstore_options.cachelib_options.clone(),
         )
         .await?;
 

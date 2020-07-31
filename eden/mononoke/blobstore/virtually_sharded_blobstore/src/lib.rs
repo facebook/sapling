@@ -11,6 +11,7 @@ mod shard;
 use anyhow::{anyhow, Context, Error};
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
 use bytes::{buf::ext::Chain, BufMut, Bytes, BytesMut};
+use cacheblob::CachelibBlobstoreOptions;
 use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
@@ -166,6 +167,7 @@ impl<T> VirtuallyShardedBlobstore<T> {
         blob_pool: VolatileLruCachePool,
         presence_pool: VolatileLruCachePool,
         shards: NonZeroUsize,
+        cachelib_options: CachelibBlobstoreOptions,
     ) -> Self {
         let inner = Inner::new(
             blobstore,
@@ -173,6 +175,7 @@ impl<T> VirtuallyShardedBlobstore<T> {
             presence_pool,
             shards,
             allow_all_filter,
+            cachelib_options,
         );
 
         Self {
@@ -198,6 +201,7 @@ struct Inner<T> {
     presence_pool: VolatileLruCachePool,
     blob_pool: VolatileLruCachePool,
     cache_filter: fn(&Bytes) -> Result<(), Error>,
+    cachelib_options: CachelibBlobstoreOptions,
 }
 
 impl<T> Inner<T> {
@@ -207,6 +211,7 @@ impl<T> Inner<T> {
         presence_pool: VolatileLruCachePool,
         shards: NonZeroUsize,
         cache_filter: fn(&Bytes) -> Result<(), Error>,
+        cachelib_options: CachelibBlobstoreOptions,
     ) -> Self {
         Self {
             blobstore,
@@ -215,6 +220,7 @@ impl<T> Inner<T> {
             blob_pool,
             presence_pool,
             cache_filter,
+            cachelib_options,
         }
     }
 }
@@ -253,8 +259,13 @@ impl<T> Inner<T> {
     ) -> Result<(), Error> {
         self.set_is_present(key, presence)?;
 
+        let encode_limit = if self.cachelib_options.attempt_zstd {
+            Some(MAX_CACHELIB_VALUE_SIZE)
+        } else {
+            None
+        };
         let stored = value
-            .encode(MAX_CACHELIB_VALUE_SIZE)
+            .encode(encode_limit)
             .map_err(|()| anyhow!("Could not encode"))
             .and_then(|encoded| {
                 (self.cache_filter)(&encoded)?;
@@ -526,7 +537,14 @@ mod test {
         let blob_pool = cachelib::get_or_create_volatile_pool(blob_pool_name, 8 * 1024 * 1024)?;
         let presence_pool = cachelib::get_or_create_volatile_pool("presence", 8 * 1024 * 1024)?;
 
-        let inner = Inner::new(blob, blob_pool, presence_pool, cache_shards, cache_filter);
+        let inner = Inner::new(
+            blob,
+            blob_pool,
+            presence_pool,
+            cache_shards,
+            cache_filter,
+            CachelibBlobstoreOptions::default(),
+        );
 
         Ok(VirtuallyShardedBlobstore {
             inner: Arc::new(inner),

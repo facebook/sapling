@@ -81,22 +81,23 @@ impl BlobstoreGetData {
         self.meta.ctime = None;
     }
 
-    pub fn encode(self, encode_limit: u64) -> Result<Bytes, ()> {
+    pub fn encode(self, encode_limit: Option<u64>) -> Result<Bytes, ()> {
         let mut bytes = vec![UNCOMPRESSED];
         let get_data = BlobstoreGetDataSerialisable::from(self);
         unsafe { abomonation::encode(&get_data, &mut bytes).map_err(|_| ())? };
 
-        if bytes.len() as u64 >= encode_limit {
-            let mut compressed = Vec::with_capacity(bytes.len());
-            compressed.push(COMPRESSED);
+        match encode_limit {
+            Some(encode_limit) if bytes.len() as u64 >= encode_limit => {
+                let mut compressed = Vec::with_capacity(bytes.len());
+                compressed.push(COMPRESSED);
 
-            let mut cursor = Cursor::new(bytes);
-            cursor.set_position(1);
-            zstd::stream::copy_encode(cursor, &mut compressed, 0 /* use default */)
-                .map_err(|_| ())?;
-            Ok(Bytes::from(compressed))
-        } else {
-            Ok(Bytes::from(bytes))
+                let mut cursor = Cursor::new(bytes);
+                cursor.set_position(1);
+                zstd::stream::copy_encode(cursor, &mut compressed, 0 /* use default */)
+                    .map_err(|_| ())?;
+                Ok(Bytes::from(compressed))
+            }
+            _ => Ok(Bytes::from(bytes)),
         }
     }
 
