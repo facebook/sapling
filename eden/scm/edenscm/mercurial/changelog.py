@@ -909,6 +909,16 @@ class changelog(revlog.revlog):
         else:
             return super(changelog, self).ancestors(revs, stoprev, inclusive)
 
+    def commonancestorsheads(self, a, b):
+        """Return heads(::a & ::b)"""
+        if self.userust("commonancestorsheads"):
+            # null special case
+            if nullid == a or nullid == b:
+                return []
+            return list(self.dag.gcaall([a, b]))
+        else:
+            return super(changelog, self).commonancestorsheads(a, b)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
