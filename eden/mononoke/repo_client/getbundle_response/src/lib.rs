@@ -8,7 +8,7 @@
 #![deny(warnings)]
 
 use crate::errors::ErrorKind;
-use anyhow::{bail, Error, Result};
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -251,10 +251,6 @@ async fn find_commits_to_send(
     heads: &Vec<HgChangesetId>,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
 ) -> Result<Vec<ChangesetId>, Error> {
-    if common.is_empty() {
-        bail!("no 'common' heads specified. Pull will be very inefficient. Please use hg clone instead");
-    }
-
     let common_heads: HashSet<_> = HashSet::from_iter(common.iter());
 
     let heads = hg_to_bonsai_stream(
