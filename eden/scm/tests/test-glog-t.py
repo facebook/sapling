@@ -3247,16 +3247,18 @@ sh % "hg log -G -r '0 | 1 | 2 | 6'" == r"""
     : :  date:        Thu Jan 01 00:00:00 1970 +0000
     : :  summary:     6
     : :
-    o :  commit:      3e6599df4cce
+    : \
+    : :\
+    : o :  commit:      3e6599df4cce
+    : :/   user:        test
+    : :    date:        Thu Jan 01 00:00:00 1970 +0000
+    : :    summary:     2
+    : :
+    : o  commit:      bd9a55143933
     :/   user:        test
     :    date:        Thu Jan 01 00:00:00 1970 +0000
-    :    summary:     2
+    :    summary:     1
     :
-    o  commit:      bd9a55143933
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     1
-    |
     o  commit:      870a5edc339c
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000

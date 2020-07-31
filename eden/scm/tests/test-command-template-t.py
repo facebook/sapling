@@ -4101,10 +4101,12 @@ sh % "'COLUMNS=10' hg log --graph -T '{fill(desc, termwidth - graphwidth)}'" == 
 sh % "hg log --graph -T '{graphwidth}' -r '0|2|4|5'" == r"""
     o    5
     |\
-    o :  5
-    | :
-    | o  5
-    |/
+    | \
+    | :\
+    o : :  7
+    :/ /
+    : o  5
+    :/
     o  3"""
 
 sh % "cd .."

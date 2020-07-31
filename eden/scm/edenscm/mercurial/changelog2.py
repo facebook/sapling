@@ -148,18 +148,14 @@ class changelog(object):
         headnodes = tonodes(heads)
         rootnodes = tonodes(roots)
         dag = self.dag
-        # special case: null::X -> ::X
-        if len(rootnodes) == 0 and nullrev in roots:
-            nodes = dag.ancestors(headnodes)
+        if includepath:
+            # special case: null::X -> ::X
+            if len(rootnodes) == 0 and nullrev in roots:
+                nodes = dag.ancestors(headnodes)
+            else:
+                nodes = dag.range(rootnodes, headnodes)
         else:
-            nodes = dag.range(rootnodes, headnodes)
-        if not includepath:
-            nodes = nodes & rootnodes
-            # The old code path with includepath=False filters "roots"
-            # out. Emulate that filtering by headsancestors.
-            # It has subtle differences, though. See
-            # test-log-filenode-conflict.t change of this commit.
-            nodes = dag.headsancestors(nodes)
+            nodes = dag.reachableroots(rootnodes, headnodes)
         return list(self.torevs(nodes))
 
     def rawheadrevs(self):
