@@ -204,7 +204,7 @@ Test push hook locking
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 1 changesets with 0 changes to 1 files
   lock:          user *, process * (*s) (glob)
   wlock:         user *, process * (*s) (glob)
   undolog/lock:  absent

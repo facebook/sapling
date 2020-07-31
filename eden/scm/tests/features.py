@@ -24,14 +24,9 @@ mutationblacklist = """
 
 narrowheadsincompatiblelist = """
     test-bookmarks.t
-    test-directaccess-revset.t
-    test-eol-clone.t
     test-hgext-perfsuite.t
-    test-lfs.t
-    test-push.t
     test-revset2.t
 
-    test-hgsql-local-commands-t.py
     test-revset-t.py
 """
 
