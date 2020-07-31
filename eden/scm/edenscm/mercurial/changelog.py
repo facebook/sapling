@@ -919,6 +919,24 @@ class changelog(revlog.revlog):
         else:
             return super(changelog, self).commonancestorsheads(a, b)
 
+    def parents(self, node):
+        if self.userust("parents"):
+            # special case for null
+            if node == nullid:
+                return (nullid, nullid)
+            parents = list(self.dag.parentnames(node))
+            while len(parents) < 2:
+                parents.append(nullid)
+            return parents
+        else:
+            return super(changelog, self).parents(node)
+
+    def parentrevs(self, rev):
+        if self.userust("parents"):
+            return list(map(self.rev, self.parents(self.node(rev))))
+        else:
+            return super(changelog, self).parentrevs(rev)
+
 
 def readfiles(text):
     # type: (bytes) -> List[str]
