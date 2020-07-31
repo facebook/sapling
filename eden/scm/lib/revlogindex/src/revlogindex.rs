@@ -1028,9 +1028,52 @@ impl DagAlgorithm for RevlogIndex {
     /// `ancestors(X)`.
     fn heads_ancestors(&self, set: Set) -> Result<Set> {
         let id_set = self.to_id_set(&set)?;
-        let revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
-        let result_revs = self.headsancestors(revs);
-        let result_id_set = IdSet::from_spans(result_revs.into_iter().map(|r| Id(r as _)));
+        if id_set.is_empty() {
+            return Ok(Set::empty());
+        }
+
+        let min_rev = id_set.min().unwrap().0 as usize;
+        let max_rev = id_set.max().unwrap().0 as usize;
+        assert!(self.len() > min_rev);
+        assert!(self.len() > max_rev);
+        let state_len = max_rev - min_rev + 1;
+
+        #[repr(u8)]
+        #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+        enum State {
+            Unspecified,
+            PotentialHead,
+            NotHead,
+        }
+        let mut states = if id_set.count() as usize == state_len {
+            // Fast path: entire range of states are "Unspecified".
+            vec![State::PotentialHead; state_len]
+        } else {
+            let mut states = vec![State::Unspecified; state_len];
+            for id in id_set {
+                states[id.0 as usize - min_rev] = State::PotentialHead;
+            }
+            states
+        };
+
+        let mut result_id_set = IdSet::empty();
+        for i in (0..states.len()).rev() {
+            let state = states[i];
+            match state {
+                State::Unspecified => (),
+                State::PotentialHead | State::NotHead => {
+                    let rev = i + min_rev;
+                    if state == State::PotentialHead {
+                        result_id_set.push(Id(rev as _));
+                    }
+                    for &parent_rev in self.parent_revs(rev as u32).as_revs() {
+                        if parent_rev as usize >= min_rev {
+                            states[parent_rev as usize - min_rev] = State::NotHead;
+                        }
+                    }
+                }
+            }
+        }
         Ok(Set::from_spans_idmap(result_id_set, self.get_snapshot()))
     }
 
