@@ -1,0 +1,44 @@
+[package]
+name = "mononoke_x_repo_sync_job"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+backsyncer = { path = "../backsyncer" }
+blobrepo = { path = "../../blobrepo" }
+blobstore = { path = "../../blobstore" }
+bookmarks = { path = "../../bookmarks" }
+cmdlib = { path = "../../cmdlib" }
+cmdlib_x_repo = { path = "../../cmdlib/x_repo" }
+context = { path = "../../server/context" }
+cross_repo_sync = { path = "../cross_repo_sync" }
+derived_data_utils = { path = "../../derived_data/utils" }
+live_commit_sync_config = { path = "../live_commit_sync_config" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_types = { path = "../../mononoke_types" }
+mutable_counters = { path = "../../mutable_counters" }
+reachabilityindex = { path = "../../reachabilityindex" }
+revset = { path = "../../revset" }
+scuba_ext = { path = "../../common/scuba_ext" }
+skiplist = { path = "../../reachabilityindex/skiplist" }
+synced_commit_mapping = { path = "../synced_commit_mapping" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+clap = "2.33"
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+slog = { version = "2.5", features = ["max_level_debug"] }
+tokio = { version = "=0.2.13", features = ["full"] }
+tokio-compat = "0.1"
+
+[dev-dependencies]
+cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils" }
+sql_construct = { path = "../../common/sql_construct" }
+tests_utils = { path = "../../tests/utils" }
+maplit = "1.0"

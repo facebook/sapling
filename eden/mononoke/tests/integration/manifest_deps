@@ -5,6 +5,7 @@
 # getdeps.py's Mononoke project and the buck target. Those names must be unique.
 MONONOKE_BINS = {
     "BACKSYNCER": "backsyncer_cmd",
+    "COMMIT_VALIDATOR": "commit_validator",
     "EDENAPI_SERVER": "edenapi_server",
     "LFS_SERVER": "lfs_server",
     "MEGAREPO_TOOL": "megarepotool",
@@ -30,6 +31,7 @@ MONONOKE_BINS = {
     "MONONOKE_SERVER": "mononoke",
     "MONONOKE_UNBUNDLE_REPLAY": "unbundle_replay",
     "MONONOKE_WALKER": "walker",
+    "MONONOKE_X_REPO_SYNC": "mononoke_x_repo_sync_job",
     "WRITE_STUB_LOG_ENTRY": "write_stub_log_entry",
 }
 
