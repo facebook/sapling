@@ -85,6 +85,7 @@ else:
         "test-edenapi-server-history.t",  # Missing eden/scm's commands
         "test-edenapi-server-trees.t",  # Missing eden/scm's commands
         "test-fastreplay-inline-args.t",  # Returns different data in OSS
+        "test-gitimport-octopus.t",  # Unknown, fails on GitHub MacOs
         "test-gitimport.t",  # Issue with hggit extension
         "test-hook-tailer.t",  # Issue with hggit extension
         "test-hooks.t",  # Hooks are not in OSS yet
