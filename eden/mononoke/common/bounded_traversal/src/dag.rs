@@ -191,14 +191,11 @@ where
                 .expect("unfold referenced invalid node");
             match node {
                 Node::Pending { children: wait, .. } => {
-                    mem::replace(
-                        wait,
-                        Some(Children {
-                            context,
-                            children,
-                            children_left,
-                        }),
-                    );
+                    *wait = Some(Children {
+                        context,
+                        children,
+                        children_left,
+                    });
                 }
                 _ => unreachable!("running unfold for Node::Done"),
             }
