@@ -149,8 +149,7 @@ def wraprepo(repo):
                 # If we know a rev is on the server, we should fetch the server
                 # version of those files, since our local file versions might
                 # become obsolete if the local commits are stripped.
-                with progress.spinner(self.ui, _("finding outgoing revisions")):
-                    localrevs = self.revs("outgoing(%s)", fallbackpath)
+                localrevs = self.revs("draft()")
                 if base is not None and base != nullrev:
                     serverbase = list(
                         self.revs("first(reverse(::%s) - %ld)", base, localrevs)
@@ -178,25 +177,21 @@ def wraprepo(repo):
                     ctx = self[rev]
                     if pats:
                         m = scmutil.match(ctx, pats, opts)
-                    if matcher is None:
+                    elif matcher is None:
                         matcher = self.maybesparsematch(rev)
 
                     mfnode = ctx.manifestnode()
                     mfctx = mfl[mfnode]
 
-                    # Decompressing manifests is expensive.
-                    # When possible, only read the deltas.
-                    p1, p2 = mfctx.parents
-                    if p1 in visited and p2 in visited:
-                        mfdict = mfctx.readnew()
-                    else:
-                        mfdict = mfctx.read()
+                    mf = mfctx.read()
 
-                    diff = iteritems(mfdict)
+                    diff = []
                     if pats:
-                        diff = (pf for pf in diff if m(pf[0]))
+                        diff.extend(iteritems(mf.matches(m)))
                     if matcher:
-                        diff = (pf for pf in diff if matcher(pf[0]))
+                        diff.extend(iteritems(mf.matches(matcher)))
+                    if not pats and not matcher:
+                        diff.extend(iteritems(mf))
                     if rev not in localrevs:
                         serverfiles.update(diff)
                     else:
