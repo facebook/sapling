@@ -104,6 +104,10 @@
   $TESTTMP/hgcache/master/indexedlogdatastore/0/log
   $TESTTMP/hgcache/master/indexedlogdatastore/0/meta
   $TESTTMP/hgcache/master/indexedlogdatastore/latest
+  $TESTTMP/hgcache/master/indexedloghistorystore/0/index2-node_and_path
+  $TESTTMP/hgcache/master/indexedloghistorystore/0/log
+  $TESTTMP/hgcache/master/indexedloghistorystore/0/meta
+  $TESTTMP/hgcache/master/indexedloghistorystore/latest
   $TESTTMP/hgcache/master/lfs/blobs/0/index2-sha256
   $TESTTMP/hgcache/master/lfs/blobs/0/log
   $TESTTMP/hgcache/master/lfs/blobs/0/meta

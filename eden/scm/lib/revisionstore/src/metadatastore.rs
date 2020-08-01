@@ -194,15 +194,9 @@ impl<'a> MetadataStoreBuilder<'a> {
         let mut historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
             UnionHgIdHistoryStore::new();
 
-        if self
-            .config
-            .get_or_default::<bool>("remotefilelog", "indexedloghistorystore")?
-        {
-            let shared_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
-                get_indexedloghistorystore_path(&cache_path)?,
-            )?);
-            historystore.add(shared_indexedloghistorystore);
-        }
+        let shared_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
+            get_indexedloghistorystore_path(&cache_path)?,
+        )?);
 
         // The shared store should precede the local one for 2 reasons:
         //  - It is expected that the number of blobs and the number of requests satisfied by the
@@ -210,7 +204,19 @@ impl<'a> MetadataStoreBuilder<'a> {
         //  - When pushing changes on a pushrebase server, the local linknode will become
         //    incorrect, future fetches will put that change in the shared cache where the linknode
         //    will be correct.
-        historystore.add(shared_pack_store.clone());
+        let primary: Arc<dyn HgIdMutableHistoryStore> = if self
+            .config
+            .get_or_default::<bool>("remotefilelog", "write-hgcache-to-indexedlog")?
+        {
+            // Put the indexedlog first, since recent data will have gone there.
+            historystore.add(shared_indexedloghistorystore.clone());
+            historystore.add(shared_pack_store.clone());
+            shared_indexedloghistorystore
+        } else {
+            historystore.add(shared_pack_store.clone());
+            historystore.add(shared_indexedloghistorystore.clone());
+            shared_pack_store
+        };
 
         let local_mutablehistorystore: Option<Arc<dyn HgIdMutableHistoryStore>> =
             if let Some(local_path) = self.local_path {
@@ -241,25 +247,20 @@ impl<'a> MetadataStoreBuilder<'a> {
                     // If data isn't found in the memcache store, once fetched from the remote store it
                     // will be written to the local cache, and will populate the memcache store, so
                     // other clients and future requests won't need to go to a network store.
-                    let memcachehistorystore = memcachestore
-                        .clone()
-                        .historystore(shared_pack_store.clone());
+                    let memcachehistorystore = memcachestore.clone().historystore(primary.clone());
 
                     let mut multiplexstore: MultiplexHgIdHistoryStore<
                         Arc<dyn HgIdMutableHistoryStore>,
                     > = MultiplexHgIdHistoryStore::new();
                     multiplexstore.add_store(memcachestore);
-                    multiplexstore.add_store(shared_pack_store.clone());
+                    multiplexstore.add_store(primary.clone());
 
                     (
                         Some(memcachehistorystore),
                         Arc::new(multiplexstore) as Arc<dyn HgIdMutableHistoryStore>,
                     )
                 } else {
-                    (
-                        None,
-                        shared_pack_store.clone() as Arc<dyn HgIdMutableHistoryStore>,
-                    )
+                    (None, primary.clone() as Arc<dyn HgIdMutableHistoryStore>)
                 };
 
                 let store = remotestore.historystore(shared_store);
@@ -279,7 +280,7 @@ impl<'a> MetadataStoreBuilder<'a> {
                 None
             };
 
-        let shared_mutablehistorystore: Arc<dyn HgIdMutableHistoryStore> = shared_pack_store;
+        let shared_mutablehistorystore: Arc<dyn HgIdMutableHistoryStore> = primary;
 
         Ok(MetadataStore {
             historystore,

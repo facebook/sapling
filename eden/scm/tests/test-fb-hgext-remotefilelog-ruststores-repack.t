@@ -74,8 +74,8 @@ Test that we can repack packs into indexedlog
   -rw-rw-r--      25 index2-node
   -rw-rw-r--     108 log
   -rw-rw-r--      * meta (glob)
-  $ ls $CACHEDIR/master/packs/ | grep datapack
-  [1]
+  $ ls $CACHEDIR/master/packs/ | grep pack
+  repacklock
 
 # Verify new fetches go to the indexedlog
   $ clearcache
@@ -85,7 +85,7 @@ Test that we can repack packs into indexedlog
   -rw-rw-r--      25 index2-node
   -rw-rw-r--     108 log
   -rw-rw-r--      * meta (glob)
-  $ ls $CACHEDIR/master/packs/ | grep datapack
+  $ ls $CACHEDIR/master/packs/ | grep pack
   [1]
   $ hg cat -r tip x
   x
