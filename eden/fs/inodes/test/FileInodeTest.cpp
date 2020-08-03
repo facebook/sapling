@@ -448,7 +448,7 @@ TEST(FileInode, readDuringLoad) {
 
   // The read() operation should have completed now.
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ(contents, std::move(dataFuture).get().copyData());
+  EXPECT_EQ(contents, std::move(dataFuture).get()->moveToFbString());
 }
 
 TEST(FileInode, writeDuringLoad) {
@@ -499,14 +499,15 @@ TEST(FileInode, truncateDuringLoad) {
 
   // The read should complete now too.
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ("", std::move(dataFuture).get().copyData());
+  EXPECT_EQ("", std::move(dataFuture).get()->moveToFbString());
 
   // For good measure, test reading and writing some more.
   inode->write("foobar\n"_sp, 5).get(0ms);
 
   dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ("\0\0\0\0\0foobar\n"_sp, std::move(dataFuture).get().copyData());
+  EXPECT_EQ(
+      "\0\0\0\0\0foobar\n"_sp, std::move(dataFuture).get()->moveToFbString());
 
   EXPECT_FILE_INODE(inode, "\0\0\0\0\0foobar\n"_sp, 0644);
 }

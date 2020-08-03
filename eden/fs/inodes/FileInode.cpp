@@ -864,7 +864,7 @@ folly::Future<size_t> FileInode::write(BufVec&& buf, off_t off) {
       nullptr,
       [buf = std::move(buf), off, self = inodePtrFromThis()](
           LockedState&& state) {
-        auto vec = buf.getIov();
+        auto vec = buf->getIov();
         return self->writeImpl(state, vec.data(), vec.size(), off);
       });
 }

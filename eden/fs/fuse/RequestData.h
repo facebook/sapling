@@ -190,21 +190,12 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
 
   template <typename T>
   void sendReply(const T& payload) {
-    static_assert(std::is_standard_layout_v<T>);
-    static_assert(std::is_trivial_v<T>);
     channel_->sendReply(stealReq(), payload);
   }
 
-  void sendReply(folly::ByteRange bytes) {
-    channel_->sendReply(stealReq(), bytes);
-  }
-
-  void sendReply(folly::fbvector<iovec>&& vec) {
-    channel_->sendReply(stealReq(), std::move(vec));
-  }
-
-  void sendReply(folly::StringPiece piece) {
-    channel_->sendReply(stealReq(), folly::ByteRange(piece));
+  template <typename T>
+  void sendReply(T&& payload) {
+    channel_->sendReply(stealReq(), std::forward<T>(payload));
   }
 
   // Reply with a negative errno value or 0 for success

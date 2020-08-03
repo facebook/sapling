@@ -6,7 +6,6 @@
  */
 
 #pragma once
-#include <folly/File.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/SharedPromise.h>
@@ -30,7 +29,7 @@ namespace facebook {
 namespace eden {
 
 class Blob;
-class BufVec;
+using BufVec = std::unique_ptr<folly::IOBuf>;
 class Hash;
 class ObjectFetchContext;
 class ObjectStore;

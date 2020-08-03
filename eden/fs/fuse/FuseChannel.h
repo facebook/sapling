@@ -258,6 +258,11 @@ class FuseChannel {
    */
   void sendReply(const fuse_in_header& request, folly::ByteRange bytes) const;
 
+  void sendReply(const fuse_in_header& request, folly::StringPiece bytes)
+      const {
+    sendReply(request, folly::ByteRange{bytes});
+  }
+
   /**
    * Sends a reply to a kernel request, consisting of multiple parts.
    * The `vec` parameter holds an array of payload components and is moved
@@ -269,6 +274,15 @@ class FuseChannel {
    */
   void sendReply(const fuse_in_header& request, folly::fbvector<iovec>&& vec)
       const;
+
+  /**
+   * Sends a reply to a kernel request potentially consisting of multiple
+   * segments.
+   *
+   * throws system_error if the write fails.  Writes can fail if the
+   * data we send to the kernel is invalid.
+   */
+  void sendReply(const fuse_in_header& request, const folly::IOBuf& buf) const;
 
   /**
    * Sends a reply to the kernel.

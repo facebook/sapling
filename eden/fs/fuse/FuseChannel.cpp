@@ -399,6 +399,21 @@ void FuseChannel::sendReply(
 
 void FuseChannel::sendReply(
     const fuse_in_header& request,
+    const folly::IOBuf& buf) const {
+  fuse_out_header out;
+  out.unique = request.unique;
+  out.error = 0;
+
+  folly::fbvector<iovec> vec;
+  vec.reserve(1 + buf.countChainElements());
+  vec.push_back(make_iovec(out));
+  buf.appendToIov(&vec);
+
+  sendRawReply(vec.data(), vec.size());
+}
+
+void FuseChannel::sendReply(
+    const fuse_in_header& request,
     folly::ByteRange bytes) const {
   fuse_out_header out;
   out.unique = request.unique;
@@ -1373,8 +1388,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRead(
 
   auto ino = InodeNumber{header->nodeid};
   return dispatcher_->read(ino, read->size, read->offset, RequestData::get())
-      .thenValue(
-          [](BufVec&& buf) { RequestData::get().sendReply(buf.getIov()); });
+      .thenValue([](BufVec&& buf) { RequestData::get().sendReply(*buf); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseWrite(
@@ -1446,16 +1460,12 @@ folly::Future<folly::Unit> FuseChannel::fuseReadLink(
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_READLINK inode=" << header->nodeid;
-  return dispatcher_
-      ->readlink(
-          InodeNumber{header->nodeid},
-  /*kernelCachesReadlink=*/
+  bool kernelCachesReadlink = false;
 #ifdef FUSE_CACHE_SYMLINKS
-          connInfo_->flags & FUSE_CACHE_SYMLINKS
-#else
-          false
+  kernelCachesReadlink = connInfo_->flags & FUSE_CACHE_SYMLINKS;
 #endif
-          )
+  return dispatcher_
+      ->readlink(InodeNumber{header->nodeid}, kernelCachesReadlink)
       .thenValue([](std::string&& str) {
         RequestData::get().sendReply(folly::StringPiece(str));
       });
