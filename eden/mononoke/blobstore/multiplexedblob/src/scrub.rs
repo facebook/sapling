@@ -139,7 +139,7 @@ async fn put_and_mark_repaired(
     value: &BlobstoreGetData,
     scrub_handler: &dyn ScrubHandler,
 ) {
-    let res = inner_put(
+    let (_, res) = inner_put(
         ctx,
         scuba.clone(),
         order,

@@ -57,6 +57,8 @@ pub enum ErrorKind {
     ValueMismatch(Arc<BlobstoresWithEntry>, Arc<BlobstoresReturnedNone>),
     #[error("Some blobstores missing this item: {0:?}")]
     SomeMissingItem(Arc<BlobstoresReturnedNone>, Option<BlobstoreGetData>),
+    #[error("Multiple failures on put: {0:?}")]
+    MultiplePutFailures(Arc<BlobstoresReturnedError>),
 }
 
 /// This handler is called on each successful put to underlying blobstore,
@@ -202,7 +204,7 @@ pub async fn inner_put(
     blobstore: &dyn Blobstore,
     key: String,
     value: BlobstoreBytes,
-) -> Result<BlobstoreId, Error> {
+) -> (BlobstoreId, Result<(), Error>) {
     let size = value.len();
     let (stats, timeout_or_res) = timeout(
         REQUEST_TIMEOUT,
@@ -222,7 +224,7 @@ pub async fn inner_put(
         Some(blobstore_id),
         Some(write_order.fetch_add(1, Ordering::Relaxed) + 1),
     );
-    result.map(|()| blobstore_id)
+    (blobstore_id, result)
 }
 
 // Workaround for Blobstore returning a static lifetime future
@@ -377,7 +379,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                         operation_key
                     );
                     async move {
-                        inner_put(
+                        let (blobstore_id, res) = inner_put(
                             &ctx,
                             scuba,
                             write_order.as_ref(),
@@ -386,12 +388,14 @@ impl Blobstore for MultiplexedBlobstoreBase {
                             key.clone(),
                             value,
                         )
-                        .await?;
+                        .await;
+                        res.map_err(|err| (blobstore_id, err))?;
                         // Return the on_put handler
                         Ok(async move {
-                            handler
+                            let res = handler
                                 .on_put(&ctx, blobstore_id, multiplex_id, &operation_key, &key)
-                                .await
+                                .await;
+                            res.map_err(|err| (blobstore_id, err))
                         })
                     }
                 }
@@ -405,8 +409,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::BlobPuts);
 
-                    // TODO: Gather all the errors for presentation to the user in a failure case
-                    let mut last_err = None;
+                    let mut put_errors = HashMap::new();
                     let mut handlers = FuturesUnordered::new();
 
                     while let Some(result) = select_next(&mut puts, &mut handlers).await {
@@ -415,13 +418,15 @@ impl Blobstore for MultiplexedBlobstoreBase {
                             Left(Ok(handler)) => {
                                 handlers.push(handler);
                                 // All puts have succeeded, no errors - we're done
-                                if puts.is_empty() && last_err.is_none() {
+                                if puts.is_empty() && put_errors.is_empty() {
                                     // Spawn off the handlers to ensure that all writes are logged.
                                     spawn_stream_completion(handlers);
                                     return Ok(());
                                 }
                             }
-                            Left(Err(e)) => last_err = Some(e),
+                            Left(Err((blobstore_id, e))) => {
+                                put_errors.insert(blobstore_id, e);
+                            }
                             Right(Ok(())) => {
                                 // A handler was successful. Spawn off remaining puts and handler
                                 // writes, then done
@@ -429,11 +434,17 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                 spawn_stream_completion(handlers);
                                 return Ok(());
                             }
-                            Right(Err(e)) => last_err = Some(e),
+                            Right(Err((blobstore_id, e))) => {
+                                put_errors.insert(blobstore_id, e);
+                            }
                         }
                     }
-                    // Unwrap is safe here, because the only way to get here is if there's an Error above
-                    Err(last_err.unwrap())
+                    if put_errors.len() == 1 {
+                        let (_, put_error) = put_errors.drain().next().unwrap();
+                        Err(put_error)
+                    } else {
+                        Err(ErrorKind::MultiplePutFailures(Arc::new(put_errors)).into())
+                    }
                 }
                 .timed()
                 .await
