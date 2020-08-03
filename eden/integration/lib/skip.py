@@ -113,7 +113,6 @@ if sys.platform == "win32":
         "hg.debug_hg_get_dirstate_tuple_test.DebugHgGetDirstateTupleTestTreeOnly": True,
         "hg.diff_test.DiffTestTreeOnly": True,
         "hg.doctor_test.DoctorTestTreeOnly": True,
-        "hg.files_test.FilesTestTreeOnly": True,
         "hg.fold_test.FoldTestTreeOnly": True,
         "hg.grep_test.GrepTestTreeOnly": [
             "test_grep_directory_from_root",

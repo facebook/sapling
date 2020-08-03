@@ -31,7 +31,7 @@ class FilesTest(EdenHgTestCase):
         repo.commit("Initial commit.")
 
     def _assert_files(self, args: List[str], expected: List[str], cwd=None) -> None:
-        stdout = self.hg("files", *args, cwd=cwd)
+        stdout = self.hg("files", "-T{path|slashpath}\\n", *args, cwd=cwd)
         results = stdout.splitlines()
         # `hg files` currently produces results in sorted order,
         # so we check for exact ordering here.
@@ -127,6 +127,7 @@ class FilesTest(EdenHgTestCase):
         # and does not print any diagnostics about the non-matching patterns.
         proc = self.repo.run_hg(
             "files",
+            "-T{path|slashpath}\\n",
             "foobar",
             "test",
             stdout=subprocess.PIPE,
