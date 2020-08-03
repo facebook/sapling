@@ -20,7 +20,7 @@ use crate::{
     BundleResolverError, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
     PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, UploadedBonsais,
 };
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use backsyncer::{backsync_latest, BacksyncLimit, TargetRepoDbs};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -383,7 +383,8 @@ impl PushRedirector {
         let maybe_bookmark_push = match maybe_bookmark_push {
             Some(bookmark_push) => Some(
                 self.convert_infinite_bookmark_push_small_to_large(ctx.clone(), bookmark_push)
-                    .await?,
+                    .await
+                    .context("while converting infinite bookmark push small-to-large")?,
             ),
             None => None,
         };
@@ -414,7 +415,8 @@ impl PushRedirector {
 
         let bookmark_push = self
             .convert_plain_bookmark_push_small_to_large(ctx.clone(), bookmark_push)
-            .await?;
+            .await
+            .context("while converting converting plain bookmark push small-to-large")?;
 
         Ok(PostResolveBookmarkOnlyPushRebase {
             bookmark_push,
@@ -433,16 +435,24 @@ impl PushRedirector {
         use UnbundleResponse::*;
         match orig {
             PushRebase(resp) => Ok(PushRebase(
-                self.convert_unbundle_pushrebase_response(ctx, resp).await?,
+                self.convert_unbundle_pushrebase_response(ctx, resp)
+                    .await
+                    .context("while converting unbundle pushrebase response")?,
             )),
             BookmarkOnlyPushRebase(resp) => Ok(BookmarkOnlyPushRebase(
                 self.convert_unbundle_bookmark_only_pushrebase_response(ctx, resp)
-                    .await?,
+                    .await
+                    .context("while converting unbundle bookmark-only pushrebase response")?,
             )),
-            Push(resp) => Ok(Push(self.convert_unbundle_push_response(ctx, resp).await?)),
+            Push(resp) => Ok(Push(
+                self.convert_unbundle_push_response(ctx, resp)
+                    .await
+                    .context("while converting unbundle push response")?,
+            )),
             InfinitePush(resp) => Ok(InfinitePush(
                 self.convert_unbundle_infinite_push_response(ctx, resp)
-                    .await?,
+                    .await
+                    .context("while converting unbundle infinitepush response")?,
             )),
         }
     }
@@ -474,12 +484,20 @@ impl PushRedirector {
         .await?;
 
         let (pushrebased_rev, pushrebased_changesets) = try_join!(
-            self.remap_changeset_expect_rewritten_or_preserved(
-                ctx.clone(),
-                &self.large_to_small_commit_syncer,
-                pushrebased_rev,
-            ),
-            self.convert_pushrebased_changesets(ctx.clone(), pushrebased_changesets),
+            async {
+                self.remap_changeset_expect_rewritten_or_preserved(
+                    ctx.clone(),
+                    &self.large_to_small_commit_syncer,
+                    pushrebased_rev,
+                )
+                .await
+                .context("while remapping pushrebased rev")
+            },
+            async {
+                self.convert_pushrebased_changesets(ctx.clone(), pushrebased_changesets)
+                    .await
+                    .context("while converting pushrebased changesets")
+            },
         )?;
 
         let onto = self
