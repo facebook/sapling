@@ -120,7 +120,7 @@ function mononoke_hg_sync {
     "${COMMON_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
-    --mononoke-config-path mononoke-config  \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
     --verify-server-bookmark-on-failure \
      ssh://user@dummy/"$HG_REPO" "$@" sync-once --start-id "$START_ID"
 }
@@ -129,7 +129,7 @@ function megarepo_tool {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
     "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
-    --mononoke-config-path mononoke-config  \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@"
 }
 
@@ -137,7 +137,7 @@ function megarepo_tool {
 function megarepo_tool_multirepo {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
     "${COMMON_ARGS[@]}" \
-    --mononoke-config-path mononoke-config  \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@"
 }
 
@@ -145,14 +145,14 @@ function mononoke_walker {
   GLOG_minloglevel=5 "$MONONOKE_WALKER" \
     "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
-    --mononoke-config-path mononoke-config  \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@"
 }
 
 function mononoke_blobstore_healer {
   GLOG_minloglevel=5 "$MONONOKE_BLOBSTORE_HEALER" \
     "${COMMON_ARGS[@]}" \
-    --mononoke-config-path mononoke-config  \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@" 2>&1 | grep -v "Could not connect to a replica"
 }
 
@@ -173,7 +173,7 @@ function mononoke_rechunker {
     GLOG_minloglevel=5 "$MONONOKE_RECHUNKER" \
     "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
-    --mononoke-config-path mononoke-config \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@"
 }
 
@@ -182,7 +182,7 @@ function mononoke_hg_sync_with_retry {
     "${COMMON_ARGS[@]}" \
     --base-retry-delay-ms 1 \
     --repo-id $REPOID \
-    --mononoke-config-path mononoke-config  \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     --verify-server-bookmark-on-failure \
      ssh://user@dummy/"$1" sync-once --start-id "$2"
 }
@@ -194,7 +194,7 @@ function mononoke_hg_sync_with_failure_handler {
     "${COMMON_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
-    --mononoke-config-path mononoke-config  \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     --verify-server-bookmark-on-failure \
     --lock-on-failure \
     --repo-lock-sqlite \
@@ -234,7 +234,7 @@ function mononoke_bookmarks_filler {
   GLOG_minloglevel=5 "$MONONOKE_BOOKMARKS_FILLER" \
     "${COMMON_ARGS[@]}" \
     --repo-id $REPOID \
-    --mononoke-config-path mononoke-config  \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@" "$sql_source" "$sql_name"
 }
 
@@ -281,7 +281,7 @@ function mononoke_hg_sync_loop {
     "${COMMON_ARGS[@]}" \
     --retry-num 1 \
     --repo-id $REPOID \
-    --mononoke-config-path mononoke-config \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
 }
 
@@ -295,7 +295,7 @@ function mononoke_hg_sync_loop_regenerate {
     "${COMMON_ARGS[@]}" \
     --retry-num 1 \
     --repo-id 0 \
-    --mononoke-config-path mononoke-config \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
     ssh://user@dummy/"$repo" --generate-bundles sync-loop --start-id "$start_id" "$@"
 }
 
