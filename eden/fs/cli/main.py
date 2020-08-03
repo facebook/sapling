@@ -1494,7 +1494,7 @@ class RestartCmd(Subcmd):
         if edenfs_pid is None:
             # The daemon is not running
             print(
-                "The daemon in not running after failed graceful restart, "
+                "The daemon is not running after failed graceful restart, "
                 "starting it"
             )
             telemetry_sample.fail("EdenFS was not running after graceful restart")
