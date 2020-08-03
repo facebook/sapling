@@ -643,6 +643,16 @@ impl FromStr for ScrubAction {
     }
 }
 
+/// Whether we should read from this blobstore normally in a Multiplex,
+/// or only read from it in Scrub or when it's our last chance to find the blob
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize)]
+pub enum MultiplexedStoreType {
+    /// Normal operation, no special treatment
+    Normal,
+    /// Only read if Normal blobstores don't provide the blob. Writes go here as per normal
+    WriteMostly,
+}
+
 /// Configuration for a blobstore
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BlobConfig {
@@ -680,7 +690,7 @@ pub enum BlobConfig {
         /// A scuba table I guess
         scuba_table: Option<String>,
         /// Set of blobstores being multiplexed over
-        blobstores: Vec<(BlobstoreId, BlobConfig)>,
+        blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
         /// 1 in scuba_sample_rate samples will be logged.
         scuba_sample_rate: NonZeroU64,
         /// DB config to use for the sync queue
@@ -693,7 +703,7 @@ pub enum BlobConfig {
         /// A scuba table I guess
         scuba_table: Option<String>,
         /// Set of blobstores being multiplexed over
-        blobstores: Vec<(BlobstoreId, BlobConfig)>,
+        blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
         /// Whether to attempt repair
         scrub_action: ScrubAction,
         /// 1 in scuba_sample_rate samples will be logged.
@@ -737,7 +747,7 @@ impl BlobConfig {
             Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } => false,
             Multiplexed { blobstores, .. } | Scrub { blobstores, .. } => blobstores
                 .iter()
-                .map(|(_, config)| config)
+                .map(|(_, _, config)| config)
                 .all(BlobConfig::is_local),
             Logging { blobconfig, .. } => blobconfig.is_local(),
             Pack { blobconfig, .. } => blobconfig.is_local(),
@@ -760,7 +770,7 @@ impl BlobConfig {
         {
             let scuba_table = mem::replace(scuba_table, None);
             let mut blobstores = mem::replace(blobstores, Vec::new());
-            for (_, store) in blobstores.iter_mut() {
+            for (_, _, store) in blobstores.iter_mut() {
                 store.set_scrubbed(scrub_action);
             }
             *self = Scrub {

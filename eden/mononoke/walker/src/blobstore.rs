@@ -119,7 +119,7 @@ fn get_blobconfig(
                 let seeked_id = BlobstoreId::new(inner_blobstore_id);
                 blobstores
                     .into_iter()
-                    .find_map(|(blobstore_id, blobstore)| {
+                    .find_map(|(blobstore_id, _, blobstore)| {
                         if blobstore_id == seeked_id {
                             Some(blobstore)
                         } else {
@@ -181,7 +181,7 @@ pub async fn open_blobstore(
             // Without this the new stats only show up when a repair is needed (i.e. as they get incremented),
             // which makes them harder to monitor on (no datapoints rather than a zero datapoint at start).
             for s in &[STATS::scrub_repaired, STATS::scrub_repair_required] {
-                for (id, _config) in &blobstores {
+                for (id, _ty, _config) in &blobstores {
                     s.add_value(0, (walk_stats_key, id.to_string(), repo_stats_key.clone()));
                 }
             }

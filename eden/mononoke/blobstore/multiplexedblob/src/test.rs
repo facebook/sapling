@@ -62,6 +62,12 @@ impl<T> Tickable<T> {
         }
     }
 
+    pub fn add_content(&self, key: String, value: T) {
+        self.storage.with(|s| {
+            s.insert(key, value);
+        })
+    }
+
     // Broadcast either success or error to a set of outstanding futures, advancing the
     // overall state by one tick.
     pub fn tick(&self, error: Option<&str>) {
@@ -211,6 +217,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<(), Error> {
     let bs = ScrubBlobstore::new(
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+        vec![],
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -252,6 +259,7 @@ async fn base(fb: FacebookInit) {
             (BlobstoreId::new(0), bs0.clone()),
             (BlobstoreId::new(1), bs1.clone()),
         ],
+        vec![],
         log.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -395,6 +403,7 @@ async fn multiplexed(fb: FacebookInit) {
     let bs = MultiplexedBlobstore::new(
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+        vec![],
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -476,6 +485,7 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<(), Error> {
             (bid1, bs1.clone()),
             (bid2, bs2.clone()),
         ],
+        vec![],
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -519,6 +529,7 @@ async fn scrubbed(fb: FacebookInit) {
     let bs = ScrubBlobstore::new(
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+        vec![],
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -587,6 +598,7 @@ async fn scrubbed(fb: FacebookInit) {
     let bs = ScrubBlobstore::new(
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+        vec![],
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -670,6 +682,7 @@ async fn queue_waits(fb: FacebookInit) {
             (BlobstoreId::new(1), bs1.clone()),
             (BlobstoreId::new(2), bs2.clone()),
         ],
+        vec![],
         log.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -760,5 +773,259 @@ async fn queue_waits(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Ready(Ok(())));
 
         clear();
+    }
+}
+
+#[fbinit::test]
+async fn write_mostly_get(fb: FacebookInit) {
+    let both_key = "both".to_string();
+    let value = make_value("value");
+    let write_mostly_key = "write_mostly".to_string();
+    let main_bs = Arc::new(Tickable::new());
+    let write_mostly_bs = Arc::new(Tickable::new());
+
+    let log = Arc::new(LogHandler::new());
+    let bs = MultiplexedBlobstoreBase::new(
+        MultiplexId::new(1),
+        vec![(BlobstoreId::new(0), main_bs.clone())],
+        vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        log.clone(),
+        ScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+
+    let ctx = CoreContext::test_mock(fb);
+
+    // Put one blob into both blobstores
+    main_bs.add_content(both_key.clone(), value.clone());
+    write_mostly_bs.add_content(both_key.clone(), value.clone());
+    // Put a blob only into the write mostly blobstore
+    write_mostly_bs.add_content(write_mostly_key.clone(), value.clone());
+
+    // Fetch the blob that's in both blobstores, see that the write mostly blobstore isn't being
+    // read from by ticking it
+    {
+        let mut fut = bs.get(ctx.clone(), both_key.clone());
+        assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+
+        // Ticking the write_mostly store does nothing.
+        for _ in 0..3usize {
+            write_mostly_bs.tick(None);
+            assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+        }
+
+        // Tick the main store, and we're finished
+        main_bs.tick(None);
+        assert_eq!(fut.await.unwrap(), Some(value.clone().into()));
+        log.clear();
+    }
+
+    // Fetch the blob that's only in the write mostly blobstore, see it fetch correctly
+    {
+        let mut fut = bs.get(ctx.clone(), write_mostly_key);
+        assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+
+        // Ticking the main store does nothing, as it lacks the blob
+        for _ in 0..3usize {
+            main_bs.tick(None);
+            assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+        }
+
+        // Tick the write_mostly store, and we're finished
+        write_mostly_bs.tick(None);
+        assert_eq!(fut.await.unwrap(), Some(value.clone().into()));
+        log.clear();
+    }
+
+    // Fetch the blob that's in both blobstores, see that the write mostly blobstore
+    // is used when the main blobstore fails
+    {
+        let mut fut = bs.get(ctx.clone(), both_key);
+        assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+
+        // Ticking the write_mostly store does nothing.
+        for _ in 0..3usize {
+            write_mostly_bs.tick(None);
+            assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+        }
+
+        // Tick the main store, and we're still stuck
+        main_bs.tick(Some("Main blobstore failed - fallback to write_mostly"));
+        assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+
+        // Finally, the write_mostly store returns our value
+        write_mostly_bs.tick(None);
+        assert_eq!(fut.await.unwrap(), Some(value.clone().into()));
+        log.clear();
+    }
+}
+
+#[fbinit::test]
+async fn write_mostly_put(fb: FacebookInit) {
+    let main_bs = Arc::new(Tickable::new());
+    let write_mostly_bs = Arc::new(Tickable::new());
+
+    let log = Arc::new(LogHandler::new());
+    let bs = MultiplexedBlobstoreBase::new(
+        MultiplexId::new(1),
+        vec![(BlobstoreId::new(0), main_bs.clone())],
+        vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        log.clone(),
+        ScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+
+    let ctx = CoreContext::test_mock(fb);
+
+    // succeed as soon as main succeeds. Fail write_mostly to confirm that we can still read.
+    {
+        let v0 = make_value("v0");
+        let k0 = String::from("k0");
+
+        let mut put_fut = bs
+            .put(ctx.clone(), k0.clone(), v0.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+        main_bs.tick(None);
+        put_fut.await.unwrap();
+        assert_eq!(
+            main_bs.storage.with(|s| s.get(&k0).cloned()),
+            Some(v0.clone())
+        );
+        assert!(write_mostly_bs.storage.with(|s| s.is_empty()));
+        write_mostly_bs.tick(Some("write_mostly_bs failed"));
+        assert!(log
+            .log
+            .with(|log| log == &vec![(BlobstoreId::new(0), k0.clone())]));
+
+        // should succeed as it is stored in main_bs
+        let mut get_fut = bs.get(ctx.clone(), k0).map_err(|_| ()).boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+        main_bs.tick(None);
+        write_mostly_bs.tick(None);
+        assert_eq!(get_fut.await.unwrap(), Some(v0.into()));
+        assert!(write_mostly_bs.storage.with(|s| s.is_empty()));
+
+        main_bs.storage.with(|s| s.clear());
+        write_mostly_bs.storage.with(|s| s.clear());
+        log.clear();
+    }
+
+    // succeed as soon as write_mostly succeeds. Fail main to confirm we can still read
+    {
+        let v0 = make_value("v0");
+        let k0 = String::from("k0");
+
+        let mut put_fut = bs
+            .put(ctx.clone(), k0.clone(), v0.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+        write_mostly_bs.tick(None);
+        put_fut.await.unwrap();
+        assert_eq!(
+            write_mostly_bs.storage.with(|s| s.get(&k0).cloned()),
+            Some(v0.clone())
+        );
+        assert!(main_bs.storage.with(|s| s.is_empty()));
+        main_bs.tick(Some("main_bs failed"));
+        assert!(log
+            .log
+            .with(|log| log == &vec![(BlobstoreId::new(1), k0.clone())]));
+
+        // should succeed as it is stored in write_mostly_bs, but main won't read
+        let mut get_fut = bs.get(ctx.clone(), k0).map_err(|_| ()).boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+        main_bs.tick(None);
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+        write_mostly_bs.tick(None);
+        assert_eq!(get_fut.await.unwrap(), Some(v0.into()));
+        assert!(main_bs.storage.with(|s| s.is_empty()));
+
+        main_bs.storage.with(|s| s.clear());
+        write_mostly_bs.storage.with(|s| s.clear());
+        log.clear();
+    }
+
+    // succeed if write_mostly succeeds and main fails
+    {
+        let v1 = make_value("v1");
+        let k1 = String::from("k1");
+
+        let mut put_fut = bs
+            .put(ctx.clone(), k1.clone(), v1.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+        main_bs.tick(Some("case 2: main_bs failed"));
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+        write_mostly_bs.tick(None);
+        put_fut.await.unwrap();
+        assert!(main_bs.storage.with(|s| s.get(&k1).is_none()));
+        assert_eq!(
+            write_mostly_bs.storage.with(|s| s.get(&k1).cloned()),
+            Some(v1.clone())
+        );
+        assert!(log
+            .log
+            .with(|log| log == &vec![(BlobstoreId::new(1), k1.clone())]));
+
+        let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+        main_bs.tick(None);
+        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+        write_mostly_bs.tick(None);
+        assert_eq!(get_fut.await.unwrap(), Some(v1.into()));
+        assert!(main_bs.storage.with(|s| s.get(&k1).is_none()));
+
+        main_bs.storage.with(|s| s.clear());
+        write_mostly_bs.storage.with(|s| s.clear());
+        log.clear();
+    }
+
+    // both fail => whole put fail
+    {
+        let k2 = String::from("k2");
+        let v2 = make_value("v2");
+
+        let mut put_fut = bs
+            .put(ctx.clone(), k2.clone(), v2.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+        main_bs.tick(Some("case 3: main_bs failed"));
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+        write_mostly_bs.tick(Some("case 3: write_mostly_bs failed"));
+        assert!(put_fut.await.is_err());
+    }
+
+    // both put succeed
+    {
+        let k4 = String::from("k4");
+        let v4 = make_value("v4");
+        main_bs.storage.with(|s| s.clear());
+        write_mostly_bs.storage.with(|s| s.clear());
+        log.clear();
+
+        let mut put_fut = bs
+            .put(ctx.clone(), k4.clone(), v4.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+        main_bs.tick(None);
+        put_fut.await.unwrap();
+        assert_eq!(
+            main_bs.storage.with(|s| s.get(&k4).cloned()),
+            Some(v4.clone())
+        );
+        write_mostly_bs.tick(None);
+        while log.log.with(|log| log.len() != 2) {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(
+            write_mostly_bs.storage.with(|s| s.get(&k4).cloned()),
+            Some(v4.clone())
+        );
     }
 }

@@ -18,7 +18,7 @@ use futures::{
 };
 use logblob::LogBlob;
 use metaconfig_types::{
-    BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, ScrubAction,
+    BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, MultiplexedStoreType, ScrubAction,
     ShardableRemoteDatabaseConfig,
 };
 use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
@@ -318,7 +318,7 @@ pub fn make_blobstore_multiplexed<'a>(
     queue_db: DatabaseConfig,
     scuba_table: Option<String>,
     scuba_sample_rate: NonZeroU64,
-    inner_config: Vec<(BlobstoreId, BlobConfig)>,
+    inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
     scrub_args: Option<(Arc<dyn ScrubHandler>, ScrubAction)>,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
@@ -335,7 +335,7 @@ pub fn make_blobstore_multiplexed<'a>(
         let mut applied_chaos = false;
 
         let components = future::try_join_all(inner_config.into_iter().map({
-            move |(blobstoreid, config)| {
+            move |(blobstoreid, store_type, config)| {
                 let mut blobstore_options = blobstore_options.clone();
 
                 if blobstore_options.chaos_options.has_chaos() {
@@ -360,7 +360,7 @@ pub fn make_blobstore_multiplexed<'a>(
                     )
                     .await?;
 
-                    Ok((blobstoreid, store))
+                    Ok((blobstoreid, store_type, store))
                 }
             }
         }));
@@ -374,10 +374,26 @@ pub fn make_blobstore_multiplexed<'a>(
 
         let (components, queue) = future::try_join(components, queue).await?;
 
+        // For now, `partition` could do this, but this will be easier to extend when we introduce more store types
+        let (normal_components, write_mostly_components) = {
+            let mut normal_components = vec![];
+            let mut write_mostly_components = vec![];
+            for (blobstore_id, store_type, store) in components.into_iter() {
+                match store_type {
+                    MultiplexedStoreType::Normal => normal_components.push((blobstore_id, store)),
+                    MultiplexedStoreType::WriteMostly => {
+                        write_mostly_components.push((blobstore_id, store))
+                    }
+                }
+            }
+            (normal_components, write_mostly_components)
+        };
+
         let blobstore = match scrub_args {
             Some((scrub_handler, scrub_action)) => Arc::new(ScrubBlobstore::new(
                 multiplex_id,
-                components,
+                normal_components,
+                write_mostly_components,
                 Arc::new(queue),
                 scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
                     ScubaSampleBuilder::new(fb, table)
@@ -388,7 +404,8 @@ pub fn make_blobstore_multiplexed<'a>(
             )) as Arc<dyn Blobstore>,
             None => Arc::new(MultiplexedBlobstore::new(
                 multiplex_id,
-                components,
+                normal_components,
+                write_mostly_components,
                 Arc::new(queue),
                 scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
                     ScubaSampleBuilder::new(fb, table)

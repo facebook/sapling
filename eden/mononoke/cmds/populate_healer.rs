@@ -229,8 +229,8 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
     };
     let manifold_args = blobstores
         .iter()
-        .filter(|(id, _)| src_blobstore_id == *id)
-        .map(|(_, args)| args)
+        .filter(|(id, ..)| src_blobstore_id == *id)
+        .map(|(.., args)| args)
         .next()
         .ok_or(format_err!(
             "failed to find source blobstore id: {:?}",

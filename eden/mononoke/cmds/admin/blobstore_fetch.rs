@@ -102,7 +102,7 @@ fn get_blobconfig(
                 let seeked_id = BlobstoreId::new(inner_blobstore_id);
                 blobstores
                     .into_iter()
-                    .find_map(|(blobstore_id, blobstore)| {
+                    .find_map(|(blobstore_id, _, blobstore)| {
                         if blobstore_id == seeked_id {
                             Some(blobstore)
                         } else {

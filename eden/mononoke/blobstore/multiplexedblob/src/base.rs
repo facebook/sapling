@@ -75,7 +75,19 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
 
 pub struct MultiplexedBlobstoreBase {
     multiplex_id: MultiplexId,
+    /// These are the "normal" blobstores, which are read from on `get`, and written to on `put`
+    /// as part of normal operation. No special treatment is applied.
     blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
+    /// Write-mostly blobstores are not normally read from on `get`, but take part in writes
+    /// like a normal blobstore.
+    ///
+    /// There are two circumstances in which a write-mostly blobstore will be read from on `get`:
+    /// 1. The normal blobstores (above) all return Ok(None) or Err for a blob.
+    ///    In this case, we read as it's our only chance of returning data that we previously accepted
+    ///    during a `put` operation.
+    /// 2. When we're recording blobstore stats to Scuba on a `get` - in this case, the read executes
+    ///    solely to gather statistics, and the result is discarded
+    write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     scuba: ScubaSampleBuilder,
     scuba_sample_rate: NonZeroU64,
@@ -85,6 +97,7 @@ impl MultiplexedBlobstoreBase {
     pub fn new(
         multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         handler: Arc<dyn MultiplexedBlobstorePutHandler>,
         mut scuba: ScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
@@ -94,6 +107,7 @@ impl MultiplexedBlobstoreBase {
         Self {
             multiplex_id,
             blobstores: blobstores.into(),
+            write_mostly_blobstores: write_mostly_blobstores.into(),
             handler,
             scuba,
             scuba_sample_rate,
@@ -108,13 +122,22 @@ impl MultiplexedBlobstoreBase {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
 
-        let results = join_all(multiplexed_get(
-            ctx,
-            self.blobstores.as_ref(),
-            key,
-            OperationType::ScrubGet,
-            scuba,
-        ))
+        let results = join_all(
+            multiplexed_get(
+                ctx,
+                self.blobstores.as_ref(),
+                key,
+                OperationType::ScrubGet,
+                scuba.clone(),
+            )
+            .chain(multiplexed_get(
+                ctx,
+                self.write_mostly_blobstores.as_ref(),
+                key,
+                OperationType::ScrubGet,
+                scuba,
+            )),
+        )
         .await;
 
         let (successes, errors): (HashMap<_, _>, HashMap<_, _>) =
@@ -206,11 +229,12 @@ pub async fn inner_put(
 async fn blobstore_get(
     ctx: CoreContext,
     blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
+    write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
     key: String,
     scuba: ScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>, Error> {
     let is_logged = scuba.sampling().is_logged();
-    let blobstores_count = blobstores.len();
+    let blobstores_count = blobstores.len() + write_mostly_blobstores.len();
 
     let (stats, result) = {
         let ctx = &ctx;
@@ -219,20 +243,33 @@ async fn blobstore_get(
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::BlobGets);
 
-            let mut requests: FuturesUnordered<_> = multiplexed_get(
+            let main_requests: FuturesUnordered<_> = multiplexed_get(
                 ctx.clone(),
                 blobstores.as_ref(),
+                &key,
+                OperationType::Get,
+                scuba.clone(),
+            )
+            .collect();
+            let write_mostly_requests: FuturesUnordered<_> = multiplexed_get(
+                ctx.clone(),
+                write_mostly_blobstores.as_ref(),
                 &key,
                 OperationType::Get,
                 scuba,
             )
             .collect();
+
+            // `chain` here guarantees that `main_requests` is empty before it starts
+            // polling anything in `write_mostly_requests`
+            let mut requests = main_requests.chain(write_mostly_requests);
             while let Some(result) = requests.next().await {
                 match result {
                     (_, Ok(Some(mut value))) => {
                         if is_logged {
                             // Allow the other requests to complete so that we can record some
-                            // metrics for the blobstore.
+                            // metrics for the blobstore. This will also log metrics for write-mostly
+                            // blobstores, which helps us decide whether they're good
                             tokio::spawn(requests.for_each(|_| async {}));
                         }
                         // Return the blob that won the race
@@ -306,9 +343,11 @@ impl Blobstore for MultiplexedBlobstoreBase {
     ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let mut scuba = self.scuba.clone();
         let blobstores = self.blobstores.clone();
+        let write_mostly_blobstores = self.write_mostly_blobstores.clone();
         scuba.sampled(self.scuba_sample_rate);
 
-        async move { blobstore_get(ctx, blobstores, key, scuba).await }.boxed()
+        async move { blobstore_get(ctx, blobstores, write_mostly_blobstores, key, scuba).await }
+            .boxed()
     }
 
     fn put(
@@ -323,6 +362,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         let mut puts: FuturesUnordered<_> = self
             .blobstores
             .iter()
+            .chain(self.write_mostly_blobstores.iter())
             .cloned()
             .map({
                 |(blobstore_id, blobstore)| {
@@ -409,9 +449,9 @@ impl Blobstore for MultiplexedBlobstoreBase {
     }
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
-        let blobstores_count = self.blobstores.len();
+        let blobstores_count = self.blobstores.len() + self.write_mostly_blobstores.len();
 
-        let mut requests: FuturesUnordered<_> = self
+        let main_requests: FuturesUnordered<_> = self
             .blobstores
             .iter()
             .cloned()
@@ -421,7 +461,20 @@ impl Blobstore for MultiplexedBlobstoreBase {
                 async move { (blobstore_id, blobstore.is_present(ctx, key).await) }
             })
             .collect();
+        let write_mostly_requests: FuturesUnordered<_> = self
+            .write_mostly_blobstores
+            .iter()
+            .cloned()
+            .map(|(blobstore_id, blobstore)| {
+                let ctx = ctx.clone();
+                let key = key.clone();
+                async move { (blobstore_id, blobstore.is_present(ctx, key).await) }
+            })
+            .collect();
 
+        // `chain` here guarantees that `main_requests` is empty before it starts
+        // polling anything in `write_mostly_requests`
+        let mut requests = main_requests.chain(write_mostly_requests);
         async move {
             let (stats, result) = {
                 let ctx = &ctx;

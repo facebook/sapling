@@ -13,13 +13,15 @@ use std::time::Duration;
 use anyhow::{anyhow, Result};
 use metaconfig_types::{
     BlobConfig, BlobstoreId, DatabaseConfig, FilestoreParams, LocalDatabaseConfig,
-    MetadataDatabaseConfig, MultiplexId, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
-    ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, StorageConfig,
+    MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, RemoteDatabaseConfig,
+    RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
+    StorageConfig,
 };
 use nonzero_ext::nonzero;
 use repos::{
     RawBlobstoreConfig, RawDbConfig, RawDbLocal, RawDbRemote, RawDbShardableRemote,
-    RawDbShardedRemote, RawFilestoreParams, RawMetadataConfig, RawStorageConfig,
+    RawDbShardedRemote, RawFilestoreParams, RawMetadataConfig, RawMultiplexedStoreType,
+    RawStorageConfig,
 };
 
 use crate::convert::Convert;
@@ -67,6 +69,9 @@ impl Convert for RawBlobstoreConfig {
                     .map(|comp| {
                         Ok((
                             BlobstoreId::new(comp.blobstore_id.try_into()?),
+                            comp.store_type
+                                .convert()?
+                                .unwrap_or(MultiplexedStoreType::Normal),
                             comp.blobstore.convert()?,
                         ))
                     })
@@ -207,5 +212,19 @@ impl Convert for RawFilestoreParams {
             chunk_size: self.chunk_size.try_into()?,
             concurrency: self.concurrency.try_into()?,
         })
+    }
+}
+
+impl Convert for RawMultiplexedStoreType {
+    type Output = MultiplexedStoreType;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self {
+            RawMultiplexedStoreType::normal(_) => Ok(MultiplexedStoreType::Normal),
+            RawMultiplexedStoreType::write_mostly(_) => Ok(MultiplexedStoreType::WriteMostly),
+            RawMultiplexedStoreType::UnknownField(field) => {
+                Err(anyhow!("unknown store type {}", field))
+            }
+        }
     }
 }

@@ -89,6 +89,7 @@ impl ScrubBlobstore {
     pub fn new(
         multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba: ScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
@@ -98,6 +99,7 @@ impl ScrubBlobstore {
         let inner = MultiplexedBlobstore::new(
             multiplex_id,
             blobstores.clone(),
+            write_mostly_blobstores.clone(),
             queue.clone(),
             scuba.clone(),
             scuba_sample_rate,
@@ -110,6 +112,7 @@ impl ScrubBlobstore {
             scrub_stores: Arc::new(
                 blobstores
                     .into_iter()
+                    .chain(write_mostly_blobstores.into_iter())
                     .collect::<HashMap<BlobstoreId, Arc<dyn Blobstore>>>(),
             ),
             queue,

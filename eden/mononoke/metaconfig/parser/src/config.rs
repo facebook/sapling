@@ -411,11 +411,11 @@ mod test {
         CommitSyncConfigVersion, CommitSyncDirection, DatabaseConfig,
         DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, FilestoreParams, HookBypass,
         HookConfig, HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams,
-        LfsParams, LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, PushParams,
-        PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
-        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig,
-        SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion,
-        WireprotoLoggingConfig,
+        LfsParams, LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType,
+        PushParams, PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig,
+        RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
+        SmallRepoCommitSyncConfig, SourceControlServiceMonitoring, SourceControlServiceParams,
+        UnodeVersion, WireprotoLoggingConfig,
     };
     use mononoke_types::MPath;
     use nonzero_ext::nonzero;
@@ -997,6 +997,7 @@ mod test {
             blobstores: vec![
                 (
                     BlobstoreId::new(0),
+                    MultiplexedStoreType::Normal,
                     BlobConfig::Manifold {
                         bucket: "bucket".into(),
                         prefix: "".into(),
@@ -1004,6 +1005,7 @@ mod test {
                 ),
                 (
                     BlobstoreId::new(1),
+                    MultiplexedStoreType::Normal,
                     BlobConfig::Files {
                         path: "/tmp/foo".into(),
                     },
@@ -1436,7 +1438,7 @@ mod test {
                         scuba_table: None,
                         scuba_sample_rate: nonzero!(100u64),
                         blobstores: vec![
-                            (BlobstoreId::new(1), BlobConfig::Files {
+                            (BlobstoreId::new(1), MultiplexedStoreType::Normal, BlobConfig::Files {
                                 path: "/tmp/foo".into()
                             })
                         ],
@@ -1576,5 +1578,72 @@ mod test {
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("unknown keys in config parsing"));
+    }
+
+    #[fbinit::test]
+    fn test_multiplexed_store_types(fb: FacebookInit) {
+        const STORAGE: &str = r#"
+        [multiplex_store.metadata.remote]
+        primary = { db_address = "some_db" }
+        filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
+
+        [multiplex_store.blobstore.multiplexed]
+        multiplex_id = 1
+        components = [
+            { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo1" } } },
+            { blobstore_id = 2, store_type = { normal = {}}, blobstore = { blob_files = { path = "/tmp/foo2" } } },
+            { blobstore_id = 3, store_type = { write_mostly = {}}, blobstore = { blob_files = { path = "/tmp/foo3" } } },
+        ]
+        queue_db = { remote = { db_address = "queue_db_address" } }
+        "#;
+
+        const REPO: &str = r#"
+        repoid = 123
+        storage_config = "multiplex_store"
+        "#;
+
+        let paths = btreemap! {
+            "common/storage.toml" => STORAGE,
+            "common/commitsyncmap.toml" => "",
+            "repos/test/server.toml" => REPO,
+        };
+
+        let tmp_dir = write_files(&paths);
+        let res = load_repo_configs(fb, tmp_dir.path()).expect("Read configs failed");
+
+        if let BlobConfig::Multiplexed { blobstores, .. } =
+            &res.repos["test"].storage_config.blobstore
+        {
+            let expected_blobstores = vec![
+                (
+                    BlobstoreId::new(1),
+                    MultiplexedStoreType::Normal,
+                    BlobConfig::Files {
+                        path: "/tmp/foo1".into(),
+                    },
+                ),
+                (
+                    BlobstoreId::new(2),
+                    MultiplexedStoreType::Normal,
+                    BlobConfig::Files {
+                        path: "/tmp/foo2".into(),
+                    },
+                ),
+                (
+                    BlobstoreId::new(3),
+                    MultiplexedStoreType::WriteMostly,
+                    BlobConfig::Files {
+                        path: "/tmp/foo3".into(),
+                    },
+                ),
+            ];
+
+            assert_eq!(
+                blobstores, &expected_blobstores,
+                "Blobstores parsed from config are wrong"
+            );
+        } else {
+            panic!("Multiplexed config is not a multiplexed blobstore");
+        }
     }
 }

@@ -29,6 +29,7 @@ impl MultiplexedBlobstore {
     pub fn new(
         multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba: ScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
@@ -40,6 +41,7 @@ impl MultiplexedBlobstore {
             blobstore: Arc::new(MultiplexedBlobstoreBase::new(
                 multiplex_id,
                 blobstores,
+                write_mostly_blobstores,
                 put_handler,
                 scuba,
                 scuba_sample_rate,

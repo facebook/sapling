@@ -104,7 +104,7 @@ async fn maybe_schedule_healer_for_storage(
 
     let blobstores = blobstore_configs
         .into_iter()
-        .map(|(id, blobconfig)| async move {
+        .map(|(id, _, blobconfig)| async move {
             let blobstore = make_blobstore(
                 fb,
                 blobconfig,
