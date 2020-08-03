@@ -35,7 +35,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ repo_import "$GIT_REPO" --dest-path "new_dir/new_repo" --batch-size 3 --bookmark-suffix "new_repo" --disable-phabricator-check
+  $ repo_import "$GIT_REPO" --dest-path "new_dir/new_repo" --batch-size 3 --bookmark-suffix "new_repo" --disable-phabricator-check --disable-hg-sync-check
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Created ce435b03d4ef526648f8654c61e26ae5cc1069cc => ChangesetId(Blake2(f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062)) (glob)
   * Created 2c01e4a5658421e2bfcd08e31d9b69399319bcd3 => ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb)) (glob)

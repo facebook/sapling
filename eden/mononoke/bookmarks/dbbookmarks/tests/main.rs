@@ -1138,6 +1138,13 @@ fn test_get_largest_log_id(fb: FacebookInit) {
             .with_repo_id(REPO_ZERO);
         let name_1 = create_bookmark_name("book");
 
+        assert_eq!(
+            bookmarks
+                .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
+                .await
+                .unwrap(),
+            None
+        );
         let mut txn = bookmarks.create_transaction(ctx.clone());
         txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
             .unwrap();

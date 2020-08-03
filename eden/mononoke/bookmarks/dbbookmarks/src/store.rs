@@ -184,7 +184,7 @@ queries! {
          OFFSET {offset}"
       }
 
-    read GetLargestLogId(repo_id: RepositoryId) -> (u64) {
+    read GetLargestLogId(repo_id: RepositoryId) -> (Option<u64>) {
         "SELECT MAX(id)
          FROM bookmarks_update_log
          WHERE repo_id = {repo_id}"
@@ -559,9 +559,20 @@ impl BookmarkUpdateLog for SqlBookmarks {
             &self.connections.read_connection
         };
 
-        GetLargestLogId::query(&connection, &self.repo_id)
+        let query = GetLargestLogId::query(&connection, &self.repo_id)
             .compat()
-            .map_ok(|entries| entries.first().map(|entry| entry.0))
+            .boxed();
+        query
+            .and_then(move |entries| {
+                let entry = entries.into_iter().next();
+                match entry {
+                    Some(count) => future::ok(count.0),
+                    None => {
+                        let msg = format!("Failed to query largest log id");
+                        future::err(Error::msg(msg))
+                    }
+                }
+            })
             .boxed()
     }
 }

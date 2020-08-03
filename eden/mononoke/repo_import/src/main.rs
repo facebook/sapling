@@ -9,7 +9,7 @@
 use anyhow::{format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
 use clap::Arg;
 use cmdlib::args;
 use cmdlib::helpers::block_execute;
@@ -26,10 +26,12 @@ use import_tools::{GitimportPreferences, GitimportTarget};
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use movers::DefaultAction;
+use mutable_counters::{MutableCounters, SqlMutableCounters};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::num::NonZeroUsize;
 use std::path::Path;
 use tokio::{process, time};
@@ -44,6 +46,7 @@ const ARG_PHAB_CHECK_DISABLED: &str = "disable-phabricator-check";
 const ARG_X_REPO_CHECK_DISABLED: &str = "disable-x-repo-check";
 const ARG_HG_SYNC_CHECK_DISABLED: &str = "disable-hg-sync-check";
 const ARG_SLEEP_TIME: &str = "sleep-time";
+const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
 
 #[derive(Deserialize, Clone, Debug)]
 struct GraphqlQueryObj {
@@ -156,6 +159,7 @@ async fn move_bookmark(
     bookmark_suffix: &str,
     checker_flags: &CheckerFlags<'_>,
     sleep_time: u64,
+    mutable_counters: &SqlMutableCounters,
 ) -> Result<(), Error> {
     if shifted_bcs.is_empty() {
         return Err(format_err!("There is no bonsai changeset present"));
@@ -201,27 +205,90 @@ async fn move_bookmark(
             ctx.logger(),
             "Set bookmark {:?} to point to {:?}", bookmark, curr_csid
         );
-
-        // if a check is disabled, we have already passed the check
-        let mut passed_phab_check = checker_flags.phab_check_disabled;
-        let mut _passed_x_repo_check = checker_flags.x_repo_check_disabled;
-        let mut _passed_hg_sync_check = checker_flags.hg_sync_check_disabled;
         let hg_csid = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid)
             .compat()
             .await?;
-        while !passed_phab_check {
-            let call_sign = checker_flags.call_sign.as_ref().unwrap();
-            passed_phab_check = phabricator_commit_check(&call_sign, &hg_csid).await?;
-            if !passed_phab_check {
-                info!(
-                    ctx.logger(),
-                    "Phabricator hasn't parsed commit: {:?}", hg_csid
-                );
-                time::delay_for(time::Duration::from_secs(sleep_time)).await;
-            }
-        }
+        check_dependent_systems(
+            &ctx,
+            &repo,
+            &checker_flags,
+            hg_csid,
+            sleep_time,
+            &mutable_counters,
+        )
+        .await?;
         old_csid = curr_csid;
+    }
+    Ok(())
+}
+
+async fn check_dependent_systems(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker_flags: &CheckerFlags<'_>,
+    hg_csid: HgChangesetId,
+    sleep_time: u64,
+    mutable_counters: &SqlMutableCounters,
+) -> Result<(), Error> {
+    // if a check is disabled, we have already passed the check
+    let mut passed_phab_check = checker_flags.phab_check_disabled;
+    let mut _passed_x_repo_check = checker_flags.x_repo_check_disabled;
+    let mut passed_hg_sync_check = checker_flags.hg_sync_check_disabled;
+
+    let repo_id = repo.get_repoid();
+    while !passed_phab_check {
+        let call_sign = checker_flags.call_sign.as_ref().unwrap();
+        passed_phab_check = phabricator_commit_check(&call_sign, &hg_csid).await?;
+        if !passed_phab_check {
+            info!(
+                ctx.logger(),
+                "Phabricator hasn't parsed commit: {:?}", hg_csid
+            );
+            time::delay_for(time::Duration::from_secs(sleep_time)).await;
+        }
+    }
+
+    let largest_id = match repo
+        .attribute_expected::<dyn BookmarkUpdateLog>()
+        .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
+        .await?
+    {
+        Some(id) => id,
+        None => return Err(format_err!("Couldn't fetch id from bookmarks update log")),
+    };
+
+    /*
+        In mutable counters table we store the latest bookmark id replayed by mercurial with
+        LATEST_REPLAYED_REQUEST_KEY key. We use this key to extract the latest replayed id
+        and compare it with the largest bookmark log id after we move the bookmark.
+        If the replayed id is larger or equal to the bookmark id, we can try to move the bookmark
+        to the next batch of commits
+    */
+    while !passed_hg_sync_check {
+        let mut_counters_value = match mutable_counters
+            .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+            .compat()
+            .await?
+        {
+            Some(value) => value,
+            None => {
+                return Err(format_err!(
+                    "Couldn't fetch the counter value from mutable_counters for repo_id {:?}",
+                    repo_id
+                ))
+            }
+        };
+        passed_hg_sync_check = largest_id <= mut_counters_value.try_into().unwrap();
+        if !passed_hg_sync_check {
+            info!(
+                ctx.logger(),
+                "Waiting for {} to be replayed to hg, the latest replayed is {}",
+                largest_id,
+                mut_counters_value
+            );
+            time::delay_for(time::Duration::from_secs(sleep_time)).await;
+        }
     }
     Ok(())
 }
@@ -408,6 +475,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     block_execute(
         async {
             let repo = repo.compat().await?;
+            let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
+                .compat()
+                .await?;
             let mut shifted_bcs = rewrite_file_paths(&ctx, &repo, &path, &prefix).await?;
             shifted_bcs = sort_bcs(&shifted_bcs)?;
             derive_bonsais(&ctx, &repo, &shifted_bcs).await?;
@@ -419,6 +489,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 &bookmark_suffix,
                 &checker_flags,
                 sleep_time,
+                &mutable_counters,
             )
             .await
         },
@@ -432,15 +503,27 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{move_bookmark, sort_bcs, CheckerFlags};
+    use crate::{
+        check_dependent_systems, move_bookmark, sort_bcs, CheckerFlags, LATEST_REPLAYED_REQUEST_KEY,
+    };
 
     use anyhow::Result;
     use blobstore::Loadable;
     use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::stream::TryStreamExt;
+    use futures::{compat::Future01CompatExt, stream::TryStreamExt};
+    use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
+    use mononoke_types_mocks::changesetid::{ONES_CSID as MON_CSID, TWOS_CSID};
+    use mutable_counters::{MutableCounters, SqlMutableCounters};
+    use sql_construct::SqlConstruct;
+    use std::time::Duration;
     use tests_utils::drawdag::create_from_dag;
+    use tokio::time;
+
+    fn create_bookmark_name(book: &str) -> BookmarkName {
+        BookmarkName::new(book.to_string()).unwrap()
+    }
 
     #[fbinit::compat_test]
     async fn move_bookmark_test(fb: FacebookInit) -> Result<()> {
@@ -455,6 +538,7 @@ mod tests {
             call_sign,
         };
         let sleep_time = 1;
+        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
         let changesets = create_from_dag(
             &ctx,
             &blob_repo,
@@ -476,6 +560,7 @@ mod tests {
             "test_repo",
             &checker_flags,
             sleep_time,
+            &mutable_counters,
         )
         .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
@@ -502,6 +587,111 @@ mod tests {
                 (Some(changesets["A"]), BookmarkUpdateReason::ManualMove),
             ]
         );
+        Ok(())
+    }
+
+    /*
+                        largest_id      mutable_counters value   assert
+        No action       None            None                     Error
+        Move bookmark   1               None                     Error
+        Set counter     1               1                        Ok(())
+        Move bookmark   2               1                        inifite loop -> timeout
+        Set counter     2               2                        Ok(())
+    */
+    #[fbinit::compat_test]
+    async fn hg_sync_check_test(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let checker_flags = CheckerFlags {
+            phab_check_disabled: true,
+            x_repo_check_disabled: true,
+            hg_sync_check_disabled: false,
+            call_sign: None,
+        };
+        let sleep_time = 1;
+        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
+        let repo_id = repo.get_repoid();
+        let bookmark = create_bookmark_name("book");
+
+        assert!(check_dependent_systems(
+            &ctx,
+            &repo,
+            &checker_flags,
+            HG_CSID,
+            sleep_time,
+            &mutable_counters
+        )
+        .await
+        .is_err());
+
+        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        txn.create(&bookmark, MON_CSID, BookmarkUpdateReason::TestMove, None)?;
+        txn.commit().await.unwrap();
+        assert!(check_dependent_systems(
+            &ctx,
+            &repo,
+            &checker_flags,
+            HG_CSID,
+            sleep_time,
+            &mutable_counters
+        )
+        .await
+        .is_err());
+
+        mutable_counters
+            .set_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY, 1, None)
+            .compat()
+            .await?;
+
+        check_dependent_systems(
+            &ctx,
+            &repo,
+            &checker_flags,
+            HG_CSID,
+            sleep_time,
+            &mutable_counters,
+        )
+        .await?;
+
+        let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        txn.update(
+            &bookmark,
+            TWOS_CSID,
+            MON_CSID,
+            BookmarkUpdateReason::TestMove,
+            None,
+        )?;
+        txn.commit().await.unwrap();
+
+        let timed_out = time::timeout(
+            Duration::from_millis(2000),
+            check_dependent_systems(
+                &ctx,
+                &repo,
+                &checker_flags,
+                HG_CSID,
+                sleep_time,
+                &mutable_counters,
+            ),
+        )
+        .await
+        .is_err();
+        assert!(timed_out);
+
+        mutable_counters
+            .set_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY, 2, None)
+            .compat()
+            .await?;
+
+        check_dependent_systems(
+            &ctx,
+            &repo,
+            &checker_flags,
+            HG_CSID,
+            sleep_time,
+            &mutable_counters,
+        )
+        .await?;
         Ok(())
     }
 }
