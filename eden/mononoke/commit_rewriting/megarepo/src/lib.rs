@@ -31,6 +31,7 @@ use std::num::NonZeroU64;
 
 pub mod chunking;
 pub mod common;
+pub mod pre_merge_delete;
 
 use crate::common::{
     create_save_and_generate_hg_changeset, ChangesetArgs, ChangesetArgsFactory, StackPosition,
