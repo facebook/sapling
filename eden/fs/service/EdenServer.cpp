@@ -1779,7 +1779,16 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
         // takeover start of the new process. We could potentially test this
         // more and change it in the future to simply flush instead of
         // compact if this proves to be too expensive.
-        localStore_->compactStorage();
+
+        // Catch errors from compaction because we do not want this failure
+        // to be blocking graceful restart. This can fail if there is no
+        // space to write to RocksDB log files.
+        try {
+          localStore_->compactStorage();
+        } catch (const std::exception& e) {
+          XLOG(ERR) << "Failed to compact local store with error: " << e.what()
+                    << ". Continuing takeover server shutdown anyway.";
+        }
 
         shutdownSubscribers();
 
