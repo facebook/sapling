@@ -18,13 +18,15 @@ using folly::sformat;
 namespace {
 
 using facebook::eden::EdenDispatcher;
+using facebook::eden::wideCharToEdenRelativePath;
 
-#define BAIL_ON_RECURSIVE_CALL(callbackData)                          \
-  do {                                                                \
-    if (callbackData->TriggeringProcessId == GetCurrentProcessId()) { \
-      XLOG(ERR) << "Recursive EdenFS call are disallowed";            \
-      return E_FAIL;                                                  \
-    }                                                                 \
+#define BAIL_ON_RECURSIVE_CALL(callbackData)                                \
+  do {                                                                      \
+    if (callbackData->TriggeringProcessId == GetCurrentProcessId()) {       \
+      auto __path = wideCharToEdenRelativePath(callbackData->FilePathName); \
+      XLOG(ERR) << "Recursive EdenFS call are disallowed for: " << __path;  \
+      return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);                       \
+    }                                                                       \
   } while (false)
 
 static EdenDispatcher* getDispatcher(
