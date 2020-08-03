@@ -77,6 +77,16 @@ pub fn path_chunker_from_hint(prefix_lists: Vec<Vec<MPath>>) -> Result<Chunker<M
     }))
 }
 
+pub fn even_chunker_with_max_size<T: Clone>(max_chunk_size: usize) -> Result<Chunker<T>, Error> {
+    Ok(Box::new(move |mpaths| {
+        let res: Vec<Vec<T>> = mpaths
+            .chunks(max_chunk_size)
+            .map(|chunk| chunk.to_vec())
+            .collect();
+        res
+    }))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

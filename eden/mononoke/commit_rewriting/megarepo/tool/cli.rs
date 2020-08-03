@@ -11,7 +11,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::future::{err, ok};
-use megarepolib::common::ChangesetArgs;
+use megarepolib::common::{ChangesetArgs, ChangesetArgsFactory, StackPosition};
 use mononoke_types::DateTime;
 
 pub const COMMIT_HASH: &'static str = "commit-hash";
@@ -28,6 +28,9 @@ pub const COMMIT_DATE_RFC3339: &'static str = "commit-date-rfc3339";
 pub const COMMIT_BOOKMARK: &'static str = "bookmark";
 pub const SYNC_DIAMOND_MERGE: &'static str = "sync-diamond-merge";
 pub const MAX_NUM_OF_MOVES_IN_COMMIT: &'static str = "max-num-of-moves-in-commit";
+pub const CHUNKING_HINT_FILE: &'static str = "chunking-hint-file";
+pub const PRE_MERGE_DELETE: &'static str = "pre-merge-delete";
+pub const EVEN_CHUNK_SIZE: &'static str = "even-chunk-size";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
     let message = try_boxfuture!(sub_m
@@ -64,6 +67,34 @@ pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetAr
     .boxify()
 }
 
+pub fn get_delete_commits_cs_args_factory<'a>(
+    sub_m: &ArgMatches<'a>,
+) -> Result<Box<dyn ChangesetArgsFactory>, Error> {
+    let message = sub_m
+        .value_of(COMMIT_MESSAGE)
+        .ok_or_else(|| format_err!("missing argument {}", COMMIT_MESSAGE))?
+        .to_string();
+
+    let author = sub_m
+        .value_of(COMMIT_AUTHOR)
+        .ok_or_else(|| format_err!("missing argument {}", COMMIT_AUTHOR))?
+        .to_string();
+
+    let datetime = sub_m
+        .value_of(COMMIT_DATE_RFC3339)
+        .map(|datetime_str| DateTime::from_rfc3339(datetime_str))
+        .transpose()?
+        .unwrap_or_else(|| DateTime::now());
+
+    Ok(Box::new(move |num: StackPosition| ChangesetArgs {
+        author: author.clone(),
+        message: format!("[MEGAREPO DELETE] {} ({})", message, num.0),
+        datetime: datetime.clone(),
+        bookmark: None,
+        mark_public: false,
+    }))
+}
+
 fn add_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, 'b> {
     subcommand
         .arg(
@@ -94,6 +125,28 @@ fn add_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, 'b> {
                 .help("bookmark to point to resulting commits (no sanity checks, will move existing bookmark, be careful)")
                 .long(COMMIT_BOOKMARK)
                 .takes_value(true)
+        )
+}
+
+fn add_light_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, 'b> {
+    subcommand
+        .arg(
+            Arg::with_name(COMMIT_AUTHOR)
+                .help("commit author to use")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(COMMIT_MESSAGE)
+                .help("commit message to use")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(COMMIT_DATE_RFC3339)
+                .help("commit date to use (default is now)")
+                .long(COMMIT_DATE_RFC3339)
+                .takes_value(true),
         )
 }
 
@@ -150,6 +203,30 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
         );
 
+    let pre_merge_delete_subcommand = SubCommand::with_name(PRE_MERGE_DELETE)
+        .about("create a set of pre-merge delete commtis, as well as commits to merge into the target branch")
+        .arg(
+            Arg::with_name(COMMIT_HASH)
+                .help("commit from which to start deletion")
+                .takes_value(true)
+                .required(true)
+        )
+        .arg(
+            Arg::with_name(CHUNKING_HINT_FILE)
+                .help(r#"a path to working copy chunking hint. If not provided, working copy will
+                        be chunked evenly into `--even-chunk-size` commits"#)
+                .long(CHUNKING_HINT_FILE)
+                .takes_value(true)
+                .required(false)
+        )
+        .arg(
+            Arg::with_name(EVEN_CHUNK_SIZE)
+                .help("chunk size for even chunking when --chunking-hing-file is not provided")
+                .long(EVEN_CHUNK_SIZE)
+                .takes_value(true)
+                .required(false)
+        );
+
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -157,4 +234,5 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(add_resulting_commit_args(move_subcommand))
         .subcommand(add_resulting_commit_args(merge_subcommand))
         .subcommand(sync_diamond_subcommand)
+        .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
 }

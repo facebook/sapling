@@ -159,3 +159,10 @@ pull the result
   
   xplat:
   xplatfile_fbsource
+
+test pre-merge deletes functionality
+  $ cd "$TESTTMP"
+  $ megarepo_tool pre-merge-delete master author "merge preparation" --even-chunk-size 4 --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null
+  342cc9bff69c2f71d19698aa1f48d5d260804f4b063625143dd7052768c0df24
+  1e80c201efb51b8e99fc4b16baa1ef389cf53faec8be2d42f6efb47396e20756
+  a201ac038c63e32c17457f830731bb4fed74650856a75351b15c0a5f7549554d

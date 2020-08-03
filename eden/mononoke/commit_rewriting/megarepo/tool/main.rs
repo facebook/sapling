@@ -30,10 +30,15 @@ mod merging;
 mod sync_diamond_merge;
 
 use crate::cli::{
-    cs_args_from_matches, setup_app, CHANGESET, COMMIT_HASH, FIRST_PARENT,
-    MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, SECOND_PARENT, SYNC_DIAMOND_MERGE,
+    cs_args_from_matches, get_delete_commits_cs_args_factory, setup_app, CHANGESET,
+    CHUNKING_HINT_FILE, COMMIT_HASH, EVEN_CHUNK_SIZE, FIRST_PARENT, MAX_NUM_OF_MOVES_IN_COMMIT,
+    MERGE, MOVE, ORIGIN_REPO, PRE_MERGE_DELETE, SECOND_PARENT, SYNC_DIAMOND_MERGE,
 };
 use crate::merging::perform_merge;
+use megarepolib::chunking::{
+    even_chunker_with_max_size, parse_chunking_hint, path_chunker_from_hint,
+};
+use megarepolib::pre_merge_delete::{create_pre_merge_delete, PreMergeDelete};
 use megarepolib::{common::StackPosition, perform_move, perform_stack_move};
 
 async fn run_move<'a>(
@@ -167,6 +172,59 @@ async fn run_sync_diamond_merge<'a>(
     .map(|_| ())
 }
 
+async fn run_pre_merge_delete<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches)
+        .compat()
+        .await?;
+
+    let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
+
+    let chunker = match sub_m.value_of(CHUNKING_HINT_FILE) {
+        Some(hint_file) => {
+            let hint_str = std::fs::read_to_string(hint_file)?;
+            let hint = parse_chunking_hint(hint_str)?;
+            path_chunker_from_hint(hint)?
+        }
+        None => {
+            let even_chunk_size: usize = sub_m
+                .value_of(EVEN_CHUNK_SIZE)
+                .ok_or_else(|| {
+                    format_err!(
+                        "either {} or {} is required",
+                        CHUNKING_HINT_FILE,
+                        EVEN_CHUNK_SIZE
+                    )
+                })?
+                .parse::<usize>()?;
+            even_chunker_with_max_size(even_chunk_size)?
+        }
+    };
+
+    let parent_bcs_id = {
+        let hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
+        helpers::csid_resolve(ctx.clone(), repo.clone(), hash)
+            .compat()
+            .await?
+    };
+
+    let pmd = create_pre_merge_delete(&ctx, &repo, parent_bcs_id, chunker, delete_cs_args_factory)
+        .await?;
+
+    let PreMergeDelete { mut delete_commits } = pmd;
+
+    info!(ctx.logger(), "Listing deletion commits in top-to-bottom order (first commit is a descendant of the last)");
+    delete_commits.reverse();
+    for delete_commit in delete_commits {
+        println!("{}", delete_commit);
+    }
+
+    Ok(())
+}
+
 fn get_and_verify_repo_config<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
@@ -206,6 +264,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
             (MERGE, Some(sub_m)) => run_merge(ctx, &matches, sub_m).await,
             (SYNC_DIAMOND_MERGE, Some(sub_m)) => run_sync_diamond_merge(ctx, &matches, sub_m).await,
+            (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
             _ => bail!("oh no, wrong arguments provided!"),
         }
     };
