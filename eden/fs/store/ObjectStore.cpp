@@ -64,11 +64,20 @@ ObjectStore::ObjectStore(
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processNameCache_(processNameCache),
       structuredLogger_(structuredLogger),
-      edenConfig_(edenConfig) {
-  fetchThreshold_ = edenConfig->fetchHeavyThreshold.getValue();
-}
+      edenConfig_(edenConfig) {}
 
 ObjectStore::~ObjectStore() {}
+
+void ObjectStore::updateProcessFetch(
+    const ObjectFetchContext& fetchContext) const {
+  if (auto pid = fetchContext.getClientPid()) {
+    auto fetch_count = pidFetchCounts_->recordProcessFetch(pid.value());
+    auto threshold = edenConfig_->fetchHeavyThreshold.getValue();
+    if (fetch_count && threshold && !(fetch_count % threshold)) {
+      sendFetchHeavyEvent(pid.value(), fetch_count);
+    }
+  }
+}
 
 void ObjectStore::sendFetchHeavyEvent(pid_t pid, uint64_t fetch_count) const {
 #ifndef _WIN32
@@ -85,7 +94,8 @@ void ObjectStore::deprioritizeWhenFetchHeavy(
   auto pid = context.getClientPid();
   if (pid.has_value()) {
     auto fetch_count = pidFetchCounts_->getCountByPid(pid.value());
-    if (fetch_count >= fetchThreshold_) {
+    auto threshold = edenConfig_->fetchHeavyThreshold.getValue();
+    if (threshold && fetch_count >= threshold) {
       context.deprioritize(importPriorityDeprioritizeAmount);
     }
   }
@@ -104,14 +114,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
       fetchContext.didFetch(
           ObjectFetchContext::Tree, id, ObjectFetchContext::FromDiskCache);
 
-      if (auto pid = fetchContext.getClientPid()) {
-        auto fetch_count =
-            self->pidFetchCounts_->recordProcessFetch(pid.value());
-        if (fetch_count == self->fetchThreshold_) {
-          self->sendFetchHeavyEvent(pid.value(), fetch_count);
-        }
-      }
-
+      self->updateProcessFetch(fetchContext);
       return makeFuture(std::move(tree));
     }
 
@@ -147,13 +150,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
               id,
               ObjectFetchContext::FromBackingStore);
 
-          if (auto pid = fetchContext.getClientPid()) {
-            auto fetch_count =
-                self->pidFetchCounts_->recordProcessFetch(pid.value());
-            if (fetch_count == self->fetchThreshold_) {
-              self->sendFetchHeavyEvent(pid.value(), fetch_count);
-            }
-          }
+          self->updateProcessFetch(fetchContext);
           return shared_ptr<const Tree>(std::move(loadedTree));
         });
   });
@@ -233,13 +230,8 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
       self->updateBlobStats(true, false);
       fetchContext.didFetch(
           ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
-      if (auto pid = fetchContext.getClientPid()) {
-        auto fetch_count =
-            self->pidFetchCounts_->recordProcessFetch(pid.value());
-        if (fetch_count == self->fetchThreshold_) {
-          self->sendFetchHeavyEvent(pid.value(), fetch_count);
-        }
-      }
+
+      self->updateProcessFetch(fetchContext);
       return makeFuture(shared_ptr<const Blob>(std::move(blob)));
     }
 
@@ -258,13 +250,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
                 id,
                 ObjectFetchContext::FromBackingStore);
 
-            if (auto pid = fetchContext.getClientPid()) {
-              auto fetch_count =
-                  self->pidFetchCounts_->recordProcessFetch(pid.value());
-              if (fetch_count == self->fetchThreshold_) {
-                self->sendFetchHeavyEvent(pid.value(), fetch_count);
-              }
-            }
+            self->updateProcessFetch(fetchContext);
 
             auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
             self->metadataCache_.wlock()->set(id, metadata);
@@ -299,12 +285,8 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
           ObjectFetchContext::BlobMetadata,
           id,
           ObjectFetchContext::FromMemoryCache);
-      if (auto pid = context.getClientPid()) {
-        auto fetch_count = pidFetchCounts_->recordProcessFetch(pid.value());
-        if (fetch_count == fetchThreshold_) {
-          sendFetchHeavyEvent(pid.value(), fetch_count);
-        }
-      }
+
+      updateProcessFetch(context);
       return cacheIter->second;
     }
   }
@@ -321,14 +303,8 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
               ObjectFetchContext::BlobMetadata,
               id,
               ObjectFetchContext::FromDiskCache);
-          if (auto pid = context.getClientPid()) {
-            auto fetch_count =
-                self->pidFetchCounts_->recordProcessFetch(pid.value());
-            if (fetch_count == self->fetchThreshold_) {
-              self->sendFetchHeavyEvent(pid.value(), fetch_count);
-            }
-          }
 
+          self->updateProcessFetch(context);
           return makeFuture(*metadata);
         }
 
@@ -359,13 +335,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
                     id,
                     ObjectFetchContext::FromBackingStore);
 
-                if (auto pid = context.getClientPid()) {
-                  auto fetch_count =
-                      self->pidFetchCounts_->recordProcessFetch(pid.value());
-                  if (fetch_count == self->fetchThreshold_) {
-                    self->sendFetchHeavyEvent(pid.value(), fetch_count);
-                  }
-                }
+                self->updateProcessFetch(context);
                 return makeFuture(metadata);
               }
 

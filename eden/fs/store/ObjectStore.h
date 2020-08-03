@@ -86,6 +86,13 @@ class ObjectStore : public IObjectStore,
   ~ObjectStore() override;
 
   /**
+   * When pid of fetchContext is available, this function updates
+   * pidFetchCounts_. If the current process needs to be logged as
+   * a fetch-heavy process, it sends a FetchHeavy event to Scuba.
+   */
+  void updateProcessFetch(const ObjectFetchContext& fetchContext) const;
+
+  /**
    * send a FetchHeavy log event to Scuba. If either processNameCache_
    * or structuredLogger_ is nullptr, this function does nothing.
    */
@@ -93,8 +100,8 @@ class ObjectStore : public IObjectStore,
 
   /**
    * Check fetch count of the process using this fetchContext before using
-   * the fetchContext in BackingStore. if fetchThreshold_ is exceeded,
-   * deprioritize the fetchContext by 1.
+   * the fetchContext in BackingStore. if fetchHeavyThreshold in edenConfig_ is
+   * exceeded, deprioritize the fetchContext by 1.
    *
    * Note: Normally, one fetchContext is created for only one fetch request,
    * so deprioritize() should only be called once by one thread, but that is
@@ -250,9 +257,6 @@ class ObjectStore : public IObjectStore,
    * sending fetch heavy events, set to nullptr if not
    * initialized by create()
    */
-
-  uint32_t fetchThreshold_;
-
   std::shared_ptr<ProcessNameCache> processNameCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;
   std::shared_ptr<const EdenConfig> edenConfig_;
