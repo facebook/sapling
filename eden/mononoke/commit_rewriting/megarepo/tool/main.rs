@@ -22,6 +22,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use movers::get_small_to_large_mover;
 use slog::info;
+use std::collections::BTreeMap;
 use std::num::NonZeroU64;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
@@ -30,14 +31,16 @@ mod merging;
 mod sync_diamond_merge;
 
 use crate::cli::{
-    cs_args_from_matches, get_delete_commits_cs_args_factory, setup_app, CHANGESET,
-    CHUNKING_HINT_FILE, COMMIT_HASH, EVEN_CHUNK_SIZE, FIRST_PARENT, MAX_NUM_OF_MOVES_IN_COMMIT,
-    MERGE, MOVE, ORIGIN_REPO, PRE_MERGE_DELETE, SECOND_PARENT, SYNC_DIAMOND_MERGE,
+    cs_args_from_matches, get_delete_commits_cs_args_factory, setup_app, BONSAI_MERGE,
+    BONSAI_MERGE_P1, BONSAI_MERGE_P2, CHANGESET, CHUNKING_HINT_FILE, COMMIT_HASH, EVEN_CHUNK_SIZE,
+    FIRST_PARENT, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PRE_MERGE_DELETE,
+    SECOND_PARENT, SYNC_DIAMOND_MERGE,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
     even_chunker_with_max_size, parse_chunking_hint, path_chunker_from_hint,
 };
+use megarepolib::common::create_and_save_bonsai;
 use megarepolib::pre_merge_delete::{create_pre_merge_delete, PreMergeDelete};
 use megarepolib::{common::StackPosition, perform_move, perform_stack_move};
 
@@ -225,6 +228,40 @@ async fn run_pre_merge_delete<'a>(
     Ok(())
 }
 
+async fn run_bonsai_merge<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches)
+        .compat()
+        .await?;
+
+    let (p1, p2) = try_join(
+        async {
+            let p1 = sub_m.value_of(BONSAI_MERGE_P1).unwrap().to_owned();
+            helpers::csid_resolve(ctx.clone(), repo.clone(), p1)
+                .compat()
+                .await
+        },
+        async {
+            let p2 = sub_m.value_of(BONSAI_MERGE_P2).unwrap().to_owned();
+            helpers::csid_resolve(ctx.clone(), repo.clone(), p2)
+                .compat()
+                .await
+        },
+    )
+    .await?;
+
+    let cs_args = cs_args_from_matches(sub_m).compat().await?;
+
+    let merge_cs_id =
+        create_and_save_bonsai(&ctx, &repo, vec![p1, p2], BTreeMap::new(), cs_args).await?;
+
+    println!("{}", merge_cs_id);
+    Ok(())
+}
+
 fn get_and_verify_repo_config<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
@@ -265,6 +302,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             (MERGE, Some(sub_m)) => run_merge(ctx, &matches, sub_m).await,
             (SYNC_DIAMOND_MERGE, Some(sub_m)) => run_sync_diamond_merge(ctx, &matches, sub_m).await,
             (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
+            (BONSAI_MERGE, Some(sub_m)) => run_bonsai_merge(ctx, &matches, sub_m).await,
             _ => bail!("oh no, wrong arguments provided!"),
         }
     };

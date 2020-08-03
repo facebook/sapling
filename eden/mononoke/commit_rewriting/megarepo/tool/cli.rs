@@ -31,6 +31,9 @@ pub const MAX_NUM_OF_MOVES_IN_COMMIT: &'static str = "max-num-of-moves-in-commit
 pub const CHUNKING_HINT_FILE: &'static str = "chunking-hint-file";
 pub const PRE_MERGE_DELETE: &'static str = "pre-merge-delete";
 pub const EVEN_CHUNK_SIZE: &'static str = "even-chunk-size";
+pub const BONSAI_MERGE: &'static str = "bonsai-merge";
+pub const BONSAI_MERGE_P1: &'static str = "bonsai-merge-p1";
+pub const BONSAI_MERGE_P2: &'static str = "bonsai-merge-p2";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
     let message = try_boxfuture!(sub_m
@@ -227,6 +230,21 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(false)
         );
 
+    let bonsai_merge_subcommand = SubCommand::with_name(BONSAI_MERGE)
+        .about("create a bonsai merge commit")
+        .arg(
+            Arg::with_name(BONSAI_MERGE_P1)
+                .help("p1 of the merge")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(BONSAI_MERGE_P2)
+                .help("p2 of the merge")
+                .takes_value(true)
+                .required(true),
+        );
+
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -235,4 +253,5 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(add_resulting_commit_args(merge_subcommand))
         .subcommand(sync_diamond_subcommand)
         .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
+        .subcommand(add_light_resulting_commit_args(bonsai_merge_subcommand))
 }
