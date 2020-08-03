@@ -31,12 +31,10 @@ use std::num::NonZeroU64;
 
 pub mod chunking;
 pub mod common;
-pub mod pre_merge_deletes;
 
 use crate::common::{
     create_save_and_generate_hg_changeset, ChangesetArgs, ChangesetArgsFactory, StackPosition,
 };
-pub use pre_merge_deletes::create_sharded_delete_commit_stacks;
 
 const BUFFER_SIZE: usize = 100;
 const REPORTING_INTERVAL_FILES: usize = 10000;

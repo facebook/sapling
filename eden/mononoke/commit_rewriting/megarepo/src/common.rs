@@ -27,13 +27,9 @@ pub struct ChangesetArgs {
 }
 
 pub struct StackPosition(pub usize);
-pub struct StackId(pub usize);
 
 /// For creating stacks of changesets
 pub trait ChangesetArgsFactory = Fn(StackPosition) -> ChangesetArgs;
-
-/// For creating groups stacks of changesets
-pub trait StackGroupChangesetArgsFactory = Fn(StackId, StackPosition) -> ChangesetArgs;
 
 pub async fn create_save_and_generate_hg_changeset(
     ctx: &CoreContext,
