@@ -24,8 +24,6 @@ use std::{
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {
     pub error_count: usize,
-    pub num_direct: usize,
-    pub num_direct_new: usize,
     pub num_expanded_new: usize,
     pub visited_of_type: usize,
 }
@@ -35,8 +33,6 @@ impl Add<StepStats> for StepStats {
     fn add(self, other: Self) -> Self {
         Self {
             error_count: self.error_count + other.error_count,
-            num_direct: self.num_direct + other.num_direct,
-            num_direct_new: self.num_direct_new + other.num_direct_new,
             num_expanded_new: self.num_expanded_new + other.num_expanded_new,
             visited_of_type: cmp::max(self.visited_of_type, other.visited_of_type),
         }
@@ -180,15 +176,14 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         Vec<OutgoingEdge>,
     ) {
         // Filter things we don't want to enter the WalkVisitor at all.
-        outgoing.retain(|e| self.retain_edge(e));
-        let num_direct = outgoing.len();
+        outgoing.retain(|e| self.retain_edge(e) && self.needs_visit(&e));
 
-        outgoing.retain(|e| self.needs_visit(&e));
-        let num_direct_new = outgoing.len();
-
+        let num_outgoing = outgoing.len();
         expand_checked_nodes(&mut outgoing);
         // Make sure we don't expand to types of node and edge not wanted
-        outgoing.retain(|e| self.retain_edge(e));
+        if num_outgoing != outgoing.len() {
+            outgoing.retain(|e| self.retain_edge(e));
+        }
 
         self.record_resolved_visit(&resolved, node_data.as_ref());
 
@@ -203,8 +198,6 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         };
         let stats = StepStats {
             error_count,
-            num_direct,
-            num_direct_new,
             num_expanded_new,
             visited_of_type: self.get_visit_count(&node.get_type()),
         };
