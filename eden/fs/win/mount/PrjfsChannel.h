@@ -28,7 +28,7 @@ class PrjfsChannel : public FsChannel {
 
   PrjfsChannel(EdenMount* mount);
   ~PrjfsChannel();
-  void start(AbsolutePath mountPath, bool readOnly);
+  void start(bool readOnly);
   void stop();
 
   folly::SemiFuture<FsChannel::StopData> getStopFuture() override;
@@ -46,6 +46,8 @@ class PrjfsChannel : public FsChannel {
    * in any state.
    */
   void removeDeletedFile(RelativePathPiece path) override;
+
+  void addDirectoryPlaceholder(RelativePathPiece path) override;
 
  private:
   void deleteFile(RelativePathPiece path, PRJ_UPDATE_TYPES updateFlags);
@@ -65,6 +67,7 @@ class PrjfsChannel : public FsChannel {
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 
   EdenDispatcher dispatcher_;
+  const AbsolutePath& mountPath_;
   Guid mountId_;
   bool isRunning_{false};
   folly::Promise<FsChannel::StopData> stopPromise_;

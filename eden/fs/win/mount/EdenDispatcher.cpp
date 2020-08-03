@@ -500,7 +500,7 @@ folly::Future<folly::Unit> createFile(
     const RelativePathPiece path,
     bool isDirectory) {
   return createDirInode(mount, path.dirname())
-      .thenValue([=](const TreeInodePtr treeInode) {
+      .thenValue([=, &mount](const TreeInodePtr treeInode) {
         if (isDirectory) {
           try {
             treeInode->mkdir(

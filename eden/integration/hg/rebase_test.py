@@ -260,6 +260,56 @@ class RebaseTest(EdenHgTestCase):
             commits[0:6],
         )
 
+    def test_rebase_stack_with_conflicts_and_abort(self) -> None:
+        """Create 2 conflicting commits and try to rebase one on top of the
+        other before aborting the rebase."""
+
+        self.mkdir("numbers/1")
+        self.write_file("numbers/1/11", "new 11\n")
+        self.repo.add_file("numbers/1/11")
+        self.mkdir("numbers/3")
+        self.write_file("numbers/3/33", "33\n")
+        self.repo.add_file("numbers/3/33")
+        commit = self.repo.commit("Add 1/11 and 3/33")
+
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.hg("rebase", "-s", commit, "-d", self._c15)
+        self.assertIn(
+            b"conflicts while merging numbers/1/11! "
+            b"(edit, then use 'hg resolve --mark')",
+            context.exception.stderr,
+        )
+
+        self.hg("rebase", "--abort")
+
+        self.assertEqual("new 11\n", self.read_file("numbers/1/11"))
+        self.assertEqual("33\n", self.read_file("numbers/3/33"))
+
+    def test_rebase_double_nesting_and_abort(self) -> None:
+        """Create a nested directory hierarchy."""
+
+        self.mkdir("first/second")
+        self.write_file("first/second/file", "Content\n")
+        self.repo.add_file("first/second/file")
+
+        # For conflict
+        self.mkdir("numbers/1")
+        self.write_file("numbers/1/11", "new 11\n")
+        self.repo.add_file("numbers/1/11")
+
+        commit = self.repo.commit("Add nested hierarchy")
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.hg("rebase", "-s", commit, "-d", self._c15)
+        self.assertIn(
+            b"conflicts while merging numbers/1/11! "
+            b"(edit, then use 'hg resolve --mark')",
+            context.exception.stderr,
+        )
+
+        self.hg("rebase", "--abort")
+
+        self.assertEqual("Content\n", self.read_file("first/second/file"))
+
     def assert_update_logic(
         self, stdout: str, num_fast_path: int = 0, num_slow_path: int = 0
     ) -> None:

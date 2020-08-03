@@ -658,15 +658,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool& wasDirectoryListModified);
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
 
-#ifndef _WIN32
   /**
-   * Send a request to the kernel to invalidate the pagecache for this inode,
-   * which flushes the readdir cache. This is required when the child entry list
-   * has changed. invalidateFuseEntryCache(name) only works if the entry name is
-   * known to FUSE, which is not true for new entries.
+   * Send a request to the kernel to invalidate its directory cache for this
+   * inode.  This is required when the child entry list has changed.
+   * invalidateChannelEntryCache(name) only works if the entry name is known to
+   * the channel (FUSE, PrjFS), which is not true for new entries.
    */
-  void invalidateFuseInodeCache();
-#endif
+  void invalidateChannelDirCache();
 
   /**
    * Send a request to the kernel to invalidate its cache for the given child

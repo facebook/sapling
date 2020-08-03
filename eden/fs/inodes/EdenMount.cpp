@@ -1203,12 +1203,11 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getChannelCompletionFuture() {
 folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
   return folly::makeFutureWith([&] { return &beginMount(); })
       .thenValue([this, readOnly](folly::Promise<folly::Unit>* mountPromise) {
-        AbsolutePath mountPath = getPath();
 #ifdef _WIN32
         return folly::makeFutureWith(
-                   [mountPath, readOnly, this]() -> folly::Future<FsChannel*> {
+                   [readOnly, this]() -> folly::Future<FsChannel*> {
                      auto channel = new PrjfsChannel(this);
-                     channel->start(mountPath, readOnly);
+                     channel->start(readOnly);
                      return channel;
                    })
             .thenTry([mountPromise, this](Try<FsChannel*>&& channel) {
@@ -1224,6 +1223,7 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
               return makeFuture(channel);
             });
 #else
+        AbsolutePath mountPath = getPath();
         return serverState_->getPrivHelper()
             ->fuseMount(mountPath.stringPiece(), readOnly)
             .thenTry(

@@ -19,11 +19,13 @@ class FsChannel {
 
   FsChannel(){};
   virtual ~FsChannel() = default;
-  virtual void start(AbsolutePath mountPath, bool readOnly) = 0;
+  virtual void start(bool readOnly) = 0;
   virtual void stop() = 0;
 
   virtual void removeCachedFile(RelativePathPiece path) = 0;
   virtual void removeDeletedFile(RelativePathPiece path) = 0;
+
+  virtual void addDirectoryPlaceholder(RelativePathPiece path) = 0;
 
   struct StopData {};
   virtual folly::SemiFuture<FsChannel::StopData> getStopFuture() = 0;

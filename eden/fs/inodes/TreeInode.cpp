@@ -966,12 +966,10 @@ FileInodePtr TreeInode::createImpl(
     saveOverlayDir(contents->entries);
   }
 
-#ifndef _WIN32
   if (InvalidationRequired::Yes == invalidate) {
     invalidateChannelEntryCache(name);
-    invalidateFuseInodeCache();
+    invalidateChannelDirCache();
   }
-#endif // !_WIN32
 
   getMount()->getJournal().recordCreated(targetName);
 
@@ -1104,12 +1102,10 @@ TreeInodePtr TreeInode::mkdir(
     saveOverlayDir(contents->entries);
   }
 
-#ifndef _WIN32
   if (InvalidationRequired::Yes == invalidate) {
     invalidateChannelEntryCache(name);
-    invalidateFuseInodeCache();
+    invalidateChannelDirCache();
   }
-#endif
   getMount()->getJournal().recordCreated(targetName);
 
   return newChild;
@@ -1294,18 +1290,12 @@ int TreeInode::tryRemoveChild(
   }
   deletedInode.reset();
 
-#ifdef _WIN32
-  // TODO(xavierd): remove the ifdef once we know if we are called from
-  // ProjectedFS
-  invalidateChannelEntryCache(name);
-#else
   // We have successfully removed the entry.
   // Flush the kernel cache for this entry if requested.
   if (InvalidationRequired::Yes == invalidate) {
-    invalidateFuseInodeCache();
+    invalidateChannelDirCache();
     invalidateChannelEntryCache(name);
   }
-#endif
 
   return 0;
 }
@@ -1670,18 +1660,16 @@ Future<Unit> TreeInode::doRename(
   locks.reset();
   deletedInode.reset();
 
-#ifndef _WIN32
   // If the rename occurred outside of a FUSE request (unlikely), make sure to
   // invalidate the kernel caches.
   if (InvalidationRequired::Yes == invalidate) {
-    invalidateFuseInodeCache();
+    invalidateChannelDirCache();
     if (destParent.get() != this) {
-      destParent->invalidateFuseInodeCache();
+      destParent->invalidateChannelDirCache();
     }
     invalidateChannelEntryCache(srcName);
     destParent->invalidateChannelEntryCache(destName);
   }
-#endif
 
   return folly::unit;
 }
@@ -2496,11 +2484,9 @@ Future<Unit> TreeInode::checkout(
                   self.get(), actions[n]->getEntryName(), result.exception());
             }
 
-#ifndef _WIN32
             if (wasDirectoryListModified) {
-              self->invalidateFuseInodeCache();
+              self->invalidateChannelDirCache();
             }
-#endif // !_WIN32
 
             // Update our state in the overlay
             self->saveOverlayPostCheckout(ctx, toTree.get());
@@ -2964,11 +2950,9 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                   newScmEntry->getHash());
               inserted = ret.second;
             }
-#ifndef _WIN32
             // This code is running asynchronously during checkout, so
             // flush the readdir cache right here.
-            parentInode->invalidateFuseInodeCache();
-#endif
+            parentInode->invalidateChannelDirCache();
 
             if (!inserted) {
               // Hmm.  Someone else already created a new entry in this location
@@ -3008,16 +2992,23 @@ void TreeInode::invalidateChannelEntryCache(PathComponentPiece name) {
 #endif
 }
 
+void TreeInode::invalidateChannelDirCache() {
 #ifndef _WIN32
-void TreeInode::invalidateFuseInodeCache() {
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     // FUSE_NOTIFY_INVAL_ENTRY is the appropriate invalidation function
     // when an entry is removed or modified. But when new entries are
     // added, the inode itself must be invalidated.
     fuseChannel->invalidateInode(getNodeId(), 0, 0);
   }
-}
+#else
+  if (auto* fsChannel = getMount()->getFsChannel()) {
+    const auto path = getPath();
+    if (path.has_value()) {
+      fsChannel->addDirectoryPlaceholder(path.value());
+    }
+  }
 #endif
+}
 
 void TreeInode::saveOverlayPostCheckout(
     CheckoutContext* ctx,

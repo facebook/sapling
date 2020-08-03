@@ -124,8 +124,7 @@ if sys.platform == "win32":
         "hg.post_clone_test.SymlinkTestTreeOnly": True,
         "hg.pull_test.PullTestTreeOnly": True,
         "hg.rebase_test.RebaseTestTreeOnly": [
-            "test_rebase_commit_with_independent_folder",
-            "test_rebase_stack_with_conflicts",
+            "test_rebase_commit_with_independent_folder"
         ],
         "hg.rm_test.RmTestTreeOnly": [
             "test_rm_directory_with_modification",
@@ -147,8 +146,6 @@ if sys.platform == "win32":
             "test_dir_locking",
             # TODO: A \r\n is used
             "test_mount_state_during_unmount_with_in_progress_checkout",
-            # TODO: Wrong status reported.
-            "test_update_replace_untracked_dir",
         ],
     }
 elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-release"):

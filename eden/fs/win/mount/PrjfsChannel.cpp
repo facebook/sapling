@@ -106,7 +106,9 @@ namespace facebook {
 namespace eden {
 
 PrjfsChannel::PrjfsChannel(EdenMount* mount)
-    : dispatcher_{*mount}, mountId_{Guid::generate()} {}
+    : dispatcher_{*mount},
+      mountPath_(mount->getPath()),
+      mountId_{Guid::generate()} {}
 
 PrjfsChannel::~PrjfsChannel() {
   if (isRunning_) {
@@ -114,7 +116,7 @@ PrjfsChannel::~PrjfsChannel() {
   }
 }
 
-void PrjfsChannel::start(AbsolutePath mountPath, bool readOnly) {
+void PrjfsChannel::start(bool readOnly) {
   if (readOnly) {
     NOT_IMPLEMENTED();
   }
@@ -144,13 +146,10 @@ void PrjfsChannel::start(AbsolutePath mountPath, bool readOnly) {
       folly::to_narrow(std::size(notificationMappings));
 
   auto dispatcher = getDispatcher();
-  XLOG(INFO) << sformat(
-      "Starting PrjfsChannel Path ({}) Dispatcher (0x{:x})",
-      mountPath,
-      uintptr_t(dispatcher));
+  XLOG(INFO) << "Starting PrjfsChannel for: " << mountPath_;
   DCHECK(dispatcher->isValidDispatcher());
 
-  auto winPath = edenToWinPath(mountPath.stringPiece());
+  auto winPath = edenToWinPath(mountPath_.stringPiece());
 
   auto result = PrjMarkDirectoryAsPlaceholder(
       winPath.c_str(), nullptr, nullptr, mountId_);
@@ -158,7 +157,7 @@ void PrjfsChannel::start(AbsolutePath mountPath, bool readOnly) {
   if (FAILED(result) &&
       result != HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
     throw makeHResultErrorExplicit(
-        result, sformat("Failed to setup the mount point({})", mountPath));
+        result, sformat("Failed to setup the mount point: {}", mountPath_));
   }
 
   result = PrjStartVirtualizing(
@@ -168,17 +167,13 @@ void PrjfsChannel::start(AbsolutePath mountPath, bool readOnly) {
     throw makeHResultErrorExplicit(result, "Failed to start the mount point");
   }
 
-  XLOG(INFO) << sformat(
-      "Started PrjfsChannel Path ({}): (0x{:x})",
-      mountPath,
-      uintptr_t(mountChannel_));
+  XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
 
   isRunning_ = true;
 }
 
 void PrjfsChannel::stop() {
-  XLOG(INFO) << sformat(
-      "Stopping PrjfsChannel (0x{:x})", uintptr_t(mountChannel_));
+  XLOG(INFO) << sformat("Stopping PrjfsChannel for {}", mountPath_);
   DCHECK(isRunning_);
   PrjStopVirtualizing(mountChannel_);
   stopPromise_.setValue(FsChannel::StopData{});
@@ -225,6 +220,23 @@ void PrjfsChannel::removeCachedFile(RelativePathPiece path) {
 
 void PrjfsChannel::removeDeletedFile(RelativePathPiece path) {
   deleteFile(path, PRJ_UPDATE_ALLOW_TOMBSTONE);
+}
+
+void PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
+  auto winMountPath = edenToWinPath(mountPath_.stringPiece());
+  auto fullPath = mountPath_ + path;
+  auto winPath = edenToWinPath(fullPath.stringPiece());
+
+  XLOGF(DBG6, "Adding a placeholder for: ", path);
+  auto result = PrjMarkDirectoryAsPlaceholder(
+      winMountPath.c_str(), winPath.c_str(), nullptr, mountId_);
+  if (FAILED(result)) {
+    XLOGF(
+        DBG6,
+        "Can't add a placeholder for {}: {:x}",
+        path,
+        static_cast<uint32_t>(result));
+  }
 }
 
 } // namespace eden
