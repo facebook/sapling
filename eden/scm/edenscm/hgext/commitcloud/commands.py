@@ -742,6 +742,7 @@ def cloudlistworspaces(ui, repo, **opts):
     workspacenameprefix = workspace.userworkspaceprefix(ui, user if user else None)
     currentworkspace = workspace.currentworkspace(repo)
     reponame = ccutil.getreponame(repo)
+    activeonly = not opts.get("all")
 
     ui.status(
         _("searching workspaces for the '%s' repo\n") % reponame,
@@ -751,28 +752,66 @@ def cloudlistworspaces(ui, repo, **opts):
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
     winfos = serv.getworkspaces(reponame, workspacenameprefix)
     if not winfos:
+        ui.write(_("no workspaces found with the prefix %s\n") % workspacenameprefix)
+        return
+
+    active, archived = [], []
+    for winfo in winfos:
+        (active if not winfo.archived else archived).append(winfo)
+
+    if not active and activeonly:
         ui.write(
             _("no active workspaces found with the prefix %s\n") % workspacenameprefix
         )
-    else:
-        ui.write(_("Workspaces:\n"))
-        for winfo in winfos:
-            fullname = winfo.name
-            shortname = winfo.name[len(workspacenameprefix) :]
-            isconnected = " (connected)" if fullname == currentworkspace else ""
-            if isconnected:
-                shortname = ui.label(shortname, "bold")
-            if winfo.archived:
-                if opts.get("all"):
-                    ui.write(_("        %s%s (archived)\n") % (shortname, isconnected))
-            else:
-                ui.write(_("        %s%s\n") % (shortname, isconnected))
-        ui.status(_("run `hg cloud sl -w <workspace name>` to view the commits\n"))
-        ui.status(
-            _(
-                "run `hg cloud join -w <workspace name> --switch` to switch to a different workspace\n"
-            )
+        return
+
+    ui.write(_("workspaces:\n"))
+
+    for winfo in active if activeonly else active + archived:
+        fullname, shortname = (winfo.name, winfo.name[len(workspacenameprefix) :])
+        isconnected = " (connected)" if fullname == currentworkspace else ""
+        if isconnected:
+            shortname = ui.label(shortname, "bold")
+        if not winfo.archived:
+            ui.write(_("        %s%s\n") % (shortname, isconnected))
+        else:
+            ui.write(_("        %s%s (archived)\n") % (shortname, isconnected))
+
+    ui.status(_("run `hg cloud sl -w <workspace name>` to view the commits\n"))
+    ui.status(
+        _(
+            "run `hg cloud join -w <workspace name> --switch` to switch to a different workspace\n"
         )
+    )
+
+
+@subcmd("deleteworkspace|delete", [] + workspace.workspaceopts)
+def clouddeleteworkspace(ui, repo, **opts):
+    """Delete (archive) workspace from commit cloud"""
+
+    workspacename = workspace.parseworkspace(ui, opts)
+    if workspacename is None:
+        raise error.Abort(_("workspace name should be provided\n"))
+
+    confirmed = True
+    if ui.interactive():
+        prompt = (
+            _("are you sure you want to delete the workspace %s [yn]:\n")
+            % workspacename
+        )
+        ui.write(ui.label(prompt, "ui.prompt"))
+        confirmed = ui.prompt("", default="").strip().lower().startswith("y")
+
+    if not confirmed:
+        return
+
+    reponame = ccutil.getreponame(repo)
+    service.get(ui, tokenmod.TokenLocator(ui).token).archiveworkspace(
+        reponame, workspacename
+    )
+    ui.status(
+        _("workspace %s has been deleted\n") % workspacename, component="commitcloud"
+    )
 
 
 @subcmd(

@@ -41,7 +41,7 @@ sh % "cat" << r"""
 
 sh % "hg cloud list" == r"""
 commitcloud: searching workspaces for the 'server' repo
-Workspaces:
+workspaces:
         default
 run `hg cloud sl -w <workspace name>` to view the commits
 run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
@@ -49,9 +49,32 @@ run `hg cloud join -w <workspace name> --switch` to switch to a different worksp
 
 sh % "hg cloud list --all" == r"""
 commitcloud: searching workspaces for the 'server' repo
-Workspaces:
-        old (archived)
+workspaces:
         default
+        old (archived)
 run `hg cloud sl -w <workspace name>` to view the commits
 run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
+"""
+
+sh % "hg cloud delete -w default" == r"""
+commitcloud: workspace user/test/default has been deleted
+"""
+
+sh % "hg cloud delete -w default_abc" == r"""
+abort: unknown workspace: user/test/default_abc
+[255]
+"""
+
+sh % "hg cloud list --all" == r"""
+commitcloud: searching workspaces for the 'server' repo
+workspaces:
+        old (archived)
+        default (archived)
+run `hg cloud sl -w <workspace name>` to view the commits
+run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
+"""
+
+sh % "hg cloud list" == r"""
+commitcloud: searching workspaces for the 'server' repo
+no active workspaces found with the prefix user/test/
 """

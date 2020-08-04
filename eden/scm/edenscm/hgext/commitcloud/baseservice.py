@@ -255,6 +255,11 @@ class BaseService(pycompat.ABC):
         """Gets the list of workspaces for the given prefix
         """
 
+    @abstractmethod
+    def archiveworkspace(self, reponame, workspace):
+        """Archive the given workspace
+        """
+
     @staticmethod
     def _makesmartloginfo(data):
         """Returns a SmartlogInfo that supports DAG operations like heads, parents,

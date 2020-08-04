@@ -87,7 +87,7 @@ class ServiceError(error.Abort):
         host = ui.config("commitcloud", "remote_host")
         port = ui.configint("commitcloud", "remote_port")
         details = _(
-            "(the Commit Cloud service endpoint is '%s:%d' - retry might help)"
+            "(the commit cloud service endpoint is '%s:%d' - retry might help)"
         ) % (host, port)
         contact = _("(please contact %s if this error persists)") % getownerteam(ui)
         message = "service error: %s\n%s\n%s" % (message, details, contact)

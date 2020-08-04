@@ -46,7 +46,7 @@ MAX_CONNECT_RETRIES = 2
 
 class HttpsCommitCloudService(baseservice.BaseService):
     """Commit Cloud Client uses http endpoint to communicate with
-       Commit Cloud Service
+       the commit cloud service
     """
 
     def __init__(self, ui, token=None):
@@ -497,3 +497,21 @@ class HttpsCommitCloudService(baseservice.BaseService):
 
         workspaces = response["workspaces_data"]
         return self._makeworkspacesinfo(workspaces)
+
+    @perftrace.tracefunc("Archive Workspace")
+    def archiveworkspace(self, reponame, workspace):
+        """Archive the given workspace
+        """
+        self.ui.debug(
+            "sending 'update_workspace_archive' request\n", component="commitcloud"
+        )
+        path = "/commit_cloud/update_workspace_archive"
+        data = {"repo_name": reponame, "workspace": workspace, "archived": True}
+        start = util.timer()
+        response = self._send(path, data)
+        elapsed = util.timer() - start
+        self.ui.debug(
+            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
+        )
+        if "error" in response:
+            raise ccerror.ServiceError(self.ui, response["error"])

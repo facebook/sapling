@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import os
 
 from edenscm.mercurial import error, json, pycompat
+from edenscm.mercurial.i18n import _
 
 from . import baseservice, error as ccerror, workspace as ccworkspace
 
@@ -279,3 +280,24 @@ class LocalService(baseservice.BaseService):
                     )
                 )
             )
+
+    def archiveworkspace(self, reponame, workspace):
+        allworkspaces = self.getworkspaces(reponame, None)
+        found = next(
+            (winfo for winfo in allworkspaces if winfo.name == workspace), None
+        )
+        # filter
+        if found:
+            allworkspaces = [
+                winfo for winfo in allworkspaces if winfo.name != workspace
+            ]
+        # update
+        if found:
+            allworkspaces.append(
+                baseservice.WorkspaceInfo(
+                    name=found.name, archived=True, version=found.version
+                )
+            )
+        else:
+            raise error.Abort(_("unknown workspace: %s") % workspace)
+        self._saveworkspaces(allworkspaces)
