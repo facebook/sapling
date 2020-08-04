@@ -489,7 +489,11 @@ mod test {
 
     #[test]
     fn test_encode() {
-        assert_eq!(encode("/foo/bar"), "fooZbar");
+        if cfg!(unix) {
+            assert_eq!(encode("/foo/bar"), "fooZbar");
+        } else {
+            assert_eq!(encode("/foo/bar"), "ZfooZbar");
+        }
         assert_eq!(encode("foo"), "foo");
         assert_eq!(encode("foo/bar"), "fooZbar");
         assert_eq!(encode(r"foo\bar"), "fooZbar");
