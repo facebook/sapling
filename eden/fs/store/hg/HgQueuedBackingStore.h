@@ -8,6 +8,8 @@
 #pragma once
 
 #include <folly/Range.h>
+#include <folly/Synchronized.h>
+#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -83,6 +85,10 @@ class HgQueuedBackingStore : public BackingStore {
       HgBackingStore::HgImportObject object,
       RequestMetricsScope::RequestMetric metric) const;
 
+  void startRecordingFetch() override;
+  void recordFetch(folly::StringPiece) override;
+  std::unordered_set<std::string> stopRecordingFetch() override;
+
  private:
   // Forbidden copy constructor and assignment operator
   HgQueuedBackingStore(const HgQueuedBackingStore&) = delete;
@@ -129,6 +135,17 @@ class HgQueuedBackingStore : public BackingStore {
    */
   RequestMetricsScope::LockedRequestWatchList& getPendingImportWatches(
       HgBackingStore::HgImportObject object) const;
+
+  /**
+   * isRecordingFetch_ indicates if HgQueuedBackingStore is recording paths
+   * for fetched files. Initially we don't record paths. When
+   * startRecordingFetch() is called, isRecordingFetch_ is set to true and
+   * recordFetch() will record the input path. When stopRecordingFetch() is
+   * called, isRecordingFetch_ is set to false and recordFetch() no longer
+   * records the input path.
+   */
+  std::atomic<bool> isRecordingFetch_{false};
+  folly::Synchronized<std::unordered_set<std::string>> fetchedFilePaths_;
 
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<EdenStats> stats_;

@@ -7,7 +7,6 @@
 
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 
-#include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
@@ -250,6 +249,7 @@ void HgQueuedBackingStore::logBackingStoreFetch(
     return;
   }
   auto logFetchPath = config_->getEdenConfig()->logObjectFetchPath.getValue();
+
   if (!logFetchPath) {
     return;
   }
@@ -267,6 +267,8 @@ void HgQueuedBackingStore::logBackingStoreFetch(
       return;
     }
   }
+
+  recordFetch(path.stringPiece());
 
   if (RelativePathPiece(logFetchPath.value())
           .isParentDirOf(RelativePathPiece(path))) {
@@ -307,6 +309,23 @@ HgQueuedBackingStore::getPendingImportWatches(
       return pendingImportPrefetchWatches_;
   }
   EDEN_BUG() << "unknown hg import object type " << static_cast<int>(object);
+}
+
+void HgQueuedBackingStore::startRecordingFetch() {
+  isRecordingFetch_.store(true);
+}
+
+void HgQueuedBackingStore::recordFetch(folly::StringPiece importPath) {
+  if (isRecordingFetch_.load()) {
+    fetchedFilePaths_.wlock()->emplace(importPath.str());
+  }
+}
+
+std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
+  isRecordingFetch_.store(false);
+  std::unordered_set<std::string> paths;
+  std::swap(paths, *fetchedFilePaths_.wlock());
+  return paths;
 }
 
 } // namespace eden

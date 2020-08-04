@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include <memory>
 
@@ -24,7 +25,6 @@ namespace eden {
 class Blob;
 class Hash;
 class Tree;
-
 /**
  * Abstract interface for a BackingStore.
  *
@@ -58,6 +58,25 @@ class BackingStore {
   }
 
   virtual void periodicManagementTask() {}
+
+  /**
+   * Subclass of BackingStore will override these functions to record file paths
+   * fetched. By default, recordFetch() does nothing. After
+   * startRecordingFetch() is called, recordFetch() starts to records fetched
+   * file paths. stopRecordingFetch() will disable recordFetch()'s function and
+   * return the fetched files since startRecordingFetch() is called and clear
+   * the old records.
+   *
+   * Currently implemented in HgQueuedBackingStore.
+   *
+   * Note: Only stopRecordingFetch() clears old records. Calling
+   * startRecordingFetch() a second time has no effect.
+   */
+  virtual void startRecordingFetch() {}
+  virtual void recordFetch(folly::StringPiece) {}
+  virtual std::unordered_set<std::string> stopRecordingFetch() {
+    return {};
+  }
 
  private:
   // Forbidden copy constructor and assignment operator
