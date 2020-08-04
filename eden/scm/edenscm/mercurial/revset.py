@@ -2545,7 +2545,7 @@ def scanunknowns(trees, lookup):
         if isinstance(x, tuple):
             headname = x[0]
             args = []
-            if headname in {"parent"}:
+            if headname in {"ancestor", "parent"}:
                 # 1st argument is a set.
                 args = x[1:2]
             elif headname in {
@@ -2558,7 +2558,6 @@ def scanunknowns(trees, lookup):
                 "or",
                 "not",
                 "difference",
-                "ancestor",
                 "parentpost",
                 "list",
             }:

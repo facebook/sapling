@@ -417,3 +417,10 @@ Check the repo.pull API
   $ newrepo
   $ setconfig paths.default=ssh://user@dummy/remoterepo
   $ hg log -r 'present(023871)' -T "{node}\n"
+
+--- x~y will not auto-pull `y`.
+
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ hg log -r '.~1000000' -T "{node}\n"
+  0000000000000000000000000000000000000000
