@@ -29,7 +29,7 @@ use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sqlblob::Sqlblob;
-use std::num::NonZeroU64;
+use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 use throttledblob::{ThrottleOptions, ThrottledBlob};
 
@@ -158,6 +158,7 @@ pub fn make_blobstore<'a>(
                 scuba_table,
                 scuba_sample_rate,
                 blobstores,
+                minimum_successful_writes,
                 queue_db,
             } => {
                 has_components = true;
@@ -168,6 +169,7 @@ pub fn make_blobstore<'a>(
                     scuba_table,
                     scuba_sample_rate,
                     blobstores,
+                    minimum_successful_writes,
                     None,
                     mysql_options,
                     readonly_storage,
@@ -181,6 +183,7 @@ pub fn make_blobstore<'a>(
                 scuba_table,
                 scuba_sample_rate,
                 blobstores,
+                minimum_successful_writes,
                 scrub_action,
                 queue_db,
             } => {
@@ -192,6 +195,7 @@ pub fn make_blobstore<'a>(
                     scuba_table,
                     scuba_sample_rate,
                     blobstores,
+                    minimum_successful_writes,
                     Some((
                         Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
                         scrub_action,
@@ -319,6 +323,7 @@ pub fn make_blobstore_multiplexed<'a>(
     scuba_table: Option<String>,
     scuba_sample_rate: NonZeroU64,
     inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
+    minimum_successful_writes: NonZeroUsize,
     scrub_args: Option<(Arc<dyn ScrubHandler>, ScrubAction)>,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
@@ -394,6 +399,7 @@ pub fn make_blobstore_multiplexed<'a>(
                 multiplex_id,
                 normal_components,
                 write_mostly_components,
+                minimum_successful_writes,
                 Arc::new(queue),
                 scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
                     ScubaSampleBuilder::new(fb, table)
@@ -406,6 +412,7 @@ pub fn make_blobstore_multiplexed<'a>(
                 multiplex_id,
                 normal_components,
                 write_mostly_components,
+                minimum_successful_writes,
                 Arc::new(queue),
                 scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
                     ScubaSampleBuilder::new(fb, table)

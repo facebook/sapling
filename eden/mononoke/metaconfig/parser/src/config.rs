@@ -900,6 +900,7 @@ mod test {
                 { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
             ]
             queue_db = { remote = { db_address = "queue_db_address" } }
+            minimum_successful_writes = 2
 
             [[bookmarks]]
             name="master"
@@ -1011,6 +1012,7 @@ mod test {
                     },
                 ),
             ],
+            minimum_successful_writes: nonzero!(2usize),
             queue_db: DatabaseConfig::Remote(RemoteDatabaseConfig {
                 db_address: "queue_db_address".into(),
             }),
@@ -1403,7 +1405,6 @@ mod test {
             { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
         ]
         queue_db = { remote = { db_address = "queue_db_address" } }
-
         "#;
 
         const REPO: &str = r#"
@@ -1442,6 +1443,7 @@ mod test {
                                 path: "/tmp/foo".into()
                             })
                         ],
+                        minimum_successful_writes: nonzero!(1usize),
                         queue_db: DatabaseConfig::Remote(
                             RemoteDatabaseConfig {
                                 db_address: "queue_db_address".into(),

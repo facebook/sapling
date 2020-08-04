@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use blobstore_sync_queue::OperationKey;
@@ -26,7 +26,7 @@ use std::{
     fmt,
     future::Future,
     iter::Iterator,
-    num::NonZeroU64,
+    num::{NonZeroU64, NonZeroUsize},
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -90,6 +90,11 @@ pub struct MultiplexedBlobstoreBase {
     /// 2. When we're recording blobstore stats to Scuba on a `get` - in this case, the read executes
     ///    solely to gather statistics, and the result is discarded
     write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
+    /// At least this many `put` and `on_put` pairs have to succeed before we consider a `put` successful
+    /// This is meant to ensure that `put` fails if the data could end up lost (e.g. if a buggy experimental
+    /// blobstore wins the `put` race).
+    /// Note that if this is bigger than the number of blobstores, we will always fail writes
+    minimum_successful_writes: NonZeroUsize,
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     scuba: ScubaSampleBuilder,
     scuba_sample_rate: NonZeroU64,
@@ -100,6 +105,7 @@ impl MultiplexedBlobstoreBase {
         multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        minimum_successful_writes: NonZeroUsize,
         handler: Arc<dyn MultiplexedBlobstorePutHandler>,
         mut scuba: ScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
@@ -110,6 +116,7 @@ impl MultiplexedBlobstoreBase {
             multiplex_id,
             blobstores: blobstores.into(),
             write_mostly_blobstores: write_mostly_blobstores.into(),
+            minimum_successful_writes,
             handler,
             scuba,
             scuba_sample_rate,
@@ -360,6 +367,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
     ) -> BoxFuture<'static, Result<(), Error>> {
         let write_order = Arc::new(AtomicUsize::new(0));
         let operation_key = OperationKey::gen();
+        let mut needed_handlers: usize = self.minimum_successful_writes.into();
 
         let mut puts: FuturesUnordered<_> = self
             .blobstores
@@ -403,6 +411,13 @@ impl Blobstore for MultiplexedBlobstoreBase {
             .collect();
 
         async move {
+            if needed_handlers > puts.len() {
+                return Err(anyhow!(
+                    "Not enough blobstores for configured put needs. Have {}, need {}",
+                    puts.len(),
+                    needed_handlers
+                ));
+            }
             let (stats, result) = {
                 let ctx = &ctx;
                 async move {
@@ -428,11 +443,14 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                 put_errors.insert(blobstore_id, e);
                             }
                             Right(Ok(())) => {
-                                // A handler was successful. Spawn off remaining puts and handler
-                                // writes, then done
-                                spawn_stream_completion(puts.and_then(|handler| handler));
-                                spawn_stream_completion(handlers);
-                                return Ok(());
+                                needed_handlers = needed_handlers.saturating_sub(1);
+                                if needed_handlers == 0 {
+                                    // Handlers were successful. Spawn off remaining puts and handler
+                                    // writes, then done
+                                    spawn_stream_completion(puts.and_then(|handler| handler));
+                                    spawn_stream_completion(handlers);
+                                    return Ok(());
+                                }
                             }
                             Right(Err((blobstore_id, e))) => {
                                 put_errors.insert(blobstore_id, e);

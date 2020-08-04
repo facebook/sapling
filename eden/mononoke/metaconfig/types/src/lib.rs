@@ -15,8 +15,7 @@ use anyhow::{anyhow, Error, Result};
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     fmt, mem,
-    num::NonZeroU64,
-    num::NonZeroUsize,
+    num::{NonZeroU64, NonZeroUsize},
     ops::Deref,
     path::PathBuf,
     str,
@@ -691,6 +690,8 @@ pub enum BlobConfig {
         scuba_table: Option<String>,
         /// Set of blobstores being multiplexed over
         blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
+        /// The number of writes that must succeed for a `put` to the multiplex to succeed
+        minimum_successful_writes: NonZeroUsize,
         /// 1 in scuba_sample_rate samples will be logged.
         scuba_sample_rate: NonZeroU64,
         /// DB config to use for the sync queue
@@ -704,6 +705,8 @@ pub enum BlobConfig {
         scuba_table: Option<String>,
         /// Set of blobstores being multiplexed over
         blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
+        /// The number of writes that must succeed for a `put` to the multiplex to succeed
+        minimum_successful_writes: NonZeroUsize,
         /// Whether to attempt repair
         scrub_action: ScrubAction,
         /// 1 in scuba_sample_rate samples will be logged.
@@ -765,6 +768,7 @@ impl BlobConfig {
             scuba_table,
             scuba_sample_rate,
             blobstores,
+            minimum_successful_writes,
             queue_db,
         } = self
         {
@@ -778,6 +782,7 @@ impl BlobConfig {
                 scuba_table,
                 scuba_sample_rate: *scuba_sample_rate,
                 blobstores,
+                minimum_successful_writes: *minimum_successful_writes,
                 scrub_action,
                 queue_db: queue_db.clone(),
             };

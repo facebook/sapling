@@ -25,7 +25,7 @@ use scuba::ScubaSampleBuilder;
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::fmt;
-use std::num::NonZeroU64;
+use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::{atomic::AtomicUsize, Arc};
 
 pub trait ScrubHandler: Send + Sync {
@@ -90,6 +90,7 @@ impl ScrubBlobstore {
         multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        minimum_successful_writes: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba: ScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
@@ -100,6 +101,7 @@ impl ScrubBlobstore {
             multiplex_id,
             blobstores.clone(),
             write_mostly_blobstores.clone(),
+            minimum_successful_writes,
             queue.clone(),
             scuba.clone(),
             scuba_sample_rate,

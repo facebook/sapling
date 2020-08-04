@@ -16,7 +16,7 @@ use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use scuba::ScubaSampleBuilder;
 use std::fmt;
-use std::num::NonZeroU64;
+use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -30,6 +30,7 @@ impl MultiplexedBlobstore {
         multiplex_id: MultiplexId,
         blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        minimum_successful_writes: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba: ScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
@@ -42,6 +43,7 @@ impl MultiplexedBlobstore {
                 multiplex_id,
                 blobstores,
                 write_mostly_blobstores,
+                minimum_successful_writes,
                 put_handler,
                 scuba,
                 scuba_sample_rate,

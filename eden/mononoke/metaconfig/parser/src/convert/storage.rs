@@ -56,31 +56,50 @@ impl Convert for RawBlobstoreConfig {
             RawBlobstoreConfig::mysql(raw) => BlobConfig::Mysql {
                 remote: raw.remote.convert()?,
             },
-            RawBlobstoreConfig::multiplexed(raw) => BlobConfig::Multiplexed {
-                multiplex_id: raw
-                    .multiplex_id
-                    .map(MultiplexId::new)
-                    .ok_or_else(|| anyhow!("missing multiplex_id from configuration"))?,
-                scuba_table: raw.scuba_table,
-                scuba_sample_rate: parse_scuba_sample_rate(raw.scuba_sample_rate)?,
-                blobstores: raw
-                    .components
-                    .into_iter()
-                    .map(|comp| {
-                        Ok((
-                            BlobstoreId::new(comp.blobstore_id.try_into()?),
-                            comp.store_type
-                                .convert()?
-                                .unwrap_or(MultiplexedStoreType::Normal),
-                            comp.blobstore.convert()?,
-                        ))
-                    })
-                    .collect::<Result<Vec<_>>>()?,
-                queue_db: raw
-                    .queue_db
-                    .ok_or_else(|| anyhow!("missing queue_db from configuration"))?
-                    .convert()?,
-            },
+            RawBlobstoreConfig::multiplexed(raw) => {
+                let unchecked_minimum_successful_writes: usize =
+                    raw.minimum_successful_writes.unwrap_or(1).try_into()?;
+
+                if unchecked_minimum_successful_writes > raw.components.len() {
+                    return Err(anyhow!(
+                        "Not enough blobstores for {} required writes (have {})",
+                        unchecked_minimum_successful_writes,
+                        raw.components.len()
+                    ));
+                }
+
+                let minimum_successful_writes =
+                    NonZeroUsize::new(unchecked_minimum_successful_writes).ok_or_else(|| {
+                        anyhow!("Must require at least 1 successful write to make a put succeed")
+                    })?;
+
+                BlobConfig::Multiplexed {
+                    multiplex_id: raw
+                        .multiplex_id
+                        .map(MultiplexId::new)
+                        .ok_or_else(|| anyhow!("missing multiplex_id from configuration"))?,
+                    scuba_table: raw.scuba_table,
+                    scuba_sample_rate: parse_scuba_sample_rate(raw.scuba_sample_rate)?,
+                    blobstores: raw
+                        .components
+                        .into_iter()
+                        .map(|comp| {
+                            Ok((
+                                BlobstoreId::new(comp.blobstore_id.try_into()?),
+                                comp.store_type
+                                    .convert()?
+                                    .unwrap_or(MultiplexedStoreType::Normal),
+                                comp.blobstore.convert()?,
+                            ))
+                        })
+                        .collect::<Result<Vec<_>>>()?,
+                    minimum_successful_writes,
+                    queue_db: raw
+                        .queue_db
+                        .ok_or_else(|| anyhow!("missing queue_db from configuration"))?
+                        .convert()?,
+                }
+            }
             RawBlobstoreConfig::manifold_with_ttl(raw) => {
                 let ttl = Duration::from_secs(raw.ttl_secs.try_into()?);
                 BlobConfig::ManifoldWithTtl {

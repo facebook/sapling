@@ -218,6 +218,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<(), Error> {
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
         vec![],
+        nonzero!(1usize),
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -260,6 +261,7 @@ async fn base(fb: FacebookInit) {
             (BlobstoreId::new(1), bs1.clone()),
         ],
         vec![],
+        nonzero!(1usize),
         log.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -404,6 +406,7 @@ async fn multiplexed(fb: FacebookInit) {
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
         vec![],
+        nonzero!(1usize),
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -486,6 +489,7 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<(), Error> {
             (bid2, bs2.clone()),
         ],
         vec![],
+        nonzero!(1usize),
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -530,6 +534,7 @@ async fn scrubbed(fb: FacebookInit) {
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
         vec![],
+        nonzero!(1usize),
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -599,6 +604,7 @@ async fn scrubbed(fb: FacebookInit) {
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
         vec![],
+        nonzero!(1usize),
         queue.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -683,6 +689,7 @@ async fn queue_waits(fb: FacebookInit) {
             (BlobstoreId::new(2), bs2.clone()),
         ],
         vec![],
+        nonzero!(1usize),
         log.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -789,6 +796,7 @@ async fn write_mostly_get(fb: FacebookInit) {
         MultiplexId::new(1),
         vec![(BlobstoreId::new(0), main_bs.clone())],
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        nonzero!(1usize),
         log.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -870,6 +878,7 @@ async fn write_mostly_put(fb: FacebookInit) {
         MultiplexId::new(1),
         vec![(BlobstoreId::new(0), main_bs.clone())],
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        nonzero!(1usize),
         log.clone(),
         ScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -1027,5 +1036,174 @@ async fn write_mostly_put(fb: FacebookInit) {
             write_mostly_bs.storage.with(|s| s.get(&k4).cloned()),
             Some(v4.clone())
         );
+    }
+}
+
+#[fbinit::test]
+async fn needed_writes(fb: FacebookInit) {
+    let main_bs0 = Arc::new(Tickable::new());
+    let main_bs2 = Arc::new(Tickable::new());
+    let write_mostly_bs = Arc::new(Tickable::new());
+
+    let log = Arc::new(LogHandler::new());
+    let bs = MultiplexedBlobstoreBase::new(
+        MultiplexId::new(1),
+        vec![
+            (BlobstoreId::new(0), main_bs0.clone()),
+            (BlobstoreId::new(2), main_bs2.clone()),
+        ],
+        vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        nonzero!(2usize),
+        log.clone(),
+        ScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+
+    let ctx = CoreContext::test_mock(fb);
+
+    // Puts do not succeed until we have two successful writes and two handlers done
+    {
+        let k0 = String::from("k0");
+        let v0 = make_value("v0");
+        let mut put_fut = bs
+            .put(ctx.clone(), k0.clone(), v0.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+
+        main_bs0.tick(None);
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+
+        log.log.with(|l| {
+            assert_eq!(l.len(), 1, "No handler run for put to blobstore");
+            assert_eq!(
+                l[0],
+                (BlobstoreId::new(0), k0.clone()),
+                "Handler put wrong entries"
+            )
+        });
+
+        main_bs2.tick(None);
+        assert!(
+            put_fut.await.is_ok(),
+            "Put failed with two succcessful writes"
+        );
+        log.log.with(|l| {
+            assert_eq!(l.len(), 2, "No handler run for put to blobstore");
+            assert_eq!(
+                l,
+                &vec![
+                    (BlobstoreId::new(0), k0.clone()),
+                    (BlobstoreId::new(2), k0.clone()),
+                ],
+                "Handler put wrong entries"
+            )
+        });
+
+        assert_eq!(
+            main_bs0.storage.with(|s| s.get(&k0).cloned()),
+            Some(v0.clone())
+        );
+        assert_eq!(
+            main_bs2.storage.with(|s| s.get(&k0).cloned()),
+            Some(v0.clone())
+        );
+        assert_eq!(write_mostly_bs.storage.with(|s| s.get(&k0).cloned()), None);
+        write_mostly_bs.tick(Some("Error"));
+        log.clear();
+    }
+
+    // A write-mostly counts as a success.
+    {
+        let k1 = String::from("k1");
+        let v1 = make_value("v1");
+        let mut put_fut = bs
+            .put(ctx.clone(), k1.clone(), v1.clone())
+            .map_err(|_| ())
+            .boxed();
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+
+        main_bs0.tick(None);
+        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
+
+        log.log.with(|l| {
+            assert_eq!(l.len(), 1, "No handler run for put to blobstore");
+            assert_eq!(
+                l[0],
+                (BlobstoreId::new(0), k1.clone()),
+                "Handler put wrong entries"
+            )
+        });
+
+        write_mostly_bs.tick(None);
+        assert!(
+            put_fut.await.is_ok(),
+            "Put failed with two succcessful writes"
+        );
+        log.log.with(|l| {
+            assert_eq!(l.len(), 2, "No handler run for put to blobstore");
+            assert_eq!(
+                l,
+                &vec![
+                    (BlobstoreId::new(0), k1.clone()),
+                    (BlobstoreId::new(1), k1.clone()),
+                ],
+                "Handler put wrong entries"
+            )
+        });
+
+        assert_eq!(
+            main_bs0.storage.with(|s| s.get(&k1).cloned()),
+            Some(v1.clone())
+        );
+        assert_eq!(
+            write_mostly_bs.storage.with(|s| s.get(&k1).cloned()),
+            Some(v1.clone())
+        );
+        assert_eq!(main_bs2.storage.with(|s| s.get(&k1).cloned()), None);
+        main_bs2.tick(Some("Error"));
+        log.clear();
+    }
+}
+
+#[fbinit::test]
+async fn needed_writes_bad_config(fb: FacebookInit) {
+    let main_bs0 = Arc::new(Tickable::new());
+    let main_bs2 = Arc::new(Tickable::new());
+    let write_mostly_bs = Arc::new(Tickable::new());
+
+    let log = Arc::new(LogHandler::new());
+    let bs = MultiplexedBlobstoreBase::new(
+        MultiplexId::new(1),
+        vec![
+            (BlobstoreId::new(0), main_bs0.clone()),
+            (BlobstoreId::new(2), main_bs2.clone()),
+        ],
+        vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
+        nonzero!(5usize),
+        log.clone(),
+        ScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+
+    let ctx = CoreContext::test_mock(fb);
+
+    {
+        let k0 = String::from("k0");
+        let v0 = make_value("v0");
+        let put_fut = bs
+            .put(ctx.clone(), k0.clone(), v0.clone())
+            .map_err(|_| ())
+            .boxed();
+
+        main_bs0.tick(None);
+        main_bs2.tick(None);
+        write_mostly_bs.tick(None);
+
+        assert!(
+            put_fut.await.is_err(),
+            "Put succeeded despite not enough blobstores"
+        );
+        log.clear();
     }
 }
