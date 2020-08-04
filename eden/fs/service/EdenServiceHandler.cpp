@@ -1294,8 +1294,7 @@ void EdenServiceHandler::clearFetchCountsByMount(
 
 void EdenServiceHandler::startRecordingBackingStoreFetch() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
-  for (auto& mount : server_->getMountPoints()) {
-    auto backingStore = mount->getObjectStore()->getBackingStore();
+  for (auto& backingStore : server_->getBackingStores()) {
     backingStore->startRecordingFetch();
   }
 }

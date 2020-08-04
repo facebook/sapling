@@ -1572,6 +1572,16 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
   return store;
 }
 
+std::unordered_set<std::shared_ptr<BackingStore>>
+EdenServer::getBackingStores() {
+  std::unordered_set<std::shared_ptr<BackingStore>> backingStores{};
+  auto lockedStores = this->backingStores_.rlock();
+  for (auto entry : *lockedStores) {
+    backingStores.emplace(std::move(entry.second));
+  }
+  return backingStores;
+}
+
 std::unordered_set<shared_ptr<HgQueuedBackingStore>>
 EdenServer::getHgQueuedBackingStores() {
   std::unordered_set<std::shared_ptr<HgQueuedBackingStore>> hgBackingStores{};

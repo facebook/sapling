@@ -382,6 +382,16 @@ class EdenServer : private TakeoverHandler {
   }
 
   /**
+   * Look up all BackingStores
+   *
+   * EdenServer maintains an internal cache of all known BackingStores,
+   * so that multiple mount points that use the same repository can
+   * share the same BackingStore object.
+   *
+   */
+  std::unordered_set<std::shared_ptr<BackingStore>> getBackingStores();
+
+  /**
    * Look up all BackingStores which are HgQueuedBackingStore
    *
    * EdenServer maintains an internal cache of all known BackingStores,
