@@ -15,6 +15,7 @@ use megarepolib::common::{ChangesetArgs, ChangesetArgsFactory, StackPosition};
 use mononoke_types::DateTime;
 
 pub const COMMIT_HASH: &'static str = "commit-hash";
+pub const GRADUAL_MERGE: &'static str = "gradual-merge";
 pub const MOVE: &'static str = "move";
 pub const MERGE: &'static str = "merge";
 pub const MARK_PUBLIC: &'static str = "mark-public";
@@ -26,6 +27,10 @@ pub const COMMIT_MESSAGE: &'static str = "commit-message";
 pub const COMMIT_AUTHOR: &'static str = "commit-author";
 pub const COMMIT_DATE_RFC3339: &'static str = "commit-date-rfc3339";
 pub const COMMIT_BOOKMARK: &'static str = "bookmark";
+pub const DRY_RUN: &'static str = "dry-run";
+pub const LAST_DELETION_COMMIT: &'static str = "last-deletion-commit";
+pub const LIMIT: &'static str = "limit";
+pub const PRE_DELETION_COMMIT: &'static str = "pre-deletion-commit";
 pub const SYNC_DIAMOND_MERGE: &'static str = "sync-diamond-merge";
 pub const MAX_NUM_OF_MOVES_IN_COMMIT: &'static str = "max-num-of-moves-in-commit";
 pub const CHUNKING_HINT_FILE: &'static str = "chunking-hint-file";
@@ -92,6 +97,34 @@ pub fn get_delete_commits_cs_args_factory<'a>(
     Ok(Box::new(move |num: StackPosition| ChangesetArgs {
         author: author.clone(),
         message: format!("[MEGAREPO DELETE] {} ({})", message, num.0),
+        datetime: datetime.clone(),
+        bookmark: None,
+        mark_public: false,
+    }))
+}
+
+pub fn get_gradual_merge_commits_cs_args_factory<'a>(
+    sub_m: &ArgMatches<'a>,
+) -> Result<Box<dyn ChangesetArgsFactory>, Error> {
+    let message = sub_m
+        .value_of(COMMIT_MESSAGE)
+        .ok_or_else(|| format_err!("missing argument {}", COMMIT_MESSAGE))?
+        .to_string();
+
+    let author = sub_m
+        .value_of(COMMIT_AUTHOR)
+        .ok_or_else(|| format_err!("missing argument {}", COMMIT_AUTHOR))?
+        .to_string();
+
+    let datetime = sub_m
+        .value_of(COMMIT_DATE_RFC3339)
+        .map(|datetime_str| DateTime::from_rfc3339(datetime_str))
+        .transpose()?
+        .unwrap_or_else(|| DateTime::now());
+
+    Ok(Box::new(move |num: StackPosition| ChangesetArgs {
+        author: author.clone(),
+        message: format!("[MEGAREPO GRADUAL MERGE] {} ({})", message, num.0),
         datetime: datetime.clone(),
         bookmark: None,
         mark_public: false,
@@ -245,6 +278,43 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true),
         );
 
+    let gradual_merge_subcommand = SubCommand::with_name(GRADUAL_MERGE)
+        .about("Gradually merge a list of deletion commits")
+        .arg(
+            Arg::with_name(LAST_DELETION_COMMIT)
+                .long(LAST_DELETION_COMMIT)
+                .help("Last deletion commit")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(PRE_DELETION_COMMIT)
+                .long(PRE_DELETION_COMMIT)
+                .help("Commit right before the first deletion commit")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(COMMIT_BOOKMARK)
+                .help("bookmark to point to resulting commits (no sanity checks, will move existing bookmark, be careful)")
+                .long(COMMIT_BOOKMARK)
+                .takes_value(true)
+        )
+        .arg(
+            Arg::with_name(DRY_RUN)
+                .long(DRY_RUN)
+                .help("Dry-run mode - doesn't do a merge, just validates")
+                .takes_value(false)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name(LIMIT)
+                .long(LIMIT)
+                .help("how many commits to merge")
+                .takes_value(true)
+                .required(false),
+        );
+
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -254,4 +324,5 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(sync_diamond_subcommand)
         .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
         .subcommand(add_light_resulting_commit_args(bonsai_merge_subcommand))
+        .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
 }

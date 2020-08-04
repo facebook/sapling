@@ -10,22 +10,92 @@
 use anyhow::{format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
-use blobstore::Storable;
+use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use context::CoreContext;
-use filestore::{self, StoreRequest};
-use futures::{compat::Future01CompatExt, future};
+use filestore::{self, FetchKey, StoreRequest};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future,
+    stream::TryStreamExt,
+};
 use futures_old::stream;
+use manifest::ManifestOps;
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath,
 };
-use std::{collections::BTreeMap, convert::TryInto, str::FromStr};
+use std::{
+    collections::{BTreeMap, HashMap},
+    convert::TryInto,
+    str::FromStr,
+};
 
 pub mod drawdag;
+
+pub async fn list_working_copy_utf8(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+) -> Result<HashMap<MPath, String>, Error> {
+    let wc = list_working_copy(ctx, repo, cs_id).await?;
+
+    wc.into_iter()
+        .map(|(path, content)| Ok((path, String::from_utf8(content.to_vec())?)))
+        .collect()
+}
+
+pub async fn list_working_copy(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+) -> Result<HashMap<MPath, Bytes>, Error> {
+    let hg_cs_id = repo
+        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+        .compat()
+        .await?;
+    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+
+    let mf_id = hg_cs.manifestid();
+    mf_id
+        .list_leaf_entries(ctx.clone(), repo.blobstore().boxed())
+        .compat()
+        .map_ok(|(path, (_file_type, filenode_id))| async move {
+            let filenode = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
+            let content_id = filenode.content_id();
+            let maybe_content = filestore::fetch(
+                repo.blobstore(),
+                ctx.clone(),
+                &FetchKey::Canonical(content_id),
+            )
+            .compat()
+            .await?;
+            let s = match maybe_content {
+                Some(s) => s,
+                None => {
+                    return Err(format_err!(
+                        "cannot fetch content for {} {}",
+                        path,
+                        content_id
+                    ));
+                }
+            };
+            let bytes = s
+                .compat()
+                .try_fold(BytesMut::new(), |mut bytes, new_bytes| {
+                    bytes.extend_from_slice(&new_bytes);
+                    future::ready(Ok(bytes))
+                })
+                .await?;
+            Ok((path, bytes.freeze()))
+        })
+        .try_buffer_unordered(100)
+        .try_collect()
+        .await
+}
 
 /// Helper to create bonsai changesets in a BlobRepo
 pub struct CreateCommitContext<'a> {

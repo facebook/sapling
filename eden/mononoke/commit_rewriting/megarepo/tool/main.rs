@@ -21,19 +21,23 @@ use futures::{
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use movers::get_small_to_large_mover;
+use skiplist::fetch_skiplist_index;
 use slog::info;
 use std::collections::BTreeMap;
 use std::num::NonZeroU64;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 mod cli;
+mod gradual_merge;
 mod merging;
 mod sync_diamond_merge;
 
 use crate::cli::{
-    cs_args_from_matches, get_delete_commits_cs_args_factory, setup_app, BONSAI_MERGE,
-    BONSAI_MERGE_P1, BONSAI_MERGE_P2, CHANGESET, CHUNKING_HINT_FILE, COMMIT_HASH, EVEN_CHUNK_SIZE,
-    FIRST_PARENT, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PRE_MERGE_DELETE,
+    cs_args_from_matches, get_delete_commits_cs_args_factory,
+    get_gradual_merge_commits_cs_args_factory, setup_app, BONSAI_MERGE, BONSAI_MERGE_P1,
+    BONSAI_MERGE_P2, CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DRY_RUN,
+    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, LAST_DELETION_COMMIT, LIMIT,
+    MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PRE_DELETION_COMMIT, PRE_MERGE_DELETE,
     SECOND_PARENT, SYNC_DIAMOND_MERGE,
 };
 use crate::merging::perform_merge;
@@ -259,6 +263,62 @@ async fn run_bonsai_merge<'a>(
         create_and_save_bonsai(&ctx, &repo, vec![p1, p2], BTreeMap::new(), cs_args).await?;
 
     println!("{}", merge_cs_id);
+
+    Ok(())
+}
+
+async fn run_gradual_merge<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches)
+        .compat()
+        .await?;
+
+    let last_deletion_commit = sub_m
+        .value_of(LAST_DELETION_COMMIT)
+        .ok_or(format_err!("last deletion commit is not specified"))?;
+    let pre_deletion_commit = sub_m
+        .value_of(PRE_DELETION_COMMIT)
+        .ok_or(format_err!("pre deletion commit is not specified"))?;
+    let bookmark = sub_m
+        .value_of(COMMIT_BOOKMARK)
+        .ok_or(format_err!("bookmark where to merge is not specified"))?;
+    let dry_run = sub_m.is_present(DRY_RUN);
+
+    let limit = args::get_usize_opt(sub_m, LIMIT);
+    let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+    let last_deletion_commit =
+        helpers::csid_resolve(ctx.clone(), repo.clone(), last_deletion_commit).compat();
+    let pre_deletion_commit =
+        helpers::csid_resolve(ctx.clone(), repo.clone(), pre_deletion_commit).compat();
+
+    let blobstore = repo.get_blobstore().boxed();
+    let skiplist =
+        fetch_skiplist_index(&ctx, &repo_config.skiplist_index_blobstore_key, &blobstore);
+
+    let (last_deletion_commit, pre_deletion_commit, skiplist) =
+        try_join3(last_deletion_commit, pre_deletion_commit, skiplist).await?;
+
+    let merge_changeset_args_factory = get_gradual_merge_commits_cs_args_factory(&sub_m)?;
+    let params = gradual_merge::GradualMergeParams {
+        pre_deletion_commit,
+        last_deletion_commit,
+        bookmark_to_merge_into: BookmarkName::new(bookmark)?,
+        merge_changeset_args_factory,
+        limit,
+        dry_run,
+    };
+    gradual_merge::gradual_merge(
+        &ctx,
+        &repo,
+        &skiplist,
+        &params,
+        &repo_config.pushrebase.flags,
+    )
+    .await?;
+
     Ok(())
 }
 
@@ -303,6 +363,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             (SYNC_DIAMOND_MERGE, Some(sub_m)) => run_sync_diamond_merge(ctx, &matches, sub_m).await,
             (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
             (BONSAI_MERGE, Some(sub_m)) => run_bonsai_merge(ctx, &matches, sub_m).await,
+            (GRADUAL_MERGE, Some(sub_m)) => run_gradual_merge(ctx, &matches, sub_m).await,
             _ => bail!("oh no, wrong arguments provided!"),
         }
     };

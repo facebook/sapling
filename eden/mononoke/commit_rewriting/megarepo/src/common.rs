@@ -26,6 +26,7 @@ pub struct ChangesetArgs {
     pub mark_public: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct StackPosition(pub usize);
 
 /// For creating stacks of changesets

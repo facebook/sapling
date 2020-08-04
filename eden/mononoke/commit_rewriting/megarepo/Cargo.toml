@@ -27,6 +27,8 @@ mercurial_types = { path = "../../mercurial/types" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 movers = { path = "../movers" }
+pushrebase = { path = "../../pushrebase" }
+reachabilityindex = { path = "../../reachabilityindex" }
 revset = { path = "../../revset" }
 skiplist = { path = "../../reachabilityindex/skiplist" }
 synced_commit_mapping = { path = "../synced_commit_mapping" }
@@ -42,6 +44,7 @@ maplit = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
 
 [dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory" }
 fixtures = { path = "../../tests/fixtures" }
 tests_utils = { path = "../../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
