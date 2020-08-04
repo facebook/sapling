@@ -177,7 +177,7 @@ class CloneTest(testcase.EdenRepoTest):
 
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden.run_cmd("clone", self.repo.path, non_empty_dir)
-        stderr = context.exception.stderr.decode("utf-8")
+        stderr = context.exception.stderr
         self.assertRegex(
             stderr,
             "destination path .* is not empty",
@@ -191,7 +191,7 @@ class CloneTest(testcase.EdenRepoTest):
 
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden.run_cmd("clone", self.repo.path, empty_dir, "--rev", "X")
-        stderr = context.exception.stderr.decode("utf-8")
+        stderr = context.exception.stderr
         self.assertIn(
             "unable to find hash for commit 'X': ",
             stderr,
@@ -208,7 +208,7 @@ class CloneTest(testcase.EdenRepoTest):
 
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden.run_cmd("clone", self.repo.path, file_in_directory)
-        stderr = context.exception.stderr.decode("utf-8")
+        stderr = context.exception.stderr
         self.assertIn(
             f"error: destination path {file_in_directory} is not a directory\n", stderr
         )
@@ -221,7 +221,7 @@ class CloneTest(testcase.EdenRepoTest):
 
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden.run_cmd("clone", self.repo.path, non_existent_dir)
-        stderr = context.exception.stderr.decode("utf-8")
+        stderr = context.exception.stderr
         self.assertIn(
             f"error: destination path {non_existent_dir} is not a directory\n", stderr
         )
@@ -234,7 +234,7 @@ class CloneTest(testcase.EdenRepoTest):
             self.eden.run_cmd("clone", repo_path, tmp)
         self.assertIn(
             f"error: {repo_path!r} does not look like a valid hg or git repository\n",
-            context.exception.stderr.decode(),
+            context.exception.stderr,
         )
 
     def test_clone_should_start_daemon(self) -> None:

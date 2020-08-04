@@ -133,6 +133,7 @@ class EdenFS(object):
         *args: str,
         cwd: Optional[str] = None,
         capture_stderr: bool = False,
+        encoding: str = "utf-8",
     ) -> str:
         """
         Run the specified eden command.
@@ -148,13 +149,19 @@ class EdenFS(object):
             # TODO(T37669726): Re-enable LSAN.
             env["LSAN_OPTIONS"] = "detect_leaks=0:verbosity=1:log_threads=1"
             completed_process = subprocess.run(
-                cmd, stdout=subprocess.PIPE, stderr=stderr, check=True, cwd=cwd, env=env
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=stderr,
+                check=True,
+                cwd=cwd,
+                env=env,
+                encoding=encoding,
             )
         except subprocess.CalledProcessError as ex:
             # Re-raise our own exception type so we can include the error
             # output.
             raise EdenCommandError(ex)
-        return completed_process.stdout.decode("utf-8")
+        return completed_process.stdout
 
     def run_unchecked(
         self, command: str, *args: str, **kwargs: Any
@@ -542,7 +549,7 @@ class EdenCommandError(subprocess.CalledProcessError):
         return "eden command [%s] returned non-zero exit status %d\nstderr=%s" % (
             cmd_str,
             self.returncode,
-            self.stderr.decode("utf-8"),
+            self.stderr,
         )
 
 

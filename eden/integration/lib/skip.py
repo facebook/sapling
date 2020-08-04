@@ -106,7 +106,6 @@ if sys.platform == "win32":
             "test_add_nonexistent_directory",
             "test_debugdirstate",
         ],
-        "hg.copy_test.CopyTestTreeOnly": True,
         "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnly": True,
         "hg.debug_get_parents.DebugGetParentsTestTreeOnly": True,
         "hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly": True,
@@ -129,7 +128,7 @@ if sys.platform == "win32":
             "test_rm_directory_with_modification",
             "test_rm_modified_file_permissions",
         ],
-        "hg.split_test.SplitTestTreeOnly": True,
+        "hg.split_test.SplitTestTreeOnly": ["test_split_one_commit_into_two"],
         "hg.status_deadlock_test.StatusDeadlockTestTreeOnly": True,
         "hg.status_test.StatusTestTreeOnly": [
             # TODO: Opening a file with O_TRUNC inside an EdenFS mount fails on Windows
