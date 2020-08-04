@@ -11,22 +11,19 @@ use anyhow::{bail, format_err, Error};
 use clap::Arg;
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, TryFutureExt},
-    stream::{StreamExt, TryStreamExt},
-};
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_old::{Future, IntoFuture};
 use serde_derive::{Deserialize, Serialize};
 use tokio_compat::runtime;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreKeyParam, BlobstoreKeySource};
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
 };
 use cmdlib::args;
 use context::CoreContext;
-use manifoldblob::{ManifoldEntry, ManifoldRange, ThriftManifoldBlob};
+use fileblob::Fileblob;
+use manifoldblob::ThriftManifoldBlob;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, MetadataDatabaseConfig, MultiplexId, RemoteDatabaseConfig,
     RemoteMetadataDatabaseConfig, StorageConfig,
@@ -39,22 +36,15 @@ use sql_ext::facebook::ReadConnectionType;
 const PRESERVE_STATE_RATIO: usize = 10_000;
 /// PRESERVE_STATE_RATIO should be divisible by CHUNK_SIZE as otherwise progress
 /// reporting will be broken
-const CHUNK_SIZE: usize = 5000;
 const INIT_COUNT_VALUE: usize = 0;
 
 const FLAT_NAMESPACE_PREFIX: &str = "flat/";
-
-struct ManifoldArgs {
-    bucket: String,
-    #[allow(unused)]
-    prefix: String,
-}
 
 /// Configuration options
 struct Config {
     db_address: String,
     myrouter_port: u16,
-    manifold_args: ManifoldArgs,
+    blobstore_args: BlobConfig,
     repo_id: RepositoryId,
     src_blobstore_id: BlobstoreId,
     #[allow(unused)]
@@ -73,12 +63,12 @@ struct Config {
 #[derive(Debug, Clone)]
 struct State {
     count: usize,
-    init_range: Arc<ManifoldRange>,
-    current_range: Arc<ManifoldRange>,
+    init_range: Arc<BlobstoreKeyParam>,
+    current_range: Arc<BlobstoreKeyParam>,
 }
 
 impl State {
-    fn from_init(init_range: Arc<ManifoldRange>) -> Self {
+    fn from_init(init_range: Arc<BlobstoreKeyParam>) -> Self {
         Self {
             count: INIT_COUNT_VALUE,
             current_range: init_range.clone(),
@@ -86,7 +76,7 @@ impl State {
         }
     }
 
-    fn with_current_many(self, current_range: Arc<ManifoldRange>, num: usize) -> Self {
+    fn with_current_many(self, current_range: Arc<BlobstoreKeyParam>, num: usize) -> Self {
         let State {
             count, init_range, ..
         } = self;
@@ -100,8 +90,8 @@ impl State {
 
 #[derive(Serialize, Deserialize)]
 struct StateSerde {
-    init_range: ManifoldRange,
-    current_range: ManifoldRange,
+    init_range: BlobstoreKeyParam,
+    current_range: BlobstoreKeyParam,
 }
 
 impl From<StateSerde> for State {
@@ -127,7 +117,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
     let app = args::MononokeApp::new("populate healer queue")
         .build()
         .version("0.0.0")
-        .about("Populate blobstore queue from existing manifold bucket")
+        .about("Populate blobstore queue from existing key source")
         .arg(
             Arg::with_name("storage-id")
                 .long("storage-id")
@@ -227,7 +217,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         } => (blobstores, multiplex_id, db_address),
         storage => return Err(format_err!("unsupported storage: {:?}", storage)),
     };
-    let manifold_args = blobstores
+    let blobstore_args = blobstores
         .iter()
         .filter(|(id, ..)| src_blobstore_id == *id)
         .map(|(.., args)| args)
@@ -236,13 +226,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
             "failed to find source blobstore id: {:?}",
             src_blobstore_id,
         ))
-        .and_then(|args| match args {
-            BlobConfig::Manifold { bucket, prefix } => Ok(ManifoldArgs {
-                bucket: bucket.clone(),
-                prefix: prefix.clone(),
-            }),
-            _ => bail!("source blobstore must be a manifold"),
-        })?;
+        .and_then(|args| Ok(args.clone()))?;
 
     let myrouter_port = args::parse_mysql_options(&matches)
         .myrouter_port
@@ -254,7 +238,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         repo_id,
         db_address: db_address.clone(),
         myrouter_port,
-        manifold_args,
+        blobstore_args,
         src_blobstore_id,
         dst_blobstore_id,
         multiplex_id,
@@ -268,10 +252,13 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
     })
 }
 
-async fn get_resume_state(manifold: &ThriftManifoldBlob, config: &Config) -> Result<State, Error> {
+async fn get_resume_state(
+    blobstore: Arc<dyn BlobstoreKeySource>,
+    config: &Config,
+) -> Result<State, Error> {
     let resume_state = match &config.state_key {
         Some(state_key) => {
-            manifold
+            blobstore
                 .get(config.ctx.clone(), state_key.clone())
                 .compat()
                 .map(|data| {
@@ -299,7 +286,7 @@ async fn get_resume_state(manifold: &ThriftManifoldBlob, config: &Config) -> Res
             config.repo_id.id(),
             config.end_key.clone().unwrap_or_else(|| "\x7f".to_string()),
         );
-        State::from_init(Arc::new(ManifoldRange::from(start..end)))
+        State::from_init(Arc::new(BlobstoreKeyParam::from(start..end)))
     };
 
     resume_state.map(move |resume_state| match resume_state {
@@ -311,7 +298,7 @@ async fn get_resume_state(manifold: &ThriftManifoldBlob, config: &Config) -> Res
 }
 
 async fn put_resume_state(
-    manifold: &ThriftManifoldBlob,
+    blobstore: Arc<dyn BlobstoreKeySource>,
     config: &Config,
     state: State,
 ) -> Result<State, Error> {
@@ -319,12 +306,12 @@ async fn put_resume_state(
         Some(state_key) if state.count % PRESERVE_STATE_RATIO == INIT_COUNT_VALUE => {
             let started_at = config.started_at;
             let ctx = config.ctx.clone();
-            cloned!(state_key, manifold);
+            cloned!(state_key, blobstore);
             serde_json::to_vec(&StateSerde::from(&state))
                 .map(|state_json| BlobstoreBytes::from_bytes(state_json))
                 .map_err(Error::from)
                 .into_future()
-                .and_then(move |state_data| manifold.put(ctx, state_key, state_data).compat())
+                .and_then(move |state_data| blobstore.put(ctx, state_key, state_data).compat())
                 .map(move |_| {
                     if termion::is_tty(&std::io::stderr()) {
                         let elapsed = started_at.elapsed().as_secs() as f64;
@@ -345,72 +332,72 @@ async fn put_resume_state(
 }
 
 async fn populate_healer_queue(
-    manifold: ThriftManifoldBlob,
+    blobstore: Arc<dyn BlobstoreKeySource>,
     queue: Arc<dyn BlobstoreSyncQueue>,
     config: Arc<Config>,
 ) -> Result<State, Error> {
-    let state = get_resume_state(&manifold, &config).await?;
-    manifold
-        .enumerate((*state.current_range).clone())
-        .compat()
-        .and_then(|mut entry| {
-            // We are enumerating Manifold's flat/ namespace
-            // and all the keys contain the flat/ prefix, which
-            // we need to strip
-            if !entry.key.starts_with(FLAT_NAMESPACE_PREFIX) {
-                future::err(format_err!(
-                    "Key {} is expected to start with {}, but does not",
-                    entry.key,
-                    FLAT_NAMESPACE_PREFIX
-                ))
-            } else {
-                // safe to unwrap here, since we know exactly how the string starts
-                entry.key = entry.key.get(FLAT_NAMESPACE_PREFIX.len()..).unwrap().into();
-                future::ok(entry)
-            }
-        })
-        .chunks(CHUNK_SIZE)
-        .then(|chunk| async {
-            chunk
-                .into_iter()
-                .collect::<Result<Vec<ManifoldEntry>, Error>>()
-        })
-        .try_fold(state, |state, entries| async {
-            let range = entries[0].range.clone();
-            let state = state.with_current_many(range, entries.len());
+    let mut state = get_resume_state(blobstore.clone(), &config).await?;
+    let mut token = state.current_range.clone();
+    loop {
+        let entries = blobstore.enumerate((*state.current_range).clone()).await?;
+        state = state.with_current_many(token, entries.keys.len());
+        if !config.dry_run {
             let src_blobstore_id = config.src_blobstore_id;
             let multiplex_id = config.multiplex_id;
-
-            if !config.dry_run {
-                let iterator_box = Box::new(entries.into_iter().map(move |entry| {
-                    BlobstoreSyncQueueEntry::new(
-                        entry.key,
-                        src_blobstore_id,
-                        multiplex_id,
-                        DateTime::now(),
-                        OperationKey::gen(),
-                    )
-                }));
-                queue.add_many(config.ctx.clone(), iterator_box).await?;
+            let iterator_box = Box::new(entries.keys.into_iter().map(move |entry| {
+                BlobstoreSyncQueueEntry::new(
+                    entry,
+                    src_blobstore_id,
+                    multiplex_id,
+                    DateTime::now(),
+                    OperationKey::gen(),
+                )
+            }));
+            queue.add_many(config.ctx.clone(), iterator_box).await?;
+        }
+        state = put_resume_state(blobstore.clone(), &config, state).await?;
+        match entries.next_token {
+            Some(next_token) => {
+                token = Arc::new(next_token);
             }
-
-            put_resume_state(&manifold, &config, state).await
-        })
-        .await
+            None => return Ok(state),
+        };
+    }
 }
 
+fn make_key_source(
+    fb: FacebookInit,
+    args: &BlobConfig,
+) -> Result<Arc<dyn BlobstoreKeySource>, Error> {
+    match args {
+        BlobConfig::Manifold { bucket, .. } => {
+            let res = Arc::new(ThriftManifoldBlob::new(fb, bucket.clone(), None)?.into_inner());
+            Ok(res)
+        }
+        BlobConfig::Files { path } => {
+            let res = Arc::new(Fileblob::create(path)?);
+            Ok(res)
+        }
+        _ => Err(format_err!("Unsupported Blobstore type")),
+    }
+}
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let config = Arc::new(parse_args(fb)?);
-    let manifold =
-        ThriftManifoldBlob::new(fb, config.manifold_args.bucket.clone(), None)?.into_inner();
-    let queue: Arc<dyn BlobstoreSyncQueue> = Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
-        config.db_address.clone(),
-        config.myrouter_port,
-        ReadConnectionType::Replica,
-        config.readonly_storage,
-    ));
-    let mut runtime = runtime::Runtime::new()?;
-    runtime.block_on_std(populate_healer_queue(manifold, queue, config))?;
-    Ok(())
+    let blobstore = make_key_source(fb, &config.blobstore_args);
+    match blobstore {
+        Ok(blobstore) => {
+            let queue: Arc<dyn BlobstoreSyncQueue> =
+                Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
+                    config.db_address.clone(),
+                    config.myrouter_port,
+                    ReadConnectionType::Replica,
+                    config.readonly_storage,
+                ));
+            let mut runtime = runtime::Runtime::new()?;
+            runtime.block_on_std(populate_healer_queue(blobstore, queue, config))?;
+            Ok(())
+        }
+        Err(error) => Err(error),
+    }
 }

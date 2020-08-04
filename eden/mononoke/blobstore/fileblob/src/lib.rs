@@ -7,16 +7,20 @@
 
 #![deny(warnings)]
 
+use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use anyhow::{bail, Error, Result};
-use futures::future::{BoxFuture, FutureExt, TryFutureExt};
+use anyhow::{bail, format_err, Error, Result};
+use futures::future::{self, BoxFuture, FutureExt, TryFutureExt};
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstoreWithLink};
+use blobstore::{
+    Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreKeyParam, BlobstoreKeySource,
+    BlobstoreMetadata, BlobstoreWithLink,
+};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use tempfile::NamedTempFile;
@@ -24,6 +28,8 @@ use tokio::{
     fs::{hard_link, File},
     io::{self, AsyncReadExt, AsyncWriteExt},
 };
+
+use walkdir::WalkDir;
 
 const PREFIX: &str = "blob";
 /// https://url.spec.whatwg.org/#fragment-percent-encode-set
@@ -148,5 +154,36 @@ impl BlobstoreWithLink for Fileblob {
         let src_path = self.path(&existing_key);
         let dst_path = self.path(&link_key);
         hard_link(src_path, dst_path).map_err(Error::from).boxed()
+    }
+}
+
+impl BlobstoreKeySource for Fileblob {
+    fn enumerate(
+        &self,
+        range: BlobstoreKeyParam,
+    ) -> BoxFuture<'static, Result<BlobstoreEnumerationData, Error>> {
+        match range {
+            BlobstoreKeyParam::Start(range) => {
+                let mut enum_data = BlobstoreEnumerationData {
+                    keys: HashSet::new(),
+                    next_token: None,
+                };
+                WalkDir::new(&self.base)
+                    .into_iter()
+                    .filter_map(|v| v.ok())
+                    .for_each(|entry| {
+                        let entry = entry.path().to_str();
+                        if let Some(data) = entry {
+                            let key = data.to_string();
+                            if key < range.end_key && key > range.begin_key {
+                                enum_data.keys.insert(key);
+                            }
+                        }
+                    });
+                future::ok(enum_data)
+            }
+            _ => future::err(format_err!("Fileblob does not support token, only ranges")),
+        }
+        .boxed()
     }
 }

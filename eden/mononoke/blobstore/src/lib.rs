@@ -9,11 +9,16 @@
 
 use auto_impl::auto_impl;
 use bytes::{Buf, Bytes};
+use serde_derive::{Deserialize, Serialize};
+
+use std::collections::HashSet;
 use std::fmt;
+use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 
 use abomonation_derive::Abomonation;
 use anyhow::Error;
 use futures::future::{BoxFuture, FutureExt};
+
 use std::io::Cursor;
 use thiserror::Error;
 
@@ -332,6 +337,78 @@ pub trait BlobstoreWithLink: Blobstore {
         existing_key: String,
         link_key: String,
     ) -> BoxFuture<'static, Result<(), Error>>;
+}
+
+/// BlobstoreKeySource Interface
+/// Abstract for use with populate_healer
+pub trait BlobstoreKeySource: Blobstore {
+    fn enumerate(
+        &self,
+        range: BlobstoreKeyParam,
+    ) -> BoxFuture<'static, Result<BlobstoreEnumerationData, Error>>;
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct BlobstoreKeyRange {
+    // Should match manifold inclusiveness rules, please check and document.
+    pub begin_key: String,
+    pub end_key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum BlobstoreKeyToken {
+    // For fileblob and manifold
+    StringToken(String),
+    // its an enum as other stores might have non-string tokens
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum BlobstoreKeyParam {
+    Start(BlobstoreKeyRange),
+    Continuation(BlobstoreKeyToken),
+}
+
+impl From<Range<String>> for BlobstoreKeyParam {
+    fn from(range: Range<String>) -> Self {
+        BlobstoreKeyParam::Start(BlobstoreKeyRange {
+            begin_key: range.start,
+            end_key: range.end,
+        })
+    }
+}
+
+impl From<RangeTo<String>> for BlobstoreKeyParam {
+    fn from(range: RangeTo<String>) -> Self {
+        BlobstoreKeyParam::Start(BlobstoreKeyRange {
+            begin_key: String::from(""),
+            end_key: range.end,
+        })
+    }
+}
+
+impl From<RangeFrom<String>> for BlobstoreKeyParam {
+    fn from(range: RangeFrom<String>) -> Self {
+        BlobstoreKeyParam::Start(BlobstoreKeyRange {
+            begin_key: range.start,
+            end_key: String::from(""),
+        })
+    }
+}
+
+impl From<RangeFull> for BlobstoreKeyParam {
+    fn from(_: RangeFull) -> Self {
+        BlobstoreKeyParam::Start(BlobstoreKeyRange {
+            begin_key: String::from(""),
+            end_key: String::from(""),
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BlobstoreEnumerationData {
+    pub keys: HashSet<String>,
+    /// current range being iterated, this range can be used to resume enumeration
+    pub next_token: Option<BlobstoreKeyParam>,
 }
 
 #[derive(Debug, Error)]
