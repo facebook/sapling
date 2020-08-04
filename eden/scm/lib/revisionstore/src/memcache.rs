@@ -7,7 +7,7 @@
 
 //! Adapters around Memcache to be transparently used as HgIdDataStore or HgIdHistoryStore.
 
-use std::{collections::HashSet, mem::size_of, path::PathBuf, sync::Arc};
+use std::{mem::size_of, path::PathBuf, sync::Arc};
 
 use anyhow::Result;
 use bytes::Bytes;
@@ -189,9 +189,7 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
         let mut hits = 0;
         let mut size = 0;
 
-        let mut not_found = keys.iter().collect::<HashSet<_>>();
-
-        let keys = keys
+        let hgidkeys = keys
             .iter()
             .filter_map(|k| match k {
                 StoreKey::HgId(k) => Some(k.clone()),
@@ -199,7 +197,7 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
             })
             .collect::<Vec<_>>();
 
-        for mcdata in self.memcache.get_data_iter(&keys) {
+        for mcdata in self.memcache.get_data_iter(&hgidkeys) {
             if let Ok(mcdata) = mcdata {
                 let metadata = mcdata.metadata;
                 let delta = Delta {
@@ -212,14 +210,13 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
                 size += delta.data.len() + size_of::<Key>();
 
                 self.store.add(&delta, &metadata)?;
-                not_found.remove(&StoreKey::hgid(delta.key));
             }
         }
 
         span.record("hit_count", &hits);
         span.record("size", &size);
 
-        Ok(not_found.into_iter().cloned().collect())
+        self.store.translate_lfs_missing(keys)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
