@@ -155,27 +155,28 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
   /** Append error handling clauses to a future chain
    * These clauses result in reporting a fuse request error back to the
    * kernel. */
-  template <typename T>
   folly::Future<folly::Unit> catchErrors(
-      folly::Future<T>&& fut,
+      folly::Future<folly::Unit>&& fut,
       Notifications* FOLLY_NULLABLE notifications) {
-    return std::move(fut)
-        .thenError(
-            folly::tag_t<folly::FutureTimeout>{},
-            [notifications](auto&& err) {
-              timeoutErrorHandler(err, notifications);
-            })
-        .thenError(
-            folly::tag_t<std::system_error>{},
-            [notifications](auto&& err) {
-              systemErrorHandler(err, notifications);
-            })
-        .thenError(
-            folly::tag_t<std::exception>{},
-            [notifications](auto&& err) {
-              genericErrorHandler(err, notifications);
-            })
-        .ensure([] { RequestData::get().finishRequest(); });
+    return std::move(fut).thenTryInline([notifications](
+                                            folly::Try<folly::Unit>&& try_) {
+      SCOPE_EXIT {
+        RequestData::get().finishRequest();
+      };
+      if (try_.hasException()) {
+        if (auto* err = try_.tryGetExceptionObject<folly::FutureTimeout>()) {
+          timeoutErrorHandler(*err, notifications);
+        } else if (
+            auto* err = try_.tryGetExceptionObject<std::system_error>()) {
+          systemErrorHandler(*err, notifications);
+        } else if (auto* err = try_.tryGetExceptionObject<std::exception>()) {
+          genericErrorHandler(*err, notifications);
+        } else {
+          genericErrorHandler(
+              std::runtime_error{"unknown exception type"}, notifications);
+        }
+      }
+    });
   }
 
   static void systemErrorHandler(
