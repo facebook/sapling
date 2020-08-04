@@ -164,12 +164,13 @@ where
 // Data found for this node, plus next steps
 struct StepOutput(NodeData, Vec<OutgoingEdge>);
 
-fn bookmark_step(
+fn bookmark_step<'a, V: VisitOne>(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: &'a BlobRepo,
+    checker: &'a Checker<V>,
     b: BookmarkName,
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     match published_bookmarks.get(&b) {
         Some(csid) => future::ok(Some(csid.clone())).left_future(),
         // Just in case we have non-public bookmarks
@@ -177,37 +178,37 @@ fn bookmark_step(
     }
     .and_then(move |bcs_opt| match bcs_opt {
         Some(bcs_id) => {
-            let recurse = vec![
-                OutgoingEdge::new(
-                    EdgeType::BookmarkToBonsaiChangeset,
-                    Node::BonsaiChangeset(bcs_id),
-                ),
-                OutgoingEdge::new(
-                    EdgeType::BookmarkToBonsaiHgMapping,
-                    Node::BonsaiHgMapping(bcs_id),
-                ),
-            ];
-            future::ok(StepOutput(NodeData::Bookmark(bcs_id), recurse))
+            let mut edges = vec![];
+            checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiChangeset, || {
+                Node::BonsaiChangeset(bcs_id)
+            });
+            checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiHgMapping, || {
+                Node::BonsaiHgMapping(bcs_id)
+            });
+            future::ok(StepOutput(NodeData::Bookmark(bcs_id), edges))
         }
         None => future::err(format_err!("Unknown Bookmark {}", b)),
     })
 }
 
-fn published_bookmarks_step(
+fn published_bookmarks_step<V: VisitOne>(
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
+    checker: &Checker<V>,
 ) -> impl Future<Output = Result<StepOutput, Error>> {
-    let mut recurse = vec![];
+    let mut edges = vec![];
     for (_, bcs_id) in published_bookmarks.iter() {
-        recurse.push(OutgoingEdge::new(
+        checker.add_edge(
+            &mut edges,
             EdgeType::PublishedBookmarksToBonsaiChangeset,
-            Node::BonsaiChangeset(bcs_id.clone()),
-        ));
-        recurse.push(OutgoingEdge::new(
+            || Node::BonsaiChangeset(bcs_id.clone()),
+        );
+        checker.add_edge(
+            &mut edges,
             EdgeType::PublishedBookmarksToBonsaiHgMapping,
-            Node::BonsaiHgMapping(bcs_id.clone()),
-        ));
+            || Node::BonsaiHgMapping(bcs_id.clone()),
+        );
     }
-    future::ok(StepOutput(NodeData::PublishedBookmarks, recurse))
+    future::ok(StepOutput(NodeData::PublishedBookmarks, edges))
 }
 
 fn bonsai_phase_step(
@@ -225,59 +226,50 @@ fn bonsai_phase_step(
         .compat()
 }
 
-async fn bonsai_changeset_step(
+async fn bonsai_changeset_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
+    checker: &Checker<V>,
     bcs_id: &ChangesetId,
-    keep_edge_paths: bool,
 ) -> Result<StepOutput, Error> {
     // Get the data, and add direct file data for this bonsai changeset
     let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
 
+    let mut edges = vec![];
+
     // Parents deliberately first to resolve dependent reads as early as possible
-    let mut recurse: Vec<OutgoingEdge> = bcs
-        .parents()
-        .map(|parent_id| {
-            OutgoingEdge::new(
-                EdgeType::BonsaiChangesetToBonsaiParent,
-                Node::BonsaiChangeset(parent_id),
-            )
-        })
-        .collect();
+    for parent_id in bcs.parents() {
+        checker.add_edge(&mut edges, EdgeType::BonsaiChangesetToBonsaiParent, || {
+            Node::BonsaiChangeset(parent_id)
+        });
+    }
     // Allow Hg based lookup
-    recurse.push(OutgoingEdge::new(
+    checker.add_edge(
+        &mut edges,
         EdgeType::BonsaiChangesetToBonsaiHgMapping,
-        Node::BonsaiHgMapping(*bcs_id),
-    ));
-    // Lookup phases
-    recurse.push(OutgoingEdge::new(
-        EdgeType::BonsaiChangesetToBonsaiPhaseMapping,
-        Node::BonsaiPhaseMapping(*bcs_id),
-    ));
-    recurse.append(
-        &mut bcs
-            .file_changes()
-            .filter_map(|(mpath, fc_opt)| {
-                fc_opt.map(|fc| (fc, mpath)) // remove None
-            })
-            .map(|(fc, mpath)| {
-                OutgoingEdge::new_with_path(
-                    EdgeType::BonsaiChangesetToFileContent,
-                    Node::FileContent(fc.content_id()),
-                    if keep_edge_paths {
-                        Some(WrappedPath::from(Some(mpath.clone())))
-                    } else {
-                        None
-                    },
-                )
-            })
-            .collect::<Vec<OutgoingEdge>>(),
+        || Node::BonsaiHgMapping(*bcs_id),
     );
-    recurse.push(OutgoingEdge::new(
+    checker.add_edge(
+        &mut edges,
+        EdgeType::BonsaiChangesetToBonsaiPhaseMapping,
+        || Node::BonsaiPhaseMapping(*bcs_id),
+    );
+    for (mpath, fc) in bcs.file_changes() {
+        if let Some(fc) = fc {
+            checker.add_edge_with_path(
+                &mut edges,
+                EdgeType::BonsaiChangesetToFileContent,
+                || Node::FileContent(fc.content_id()),
+                || Some(WrappedPath::from(Some(mpath.clone()))),
+            );
+        }
+    }
+    checker.add_edge(
+        &mut edges,
         EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
-        Node::BonsaiFsnodeMapping(*bcs_id),
-    ));
-    Ok(StepOutput(NodeData::BonsaiChangeset(bcs), recurse))
+        || Node::BonsaiFsnodeMapping(*bcs_id),
+    );
+    Ok(StepOutput(NodeData::BonsaiChangeset(bcs), edges))
 }
 
 fn file_content_step(
@@ -295,12 +287,13 @@ fn file_content_step(
     ))
 }
 
-fn file_content_metadata_step(
+fn file_content_metadata_step<'a, V: VisitOne>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &'a BlobRepo,
+    checker: &'a Checker<V>,
     id: ContentId,
     enable_derive: bool,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     let loader = if enable_derive {
         filestore::get_metadata(repo.blobstore(), ctx, &id.into())
             .map(Some)
@@ -310,32 +303,33 @@ fn file_content_metadata_step(
     };
 
     loader
-        .map(|metadata_opt| match metadata_opt {
+        .map(move |metadata_opt| match metadata_opt {
             Some(Some(metadata)) => {
-                let recurse = vec![
-                    OutgoingEdge::new(
-                        EdgeType::FileContentMetadataToSha1Alias,
-                        Node::AliasContentMapping(Alias::Sha1(metadata.sha1)),
-                    ),
-                    OutgoingEdge::new(
-                        EdgeType::FileContentMetadataToSha256Alias,
-                        Node::AliasContentMapping(Alias::Sha256(metadata.sha256)),
-                    ),
-                    OutgoingEdge::new(
-                        EdgeType::FileContentMetadataToGitSha1Alias,
-                        Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1.sha1())),
-                    ),
-                ];
-                StepOutput(NodeData::FileContentMetadata(Some(metadata)), recurse)
+                let mut edges = vec![];
+                checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha1Alias, || {
+                    Node::AliasContentMapping(Alias::Sha1(metadata.sha1))
+                });
+                checker.add_edge(
+                    &mut edges,
+                    EdgeType::FileContentMetadataToSha256Alias,
+                    || Node::AliasContentMapping(Alias::Sha256(metadata.sha256)),
+                );
+                checker.add_edge(
+                    &mut edges,
+                    EdgeType::FileContentMetadataToGitSha1Alias,
+                    || Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1.sha1())),
+                );
+                StepOutput(NodeData::FileContentMetadata(Some(metadata)), edges)
             }
             Some(None) | None => StepOutput(NodeData::FileContentMetadata(None), vec![]),
         })
         .compat()
 }
 
-fn bonsai_to_hg_mapping_step<'a>(
+fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
+    checker: &'a Checker<V>,
     bcs_id: ChangesetId,
     enable_derive: bool,
 ) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
@@ -390,90 +384,94 @@ fn bonsai_to_hg_mapping_step<'a>(
     };
 
     hg_cs_id
-        .map(|maybe_hg_cs_id| match maybe_hg_cs_id {
-            Some(hg_cs_id) => StepOutput(
-                NodeData::BonsaiHgMapping(Some(hg_cs_id)),
-                vec![OutgoingEdge::new(
-                    EdgeType::BonsaiHgMappingToHgChangeset,
-                    Node::HgChangeset(hg_cs_id),
-                )],
-            ),
+        .map(move |maybe_hg_cs_id| match maybe_hg_cs_id {
+            Some(hg_cs_id) => {
+                let mut edges = vec![];
+                checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgChangeset, || {
+                    Node::HgChangeset(hg_cs_id)
+                });
+                StepOutput(NodeData::BonsaiHgMapping(Some(hg_cs_id)), edges)
+            }
             None => StepOutput(NodeData::BonsaiHgMapping(None), vec![]),
         })
         .compat()
 }
 
-fn hg_to_bonsai_mapping_step(
+fn hg_to_bonsai_mapping_step<'a, V: VisitOne>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &'a BlobRepo,
+    checker: &'a Checker<V>,
     id: HgChangesetId,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     repo.get_bonsai_from_hg(ctx, id)
         .map(move |maybe_bcs_id| match maybe_bcs_id {
             Some(bcs_id) => {
-                let recurse = vec![OutgoingEdge::new(
+                let mut edges = vec![];
+                checker.add_edge(
+                    &mut edges,
                     EdgeType::HgBonsaiMappingToBonsaiChangeset,
-                    Node::BonsaiChangeset(bcs_id),
-                )];
-                StepOutput(NodeData::HgBonsaiMapping(Some(bcs_id)), recurse)
+                    || Node::BonsaiChangeset(bcs_id),
+                );
+                StepOutput(NodeData::HgBonsaiMapping(Some(bcs_id)), edges)
             }
             None => StepOutput(NodeData::HgBonsaiMapping(None), vec![]),
         })
         .compat()
 }
 
-fn hg_changeset_step(
+fn hg_changeset_step<'a, V: VisitOne>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &'a BlobRepo,
+    checker: &'a Checker<V>,
     id: HgChangesetId,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     id.load(ctx, repo.blobstore())
         .map_err(Error::from)
-        .map_ok(|hgchangeset| {
-            let manifest_id = hgchangeset.manifestid();
-            let mut recurse = vec![OutgoingEdge::new(
-                EdgeType::HgChangesetToHgManifest,
-                Node::HgManifest((WrappedPath::Root, manifest_id)),
-            )];
+        .map_ok(move |hgchangeset| {
+            let mut edges = vec![];
+            checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifest, || {
+                Node::HgManifest((WrappedPath::Root, hgchangeset.manifestid()))
+            });
             for p in hgchangeset.parents().into_iter() {
-                let step = OutgoingEdge::new(
-                    EdgeType::HgChangesetToHgParent,
-                    Node::HgChangeset(HgChangesetId::new(p)),
-                );
-                recurse.push(step);
+                checker.add_edge(&mut edges, EdgeType::HgChangesetToHgParent, || {
+                    Node::HgChangeset(HgChangesetId::new(p))
+                });
             }
-            StepOutput(NodeData::HgChangeset(hgchangeset), recurse)
+            StepOutput(NodeData::HgChangeset(hgchangeset), edges)
         })
 }
 
-fn hg_file_envelope_step(
+fn hg_file_envelope_step<'a, V: 'a + VisitOne>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &'a BlobRepo,
+    checker: &'a Checker<V>,
     hg_file_node_id: HgFileNodeId,
-    path: Option<WrappedPath>,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+    path: Option<&'a WrappedPath>,
+) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     hg_file_node_id
         .load(ctx, repo.blobstore())
         .map_err(Error::from)
         .map_ok({
             move |envelope| {
-                let file_content_id = envelope.content_id();
-                let fnode = OutgoingEdge::new_with_path(
+                let mut edges = vec![];
+                checker.add_edge_with_path(
+                    &mut edges,
                     EdgeType::HgFileEnvelopeToFileContent,
-                    Node::FileContent(file_content_id),
-                    path,
+                    || Node::FileContent(envelope.content_id()),
+                    || path.cloned(),
                 );
-                StepOutput(NodeData::HgFileEnvelope(envelope), vec![fnode])
+                StepOutput(NodeData::HgFileEnvelope(envelope), edges)
             }
         })
 }
 
-fn hg_file_node_step(
+fn hg_file_node_step<'a, V: VisitOne>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &'a BlobRepo,
+    checker: &'a Checker<V>,
     path: WrappedPath,
     hg_file_node_id: HgFileNodeId,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     let repo_path = match &path {
         WrappedPath::Root => RepoPath::RootPath,
         WrappedPath::NonRoot(path) => RepoPath::FilePath(path.mpath().clone()),
@@ -482,42 +480,38 @@ fn hg_file_node_step(
         .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
         .map(move |file_node_opt| match file_node_opt {
             Some(file_node_info) => {
+                let mut edges = vec![];
                 // Validate hg link node
-                let linked_commit = OutgoingEdge::new(
-                    EdgeType::HgLinkNodeToHgChangeset,
-                    Node::HgChangeset(file_node_info.linknode),
-                );
+                checker.add_edge(&mut edges, EdgeType::HgLinkNodeToHgChangeset, || {
+                    Node::HgChangeset(file_node_info.linknode)
+                });
+
                 // Following linknode bonsai increases parallelism of walk.
                 // Linknodes will point to many commits we can then walk
                 // in parallel
-                let linked_commit_bonsai = OutgoingEdge::new(
-                    EdgeType::HgLinkNodeToHgBonsaiMapping,
-                    Node::HgBonsaiMapping(file_node_info.linknode),
-                );
-                let mut recurse = vec![linked_commit, linked_commit_bonsai];
-                file_node_info.p1.map(|parent_file_node_id| {
-                    recurse.push(OutgoingEdge::new(
-                        EdgeType::HgFileNodeToHgParentFileNode,
-                        Node::HgFileNode((path.clone(), parent_file_node_id)),
-                    ))
+                checker.add_edge(&mut edges, EdgeType::HgLinkNodeToHgBonsaiMapping, || {
+                    Node::HgBonsaiMapping(file_node_info.linknode)
                 });
-                file_node_info.p2.map(|parent_file_node_id| {
-                    recurse.push(OutgoingEdge::new(
-                        EdgeType::HgFileNodeToHgParentFileNode,
-                        Node::HgFileNode((path.clone(), parent_file_node_id)),
-                    ))
-                });
+
+                // Parents
+                for parent in &[file_node_info.p1, file_node_info.p2] {
+                    if let Some(parent) = parent {
+                        checker.add_edge(&mut edges, EdgeType::HgFileNodeToHgParentFileNode, || {
+                            Node::HgFileNode((path.clone(), *parent))
+                        })
+                    }
+                }
+
                 // Copyfrom is like another parent
                 for (repo_path, file_node_id) in &file_node_info.copyfrom {
-                    recurse.push(OutgoingEdge::new(
-                        EdgeType::HgFileNodeToHgCopyfromFileNode,
+                    checker.add_edge(&mut edges, EdgeType::HgFileNodeToHgCopyfromFileNode, || {
                         Node::HgFileNode((
                             WrappedPath::from(repo_path.clone().into_mpath()),
                             *file_node_id,
-                        )),
-                    ))
+                        ))
+                    })
                 }
-                StepOutput(NodeData::HgFileNode(Some(file_node_info)), recurse)
+                StepOutput(NodeData::HgFileNode(Some(file_node_info)), edges)
             }
             None => StepOutput(NodeData::HgFileNode(None), vec![]),
         })
@@ -565,52 +559,57 @@ fn hg_manifest_step<'a, V: VisitOne>(
         })
 }
 
-fn alias_content_mapping_step(
+fn alias_content_mapping_step<'a, V: VisitOne>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &'a BlobRepo,
+    checker: &'a Checker<V>,
     alias: Alias,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     alias
         .load(ctx, &repo.get_blobstore())
-        .map_ok(|content_id| {
-            let recurse = vec![OutgoingEdge::new(
+        .map_ok(move |content_id| {
+            let mut edges = vec![];
+            checker.add_edge(
+                &mut edges,
                 EdgeType::AliasContentMappingToFileContent,
-                Node::FileContent(content_id),
-            )];
-            StepOutput(NodeData::AliasContentMapping(content_id), recurse)
+                || Node::FileContent(content_id),
+            );
+            StepOutput(NodeData::AliasContentMapping(content_id), edges)
         })
         .map_err(Error::from)
 }
 
-async fn bonsai_to_fsnode_mapping_step(
+async fn bonsai_to_fsnode_mapping_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
+    checker: &Checker<V>,
     bcs_id: &ChangesetId,
     enable_derive: bool,
 ) -> Result<StepOutput, Error> {
     let is_derived = RootFsnodeId::is_derived(&ctx, &repo, &bcs_id).await?;
 
     if is_derived || enable_derive {
+        let mut edges = vec![];
         let root_fsnode_id = RootFsnodeId::derive(ctx.clone(), repo.clone(), *bcs_id)
             .map_err(Error::from)
             .compat()
             .await?;
-
+        checker.add_edge(&mut edges, EdgeType::BonsaiToRootFsnode, || {
+            Node::Fsnode((WrappedPath::Root, *root_fsnode_id.fsnode_id()))
+        });
         Ok(StepOutput(
             NodeData::BonsaiFsnodeMapping(Some(*root_fsnode_id.fsnode_id())),
-            vec![OutgoingEdge::new(
-                EdgeType::BonsaiToRootFsnode,
-                Node::Fsnode((WrappedPath::Root, *root_fsnode_id.fsnode_id())),
-            )],
+            edges,
         ))
     } else {
         Ok(StepOutput(NodeData::BonsaiFsnodeMapping(None), vec![]))
     }
 }
 
-async fn fsnode_step(
+async fn fsnode_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
+    checker: &Checker<V>,
     path: WrappedPath,
     fsnode_id: &FsnodeId,
 ) -> Result<StepOutput, Error> {
@@ -627,21 +626,21 @@ async fn fsnode_step(
                 let fsnode_id = dir.id();
                 let mpath_opt =
                     WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
-
-                edges.push(OutgoingEdge::new(
-                    EdgeType::FsnodeToChildFsnode,
-                    Node::Fsnode((WrappedPath::from(mpath_opt), *fsnode_id)),
-                ));
+                checker.add_edge(&mut edges, EdgeType::FsnodeToChildFsnode, || {
+                    Node::Fsnode((WrappedPath::from(mpath_opt), *fsnode_id))
+                });
             }
             FsnodeEntry::File(file) => {
-                edges.push(OutgoingEdge::new_with_path(
+                checker.add_edge_with_path(
+                    &mut edges,
                     EdgeType::FsnodeToFileContent,
-                    Node::FileContent(*file.content_id()),
-                    Some(WrappedPath::from(MPath::join_element_opt(
-                        path.as_ref(),
-                        Some(child),
-                    ))),
-                ));
+                    || Node::FileContent(*file.content_id()),
+                    || {
+                        let p =
+                            WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
+                        Some(p)
+                    },
+                );
             }
         }
     }
@@ -833,7 +832,6 @@ where
                                 .boxed()
                             }),
                             checker,
-                            keep_edge_paths,
                         );
 
                         let handle = tokio::task::spawn(next);
@@ -860,7 +858,6 @@ async fn walk_one<V, VOut, Route>(
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
     heads_fetcher: HeadsFetcher,
     checker: Arc<Checker<V>>,
-    keep_edge_paths: bool,
 ) -> Result<(VOut, Vec<(Option<Route>, OutgoingEdge)>), Error>
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
@@ -880,17 +877,18 @@ where
         Node::Bookmark(bookmark_name) => {
             bookmark_step(
                 ctx.clone(),
-                repo.clone(),
+                &repo,
+                &checker,
                 bookmark_name,
                 published_bookmarks.clone(),
             )
             .await
         }
         Node::BonsaiChangeset(bcs_id) => {
-            bonsai_changeset_step(&ctx, &repo, &bcs_id, keep_edge_paths).await
+            bonsai_changeset_step(&ctx, &repo, &checker, &bcs_id).await
         }
         Node::BonsaiHgMapping(bcs_id) => {
-            bonsai_to_hg_mapping_step(&ctx, &repo, bcs_id, enable_derive).await
+            bonsai_to_hg_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::BonsaiPhaseMapping(bcs_id) => {
             let phases_store = repo.get_phases_factory().get_phases(
@@ -900,27 +898,28 @@ where
             );
             bonsai_phase_step(&ctx, phases_store, bcs_id).await
         }
-        Node::PublishedBookmarks => published_bookmarks_step(published_bookmarks.clone()).await,
+        Node::PublishedBookmarks => {
+            published_bookmarks_step(published_bookmarks.clone(), &checker).await
+        }
         // Hg
         Node::HgBonsaiMapping(hg_csid) => {
-            hg_to_bonsai_mapping_step(ctx.clone(), &repo, hg_csid).await
+            hg_to_bonsai_mapping_step(ctx.clone(), &repo, &checker, hg_csid).await
         }
-        Node::HgChangeset(hg_csid) => hg_changeset_step(ctx.clone(), &repo, hg_csid).await,
+        Node::HgChangeset(hg_csid) => {
+            hg_changeset_step(ctx.clone(), &repo, &checker, hg_csid).await
+        }
         Node::HgFileEnvelope(hg_file_node_id) => {
             hg_file_envelope_step(
                 ctx.clone(),
                 &repo,
+                &checker,
                 hg_file_node_id,
-                if keep_edge_paths {
-                    walk_item.path.clone()
-                } else {
-                    None
-                },
+                walk_item.path.as_ref(),
             )
             .await
         }
         Node::HgFileNode((path, hg_file_node_id)) => {
-            hg_file_node_step(ctx.clone(), &repo, path, hg_file_node_id).await
+            hg_file_node_step(ctx.clone(), &repo, &checker, path, hg_file_node_id).await
         }
         Node::HgManifest((path, hg_manifest_id)) => {
             hg_manifest_step(ctx.clone(), &repo, &checker, path, hg_manifest_id).await
@@ -928,15 +927,18 @@ where
         // Content
         Node::FileContent(content_id) => file_content_step(ctx.clone(), &repo, content_id),
         Node::FileContentMetadata(content_id) => {
-            file_content_metadata_step(ctx.clone(), &repo, content_id, enable_derive).await
+            file_content_metadata_step(ctx.clone(), &repo, &checker, content_id, enable_derive)
+                .await
         }
         Node::AliasContentMapping(alias) => {
-            alias_content_mapping_step(ctx.clone(), &repo, alias).await
+            alias_content_mapping_step(ctx.clone(), &repo, &checker, alias).await
         }
         Node::BonsaiFsnodeMapping(cs_id) => {
-            bonsai_to_fsnode_mapping_step(&ctx, &repo, &cs_id, enable_derive).await
+            bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, &cs_id, enable_derive).await
         }
-        Node::Fsnode((path, fsnode_id)) => fsnode_step(&ctx, &repo, path, &fsnode_id).await,
+        Node::Fsnode((path, fsnode_id)) => {
+            fsnode_step(&ctx, &repo, &checker, path, &fsnode_id).await
+        }
     };
 
     let edge_label = walk_item.label;

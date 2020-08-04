@@ -68,7 +68,7 @@ validate, expect failures on phase info, as we now point to a non-public commit
   Validation failed: *bonsai_phase_is_public* (glob)
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:56,7,1; EdgesChecked:16; CheckType:Pass,Fail Total:7,1 BonsaiChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:4,0
+  Nodes,Pass,Fail:56,7,1; EdgesChecked:15; CheckType:Pass,Fail Total:7,1 BonsaiChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:4,0
 
 Check scuba data
   $ wc -l < scuba.json

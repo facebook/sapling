@@ -672,17 +672,8 @@ pub async fn validate<'a>(
         }
     };
 
-    let mut always_emit_edge_types = vec![EdgeType::HgLinkNodeToHgChangeset];
-
-    // TODO(ahornby) temporary until later in stack so don't need to review
-    // all types update to new checker at once
-    let mut unmigrated_types = include_edge_types.clone();
-    unmigrated_types.remove(&EdgeType::HgManifestToHgFileEnvelope);
-    unmigrated_types.remove(&EdgeType::HgManifestToHgFileNode);
-    unmigrated_types.remove(&EdgeType::HgManifestToChildHgManifest);
-    always_emit_edge_types.append(&mut unmigrated_types.into_iter().collect());
-
-    let always_emit_edge_types = HashSet::from_iter(always_emit_edge_types.into_iter());
+    let always_emit_edge_types =
+        HashSet::from_iter(vec![EdgeType::HgLinkNodeToHgChangeset].into_iter());
 
     let stateful_visitor = Arc::new(ValidatingVisitor::new(
         repo_stats_key,
