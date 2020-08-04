@@ -864,7 +864,7 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
 impl LfsRemoteInner {
     fn batch_fetch(
         &self,
-        objs: &[(Sha256, usize)],
+        objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
     ) -> Result<()> {
         let read_from_store = |_sha256| unreachable!();
@@ -882,7 +882,7 @@ impl LfsRemoteInner {
 
     fn batch_upload(
         &self,
-        objs: &[(Sha256, usize)],
+        objs: &HashSet<(Sha256, usize)>,
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
     ) -> Result<()> {
         let write_to_store = |_, _| unreachable!();
@@ -970,7 +970,7 @@ impl LfsRemoteInner {
 
     fn send_batch_request(
         http: &HttpLfsRemote,
-        objs: &[(Sha256, usize)],
+        objs: &HashSet<(Sha256, usize)>,
         operation: Operation,
     ) -> Result<Option<ResponseBatch>> {
         let span = info_span!("LfsRemote::send_batch_inner");
@@ -1078,7 +1078,7 @@ impl LfsRemoteInner {
     /// The protocol is described at: https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
     fn batch_http(
         http: &HttpLfsRemote,
-        objs: &[(Sha256, usize)],
+        objs: &HashSet<(Sha256, usize)>,
         operation: Operation,
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
@@ -1142,7 +1142,7 @@ impl LfsRemoteInner {
     /// Fetch files from the filesystem.
     fn batch_fetch_file(
         file: &LfsBlobsStore,
-        objs: &[(Sha256, usize)],
+        objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()>,
     ) -> Result<()> {
         for (hash, _) in objs {
@@ -1156,7 +1156,7 @@ impl LfsRemoteInner {
 
     fn batch_upload_file(
         file: &LfsBlobsStore,
-        objs: &[(Sha256, usize)],
+        objs: &HashSet<(Sha256, usize)>,
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>>,
     ) -> Result<()> {
         for (sha256, _) in objs {
@@ -1303,7 +1303,7 @@ impl LfsRemote {
 
     fn batch_fetch(
         &self,
-        objs: &[(Sha256, usize)],
+        objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
     ) -> Result<()> {
         self.remote.batch_fetch(objs, write_to_store)
@@ -1311,7 +1311,7 @@ impl LfsRemote {
 
     fn batch_upload(
         &self,
-        objs: &[(Sha256, usize)],
+        objs: &HashSet<(Sha256, usize)>,
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
     ) -> Result<()> {
         self.remote.batch_upload(objs, read_from_store)
@@ -1404,7 +1404,7 @@ impl RemoteDataStore for LfsRemoteStore {
                 Ok(None)
             })
             .filter_map(|res| res.transpose())
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<HashSet<_>>>()?;
 
         // If there are no objects involved at all, then don't make an (expensive) remote request!
         if objs.is_empty() {
@@ -1476,7 +1476,7 @@ impl RemoteDataStore for LfsRemoteStore {
                 }
             })
             .filter_map(|res| res.transpose())
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<HashSet<_>>>()?;
 
         if !objs.is_empty() {
             let span = info_span!("LfsRemoteStore::upload", num_blobs = objs.len(), size = &0);
@@ -2182,7 +2182,8 @@ mod tests {
                 Bytes::from(&b"nothing"[..]),
             );
 
-            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             let err = resp.err().unwrap();
             assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
 
@@ -2227,7 +2228,8 @@ mod tests {
                 Bytes::from(&b"nothing"[..]),
             );
 
-            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             assert!(resp.is_err());
 
             Ok(())
@@ -2257,7 +2259,8 @@ mod tests {
                 Bytes::from(&b"nothing"[..]),
             );
 
-            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             assert!(resp.is_err());
 
             Ok(())
@@ -2293,7 +2296,8 @@ mod tests {
                 Bytes::from(&b"nothing"[..]),
             );
 
-            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             let err = resp.err().unwrap();
             assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
 
@@ -2331,7 +2335,8 @@ mod tests {
                 Bytes::from(&b"nothing"[..]),
             );
 
-            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             let err = resp.err().unwrap();
             assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
 
@@ -2362,8 +2367,12 @@ mod tests {
                 Bytes::from(&b"1.44.0"[..]),
             );
 
+            let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
             let out = Arc::new(Mutex::new(Vec::new()));
-            remote.batch_fetch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)], {
+            remote.batch_fetch(&objs, {
                 let out = out.clone();
                 move |sha256, blob| {
                     out.lock().push((sha256, blob));
@@ -2399,7 +2408,8 @@ mod tests {
                 Bytes::from(&b"master"[..]),
             );
 
-            let res = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            let res = remote.batch_fetch(&objs, |_, _| unreachable!());
             assert!(res.is_err());
 
             Ok(())
@@ -2484,8 +2494,12 @@ mod tests {
 
         let remote = LfsRemote::new(lfs, None, &config)?;
 
+        let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
         let out = Arc::new(Mutex::new(Vec::new()));
-        remote.batch_fetch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)], {
+        remote.batch_fetch(&objs, {
             let out = out.clone();
             move |sha256, blob| {
                 out.lock().push((sha256, blob));
@@ -2534,9 +2548,11 @@ mod tests {
 
         let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config)?;
 
-        remote.batch_upload(&[(blob1.0, blob1.1), (blob2.0, blob2.1)], {
-            move |sha256| local_lfs.blobs.get(&sha256)
-        })?;
+        let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
+        remote.batch_upload(&objs, { move |sha256| local_lfs.blobs.get(&sha256) })?;
 
         assert_eq!(remote_lfs_file_store.get(&blob1.0)?, Some(blob1.2));
         assert_eq!(remote_lfs_file_store.get(&blob2.0)?, Some(blob2.2));

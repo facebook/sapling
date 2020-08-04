@@ -945,6 +945,45 @@ mod tests {
 
             Ok(())
         }
+
+        #[test]
+        fn test_lfs_prefetch_once() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let localdir = TempDir::new()?;
+            let config = make_lfs_config(&cachedir);
+
+            let k1 = key("a", "1");
+            let k2 = key("a", "2");
+            let sha256 = Sha256::from_str(
+                "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
+            )?;
+            let size = 6;
+
+            let pointer = format!(
+                "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 0\n",
+                sha256.to_hex(),
+                size
+            );
+
+            let data = Bytes::from(pointer);
+
+            let mut map = HashMap::new();
+            map.insert(k1.clone(), (data.clone(), Some(0x2000)));
+            map.insert(k2.clone(), (data, Some(0x2000)));
+            let mut remotestore = FakeHgIdRemoteStore::new();
+            remotestore.data(map);
+
+            let store = ContentStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .remotestore(Arc::new(remotestore))
+                .build()?;
+
+            let k1 = StoreKey::from(k1.clone());
+            let k2 = StoreKey::from(k2.clone());
+            assert_eq!(store.prefetch(&[k1, k2])?, vec![]);
+
+            Ok(())
+        }
     }
 
     #[cfg(all(fbcode_build, target_os = "linux"))]
