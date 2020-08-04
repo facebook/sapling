@@ -6,7 +6,7 @@
  */
 
 #![deny(warnings)]
-#![feature(atomic_min_max, never_type)]
+#![feature(never_type)]
 
 pub use session_id::SessionId;
 
