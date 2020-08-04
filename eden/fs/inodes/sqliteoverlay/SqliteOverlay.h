@@ -52,7 +52,7 @@ class SqliteOverlay {
    * Was FsOverlay initialized - i.e., is cleanup (close) necessary.
    */
   bool initialized() const {
-    return initialized_;
+    return bool(db_);
   }
 
   void saveOverlayDir(InodeNumber inodeNumber, const overlay::OverlayDir& odir);
@@ -91,9 +91,6 @@ class SqliteOverlay {
 
   // Path to the folder containing DB.
   const AbsolutePath localDir_;
-
-  // Has initOverlay() been called on this.
-  bool initialized_ = false;
 
   // nextInodeNumber_ is part of a stop gap solution for Windows described
   // above. The writes to this are protected by db_ lock.
