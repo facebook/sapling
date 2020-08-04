@@ -181,6 +181,8 @@ pub struct RepoConfig {
     pub enforce_lfs_acl_check: bool,
     /// Whether to use warm bookmark cache while serving data hg wireprotocol
     pub repo_client_use_warm_bookmarks_cache: bool,
+    /// Configuration for Segmented Changelog.
+    pub segmented_changelog_config: SegmentedChangelogConfig,
 }
 
 /// Config for derived data
@@ -1136,5 +1138,20 @@ impl AsRef<str> for HgsqlGlobalrevsName {
 impl AsRef<String> for HgsqlGlobalrevsName {
     fn as_ref(&self) -> &String {
         &self.0
+    }
+}
+
+/// Configuration for Segmented Changelog.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SegmentedChangelogConfig {
+    /// Signals whether segmented changelog functionality is enabled for the current repository.
+    /// This can mean that functionality is disabled to shed load, that the required data is not
+    /// curretly being computed or that it was never computed for this repository.
+    pub enabled: bool,
+}
+
+impl Default for SegmentedChangelogConfig {
+    fn default() -> Self {
+        SegmentedChangelogConfig { enabled: false }
     }
 }

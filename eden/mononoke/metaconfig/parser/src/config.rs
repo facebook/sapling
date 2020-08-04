@@ -21,7 +21,7 @@ use anyhow::{anyhow, Result};
 use fbinit::FacebookInit;
 use metaconfig_types::{
     AllowlistEntry, CommitSyncConfig, CommonConfig, HgsqlGlobalrevsName, HgsqlName, Redaction,
-    RepoConfig, RepoReadOnly, StorageConfig,
+    RepoConfig, RepoReadOnly, SegmentedChangelogConfig, StorageConfig,
 };
 use mononoke_types::RepositoryId;
 use repos::{
@@ -327,6 +327,8 @@ fn parse_repo_config(
     let repo_client_use_warm_bookmarks_cache =
         repo_client_use_warm_bookmarks_cache.unwrap_or(false);
 
+    let segmented_changelog_config = SegmentedChangelogConfig::default();
+
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -364,6 +366,7 @@ fn parse_repo_config(
         hgsql_globalrevs_name,
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
+        segmented_changelog_config,
     })
 }
 
@@ -413,9 +416,9 @@ mod test {
         HookConfig, HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams,
         LfsParams, LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType,
         PushParams, PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig,
-        RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
-        SmallRepoCommitSyncConfig, SourceControlServiceMonitoring, SourceControlServiceParams,
-        UnodeVersion, WireprotoLoggingConfig,
+        RemoteMetadataDatabaseConfig, SegmentedChangelogConfig, ShardableRemoteDatabaseConfig,
+        ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
+        SourceControlServiceParams, UnodeVersion, WireprotoLoggingConfig,
     };
     use mononoke_types::MPath;
     use nonzero_ext::nonzero;
@@ -1167,6 +1170,7 @@ mod test {
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("fbsource".to_string()),
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: true,
+                segmented_changelog_config: SegmentedChangelogConfig { enabled: false },
             },
         );
 
@@ -1216,6 +1220,7 @@ mod test {
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("www-barfoo".to_string()),
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: false,
+                segmented_changelog_config: SegmentedChangelogConfig { enabled: false },
             },
         );
         assert_eq!(
