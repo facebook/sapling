@@ -144,6 +144,10 @@ class verifier(object):
 
         ui = repo.ui
 
+        if "segmentedchangelog" in repo.storerequirements:
+            ui.warn(_("verify for this repo format is not yet supported\n"))
+            return
+
         if not repo.url().startswith("file:"):
             raise error.Abort(_("cannot verify bundle or remote repos"))
 

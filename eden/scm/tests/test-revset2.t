@@ -398,8 +398,8 @@ test integer range in `_list`
   abort: unknown revision '-11'!
   [255]
 
-  $ log '9|10'
-  abort: unknown revision '10'!
+  $ log '9|11'
+  abort: unknown revision '11'!
   [255]
 
 test '0000' != '0' in `_list`

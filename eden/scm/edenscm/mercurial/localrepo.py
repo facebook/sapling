@@ -341,6 +341,7 @@ class localrepository(object):
         "narrowheads",
         "zstorecommitdata",
         "invalidatelinkrev",
+        "segmentedchangelog",
     }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
@@ -1032,13 +1033,15 @@ class localrepository(object):
             if deleted:
                 self.ui.log("features", feature="remove-svfs-dottmp")
 
+            if "segmentedchangelog" in self.storerequirements:
+                return changelog2.changelog.opensegments(self.svfs, self.ui.uiconfig())
+
             if (
                 self.ui.configbool("experimental", "rust-commits")
                 and self.ui.configbool("experimental", "rust-commits")
                 and getattr(self.svfs, "options", {}).get("bypass-revlog-transaction")
                 and not "hgsql" in self.requirements
             ):
-                # Use the new changelog directly.
                 return changelog2.changelog.openrevlog(self.svfs, self.ui.uiconfig())
 
             if "zstorecommitdata" in self.storerequirements:
@@ -2922,6 +2925,12 @@ def newrepostorerequirements(repo):
 
     if ui.configbool("format", "use-zstore-commit-data"):
         requirements.add("zstorecommitdata")
+
+    if ui.configbool("format", "use-segmented-changelog"):
+        requirements.add("segmentedchangelog")
+        # linkrev are not going to work with segmented changelog,
+        # because the numbers might get rewritten.
+        requirements.add("invalidatelinkrev")
 
     return requirements
 

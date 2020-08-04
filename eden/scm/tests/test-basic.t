@@ -4,6 +4,8 @@
 
 Create a repository:
 
+  $ setconfig format.use-segmented-changelog=1
+
   $ hg config
   devel.all-warnings=true
   devel.default-date=0 0
@@ -11,6 +13,7 @@ Create a repository:
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=!
   format.use-zstore-commit-data=false
+  format.use-segmented-changelog=1
   fsmonitor.detectrace=1 (fsmonitor !)
   mutation.record=False
   remotefilelog.reponame=reponame-default
@@ -72,25 +75,26 @@ This command is ancient:
 
   $ hg history
   commit:      acb14030fe0a
+  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     test
   
 
-Verify that updating to revision 0 via commands.update() works properly
+Verify that updating to revision acb14030fe0a via commands.update() works properly
 
   $ cat <<EOF > update_to_rev0.py
   > from edenscm.mercurial import ui, hg, commands
   > myui = ui.ui.load()
   > repo = hg.repository(myui, path='.')
-  > commands.update(myui, repo, rev=0)
+  > commands.update(myui, repo, rev='acb14030fe0a')
   > EOF
   $ hg up null
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugpython -- ./update_to_rev0.py
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg identify -n
-  0
+  72057594037927936
 
 
 Poke around at hashes:
@@ -104,11 +108,7 @@ Poke around at hashes:
 Verify should succeed:
 
   $ hg verify
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
+  verify for this repo format is not yet supported
 
 At the end...
 

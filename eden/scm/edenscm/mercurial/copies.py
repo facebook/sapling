@@ -55,7 +55,7 @@ def _findlimit(repo, a, b):
     hascommonancestor = False
     limit = working
 
-    while interesting:
+    while interesting > 0:
         r = -(heapq.heappop(visit))
         if r == working:
             parents = [cl.rev(p) for p in repo.dirstate.parents()]

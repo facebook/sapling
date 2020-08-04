@@ -441,12 +441,13 @@ class changectx(basectx):
                 l = len(repo.changelog)
                 if r < 0:
                     r += l
-                if r < 0 or r >= l and r != wdirrev:
+                if r < 0 and r != wdirrev:
                     raise ValueError
+                node = repo.changelog.node(r)
                 self._rev = r
-                self._node = repo.changelog.node(r)
+                self._node = node
                 return
-            except (ValueError, OverflowError, IndexError):
+            except (ValueError, OverflowError, IndexError, TypeError, error.RustError):
                 pass
 
             if len(changeid) == 40:

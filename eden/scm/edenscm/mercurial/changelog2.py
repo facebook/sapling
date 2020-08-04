@@ -48,6 +48,13 @@ class changelog(object):
         inner = bindings.dag.commits.openrevlog(svfs.join(""))
         return cls(svfs, inner, uiconfig)
 
+    @classmethod
+    def opensegments(cls, svfs, uiconfig):
+        segmentsdir = svfs.join("segments/v1")
+        hgcommitsdir = svfs.join("hgcommits/v1")
+        inner = bindings.dag.commits.opensegments(segmentsdir, hgcommitsdir)
+        return cls(svfs, inner, uiconfig)
+
     @property
     def dag(self):
         """Get the DAG with algorithms. Require rust-commit."""

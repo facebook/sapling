@@ -378,15 +378,7 @@ def uisetup(ui):
         if oldlen != newlen:
             for oldargs in pendingadd:
                 log, dpack, hpack, nname, nnode, ntext, np1, np2, linkrev = oldargs
-                linknode = self.node(linkrev)
-                if linknode == node:
-                    log._addtreeentry(
-                        dpack, hpack, nname, nnode, ntext, np1, np2, linknode
-                    )
-                else:
-                    raise error.ProgrammingError(
-                        "pending multiple integer revisions are not supported"
-                    )
+                log._addtreeentry(dpack, hpack, nname, nnode, ntext, np1, np2, node)
         else:
             # Nothing was added to the changelog, let's make sure that we don't
             # have pending adds.
