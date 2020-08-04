@@ -47,6 +47,14 @@ pub struct Dag {
 }
 
 impl Dag {
+    pub fn new_in_process(repo_id: RepositoryId) -> Result<Dag> {
+        Ok(Dag {
+            repo_id,
+            iddag: InProcessIdDag::new_in_process(),
+            idmap: Arc::new(IdMap::with_sqlite_in_memory()?),
+        })
+    }
+
     // TODO(sfilip): error scenarios
     pub async fn location_to_changeset_id(
         &self,
@@ -277,14 +285,6 @@ mod tests {
     use tests_utils::resolve_cs_id;
 
     impl Dag {
-        fn new_in_process(repo_id: RepositoryId) -> Result<Dag> {
-            Ok(Dag {
-                repo_id,
-                iddag: InProcessIdDag::new_in_process(),
-                idmap: Arc::new(IdMap::with_sqlite_in_memory()?),
-            })
-        }
-
         async fn build_all_from_blobrepo(
             &mut self,
             ctx: &CoreContext,

@@ -48,6 +48,7 @@ use mononoke_types::{
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
 use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
+use segmented_changelog::SegmentedChangelog;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
 #[cfg(test)]
@@ -1084,6 +1085,36 @@ impl RepoContext {
     /// Get an HgRepoContext to access this repo's data in Mercurial-specific formats.
     pub fn hg(self) -> HgRepoContext {
         HgRepoContext::new(self)
+    }
+
+    /// A SegmentedChangelog client repository has a compressed shape of the commit graph but
+    /// doesn't know the identifiers for all the commits in the graph. It only knows the
+    /// identifiers for select commits called "known" commits. These repositories can query
+    /// the server to get the identifiers of the commits they don't have using the location
+    /// of the desired commit relative to one of the "known" commits.
+    /// The current version has all parents of merge commits downloaded to clients so that
+    /// locations can be expressed using only the unique descendant distance to one of these
+    /// commits. The heads of the repo are also known.
+    /// Let's assume our graph is `0 - a - b - c`.
+    /// In this example our initial commit is `0`, then we have `a` the first commit, `b` second,
+    /// `c` third.
+    /// For `known_descendant = c` and `distance_to_descendant = 2` we want to return `a`.
+    pub async fn location_to_changeset_id(
+        &self,
+        known_descendant: ChangesetId,
+        distance_to_descendant: u64,
+    ) -> Result<ChangesetId, MononokeError> {
+        let blob_repo = self.blob_repo();
+        let segmented_changelog = blob_repo.attribute::<SegmentedChangelog>().ok_or_else(|| {
+            MononokeError::InvalidRequest(String::from(
+                "Segmented Changelog is not enabled for this repo",
+            ))
+        })?;
+        let ancestor = segmented_changelog
+            .location_to_changeset_id(&self.ctx, known_descendant, distance_to_descendant)
+            .await
+            .map_err(MononokeError::from)?;
+        Ok(ancestor)
     }
 }
 

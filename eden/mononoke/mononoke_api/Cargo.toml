@@ -36,6 +36,7 @@ repo_client = { path = "../repo_client" }
 revisionstore_types = { path = "../../scm/lib/revisionstore/types" }
 revset = { path = "../revset" }
 scuba_ext = { path = "../common/scuba_ext" }
+segmented_changelog = { path = "../segmented_changelog" }
 skiplist = { path = "../reachabilityindex/skiplist" }
 sql_ext = { path = "../common/rust/sql_ext" }
 synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping" }

@@ -11,5 +11,7 @@
 ///! segmented_changelog
 ///!
 ///! Data structures and algorithms for a commit graph used by source control.
-pub mod dag;
-pub mod idmap;
+mod dag;
+mod idmap;
+
+pub use crate::dag::Dag as SegmentedChangelog;

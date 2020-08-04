@@ -6,10 +6,14 @@
  */
 
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use context::CoreContext;
-use futures::{compat::Stream01CompatExt, TryStream, TryStreamExt};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    TryStream, TryStreamExt,
+};
 use hgproto::GettreepackArgs;
-use mercurial_types::{HgFileNodeId, HgManifestId};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use mononoke_types::MPath;
 use repo_client::gettreepack_entries;
@@ -113,6 +117,37 @@ impl HgRepoContext {
                 }
             })
     }
+
+    /// This provides the same functionality as
+    /// `mononoke_api::RepoContext::location_to_changeset_id`. It just wraps the request and
+    /// response using Mercurial specific types.
+    pub async fn location_to_hg_changeset_id(
+        &self,
+        known_descendant: HgChangesetId,
+        distance_to_descendant: u64,
+    ) -> Result<HgChangesetId, MononokeError> {
+        let known_descendent_csid = self
+            .blob_repo()
+            .get_bonsai_from_hg(self.ctx().clone(), known_descendant)
+            .compat()
+            .await?
+            .ok_or_else(|| {
+                MononokeError::InvalidRequest(format!(
+                    "hg changeset {} not found",
+                    known_descendant
+                ))
+            })?;
+        let result_csid = self
+            .repo()
+            .location_to_changeset_id(known_descendent_csid, distance_to_descendant)
+            .await?;
+        let result = self
+            .blob_repo()
+            .get_hg_from_bonsai_changeset(self.ctx().clone(), result_csid)
+            .compat()
+            .await?;
+        Ok(result)
+    }
 }
 
 #[cfg(test)]
@@ -123,7 +158,6 @@ mod tests {
     use std::sync::Arc;
 
     use anyhow::Error;
-    use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;
