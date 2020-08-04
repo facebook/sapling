@@ -24,7 +24,9 @@ use serde::Serialize;
 use serde_json::Value;
 use structopt::StructOpt;
 
-use edenapi_types::{json::FromJson, CompleteTreeRequest, DataRequest, HistoryRequest};
+use edenapi_types::{
+    json::FromJson, CompleteTreeRequest, DataRequest, HistoryRequest, LocationToHashRequest,
+};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "make_req", about = "Make EdenAPI CBOR request payloads")]
@@ -32,6 +34,7 @@ enum Command {
     Data(Args),
     History(Args),
     Tree(Args),
+    LocationToHash(Args),
 }
 
 #[derive(Debug, StructOpt)]
@@ -47,6 +50,7 @@ fn main() -> Result<()> {
         Command::Data(args) => make_req::<DataRequest>(args),
         Command::History(args) => make_req::<HistoryRequest>(args),
         Command::Tree(args) => make_req::<CompleteTreeRequest>(args),
+        Command::LocationToHash(args) => make_req::<LocationToHashRequest>(args),
     }
 }
 

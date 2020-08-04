@@ -27,9 +27,54 @@ use serde_json::{json, Value};
 
 use types::{HgId, Key, RepoPathBuf};
 
+use crate::commit::{Location, LocationToHashRequest};
 use crate::data::DataRequest;
 use crate::history::HistoryRequest;
 use crate::tree::CompleteTreeRequest;
+
+/// Parse a `LocationToHashRequest` from JSON.
+///
+/// Example request:
+/// ```json
+/// {
+///   "locations": [{
+///     "known_descendant": "159a8912de890112b8d6005999cdf4988213fb2f",
+///     "distance_to_descendant": 1,
+///     "count": 2,
+///   }]
+/// }
+pub fn parse_location_to_hash_req(json: &Value) -> Result<LocationToHashRequest> {
+    let json = json.as_object().context("input must be a JSON object")?;
+    let locations_json = json
+        .get("locations")
+        .context("missing field locations")?
+        .as_array()
+        .context("field locations is not an array")?;
+    let mut locations = Vec::new();
+    for entry in locations_json {
+        let known_descendent = HgId::from_str(
+            entry
+                .get("known_descendant")
+                .context("missing field descendant")?
+                .as_str()
+                .context("field descendant is not a string")?,
+        )
+        .context("could not be parsed as HgId")?;
+        let distance_to_descendant = entry
+            .get("distance_to_descendant")
+            .context("missing field distance_to_descendant")?
+            .as_u64()
+            .context("field distance_to_descendant is not a valid u64 number")?;
+        let count = entry
+            .get("count")
+            .context("missing field count")?
+            .as_u64()
+            .context("field count is not a valid u64 number")?;
+        let location = Location::new(known_descendent, distance_to_descendant, count);
+        locations.push(location);
+    }
+    Ok(LocationToHashRequest { locations })
+}
 
 /// Parse a `DataRequest` from JSON.
 ///
@@ -214,6 +259,12 @@ impl FromJson for CompleteTreeRequest {
     }
 }
 
+impl FromJson for LocationToHashRequest {
+    fn from_json(json: &Value) -> Result<Self> {
+        parse_location_to_hash_req(json)
+    }
+}
+
 pub trait ToJson {
     fn to_json(&self) -> Value;
 }
@@ -255,6 +306,24 @@ impl ToJson for CompleteTreeRequest {
             "mfnodes": self.mfnodes.to_json(),
             "basemfnodes": self.basemfnodes.to_json(),
             "depth": self.depth,
+        })
+    }
+}
+
+impl ToJson for Location {
+    fn to_json(&self) -> Value {
+        json!({
+            "known_descendant": self.known_descendant.to_json(),
+            "distance_to_descendant": self.distance_to_descendant,
+            "count": self.count,
+        })
+    }
+}
+
+impl ToJson for LocationToHashRequest {
+    fn to_json(&self) -> Value {
+        json!({
+            "locations": self.locations,
         })
     }
 }

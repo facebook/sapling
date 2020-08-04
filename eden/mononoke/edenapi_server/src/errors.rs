@@ -56,6 +56,10 @@ pub enum ErrorKind {
     HistoryFetchFailed(Key),
     #[error("Complete tree request failed")]
     CompleteTreeRequestFailed,
+    #[error("Dag location to hash request failed")]
+    CommitLocationToHashRequestFailed,
+    #[error("Functionality not implemented")]
+    NotImplemented,
 }
 
 /// Extension trait for converting `MononokeError`s into `HttpErrors`.
