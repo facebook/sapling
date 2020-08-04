@@ -229,6 +229,18 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<GetConfigParams> params) override;
 
   /**
+   * Enable all backing stores to record fetched files
+   */
+  void startRecordingBackingStoreFetch() override;
+
+  /**
+   * Make all backing stores stop recording
+   * fetched files. Previous records for different kinds of backing
+   * stores will be returned by backing store types.
+   */
+  void stopRecordingBackingStoreFetch(GetFetchedFilesResult& results) override;
+
+  /**
    * Returns the pid that caused the Thrift request running on the calling
    * Thrift worker thread and registers it with the ProcessNameCache.
    *

@@ -52,11 +52,13 @@
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/ThriftPermissionChecker.h"
 #include "eden/fs/service/ThriftUtil.h"
+#include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
@@ -1289,6 +1291,24 @@ void EdenServiceHandler::clearFetchCountsByMount(
   NOT_IMPLEMENTED();
 #endif // !_WIN32
 }
+
+void EdenServiceHandler::startRecordingBackingStoreFetch() {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+  for (auto& mount : server_->getMountPoints()) {
+    auto backingStore = mount->getObjectStore()->getBackingStore();
+    backingStore->startRecordingFetch();
+  }
+}
+
+void EdenServiceHandler::stopRecordingBackingStoreFetch(
+    GetFetchedFilesResult& results) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+  for (const auto& backingStore : server_->getHgQueuedBackingStores()) {
+    auto filePaths = backingStore->stopRecordingFetch();
+    (*results.fetchedFilePaths_ref())["HgQueuedBackingStore"].insert(
+        filePaths.begin(), filePaths.end());
+  }
+} // namespace eden
 
 void EdenServiceHandler::getAccessCounts(
     GetAccessCountsResult& result,

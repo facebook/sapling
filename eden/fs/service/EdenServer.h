@@ -381,6 +381,17 @@ class EdenServer : private TakeoverHandler {
     return mainEventBase_;
   }
 
+  /**
+   * Look up all BackingStores which are HgQueuedBackingStore
+   *
+   * EdenServer maintains an internal cache of all known BackingStores,
+   * so that multiple mount points that use the same repository can
+   * share the same BackingStore object.
+   *
+   */
+  std::unordered_set<std::shared_ptr<HgQueuedBackingStore>>
+  getHgQueuedBackingStores();
+
  private:
   // Struct to store EdenMount along with SharedPromise that is set
   // during unmount to allow synchronization between unmountFinished
@@ -521,17 +532,6 @@ class EdenServer : private TakeoverHandler {
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
-
-  /**
-   * Look up all BackingStores which are HgQueuedBackingStore
-   *
-   * EdenServer maintains an internal cache of all known BackingStores,
-   * so that multiple mount points that use the same repository can
-   * share the same BackingStore object.
-   *
-   */
-  std::unordered_set<std::shared_ptr<HgQueuedBackingStore>>
-  getHgQueuedBackingStores();
 
   /**
    * collect the values of the counter for each HgQueuedBackingStore
