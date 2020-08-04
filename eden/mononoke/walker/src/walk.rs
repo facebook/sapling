@@ -96,7 +96,15 @@ pub enum ErrorKind {
     NotTraversable(OutgoingEdge, String),
 }
 
-pub trait WalkVisitor<VOut, Route> {
+// Simpler visitor trait used inside each step to decide
+// whether to emit an edge
+pub trait VisitOne {
+    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool;
+}
+
+// Overall trait with support for route tracking and handling
+// partially derived types (it can see the node_data)
+pub trait WalkVisitor<VOut, Route>: VisitOne {
     // Called before the step is attempted
     fn start_step(
         &self,
@@ -114,6 +122,15 @@ pub trait WalkVisitor<VOut, Route> {
         route: Option<Route>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (VOut, Route, Vec<OutgoingEdge>);
+}
+
+impl<V> VisitOne for Arc<V>
+where
+    V: VisitOne,
+{
+    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
+        self.as_ref().needs_visit(outgoing)
+    }
 }
 
 impl<V, VOut, Route> WalkVisitor<VOut, Route> for Arc<V>
@@ -507,70 +524,44 @@ fn hg_file_node_step(
         .compat()
 }
 
-fn hg_manifest_step(
+fn hg_manifest_step<'a, V: VisitOne>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &'a BlobRepo,
+    checker: &'a Checker<V>,
     path: WrappedPath,
     hg_manifest_id: HgManifestId,
-    keep_edge_paths: bool,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     hg_manifest_id
         .load(ctx, repo.blobstore())
         .map_err(Error::from)
-        .map_ok({
-            move |hgmanifest| {
-                let (manifests, filenodes): (Vec<_>, Vec<_>) =
-                    hgmanifest.list().partition_map(|child| {
-                        let path_opt = WrappedPath::from(MPath::join_element_opt(
-                            path.as_ref(),
-                            child.get_name(),
-                        ));
-                        match child.get_hash() {
-                            HgEntryId::File(_, filenode_id) => {
-                                Either::Right((path_opt, filenode_id))
-                            }
-                            HgEntryId::Manifest(manifest_id) => {
-                                Either::Left((path_opt, manifest_id))
-                            }
-                        }
-                    });
-
-                let mut children: Vec<_> = filenodes
-                    .into_iter()
-                    .map(move |(full_path, hg_file_node_id)| {
-                        vec![
-                            OutgoingEdge::new_with_path(
-                                EdgeType::HgManifestToHgFileEnvelope,
-                                Node::HgFileEnvelope(hg_file_node_id),
-                                if keep_edge_paths {
-                                    Some(full_path.clone())
-                                } else {
-                                    None
-                                },
-                            ),
-                            OutgoingEdge::new(
-                                EdgeType::HgManifestToHgFileNode,
-                                Node::HgFileNode((full_path, hg_file_node_id)),
-                            ),
-                        ]
-                    })
-                    .flatten()
-                    .collect();
-
-                let mut children_manifests: Vec<_> = manifests
-                    .into_iter()
-                    .map(move |(full_path, hg_child_manifest_id)| {
-                        OutgoingEdge::new(
-                            EdgeType::HgManifestToChildHgManifest,
-                            Node::HgManifest((full_path, hg_child_manifest_id)),
-                        )
-                    })
-                    .collect();
-
-                children.append(&mut children_manifests);
-
-                StepOutput(NodeData::HgManifest(hgmanifest), children)
+        .map_ok(move |hgmanifest| {
+            let (manifests, filenodes): (Vec<_>, Vec<_>) =
+                hgmanifest.list().partition_map(|child| {
+                    let path_opt =
+                        WrappedPath::from(MPath::join_element_opt(path.as_ref(), child.get_name()));
+                    match child.get_hash() {
+                        HgEntryId::File(_, filenode_id) => Either::Right((path_opt, filenode_id)),
+                        HgEntryId::Manifest(manifest_id) => Either::Left((path_opt, manifest_id)),
+                    }
+                });
+            let mut edges = vec![];
+            for (full_path, hg_file_node_id) in filenodes {
+                checker.add_edge_with_path(
+                    &mut edges,
+                    EdgeType::HgManifestToHgFileEnvelope,
+                    || Node::HgFileEnvelope(hg_file_node_id),
+                    || Some(full_path.clone()),
+                );
+                checker.add_edge(&mut edges, EdgeType::HgManifestToHgFileNode, || {
+                    Node::HgFileNode((full_path, hg_file_node_id))
+                });
             }
+            for (full_path, hg_child_manifest_id) in manifests {
+                checker.add_edge(&mut edges, EdgeType::HgManifestToChildHgManifest, || {
+                    Node::HgManifest((full_path, hg_child_manifest_id))
+                })
+            }
+            StepOutput(NodeData::HgManifest(hgmanifest), edges)
         })
 }
 
@@ -683,6 +674,81 @@ pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
     }
 }
 
+struct Checker<V: VisitOne> {
+    include_edge_types: HashSet<EdgeType>,
+    always_emit_edge_types: HashSet<EdgeType>,
+    keep_edge_paths: bool,
+    visitor: V,
+}
+
+impl<V: VisitOne> Checker<V> {
+    // Convience method around make_edge
+    fn add_edge<N>(&self, edges: &mut Vec<OutgoingEdge>, edge_type: EdgeType, node_fn: N)
+    where
+        N: FnOnce() -> Node,
+    {
+        if let Some(edge) = self.make_edge(edge_type, node_fn) {
+            edges.push(edge)
+        }
+    }
+
+    // Convience method around make_edge_with_path
+    fn add_edge_with_path<N, P>(
+        &self,
+        edges: &mut Vec<OutgoingEdge>,
+        edge_type: EdgeType,
+        node_fn: N,
+        path_fn: P,
+    ) where
+        N: FnOnce() -> Node,
+        P: FnOnce() -> Option<WrappedPath>,
+    {
+        if let Some(edge) = self.make_edge_with_path(edge_type, node_fn, path_fn) {
+            edges.push(edge)
+        }
+    }
+
+    // Construct a new edge, only calling visitor to check if the edge_type is needed
+    fn make_edge<N>(&self, edge_type: EdgeType, node_fn: N) -> Option<OutgoingEdge>
+    where
+        N: FnOnce() -> Node,
+    {
+        let always_emit = self.always_emit_edge_types.contains(&edge_type);
+        if always_emit || self.include_edge_types.contains(&edge_type) {
+            let outgoing = OutgoingEdge::new(edge_type, node_fn());
+            if always_emit || self.visitor.needs_visit(&outgoing) {
+                return Some(outgoing);
+            }
+        }
+        None
+    }
+
+    // Construct a new edge, only calling visitor to check if the edge_type is needed
+    fn make_edge_with_path<N, P>(
+        &self,
+        edge_type: EdgeType,
+        node_fn: N,
+        path_fn: P,
+    ) -> Option<OutgoingEdge>
+    where
+        N: FnOnce() -> Node,
+        P: FnOnce() -> Option<WrappedPath>,
+    {
+        let always_emit = self.always_emit_edge_types.contains(&edge_type);
+        if always_emit || self.include_edge_types.contains(&edge_type) {
+            let outgoing = if self.keep_edge_paths {
+                OutgoingEdge::new_with_path(edge_type, node_fn(), path_fn())
+            } else {
+                OutgoingEdge::new(edge_type, node_fn())
+            };
+            if always_emit || self.visitor.needs_visit(&outgoing) {
+                return Some(outgoing);
+            }
+        }
+        None
+    }
+}
+
 /// Walk the graph from one or more starting points,  providing stream of data for later reduction
 pub fn walk_exact<V, VOut, Route>(
     ctx: CoreContext,
@@ -693,11 +759,13 @@ pub fn walk_exact<V, VOut, Route>(
     scheduled_max: usize,
     error_as_data_node_types: HashSet<NodeType>,
     error_as_data_edge_types: HashSet<EdgeType>,
+    include_edge_types: HashSet<EdgeType>,
+    always_emit_edge_types: HashSet<EdgeType>,
     scuba: ScubaSampleBuilder,
     keep_edge_paths: bool,
 ) -> BoxStream<'static, Result<VOut, Error>>
 where
-    V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
+    V: 'static + Clone + WalkVisitor<VOut, Route> + Send + Sync,
     VOut: 'static + Send,
     Route: 'static + Send + Clone + StepRoute,
 {
@@ -719,6 +787,13 @@ where
     let walk_roots: Vec<(Option<Route>, OutgoingEdge)> =
         walk_roots.into_iter().map(|e| (None, e)).collect();
 
+    let checker = Arc::new(Checker {
+        include_edge_types,
+        always_emit_edge_types,
+        keep_edge_paths,
+        visitor: visitor.clone(),
+    });
+
     published_bookmarks
         .map_ok(move |published_bookmarks| {
             let published_bookmarks = Arc::new(published_bookmarks);
@@ -731,7 +806,8 @@ where
                         published_bookmarks,
                         repo,
                         scuba,
-                        visitor
+                        visitor,
+                        checker,
                     );
                     // Each step returns the walk result, and next steps
                     async move {
@@ -756,6 +832,7 @@ where
                                 )
                                 .boxed()
                             }),
+                            checker,
                             keep_edge_paths,
                         );
 
@@ -782,6 +859,7 @@ async fn walk_one<V, VOut, Route>(
     mut scuba: ScubaSampleBuilder,
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
     heads_fetcher: HeadsFetcher,
+    checker: Arc<Checker<V>>,
     keep_edge_paths: bool,
 ) -> Result<(VOut, Vec<(Option<Route>, OutgoingEdge)>), Error>
 where
@@ -845,7 +923,7 @@ where
             hg_file_node_step(ctx.clone(), &repo, path, hg_file_node_id).await
         }
         Node::HgManifest((path, hg_manifest_id)) => {
-            hg_manifest_step(ctx.clone(), &repo, path, hg_manifest_id, keep_edge_paths).await
+            hg_manifest_step(ctx.clone(), &repo, &checker, path, hg_manifest_id).await
         }
         // Content
         Node::FileContent(content_id) => file_content_step(ctx.clone(), &repo, content_id),

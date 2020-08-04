@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::graph::EdgeType;
 use crate::setup::{RepoWalkDatasources, RepoWalkParams};
 use crate::walk::{walk_exact, StepRoute, WalkVisitor};
 
@@ -15,6 +16,7 @@ use fbinit::FacebookInit;
 use futures::{future::Future, stream::BoxStream};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
+use std::collections::HashSet;
 use tokio::time::{Duration, Instant};
 
 #[derive(Clone)]
@@ -28,6 +30,7 @@ pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
     logger: Logger,
     datasources: RepoWalkDatasources,
     walk_params: RepoWalkParams,
+    always_emit_edge_types: Option<HashSet<EdgeType>>,
     visitor: V,
     make_run: RunFac,
     keep_edge_paths: bool,
@@ -36,13 +39,18 @@ where
     RunFac: 'static + Clone + Send + Sync + FnOnce(RepoWalkRun) -> SinkFac,
     SinkFac: 'static + FnOnce(BoxStream<'static, Result<VOut, Error>>) -> SinkOut + Clone + Send,
     SinkOut: Future<Output = Result<(), Error>> + 'static + Send,
-    V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
+    V: 'static + Clone + WalkVisitor<VOut, Route> + Send + Sync,
     VOut: 'static + Send,
     Route: 'static + Send + Clone + StepRoute,
 {
     let scuba_builder = datasources.scuba_builder;
     let repo = datasources.blobrepo;
     let tail_secs = walk_params.tail_secs.clone();
+    let always_emit_edge_types = if let Some(always_emit_edge_types) = always_emit_edge_types {
+        always_emit_edge_types
+    } else {
+        HashSet::new()
+    };
     loop {
         cloned!(make_run, repo, mut scuba_builder, visitor,);
 
@@ -62,6 +70,8 @@ where
             walk_params.scheduled_max,
             walk_params.error_as_data_node_types.clone(),
             walk_params.error_as_data_edge_types.clone(),
+            walk_params.include_edge_types.clone(),
+            always_emit_edge_types.clone(),
             scuba_builder,
             keep_edge_paths,
         );

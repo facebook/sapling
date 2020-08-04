@@ -23,7 +23,7 @@ use crate::setup::{
 };
 use crate::state::{StepStats, WalkState};
 use crate::tail::{walk_exact_tail, RepoWalkRun};
-use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, WalkVisitor};
+use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, VisitOne, WalkVisitor};
 
 use anyhow::{format_err, Error};
 use clap::ArgMatches;
@@ -157,10 +157,15 @@ impl ValidatingVisitor {
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
         include_checks: HashSet<CheckType>,
+        always_emit_edge_types: HashSet<EdgeType>,
     ) -> Self {
         Self {
             repo_stats_key,
-            inner: WalkState::new(include_node_types, include_edge_types),
+            inner: WalkState::new(
+                include_node_types,
+                include_edge_types,
+                always_emit_edge_types,
+            ),
             checks_by_node_type: include_checks
                 .into_iter()
                 .group_by(|c| c.node_type())
@@ -168,6 +173,12 @@ impl ValidatingVisitor {
                 .map(|(key, group)| (key, HashSet::from_iter(group)))
                 .collect(),
         }
+    }
+}
+
+impl VisitOne for ValidatingVisitor {
+    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
+        self.inner.needs_visit(outgoing)
     }
 }
 
@@ -661,11 +672,24 @@ pub async fn validate<'a>(
         }
     };
 
+    let mut always_emit_edge_types = vec![EdgeType::HgLinkNodeToHgChangeset];
+
+    // TODO(ahornby) temporary until later in stack so don't need to review
+    // all types update to new checker at once
+    let mut unmigrated_types = include_edge_types.clone();
+    unmigrated_types.remove(&EdgeType::HgManifestToHgFileEnvelope);
+    unmigrated_types.remove(&EdgeType::HgManifestToHgFileNode);
+    unmigrated_types.remove(&EdgeType::HgManifestToChildHgManifest);
+    always_emit_edge_types.append(&mut unmigrated_types.into_iter().collect());
+
+    let always_emit_edge_types = HashSet::from_iter(always_emit_edge_types.into_iter());
+
     let stateful_visitor = Arc::new(ValidatingVisitor::new(
         repo_stats_key,
         include_node_types,
         include_edge_types,
         include_check_types,
+        always_emit_edge_types.clone(),
     ));
 
     walk_exact_tail(
@@ -673,6 +697,7 @@ pub async fn validate<'a>(
         logger,
         datasources,
         walk_params,
+        Some(always_emit_edge_types),
         stateful_visitor,
         make_sink,
         false,

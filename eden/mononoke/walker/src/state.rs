@@ -6,7 +6,7 @@
  */
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
-use crate::walk::{expand_checked_nodes, EmptyRoute, OutgoingEdge, WalkVisitor};
+use crate::walk::{expand_checked_nodes, EmptyRoute, OutgoingEdge, VisitOne, WalkVisitor};
 use array_init::array_init;
 use context::CoreContext;
 use dashmap::DashMap;
@@ -45,6 +45,7 @@ pub struct WalkState {
     // e.g. ChangesetId, HgChangesetId, HgFileNodeId
     include_node_types: HashSet<NodeType>,
     include_edge_types: HashSet<EdgeType>,
+    always_emit_edge_types: HashSet<EdgeType>,
     visited_bcs: DashMap<ChangesetId, ()>,
     visited_bcs_mapping: DashMap<ChangesetId, ()>,
     visited_bcs_phase: DashMap<ChangesetId, ()>,
@@ -75,10 +76,12 @@ impl WalkState {
     pub fn new(
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
+        always_emit_edge_types: HashSet<EdgeType>,
     ) -> Self {
         Self {
             include_node_types,
             include_edge_types,
+            always_emit_edge_types,
             visited_bcs: DashMap::new(),
             visited_bcs_mapping: DashMap::new(),
             visited_bcs_phase: DashMap::new(),
@@ -90,36 +93,6 @@ impl WalkState {
             visited_hg_manifest: DashMap::new(),
             visited_fsnode: DashMap::new(),
             visit_count: array_init(|_i| AtomicUsize::new(0)),
-        }
-    }
-
-    /// If the set did not have this value present, true is returned.
-    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
-        let target_node: &Node = &outgoing.target;
-        let k = target_node.get_type();
-        self.visit_count[k as usize].fetch_add(1, Ordering::Release);
-
-        match &target_node {
-            Node::BonsaiChangeset(bcs_id) => self.visited_bcs.insert(*bcs_id, ()).is_none(),
-            // TODO - measure if worth tracking - the mapping is cachelib enabled.
-            Node::BonsaiHgMapping(bcs_id) => {
-                // Does not insert, see record_resolved_visit
-                !self.visited_bcs_mapping.contains_key(bcs_id)
-            }
-            Node::BonsaiPhaseMapping(bcs_id) => {
-                // Does not insert, as can only prune visits once data resolved, see record_resolved_visit
-                !self.visited_bcs_phase.contains_key(bcs_id)
-            }
-            Node::HgBonsaiMapping(hg_cs_id) => {
-                self.visited_hg_cs_mapping.insert(*hg_cs_id, ()).is_none()
-            }
-            Node::HgChangeset(hg_cs_id) => self.visited_hg_cs.insert(*hg_cs_id, ()).is_none(),
-            Node::HgManifest(k) => record_with_path(&self.visited_hg_manifest, k),
-            Node::HgFileNode(k) => record_with_path(&self.visited_hg_filenode, k),
-            Node::HgFileEnvelope(id) => self.visited_hg_file_envelope.insert(*id, ()).is_none(),
-            Node::FileContent(content_id) => self.visited_file.insert(*content_id, ()).is_none(),
-            Node::Fsnode(k) => record_with_path(&self.visited_fsnode, k),
-            _ => true,
         }
     }
 
@@ -153,6 +126,38 @@ impl WalkState {
     }
 }
 
+impl VisitOne for WalkState {
+    /// If the set did not have this value present, true is returned.
+    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
+        let target_node: &Node = &outgoing.target;
+        let k = target_node.get_type();
+        self.visit_count[k as usize].fetch_add(1, Ordering::Release);
+
+        match &target_node {
+            Node::BonsaiChangeset(bcs_id) => self.visited_bcs.insert(*bcs_id, ()).is_none(),
+            // TODO - measure if worth tracking - the mapping is cachelib enabled.
+            Node::BonsaiHgMapping(bcs_id) => {
+                // Does not insert, see record_resolved_visit
+                !self.visited_bcs_mapping.contains_key(bcs_id)
+            }
+            Node::BonsaiPhaseMapping(bcs_id) => {
+                // Does not insert, as can only prune visits once data resolved, see record_resolved_visit
+                !self.visited_bcs_phase.contains_key(bcs_id)
+            }
+            Node::HgBonsaiMapping(hg_cs_id) => {
+                self.visited_hg_cs_mapping.insert(*hg_cs_id, ()).is_none()
+            }
+            Node::HgChangeset(hg_cs_id) => self.visited_hg_cs.insert(*hg_cs_id, ()).is_none(),
+            Node::HgManifest(k) => record_with_path(&self.visited_hg_manifest, k),
+            Node::HgFileNode(k) => record_with_path(&self.visited_hg_filenode, k),
+            Node::HgFileEnvelope(id) => self.visited_hg_file_envelope.insert(*id, ()).is_none(),
+            Node::FileContent(content_id) => self.visited_file.insert(*content_id, ()).is_none(),
+            Node::Fsnode(k) => record_with_path(&self.visited_fsnode, k),
+            _ => true,
+        }
+    }
+}
+
 impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for WalkState {
     fn start_step(
         &self,
@@ -168,18 +173,30 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         _ctx: &CoreContext,
         resolved: OutgoingEdge,
         node_data: Option<NodeData>,
-        _route: Option<EmptyRoute>,
+        route: Option<EmptyRoute>,
         mut outgoing: Vec<OutgoingEdge>,
     ) -> (
         (Node, Option<NodeData>, Option<StepStats>),
         EmptyRoute,
         Vec<OutgoingEdge>,
     ) {
-        // Filter things we don't want to enter the WalkVisitor at all.
-        outgoing.retain(|e| self.retain_edge(e) && self.needs_visit(&e));
+        if route.is_none() || !self.always_emit_edge_types.is_empty() {
+            outgoing.retain(|e| {
+                if e.label.incoming_type().is_none() {
+                    // Make sure stats are updated for root nodes
+                    self.needs_visit(&e);
+                    true
+                } else {
+                    // Check the always emit edges, outer visitor has now processed them.
+                    self.retain_edge(e)
+                        && (!self.always_emit_edge_types.contains(&e.label) || self.needs_visit(&e))
+                }
+            });
+        }
 
         let num_outgoing = outgoing.len();
         expand_checked_nodes(&mut outgoing);
+
         // Make sure we don't expand to types of node and edge not wanted
         if num_outgoing != outgoing.len() {
             outgoing.retain(|e| self.retain_edge(e));

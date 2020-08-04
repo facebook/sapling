@@ -7,7 +7,7 @@
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::state::{StepStats, WalkState};
-use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, WalkVisitor};
+use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, VisitOne, WalkVisitor};
 
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
@@ -39,14 +39,27 @@ impl<T> SamplingWalkVisitor<T> {
         sample_rate: u64,
         sample_offset: u64,
     ) -> Self {
+        // TODO(ahornby) temporary until later in stack so don't need to review
+        // all types update to new checker at once
+        let mut unmigrated_types = include_edge_types.clone();
+        unmigrated_types.remove(&EdgeType::HgManifestToHgFileEnvelope);
+        unmigrated_types.remove(&EdgeType::HgManifestToHgFileNode);
+        unmigrated_types.remove(&EdgeType::HgManifestToChildHgManifest);
+
         Self {
-            inner: WalkState::new(include_node_types, include_edge_types),
+            inner: WalkState::new(include_node_types, include_edge_types, unmigrated_types),
             sample_node_types,
             sample_path_regex,
             sampler,
             sample_rate,
             sample_offset,
         }
+    }
+}
+
+impl<T> VisitOne for SamplingWalkVisitor<T> {
+    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
+        self.inner.needs_visit(outgoing)
     }
 }
 

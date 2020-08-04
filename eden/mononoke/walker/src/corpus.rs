@@ -416,6 +416,7 @@ pub async fn corpus<'a>(
         logger,
         datasources,
         walk_params,
+        None,
         walk_state,
         make_sink,
         true,

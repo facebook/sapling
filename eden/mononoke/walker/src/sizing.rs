@@ -372,6 +372,7 @@ pub async fn compression_benefit<'a>(
         logger,
         datasources,
         walk_params,
+        None,
         walk_state,
         make_sink,
         true,

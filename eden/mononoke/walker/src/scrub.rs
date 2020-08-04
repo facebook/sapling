@@ -396,6 +396,7 @@ pub async fn scrub_objects<'a>(
         logger,
         datasources,
         walk_params,
+        None,
         walk_state,
         make_sink,
         false,
