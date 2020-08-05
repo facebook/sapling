@@ -6,6 +6,7 @@
  */
 
 use std::convert::{TryFrom, TryInto};
+use std::fmt;
 use std::path::{Path, PathBuf};
 
 use curl::{
@@ -28,6 +29,21 @@ enum Method {
     Head,
     Post,
     Put,
+}
+
+impl fmt::Display for Method {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Method::Get => "GET",
+                Method::Head => "HEAD",
+                Method::Post => "POST",
+                Method::Put => "PUT",
+            }
+        )
+    }
 }
 
 /// A builder struct for HTTP requests, designed to be
