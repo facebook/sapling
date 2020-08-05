@@ -22,7 +22,7 @@ from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
 from .stats_print import format_size
 from .subcmd import Subcmd
-from .util import mkdir_p, mkscratch_bin
+from .util import mkscratch_bin
 
 
 redirect_cmd = subcmd_mod.Decorator()
@@ -59,11 +59,17 @@ def is_bind_mount(path: Path) -> bool:
         return False
 
 
-def make_scratch_dir(checkout: EdenCheckout, subdir: str) -> Path:
-    sub = os.path.join("edenfs", "redirections", subdir)
+def make_scratch_dir(checkout: EdenCheckout, subdir: Path) -> Path:
+    sub = Path("edenfs") / Path("redirections") / subdir
     return Path(
         subprocess.check_output(
-            [mkscratch_bin(), "path", checkout.path, "--subdir", sub]
+            [
+                mkscratch_bin(),
+                "path",
+                os.fsdecode(checkout.path),
+                "--subdir",
+                os.fsdecode(sub),
+            ]
         )
         .decode("utf-8")
         .strip()
@@ -129,16 +135,9 @@ class RedirectionType(enum.Enum):
         raise ValueError(f"{arg} is not a valid RedirectionType")
 
 
-def paths_are_equal(a: Path, b: Path) -> bool:
-    """ Returns true if the string content of two Path objects
-    are equal.   Comparing the Path objects themselves doesn't
-    return true! """
-    return str(a) == str(b)
-
-
 def opt_paths_are_equal(a: Optional[Path], b: Optional[Path]) -> bool:
     if a is not None and b is not None:
-        return paths_are_equal(a, b)
+        return a == b
     if a is None and b is None:
         return True
     # either one or the other is None, but not both, so they are not equal
@@ -164,7 +163,7 @@ class Redirection:
 
     def __eq__(self, b) -> bool:
         return (
-            paths_are_equal(self.repo_path, b.repo_path)
+            self.repo_path == b.repo_path
             and self.type == b.type
             and opt_paths_are_equal(self.target, b.target)
             and self.source == b.source
@@ -201,9 +200,9 @@ class Redirection:
                 # that we can use APFS.
                 return checkout.path / self.repo_path
             else:
-                return make_scratch_dir(checkout, str(self.repo_path))
+                return make_scratch_dir(checkout, self.repo_path)
         elif self.type == RedirectionType.SYMLINK:
-            return make_scratch_dir(checkout, str(self.repo_path))
+            return make_scratch_dir(checkout, self.repo_path)
         elif self.type == RedirectionType.UNKNOWN:
             return None
         else:
@@ -212,11 +211,11 @@ class Redirection:
     def expand_repo_path(self, checkout: EdenCheckout) -> Path:
         return checkout.path / self.repo_path
 
-    def _dmg_file_name(self, target: bytes) -> Path:
-        return Path(os.fsdecode(target)) / "image.dmg.sparseimage"
+    def _dmg_file_name(self, target: Path) -> Path:
+        return target / "image.dmg.sparseimage"
 
     def _bind_mount_darwin(
-        self, instance: EdenInstance, checkout_path: bytes, target: bytes
+        self, instance: EdenInstance, checkout_path: Path, target: Path
     ):
         if have_apfs_helper():
             return self._bind_mount_darwin_apfs(instance, checkout_path, target)
@@ -224,17 +223,17 @@ class Redirection:
             return self._bind_mount_darwin_dmg(instance, checkout_path, target)
 
     def _bind_mount_darwin_apfs(
-        self, instance: EdenInstance, checkout_path: bytes, target: bytes
+        self, instance: EdenInstance, checkout_path: Path, target: Path
     ):
         """Attempt to use an APFS volume for a bind redirection.
         The heavy lifting is part of the APFS_HELPER utility found
         in `eden/scm/exec/eden_apfs_mount_helper/`"""
-        mount_path = Path(os.fsdecode(checkout_path)) / self.repo_path
-        os.makedirs(mount_path, exist_ok=True)
+        mount_path = checkout_path / self.repo_path
+        mount_path.mkdir(exist_ok=True, parents=True)
         run_cmd_quietly([APFS_HELPER, "mount", mount_path])
 
     def _bind_mount_darwin_dmg(
-        self, instance: EdenInstance, checkout_path: bytes, target: bytes
+        self, instance: EdenInstance, checkout_path: Path, target: Path
     ):
         # Since we don't have bind mounts, we set up a disk image file
         # and mount that instead.
@@ -244,7 +243,7 @@ class Redirection:
         # defaults if the units are unspecified, and `b` doesn't mean
         # bytes!
         total_kb = total / 1024
-        mount_path = Path(os.fsdecode(checkout_path)) / self.repo_path
+        mount_path = checkout_path / self.repo_path
         if not image_file_name.exists():
             run_cmd_quietly(
                 [
@@ -258,7 +257,7 @@ class Redirection:
                     "HFS+",
                     "-volname",
                     f"Eden redirection for {mount_path}",
-                    str(image_file_name),
+                    image_file_name,
                 ]
             )
 
@@ -266,33 +265,33 @@ class Redirection:
             [
                 "hdiutil",
                 "attach",
-                str(image_file_name),
+                image_file_name,
                 "-nobrowse",
                 "-mountpoint",
-                str(mount_path),
+                mount_path,
             ]
         )
 
     def _bind_unmount_darwin(self, checkout: EdenCheckout):
         mount_path = checkout.path / self.repo_path
         # This will unmount/detach both disk images and apfs volumes
-        run_cmd_quietly(["diskutil", "unmount", "force", str(mount_path)])
+        run_cmd_quietly(["diskutil", "unmount", "force", mount_path])
 
     def _bind_mount_linux(
-        self, instance: EdenInstance, checkout_path: bytes, target: bytes
+        self, instance: EdenInstance, checkout_path: Path, target: Path
     ):
-        abs_mount_path_in_repo = os.path.join(
-            checkout_path, os.fsencode(self.repo_path)
-        )
+        abs_mount_path_in_repo = checkout_path / self.repo_path
         with instance.get_thrift_client() as client:
-            if os.path.exists(abs_mount_path_in_repo):
+            if abs_mount_path_in_repo.exists():
                 try:
                     # To deal with the case where someone has manually unmounted
                     # a bind mount and left the privhelper confused about the
                     # list of bind mounts, we first speculatively try asking the
                     # eden daemon to unmount it first, ignoring any error that
                     # might raise.
-                    client.removeBindMount(checkout_path, os.fsencode(self.repo_path))
+                    client.removeBindMount(
+                        os.fsencode(checkout_path), os.fsencode(self.repo_path)
+                    )
                 except TApplicationException as exc:
                     if exc.type == TApplicationException.UNKNOWN_METHOD:
                         print(PLEASE_RESTART, file=sys.stderr)
@@ -300,11 +299,15 @@ class Redirection:
 
             # Ensure that the client directory exists before we try
             # to mount over it
-            os.makedirs(abs_mount_path_in_repo, exist_ok=True)
-            os.makedirs(target, exist_ok=True)
+            abs_mount_path_in_repo.mkdir(exist_ok=True, parents=True)
+            target.mkdir(exist_ok=True, parents=True)
 
             try:
-                client.addBindMount(checkout_path, os.fsencode(self.repo_path), target)
+                client.addBindMount(
+                    os.fsencode(checkout_path),
+                    os.fsencode(self.repo_path),
+                    os.fsencode(target),
+                )
             except TApplicationException as exc:
                 if exc.type == TApplicationException.UNKNOWN_METHOD:
                     raise Exception(PLEASE_RESTART)
@@ -314,14 +317,14 @@ class Redirection:
         with checkout.instance.get_thrift_client() as client:
             try:
                 client.removeBindMount(
-                    bytes(checkout.path), os.fsencode(self.repo_path)
+                    os.fsencode(checkout.path), os.fsencode(self.repo_path)
                 )
             except TApplicationException as exc:
                 if exc.type == TApplicationException.UNKNOWN_METHOD:
                     raise Exception(PLEASE_RESTART)
                 raise
 
-    def _bind_mount(self, instance: EdenInstance, checkout_path: bytes, target: bytes):
+    def _bind_mount(self, instance: EdenInstance, checkout_path: Path, target: Path):
         """Arrange to set up a bind mount"""
         if sys.platform == "darwin":
             return self._bind_mount_darwin(instance, checkout_path, target)
@@ -379,13 +382,13 @@ class Redirection:
         if self.type == RedirectionType.BIND:
             target = self.expand_target_abspath(checkout)
             assert target is not None
-            self._bind_mount(checkout.instance, bytes(checkout.path), bytes(target))
+            self._bind_mount(checkout.instance, checkout.path, target)
         elif self.type == RedirectionType.SYMLINK:
-            symlink_path = Path(os.path.join(checkout.path, self.repo_path))
-            mkdir_p(os.path.dirname(symlink_path))
+            symlink_path = Path(checkout.path / self.repo_path)
+            symlink_path.parent.mkdir(exist_ok=True, parents=True)
             target = self.expand_target_abspath(checkout)
             assert target is not None
-            os.symlink(target, symlink_path)
+            symlink_path.symlink_to(target)
         else:
             raise Exception(f"Unsupported redirection type {self.type}")
 
@@ -412,8 +415,8 @@ def get_configured_redirections(checkout: EdenCheckout) -> Dict[str, Redirection
     config = checkout.get_config()
 
     # Repo-specified settings have the lowest level of precedence
-    repo_redirection_config_file_name = checkout.path.joinpath(".eden-redirections")
-    if os.path.exists(repo_redirection_config_file_name):
+    repo_redirection_config_file_name = checkout.path / ".eden-redirections"
+    if repo_redirection_config_file_name.exists():
         for repo_path, redir_type in load_redirection_profile(
             repo_redirection_config_file_name
         ).items():
@@ -484,7 +487,10 @@ def get_effective_redirections(
             elif redir.type == RedirectionType.SYMLINK:
                 try:
                     expected_target = redir.expand_target_abspath(checkout)
-                    target = Path(os.readlink(redir.expand_repo_path(checkout)))
+                    # TODO: replace this with Path.readlink once Python 3.9+
+                    target = Path(
+                        os.readlink(os.fsdecode(redir.expand_repo_path(checkout)))
+                    )
                     if target != expected_target:
                         redir.state = RedirectionState.SYMLINK_INCORRECT
                 except OSError:
@@ -500,7 +506,7 @@ def get_effective_redirections(
 
 
 def file_size(path: Path) -> int:
-    st = os.lstat(path)
+    st = path.lstat()
     return st.st_size
 
 
@@ -508,6 +514,14 @@ def run_cmd_quietly(args, check=True) -> int:
     """ Quietly run a command; if successful then its output is entirely suppressed.
     If it fails then raise an exception containing the output/error streams.
     If check=False then print the output and return the exit status """
+    formatted_args = []
+    for a in args:
+        if isinstance(a, Path):
+            # `WindowsPath` is not accepted by subprocess in older version Python
+            formatted_args.append(os.fsencode(a))
+        else:
+            formatted_args.append(a)
+
     proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     if proc.returncode != 0:
@@ -533,8 +547,8 @@ def compact_redirection_sparse_images(instance: EdenInstance) -> None:
             if redir.type == RedirectionType.BIND:
                 target = redir.expand_target_abspath(checkout)
                 assert target is not None
-                dmg_file = redir._dmg_file_name(bytes(target))
-                if not os.path.exists(dmg_file):
+                dmg_file = redir._dmg_file_name(target)
+                if not dmg_file.exists():
                     continue
                 print(f"\nCompacting {redir.expand_repo_path(checkout)}: {dmg_file}")
                 size_before = file_size(dmg_file)
@@ -564,8 +578,7 @@ def apply_redirection_configs_to_checkout_config(
 
 
 def is_empty_dir(path: Path) -> bool:
-    entries = os.listdir(path)
-    for ent in entries:
+    for ent in path.iterdir():
         if ent not in (".", ".."):
             return False
     return True
@@ -736,7 +749,9 @@ class AddCmd(Subcmd):
         # don't want to scoop those up and write them out to this branch of
         # the configuration.
         redirs = get_configured_redirections(checkout)
-        redir = Redirection(args.repo_path, redir_type, None, USER_REDIRECTION_SOURCE)
+        redir = Redirection(
+            Path(args.repo_path), redir_type, None, USER_REDIRECTION_SOURCE
+        )
         existing_redir = redirs.get(args.repo_path, None)
         if (
             existing_redir

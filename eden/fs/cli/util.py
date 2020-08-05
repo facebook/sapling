@@ -625,7 +625,7 @@ def resolve_path(path: Path, strict: bool = False) -> Path:
     """
     # TODO: remove this once Python on Windows is updated
     if sys.platform == "win32":
-        return Path(os.path.realpath(path))
+        return Path(os.path.realpath(os.fspath(path)))
     return path.resolve(strict=strict)
 
 
