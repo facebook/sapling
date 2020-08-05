@@ -27,6 +27,7 @@ from fb303_core.ttypes import fb303_status
 from . import (
     check_filesystems,
     check_hg,
+    check_kerberos,
     check_os,
     check_redirections,
     check_rogue_edenfs,
@@ -131,6 +132,8 @@ class EdenDoctorChecker:
             check_rogue_edenfs.check_many_edenfs_are_running(
                 self.tracker, self.proc_utils
             )
+
+            check_kerberos.run_kerberos_certificate_checks(self.tracker)
 
         status = self.instance.check_health()
         if status.status == fb303_status.ALIVE:
