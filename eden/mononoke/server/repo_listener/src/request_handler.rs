@@ -9,8 +9,8 @@ use anyhow::Error;
 use async_limiter::AsyncLimiter;
 use cached_config::ConfigHandle;
 use context::{
-    generate_session_id, is_quicksand, LoggingContainer, SessionContainer, SessionContainerBuilder,
-    SessionId,
+    generate_session_id, is_quicksand, LoggingContainer, SessionClass, SessionContainer,
+    SessionContainerBuilder, SessionId,
 };
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -214,6 +214,9 @@ pub async fn request_handler(
         .load_limiter(load_limiter)
         .user_ip(client_ip);
 
+    if priority == Priority::Wishlist {
+        session_builder = session_builder.session_class(SessionClass::Background);
+    }
     set_blobstore_limiters(&mut session_builder, priority).await;
 
     let session = session_builder.build();
