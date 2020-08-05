@@ -8,6 +8,7 @@
 use std::{
     collections::HashSet,
     fs,
+    io::{Error as IoError, ErrorKind as IoErrorKind},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -90,12 +91,12 @@ fn repack_packs<T: MutablePack, U: LocalStore + Repackable + ToKeys>(
     paths: impl IntoIterator<Item = PathBuf> + Clone,
     mut mut_pack: T,
     repack_pack: impl Fn(&U, &mut T) -> Result<()>,
-) -> Result<PathBuf> {
+) -> Result<Option<PathBuf>> {
     if paths.clone().into_iter().count() <= 1 {
         if let Some(path) = paths.into_iter().next() {
-            return Ok(path);
+            return Ok(Some(path));
         } else {
-            return Ok(PathBuf::new());
+            return Ok(None);
         }
     }
 
@@ -111,12 +112,24 @@ fn repack_packs<T: MutablePack, U: LocalStore + Repackable + ToKeys>(
                     repacked.push(path);
                 }
             }
-            Err(e) => errors.push((path.clone(), e)),
+            Err(e) => {
+                if let Some(e) = e.downcast_ref::<IoError>() {
+                    if e.kind() == IoErrorKind::NotFound {
+                        continue;
+                    }
+                }
+                errors.push((path.clone(), e));
+            }
         }
     }
 
     if repacked.is_empty() {
-        return Err(RepackFailure::Total(errors).into());
+        if !errors.is_empty() {
+            return Err(RepackFailure::Total(errors).into());
+        } else {
+            // Nothing to repack
+            return Ok(None);
+        }
     }
 
     let new_pack_path = mut_pack.close_pack()?.unwrap();
@@ -159,14 +172,14 @@ fn repack_packs<T: MutablePack, U: LocalStore + Repackable + ToKeys>(
     } else if !errors.is_empty() {
         Err(RepackFailure::Partial(errors).into())
     } else {
-        Ok(new_pack_path)
+        Ok(Some(new_pack_path))
     }
 }
 
 fn repack_datapacks(
     paths: impl IntoIterator<Item = PathBuf> + Clone,
     outdir: &Path,
-) -> Result<PathBuf> {
+) -> Result<Option<PathBuf>> {
     let mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
 
     repack_packs(paths, mut_pack, repack_datapack)
@@ -186,7 +199,7 @@ fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryP
 fn repack_historypacks(
     paths: impl IntoIterator<Item = PathBuf> + Clone,
     outdir: &Path,
-) -> Result<PathBuf> {
+) -> Result<Option<PathBuf>> {
     let mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
 
     repack_packs(paths, mut_pack, repack_historypack)
@@ -562,7 +575,7 @@ mod tests {
         let newpath = repack_datapacks(vec![].into_iter(), tempdir.path());
         assert!(newpath.is_ok());
         let newpath = newpath.unwrap();
-        assert_eq!(newpath.to_str(), Some(""));
+        assert_eq!(newpath, None);
     }
 
     #[test]
@@ -584,7 +597,7 @@ mod tests {
             tempdir.path(),
         );
         assert!(newpath.is_ok());
-        let newpath2 = newpath.unwrap();
+        let newpath2 = newpath.unwrap().unwrap();
         assert_eq!(newpath2.with_extension("datapack"), pack.pack_path());
         let datapack = DataPack::new(&newpath2);
         assert!(datapack.is_ok());
@@ -636,7 +649,7 @@ mod tests {
 
         let newpath = repack_datapacks(paths.into_iter(), tempdir.path());
         assert!(newpath.is_ok());
-        let newpack = DataPack::new(&newpath.unwrap()).unwrap();
+        let newpack = DataPack::new(&newpath.unwrap().unwrap()).unwrap();
         assert_eq!(
             newpack
                 .to_keys()
@@ -656,21 +669,9 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
 
         let paths = vec![PathBuf::from("foo.datapack"), PathBuf::from("bar.datapack")];
-        let res = repack_datapacks(paths.clone().into_iter(), tempdir.path())
-            .err()
-            .unwrap();
+        let res = repack_datapacks(paths.clone().into_iter(), tempdir.path());
 
-        if let Ok(RepackFailure::Total(errors)) = res.downcast() {
-            assert_eq!(
-                errors
-                    .into_iter()
-                    .map(|(path, _)| path)
-                    .collect::<Vec<PathBuf>>(),
-                paths
-            );
-        } else {
-            assert!(false);
-        }
+        assert!(res.unwrap().is_none());
     }
 
     #[test]
@@ -743,7 +744,7 @@ mod tests {
             tempdir.path(),
         );
         assert!(newpath.is_ok());
-        let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
+        let newpack = HistoryPack::new(&newpath.unwrap().unwrap()).unwrap();
 
         for (ref key, _) in nodes.iter() {
             let response = newpack.get_node_info(key).unwrap().unwrap();
@@ -769,7 +770,7 @@ mod tests {
 
         let newpath = repack_historypacks(paths.into_iter(), tempdir.path());
         assert!(newpath.is_ok());
-        let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
+        let newpack = HistoryPack::new(&newpath.unwrap().unwrap()).unwrap();
 
         for (key, _) in nodes.iter() {
             let response = newpack.get_node_info(&key).unwrap().unwrap();
