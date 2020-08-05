@@ -97,6 +97,7 @@ async fn run_hook_tailer<'a>(
     let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
     let concurrency = cmdlib::args::get_usize(&matches, "concurrency", 100);
     let log_interval = cmdlib::args::get_usize(&matches, "log_interval", 500);
+    let exclude_merges = matches.is_present("exclude_merges");
     let stats_file = matches.value_of("stats-file");
 
     let mut stats_file = match stats_file {
@@ -147,6 +148,7 @@ async fn run_hook_tailer<'a>(
         bookmark,
         concurrency,
         log_interval,
+        exclude_merges,
         exclusions,
         &disabled_hooks,
     )
@@ -287,6 +289,11 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .short("f")
                 .help("a file containing changesets to exclude that is separated by new lines")
                 .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("exclude_merges")
+                .long("exclude-merges")
+                .help("exclude changesets that are merges (more than one parent)"),
         )
         .arg(
             Arg::with_name("limit")

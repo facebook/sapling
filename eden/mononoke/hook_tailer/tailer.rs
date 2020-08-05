@@ -46,6 +46,7 @@ pub struct Tailer {
     bookmark: BookmarkName,
     concurrency: usize,
     log_interval: usize,
+    exclude_merges: bool,
     excludes: HashSet<ChangesetId>,
 }
 
@@ -57,6 +58,7 @@ impl Tailer {
         bookmark: BookmarkName,
         concurrency: usize,
         log_interval: usize,
+        exclude_merges: bool,
         excludes: HashSet<ChangesetId>,
         disabled_hooks: &HashSet<String>,
     ) -> Result<Tailer> {
@@ -79,6 +81,7 @@ impl Tailer {
             bookmark,
             concurrency,
             log_interval,
+            exclude_merges,
             excludes,
         })
     }
@@ -141,26 +144,34 @@ impl Tailer {
             .map(move |cs_id| async move {
                 match cs_id {
                     Ok(cs_id) => {
-                        cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark);
+                        cloned!(
+                            self.ctx,
+                            self.repo,
+                            self.hook_manager,
+                            self.bookmark,
+                            self.exclude_merges,
+                        );
 
-                        let outcomes = task::spawn(async move {
+                        let maybe_outcomes = task::spawn(async move {
                             run_hooks_for_changeset(
                                 &ctx,
                                 &repo,
                                 hook_manager.as_ref(),
                                 &bookmark,
                                 cs_id,
+                                exclude_merges,
                             )
                             .await
                         })
                         .await??;
 
-                        Ok(outcomes)
+                        Ok(maybe_outcomes)
                     }
                     Err(e) => Err(e),
                 }
             })
             .buffered(self.concurrency)
+            .try_filter_map(|maybe_outcomes| future::ready(Ok(maybe_outcomes)))
     }
 }
 
@@ -170,8 +181,14 @@ async fn run_hooks_for_changeset(
     hm: &HookManager,
     bm: &BookmarkName,
     cs_id: ChangesetId,
-) -> Result<HookExecutionInstance, Error> {
+    exclude_merges: bool,
+) -> Result<Option<HookExecutionInstance>, Error> {
     let cs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
+
+    if exclude_merges && cs.is_merge() {
+        info!(ctx.logger(), "Skipped merge commit {}", cs_id);
+        return Ok(None);
+    }
 
     debug!(ctx.logger(), "Running hooks for changeset {:?}", cs);
 
@@ -184,12 +201,12 @@ async fn run_hooks_for_changeset(
 
     let outcomes = outcomes?;
 
-    Ok(HookExecutionInstance {
+    Ok(Some(HookExecutionInstance {
         cs_id,
         file_count,
         stats,
         outcomes,
-    })
+    }))
 }
 
 #[derive(Debug, Error)]
