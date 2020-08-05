@@ -827,6 +827,11 @@ class ui(object):
             if name not in encoding.environ:
                 pagerenv[name] = value
 
+        # Tell the pager what encoding we're sending it.
+        pagerencoding = self.config("pager", "encoding")
+        if pagerencoding:
+            pagerenv["LESSCHARSET"] = pagerencoding
+
         self.debug("starting pager for command %r\n" % command)
         self.flush()
 
@@ -847,7 +852,6 @@ class ui(object):
             self._terminaloutput = wasterminaloutput
 
             # If pager encoding is set, update the output encoding
-            pagerencoding = self.config("pager", "encoding")
             if pagerencoding:
                 encoding.outputencoding = pagerencoding
 
