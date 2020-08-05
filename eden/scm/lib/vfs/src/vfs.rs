@@ -247,7 +247,10 @@ pub fn is_executable(metadata: &Metadata) -> bool {
     return metadata.permissions().mode() & 0o111 != 0;
 
     #[cfg(target_os = "windows")]
-    panic!("is_executable is not supported on Windows");
+    {
+        let _ = metadata;
+        panic!("is_executable is not supported on Windows");
+    }
 }
 
 pub fn is_symlink(metadata: &Metadata) -> bool {
@@ -255,5 +258,8 @@ pub fn is_symlink(metadata: &Metadata) -> bool {
     return metadata.file_type().is_symlink();
 
     #[cfg(target_os = "windows")]
-    panic!("is_symlink is not supported on Windows");
+    {
+        let _ = metadata;
+        panic!("is_symlink is not supported on Windows");
+    }
 }

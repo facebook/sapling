@@ -11,7 +11,6 @@ use anyhow::{bail, Result};
 use ini::Ini;
 use log::{error, info};
 use std::collections::HashMap;
-use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
