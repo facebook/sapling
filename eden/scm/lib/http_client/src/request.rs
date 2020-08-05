@@ -63,7 +63,9 @@ impl Request {
         Self {
             url,
             method,
-            headers: Vec::new(),
+            // Always set Expect so we can disable curl automatically expecting "100-continue".
+            // That would require two response reads, which breaks the http_client model.
+            headers: vec![("Expect".to_string(), "".to_string())],
             body: None,
             creds: None,
             cainfo: None,
@@ -409,6 +411,26 @@ mod tests {
 
         let url = Url::parse(&mockito::server_url())?.join("test")?;
         let res = Request::post(url).body(body.as_bytes()).send()?;
+
+        mock.assert();
+        assert_eq!(res.status, StatusCode::CREATED);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_post_large() -> Result<()> {
+        let body_bytes = vec![65; 1024 * 1024];
+        let body = String::from_utf8_lossy(body_bytes.as_ref());
+
+        let mock = mock("POST", "/test")
+            .with_status(201)
+            .match_header("Expect", Matcher::Missing)
+            .match_body(Matcher::Exact(body.into()))
+            .create();
+
+        let url = Url::parse(&mockito::server_url())?.join("test")?;
+        let res = Request::post(url).body(body_bytes).send()?;
 
         mock.assert();
         assert_eq!(res.status, StatusCode::CREATED);
