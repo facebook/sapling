@@ -19,7 +19,7 @@ stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch 
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
-auto_impl = { git = "https://github.com/auto-impl-rs/auto_impl", rev = "43ad0ed49f67168b2971b271481e75afac589b24" }
+auto_impl = "0.4"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
