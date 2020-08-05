@@ -52,7 +52,7 @@ Test various combinations of exclusions
   Changesets rejected: 0
 
   $ echo "master_bookmark" > "$TESTTMP/excluded"
-  $ hook_tailer --bookmark master_bookmark --exclude_file "$TESTTMP/excluded" 2>&1 | strip_glog
+  $ hook_tailer --bookmark master_bookmark --exclude-file "$TESTTMP/excluded" 2>&1 | strip_glog
   Hook tailer is starting
   changeset resolved as: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))
   ==== Hooks results ====
@@ -104,7 +104,7 @@ Test explicit commits
 
   $ echo "459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66" >> "$TESTTMP/included"
   $ echo "9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec" >> "$TESTTMP/included"
-  $ hook_tailer --bookmark master_bookmark --changeset_file "$TESTTMP/included" 2>&1 | strip_glog
+  $ hook_tailer --bookmark master_bookmark --changeset-file "$TESTTMP/included" 2>&1 | strip_glog
   Hook tailer is starting
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)

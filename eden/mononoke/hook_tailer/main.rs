@@ -98,7 +98,7 @@ async fn run_hook_tailer<'a>(
     let concurrency = cmdlib::args::get_usize(&matches, "concurrency", 100);
     let log_interval = cmdlib::args::get_usize(&matches, "log_interval", 500);
     let exclude_merges = matches.is_present("exclude_merges");
-    let stats_file = matches.value_of("stats-file");
+    let stats_file = matches.value_of("stats_file");
 
     let mut stats_file = match stats_file {
         Some(stats_file) => {
@@ -271,7 +271,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
         .arg(
             Arg::with_name("changeset_file")
-                .long("changeset_file")
+                .long("changeset-file")
+                .alias("changeset_file")
                 .help("a file containing chnagesets to explicitly run hooks for")
                 .takes_value(true),
         )
@@ -285,7 +286,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
         .arg(
             Arg::with_name("exclude_file")
-                .long("exclude_file")
+                .long("exclude-file")
+                .alias("exclude_file")
                 .short("f")
                 .help("a file containing changesets to exclude that is separated by new lines")
                 .takes_value(true),
@@ -302,7 +304,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .help("limit number of commits to process (non-continuous only). Default: 1000"),
         )
         .arg(
-            Arg::with_name("stats-file")
+            Arg::with_name("stats_file")
                 .long("stats-file")
                 .takes_value(true)
                 .help("Log hook execution statistics to a file (CSV format)"),
