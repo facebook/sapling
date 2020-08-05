@@ -12,12 +12,14 @@ use anyhow::{bail, format_err, Error, Result};
 use bookmarks::BookmarkName;
 use clap::ArgMatches;
 use cmdlib::{args, helpers};
+use cmdlib_x_repo::create_commit_syncer_args_from_matches;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, try_join3},
+    future::{try_join, try_join3, try_join_all},
 };
+use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use movers::get_small_to_large_mover;
@@ -29,6 +31,7 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 
 mod cli;
 mod gradual_merge;
+mod manual_commit_sync;
 mod merging;
 mod sync_diamond_merge;
 
@@ -36,9 +39,9 @@ use crate::cli::{
     cs_args_from_matches, get_delete_commits_cs_args_factory,
     get_gradual_merge_commits_cs_args_factory, setup_app, BONSAI_MERGE, BONSAI_MERGE_P1,
     BONSAI_MERGE_P2, CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DRY_RUN,
-    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, LAST_DELETION_COMMIT, LIMIT,
-    MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PRE_DELETION_COMMIT, PRE_MERGE_DELETE,
-    SECOND_PARENT, SYNC_DIAMOND_MERGE,
+    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC,
+    MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS, PRE_DELETION_COMMIT,
+    PRE_MERGE_DELETE, SECOND_PARENT, SYNC_DIAMOND_MERGE,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -322,6 +325,53 @@ async fn run_gradual_merge<'a>(
     Ok(())
 }
 
+async fn run_manual_commit_sync<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
+    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
+        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let commit_syncer_args =
+        create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
+    let commit_sync_config =
+        live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
+    let commit_syncer = commit_syncer_args.try_into_commit_syncer(&commit_sync_config)?;
+
+    let target_repo = commit_syncer.get_target_repo();
+    let target_repo_parents = sub_m.values_of(PARENTS);
+    let target_repo_parents = match target_repo_parents {
+        Some(target_repo_parents) => {
+            try_join_all(
+                target_repo_parents
+                    .into_iter()
+                    .map(|p| helpers::csid_resolve(ctx.clone(), target_repo.clone(), p).compat()),
+            )
+            .await?
+        }
+        None => vec![],
+    };
+
+    let source_cs = sub_m
+        .value_of(CHANGESET)
+        .ok_or_else(|| format_err!("{} not set", CHANGESET))?;
+    let source_cs_id = helpers::csid_resolve(ctx.clone(), target_repo.clone(), source_cs)
+        .compat()
+        .await?;
+
+    let target_cs_id = manual_commit_sync::manual_commit_sync(
+        &ctx,
+        &commit_syncer,
+        source_cs_id,
+        target_repo_parents,
+    )
+    .await?;
+    info!(ctx.logger(), "target cs id is {:?}", target_cs_id);
+    Ok(())
+}
+
 fn get_and_verify_repo_config<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
@@ -364,6 +414,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
             (BONSAI_MERGE, Some(sub_m)) => run_bonsai_merge(ctx, &matches, sub_m).await,
             (GRADUAL_MERGE, Some(sub_m)) => run_gradual_merge(ctx, &matches, sub_m).await,
+            (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
             _ => bail!("oh no, wrong arguments provided!"),
         }
     };

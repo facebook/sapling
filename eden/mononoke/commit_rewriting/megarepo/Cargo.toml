@@ -20,8 +20,10 @@ blobrepo_utils = { path = "../../blobrepo_utils" }
 blobstore = { path = "../../blobstore" }
 bookmarks = { path = "../../bookmarks" }
 cmdlib = { path = "../../cmdlib" }
+cmdlib_x_repo = { path = "../../cmdlib/x_repo" }
 context = { path = "../../server/context" }
 cross_repo_sync = { path = "../cross_repo_sync" }
+live_commit_sync_config = { path = "../live_commit_sync_config" }
 manifest = { path = "../../manifest" }
 mercurial_types = { path = "../../mercurial/types" }
 metaconfig_types = { path = "../../metaconfig/types" }
@@ -45,6 +47,7 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
+cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils" }
 fixtures = { path = "../../tests/fixtures" }
 tests_utils = { path = "../../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

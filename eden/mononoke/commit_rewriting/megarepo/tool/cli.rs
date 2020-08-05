@@ -30,10 +30,12 @@ pub const COMMIT_BOOKMARK: &'static str = "bookmark";
 pub const DRY_RUN: &'static str = "dry-run";
 pub const LAST_DELETION_COMMIT: &'static str = "last-deletion-commit";
 pub const LIMIT: &'static str = "limit";
+pub const MANUAL_COMMIT_SYNC: &'static str = "manual-commit-sync";
 pub const PRE_DELETION_COMMIT: &'static str = "pre-deletion-commit";
 pub const SYNC_DIAMOND_MERGE: &'static str = "sync-diamond-merge";
 pub const MAX_NUM_OF_MOVES_IN_COMMIT: &'static str = "max-num-of-moves-in-commit";
 pub const CHUNKING_HINT_FILE: &'static str = "chunking-hint-file";
+pub const PARENTS: &'static str = "parents";
 pub const PRE_MERGE_DELETE: &'static str = "pre-merge-delete";
 pub const EVEN_CHUNK_SIZE: &'static str = "even-chunk-size";
 pub const BONSAI_MERGE: &'static str = "bonsai-merge";
@@ -315,6 +317,31 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(false),
         );
 
+    let manual_commit_sync_subcommand = SubCommand::with_name(MANUAL_COMMIT_SYNC)
+        .about("Manually sync a commit from source repo to a target repo. It's usually used right after a big merge")
+        .arg(
+            Arg::with_name(CHANGESET)
+                .long(CHANGESET)
+                .help("Source repo changeset that will synced to target repo")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(DRY_RUN)
+                .long(DRY_RUN)
+                .help("Dry-run mode - doesn't do a merge, just validates")
+                .takes_value(false)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name(PARENTS)
+                .long(PARENTS)
+                .help("Parents of the new commit")
+                .takes_value(true)
+                .multiple(true)
+                .required(true),
+        );
+
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -325,4 +352,5 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
         .subcommand(add_light_resulting_commit_args(bonsai_merge_subcommand))
         .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
+        .subcommand(manual_commit_sync_subcommand)
 }

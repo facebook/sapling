@@ -344,6 +344,15 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
     source_repo: BlobRepo,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let (_, _, mover) = commit_syncer.get_source_target_mover();
+    let remapped_parents = remap_parents(&ctx, &cs, commit_syncer).await?;
+    rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await
+}
+
+async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
+    ctx: &CoreContext,
+    cs: &BonsaiChangesetMut,
+    commit_syncer: &'a CommitSyncer<M>,
+) -> Result<HashMap<ChangesetId, ChangesetId>, Error> {
     let mut remapped_parents = HashMap::new();
     for commit in &cs.parents {
         let maybe_sync_outcome = commit_syncer
@@ -365,7 +374,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
         remapped_parents.insert(*commit, remapped_parent);
     }
 
-    rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await
+    Ok(remapped_parents)
 }
 
 pub async fn find_toposorted_unsynced_ancestors<M>(
@@ -727,8 +736,9 @@ where
 
     /// Rewrite a commit and creates in target repo if parents are already created.
     /// This is marked as unsafe since it might lead to repo corruption if used incorrectly.
-    /// At the moment it can be used to import a merge commit from a new repo:
-    /// ```text
+    /// It can be used to import a merge commit from a new repo:
+    ///
+    ///```text
     ///     source repo:
     ///
     ///     O  <- master (common bookmark). Points to a merge commit that imports a new repo
@@ -736,25 +746,38 @@ where
     ///     O   \
     ///          O  <- merge commit in the new repo we are trying to merge into master.
     ///         /  \   naive_sync_commit can be used to sync this commit
-    /// ```
-    pub async fn unsafe_naive_sync_commit(
+    ///```
+    ///
+    /// Normally this function is able to find the parents for the synced commit automatically
+    /// but in case it can't then `maybe_parents` parameter allows us to overwrite parents of
+    /// the synced commit.
+    pub async fn unsafe_always_rewrite_sync_commit(
         &self,
         ctx: CoreContext,
         source_cs_id: ChangesetId,
+        maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
     ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo, _) = self.get_source_target_mover();
         let source_cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
             .await?;
 
-        match remap_parents_and_rewrite_commit(
+        let source_cs = source_cs.clone().into_mut();
+        let remapped_parents = match maybe_parents {
+            Some(parents) => parents,
+            None => remap_parents(&ctx, &source_cs, self).await?,
+        };
+
+        let (_, _, mover) = self.get_source_target_mover();
+        let rewritten_commit = rewrite_commit(
             ctx.clone(),
-            source_cs.clone().into_mut(),
-            self,
+            source_cs,
+            &remapped_parents,
+            mover,
             source_repo.clone(),
         )
-        .await?
-        {
+        .await?;
+        match rewritten_commit {
             None => {
                 self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
                     .await?;
@@ -764,13 +787,7 @@ where
                 // Sync commit
                 let frozen = rewritten.freeze()?;
                 let frozen_cs_id = frozen.get_changeset_id();
-                upload_commits(
-                    ctx.clone(),
-                    vec![frozen],
-                    source_repo.clone(),
-                    target_repo.clone(),
-                )
-                .await?;
+                upload_commits(ctx.clone(), vec![frozen], source_repo, target_repo.clone()).await?;
 
                 update_mapping(
                     ctx.clone(),

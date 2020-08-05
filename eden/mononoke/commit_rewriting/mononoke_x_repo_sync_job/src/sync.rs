@@ -289,7 +289,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         // it's fine to sync it.
         if maybe_independent_branch.is_some() {
             commit_syncer
-                .unsafe_naive_sync_commit(ctx.clone(), cs_id)
+                .unsafe_always_rewrite_sync_commit(ctx.clone(), cs_id, None)
                 .timed()
                 .await
         } else {

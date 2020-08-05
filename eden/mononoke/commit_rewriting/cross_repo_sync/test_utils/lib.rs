@@ -213,6 +213,14 @@ pub async fn init_small_large_repo(
         .await?;
     let move_bcs_id = maybe_move_bcs_id.unwrap();
 
+    bookmark(&ctx, &megarepo, "megarepo_start")
+        .set_to(move_bcs_id)
+        .await?;
+
+    bookmark(&ctx, &smallrepo, "megarepo_start")
+        .set_to("premove")
+        .await?;
+
     // Master commit in the small repo after "big move"
     let small_master_bcs_id = CreateCommitContext::new(&ctx, &smallrepo, vec![second_bcs_id])
         .add_file("file3", "content3")
