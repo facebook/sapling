@@ -75,7 +75,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
         key: &'out str,
     ) -> BoxFuture<'out, Result<(), Error>> {
         self.queue.add(
-            ctx.clone(),
+            ctx,
             BlobstoreSyncQueueEntry::new(
                 key.to_string(),
                 blobstore_id,
@@ -109,7 +109,7 @@ impl Blobstore for MultiplexedBlobstore {
                     // check synchronization queue. If it does not contain entries with this key
                     // it means it is true-none otherwise, only replica containing key has
                     // failed and we need to return error.
-                    let entries = queue.get(ctx, key).await?;
+                    let entries = queue.get(&ctx, &key).await?;
                     if entries.is_empty() {
                         Ok(None)
                     } else {
@@ -142,7 +142,7 @@ impl Blobstore for MultiplexedBlobstore {
                     if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
                         return Err(error);
                     }
-                    let entries = queue.get(ctx, key).await?;
+                    let entries = queue.get(&ctx, &key).await?;
                     if entries.is_empty() {
                         Ok(false)
                     } else {

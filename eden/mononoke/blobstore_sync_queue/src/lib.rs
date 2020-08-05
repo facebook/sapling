@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cloned::cloned;
 use context::CoreContext;
@@ -112,21 +113,22 @@ impl BlobstoreSyncQueueEntry {
     }
 }
 
+#[async_trait]
 #[auto_impl(Arc, Box)]
 pub trait BlobstoreSyncQueue: Send + Sync {
-    fn add(
-        &self,
-        ctx: CoreContext,
+    async fn add<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         entry: BlobstoreSyncQueueEntry,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        self.add_many(ctx, Box::new(vec![entry].into_iter()))
+    ) -> Result<(), Error> {
+        self.add_many(ctx, vec![entry]).await
     }
 
-    fn add_many(
-        &self,
-        ctx: CoreContext,
-        entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
-    ) -> BoxFuture<'static, Result<(), Error>>;
+    async fn add_many<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        entries: Vec<BlobstoreSyncQueueEntry>,
+    ) -> Result<(), Error>;
 
     /// Returns list of entries that consist of two groups of entries:
     /// 1. Group with at most `limit` entries that are older than `older_than` and
@@ -136,26 +138,26 @@ pub trait BlobstoreSyncQueue: Send + Sync {
     /// As a result the caller gets a reasonably limited slice of BlobstoreSyncQueue entries that
     /// are all related, so that the caller doesn't need to fetch more data from BlobstoreSyncQueue
     /// to process the sync queue.
-    fn iter(
-        &self,
-        ctx: CoreContext,
-        key_like: Option<String>,
+    async fn iter<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key_like: Option<&'a String>,
         multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
-    ) -> BoxFuture<'static, Result<Vec<BlobstoreSyncQueueEntry>, Error>>;
+    ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error>;
 
-    fn del(
-        &self,
-        ctx: CoreContext,
-        entries: Vec<BlobstoreSyncQueueEntry>,
-    ) -> BoxFuture<'static, Result<(), Error>>;
+    async fn del<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        entries: &'a [BlobstoreSyncQueueEntry],
+    ) -> Result<(), Error>;
 
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<Vec<BlobstoreSyncQueueEntry>, Error>>;
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a String,
+    ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error>;
 }
 
 #[derive(Clone)]
@@ -327,144 +329,133 @@ async fn insert_entries(
     Ok(())
 }
 
+#[async_trait]
 impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
-    fn add_many(
-        &self,
-        _ctx: CoreContext,
-        entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        cloned!(self.write_sender, self.ensure_worker_scheduled);
-        async move {
-            ensure_worker_scheduled.await;
-            let (senders_entries, receivers): (Vec<_>, Vec<_>) = entries
-                .map(|entry| {
-                    let (sender, receiver) = oneshot::channel();
-                    ((sender, entry), receiver)
-                })
-                .unzip();
+    async fn add_many<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        entries: Vec<BlobstoreSyncQueueEntry>,
+    ) -> Result<(), Error> {
+        self.ensure_worker_scheduled.clone().await;
+        let (senders_entries, receivers): (Vec<_>, Vec<_>) = entries
+            .into_iter()
+            .map(|entry| {
+                let (sender, receiver) = oneshot::channel();
+                ((sender, entry), receiver)
+            })
+            .unzip();
 
-            STATS::adds.add_value(senders_entries.len() as i64);
-            senders_entries
-                .into_iter()
-                .map(|(send, entry)| write_sender.unbounded_send((send, entry)))
-                .collect::<Result<_, _>>()?;
-            let results = future::try_join_all(receivers)
-                .map_err(|errs| format_err!("failed to receive result {:?}", errs))
-                .await?;
-            let errs: Vec<_> = results.into_iter().filter_map(|r| r.err()).collect();
-            if errs.len() > 0 {
-                Err(format_err!("failed to receive result {:?}", errs))
-            } else {
-                Ok(())
-            }
+        STATS::adds.add_value(senders_entries.len() as i64);
+        senders_entries
+            .into_iter()
+            .map(|(send, entry)| self.write_sender.unbounded_send((send, entry)))
+            .collect::<Result<_, _>>()?;
+        let results = future::try_join_all(receivers)
+            .map_err(|errs| format_err!("failed to receive result {:?}", errs))
+            .await?;
+        let errs: Vec<_> = results.into_iter().filter_map(|r| r.err()).collect();
+        if errs.len() > 0 {
+            Err(format_err!("failed to receive result {:?}", errs))
+        } else {
+            Ok(())
         }
-        .boxed()
     }
 
-    fn iter(
-        &self,
-        _ctx: CoreContext,
-        key_like: Option<String>,
+    async fn iter<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key_like: Option<&'a String>,
         multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
-    ) -> BoxFuture<'static, Result<Vec<BlobstoreSyncQueueEntry>, Error>> {
+    ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error> {
         STATS::iters.add_value(1);
-        let query = match &key_like {
-            Some(sql_like) => GetRangeOfEntriesLike::query(
-                &self.read_master_connection,
-                &sql_like,
-                &multiplex_id,
-                &older_than.into(),
-                &limit,
-            )
-            .compat()
-            .left_future(),
-            None => GetRangeOfEntries::query(
-                &self.read_master_connection,
-                &multiplex_id,
-                &older_than.into(),
-                &limit,
-            )
-            .compat()
-            .right_future(),
-        };
-
-        async move {
-            let rows = query.await?;
-            Ok(rows
-                .into_iter()
-                .map(
-                    |(blobstore_key, blobstore_id, multiplex_id, timestamp, operation_key, id)| {
-                        BlobstoreSyncQueueEntry {
-                            blobstore_key,
-                            blobstore_id,
-                            multiplex_id,
-                            timestamp: timestamp.into(),
-                            operation_key,
-                            id: Some(id),
-                        }
-                    },
+        let rows = match key_like {
+            Some(sql_like) => {
+                GetRangeOfEntriesLike::query(
+                    &self.read_master_connection,
+                    sql_like,
+                    &multiplex_id,
+                    &older_than.into(),
+                    &limit,
                 )
-                .collect())
-        }
-        .boxed()
-    }
-
-    fn del(
-        &self,
-        _ctx: CoreContext,
-        entries: Vec<BlobstoreSyncQueueEntry>,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        cloned!(self.write_connection);
-
-        async move {
-            let ids: Vec<u64> = entries
-                .into_iter()
-                .map(|entry| {
-                    entry.id.ok_or_else(|| {
-                        format_err!(
-                            "BlobstoreSyncQueueEntry must contain `id` to be able to delete it"
-                        )
-                    })
-                })
-                .collect::<Result<_, _>>()?;
-
-            for chunk in ids.chunks(10_000) {
-                let deletion_result = DeleteEntries::query(&write_connection, chunk)
-                    .compat()
-                    .await?;
-                STATS::dels.add_value(deletion_result.affected_rows() as i64);
+                .compat()
+                .await
             }
-            Ok(())
-        }
-        .boxed()
+            None => {
+                GetRangeOfEntries::query(
+                    &self.read_master_connection,
+                    &multiplex_id,
+                    &older_than.into(),
+                    &limit,
+                )
+                .compat()
+                .await
+            }
+        }?;
+
+        Ok(rows
+            .into_iter()
+            .map(
+                |(blobstore_key, blobstore_id, multiplex_id, timestamp, operation_key, id)| {
+                    BlobstoreSyncQueueEntry {
+                        blobstore_key,
+                        blobstore_id,
+                        multiplex_id,
+                        timestamp: timestamp.into(),
+                        operation_key,
+                        id: Some(id),
+                    }
+                },
+            )
+            .collect())
     }
 
-    fn get(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<Vec<BlobstoreSyncQueueEntry>, Error>> {
-        let query = GetByKey::query(&self.read_master_connection, &key).compat();
-        async move {
-            let rows = query.await?;
-            Ok(rows
-                .into_iter()
-                .map(
-                    |(blobstore_key, blobstore_id, multiplex_id, timestamp, operation_key, id)| {
-                        BlobstoreSyncQueueEntry {
-                            blobstore_key,
-                            blobstore_id,
-                            multiplex_id,
-                            timestamp: timestamp.into(),
-                            operation_key,
-                            id: Some(id),
-                        }
-                    },
-                )
-                .collect())
+    async fn del<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        entries: &'a [BlobstoreSyncQueueEntry],
+    ) -> Result<(), Error> {
+        let ids: Vec<u64> = entries
+            .into_iter()
+            .map(|entry| {
+                entry.id.ok_or_else(|| {
+                    format_err!("BlobstoreSyncQueueEntry must contain `id` to be able to delete it")
+                })
+            })
+            .collect::<Result<_, _>>()?;
+
+        for chunk in ids.chunks(10_000) {
+            let deletion_result = DeleteEntries::query(&self.write_connection, chunk)
+                .compat()
+                .await?;
+            STATS::dels.add_value(deletion_result.affected_rows() as i64);
         }
-        .boxed()
+        Ok(())
+    }
+
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a String,
+    ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error> {
+        let rows = GetByKey::query(&self.read_master_connection, key)
+            .compat()
+            .await?;
+        Ok(rows
+            .into_iter()
+            .map(
+                |(blobstore_key, blobstore_id, multiplex_id, timestamp, operation_key, id)| {
+                    BlobstoreSyncQueueEntry {
+                        blobstore_key,
+                        blobstore_id,
+                        multiplex_id,
+                        timestamp: timestamp.into(),
+                        operation_key,
+                        id: Some(id),
+                    }
+                },
+            )
+            .collect())
     }
 }

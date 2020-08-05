@@ -9,6 +9,7 @@
 //! --dry-run mode to test the healer
 
 use anyhow::Error;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use context::CoreContext;
@@ -77,44 +78,46 @@ impl<Q: BlobstoreSyncQueue> DummyBlobstoreSyncQueue<Q> {
     }
 }
 
+#[async_trait]
 impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
-    fn add_many(
-        &self,
-        _ctx: CoreContext,
-        entries: Box<dyn Iterator<Item = BlobstoreSyncQueueEntry> + Send>,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        let entries: Vec<_> = entries.map(|e| format!("{:?}", e)).collect();
+    async fn add_many<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        entries: Vec<BlobstoreSyncQueueEntry>,
+    ) -> Result<(), Error> {
+        let entries: Vec<_> = entries.into_iter().map(|e| format!("{:?}", e)).collect();
         info!(self.logger, "I would have written {}", entries.join(",\n"));
-        future::ok(()).boxed()
+        Ok(())
     }
 
-    fn iter(
-        &self,
-        ctx: CoreContext,
-        key_like: Option<String>,
+    async fn iter<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key_like: Option<&'a String>,
         multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
-    ) -> BoxFuture<'static, Result<Vec<BlobstoreSyncQueueEntry>, Error>> {
+    ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error> {
         self.inner
             .iter(ctx, key_like, multiplex_id, older_than, limit)
+            .await
     }
 
-    fn del(
-        &self,
-        _ctx: CoreContext,
-        entries: Vec<BlobstoreSyncQueueEntry>,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    async fn del<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        entries: &'a [BlobstoreSyncQueueEntry],
+    ) -> Result<(), Error> {
         let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
         info!(self.logger, "I would have deleted {}", entries.join(",\n"));
-        future::ok(()).boxed()
+        Ok(())
     }
 
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<Vec<BlobstoreSyncQueueEntry>, Error>> {
-        self.inner.get(ctx, key)
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a String,
+    ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error> {
+        self.inner.get(ctx, key).await
     }
 }

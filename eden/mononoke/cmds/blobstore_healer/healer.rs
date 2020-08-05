@@ -74,8 +74,8 @@ impl Healer {
         let queue_entries = self
             .sync_queue
             .iter(
-                ctx.clone(),
-                self.blobstore_key_like.clone(),
+                ctx,
+                self.blobstore_key_like.as_ref(),
                 self.multiplex_id,
                 healing_deadline.clone(),
                 self.blobstore_sync_queue_limit,
@@ -453,7 +453,7 @@ async fn cleanup_after_healing(
 ) -> Result<u64> {
     let n = entries.len() as u64;
     info!(ctx.logger(), "Deleting {} actioned queue entries", n);
-    sync_queue.del(ctx.clone(), entries).await?;
+    sync_queue.del(ctx, &entries).await?;
     Ok(n)
 }
 
@@ -481,7 +481,5 @@ async fn requeue_partial_heal(
             id: None,
         })
         .collect();
-    sync_queue
-        .add_many(ctx.clone(), Box::new(new_entries.into_iter()))
-        .await
+    sync_queue.add_many(ctx, new_entries).await
 }

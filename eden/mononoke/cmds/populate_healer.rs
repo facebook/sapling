@@ -344,16 +344,20 @@ async fn populate_healer_queue(
         if !config.dry_run {
             let src_blobstore_id = config.src_blobstore_id;
             let multiplex_id = config.multiplex_id;
-            let iterator_box = Box::new(entries.keys.into_iter().map(move |entry| {
-                BlobstoreSyncQueueEntry::new(
-                    entry,
-                    src_blobstore_id,
-                    multiplex_id,
-                    DateTime::now(),
-                    OperationKey::gen(),
-                )
-            }));
-            queue.add_many(config.ctx.clone(), iterator_box).await?;
+            let entries = entries
+                .keys
+                .into_iter()
+                .map(move |entry| {
+                    BlobstoreSyncQueueEntry::new(
+                        entry,
+                        src_blobstore_id,
+                        multiplex_id,
+                        DateTime::now(),
+                        OperationKey::gen(),
+                    )
+                })
+                .collect();
+            queue.add_many(&config.ctx, entries).await?;
         }
         state = put_resume_state(blobstore.clone(), &config, state).await?;
         match entries.next_token {

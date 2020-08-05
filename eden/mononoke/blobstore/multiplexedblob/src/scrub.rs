@@ -171,7 +171,7 @@ async fn blobstore_get(
             ErrorKind::SomeFailedOthersNone(_) => {
                 // MultiplexedBlobstore returns Ok(None) here if queue is empty for the key
                 // and Error otherwise. Scrub does likewise.
-                let entries = queue.get(ctx.clone(), key).await?;
+                let entries = queue.get(ctx, &key).await?;
                 if entries.is_empty() {
                     // No pending write for the key, it really is None
                     Ok(None)
@@ -181,7 +181,7 @@ async fn blobstore_get(
                 }
             }
             ErrorKind::SomeMissingItem(missing_reads, Some(value)) => {
-                let entries = queue.get(ctx.clone(), key.clone()).await?;
+                let entries = queue.get(ctx, &key).await?;
                 let mut needs_repair: HashMap<BlobstoreId, &dyn Blobstore> = HashMap::new();
 
                 for k in missing_reads.iter() {

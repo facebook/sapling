@@ -91,9 +91,7 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueueExt for Q {
     ) -> BoxFuture<'out, Result<usize>> {
         let zero_date = DateTime::now();
         async move {
-            let entries = self
-                .iter(ctx.clone(), None, multiplex_id, zero_date, 100)
-                .await?;
+            let entries = self.iter(ctx, None, multiplex_id, zero_date, 100).await?;
             if entries.len() >= 100 {
                 Err(format_err!("too many entries"))
             } else {
@@ -630,9 +628,7 @@ async fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Erro
         t0,
         op0,
     )];
-    sync_queue
-        .add_many(ctx.clone(), Box::new(entries.into_iter()))
-        .await?;
+    sync_queue.add_many(&ctx, entries).await?;
 
     let healer = Healer::new(1000, 10, sync_queue.clone(), stores, mp, None, false);
 
@@ -685,9 +681,7 @@ async fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<(), E
     ];
 
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    sync_queue
-        .add_many(ctx.clone(), Box::new(entries.into_iter()))
-        .await?;
+    sync_queue.add_many(&ctx, entries).await?;
 
     // We aren't healing blobs for old_mp, so expect to only have 1 blob in each
     // blobstore at the end of the test.
@@ -723,9 +717,7 @@ async fn healer_heal_complete_batch(fb: FacebookInit) -> Result<(), Error> {
     ];
 
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    sync_queue
-        .add_many(ctx.clone(), Box::new(entries.into_iter()))
-        .await?;
+    sync_queue.add_many(&ctx, entries).await?;
 
     let healer = Healer::new(2, 10, sync_queue, stores, mp, None, false);
     let (complete_batch, _) = healer.heal(&ctx, DateTime::now()).await?;
@@ -753,9 +745,7 @@ async fn healer_heal_incomplete_batch(fb: FacebookInit) -> Result<(), Error> {
     ];
 
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
-    sync_queue
-        .add_many(ctx.clone(), Box::new(entries.into_iter()))
-        .await?;
+    sync_queue.add_many(&ctx, entries).await?;
 
     let healer = Healer::new(20, 10, sync_queue, stores, mp, None, false);
     let (complete_batch, _) = healer.heal(&ctx, DateTime::now()).await?;

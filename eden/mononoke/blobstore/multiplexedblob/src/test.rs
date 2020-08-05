@@ -242,7 +242,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<(), Error> {
         id: None,
         operation_key: OperationKey::gen(),
     };
-    queue.add(ctx.clone(), entry).await?;
+    queue.add(&ctx, entry).await?;
 
     fut.await?;
 
@@ -441,7 +441,7 @@ async fn multiplexed(fb: FacebookInit) {
         put_fut.await.expect("case 2 put_fut failed");
 
         match queue
-            .get(ctx.clone(), k1.clone())
+            .get(&ctx, &k1)
             .await
             .expect("case 2 get failed")
             .as_slice()
@@ -506,7 +506,7 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<(), Error> {
             .expect("test multiplexed_operation_keys, put failed");
 
         match queue
-            .get(ctx.clone(), k3.clone())
+            .get(&ctx, &k3)
             .await
             .expect("test multiplexed_operation_keys, get failed")
             .as_slice()
@@ -571,7 +571,7 @@ async fn scrubbed(fb: FacebookInit) {
         bs1.tick(Some("bs1 failed"));
         put_fut.await.unwrap();
 
-        match queue.get(ctx.clone(), k1.clone()).await.unwrap().as_slice() {
+        match queue.get(&ctx, &k1).await.unwrap().as_slice() {
             [entry] => assert_eq!(entry.blobstore_id, bid0, "Queue bad"),
             _ => panic!("only one entry expected"),
         }
@@ -642,11 +642,11 @@ async fn scrubbed(fb: FacebookInit) {
         let k1 = String::from("k1");
         let v1 = make_value("v1");
 
-        match queue.get(ctx.clone(), k1.clone()).await.unwrap().as_slice() {
+        match queue.get(&ctx, &k1).await.unwrap().as_slice() {
             [entry] => {
                 assert_eq!(entry.blobstore_id, bid0, "Queue bad");
                 queue
-                    .del(ctx.clone(), vec![entry.clone()])
+                    .del(&ctx, &vec![entry.clone()])
                     .await
                     .expect("Could not delete scrub queue entry");
             }
