@@ -12,6 +12,7 @@ Run the hook tailer
   $ hook_tailer --bookmark master_bookmark 2>&1 | strip_glog
   Hook tailer is starting
   ==== Hooks results ====
+  Starting hooks for c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (0 already started)
   ==== Hooks stats ====
   Completion time: *us (glob)
   Poll time: *us (glob)
@@ -32,6 +33,7 @@ Test various combinations of exclusions
   $ hook_tailer --bookmark master_bookmark --limit 2 2>&1 | strip_glog
   Hook tailer is starting
   ==== Hooks results ====
+  Starting hooks for c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (0 already started)
   ==== Hooks stats ====
   Completion time: *us (glob)
   Poll time: *us (glob)
@@ -42,6 +44,7 @@ Test various combinations of exclusions
   Hook tailer is starting
   changeset resolved as: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))
   ==== Hooks results ====
+  Starting hooks for 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 (0 already started)
   ==== Hooks stats ====
   Completion time: *us (glob)
   Poll time: *us (glob)
@@ -53,6 +56,7 @@ Test various combinations of exclusions
   Hook tailer is starting
   changeset resolved as: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))
   ==== Hooks results ====
+  Starting hooks for 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 (0 already started)
   ==== Hooks stats ====
   Completion time: *us (glob)
   Poll time: *us (glob)
@@ -66,6 +70,7 @@ Test excluding multiple commits
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   ==== Hooks results ====
+  Starting hooks for c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (0 already started)
   ==== Hooks stats ====
   Completion time: *us (glob)
   Poll time: *us (glob)
@@ -78,6 +83,7 @@ Test explicit commits
   Hook tailer is starting
   changeset resolved as: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))
   ==== Hooks results ====
+  Starting hooks for c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd (0 already started)
   ==== Hooks stats ====
   Completion time: *us (glob)
   Poll time: *us (glob)
@@ -89,6 +95,7 @@ Test explicit commits
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   ==== Hooks results ====
+  Starting hooks for * (0 already started) (glob)
   ==== Hooks stats ====
   Completion time: *us (glob)
   Poll time: *us (glob)
@@ -102,6 +109,7 @@ Test explicit commits
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   changeset resolved as: ChangesetId(Blake2(*)) (glob)
   ==== Hooks results ====
+  Starting hooks for * (0 already started) (glob)
   ==== Hooks stats ====
   Completion time: *us (glob)
   Poll time: *us (glob)

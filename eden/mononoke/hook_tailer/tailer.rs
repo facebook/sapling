@@ -25,7 +25,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilder;
-use slog::debug;
+use slog::{debug, info};
 use std::collections::HashSet;
 use std::iter::IntoIterator;
 use std::sync::Arc;
@@ -45,6 +45,7 @@ pub struct Tailer {
     hook_manager: Arc<HookManager>,
     bookmark: BookmarkName,
     concurrency: usize,
+    log_interval: usize,
     excludes: HashSet<ChangesetId>,
 }
 
@@ -55,6 +56,7 @@ impl Tailer {
         config: RepoConfig,
         bookmark: BookmarkName,
         concurrency: usize,
+        log_interval: usize,
         excludes: HashSet<ChangesetId>,
         disabled_hooks: &HashSet<String>,
     ) -> Result<Tailer> {
@@ -76,6 +78,7 @@ impl Tailer {
             hook_manager: Arc::new(hook_manager),
             bookmark,
             concurrency,
+            log_interval,
             excludes,
         })
     }
@@ -123,8 +126,18 @@ impl Tailer {
     where
         S: Stream<Item = Result<ChangesetId, Error>> + 'a,
     {
+        let mut count = 0;
         stream
             .try_filter(move |cs_id| future::ready(!self.excludes.contains(cs_id)))
+            .inspect_ok(move |cs_id| {
+                if count % self.log_interval == 0 {
+                    info!(
+                        self.ctx.logger(),
+                        "Starting hooks for {} ({} already started)", cs_id, count
+                    );
+                }
+                count += 1;
+            })
             .map(move |cs_id| async move {
                 match cs_id {
                     Ok(cs_id) => {
