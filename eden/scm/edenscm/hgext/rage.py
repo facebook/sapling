@@ -238,7 +238,9 @@ def readsigtraces(repo):
     names.sort(key=lambda name: -vfs.stat("sigtrace/%s" % name).st_mtime)
     result = ""
     for name in names:
-        content = vfs.tryread("sigtrace/%s" % name)
+        content = pycompat.decodeutf8(
+            vfs.tryread("sigtrace/%s" % name), errors="replace"
+        )
         result += "%s:\n%s\n\n" % (name, content.strip())
     return result
 
@@ -556,7 +558,9 @@ def rage(ui, repo, *pats, **opts):
             _("Please post in %s with the following link:\n\n")
             % (ui.config("ui", "supportcontact"))
         )
-        ui.write("  " + out + "\n", label="rage.link")
+        ui.write(
+            "  " + pycompat.decodeutf8(out, errors="replace") + "\n", label="rage.link"
+        )
     ui.write(ui.config("rage", "advice", "") + "\n")
 
 
