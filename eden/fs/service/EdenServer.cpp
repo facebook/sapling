@@ -1654,6 +1654,7 @@ Future<Unit> EdenServer::createThriftServer() {
   // server object destruction. This specifically matters in the takeover
   // shutdown code path.
   server_->setStopWorkersOnStopListening(false);
+  server_->leakOutstandingRequestsWhenServerStops(true);
 
   handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
   server_->setInterface(handler_);
