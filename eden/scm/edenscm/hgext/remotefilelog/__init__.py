@@ -1113,6 +1113,12 @@ def prefetch(ui, repo, *pats, **opts):
     """
     if not shallowrepo.requirement in repo.requirements:
         raise error.Abort(_("repo is not shallow"))
+    fullrepo = not (pats or opts.get("include") or opts.get("exclude"))
+    if "eden" in repo.requirements and fullrepo:
+        raise error.Abort(
+            _("`hg prefetch` must be called with paths in an EdenFS repository!"),
+            hint="Specify exact paths you want to fetch i.e. run `hg prefetch DIR/**`",
+        )
 
     opts = resolveprefetchopts(ui, opts)
     revs = scmutil.revrange(repo, opts.get("rev"))
