@@ -144,11 +144,7 @@ inline void writeFileAtomic(const wchar_t* filePath, const std::string& data) {
   writeFileAtomic(filePath, folly::StringPiece(data));
 }
 
-Hash getFileSha1(const wchar_t* filePath);
-
-static inline Hash getFileSha1(char const* filePath) {
-  return getFileSha1(multibyteToWideString(filePath).c_str());
-}
+Hash getFileSha1(AbsolutePathPiece filePath);
 
 } // namespace eden
 } // namespace facebook

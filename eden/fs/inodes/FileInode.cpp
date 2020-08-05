@@ -637,10 +637,7 @@ Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
       return getObjectStore()->getBlobSha1(state->hash.value(), fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
 #ifdef _WIN32
-      // TODO(puneetk): We should convert the following code to Future based by
-      // offloading the function call.
-      AbsolutePath pathToFile = getMaterializedFilePath();
-      return makeFuture(getFileSha1(pathToFile.c_str()));
+      return getFileSha1(getMaterializedFilePath());
 #else
       return getOverlayFileAccess(state)->getSha1(*this);
 #endif // _WIN32
