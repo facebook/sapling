@@ -330,8 +330,36 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
   if (readOnly) {
     mountFlags |= MNT_RDONLY;
   }
-  checkUnixError(
-      mount(OSXFUSE_NAME, args.mntpath, mountFlags, &args), "failed to mount");
+
+  // The mount() syscall can internally attempt to interrogate the filesystem
+  // before it returns to us here.  We can't respond to those requests
+  // until we have passed the device back to the dispatcher so we're forced
+  // to do a little asynchronous dance and run the mount in a separate
+  // thread.
+  // We'd like to be able to catch invalid parameters detected by mount;
+  // those are likely to be immediately returned to us, so we commit a
+  // minor crime here and allow the mount thread to set the errno into
+  // a shared value.
+  // Then we can wait for a short grace period to see if that got populated
+  // with an error and propagate that.
+  auto shared_errno = std::make_shared<int>(0);
+
+  auto thr = std::thread([args, mountFlags, shared_errno]() mutable {
+    auto res = mount(OSXFUSE_NAME, args.mntpath, mountFlags, &args);
+    if (res != 0) {
+      *shared_errno = errno;
+      XLOG(ERR) << "failed to mount " << args.mntpath << ": "
+                << folly::errnoStr(*shared_errno);
+    }
+  });
+  thr.detach();
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  if (*shared_errno) {
+    folly::throwSystemErrorExplicit(
+        *shared_errno, "mount failed for ", args.mntpath);
+  }
+
   return std::move(fuseDev);
 
 #else
