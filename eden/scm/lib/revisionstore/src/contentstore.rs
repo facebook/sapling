@@ -834,7 +834,7 @@ mod tests {
 
         use std::str::FromStr;
 
-        use reqwest::Url;
+        use url::Url;
 
         use types::Sha256;
 

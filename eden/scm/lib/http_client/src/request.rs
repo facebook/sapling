@@ -23,8 +23,8 @@ use crate::{
     response::{AsyncResponse, Response},
 };
 
-#[derive(Copy, Clone, Debug)]
-enum Method {
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Method {
     Get,
     Head,
     Post,
@@ -59,7 +59,7 @@ pub struct Request {
 }
 
 impl Request {
-    fn new(url: Url, method: Method) -> Self {
+    pub fn new(url: Url, method: Method) -> Self {
         Self {
             url,
             method,

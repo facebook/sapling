@@ -9,7 +9,6 @@ use std::{
     cmp::min,
     collections::{HashMap, HashSet},
     convert::TryInto,
-    env::var_os,
     fs::File,
     io::{ErrorKind, Read, Write},
     iter, mem,
@@ -27,17 +26,19 @@ use std::{
 use anyhow::{bail, ensure, format_err, Context, Result};
 use bytes::{Bytes, BytesMut};
 use futures::stream::{iter, StreamExt};
+use http::status::StatusCode;
 use parking_lot::{Mutex, RwLock};
 use rand::{thread_rng, Rng};
-use reqwest::{Client, Method, Proxy, RequestBuilder, Url};
 use serde_derive::{Deserialize, Serialize};
 use tokio::{runtime::Runtime, task::spawn_blocking, time::timeout};
 use tracing::info_span;
+use url::Url;
 
 use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
 };
+use http_client::{HttpClient, Method, Request};
 use indexedlog::log::IndexOutput;
 use lfs_protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
@@ -52,6 +53,7 @@ use crate::{
         strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
         HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
     },
+    error::FetchError,
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::LocalStore,
@@ -88,7 +90,7 @@ struct HttpLfsRemote {
     concurrent_fetches: usize,
     backoff_times: Vec<f32>,
     request_timeout: Duration,
-    client: Client,
+    client: HttpClient,
     rt: Arc<Mutex<Runtime>>,
 }
 
@@ -899,57 +901,59 @@ impl LfsRemoteInner {
     }
 
     async fn send_with_retry(
-        client: Client,
+        client: HttpClient,
         method: Method,
         url: Url,
         user_agent: String,
         backoff_times: Vec<f32>,
         request_timeout: Duration,
-        add_extra: impl Fn(RequestBuilder) -> RequestBuilder,
+        add_extra: impl Fn(Request) -> Request,
     ) -> Result<Option<Bytes>> {
         let mut backoff = backoff_times.into_iter();
 
         loop {
-            let req = client
-                .request(method.clone(), url.clone())
+            let req = Request::new(url.clone(), method)
                 .header("Accept", "application/vnd.git-lfs+json")
                 .header("Content-Type", "application/vnd.git-lfs+json")
                 .header("User-Agent", &user_agent);
+
             let req = add_extra(req);
 
-            let reply = timeout(request_timeout, req.send())
+            let (mut stream, _) = client.send_async(vec![req])?;
+
+            let reply = timeout(request_timeout, stream.next())
                 .await
                 .with_context(|| {
                     format!("Timed out after waiting {:?} from {}", request_timeout, url)
-                })??
-                .error_for_status();
+                })?;
 
-            let (err, status) = match reply {
-                Ok(mut response) => {
-                    let mut chunks = vec![];
-                    while let Some(chunk) = timeout(request_timeout, response.chunk()).await?? {
-                        chunks.push(chunk);
-                    }
-
-                    let mut result = BytesMut::with_capacity(chunks.iter().map(|c| c.len()).sum());
-                    for chunk in chunks.into_iter() {
-                        result.extend_from_slice(&chunk);
-                    }
-                    return Ok(Some(result.freeze()));
-                }
-                Err(e) => match e.status() {
-                    None => return Err(e.into()),
-                    Some(status) => (e, status),
-                },
+            let reply = match reply {
+                Some(r) => r?,
+                None => return Err(FetchError::EndOfStream(url, method).into()),
             };
 
+            let status = reply.status;
+            if status.is_success() {
+                let mut body = reply.body;
+                let mut chunks: Vec<Vec<u8>> = vec![];
+                while let Some(chunk) = timeout(request_timeout, body.next()).await? {
+                    chunks.push(chunk?);
+                }
+
+                let mut result = BytesMut::with_capacity(chunks.iter().map(|c| c.len()).sum());
+                for chunk in chunks.into_iter() {
+                    result.extend_from_slice(&chunk);
+                }
+                return Ok(Some(result.freeze()));
+            }
+
             if status.is_server_error() {
-                if status.as_u16() == reqwest::StatusCode::SERVICE_UNAVAILABLE {
+                if status.as_u16() == StatusCode::SERVICE_UNAVAILABLE {
                     // No need to retry, the server is down.
-                    if method == Method::GET {
+                    if method == Method::Get {
                         return Ok(None);
                     } else {
-                        return Err(err.into());
+                        return Err(FetchError::Http(status, url, method).into());
                     }
                 }
 
@@ -964,7 +968,7 @@ impl LfsRemoteInner {
                 }
             }
 
-            return Err(err.into());
+            return Err(FetchError::Http(status, url, method).into());
         }
     }
 
@@ -996,7 +1000,7 @@ impl LfsRemoteInner {
         let response_fut = async move {
             LfsRemoteInner::send_with_retry(
                 http.client.clone(),
-                Method::POST,
+                Method::Post,
                 http.url.join("objects/batch")?,
                 http.user_agent.clone(),
                 http.backoff_times.clone(),
@@ -1016,7 +1020,7 @@ impl LfsRemoteInner {
     }
 
     async fn process_action(
-        client: Client,
+        client: HttpClient,
         user_agent: String,
         backoff_times: Vec<f32>,
         request_timeout: Duration,
@@ -1033,8 +1037,8 @@ impl LfsRemoteInner {
         };
 
         let method = match op {
-            Operation::Download => Method::GET,
-            Operation::Upload => Method::PUT,
+            Operation::Download => Method::Get,
+            Operation::Upload => Method::Put,
         };
 
         let url = Url::from_str(&action.href.to_string())?;
@@ -1053,7 +1057,7 @@ impl LfsRemoteInner {
                 }
 
                 if let Some(body) = body.clone() {
-                    builder.body(body)
+                    builder.body(Vec::from(body.as_ref()))
                 } else {
                     builder.header("Content-Length", 0)
                 }
@@ -1170,78 +1174,6 @@ impl LfsRemoteInner {
 }
 
 impl LfsRemote {
-    fn make_client(config: &ConfigSet) -> Result<Client> {
-        let proxy_url = if let Some(proxy_env) = var_os("https_proxy") {
-            Some(proxy_env.into_string().map_err(|_| {
-                format_err!("https_proxy environment variable is not a valid UTF-8 value")
-            })?)
-        } else if let Some(proxy_config) = config.get_opt::<String>("http_proxy", "host")? {
-            Some(proxy_config)
-        } else {
-            None
-        };
-
-        let proxy_url = proxy_url.and_then(|s| if s.is_empty() { None } else { Some(s) });
-
-        // The proxy can be specified without the http scheme at the beginning, for instance:
-        // `http_proxy=fwdproxy:8082` is valid but isn't an http url, ie the proxy code below would
-        // simply not send http traffic towards the proxy.
-        //
-        // To solve this, let's parse the url twice, and manually add the http scheme if needed.
-        let proxy_url = if let Some(proxy_url) = proxy_url {
-            let url = Url::parse(&proxy_url)?;
-            if !["http", "https"].contains(&url.scheme()) {
-                Some(Url::parse(&format!("http://{}", proxy_url))?)
-            } else {
-                Some(url)
-            }
-        } else {
-            None
-        };
-
-        let no_proxy = config.get_or("http_proxy", "no", || "".to_string())?;
-        let no_proxy = no_proxy.split(',').map(Into::into);
-        let mut no_proxy = no_proxy.collect::<HashSet<String>>();
-
-        if let Some(env_no_proxy) = var_os("no_proxy") {
-            let env_no_proxy = env_no_proxy.into_string().map_err(|_| {
-                format_err!("no_proxy environment variable is not a valid UTF-8 value")
-            })?;
-            let env_no_proxy = env_no_proxy.split(',').map(Into::into);
-
-            no_proxy.extend(env_no_proxy);
-        }
-
-        let client = if let Some(proxy_url) = proxy_url {
-            Client::builder()
-                .proxy(Proxy::custom(move |url| {
-                    let host = url.host_str();
-                    if let Some(host) = host {
-                        // The no_proxy list is expected to be fairly small, iterating over it
-                        // should be OK.
-                        for no_proxy_url in &no_proxy {
-                            if no_proxy_url == host {
-                                return None;
-                            }
-
-                            if no_proxy_url.starts_with('.') && host.ends_with(no_proxy_url) {
-                                return None;
-                            }
-                        }
-
-                        Some(proxy_url.clone())
-                    } else {
-                        None
-                    }
-                }))
-                .build()?
-        } else {
-            Client::new()
-        };
-
-        Ok(client)
-    }
-
     pub fn new(
         shared: Arc<LfsStore>,
         local: Option<Arc<LfsStore>>,
@@ -1282,7 +1214,7 @@ impl LfsRemote {
                 Duration::from_millis(config.get_or("lfs", "requesttimeout", || 10_000)?);
 
             let rt = Arc::new(Mutex::new(Runtime::new()?));
-            let client = Self::make_client(config)?;
+            let client = HttpClient::new();
 
             Ok(Self {
                 shared,
@@ -1612,7 +1544,7 @@ impl LocalStore for LfsFallbackRemoteStore {
 mod tests {
     use super::*;
 
-    use std::str::FromStr;
+    use std::{env::set_var, str::FromStr};
 
     use quickcheck::quickcheck;
     use tempfile::TempDir;
@@ -2191,31 +2123,12 @@ mod tests {
         }
 
         #[test]
-        fn test_lfs_empty_proxy() -> Result<()> {
-            let cachedir = TempDir::new()?;
-            let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
-
-            config.set("http_proxy", "host", Some(""), &Default::default());
-
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            LfsRemote::new(lfs, None, &config)?;
-
-            Ok(())
-        }
-
-        #[test]
         fn test_lfs_proxy_no_http() -> Result<()> {
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir);
 
-            config.set(
-                "http_proxy",
-                "host",
-                Some("fwdproxy:8082"),
-                &Default::default(),
-            );
+            set_var("https_proxy", "fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
@@ -2230,7 +2143,7 @@ mod tests {
 
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
-            assert!(resp.is_err());
+            assert!(resp.unwrap_err().to_string().contains("Proxy"));
 
             Ok(())
         }
@@ -2239,14 +2152,9 @@ mod tests {
         fn test_lfs_proxy_http() -> Result<()> {
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir);
 
-            config.set(
-                "http_proxy",
-                "host",
-                Some("http://fwdproxy:8082"),
-                &Default::default(),
-            );
+            set_var("https_proxy", "http://fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
@@ -2261,7 +2169,7 @@ mod tests {
 
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
-            assert!(resp.is_err());
+            assert!(resp.unwrap_err().to_string().contains("Proxy"));
 
             Ok(())
         }
@@ -2270,19 +2178,12 @@ mod tests {
         fn test_lfs_no_proxy() -> Result<()> {
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir);
 
-            config.set(
-                "http_proxy",
-                "host",
-                Some("http://fwdproxy:8082"),
-                &Default::default(),
-            );
-            config.set(
-                "http_proxy",
-                "no",
-                Some("dewey-lfs.vip.facebook.com,mononoke-lfs.internal.tfbnw.net"),
-                &Default::default(),
+            set_var("http_proxy", "http://fwdproxy:8082");
+            set_var(
+                "NO_PROXY",
+                "dewey-lfs.vip.facebook.com,mononoke-lfs.internal.tfbnw.net",
             );
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
@@ -2308,21 +2209,10 @@ mod tests {
         fn test_lfs_no_proxy_suffix() -> Result<()> {
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let mut config = make_lfs_config(&cachedir);
+            let config = make_lfs_config(&cachedir);
 
-            config.set(
-                "http_proxy",
-                "host",
-                Some("http://fwdproxy:8082"),
-                &Default::default(),
-            );
-
-            config.set(
-                "http_proxy",
-                "no",
-                Some(".facebook.com,.tfbnw.net"),
-                &Default::default(),
-            );
+            set_var("http_proxy", "http://fwdproxy:8082");
+            set_var("NO_PROXY", ".facebook.com,.tfbnw.net");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
