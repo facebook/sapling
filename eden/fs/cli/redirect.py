@@ -33,6 +33,7 @@ USER_REDIRECTION_SOURCE = ".eden/client/config.toml:redirections"
 REPO_SOURCE = ".eden-redirections"
 PLEASE_RESTART = "Please run `eden restart` to pick up the new redirections feature set"
 APFS_HELPER = "/usr/local/libexec/eden/eden_apfs_mount_helper"
+WINDOWS_SCRATCH_DIR = Path("c:\\open\\scratch")
 
 
 def have_apfs_helper() -> bool:
@@ -61,6 +62,10 @@ def is_bind_mount(path: Path) -> bool:
 
 def make_scratch_dir(checkout: EdenCheckout, subdir: Path) -> Path:
     sub = Path("edenfs") / Path("redirections") / subdir
+
+    if sys.platform == "win32":
+        return make_temp_dir(checkout.path, sub)
+
     return Path(
         subprocess.check_output(
             [
@@ -74,6 +79,14 @@ def make_scratch_dir(checkout: EdenCheckout, subdir: Path) -> Path:
         .decode("utf-8")
         .strip()
     )
+
+
+def make_temp_dir(repo: Path, subdir: Path) -> Path:
+    """ TODO(zeyi): This is a temporary measurement before we get mkscratch on Windows"""
+    escaped = os.fsdecode(repo / subdir).replace("\\", "Z").replace("/", "Z")
+    scratch = WINDOWS_SCRATCH_DIR / escaped
+    scratch.mkdir(parents=True, exist_ok=True)
+    return scratch
 
 
 class RedirectionState(enum.Enum):
@@ -118,6 +131,7 @@ class RepoPathDisposition(enum.Enum):
 class RedirectionType(enum.Enum):
     # Linux: a bind mount to a mkscratch generated path
     # macOS: a mounted dmg file in a mkscratch generated path
+    # Windows: equivalent to symlink type
     BIND = "bind"
     # A symlink to a mkscratch generated path
     SYMLINK = "symlink"
@@ -324,6 +338,15 @@ class Redirection:
                     raise Exception(PLEASE_RESTART)
                 raise
 
+    def _bind_mount_windows(
+        self, instance: EdenInstance, checkout_path: Path, target: Path
+    ):
+        self._apply_symlink(checkout_path, target)
+
+    def _bind_unmount_windows(self, checkout: EdenCheckout):
+        repo_path = self.expand_repo_path(checkout)
+        repo_path.unlink()
+
     def _bind_mount(self, instance: EdenInstance, checkout_path: Path, target: Path):
         """Arrange to set up a bind mount"""
         if sys.platform == "darwin":
@@ -331,6 +354,9 @@ class Redirection:
 
         if "linux" in sys.platform:
             return self._bind_mount_linux(instance, checkout_path, target)
+
+        if sys.platform == "win32":
+            return self._bind_mount_windows(instance, checkout_path, target)
 
         raise Exception(f"don't know how to handle bind mounts on {sys.platform}")
 
@@ -340,6 +366,9 @@ class Redirection:
 
         if "linux" in sys.platform:
             return self._bind_unmount_linux(checkout)
+
+        if sys.platform == "win32":
+            return self._bind_unmount_windows(checkout)
 
         raise Exception(f"don't know how to handle bind mounts on {sys.platform}")
 
@@ -360,6 +389,11 @@ class Redirection:
             repo_path.rmdir()
             return RepoPathDisposition.DOES_NOT_EXIST
         return disposition
+
+    def _apply_symlink(self, checkout_path: Path, target: Path):
+        symlink_path = Path(checkout_path / self.repo_path)
+        symlink_path.parent.mkdir(exist_ok=True, parents=True)
+        symlink_path.symlink_to(target)
 
     def apply(self, checkout: EdenCheckout):
         disposition = self.remove_existing(checkout)
@@ -384,11 +418,9 @@ class Redirection:
             assert target is not None
             self._bind_mount(checkout.instance, checkout.path, target)
         elif self.type == RedirectionType.SYMLINK:
-            symlink_path = Path(checkout.path / self.repo_path)
-            symlink_path.parent.mkdir(exist_ok=True, parents=True)
             target = self.expand_target_abspath(checkout)
             assert target is not None
-            symlink_path.symlink_to(target)
+            self._apply_symlink(checkout.path, target)
         else:
             raise Exception(f"Unsupported redirection type {self.type}")
 
@@ -429,6 +461,13 @@ def get_configured_redirections(checkout: EdenCheckout) -> Dict[str, Redirection
         redirs[repo_path] = Redirection(
             Path(repo_path), redir_type, None, USER_REDIRECTION_SOURCE
         )
+
+    if sys.platform == "win32":
+        # Convert path separator to backslash on Windows
+        normalized_redirs = {}
+        for repo_path, redirection in redirs.items():
+            normalized_redirs[repo_path.replace("/", "\\")] = redirection
+        return normalized_redirs
 
     return redirs
 
@@ -479,12 +518,12 @@ def get_effective_redirections(
             # we want it to point, so we just assume that it is in the right
             # state.
         else:
-            if redir.type == RedirectionType.BIND:
+            if redir.type == RedirectionType.BIND and sys.platform != "win32":
                 # We expected both of these types to be visible in the
                 # mount table, but they were not, so we consider them to
                 # be in the NOT_MOUNTED state.
                 redir.state = RedirectionState.NOT_MOUNTED
-            elif redir.type == RedirectionType.SYMLINK:
+            elif redir.type == RedirectionType.SYMLINK or sys.platform == "win32":
                 try:
                     expected_target = redir.expand_target_abspath(checkout)
                     # TODO: replace this with Path.readlink once Python 3.9+
@@ -568,7 +607,12 @@ def apply_redirection_configs_to_checkout_config(
     redirections = {}
     for r in redirs:
         if r.source != REPO_SOURCE:
-            redirections[str(r.repo_path)] = r.type
+            normalized = os.fsdecode(r.repo_path)
+            if sys.platform == "win32":
+                # TODO: on Windows we replace backslash \ with / since
+                # python-toml doesn't escape them correctly when used as key
+                normalized = normalized.replace("\\", "/")
+            redirections[normalized] = r.type
     return CheckoutConfig(
         backing_repo=config.backing_repo,
         scm_type=config.scm_type,
