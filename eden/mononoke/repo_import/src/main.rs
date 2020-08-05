@@ -34,7 +34,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::num::NonZeroUsize;
 use std::path::Path;
-use tokio::{process, time};
+use tokio::{fs, io::AsyncWriteExt, process, time};
 use topo_sort::sort_topological;
 
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
@@ -47,6 +47,7 @@ const ARG_X_REPO_CHECK_DISABLED: &str = "disable-x-repo-check";
 const ARG_HG_SYNC_CHECK_DISABLED: &str = "disable-hg-sync-check";
 const ARG_SLEEP_TIME: &str = "sleep-time";
 const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
+const ARG_BACKUP_HASHES_FILE_PATH: &str = "backup-hashes-file-path";
 
 #[derive(Deserialize, Clone, Debug)]
 struct GraphqlQueryObj {
@@ -81,17 +82,24 @@ async fn rewrite_file_paths(
     repo: &BlobRepo,
     path: &Path,
     prefix: &str,
+    backup_hashes_path: &str,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
     let prefs = GitimportPreferences::default();
     let target = GitimportTarget::FullRepo;
+    info!(ctx.logger(), "Started importing git commits to Mononoke");
     let import_map = import_tools::gitimport(ctx, repo, path, target, prefs).await?;
+    info!(ctx.logger(), "Added commits to Mononoke");
     let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
     let mover = movers::mover_factory(
         HashMap::new(),
         DefaultAction::PrependPrefix(MPath::new(prefix).unwrap()),
     )?;
     let mut bonsai_changesets = vec![];
-
+    let mut index = 1;
+    let map_size = import_map.len();
+    // Save the hashes to a txt file as a backup. If we failed at deriving data types, we can
+    // use the hashes to derive the commits manually.
+    let mut file = fs::File::create(backup_hashes_path).await?;
     for (_id, (bcs_id, bcs)) in import_map {
         let bcs_mut = bcs.into_mut();
         let rewritten_bcs_opt = rewrite_commit(
@@ -108,16 +116,23 @@ async fn rewrite_file_paths(
             remapped_parents.insert(bcs_id, rewritten_bcs.get_changeset_id());
             info!(
                 ctx.logger(),
-                "Remapped {:?} => {:?}",
+                "Commit {}/{}: Remapped {:?} => {:?}",
+                index,
+                map_size,
                 bcs_id,
                 rewritten_bcs.get_changeset_id(),
             );
+            let hash = format!("{}\n", rewritten_bcs.get_changeset_id());
+            file.write_all(hash.as_bytes()).await?;
             bonsai_changesets.push(rewritten_bcs);
         }
+        index += 1;
     }
+    info!(ctx.logger(), "Saving bonsai changesets");
     save_bonsai_changesets(bonsai_changesets.clone(), ctx.clone(), repo.clone())
         .compat()
         .await?;
+    info!(ctx.logger(), "Saved bonsai changesets");
     Ok(bonsai_changesets)
 }
 
@@ -435,6 +450,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help(
                     "Sleep time, if we fail dependent system (phabricator, hg_sync ...) checkers",
                 ),
+        )
+        .arg(
+            Arg::with_name(ARG_BACKUP_HASHES_FILE_PATH)
+                .long(ARG_BACKUP_HASHES_FILE_PATH)
+                .takes_value(true)
+                .required(true)
+                .help("Backup file path to save bonsai hashes if deriving data types fail"),
         );
 
     let matches = app.get_matches();
@@ -466,6 +488,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
     let sleep_time = matches.value_of(ARG_SLEEP_TIME).unwrap();
     let sleep_time = sleep_time.parse::<u64>()?;
+    let backup_hashes_path = matches.value_of(ARG_BACKUP_HASHES_FILE_PATH).unwrap();
 
     args::init_cachelib(fb, &matches, None);
 
@@ -478,9 +501,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
                 .compat()
                 .await?;
-            let mut shifted_bcs = rewrite_file_paths(&ctx, &repo, &path, &prefix).await?;
+            let mut shifted_bcs =
+                rewrite_file_paths(&ctx, &repo, &path, &prefix, &backup_hashes_path).await?;
             shifted_bcs = sort_bcs(&shifted_bcs)?;
+            info!(ctx.logger(), "Start deriving data types");
             derive_bonsais(&ctx, &repo, &shifted_bcs).await?;
+            info!(ctx.logger(), "Finished deriving data types");
+            info!(ctx.logger(), "Start moving bookmarks");
             move_bookmark(
                 &ctx,
                 &repo,

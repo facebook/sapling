@@ -35,14 +35,21 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ repo_import "$GIT_REPO" --dest-path "new_dir/new_repo" --batch-size 3 --bookmark-suffix "new_repo" --disable-phabricator-check --disable-hg-sync-check
+  $ repo_import "$GIT_REPO" --dest-path "new_dir/new_repo" --batch-size 3 --bookmark-suffix "new_repo" --disable-phabricator-check --disable-hg-sync-check --backup-hashes-file-path "$GIT_REPO/hashes.txt"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * Started importing git commits to Mononoke (glob)
   * Created ce435b03d4ef526648f8654c61e26ae5cc1069cc => ChangesetId(Blake2(f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062)) (glob)
   * Created 2c01e4a5658421e2bfcd08e31d9b69399319bcd3 => ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb)) (glob)
   * 2 bonsai changesets have been committed (glob)
   * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb))) (glob)
+  * Added commits to Mononoke (glob)
   * Remapped ChangesetId(Blake2(f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062)) => ChangesetId(Blake2(a159bc614d2dbd07a5ecc6476156fa464b69e884d819bbc2e854ade3e4c353b9)) (glob)
   * Remapped ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb)) => ChangesetId(Blake2(a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5)) (glob)
+  * Saving bonsai changesets (glob)
+  * Saved bonsai changesets (glob)
+  * Start deriving data types (glob)
+  * Finished deriving data types (glob)
+  * Start moving bookmarks (glob)
   * Created bookmark BookmarkName { bookmark: "repo_import_new_repo" } pointing to * (glob)
   * Set bookmark BookmarkName { bookmark: "repo_import_new_repo" } to * (glob)
 
@@ -72,6 +79,9 @@
 # Clone the repository
   $ cd "$TESTTMP"
   $ hgmn_clone 'ssh://user@dummy/repo' "$HG_REPO"
+  $ cat "$GIT_REPO/hashes.txt"
+  a159bc614d2dbd07a5ecc6476156fa464b69e884d819bbc2e854ade3e4c353b9
+  a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
   $ cd "$HG_REPO"
   $ cat "new_dir/new_repo/file1"
   this is file1
