@@ -94,13 +94,6 @@ class PrefetchCmd(Subcmd):
         )
         self.add_subcommands(parser, prefetch_cmd.commands)
 
-    def _repo_root(self, path: str) -> Optional[str]:
-        try:
-            return util.get_eden_mount_name(path)
-        except Exception:
-            # Likely no .eden dir there, so probably not an eden repo
-            return None
-
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, rel_path = require_checkout(args, args.repo)
         if args.repo and rel_path != Path("."):

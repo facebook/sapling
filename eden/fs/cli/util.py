@@ -540,7 +540,7 @@ def get_eden_mount_name(path_arg: str) -> str:
         parent = os.path.dirname(path)
         while path != parent:
             if os.path.isdir(os.path.join(path, ".eden")):
-                return path
+                return os.path.realpath(path)
             if os.path.exists(os.path.join(path, ".hg")):
                 break
             path = parent
