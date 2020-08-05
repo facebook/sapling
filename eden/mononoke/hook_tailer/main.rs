@@ -95,7 +95,7 @@ async fn run_hook_tailer<'a>(
     let bookmark = BookmarkName::new(bookmark_name)?;
     let common_config = cmdlib::args::load_common_config(fb, &matches)?;
     let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
-    let concurrency = cmdlib::args::get_usize(&matches, "concurrency", 100);
+    let concurrency = cmdlib::args::get_usize(&matches, "concurrency", 20);
     let log_interval = cmdlib::args::get_usize(&matches, "log_interval", 500);
     let exclude_merges = matches.is_present("exclude_merges");
     let stats_file = matches.value_of("stats_file");
@@ -252,7 +252,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("concurrency")
                 .long("concurrency")
                 .help("the number of changesets to run hooks for in parallel")
-                .takes_value(true),
+                .takes_value(true)
+                .default_value("20"),
         )
         .arg(
             Arg::with_name("log_interval")
@@ -301,7 +302,8 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("limit")
                 .long("limit")
                 .takes_value(true)
-                .help("limit number of commits to process (non-continuous only). Default: 1000"),
+                .help("limit number of commits to process (non-continuous only)")
+                .default_value("1000"),
         )
         .arg(
             Arg::with_name("stats_file")
