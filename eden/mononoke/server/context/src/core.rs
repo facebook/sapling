@@ -17,7 +17,7 @@ use tracing::TraceContext;
 
 use crate::logging::{LoggingContainer, SamplingKey};
 use crate::perf_counters::PerfCounters;
-use crate::session::SessionContainer;
+use crate::session::{SessionClass, SessionContainer};
 
 #[derive(Clone)]
 pub struct CoreContext {
@@ -35,6 +35,18 @@ impl CoreContext {
     pub fn test_mock(fb: FacebookInit) -> Self {
         let session = SessionContainer::new_with_defaults(fb);
 
+        Self::test_mock_session(session)
+    }
+
+    pub fn test_mock_class(fb: FacebookInit, session_class: SessionClass) -> Self {
+        let session = SessionContainer::builder(fb)
+            .session_class(session_class)
+            .build();
+
+        Self::test_mock_session(session)
+    }
+
+    pub fn test_mock_session(session: SessionContainer) -> Self {
         let drain = default_drain().filter_level(Level::Debug).ignore_res();
         let logger = Logger::root(drain, o![]);
         session.new_context(logger, ScubaSampleBuilder::with_discard())

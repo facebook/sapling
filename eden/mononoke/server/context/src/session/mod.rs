@@ -33,6 +33,17 @@ pub struct SessionContainer {
     inner: Arc<SessionContainerInner>,
 }
 
+/// Represents the reason this session is running
+#[derive(Clone, Copy)]
+pub enum SessionClass {
+    /// There is someone waiting for this session to complete.
+    UserWaiting,
+    /// The session is doing background work (e.g. backfilling).
+    /// Wherever reasonable, prefer to slow down and wait for work to complete
+    /// fully rather than pushing work out to other tasks.
+    Background,
+}
+
 struct SessionContainerInner {
     session_id: SessionId,
     trace: TraceContext,
@@ -44,6 +55,7 @@ struct SessionContainerInner {
     blobstore_write_limiter: Option<AsyncLimiter>,
     blobstore_read_limiter: Option<AsyncLimiter>,
     user_ip: Option<IpAddr>,
+    session_class: SessionClass,
 }
 
 impl SessionContainer {
@@ -138,5 +150,9 @@ impl SessionContainer {
 
     pub fn blobstore_write_limiter(&self) -> &Option<AsyncLimiter> {
         &self.inner.blobstore_write_limiter
+    }
+
+    pub fn session_class(&self) -> SessionClass {
+        self.inner.session_class
     }
 }

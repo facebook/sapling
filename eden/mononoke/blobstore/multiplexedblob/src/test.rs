@@ -23,7 +23,7 @@ use blobstore_sync_queue::{
 };
 use bytes::Bytes;
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, SessionClass};
 use fbinit::FacebookInit;
 use futures::{
     channel::oneshot,
@@ -1205,5 +1205,120 @@ async fn needed_writes_bad_config(fb: FacebookInit) {
             "Put succeeded despite not enough blobstores"
         );
         log.clear();
+    }
+}
+
+#[fbinit::test]
+async fn no_handlers(fb: FacebookInit) {
+    let bs0 = Arc::new(Tickable::new());
+    let bs1 = Arc::new(Tickable::new());
+    let bs2 = Arc::new(Tickable::new());
+    let log = Arc::new(LogHandler::new());
+    let bs = MultiplexedBlobstoreBase::new(
+        MultiplexId::new(1),
+        vec![
+            (BlobstoreId::new(0), bs0.clone()),
+            (BlobstoreId::new(1), bs1.clone()),
+            (BlobstoreId::new(2), bs2.clone()),
+        ],
+        vec![],
+        nonzero!(1usize),
+        log.clone(),
+        ScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+    let ctx = CoreContext::test_mock_class(fb, SessionClass::Background);
+
+    let clear = {
+        cloned!(bs0, bs1, bs2, log);
+        move || {
+            bs0.tick(None);
+            bs1.tick(None);
+            bs2.tick(None);
+            log.clear();
+        }
+    };
+
+    let k = String::from("k");
+    let v = make_value("v");
+
+    // Put succeeds once all blobstores have succeded. The handlers won't run
+    {
+        let mut fut = bs
+            .put(ctx.clone(), k.clone(), v.clone())
+            .map_err(|_| ())
+            .boxed();
+
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
+
+        bs0.tick(None);
+        bs1.tick(None);
+        bs2.tick(None);
+        fut.await.expect("Put should have succeeded");
+
+        log.log
+            .with(|l| assert!(l.is_empty(), "Handlers ran, yet all blobstores succeeded"));
+        clear();
+    }
+
+    // Put is still in progress after one write, because no handlers have run
+    {
+        let mut fut = bs
+            .put(ctx.clone(), k.clone(), v.clone())
+            .map_err(|_| ())
+            .boxed();
+
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
+
+        bs0.tick(None);
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
+        log.log
+            .with(|l| assert!(l.is_empty(), "Handlers ran, yet put in progress"));
+
+        bs1.tick(None);
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
+        log.log
+            .with(|l| assert!(l.is_empty(), "Handlers ran, yet put in progress"));
+
+        bs2.tick(None);
+        fut.await.expect("Put should have succeeded");
+        log.log
+            .with(|l| assert!(l.is_empty(), "Handlers ran, yet all blobstores succeeded"));
+
+        clear();
+    }
+
+    // Put succeeds despite errors, if the queue succeeds
+    {
+        let mut fut = bs
+            .put(ctx.clone(), k.clone(), v.clone())
+            .map_err(|_| ())
+            .boxed();
+
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
+
+        bs0.tick(None);
+        assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
+        bs1.tick(Some("oops"));
+        fut.await.expect("Put should have succeeded");
+
+        log.log.with(|l| {
+            assert!(
+                l.len() == 1,
+                "Handlers did not run after a blobstore failure"
+            )
+        });
+        bs2.tick(None);
+        // Yield to let the spawned puts and handlers run
+        tokio::task::yield_now().await;
+
+        log.log.with(|l| {
+            assert!(
+                l.len() == 2,
+                "Handlers did not run for both successful blobstores"
+            )
+        });
+
+        clear();
     }
 }

@@ -10,7 +10,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
-use context::{CoreContext, PerfCounterType};
+use context::{CoreContext, PerfCounterType, SessionClass};
 use futures::{
     future::{join_all, select, BoxFuture, Either as FutureEither, FutureExt},
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
@@ -318,15 +318,23 @@ fn spawn_stream_completion(s: impl StreamExt + Send + 'static) {
     tokio::spawn(s.for_each(|_| async {}));
 }
 
+/// Select the next item from one of two FuturesUnordered stream.
+/// With `consider_right` set to false, this is the same as `left.next().await.map(Either::Left)`.
+/// With `consider_right` set to true, this picks the first item to complete from either stream.
+/// The idea is that `left` contains your core work, and you always want to poll futures in that
+/// stream, while `right` contains failure recovery, and you only want to poll futures in that
+/// stream if you need to do failure recovery.
 async fn select_next<F1: Future, F2: Future>(
     left: &mut FuturesUnordered<F1>,
     right: &mut FuturesUnordered<F2>,
+    consider_right: bool,
 ) -> Option<Either<F1::Output, F2::Output>> {
     use Either::*;
+    let right_empty = !consider_right || right.is_empty();
     // Can't use a match block because that infers the wrong Send + Sync bounds for this future
-    if left.is_empty() && right.is_empty() {
+    if left.is_empty() && right_empty {
         None
-    } else if right.is_empty() {
+    } else if right_empty {
         left.next().await.map(Left)
     } else if left.is_empty() {
         right.next().await.map(Right)
@@ -368,6 +376,10 @@ impl Blobstore for MultiplexedBlobstoreBase {
         let write_order = Arc::new(AtomicUsize::new(0));
         let operation_key = OperationKey::gen();
         let mut needed_handlers: usize = self.minimum_successful_writes.into();
+        let run_handlers_on_success = match ctx.session().session_class() {
+            SessionClass::UserWaiting => true,
+            SessionClass::Background => false,
+        };
 
         let mut puts: FuturesUnordered<_> = self
             .blobstores
@@ -427,15 +439,23 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     let mut put_errors = HashMap::new();
                     let mut handlers = FuturesUnordered::new();
 
-                    while let Some(result) = select_next(&mut puts, &mut handlers).await {
+                    while let Some(result) = select_next(
+                        &mut puts,
+                        &mut handlers,
+                        run_handlers_on_success || !put_errors.is_empty(),
+                    )
+                    .await
+                    {
                         use Either::*;
                         match result {
                             Left(Ok(handler)) => {
                                 handlers.push(handler);
                                 // All puts have succeeded, no errors - we're done
                                 if puts.is_empty() && put_errors.is_empty() {
-                                    // Spawn off the handlers to ensure that all writes are logged.
-                                    spawn_stream_completion(handlers);
+                                    if run_handlers_on_success {
+                                        // Spawn off the handlers to ensure that all writes are logged.
+                                        spawn_stream_completion(handlers);
+                                    }
                                     return Ok(());
                                 }
                             }
@@ -444,6 +464,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
                             }
                             Right(Ok(())) => {
                                 needed_handlers = needed_handlers.saturating_sub(1);
+                                // Can only get here if at least one handler has been run, therefore need to ensure all handlers
+                                // run.
                                 if needed_handlers == 0 {
                                     // Handlers were successful. Spawn off remaining puts and handler
                                     // writes, then done

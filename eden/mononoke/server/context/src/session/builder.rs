@@ -16,7 +16,7 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use tracing::TraceContext;
 
-use super::{SessionContainer, SessionContainerInner};
+use super::{SessionClass, SessionContainer, SessionContainerInner};
 
 pub fn generate_session_id() -> SessionId {
     let s: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
@@ -50,6 +50,7 @@ impl SessionContainerBuilder {
                 blobstore_write_limiter: None,
                 blobstore_read_limiter: None,
                 user_ip: None,
+                session_class: SessionClass::UserWaiting,
             },
         }
     }
@@ -99,6 +100,11 @@ impl SessionContainerBuilder {
 
     pub fn user_ip(mut self, value: impl Into<Option<IpAddr>>) -> Self {
         self.inner.user_ip = value.into();
+        self
+    }
+
+    pub fn session_class(mut self, value: SessionClass) -> Self {
+        self.inner.session_class = value;
         self
     }
 }
