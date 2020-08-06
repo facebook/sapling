@@ -397,6 +397,14 @@ impl HgManifestId {
         HgManifestId(hash)
     }
 
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        HgNodeHash::from_bytes(bytes).map(HgManifestId)
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+
     #[inline]
     pub fn to_hex(&self) -> AsciiString {
         self.0.to_hex()

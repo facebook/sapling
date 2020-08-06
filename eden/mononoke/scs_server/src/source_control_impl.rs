@@ -492,5 +492,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             repo: thrift::RepoSpecifier,
             params: thrift::RepoMoveBookmarkParams,
         ) -> Result<thrift::RepoMoveBookmarkResponse, service::RepoMoveBookmarkExn>;
+
+        async fn repo_list_hg_manifest(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoListHgManifestParams,
+        ) -> Result<thrift::RepoListHgManifestResponse, service::RepoListHgManifestExn>;
     }
 }

@@ -593,7 +593,7 @@ impl RepoContext {
     }
 
     /// The underlying `BlobRepo`.
-    pub(crate) fn blob_repo(&self) -> &BlobRepo {
+    pub fn blob_repo(&self) -> &BlobRepo {
         &self.repo.blob_repo
     }
 
@@ -627,6 +627,13 @@ impl RepoContext {
             .get_derived_data_config()
             .derived_data_types
             .contains(ChangesetInfo::NAME)
+    }
+
+    pub fn derive_hgchangesets_enabled(&self) -> bool {
+        self.blob_repo()
+            .get_derived_data_config()
+            .derived_data_types
+            .contains("hgchangesets")
     }
 
     /// Look up a changeset specifier to find the canonical bonsai changeset

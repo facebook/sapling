@@ -117,6 +117,7 @@ impl_into_thrift_error!(service::FileExistsExn);
 impl_into_thrift_error!(service::FileInfoExn);
 impl_into_thrift_error!(service::FileContentChunkExn);
 impl_into_thrift_error!(service::CommitLookupXrepoExn);
+impl_into_thrift_error!(service::RepoListHgManifestExn);
 
 pub(crate) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {
@@ -189,5 +190,12 @@ pub(crate) fn diff_input_too_many_paths(path_count: usize) -> thrift::RequestErr
             thrift::consts::COMMIT_FILE_DIFFS_PATH_COUNT_LIMIT,
             path_count,
         ),
+    }
+}
+
+pub(crate) fn not_available(reason: String) -> thrift::RequestError {
+    thrift::RequestError {
+        kind: thrift::RequestErrorKind::NOT_AVAILABLE,
+        reason,
     }
 }

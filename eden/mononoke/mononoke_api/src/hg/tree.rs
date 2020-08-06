@@ -59,6 +59,11 @@ impl HgTreeContext {
     pub fn content_bytes(&self) -> Bytes {
         self.envelope.contents().clone()
     }
+
+    pub fn into_blob_manifest(self) -> anyhow::Result<mercurial_types::blobs::BlobManifest> {
+        let blobstore = self.repo.blob_repo().blobstore().boxed();
+        mercurial_types::blobs::BlobManifest::parse(blobstore, self.envelope)
+    }
 }
 
 #[async_trait]

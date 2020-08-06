@@ -212,3 +212,12 @@ impl AddScubaParams for thrift::TreeListParams {
         scuba.add("param_limit", self.limit);
     }
 }
+
+impl AddScubaParams for thrift::RepoListHgManifestParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add(
+            "hg_manifest_id",
+            faster_hex::hex_string(&self.hg_manifest_id).expect("hex_string should never fail"),
+        );
+    }
+}
