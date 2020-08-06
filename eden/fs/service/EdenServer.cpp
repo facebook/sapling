@@ -417,11 +417,12 @@ void EdenServer::ProgressManager::updateProgressState(
     size_t progressIndex,
     uint16_t percent) {
   if (progressIndex < totalInProgress) {
-    progresses[progressIndex].percentComplete = percent;
+    progresses[progressIndex].fsckPercentComplete = percent;
+    progresses[progressIndex].fsckStarted = true;
   }
 }
 void EdenServer::ProgressManager::finishProgress(size_t progressIndex) {
-  progresses[progressIndex].finished = true;
+  progresses[progressIndex].mountFinished = true;
 
   totalFinished++;
   totalInProgress--;
@@ -429,7 +430,8 @@ void EdenServer::ProgressManager::finishProgress(size_t progressIndex) {
 
 void EdenServer::ProgressManager::printProgresses(
     std::shared_ptr<StartupLogger> logger) {
-  std::string prepare, content;
+  std::string prepare;
+  std::string content;
 
   if (totalLinesPrinted) {
     prepare = cursor_helper::move_cursor_up(totalLinesPrinted);
@@ -437,17 +439,21 @@ void EdenServer::ProgressManager::printProgresses(
   }
   prepare += cursor_helper::clear_to_bottom();
 
-  unsigned int printedFinished = 0, printedInProgress = 0;
+  unsigned int printedFinished = 0;
+  unsigned int printedInProgress = 0;
   for (auto& it : progresses) {
-    if (it.finished) {
+    if (it.mountFinished) {
       content +=
           folly::to<std::string>("Successfully remounted ", it.mountPath, "\n");
+      printedFinished++;
+    } else if (!it.fsckStarted) {
+      content += folly::to<std::string>("Remounting ", it.mountPath, "\n");
       printedFinished++;
     } else {
       content += folly::format(
                      "[{:21}] {:>3}%: fsck on {}{}",
-                     std::string(it.percentComplete * 2, '=') + ">",
-                     it.percentComplete * 10,
+                     std::string(it.fsckPercentComplete * 2, '=') + ">",
+                     it.fsckPercentComplete * 10,
                      it.localDir,
                      "\n")
                      .str();

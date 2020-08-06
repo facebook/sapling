@@ -619,15 +619,22 @@ class EdenServer : private TakeoverHandler {
    */
   const std::string version_;
 
+  /**
+   * Remounting progress state.
+   */
   struct ProgressState {
     std::string mountPath;
     std::string localDir;
-    uint16_t percentComplete{0};
-    bool finished{false};
+    uint16_t fsckPercentComplete{0};
+    bool mountFinished{false};
+    bool fsckStarted{false};
     ProgressState(std::string&& mountPath, std::string&& localDir)
         : mountPath(std::move(mountPath)), localDir(std::move(localDir)) {}
   };
 
+  /**
+   * Manage remounting progress states.
+   */
   struct ProgressManager {
     static constexpr size_t kMaxProgressLines = 8;
     std::vector<ProgressState> progresses;
@@ -636,16 +643,32 @@ class EdenServer : private TakeoverHandler {
     size_t totalFinished{0};
     size_t totalInProgress{0};
 
-    void updateProgressState(size_t processIndex, uint16_t percent);
-    void printProgresses(std::shared_ptr<StartupLogger>);
-    void finishProgress(size_t processIndex);
-
+    /**
+     * Register a ProgressState for a mount point before remounting starts.
+     */
     size_t registerEntry(std::string&& mountPath, std::string&& localDir);
 
+    void updateProgressState(size_t processIndex, uint16_t percent);
+
+    /**
+     * Print registered progress states to stdout
+     */
+    void printProgresses(std::shared_ptr<StartupLogger>);
+
+    /**
+     * Update fsck completion percent and mark fsckStarted as true. Then refresh
+     * the progress states printed to stdout. This function is triggered when
+     * OverlayChecker calls back
+     */
     void manageProgress(
         std::shared_ptr<StartupLogger> logger,
         size_t processIndex,
         uint16_t percent);
+
+    /**
+     * Mark mountFinished as true when a remounting progress is finished.
+     */
+    void finishProgress(size_t processIndex);
   };
 
   const std::unique_ptr<folly::Synchronized<ProgressManager>> progressManager_;
