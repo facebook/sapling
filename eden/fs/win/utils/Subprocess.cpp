@@ -13,7 +13,6 @@
 #include <iostream>
 #include <string>
 #include "Pipe.h"
-#include "eden/fs/win/Edenwin.h"
 
 namespace facebook {
 namespace eden {
@@ -101,7 +100,7 @@ void Subprocess::createSubprocess(
     cmdToProcess += str + " ";
   }
 
-  XLOG(DBG1) << "Creating the process: " << cmdToProcess.c_str() << std::endl;
+  XLOG(DBG1) << "Creating the process: " << cmdToProcess.c_str();
 
   status = CreateProcessA(
       nullptr,
