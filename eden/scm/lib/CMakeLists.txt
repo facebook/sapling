@@ -6,4 +6,3 @@
 add_subdirectory(backingstore)
 add_subdirectory(cdatapack)
 add_subdirectory(clib)
-add_subdirectory(configparser)
