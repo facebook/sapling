@@ -688,6 +688,7 @@ pub async fn validate<'a>(
         logger,
         datasources,
         walk_params,
+        &[NodeType::BonsaiPhaseMapping],
         Some(always_emit_edge_types),
         stateful_visitor,
         make_sink,

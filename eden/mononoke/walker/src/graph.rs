@@ -439,6 +439,7 @@ pub enum FileContentData {
 /// e.g. file content streams are passed to you to read, they aren't pre-loaded to bytes.
 pub enum NodeData {
     ErrorAsData(Node),
+    NotRequired,
     // Bonsai
     Bookmark(ChangesetId),
     BonsaiChangeset(BonsaiChangeset),

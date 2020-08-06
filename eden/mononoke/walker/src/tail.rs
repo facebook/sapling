@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::EdgeType;
+use crate::graph::{EdgeType, NodeType};
 use crate::setup::{RepoWalkDatasources, RepoWalkParams};
 use crate::walk::{walk_exact, StepRoute, WalkVisitor};
 
@@ -16,7 +16,7 @@ use fbinit::FacebookInit;
 use futures::{future::Future, stream::BoxStream};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
-use std::collections::HashSet;
+use std::{collections::HashSet, iter::FromIterator};
 use tokio::time::{Duration, Instant};
 
 #[derive(Clone)]
@@ -30,6 +30,7 @@ pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
     logger: Logger,
     datasources: RepoWalkDatasources,
     walk_params: RepoWalkParams,
+    required_node_data_types: &[NodeType],
     always_emit_edge_types: Option<HashSet<EdgeType>>,
     visitor: V,
     make_run: RunFac,
@@ -51,6 +52,9 @@ where
     } else {
         HashSet::new()
     };
+    let required_node_data_types =
+        HashSet::from_iter(required_node_data_types.into_iter().cloned());
+
     loop {
         cloned!(make_run, repo, mut scuba_builder, visitor,);
 
@@ -72,6 +76,7 @@ where
             walk_params.error_as_data_edge_types.clone(),
             walk_params.include_edge_types.clone(),
             always_emit_edge_types.clone(),
+            required_node_data_types.clone(),
             scuba_builder,
             keep_edge_paths,
         );
