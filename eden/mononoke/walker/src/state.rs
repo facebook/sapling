@@ -7,6 +7,8 @@
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::walk::{expand_checked_nodes, EmptyRoute, OutgoingEdge, VisitOne, WalkVisitor};
+
+use ahash::RandomState;
 use array_init::array_init;
 use context::CoreContext;
 use dashmap::DashMap;
@@ -39,6 +41,9 @@ impl Add<StepStats> for StepStats {
     }
 }
 
+type BuildStateHasher = RandomState;
+type StateMap<T> = DashMap<T, (), BuildStateHasher>;
+
 #[derive(Debug)]
 pub struct WalkState {
     // TODO implement ID interning to u32 or u64 for types in more than one map
@@ -46,22 +51,29 @@ pub struct WalkState {
     include_node_types: HashSet<NodeType>,
     include_edge_types: HashSet<EdgeType>,
     always_emit_edge_types: HashSet<EdgeType>,
-    visited_bcs: DashMap<ChangesetId, ()>,
-    visited_bcs_mapping: DashMap<ChangesetId, ()>,
-    visited_bcs_phase: DashMap<ChangesetId, ()>,
-    visited_file: DashMap<ContentId, ()>,
-    visited_hg_cs: DashMap<HgChangesetId, ()>,
-    visited_hg_cs_mapping: DashMap<HgChangesetId, ()>,
-    visited_hg_file_envelope: DashMap<HgFileNodeId, ()>,
-    visited_hg_filenode: DashMap<(Option<MPathHash>, HgFileNodeId), ()>,
-    visited_hg_manifest: DashMap<(Option<MPathHash>, HgManifestId), ()>,
-    visited_fsnode: DashMap<(Option<MPathHash>, FsnodeId), ()>,
+    visited_bcs: StateMap<ChangesetId>,
+    visited_bcs_mapping: StateMap<ChangesetId>,
+    visited_bcs_phase: StateMap<ChangesetId>,
+    visited_file: StateMap<ContentId>,
+    visited_hg_cs: StateMap<HgChangesetId>,
+    visited_hg_cs_mapping: StateMap<HgChangesetId>,
+    visited_hg_file_envelope: StateMap<HgFileNodeId>,
+    visited_hg_filenode: StateMap<(Option<MPathHash>, HgFileNodeId)>,
+    visited_hg_manifest: StateMap<(Option<MPathHash>, HgManifestId)>,
+    visited_fsnode: StateMap<(Option<MPathHash>, FsnodeId)>,
     visit_count: [AtomicUsize; NodeType::MAX_ORDINAL + 1],
+}
+
+fn record<K>(visited: &StateMap<K>, k: &K) -> bool
+where
+    K: Eq + Hash + Copy,
+{
+    visited.insert(*k, ()).is_none()
 }
 
 /// If the state did not have this value present, true is returned.
 fn record_with_path<K>(
-    visited_with_path: &DashMap<(Option<MPathHash>, K), ()>,
+    visited_with_path: &StateMap<(Option<MPathHash>, K)>,
     k: &(WrappedPath, K),
 ) -> bool
 where
@@ -69,7 +81,7 @@ where
 {
     let (path, id) = k;
     let mpathhash_opt = path.get_path_hash().cloned();
-    !visited_with_path.insert((mpathhash_opt, *id), ()).is_some()
+    visited_with_path.insert((mpathhash_opt, *id), ()).is_none()
 }
 
 impl WalkState {
@@ -78,20 +90,21 @@ impl WalkState {
         include_edge_types: HashSet<EdgeType>,
         always_emit_edge_types: HashSet<EdgeType>,
     ) -> Self {
+        let fac = BuildStateHasher::default();
         Self {
             include_node_types,
             include_edge_types,
             always_emit_edge_types,
-            visited_bcs: DashMap::new(),
-            visited_bcs_mapping: DashMap::new(),
-            visited_bcs_phase: DashMap::new(),
-            visited_file: DashMap::new(),
-            visited_hg_cs: DashMap::new(),
-            visited_hg_cs_mapping: DashMap::new(),
-            visited_hg_file_envelope: DashMap::new(),
-            visited_hg_filenode: DashMap::new(),
-            visited_hg_manifest: DashMap::new(),
-            visited_fsnode: DashMap::new(),
+            visited_bcs: StateMap::with_hasher(fac.clone()),
+            visited_bcs_mapping: StateMap::with_hasher(fac.clone()),
+            visited_bcs_phase: StateMap::with_hasher(fac.clone()),
+            visited_file: StateMap::with_hasher(fac.clone()),
+            visited_hg_cs: StateMap::with_hasher(fac.clone()),
+            visited_hg_cs_mapping: StateMap::with_hasher(fac.clone()),
+            visited_hg_file_envelope: StateMap::with_hasher(fac.clone()),
+            visited_hg_filenode: StateMap::with_hasher(fac.clone()),
+            visited_hg_manifest: StateMap::with_hasher(fac.clone()),
+            visited_fsnode: StateMap::with_hasher(fac),
             visit_count: array_init(|_i| AtomicUsize::new(0)),
         }
     }
@@ -134,7 +147,7 @@ impl VisitOne for WalkState {
         self.visit_count[k as usize].fetch_add(1, Ordering::Release);
 
         match &target_node {
-            Node::BonsaiChangeset(bcs_id) => self.visited_bcs.insert(*bcs_id, ()).is_none(),
+            Node::BonsaiChangeset(bcs_id) => record(&self.visited_bcs, bcs_id),
             // TODO - measure if worth tracking - the mapping is cachelib enabled.
             Node::BonsaiHgMapping(bcs_id) => {
                 // Does not insert, see record_resolved_visit
@@ -144,14 +157,12 @@ impl VisitOne for WalkState {
                 // Does not insert, as can only prune visits once data resolved, see record_resolved_visit
                 !self.visited_bcs_phase.contains_key(bcs_id)
             }
-            Node::HgBonsaiMapping(hg_cs_id) => {
-                self.visited_hg_cs_mapping.insert(*hg_cs_id, ()).is_none()
-            }
-            Node::HgChangeset(hg_cs_id) => self.visited_hg_cs.insert(*hg_cs_id, ()).is_none(),
+            Node::HgBonsaiMapping(hg_cs_id) => record(&self.visited_hg_cs_mapping, hg_cs_id),
+            Node::HgChangeset(hg_cs_id) => record(&self.visited_hg_cs, hg_cs_id),
             Node::HgManifest(k) => record_with_path(&self.visited_hg_manifest, k),
             Node::HgFileNode(k) => record_with_path(&self.visited_hg_filenode, k),
-            Node::HgFileEnvelope(id) => self.visited_hg_file_envelope.insert(*id, ()).is_none(),
-            Node::FileContent(content_id) => self.visited_file.insert(*content_id, ()).is_none(),
+            Node::HgFileEnvelope(id) => record(&self.visited_hg_file_envelope, id),
+            Node::FileContent(content_id) => record(&self.visited_file, content_id),
             Node::Fsnode(k) => record_with_path(&self.visited_fsnode, k),
             _ => true,
         }
