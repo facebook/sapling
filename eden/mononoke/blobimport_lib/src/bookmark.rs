@@ -24,7 +24,7 @@ use mercurial_revlog::RevlogRepo;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 
-pub fn read_bookmarks(revlogrepo: RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChangesetId)>, Error> {
+pub fn read_bookmarks(revlogrepo: &RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChangesetId)>, Error> {
     let bookmarks = Arc::new(try_boxfuture!(revlogrepo.get_bookmarks()));
 
     (*bookmarks)
@@ -68,7 +68,7 @@ pub fn upload_bookmarks(
     let logger = logger.clone();
     let stale_bookmarks = Arc::new(stale_bookmarks.into_iter().collect::<HashMap<_, _>>());
 
-    read_bookmarks(revlogrepo)
+    read_bookmarks(&revlogrepo)
         .map({
             cloned!(ctx, logger, blobrepo, stale_bookmarks);
             move |bookmarks| {

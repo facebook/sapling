@@ -102,13 +102,8 @@ impl<'a> Blobimport<'a> {
 
         let repo_id = blobrepo.get_repoid();
 
-        let stale_bookmarks_fut = {
-            let revlogrepo = RevlogRepo::open(&revlogrepo_path).expect("cannot open revlogrepo");
-            bookmark::read_bookmarks(revlogrepo)
-        }
-        .compat();
-
         let revlogrepo = RevlogRepo::open(revlogrepo_path).expect("cannot open revlogrepo");
+        let stale_bookmarks_fut = bookmark::read_bookmarks(&revlogrepo).compat();
 
         let log_step = match commits_limit {
             Some(commits_limit) => cmp::max(1, commits_limit / 10),
