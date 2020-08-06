@@ -43,7 +43,7 @@ mod tests {
     use std::thread;
 
     #[test]
-    fn test_path_lock() -> anyhow::Result<()> {
+    fn test_path_lock() -> io::Result<()> {
         let dir = tempfile::tempdir()?;
         let path = dir.path().join("a");
         let (tx, rx) = channel();
@@ -67,8 +67,8 @@ mod tests {
 
         for _ in 0..N {
             // Read 2 values. They should be the same.
-            let v1 = rx.recv()?;
-            let v2 = rx.recv()?;
+            let v1 = rx.recv().unwrap();
+            let v2 = rx.recv().unwrap();
             assert_eq!(v1, v2);
         }
 

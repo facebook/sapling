@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.20"
 dirs = "2.0.2"
 fs2 = "0.4"
 libc = "0.2"

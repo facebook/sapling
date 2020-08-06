@@ -16,8 +16,6 @@ use std::io::{self, ErrorKind, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 
-use anyhow::Result;
-
 /// Pick a random file name `path.$RAND.atomic` as `real_path`. Write `data` to
 /// it.  Then modify the symlink `path` to point to `real_path`.  Attempt to
 /// delete files that are no longer referred.
@@ -33,7 +31,7 @@ use anyhow::Result;
 ///
 /// Attention: the deletion attempt is based on file name. So do not use
 /// confusing file names like `path.0001.atomic` in the same directory.
-pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> Result<()> {
+pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
     let append_name = |suffix: &str| -> PathBuf {
         let mut s = path.to_path_buf().into_os_string();
         s.push(suffix);
@@ -169,7 +167,7 @@ pub fn absolute(path: impl AsRef<Path>) -> io::Result<PathBuf> {
 }
 
 /// Remove the file pointed by `path`.
-pub fn remove_file<P: AsRef<Path>>(path: P) -> Result<()> {
+pub fn remove_file<P: AsRef<Path>>(path: P) -> io::Result<()> {
     let path = path.as_ref();
     // On Windows, try to rename the file before removing.
     // This allows re-creating a same file.
@@ -389,6 +387,7 @@ mod tests {
     use super::*;
 
     use std::fs::File;
+    use std::io::Result;
 
     use tempfile::TempDir;
 
