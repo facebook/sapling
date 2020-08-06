@@ -7,6 +7,84 @@
 
 use dag::Vertex;
 use std::fmt;
+use std::io;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum RevlogIndexError {
+    #[error(transparent)]
+    CommitNotFound(#[from] CommitNotFound),
+
+    #[error(transparent)]
+    RevNotFound(#[from] RevNotFound),
+
+    #[error("ambiguous prefix")]
+    AmbiguousPrefix,
+
+    // Collapse different kinds of corruption into one variant.
+    // This helps keeping the enum sane.
+    #[error(transparent)]
+    Corruption(Box<CorruptionError>),
+
+    #[error("unsupported: {0}")]
+    Unsupported(String),
+}
+
+#[derive(Debug, Error)]
+pub enum CorruptionError {
+    #[error("{0}")]
+    Generic(String),
+
+    #[error(transparent)]
+    Io(#[from] io::Error),
+
+    #[error(transparent)]
+    RadixTree(#[from] radixbuf::Error),
+
+    #[error(transparent)]
+    Lz4(#[from] lz4_pyframe::Error),
+
+    #[error(transparent)]
+    IndexedLog(#[from] indexedlog::Error),
+}
+
+impl From<radixbuf::Error> for RevlogIndexError {
+    fn from(err: radixbuf::Error) -> Self {
+        match err {
+            radixbuf::Error::AmbiguousPrefix => Self::AmbiguousPrefix,
+            _ => Self::Corruption(Box::new(err.into())),
+        }
+    }
+}
+
+impl From<lz4_pyframe::Error> for RevlogIndexError {
+    fn from(err: lz4_pyframe::Error) -> Self {
+        Self::Corruption(Box::new(err.into()))
+    }
+}
+
+impl From<indexedlog::Error> for RevlogIndexError {
+    fn from(err: indexedlog::Error) -> Self {
+        Self::Corruption(Box::new(err.into()))
+    }
+}
+
+// Currently, consider io::Error as a corruption error in this crate.
+impl From<io::Error> for RevlogIndexError {
+    fn from(err: io::Error) -> Self {
+        Self::Corruption(Box::new(err.into()))
+    }
+}
+
+pub fn corruption<T>(s: impl ToString) -> crate::Result<T> {
+    Err(RevlogIndexError::Corruption(Box::new(
+        CorruptionError::Generic(s.to_string()),
+    )))
+}
+
+pub fn unsupported<T>(s: impl ToString) -> crate::Result<T> {
+    Err(RevlogIndexError::Unsupported(s.to_string()))
+}
 
 #[derive(Debug)]
 pub struct CommitNotFound(pub Vertex);

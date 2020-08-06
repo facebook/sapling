@@ -47,3 +47,6 @@ pub use nameset::NameIter as SetIter;
 pub type Vertex = VertexName;
 
 pub mod tests;
+
+// Currently, this crate uses anyhow error types. This might change.
+pub use anyhow::{Error, Result};

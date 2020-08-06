@@ -11,6 +11,8 @@ pub mod errors;
 pub mod nodemap;
 mod revlogindex;
 
+pub use crate::errors::RevlogIndexError as Error;
 pub use crate::nodemap::NodeRevMap;
 pub use crate::revlogindex::RevlogEntry;
 pub use crate::revlogindex::RevlogIndex;
+pub type Result<T> = std::result::Result<T, Error>;

@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.20"
 bit-vec = "0.6"
 byteorder = "1"
 dag = { path = "../dag" }
@@ -13,7 +12,9 @@ lz4-pyframe = { path = "../lz4-pyframe" }
 minibytes = { path = "../minibytes" }
 parking_lot = "0.10"
 radixbuf = { path = "../radixbuf" }
+thiserror = "1"
 util = { path = "../util" }
 
 [dev-dependencies]
+anyhow = "1.0.20"
 tempfile = "3"

@@ -83,6 +83,20 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 fn register_error_handlers() {
     fn specific_error_handler(py: Python, e: &error::Error, _m: CommonMetadata) -> Option<PyErr> {
+        // Extract inner io::Error out.
+        // Why does Python need the low-level IOError? It doesn't have to.
+        // Consider:
+        // - Only expose high-level errors to Python with just enough
+        //   information that Python can consume. Python no longer handles
+        //   IOError directly.
+        // - Gain more explicit control about error types exposed to
+        //   Python. This means dropping anyhow.
+        if let Some(revlogindex::Error::Corruption(e)) = e.downcast_ref::<revlogindex::Error>() {
+            if let revlogindex::errors::CorruptionError::Io(e) = e.as_ref() {
+                return Some(cpython_ext::error::translate_io_error(py, e));
+            }
+        }
+
         if e.is::<indexedlog::Error>() {
             Some(PyErr::new::<IndexedLogError, _>(
                 py,
@@ -98,12 +112,10 @@ fn register_error_handlers() {
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))
-        } else if e.is::<revlogindex::errors::CommitNotFound>() {
-            Some(PyErr::new::<CommitLookupError, _>(
-                py,
-                cpython_ext::Str::from(e.to_string()),
-            ))
-        } else if e.is::<revlogindex::errors::RevNotFound>() {
+        } else if matches!(
+            e.downcast_ref::<revlogindex::Error>(),
+            Some(revlogindex::Error::CommitNotFound(_)) | Some(revlogindex::Error::RevNotFound(_))
+        ) {
             Some(PyErr::new::<CommitLookupError, _>(
                 py,
                 cpython_ext::Str::from(e.to_string()),

@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use crate::errors::corruption;
+use crate::errors::unsupported;
 use crate::errors::CommitNotFound;
 use crate::errors::RevNotFound;
 use crate::nodemap;
+use crate::Error;
 use crate::NodeRevMap;
-use anyhow::bail;
-use anyhow::ensure;
-use anyhow::Result;
+use crate::Result;
 use bit_vec::BitVec;
 use byteorder::ReadBytesExt;
 use byteorder::BE;
@@ -558,7 +559,7 @@ impl RevlogIndex {
                 chunk
             }
             Some(b'4') => lz4_pyframe::decompress(&chunk[1..])?,
-            Some(&c) => bail!("unsupported header: {:?}", c as char),
+            Some(&c) => return unsupported(format!("unsupported header: {:?}", c as char)),
         };
 
         let base = i32::from_be(entry.base);
@@ -619,14 +620,17 @@ impl RevlogIndex {
             .write(true)
             .open(&self.index_path)?;
 
-        let old_rev_len =
-            revlog_index.seek(io::SeekFrom::End(0))? as usize / mem::size_of::<RevlogEntry>();
+        let revlog_index_size = revlog_index.seek(io::SeekFrom::End(0))? as usize;
+        let old_rev_len = revlog_index_size / mem::size_of::<RevlogEntry>();
         let old_offset = revlog_data.seek(io::SeekFrom::End(0))?;
 
-        ensure!(
-            old_rev_len >= self.data_len(),
-            "changelog was truncated unexpectedly"
-        );
+        if revlog_index_size % mem::size_of::<RevlogEntry>() != 0 {
+            return corruption("changelog index length is not a multiple of 64");
+        }
+
+        if old_rev_len < self.data_len() {
+            return corruption("changelog was truncated unexpectedly");
+        }
 
         // Read from disk about new nodes. Do not write them again.
         let mut existed_nodes = HashSet::new();
@@ -693,7 +697,9 @@ impl RevlogIndex {
                 link: i32::to_be(rev as i32),
                 p1: i32::to_be(adjust_rev(parents.0[0])),
                 p2: i32::to_be(adjust_rev(parents.0[1])),
-                node: <[u8; 20]>::try_from(node.as_ref())?,
+                node: <[u8; 20]>::try_from(node.as_ref()).map_err(|_| {
+                    crate::Error::Unsupported(format!("node is not 20-char long: {:?}", &node))
+                })?,
                 _padding: [0u8; 12],
             };
 
@@ -800,7 +806,7 @@ fn read_path(path: &Path, fallback: Bytes) -> io::Result<Bytes> {
 }
 
 impl PrefixLookup for RevlogIndex {
-    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<Vertex>> {
+    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> dag::Result<Vec<Vertex>> {
         // Search through the BTreeMap
         let start = Vertex::from_hex(hex_prefix)?;
         let mut result = Vec::new();
@@ -821,35 +827,35 @@ impl PrefixLookup for RevlogIndex {
                 }
             }
             Ok(None) => (),
-            Err(e) => {
-                if let Some(e) = e.downcast_ref::<radixbuf::errors::ErrorKind>() {
-                    if e == &radixbuf::errors::ErrorKind::AmbiguousPrefix {
-                        // Convert AmbiguousPrefix to a non-error with multiple vertex pushed to
-                        // result.  That's what the Python code base expects.
-                        while result.len() < limit {
-                            result.push(Vertex::from(Bytes::from_static(b"")));
-                        }
-                        return Ok(result);
-                    }
+            Err(crate::Error::AmbiguousPrefix) => {
+                // Convert AmbiguousPrefix to a non-error with multiple vertex pushed to
+                // result.  That's what the Python code base expects.
+                while result.len() < limit {
+                    result.push(Vertex::from(Bytes::from_static(b"")));
                 }
-                return Err(e);
+                return Ok(result);
             }
+            Err(e) => return Err(e.into()),
         }
         Ok(result)
     }
 }
 
 impl IdConvert for RevlogIndex {
-    fn vertex_id(&self, vertex: Vertex) -> Result<Id> {
+    fn vertex_id(&self, vertex: Vertex) -> dag::Result<Id> {
         if let Some(pending_id) = self.pending_nodes_index.get(&vertex) {
             Ok(Id((pending_id + self.data_len()) as _))
         } else if let Some(id) = self.nodemap.node_to_rev(vertex.as_ref())? {
             Ok(Id(id as _))
         } else {
-            Err(CommitNotFound(vertex).into())
+            Err(Error::from(CommitNotFound(vertex)).into())
         }
     }
-    fn vertex_id_with_max_group(&self, vertex: &Vertex, _max_group: Group) -> Result<Option<Id>> {
+    fn vertex_id_with_max_group(
+        &self,
+        vertex: &Vertex,
+        _max_group: Group,
+    ) -> dag::Result<Option<Id>> {
         // RevlogIndex stores everything in the master group. So max_gorup is ignored.
         if let Some(pending_id) = self.pending_nodes_index.get(vertex) {
             Ok(Some(Id((pending_id + self.data_len()) as _)))
@@ -859,7 +865,7 @@ impl IdConvert for RevlogIndex {
             Ok(None)
         }
     }
-    fn vertex_name(&self, id: Id) -> Result<Vertex> {
+    fn vertex_name(&self, id: Id) -> dag::Result<Vertex> {
         let id = id.0 as usize;
         if id < self.data_len() {
             Ok(Vertex::from(self.data()[id].node.as_ref().to_vec()))
@@ -870,7 +876,7 @@ impl IdConvert for RevlogIndex {
             }
         }
     }
-    fn contains_vertex_name(&self, vertex: &Vertex) -> Result<bool> {
+    fn contains_vertex_name(&self, vertex: &Vertex) -> dag::Result<bool> {
         if let Some(_pending_id) = self.pending_nodes_index.get(vertex) {
             Ok(true)
         } else if let Some(_id) = self.nodemap.node_to_rev(vertex.as_ref())? {
@@ -883,7 +889,7 @@ impl IdConvert for RevlogIndex {
 
 impl DagAlgorithm for RevlogIndex {
     /// Sort a `Set` topologically.
-    fn sort(&self, set: &Set) -> Result<Set> {
+    fn sort(&self, set: &Set) -> dag::Result<Set> {
         if set.hints().contains(Flags::TOPO_DESC) {
             Ok(set.clone())
         } else {
@@ -899,7 +905,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Get ordered parent vertexes.
-    fn parent_names(&self, name: Vertex) -> Result<Vec<Vertex>> {
+    fn parent_names(&self, name: Vertex) -> dag::Result<Vec<Vertex>> {
         let rev = self.vertex_id(name)?.0 as u32;
         let parent_revs = self.parent_revs(rev);
         let parent_revs = parent_revs.as_revs();
@@ -911,7 +917,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
-    fn all(&self) -> Result<Set> {
+    fn all(&self) -> dag::Result<Set> {
         let id_set = if self.len() == 0 {
             IdSet::empty()
         } else {
@@ -923,7 +929,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Calculates all ancestors reachable from any name from the given set.
-    fn ancestors(&self, set: Set) -> Result<Set> {
+    fn ancestors(&self, set: Set) -> dag::Result<Set> {
         if set.hints().contains(Flags::ANCESTORS) {
             return Ok(set);
         }
@@ -965,7 +971,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Calculates parents.
-    fn parents(&self, set: Set) -> Result<Set> {
+    fn parents(&self, set: Set) -> dag::Result<Set> {
         let id_set = self.to_id_set(&set)?;
         if id_set.is_empty() {
             return Ok(Set::empty());
@@ -1004,7 +1010,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Calculates children of the given set.
-    fn children(&self, set: Set) -> Result<Set> {
+    fn children(&self, set: Set) -> dag::Result<Set> {
         let id_set = self.to_id_set(&set)?;
         if id_set.is_empty() {
             return Ok(Set::empty());
@@ -1032,7 +1038,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Calculates roots of the given set.
-    fn roots(&self, set: Set) -> Result<Set> {
+    fn roots(&self, set: Set) -> dag::Result<Set> {
         let id_set = self.to_id_set(&set)?;
         if id_set.is_empty() {
             return Ok(Set::empty());
@@ -1065,7 +1071,7 @@ impl DagAlgorithm for RevlogIndex {
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    fn gca_one(&self, set: Set) -> Result<Option<Vertex>> {
+    fn gca_one(&self, set: Set) -> dag::Result<Option<Vertex>> {
         let id_set = self.to_id_set(&set)?;
         let mut revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
         while revs.len() > 1 {
@@ -1093,11 +1099,15 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Calculates all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
-    fn gca_all(&self, set: Set) -> Result<Set> {
+    fn gca_all(&self, set: Set) -> dag::Result<Set> {
         let id_set = self.to_id_set(&set)?;
         // XXX: Limited by gca_revs implementation detail.
         if id_set.count() > 6 {
-            bail!("RevlogIndex::gca_all does not support set with > 6 items");
+            return Err(Error::Unsupported(format!(
+                "RevlogIndex::gca_all does not support set with > 6 items, got {} items",
+                id_set.count()
+            ))
+            .into());
         }
         let revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
         let gcas = self.gca_revs(&revs, usize::max_value());
@@ -1108,7 +1118,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Tests if `ancestor` is an ancestor of `descendant`.
-    fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> Result<bool> {
+    fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> dag::Result<bool> {
         let ancestor_rev = self.vertex_id(ancestor)?.0 as u32;
         let descendant_rev = self.vertex_id(descendant)?.0 as u32;
         if ancestor_rev == descendant_rev {
@@ -1120,7 +1130,7 @@ impl DagAlgorithm for RevlogIndex {
     /// Calculates "heads" of the ancestors of the given set. That is,
     /// Find Y, which is the smallest subset of set X, where `ancestors(Y)` is
     /// `ancestors(X)`.
-    fn heads_ancestors(&self, set: Set) -> Result<Set> {
+    fn heads_ancestors(&self, set: Set) -> dag::Result<Set> {
         let id_set = self.to_id_set(&set)?;
         if id_set.is_empty() {
             return Ok(Set::empty());
@@ -1174,7 +1184,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Calculate the heads of the set.
-    fn heads(&self, set: Set) -> Result<Set> {
+    fn heads(&self, set: Set) -> dag::Result<Set> {
         if set.hints().contains(Flags::ANCESTORS) {
             self.heads_ancestors(set)
         } else {
@@ -1183,7 +1193,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
-    fn range(&self, roots: Set, heads: Set) -> Result<Set> {
+    fn range(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         let root_ids = self.to_id_set(&roots)?;
         let head_ids = self.to_id_set(&heads)?;
         let root_revs: Vec<u32> = root_ids.into_iter().map(|i| i.0 as u32).collect();
@@ -1196,7 +1206,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Calculate `::reachable - ::unreachable`.
-    fn only(&self, reachable: Set, unreachable: Set) -> Result<Set> {
+    fn only(&self, reachable: Set, unreachable: Set) -> dag::Result<Set> {
         let reachable_ids = self.to_id_set(&reachable)?;
         let unreachable_ids = self.to_id_set(&unreachable)?;
 
@@ -1267,7 +1277,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Calculate `::reachable - ::unreachable` and `::unreachable`.
-    fn only_both(&self, reachable: Set, unreachable: Set) -> Result<(Set, Set)> {
+    fn only_both(&self, reachable: Set, unreachable: Set) -> dag::Result<(Set, Set)> {
         let reachable_ids = self.to_id_set(&reachable)?;
         let unreachable_ids = self.to_id_set(&unreachable)?;
         let reachable_revs: Vec<u32> = reachable_ids.into_iter().map(|i| i.0 as u32).collect();
@@ -1283,7 +1293,7 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     /// Calculates the descendants of the given set.
-    fn descendants(&self, set: Set) -> Result<Set> {
+    fn descendants(&self, set: Set) -> dag::Result<Set> {
         let id_set = self.to_id_set(&set)?;
         if id_set.is_empty() {
             return Ok(Set::empty());
@@ -1321,7 +1331,7 @@ impl DagAlgorithm for RevlogIndex {
         Ok(set)
     }
 
-    fn reachable_roots(&self, roots: Set, heads: Set) -> Result<Set> {
+    fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         let id_roots = self.to_id_set(&roots)?;
         if id_roots.is_empty() {
             return Ok(Set::empty());
@@ -1399,15 +1409,15 @@ impl IdMapEq for RevlogIndex {
 }
 
 impl IdMapSnapshot for RevlogIndex {
-    fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
+    fn id_map_snapshot(&self) -> dag::Result<Arc<dyn IdConvert + Send + Sync>> {
         Ok(self.get_snapshot())
     }
 }
 
 impl RevlogIndex {
-    fn add_heads_for_testing<F>(&mut self, parents_func: &F, heads: &[Vertex]) -> Result<()>
+    fn add_heads_for_testing<F>(&mut self, parents_func: &F, heads: &[Vertex]) -> dag::Result<()>
     where
-        F: Fn(Vertex) -> Result<Vec<Vertex>>,
+        F: Fn(Vertex) -> dag::Result<Vec<Vertex>>,
     {
         if !cfg!(test) {
             panic!(
@@ -1431,10 +1441,11 @@ impl RevlogIndex {
                         .map(|p| self.vertex_id(p.clone()).unwrap().0 as u32)
                         .collect();
                     if parent_revs.len() > 2 {
-                        bail!(
+                        return Err(Error::Unsupported(format!(
                             "revlog does not support > 2 parents (when inserting {:?})",
                             &head
-                        );
+                        ))
+                        .into());
                     }
                     let text = Bytes::from_static(b"DUMMY COMMIT MESSAGE FOR TESTING");
                     self.insert(head.clone(), parent_revs, text);
@@ -1447,9 +1458,9 @@ impl RevlogIndex {
 }
 
 impl DagAddHeads for RevlogIndex {
-    fn add_heads<F>(&mut self, parents_func: F, heads: &[Vertex]) -> Result<()>
+    fn add_heads<F>(&mut self, parents_func: F, heads: &[Vertex]) -> dag::Result<()>
     where
-        F: Fn(Vertex) -> Result<Vec<Vertex>>,
+        F: Fn(Vertex) -> dag::Result<Vec<Vertex>>,
     {
         self.add_heads_for_testing(&parents_func, heads)
     }
@@ -1458,6 +1469,7 @@ impl DagAddHeads for RevlogIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering::SeqCst;
     use tempfile::tempdir;
@@ -1622,7 +1634,7 @@ commit 3"#
         fs::write(&d_path, util_py_d)?;
         let nodemap_path = dir.join("util.py.nodemap");
         let index = RevlogIndex::new(&i_path, &nodemap_path)?;
-        let read = |rev: u32| -> Result<Bytes> { index.raw_data(rev) };
+        let read = |rev: u32| index.raw_data(rev);
 
         assert_eq!(
             to_xxd(&read(0)?),
@@ -1817,7 +1829,7 @@ commit 3"#
         let read = |rev: u32| -> Result<String> {
             let raw = revlog3.raw_data(rev)?;
             for index in vec![&revlog1, &revlog2] {
-                ensure!(index.raw_data(rev)? == raw, "index read mismatch");
+                assert!(index.raw_data(rev)? == raw, "index read mismatch");
             }
             Ok(std::str::from_utf8(&raw)?.to_string())
         };
