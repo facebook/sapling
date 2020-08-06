@@ -12,11 +12,11 @@ use futures::prelude::*;
 use http::{header::HeaderMap, status::StatusCode, version::Version};
 use serde::de::DeserializeOwned;
 
-use crate::cbor::CborStream;
 use crate::errors::HttpClientError;
 use crate::handler::Buffered;
 use crate::header::Header;
 use crate::receiver::ResponseStreams;
+use crate::stream::CborStream;
 
 #[derive(Debug)]
 pub struct Response {

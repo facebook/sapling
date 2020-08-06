@@ -9,7 +9,6 @@
 
 #![deny(warnings)]
 
-mod cbor;
 mod client;
 mod driver;
 mod errors;
@@ -21,8 +20,8 @@ mod receiver;
 mod request;
 mod response;
 mod stats;
+mod stream;
 
-pub use cbor::CborStream;
 pub use client::{HttpClient, ResponseStream, StatsFuture};
 pub use errors::{Abort, CertOrKeyMissing, HttpClientError};
 pub use header::Header;
@@ -31,3 +30,4 @@ pub use receiver::Receiver;
 pub use request::{Method, Request, StreamRequest};
 pub use response::{AsyncBody, AsyncResponse, Response};
 pub use stats::Stats;
+pub use stream::CborStream;
