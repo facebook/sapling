@@ -214,6 +214,7 @@ impl Iterator for PyNameIter {
             }
         })()
         .into_anyhow_result()
+        .map_err(|e: anyhow::Error| dag::errors::BackendError::Other(e).into())
         .transpose()
     }
 }

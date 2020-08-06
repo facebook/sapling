@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use crate::errors::programming;
 use crate::DagAlgorithm;
 use crate::NameSet;
+use crate::Result;
 use crate::VertexName;
-use anyhow::bail;
-use anyhow::Result;
 use std::collections::HashSet;
 
 pub(crate) fn parents(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
@@ -30,7 +30,7 @@ pub(crate) fn first_ancestor_nth(
     for _ in 0..n {
         let parents = this.parent_names(vertex)?;
         if parents.is_empty() {
-            bail!("{:?}~{} cannot be resolved", name, n);
+            return programming(format!("{:?}~{} cannot be resolved", name, n));
         }
         vertex = parents[0].clone();
     }

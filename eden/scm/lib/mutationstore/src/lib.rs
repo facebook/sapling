@@ -292,7 +292,8 @@ impl MutationStore {
         let parent_func = move |node| -> dag::Result<Vec<VertexName>> {
             let mut result = Vec::new();
             for entry in self.log.lookup(INDEX_SUCC, &node)? {
-                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))
+                    .map_err(|e| dag::errors::BackendError::Other(e.into()))?;
                 for pred in entry.preds {
                     if connected.contains(&pred) {
                         let parent_node = VertexName::copy_from(pred.as_ref());

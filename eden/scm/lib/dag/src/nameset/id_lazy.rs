@@ -12,8 +12,8 @@ use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
 use crate::Group;
 use crate::Id;
+use crate::Result;
 use crate::VertexName;
-use anyhow::{anyhow, bail, Result};
 use indexmap::IndexSet;
 use std::any::Any;
 use std::fmt;
@@ -36,7 +36,7 @@ struct Inner {
 
 impl Inner {
     fn load_more(&mut self, n: usize, mut out: Option<&mut Vec<Id>>) -> Result<()> {
-        if self.is_completed()? {
+        if matches!(self.state, State::Complete | State::Error) {
             return Ok(());
         }
         for _ in 0..n {
@@ -58,14 +58,6 @@ impl Inner {
             }
         }
         Ok(())
-    }
-
-    fn is_completed(&self) -> Result<bool> {
-        match self.state {
-            State::Error => bail!("Iteration has errored out"),
-            State::Complete => Ok(true),
-            State::Incomplete => Ok(false),
-        }
     }
 }
 
@@ -89,7 +81,7 @@ impl Iterator for Iter {
         let mut inner = self.inner.lock().unwrap();
         loop {
             match inner.state {
-                State::Error => break Some(Err(anyhow!("Iteration has errored out"))),
+                State::Error => break None,
                 State::Complete if inner.visited.len() <= self.index => break None,
                 State::Complete | State::Incomplete => {
                     match inner.visited.get_index(self.index) {
@@ -245,7 +237,7 @@ impl NameSetQuery for IdLazySet {
             return Ok(true);
         } else {
             let mut loaded = Vec::new();
-            while !inner.is_completed()? {
+            loop {
                 // Fast paths.
                 if let Some(&last_id) = inner.visited.iter().rev().next() {
                     let hints = self.hints();
@@ -262,6 +254,9 @@ impl NameSetQuery for IdLazySet {
                 loaded.clear();
                 inner.load_more(1, Some(&mut loaded))?;
                 debug_assert!(loaded.len() <= 1);
+                if loaded.is_empty() {
+                    break;
+                }
                 if loaded.first() == Some(&id) {
                     return Ok(true);
                 }
@@ -299,7 +294,7 @@ pub(crate) mod tests {
 
     impl IdConvert for StrIdMap {
         fn vertex_id(&self, name: VertexName) -> Result<Id> {
-            let slice: [u8; 8] = name.as_ref().try_into()?;
+            let slice: [u8; 8] = name.as_ref().try_into().unwrap();
             let id = u64::from_le(unsafe { std::mem::transmute(slice) });
             Ok(Id(id))
         }

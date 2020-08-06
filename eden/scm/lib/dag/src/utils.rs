@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use crate::Result;
 use crate::Vertex;
-use anyhow::Result;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Mutex;

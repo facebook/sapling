@@ -9,6 +9,8 @@
 //!
 //! Combination of IdMap and IdDag.
 
+use crate::errors::bug;
+use crate::errors::programming;
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
@@ -38,7 +40,7 @@ use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
 use crate::ops::ToSet;
 use crate::spanset::SpanSet;
-use anyhow::{anyhow, bail, ensure, Result};
+use crate::Result;
 use indexedlog::multi;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -117,11 +119,12 @@ impl DagPersistent for NameDag {
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {
-        ensure!(
-            self.pending_heads.is_empty(),
-            "ProgrammingError: add_heads_and_flush called with pending heads ({:?})",
-            &self.pending_heads,
-        );
+        if !self.pending_heads.is_empty() {
+            return programming(format!(
+                "ProgrammingError: add_heads_and_flush called with pending heads ({:?})",
+                &self.pending_heads,
+            ));
+        }
         // Already include specified nodes?
         if master_names.iter().all(|n| {
             is_ok_some(
@@ -167,11 +170,9 @@ impl DagPersistent for NameDag {
     fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
         // Sanity check.
         for head in master_heads.iter() {
-            ensure!(
-                self.map.find_id_by_name(head.as_ref())?.is_some(),
-                "head {:?} does not exist in DAG",
-                head
-            );
+            if self.map.find_id_by_name(head.as_ref())?.is_none() {
+                return head.not_found();
+            }
         }
 
         // Dump the pending DAG to memory so we can re-assign numbers.
@@ -184,22 +185,17 @@ impl DagPersistent for NameDag {
 
         self.reload()?;
         let parents = |name| {
-            parents_map.get(&name).cloned().ok_or_else(|| {
-                anyhow!(
-                    "{:?} not found in parent map ({:?}, {:?})",
-                    &name,
-                    &parents_map,
-                    &non_master_heads,
-                )
-            })
+            parents_map
+                .get(&name)
+                .cloned()
+                .ok_or_else(|| name.not_found_error())
         };
         let flush_result = self.add_heads_and_flush(&parents, master_heads, &non_master_heads);
         if let Err(flush_err) = flush_result {
-            // Add back commits to revert the side effect of 'reload()'.
-            return match self.add_heads(&parents, &non_master_heads) {
-                Ok(_) => Err(flush_err),
-                Err(err) => Err(flush_err.context(err)),
-            };
+            // Attempt to add back commits to revert the side effect of 'reload()'.
+            // No slot for "add_heads" error.
+            let _ = self.add_heads(&parents, &non_master_heads);
+            return Err(flush_err);
         }
         Ok(())
     }
@@ -645,10 +641,10 @@ pub fn rebuild_non_master(
     // Rebuild them.
     let parent_func = |name: VertexName| match parents.get(&name) {
         Some(names) => Ok(names.iter().cloned().collect()),
-        None => bail!(
+        None => bug(format!(
             "bug: parents of {:?} is missing (in rebuild_non_master)",
             name
-        ),
+        )),
     };
     build(map, dag, parent_func, &[], &heads[..])?;
 

@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::segment::{Segment, SegmentFlags};
 use crate::Level;
-use anyhow::{bail, ensure, Result};
+use crate::Result;
 use byteorder::{BigEndian, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
@@ -163,7 +164,7 @@ impl IdDagStore for IndexedLogStore {
                     let seg = Segment(self.log.slice_to_bytes(bytes?));
                     Ok(seg.high()? + 1)
                 } else {
-                    bail!("key {:?} should have some values", key);
+                    bug(format!("key {:?} should have values in next_free_id", key))
                 }
             }
         }
@@ -230,10 +231,9 @@ impl IdDagStore for IndexedLogStore {
         // As an optimization, we could pass a max_level hint from iddag.
         // Doesn't seem necessary though.
         for level in 0..=self.max_level()? {
-            ensure!(
-                self.next_free_id(level, Group::NON_MASTER)? == Group::NON_MASTER.min_id(),
-                "bug: remove_non_master did not take effect"
-            );
+            if self.next_free_id(level, Group::NON_MASTER)? != Group::NON_MASTER.min_id() {
+                return bug("remove_non_master did not take effect");
+            }
         }
         Ok(())
     }

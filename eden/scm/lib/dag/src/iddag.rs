@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::iddagstore::{GetLock, IdDagStore, InProcessStore, IndexedLogStore};
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
+use crate::Error::Programming;
 use crate::Level;
-use anyhow::{bail, ensure, format_err, Result};
+use crate::Result;
 use indexmap::set::IndexSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -203,7 +205,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         let mut count = 0;
         count += self.build_flat_segments(high, get_parents, 0)?;
         if self.next_free_id(0, high.group())? <= high {
-            bail!("internal error: flat segments are not built as expected");
+            return bug("internal error: flat segments are not built as expected");
         }
         count += self.build_all_high_level_segments(false)?;
         Ok(count)
@@ -292,7 +294,10 @@ impl<Store: IdDagStore> IdDag<Store> {
     ///
     /// Return number of segments inserted.
     fn build_high_level_segments(&mut self, level: Level, drop_last: bool) -> Result<usize> {
-        ensure!(level > 0, "build_high_level_segments requires level > 0");
+        if level == 0 {
+            // Do nothing. Level 0 is not considered high level.
+            return Ok(0);
+        }
         let size = self.new_seg_size;
 
         let mut insert_count = 0;
@@ -302,7 +307,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                 if let Some(seg) = self.find_segment_by_head_and_level(head, level - 1)? {
                     seg.parents()
                 } else {
-                    bail!("programming error: get_parents called with wrong head");
+                    bug("get_parents called with wrong head in build_high_level_segments")
                 }
             };
 
@@ -315,11 +320,12 @@ impl<Store: IdDagStore> IdDag<Store> {
                 // Sanity check: They should be sorted and connected.
                 for i in 1..segments.len() {
                     if segments[i - 1].high()? + 1 != segments[i].span()?.low {
-                        bail!(
+                        let msg = format!(
                             "level {} segments {:?} are not sorted or connected!",
                             level,
                             &segments[i - 1..=i]
                         );
+                        return bug(msg);
                     }
                 }
 
@@ -500,9 +506,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                     to_visit.push(parent);
                 }
             } else {
-                bail!(
-                    "logic error: flat segments are expected to cover everything but they are not"
-                );
+                return bug("flat segments are expected to cover everything but they are not");
             }
         }
 
@@ -586,7 +590,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         while n > 0 {
             let seg = self
                 .find_flat_segment_including_id(id)?
-                .ok_or_else(|| format_err!("id {} is not covered by dag", id))?;
+                .ok_or_else(|| id.not_found_error())?;
             // segment: low ... id ... high
             //          \________/
             //            delta
@@ -597,10 +601,9 @@ impl<Store: IdDagStore> IdDag<Store> {
             n -= step;
             if n > 0 {
                 // Follow the first parent.
-                id = *seg
-                    .parents()?
-                    .get(0)
-                    .ok_or_else(|| format_err!("{}~{} cannot be resolved - no parents", &id, n))?;
+                id = *seg.parents()?.get(0).ok_or_else(|| {
+                    Programming(format!("{}~{} cannot be resolved - no parents", &id, n))
+                })?;
                 n -= 1;
             }
         }
@@ -640,7 +643,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         let result = 'outer: loop {
             let seg = self
                 .find_flat_segment_including_id(id)?
-                .ok_or_else(|| format_err!("{} is not covered by segments", id))?;
+                .ok_or_else(|| id.not_found_error())?;
             let head = seg.head()?;
             // Can we use an `id` from `heads` as `x`?
             let intersected = heads.intersection(&(id..=head).into());
@@ -666,7 +669,7 @@ impl<Store: IdDagStore> IdDag<Store> {
             }
             match next_id {
                 // This should not happen if indexes and segments are legit.
-                None => bail!("internal error: cannot convert {} to x~n form", id),
+                None => return bug(format!("cannot convert {} to x~n form", id)),
                 Some(next_id) => {
                     n += head.0 - id.0 + 1;
                     id = next_id;

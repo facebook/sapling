@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
 use dag::idmap::IdMapAssignHead;
 use dag::idmap::IdMapBuildParents;
 use dag::{idmap::IdMap, Group, Id, IdDag, VertexName};
@@ -19,7 +18,7 @@ fn main() {
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 
     let head_name = VertexName::copy_from(format!("{}", parents.len() - 1).as_bytes());
-    let parents_by_name = |name: VertexName| -> Result<Vec<VertexName>> {
+    let parents_by_name = |name: VertexName| -> dag::Result<Vec<VertexName>> {
         let i = String::from_utf8(name.as_ref().to_vec())
             .unwrap()
             .parse::<usize>()

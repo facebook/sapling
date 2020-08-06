@@ -113,8 +113,8 @@ fn register_error_handlers() {
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))
         } else if matches!(
-            e.downcast_ref::<revlogindex::Error>(),
-            Some(revlogindex::Error::CommitNotFound(_)) | Some(revlogindex::Error::RevNotFound(_))
+            e.downcast_ref::<dag::Error>(),
+            Some(dag::Error::VertexNotFound(_)) | Some(dag::Error::IdNotFound(_))
         ) {
             Some(PyErr::new::<CommitLookupError, _>(
                 py,

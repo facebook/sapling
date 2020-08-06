@@ -7,8 +7,8 @@
 
 use crate::ops::DagAlgorithm;
 use crate::NameSet;
+use crate::Result;
 use crate::VertexName;
-use anyhow::Result;
 use std::sync::Arc;
 
 /// Inversed DAG. Parents become children.

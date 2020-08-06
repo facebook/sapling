@@ -6,8 +6,8 @@
  */
 
 use super::{Hints, NameIter, NameSetQuery};
+use crate::Result;
 use crate::VertexName;
-use anyhow::{anyhow, bail, Result};
 use indexmap::IndexSet;
 use std::any::Any;
 use std::fmt;
@@ -27,7 +27,7 @@ struct Inner {
 
 impl Inner {
     fn load_more(&mut self, n: usize, mut out: Option<&mut Vec<VertexName>>) -> Result<()> {
-        if self.is_completed()? {
+        if matches!(self.state, State::Complete | State::Error) {
             return Ok(());
         }
         for _ in 0..n {
@@ -50,14 +50,6 @@ impl Inner {
         }
         Ok(())
     }
-
-    fn is_completed(&self) -> Result<bool> {
-        match self.state {
-            State::Error => bail!("Iteration has errored out"),
-            State::Complete => Ok(true),
-            State::Incomplete => Ok(false),
-        }
-    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -79,7 +71,7 @@ impl Iterator for Iter {
         let mut inner = self.inner.lock().unwrap();
         loop {
             match inner.state {
-                State::Error => break Some(Err(anyhow!("Iteration has errored out"))),
+                State::Error => break None,
                 State::Complete if inner.visited.len() <= self.index => break None,
                 State::Complete | State::Incomplete => {
                     match inner.visited.get_index(self.index) {
@@ -176,10 +168,13 @@ impl NameSetQuery for LazySet {
             return Ok(true);
         } else {
             let mut loaded = Vec::new();
-            while !inner.is_completed()? {
+            loop {
                 loaded.clear();
                 inner.load_more(1, Some(&mut loaded))?;
                 debug_assert!(loaded.len() <= 1);
+                if loaded.is_empty() {
+                    break;
+                }
                 if loaded.first() == Some(name) {
                     return Ok(true);
                 }

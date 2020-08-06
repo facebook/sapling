@@ -12,6 +12,7 @@
 //! Building blocks for the commit graph used by source control.
 
 mod default_impl;
+pub mod errors;
 mod fmt;
 pub mod id;
 mod iddag;
@@ -48,5 +49,5 @@ pub type Vertex = VertexName;
 
 pub mod tests;
 
-// Currently, this crate uses anyhow error types. This might change.
-pub use anyhow::{Error, Result};
+pub use errors::DagError as Error;
+pub type Result<T> = std::result::Result<T, Error>;

@@ -16,7 +16,7 @@ use crate::nameset::id_lazy::IdLazySet;
 use crate::nameset::id_static::IdStaticSet;
 use crate::nameset::NameSet;
 use crate::IdSet;
-use anyhow::Result;
+use crate::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 

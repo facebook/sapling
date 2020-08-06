@@ -14,10 +14,11 @@
 //! have in-memory-only changes. [`SyncableIdDag`] is the only way to update
 //! the filesystem state, and does not support queires.
 
+use crate::errors::bug;
 use crate::id::Id;
 use crate::spanset::Span;
 use crate::Level;
-use anyhow::{bail, Result};
+use crate::Result;
 use bitflags::bitflags;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use minibytes::Bytes;
@@ -68,7 +69,7 @@ impl Segment {
     pub(crate) fn flags(&self) -> Result<SegmentFlags> {
         match self.0.get(Self::OFFSET_FLAGS) {
             Some(bits) => Ok(SegmentFlags::from_bits_truncate(*bits)),
-            None => bail!("cannot read flags"),
+            None => bug("cannot read Segment::flags"),
         }
     }
 
@@ -83,7 +84,7 @@ impl Segment {
     pub(crate) fn high(&self) -> Result<Id> {
         match self.0.get(Self::OFFSET_HIGH..Self::OFFSET_HIGH + 8) {
             Some(slice) => Ok(Id(BigEndian::read_u64(slice))),
-            None => bail!("cannot read high"),
+            None => bug("cannot read Segment::high"),
         }
     }
 
@@ -107,7 +108,7 @@ impl Segment {
     pub(crate) fn level(&self) -> Result<Level> {
         match self.0.get(Self::OFFSET_LEVEL) {
             Some(level) => Ok(*level),
-            None => bail!("cannot read level"),
+            None => bug("cannot read Segment::level"),
         }
     }
 

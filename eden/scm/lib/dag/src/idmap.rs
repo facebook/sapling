@@ -9,10 +9,12 @@
 //!
 //! See [`IdMap`] for the main structure.
 
+use crate::errors::bug;
+use crate::errors::programming;
 use crate::id::{Group, Id, VertexName};
 use crate::ops::IdConvert;
 use crate::ops::PrefixLookup;
-use anyhow::{bail, ensure, format_err, Context, Result};
+use crate::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
@@ -131,10 +133,11 @@ impl IdMap {
     ///
     /// Block if another instance is taking the lock.
     pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdMap> {
-        ensure!(
-            self.log.iter_dirty().next().is_none(),
-            "programming error: prepare_filesystem_sync must be called without dirty in-memory entries",
-        );
+        if self.log.iter_dirty().next().is_some() {
+            return programming(
+                "prepare_filesystem_sync must be called without dirty in-memory entries",
+            );
+        }
 
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
@@ -175,7 +178,9 @@ impl IdMap {
         let key = self.log.lookup(Self::INDEX_ID_TO_NAME, key)?.nth(0);
         match key {
             Some(Ok(entry)) => {
-                ensure!(entry.len() >= 8, "index key should have 8 bytes at least");
+                if entry.len() < 8 {
+                    return bug("index key should have 8 bytes at least");
+                }
                 Ok(Some(&entry[8..]))
             }
             None => Ok(None),
@@ -194,7 +199,9 @@ impl IdMap {
         let key = self.log.lookup(Self::INDEX_NAME_TO_ID, name)?.nth(0);
         match key {
             Some(Ok(mut entry)) => {
-                ensure!(entry.len() >= 8, "index key should have 8 bytes at least");
+                if entry.len() < 8 {
+                    return bug("index key should have 8 bytes at least");
+                }
                 let id = Id(entry.read_u64::<BigEndian>().unwrap());
                 // Double check. Id should <= next_free_id. This is useful for 'remove_non_master'
                 // and re-insert ids.
@@ -238,13 +245,10 @@ impl IdMap {
                 if existing_name == name {
                     return Ok(());
                 } else {
-                    bail!(
-                        "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
-                        id,
-                        name,
-                        id,
-                        existing_name
-                    );
+                    return bug(format!(
+                        "new entry {} = {:?} conflicts with an existing entry {} = {:?}",
+                        id, name, id, existing_name
+                    ));
                 }
             }
         }
@@ -258,13 +262,10 @@ impl IdMap {
             if existing_id == id {
                 return Ok(());
             } else if existing_id.group() <= group {
-                bail!(
-                    "logic error: new entry {} = {:?} conflicts with an existing entry {} = {:?}",
-                    id,
-                    name,
-                    existing_id,
-                    name
-                );
+                return bug(format!(
+                    "new entry {} = {:?} conflicts with an existing entry {} = {:?}",
+                    id, name, existing_id, name
+                ));
             }
             // Mark "need_rebuild_non_master". This prevents "sync" until
             // the callsite uses "remove_non_master" to remove and re-insert
@@ -322,7 +323,7 @@ impl IdMap {
         let id = match iter.nth(0) {
             None => lower_bound_id,
             Some(Ok((key, _))) => Id(Cursor::new(key).read_u64::<BigEndian>()? + 1),
-            _ => bail!("cannot read next_free_id for group {}", group),
+            _ => return bug(format!("cannot read next_free_id for group {}", group)),
         };
         debug_assert!(id >= lower_bound_id);
         debug_assert!(id <= upper_bound_id);
@@ -461,21 +462,20 @@ pub trait IdMapBuildParents: IdConvert {
         get_parents_by_name: &'a dyn Fn(VertexName) -> Result<Vec<VertexName>>,
     ) -> Box<dyn Fn(Id) -> Result<Vec<Id>> + 'a> {
         let func = move |id: Id| -> Result<Vec<Id>> {
-            let name = self
-                .vertex_name(id)
-                .context("logic error: vertex referred but is not assigned")?;
+            let name = self.vertex_name(id)?;
             let parent_names: Vec<VertexName> = get_parents_by_name(name.clone())?;
             let mut result = Vec::with_capacity(parent_names.len());
             for parent_name in parent_names {
                 let parent_id = self.vertex_id(parent_name)?;
-                ensure!(
-                    parent_id < id,
-                    "parent {} {:?} should <= {} {:?}",
-                    parent_id,
-                    self.vertex_name(parent_id)?,
-                    id,
-                    &name
-                );
+                if parent_id >= id {
+                    return programming(format!(
+                        "parent {} {:?} should <= {} {:?}",
+                        parent_id,
+                        self.vertex_name(parent_id)?,
+                        id,
+                        &name
+                    ));
+                };
                 result.push(parent_id);
             }
             Ok(result)
@@ -494,10 +494,9 @@ impl IdMap {
         self.need_rebuild_non_master = false;
         // Invalidate the next free id cache.
         self.cached_next_free_ids = Default::default();
-        ensure!(
-            self.next_free_id(Group::NON_MASTER)? == Group::NON_MASTER.min_id(),
-            "bug: remove_non_master did not take effect"
-        );
+        if self.next_free_id(Group::NON_MASTER)? != Group::NON_MASTER.min_id() {
+            return bug("remove_non_master did not take effect");
+        }
         Ok(())
     }
 }
@@ -505,10 +504,9 @@ impl IdMap {
 impl<'a> SyncableIdMap<'a> {
     /// Write pending changes to disk.
     pub fn sync(&mut self) -> Result<()> {
-        ensure!(
-            !self.need_rebuild_non_master,
-            "bug: cannot sync with re-assigned ids unresolved"
-        );
+        if self.need_rebuild_non_master {
+            return bug("cannot sync with re-assigned ids unresolved");
+        }
         self.map.log.sync()?;
         Ok(())
     }
@@ -559,14 +557,14 @@ pub trait IdMapWrite {
 impl IdConvert for IdMap {
     fn vertex_id(&self, name: VertexName) -> Result<Id> {
         self.find_id_by_name(name.as_ref())?
-            .ok_or_else(|| format_err!("{:?} not found", name))
+            .ok_or_else(|| name.not_found_error())
     }
     fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>> {
         self.find_id_by_name_with_max_group(name.as_ref(), max_group)
     }
     fn vertex_name(&self, id: Id) -> Result<VertexName> {
         self.find_vertex_name_by_id(id)?
-            .ok_or_else(|| format_err!("{} not found", id))
+            .ok_or_else(|| id.not_found_error())
     }
     fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
         Ok(self.find_id_by_name(name.as_ref())?.is_some())
@@ -587,7 +585,7 @@ impl IdConvert for MemIdMap {
         let id = self
             .name2id
             .get(&name)
-            .ok_or_else(|| format_err!("{:?} not found", name))?;
+            .ok_or_else(|| name.not_found_error())?;
         Ok(*id)
     }
     fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>> {
@@ -601,10 +599,7 @@ impl IdConvert for MemIdMap {
         Ok(optional_id)
     }
     fn vertex_name(&self, id: Id) -> Result<VertexName> {
-        let name = self
-            .id2name
-            .get(&id)
-            .ok_or_else(|| format_err!("{} not found", id))?;
+        let name = self.id2name.get(&id).ok_or_else(|| id.not_found_error())?;
         Ok(name.clone())
     }
     fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {

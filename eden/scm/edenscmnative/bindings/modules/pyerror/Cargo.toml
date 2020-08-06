@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-cpython = { version = "0.5", default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython = { version = "0.5", default-features = false }
+dag = { path = "../../../../lib/dag" }
 indexedlog = { path = "../../../../lib/indexedlog" }
 metalog = { path = "../../../../lib/metalog" }
 revisionstore = { path = "../../../../lib/revisionstore" }

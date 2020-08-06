@@ -21,8 +21,9 @@ use crate::iddag::{FirstAncestorConstraint, IdDag};
 use crate::iddagstore::IdDagStore;
 use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
+use crate::Error;
+use crate::Result;
 use crate::{Id, IdMap};
-use anyhow::{format_err, Result};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -141,7 +142,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
                             heads: heads.clone(),
                         },
                     )?
-                    .ok_or_else(|| format_err!("no segment for id {}", id))?;
+                    .ok_or_else(|| id.not_found_error())?;
                 let x = map.vertex_name(x)?;
                 Ok(AncestorPath {
                     x,
@@ -181,7 +182,9 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, Response
                             heads: heads.clone(),
                         },
                     )?
-                    .ok_or_else(|| format_err!("no path found for name {:?}", &name))?;
+                    .ok_or_else(|| {
+                        Error::Programming(format!("no path found for name {:?}", &name))
+                    })?;
                 let x = map.vertex_name(x)?;
                 Ok((
                     AncestorPath {
@@ -239,7 +242,7 @@ impl<'a, DagStore: IdDagStore> Process<&ResponseIdNamePair, ()>
         for (path, names) in res.path_names.iter() {
             let x: Id = map
                 .find_id_by_name(path.x.as_ref())?
-                .ok_or_else(|| format_err!("server referred an unknown name {:?}", &path.x))?;
+                .ok_or_else(|| path.x.not_found_error())?;
             let mut id = dag.first_ancestor_nth(x, path.n)?;
             for (i, name) in names.iter().enumerate() {
                 if i > 0 {

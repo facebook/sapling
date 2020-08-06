@@ -8,8 +8,8 @@
 use super::hints::Flags;
 use super::{Hints, NameIter, NameSet, NameSetQuery};
 use crate::fmt::write_debug;
+use crate::Result;
 use crate::VertexName;
-use anyhow::Result;
 use std::any::Any;
 use std::fmt;
 

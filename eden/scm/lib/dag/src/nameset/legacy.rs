@@ -36,7 +36,7 @@ mod tests {
     use super::super::id_static::tests::with_dag;
     use super::*;
     use crate::DagAlgorithm;
-    use anyhow::Result;
+    use crate::Result;
 
     #[test]
     fn test_legacy_convert() -> Result<()> {

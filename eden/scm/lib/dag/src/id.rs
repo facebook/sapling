@@ -9,7 +9,8 @@
 //!
 //! Defines types around [`Id`].
 
-use anyhow::{bail, Result};
+use crate::errors::programming;
+use crate::Result;
 pub use minibytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -52,7 +53,7 @@ impl VertexName {
                 b'0'..=b'9' => byte - b'0',
                 b'a'..=b'f' => byte - b'a' + 10,
                 b'A'..=b'F' => byte - b'A' + 10,
-                _ => bail!("{:?} is not a hex character", *byte as char),
+                _ => return programming(format!("{:?} is not a hex character", *byte as char)),
             };
             if i & 1 == 0 {
                 bytes[i / 2] |= value << 4;

@@ -199,7 +199,7 @@ revision 2
   4ce51a113780
   $ hg unbundle ../test-bundle-should-fail.hg
   adding changesets
-  abort: 00changelog.i@93ee6ab3: not found!
+  abort: 93ee6ab32777cd430e07da694794fb6a4f917712 cannot be found!
   [255]
 
 revision 2

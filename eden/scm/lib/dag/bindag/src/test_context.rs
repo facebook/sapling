@@ -6,7 +6,6 @@
  */
 
 use crate::{parse_bindag, ParentRevs};
-use anyhow::Result;
 use dag::{namedag::LowLevelAccess, ops::DagPersistent, spanset::SpanSet, Id, NameDag, VertexName};
 use std::collections::HashSet;
 use std::ops::Range;
@@ -47,7 +46,7 @@ impl TestContext {
 impl<T: AsRef<[usize]>> GeneralTestContext<T> {
     pub fn from_parents(parents: Vec<T>) -> Self {
         // Prepare NameDag
-        let parents_by_name = |name: VertexName| -> Result<Vec<VertexName>> {
+        let parents_by_name = |name: VertexName| -> dag::Result<Vec<VertexName>> {
             let i = String::from_utf8(name.as_ref().to_vec())
                 .unwrap()
                 .parse::<usize>()

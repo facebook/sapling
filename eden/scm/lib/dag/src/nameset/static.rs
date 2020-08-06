@@ -7,8 +7,8 @@
 
 use super::hints::Flags;
 use super::{Hints, NameIter, NameSetQuery};
+use crate::Result;
 use crate::VertexName;
-use anyhow::Result;
 use indexmap::IndexSet;
 use std::any::Any;
 use std::fmt;

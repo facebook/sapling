@@ -14,8 +14,8 @@ use crate::IdMap;
 use crate::InverseDag;
 use crate::NameDag;
 use crate::NameSet;
+use crate::Result;
 use crate::SpanSet;
-use anyhow::Result;
 use std::sync::Arc;
 use tempfile::tempdir;
 
@@ -1069,7 +1069,7 @@ pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> Bu
             name_dag.add_heads(&parents_by_name, &master).unwrap();
             name_dag.add_heads(&parents_by_name, &other).unwrap();
             let iter = name_dag.all().unwrap().iter().unwrap();
-            iter.collect::<Result<Vec<_>, _>>()
+            iter.collect::<std::result::Result<Vec<_>, _>>()
                 .expect("name_dag iter() should work with pending changes");
             name_dag.flush(&master).unwrap();
             format!("{}\n{:?}", name_dag.map.replace(text), name_dag.dag)

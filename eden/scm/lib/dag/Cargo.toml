@@ -16,6 +16,7 @@ fs2 = "0.4.3"
 indexmap = "1.0.1"
 serde = { version = "1", features = ["derive"] }
 tempfile = "3.0.7"
+thiserror = "1"
 
 [dev-dependencies]
 bindag = { path = "bindag" }

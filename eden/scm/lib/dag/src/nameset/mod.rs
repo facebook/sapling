@@ -12,8 +12,8 @@
 use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
 use crate::Id;
+use crate::Result;
 use crate::VertexName;
-use anyhow::Result;
 use std::any::Any;
 use std::fmt;
 use std::fmt::Debug;
@@ -217,7 +217,9 @@ pub trait NameSetQuery: Any + Debug + Send + Sync {
 
     /// Iterate through the set in the reversed order.
     fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
-        let names = self.iter()?.collect::<Result<Vec<VertexName>, _>>()?;
+        let names = self
+            .iter()?
+            .collect::<std::result::Result<Vec<VertexName>, _>>()?;
         let iter = names.into_iter().rev().map(Ok);
         Ok(Box::new(iter))
     }

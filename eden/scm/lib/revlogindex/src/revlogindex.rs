@@ -7,8 +7,6 @@
 
 use crate::errors::corruption;
 use crate::errors::unsupported;
-use crate::errors::CommitNotFound;
-use crate::errors::RevNotFound;
 use crate::nodemap;
 use crate::Error;
 use crate::NodeRevMap;
@@ -848,7 +846,7 @@ impl IdConvert for RevlogIndex {
         } else if let Some(id) = self.nodemap.node_to_rev(vertex.as_ref())? {
             Ok(Id(id as _))
         } else {
-            Err(Error::from(CommitNotFound(vertex)).into())
+            vertex.not_found()
         }
     }
     fn vertex_id_with_max_group(
@@ -866,13 +864,13 @@ impl IdConvert for RevlogIndex {
         }
     }
     fn vertex_name(&self, id: Id) -> dag::Result<Vertex> {
-        let id = id.0 as usize;
-        if id < self.data_len() {
-            Ok(Vertex::from(self.data()[id].node.as_ref().to_vec()))
+        let rev = id.0 as usize;
+        if rev < self.data_len() {
+            Ok(Vertex::from(self.data()[rev].node.as_ref().to_vec()))
         } else {
-            match self.pending_nodes.get(id - self.data_len()) {
+            match self.pending_nodes.get(rev - self.data_len()) {
                 Some(node) => Ok(node.clone()),
-                None => Err(RevNotFound(id as _).into()),
+                None => id.not_found(),
             }
         }
     }

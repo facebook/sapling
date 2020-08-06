@@ -10,7 +10,6 @@ use crate::AppendCommits;
 use crate::HgCommit;
 use crate::ReadCommitText;
 use crate::StripCommits;
-use anyhow::bail;
 use anyhow::Result;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
@@ -61,7 +60,7 @@ impl AppendCommits for MemHgCommits {
         let parent_func = |v: Vertex| -> dag::Result<Vec<Vertex>> {
             match commits.get(&v) {
                 Some(commit) => Ok(commit.parents.clone()),
-                None => bail!("unknown commit ({:?}) at add_commits", &v),
+                None => v.not_found(),
             }
         };
         let heads: Vec<Vertex> = {

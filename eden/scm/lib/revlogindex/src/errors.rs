@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use dag::Id;
 use dag::Vertex;
 use std::fmt;
 use std::io;
@@ -107,3 +108,27 @@ impl fmt::Display for RevNotFound {
 }
 
 impl std::error::Error for RevNotFound {}
+
+impl From<RevlogIndexError> for dag::Error {
+    fn from(err: RevlogIndexError) -> dag::Error {
+        use dag::errors::BackendError;
+        use RevlogIndexError as R;
+
+        match err {
+            R::CommitNotFound(CommitNotFound(vertex)) => vertex.not_found_error(),
+            R::RevNotFound(RevNotFound(id)) => Id(id as _).not_found_error(),
+            R::AmbiguousPrefix => {
+                dag::Error::Bug("AmbiguousPrefix should not be translated".into())
+            }
+            R::Corruption(err) => match *err {
+                CorruptionError::Generic(message) => BackendError::Generic(message),
+                CorruptionError::Io(e) => BackendError::Io(e),
+                CorruptionError::IndexedLog(e) => BackendError::IndexedLog(e),
+                CorruptionError::RadixTree(e) => BackendError::Other(e.into()),
+                CorruptionError::Lz4(e) => BackendError::Other(e.into()),
+            }
+            .into(),
+            R::Unsupported(message) => dag::Error::Programming(message),
+        }
+    }
+}

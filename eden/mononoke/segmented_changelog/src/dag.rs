@@ -201,19 +201,26 @@ impl Dag {
 
         let get_vertex_parents = |vertex: Vertex| -> dag::Result<Vec<Vertex>> {
             let cs_id = match mem_idmap.find_changeset_id(vertex) {
-                None => start_state.assignments.get_changeset_id(vertex)?,
+                None => start_state
+                    .assignments
+                    .get_changeset_id(vertex)
+                    .map_err(|e| dag::errors::BackendError::Other(e))?,
                 Some(v) => v,
             };
             let parents = start_state.parents.get(&cs_id).ok_or_else(|| {
-                format_err!(
+                let err = format_err!(
                     "error building IdMap; unexpected request for parents for {}",
                     cs_id
-                )
+                );
+                dag::errors::BackendError::Other(err)
             })?;
             let mut response = Vec::with_capacity(parents.len());
             for parent in parents {
                 let vertex = match mem_idmap.find_vertex(*parent) {
-                    None => start_state.assignments.get_vertex(*parent)?,
+                    None => start_state
+                        .assignments
+                        .get_vertex(*parent)
+                        .map_err(|e| dag::errors::BackendError::Other(e))?,
                     Some(v) => v,
                 };
                 response.push(vertex);
