@@ -13,11 +13,17 @@ from typing import List, Optional
 
 from . import proc_utils_win
 from .config import EdenInstance
+from .util import wait_for_pid_healthy
 
 
-def start_edenfs_service(cmd: List[str]) -> int:
+def start_edenfs_service(instance: EdenInstance, cmd: List[str]) -> int:
+    """
+    Start EdenFS and wait for it to be ready.
+    """
+
     cmdline = subprocess.list2cmdline(cmd)
-    proc_utils_win.create_process_shim(cmdline)
+    pid = proc_utils_win.create_process_shim(cmdline)
+    wait_for_pid_healthy(instance, pid, 10)
     return 0
 
 

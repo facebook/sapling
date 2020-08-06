@@ -271,6 +271,34 @@ def wait_for_instance_healthy(instance: "EdenInstance", timeout: float) -> Healt
     return poll_until(check_daemon_health, timeout=timeout, timeout_ex=timeout_ex)
 
 
+def wait_for_pid_healthy(
+    instance: "EdenInstance", pid: int, timeout: float
+) -> HealthStatus:
+    """
+    Wait for EdenFS as represented by the pid to become healthy. This differs
+    slightly from wait_for_instance_healthy as the pid file might either not be
+    present on disk, or be from an old instance.
+    """
+    from . import proc_utils as proc_utils_mod
+
+    proc_utils = proc_utils_mod.new()
+
+    def check_daemon_health() -> Optional[HealthStatus]:
+        # Check the thrift status
+        health_info = instance.check_health()
+        if health_info.is_healthy():
+            return health_info
+
+        if not proc_utils.is_process_alive(pid):
+            raise EdenStartError("edenfs exited before becoming healthy")
+
+        # Still starting
+        return None
+
+    timeout_ex = EdenStartError("timed out waiting for edenfs to become healthy")
+    return poll_until(check_daemon_health, timeout=timeout, timeout_ex=timeout_ex)
+
+
 def get_home_dir() -> Path:
     home_dir = None
     if sys.platform == "win32":

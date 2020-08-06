@@ -98,7 +98,7 @@ class _PROCESS_INFORMATION(ctypes.Structure):
     ]
 
 
-def create_process_shim(cmd_str: str) -> None:
+def create_process_shim(cmd_str: str) -> int:
     si = _STARTUPINFO()
     si.cb = ctypes.sizeof(_STARTUPINFO)  # pyre-ignore[16]
     pi = _PROCESS_INFORMATION()
@@ -121,6 +121,8 @@ def create_process_shim(cmd_str: str) -> None:
 
     _win32.CloseHandle(pi.hProcess)
     _win32.CloseHandle(pi.hThread)
+
+    return pi.dwProcessId
 
 
 class Handle:
