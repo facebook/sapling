@@ -128,6 +128,7 @@ class TempFileManager:
         top_level = self.top_level_tmp_dir()
         fd, path_str = tempfile.mkstemp(prefix=prefix, dir=str(top_level))
         file_obj = os.fdopen(fd, mode, encoding="utf-8")
+        # pyre-fixme[6]: Expected `TextIO` for 1st param but got `IO[typing.Any]`.
         return TemporaryTextFile(file_obj, Path(path_str))
 
     def make_temp_binary(
@@ -136,6 +137,7 @@ class TempFileManager:
         top_level = self.top_level_tmp_dir()
         fd, path_str = tempfile.mkstemp(prefix=prefix, dir=str(top_level))
         file_obj = os.fdopen(fd, mode)
+        # pyre-fixme[6]: Expected `BinaryIO` for 1st param but got `IO[typing.Any]`.
         return TemporaryBinaryFile(file_obj, Path(path_str))
 
     def top_level_tmp_dir(self) -> Path:

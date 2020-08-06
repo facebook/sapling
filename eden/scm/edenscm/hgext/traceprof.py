@@ -5,7 +5,7 @@
 
 # isort:skip_file
 
-# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative.traceprof import *  # noqa: F403, F401
 
+# pyre-fixme[21]: Could not find module `edenscmnative.traceprof`.
 from edenscmnative.traceprof import __doc__  # noqa: F401
