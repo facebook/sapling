@@ -49,31 +49,52 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
     let target_hash = get_synced_commit(ctx.clone(), &commit_syncer, source_hash).await?;
     info!(ctx.logger(), "target repo cs id: {}", target_hash);
 
+    verify_working_copy_inner(
+        &ctx,
+        Source::ref_cast(source_repo),
+        Target::ref_cast(target_repo),
+        Source(source_hash),
+        Target(target_hash),
+        commit_syncer.get_mover(),
+        commit_syncer.get_reverse_mover(),
+    )
+    .await
+}
+
+pub async fn verify_working_copy_inner<'a>(
+    ctx: &'a CoreContext,
+    source_repo: &'a SourceRepo,
+    target_repo: &'a TargetRepo,
+    source_hash: Source<ChangesetId>,
+    target_hash: Target<ChangesetId>,
+    mover: &Mover,
+    reverse_mover: &Mover,
+) -> Result<(), Error> {
     let moved_source_repo_entries = get_maybe_moved_filenode_ids(
         ctx.clone(),
         &source_repo,
-        source_hash.clone(),
-        if source_hash != target_hash {
-            Some(commit_syncer.get_mover())
+        *source_hash,
+        if *source_hash != *target_hash {
+            Some(mover)
         } else {
             // No need to move any paths, because this commit was preserved as is
             None
         },
     );
     let target_repo_entries =
-        get_maybe_moved_filenode_ids(ctx.clone(), &target_repo, target_hash.clone(), None);
+        get_maybe_moved_filenode_ids(ctx.clone(), &target_repo, *target_hash, None);
 
     let (moved_source_repo_entries, target_repo_entries) =
         try_join!(moved_source_repo_entries, target_repo_entries)?;
 
     verify_filenode_mapping_equivalence(
-        ctx,
-        Source(source_hash),
-        SourceRepo::ref_cast(source_repo),
-        TargetRepo::ref_cast(target_repo),
+        ctx.clone(),
+        source_hash,
+        source_repo,
+        target_repo,
         &Source(moved_source_repo_entries),
         &Target(target_repo_entries),
-        commit_syncer.get_reverse_mover(),
+        reverse_mover,
     )
     .await
 }

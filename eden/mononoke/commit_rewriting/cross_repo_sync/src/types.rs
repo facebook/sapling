@@ -8,6 +8,7 @@
 use ref_cast::RefCast;
 use std::fmt::{self, Debug, Display};
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 
 macro_rules! generic_newtype_with_obvious_impls {
     ($name: ident) => {
@@ -52,6 +53,14 @@ macro_rules! generic_newtype_with_obvious_impls {
         impl<T: Hash> Hash for $name<T> {
             fn hash<H: Hasher>(&self, state: &mut H) {
                 self.0.hash(state)
+            }
+        }
+
+        impl<T> Deref for $name<T> {
+            type Target = T;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
             }
         }
     };
