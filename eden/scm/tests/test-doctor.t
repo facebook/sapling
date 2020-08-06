@@ -173,8 +173,10 @@ Check dirstate pointing to a stripped commit:
   >>> with open(".hg/store/00changelog.i", "rb+") as f:
   ...     x = f.truncate(64)  # only keep 1 commit: "A"
 
+XXX: The error message should be improved to indicate it is revlog and hg doctor might fix it.
+
   $ hg status
-  abort: 00changelog.i@d2653ea8ee94: no node!
+  abort: mmap length 192 is greater than file size 64
   [255]
 
  (hg doctor can fix dirstate/treestate)

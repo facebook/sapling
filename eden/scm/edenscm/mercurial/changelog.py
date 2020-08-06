@@ -519,6 +519,7 @@ class changelog(revlog.revlog):
     def add(
         self, manifest, files, desc, transaction, p1, p2, user, date=None, extra=None
     ):
+        self._invalidaterustrevlog()
         text = hgcommittext(manifest, files, desc, user, date, extra)
         btext = encodeutf8(text)
         result = self.addrevision(btext, transaction, len(self), p1, p2)
@@ -529,6 +530,7 @@ class changelog(revlog.revlog):
         return result
 
     def addgroup(self, deltas, linkmapper, transaction, addrevisioncb=None):
+        self._invalidaterustrevlog()
         result = super(changelog, self).addgroup(
             deltas, linkmapper, transaction, addrevisioncb
         )
@@ -536,6 +538,12 @@ class changelog(revlog.revlog):
         if zstore is not None:
             zstore.flush()
         return result
+
+    def _invalidaterustrevlog(self):
+        """Remove the 00changelog.len metadata used by the Rust revlog.
+        Call this function whenever the revlog is changed by Python.
+        """
+        self._realopener.tryunlink("00changelog.len")
 
     def branchinfo(self, rev):
         """return the branch name and open/close state of a revision

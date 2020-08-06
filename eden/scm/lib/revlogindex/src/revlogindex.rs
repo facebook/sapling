@@ -28,6 +28,7 @@ use dag::IdSet;
 use dag::Set;
 use dag::Vertex;
 use indexedlog::lock::ScopedDirLock;
+use indexedlog::utils::atomic_write_plain;
 use indexedlog::utils::mmap_bytes;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -452,8 +453,9 @@ impl RevlogIndex {
         nodemap_lag_threshold: usize,
     ) -> Result<Self> {
         let empty_nodemap_data = Bytes::from(nodemap::empty_index_buffer());
-        let nodemap_data = read_path(nodemap_path, empty_nodemap_data.clone())?;
-        let changelogi_data = read_path(changelogi_path, Bytes::default())?;
+        let nodemap_data = read_path(nodemap_path, None, empty_nodemap_data.clone())?;
+        let changelogi_len = read_usize(&changelogi_path.with_extension("len"))?;
+        let changelogi_data = read_path(changelogi_path, changelogi_len, Bytes::default())?;
         let nodemap = NodeRevMap::new(changelogi_data.clone().into(), nodemap_data.into())
             .or_else(|_| {
                 // Attempt to rebuild the index (in-memory) automatically.
@@ -614,11 +616,18 @@ impl RevlogIndex {
         let mut revlog_index = fs::OpenOptions::new()
             .read(true)
             .create(true)
-            .append(true)
             .write(true)
             .open(&self.index_path)?;
 
-        let revlog_index_size = revlog_index.seek(io::SeekFrom::End(0))? as usize;
+        let meta_len_path = self.index_path.with_extension("len");
+        let meta_len = read_usize(&meta_len_path)?;
+        let revlog_index_size = match meta_len {
+            // Use the logic length.
+            Some(len) => revlog_index.seek(io::SeekFrom::Start(len as _))? as usize,
+            // No explicit length. Use the physical length of the file.
+            None => revlog_index.seek(io::SeekFrom::End(0))? as usize,
+        };
+
         let old_rev_len = revlog_index_size / mem::size_of::<RevlogEntry>();
         let old_offset = revlog_data.seek(io::SeekFrom::End(0))?;
 
@@ -633,7 +642,11 @@ impl RevlogIndex {
         // Read from disk about new nodes. Do not write them again.
         let mut existed_nodes = HashSet::new();
         if old_rev_len > self.data_len() {
-            let data = BytesSlice::<RevlogEntry>::from(read_path(&self.index_path, Bytes::new())?);
+            let data = BytesSlice::<RevlogEntry>::from(read_path(
+                &self.index_path,
+                Some(revlog_index_size),
+                Bytes::new(),
+            )?);
             for entry in &data.as_ref()[self.data_len()..] {
                 existed_nodes.insert(entry.node.as_ref().to_vec());
             }
@@ -721,6 +734,10 @@ impl RevlogIndex {
         revlog_index.write_all(&new_index)?;
         drop(revlog_index);
 
+        // Update meta file with the new logical length.
+        let new_len = revlog_index_size + new_index.len();
+        atomic_write_plain(&meta_len_path, format!("{}", new_len).as_bytes(), false)?;
+
         // Reload.
         *self = Self::new(&self.index_path, &self.nodemap_path)?;
 
@@ -790,7 +807,34 @@ fn apply_deltas(base_text: &[u8], delta_text: &[u8]) -> Result<Vec<u8>> {
     Ok(result)
 }
 
-fn read_path(path: &Path, fallback: Bytes) -> io::Result<Bytes> {
+/// Read an integer from a `path`. If the file does not exist, or is empty,
+/// return None.
+fn read_usize(path: &Path) -> io::Result<Option<usize>> {
+    match fs::OpenOptions::new().read(true).open(path) {
+        Err(err) => {
+            if err.kind() == io::ErrorKind::NotFound {
+                Ok(None)
+            } else {
+                Err(err)
+            }
+        }
+        Ok(mut file) => {
+            let mut s = String::new();
+            file.read_to_string(&mut s)?;
+            if s.is_empty() {
+                // This might happen with some file systems.
+                // Just treat it as if the file does not exist.
+                Ok(None)
+            } else {
+                s.parse::<usize>()
+                    .map(Some)
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+            }
+        }
+    }
+}
+
+fn read_path(path: &Path, length: Option<usize>, fallback: Bytes) -> io::Result<Bytes> {
     match fs::OpenOptions::new().read(true).open(path) {
         Err(err) => {
             if err.kind() == io::ErrorKind::NotFound {
@@ -799,7 +843,7 @@ fn read_path(path: &Path, fallback: Bytes) -> io::Result<Bytes> {
                 Err(err)
             }
         }
-        Ok(file) => mmap_bytes(&file, None),
+        Ok(file) => mmap_bytes(&file, length.map(|size| size as u64)),
     }
 }
 

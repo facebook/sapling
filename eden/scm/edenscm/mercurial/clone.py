@@ -22,6 +22,9 @@ def shallowclone(source, repo):
         repo.requirements.add("remotefilelog")
         repo._writerequirements()
 
+        # Invalidate the local changelog length metadata.
+        repo.svfs.tryunlink("00changelog.len")
+
         repo.ui.status(_("fetching changelog\n"))
         with repo.conn(source) as conn:
             # Assume the remote server supports streamclone.

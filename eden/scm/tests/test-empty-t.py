@@ -75,6 +75,7 @@ sh % "ls .hg" == r"""
 sh % "ls .hg/store" == r"""
     00changelog.d
     00changelog.i
+    00changelog.len
     allheads
     metalog
     requires

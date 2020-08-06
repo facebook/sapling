@@ -138,6 +138,9 @@ def maybeperformlegacystreamclone(pullop):
 
     repo.ui.status(_("streaming all changes\n"))
 
+    # Invalidate the local changelog length metadata.
+    repo.svfs.tryunlink("00changelog.len")
+
     shallow = pullop.extras.get("shallow", False)
 
     fp = remote.stream_out(shallow=shallow)

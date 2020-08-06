@@ -239,6 +239,10 @@ def repairchangelog(ui, svfs):
     except Exception:
         return None
 
+    # Those two files are not necessary. Removing them forces rebuilding them.
+    svfs.tryunlink("00changelog.len")
+    svfs.tryunlink("00changelog.nodemap")
+
     rev, linkrev = quickchecklog(ui, cl, "changelog", set())
     if rev is None:
         return cl

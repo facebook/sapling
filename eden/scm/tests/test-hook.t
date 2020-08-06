@@ -154,6 +154,7 @@ more there after
   $ LC_ALL=C ls -1 .hg/store/
   00changelog.d
   00changelog.i
+  00changelog.len
   00manifest.i
   allheads
   data
