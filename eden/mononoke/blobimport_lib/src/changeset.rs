@@ -8,7 +8,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use anyhow::{bail, format_err, Context, Error};
+use anyhow::{bail, Context, Error};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -262,9 +262,6 @@ pub struct UploadChangesets {
     pub ctx: CoreContext,
     pub blobrepo: BlobRepo,
     pub revlogrepo: RevlogRepo,
-    pub changeset: Option<HgNodeHash>,
-    pub skip: Option<usize>,
-    pub commits_limit: Option<usize>,
     pub lfs_helper: Option<String>,
     pub concurrent_changesets: usize,
     pub concurrent_blobs: usize,
@@ -275,14 +272,13 @@ pub struct UploadChangesets {
 impl UploadChangesets {
     pub fn upload(
         self,
+        changesets: impl Stream<Item = (RevIdx, HgNodeHash), Error = Error> + Send + 'static,
+        is_import_from_beggining: bool,
     ) -> BoxStream<(RevIdx, SharedItem<(BonsaiChangeset, HgBlobChangeset)>), Error> {
         let Self {
             ctx,
             blobrepo,
             revlogrepo,
-            changeset,
-            skip,
-            commits_limit,
             lfs_helper,
             concurrent_changesets,
             concurrent_blobs,
@@ -290,30 +286,6 @@ impl UploadChangesets {
             fixed_parent_order,
         } = self;
 
-        let changesets = match changeset {
-            Some(hash) => match revlogrepo.get_rev_idx_for_changeset(HgChangesetId::new(hash)) {
-                Ok(idx) => future::ok((idx, hash)).into_stream().boxify(),
-                Err(err) => stream::once(Err(format_err!(
-                    "{} not found in revlog repo: {}",
-                    hash,
-                    err
-                )))
-                .boxify(),
-            },
-            None => revlogrepo.changesets().boxify(),
-        };
-
-        let changesets = match skip {
-            None => changesets,
-            Some(skip) => changesets.skip(skip as u64).boxify(),
-        };
-
-        let changesets = match commits_limit {
-            None => changesets,
-            Some(limit) => changesets.take(limit as u64).boxify(),
-        };
-
-        let is_import_from_beggining = changeset.is_none() && skip.is_none();
         let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
 
         let mut executor = DefaultExecutor::current();

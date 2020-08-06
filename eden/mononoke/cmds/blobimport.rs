@@ -38,6 +38,7 @@ use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
+const ARG_FIND_ALREADY_IMPORTED_REV_ONLY: &str = "find-already-imported-rev-only";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("revlog to blob importer")
@@ -93,6 +94,17 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(false)
                 .possible_values(POSSIBLE_DERIVED_TYPES)
                 .help("Derived data type to be backfilled. Note - 'filenodes' will always be derived")
+        )
+        .arg(
+            Arg::with_name(ARG_FIND_ALREADY_IMPORTED_REV_ONLY)
+                .long(ARG_FIND_ALREADY_IMPORTED_REV_ONLY)
+                .takes_value(false)
+                .multiple(false)
+                .required(false)
+                .help("Does not do any import. Just finds the rev that was already imported rev and \
+                      updates manifold-next-rev-to-import if it's set. Note that we might have \
+                      a situation where revision i is imported, i+1 is not and i+2 is imported. \
+                      In that case this function would return i.")
         )
 }
 
@@ -289,8 +301,9 @@ async fn run_blobimport<'a>(
     let globalrevs_store = Arc::new(globalrevs_store);
     let synced_commit_mapping = Arc::new(synced_commit_mapping);
 
+    let find_latest_imported_rev_only = matches.is_present(ARG_FIND_ALREADY_IMPORTED_REV_ONLY);
     async move {
-        let maybe_latest_imported_rev = blobimport_lib::Blobimport {
+        let blobimport = blobimport_lib::Blobimport {
             ctx,
             blobrepo,
             revlogrepo_path,
@@ -309,9 +322,13 @@ async fn run_blobimport<'a>(
             populate_git_mapping,
             small_repo_id,
             derived_data_types,
-        }
-        .import()
-        .await?;
+        };
+
+        let maybe_latest_imported_rev = if find_latest_imported_rev_only {
+            blobimport.find_already_imported_revision().await?
+        } else {
+            blobimport.import().await?
+        };
 
         match maybe_latest_imported_rev {
             Some(latest_imported_rev) => {

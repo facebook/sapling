@@ -53,4 +53,14 @@
 
   $ setup_mononoke_config
   $ cd $TESTTMP
+  $ blobimport --log repo-hg/.hg repo --find-already-imported-rev-only
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * didn't import any commits (glob)
+  $ blobimport repo-hg/.hg repo --commits-limit 1
+  $ blobimport --log repo-hg/.hg repo --find-already-imported-rev-only
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * latest imported revision 0 (glob)
   $ blobimport repo-hg/.hg repo
+  $ blobimport --log repo-hg/.hg repo --find-already-imported-rev-only
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * latest imported revision 4 (glob)

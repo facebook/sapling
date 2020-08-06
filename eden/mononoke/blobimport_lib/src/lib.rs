@@ -18,18 +18,20 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{Context, Error};
+use anyhow::{format_err, Context, Error};
 use ascii::AsciiString;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future,
-    stream::{StreamExt, TryStreamExt},
+    stream::{self, StreamExt, TryStreamExt},
+    Stream,
 };
 use futures_ext::StreamExt as OldStreamExt;
-use futures_old::{Future as OldFuture, Stream};
+use futures_old::{Future as OldFuture, Stream as OldStream};
 use slog::{debug, error, info};
 
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{bulk_import_globalrevs, BonsaiGlobalrevMapping};
 use context::CoreContext;
@@ -113,20 +115,22 @@ impl<'a> Blobimport<'a> {
 
         let chunk_size = 100;
 
+        let is_import_from_beggining = changeset.is_none() && skip.is_none();
+        let changesets = get_changeset_stream(&revlogrepo, changeset, skip, commits_limit)
+            .boxed()
+            .compat();
+
         let mut upload_changesets = UploadChangesets {
             ctx: ctx.clone(),
             blobrepo: blobrepo.clone(),
             revlogrepo: revlogrepo.clone(),
-            changeset,
-            skip,
-            commits_limit,
             lfs_helper,
             concurrent_changesets,
             concurrent_blobs,
             concurrent_lfs_imports,
             fixed_parent_order,
         }
-        .upload()
+        .upload(changesets, is_import_from_beggining)
         .enumerate()
         .compat()
         .map_ok({
@@ -282,5 +286,110 @@ impl<'a> Blobimport<'a> {
         };
 
         Ok(max_rev)
+    }
+
+    /// From a stream of revisions returns the latest revision that's already imported and public
+    /// From this revision it's safe to restart blobimport next time.
+    /// Note that we might have a situation where revision i is imported, i+1 is not and i+2 is imported.
+    /// In that case this function would return i.
+    pub async fn find_already_imported_revision(self) -> Result<Option<RevIdx>, Error> {
+        let Self {
+            ctx,
+            blobrepo,
+            revlogrepo_path,
+            changeset,
+            skip,
+            commits_limit,
+            ..
+        } = self;
+
+        let blobrepo = &blobrepo;
+        let revlogrepo = RevlogRepo::open(revlogrepo_path)?;
+        let imported: Vec<_> = get_changeset_stream(&revlogrepo, changeset, skip, commits_limit)
+            .chunks(100)
+            .then(|chunk| async move {
+                let chunk: Result<Vec<_>, Error> = chunk.into_iter().collect();
+                let chunk = chunk?;
+                let hg_to_bcs_ids = blobrepo
+                    .get_hg_bonsai_mapping(
+                        ctx.clone(),
+                        chunk
+                            .clone()
+                            .into_iter()
+                            .map(|(_, hg_cs_id)| HgChangesetId::new(hg_cs_id))
+                            .collect::<Vec<_>>(),
+                    )
+                    .compat()
+                    .await?;
+
+                let public = blobrepo
+                    .get_phases()
+                    .get_public(
+                        ctx.clone(),
+                        hg_to_bcs_ids
+                            .clone()
+                            .into_iter()
+                            .map(|(_, bcs_id)| bcs_id)
+                            .collect(),
+                        false, /* ephemeral_derive */
+                    )
+                    .compat()
+                    .await?;
+
+                let hg_cs_ids: HashMap<_, _> = hg_to_bcs_ids.into_iter().collect();
+                let s = chunk.into_iter().map(move |(revidx, hg_cs_id)| {
+                    let exists_and_public = match hg_cs_ids.get(&HgChangesetId::new(hg_cs_id)) {
+                        Some(bcs_id) => public.contains(bcs_id),
+                        None => false,
+                    };
+
+                    (revidx, exists_and_public)
+                });
+
+                Result::<_, Error>::Ok(stream::iter(s).map(Result::<_, Error>::Ok))
+            })
+            .try_flatten()
+            .take_while(|res| match res {
+                Ok((_, exists)) => future::ready(*exists),
+                // Take errors since they will just be propagated to the caller,
+                // and if we don't take them then the caller won't know
+                // about the error.
+                Err(_) => future::ready(true),
+            })
+            .try_collect()
+            .await?;
+
+        Ok(imported.last().map(|(revidx, _)| *revidx))
+    }
+}
+
+fn get_changeset_stream(
+    revlogrepo: &RevlogRepo,
+    changeset: Option<HgNodeHash>,
+    skip: Option<usize>,
+    commits_limit: Option<usize>,
+) -> impl Stream<Item = Result<(RevIdx, HgNodeHash), Error>> + 'static {
+    let changesets = match changeset {
+        Some(hash) => {
+            let maybe_idx = revlogrepo.get_rev_idx_for_changeset(HgChangesetId::new(hash));
+            stream::once(async move {
+                match maybe_idx {
+                    Ok(idx) => Ok((idx, hash)),
+                    Err(err) => Err(format_err!("{} not found in revlog repo: {}", hash, err)),
+                }
+            })
+            .left_stream()
+        }
+        None => revlogrepo.changesets().compat().right_stream(),
+    };
+
+    let changesets = match skip {
+        None => changesets.left_stream(),
+        Some(skip) => changesets.skip(skip).right_stream(),
+    };
+
+    match commits_limit {
+        None => changesets.left_stream(),
+        Some(limit) => changesets.take(limit).right_stream(),
     }
 }
