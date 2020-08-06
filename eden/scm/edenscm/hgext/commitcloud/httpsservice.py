@@ -150,6 +150,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
                     raise ccerror.RegistrationError(self.ui, _("unauthorized client"))
                 if resp.status == httplib.FORBIDDEN:
                     raise ccerror.RegistrationError(self.ui, _("forbidden client"))
+                if resp.status == httplib.BAD_REQUEST:
+                    raise ccerror.BadRequestError(self.ui, resp.reason)
                 if resp.status != httplib.OK:
                     raise ccerror.ServiceError(
                         self.ui, "%d %s" % (resp.status, resp.reason)

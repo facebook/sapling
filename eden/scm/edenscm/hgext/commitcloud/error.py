@@ -80,17 +80,18 @@ class TLSConfigurationError(error.Abort):
         )
 
 
-class ServiceError(error.Abort):
-    """Commit Cloud errors from remote service"""
-
+class BadRequestError(error.Abort):
     def __init__(self, ui, message, *args):
-        host = ui.config("commitcloud", "remote_host")
-        port = ui.configint("commitcloud", "remote_port")
-        details = _(
-            "(the commit cloud service endpoint is '%s:%d' - retry might help)"
-        ) % (host, port)
-        contact = _("(please contact %s if this error persists)") % getownerteam(ui)
-        message = "service error: %s\n%s\n%s" % (message, details, contact)
+        ui.log("commitcloud_error", commitcloud_sync_error="bad request error")
+        super(BadRequestError, self).__init__(message, *args, component="commitcloud")
+
+
+class ServiceError(error.Abort):
+    def __init__(self, ui, message, *args):
+        helptext = _(
+            "(retry might help, please contact %s if this error persists)"
+        ) % getownerteam(ui)
+        message = "service error: %s\n%s" % (message, helptext)
         ui.log("commitcloud_error", commitcloud_sync_error="service error")
         super(ServiceError, self).__init__(message, *args, component="commitcloud")
 
