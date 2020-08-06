@@ -16,7 +16,7 @@ use crate::errors::HttpClientError;
 use crate::handler::Buffered;
 use crate::header::Header;
 use crate::receiver::ResponseStreams;
-use crate::stream::CborStream;
+use crate::stream::{BufferedStream, CborStream};
 
 #[derive(Debug)]
 pub struct Response {
@@ -60,6 +60,7 @@ impl TryFrom<&mut Buffered> for Response {
 
 pub type AsyncBody = Pin<Box<dyn Stream<Item = Result<Vec<u8>, HttpClientError>> + Send + 'static>>;
 pub type CborStreamBody<T> = CborStream<T, AsyncBody, Vec<u8>, HttpClientError>;
+pub type BufferedStreamBody = BufferedStream<AsyncBody, Vec<u8>, HttpClientError>;
 
 pub struct AsyncResponse {
     pub version: Version,
@@ -133,5 +134,11 @@ impl AsyncResponse {
     /// incoming data as a stream of CBOR-serialized values.
     pub fn into_cbor_stream<T: DeserializeOwned>(self) -> CborStreamBody<T> {
         CborStream::new(self.body)
+    }
+
+    /// Create a buffered body stream that ensures that all yielded chunks
+    /// (except the last) are at least as large as the given chunk size.
+    pub fn buffered(self, size: usize) -> BufferedStreamBody {
+        BufferedStream::new(self.body, size)
     }
 }

@@ -30,4 +30,4 @@ pub use receiver::Receiver;
 pub use request::{Method, Request, StreamRequest};
 pub use response::{AsyncBody, AsyncResponse, Response};
 pub use stats::Stats;
-pub use stream::CborStream;
+pub use stream::{BufferedStream, CborStream};

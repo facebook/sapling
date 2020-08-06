@@ -115,7 +115,7 @@ where
 /// data from bytes streams that consist largely of small chunks.
 #[pin_project]
 #[must_use = "streams do nothing unless polled"]
-struct BufferedStream<S, B, E> {
+pub struct BufferedStream<S, B, E> {
     #[pin]
     inner: S,
     buffer: Vec<u8>,
@@ -125,7 +125,7 @@ struct BufferedStream<S, B, E> {
 }
 
 impl<S, B, E> BufferedStream<S, B, E> {
-    fn new(inner: S, n: usize) -> Self {
+    pub(crate) fn new(inner: S, n: usize) -> Self {
         Self {
             inner,
             buffer: Vec::with_capacity(n),
