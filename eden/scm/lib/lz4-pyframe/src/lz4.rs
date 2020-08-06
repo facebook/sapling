@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
+use crate::Result;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use libc::{c_int, c_void};
 use lz4_sys::{
@@ -40,9 +40,21 @@ extern "C" {
 }
 
 #[derive(Debug, Error)]
-#[error("{message:?}")]
-pub struct LZ4Error {
-    message: String,
+pub enum LZ4Error {
+    #[error("{message:?}")]
+    Generic { message: String },
+
+    #[error("{source:?}")]
+    Decompression {
+        #[from]
+        source: LZ4DecompressionError,
+    },
+
+    #[error("{source:?}")]
+    Io {
+        #[from]
+        source: std::io::Error,
+    },
 }
 
 #[derive(Error, Debug)]
@@ -112,7 +124,7 @@ impl Drop for StreamEncoderHC {
 pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<()> {
     let stream = StreamDecoder(unsafe { LZ4_createStreamDecode() });
     if stream.0.is_null() {
-        return Err(LZ4Error {
+        return Err(LZ4Error::Generic {
             message: "Unable to construct lz4 stream decoder".to_string(),
         }
         .into());
@@ -157,7 +169,7 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
 
     let stream = StreamEncoder(unsafe { LZ4_createStream() });
     if stream.0.is_null() {
-        return Err(LZ4Error {
+        return Err(LZ4Error::Generic {
             message: "unable to construct LZ4 stream encoder".to_string(),
         }
         .into());
@@ -190,7 +202,7 @@ pub fn compresshc(data: &[u8]) -> Result<Vec<u8>> {
 
     let stream = StreamEncoderHC::new();
     if stream.0.is_null() {
-        return Err(LZ4Error {
+        return Err(LZ4Error::Generic {
             message: "unable to construct LZ4 stream encoder".to_string(),
         }
         .into());
@@ -220,7 +232,7 @@ pub fn compresshc(data: &[u8]) -> Result<Vec<u8>> {
 
 fn check_error(result: i32) -> Result<i32> {
     if result < 0 {
-        return Err(LZ4Error {
+        return Err(LZ4Error::Generic {
             message: format!("lz4 failed with error '{:?}'", result),
         }
         .into());
