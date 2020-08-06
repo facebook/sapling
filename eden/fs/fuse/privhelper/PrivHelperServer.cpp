@@ -342,7 +342,7 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
   // a shared value.
   // Then we can wait for a short grace period to see if that got populated
   // with an error and propagate that.
-  auto shared_errno = std::make_shared<int>(0);
+  auto shared_errno = std::make_shared<std::atomic<int>>(0);
 
   auto thr = std::thread([args, mountFlags, shared_errno]() mutable {
     auto res = mount(OSXFUSE_NAME, args.mntpath, mountFlags, &args);
