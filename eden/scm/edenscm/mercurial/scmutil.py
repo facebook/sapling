@@ -19,6 +19,8 @@ import os
 import re
 import socket
 import subprocess
+import time
+import traceback
 import weakref
 
 from . import (
@@ -143,9 +145,13 @@ def callcatch(ui, func):
     try:
         try:
             return func()
-        except:  # re-raises
+        except Exception as ex:  # re-raises
             ui.traceback()
+
+            # Log error info for all non-zero exits.
+            _uploadtraceback(ui, str(ex), traceback.format_exc())
             raise
+
     # Global exception handling, alphabetically
     # Mercurial-specific first, followed by built-in and library exceptions
     except error.LockHeld as inst:
@@ -293,6 +299,20 @@ def callcatch(ui, func):
             raise
 
     return -1
+
+
+def _uploadtraceback(ui, message, trace):
+    key = "flat/errortrace-%(host)s-%(pid)s-%(time)s" % {
+        "host": socket.gethostname(),
+        "pid": os.getpid(),
+        "time": time.time(),
+    }
+
+    payload = message + "\n\n" + trace
+    # TODO: Move this into a background task that renders from
+    # blackbox instead.
+    ui.log("errortrace", "Trace:\n%s\n", trace, key=key, payload=payload)
+    ui.log("errortracekey", "Trace key:%s\n", key, errortracekey=key)
 
 
 def _printstat(ui, path):
