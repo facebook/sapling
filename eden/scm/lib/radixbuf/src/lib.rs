@@ -10,3 +10,6 @@ pub mod errors;
 pub mod key;
 pub mod radix;
 pub mod traits;
+
+pub use errors::ErrorKind as Error;
+pub type Result<T> = std::result::Result<T, Error>;

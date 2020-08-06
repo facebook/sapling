@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.20"
 thiserror = "1.0.5"
 vlqencoding = { path = "../vlqencoding" }
 

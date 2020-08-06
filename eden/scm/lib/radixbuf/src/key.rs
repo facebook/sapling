@@ -27,9 +27,9 @@
 
 use crate::errors::ErrorKind;
 use crate::traits::Resize;
-use anyhow::{bail, Result};
-use std::io::{Cursor, Seek, SeekFrom, Write};
-use vlqencoding::{VLQDecode, VLQEncode};
+use crate::Result;
+use std::io::Write;
+use vlqencoding::{VLQDecodeAt, VLQEncode};
 
 /// Integer that maps to a key (`[u8]`).
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Default)]
@@ -78,7 +78,7 @@ impl FixedKey {
         // LANG: Consider making 20 a type parameter once supported.
         let end_pos = start_pos + 20;
         if key_buf.len() < end_pos {
-            bail!(ErrorKind::InvalidKeyId(key_id));
+            return Err(ErrorKind::InvalidKeyId(key_id));
         }
         Ok(&key_buf[start_pos..end_pos])
     }
@@ -100,14 +100,13 @@ impl VariantKey {
     #[inline]
     pub fn read<'a, K: AsRef<[u8]>>(key_buf: &'a K, key_id: KeyId) -> Result<&'a [u8]> {
         let key_buf = key_buf.as_ref();
-        let mut reader = Cursor::new(key_buf);
-        reader.seek(SeekFrom::Start(key_id.into()))?;
-        let key_len: usize = reader.read_vlq()?;
-
-        let start_pos = reader.seek(SeekFrom::Current(0))? as usize;
+        let (key_len, vlq_size): (usize, _) = key_buf
+            .read_vlq_at(key_id.0 as usize)
+            .map_err(|_| ErrorKind::InvalidKeyId(key_id))?;
+        let start_pos = key_id.0 as usize + vlq_size;
         let end_pos = start_pos + key_len;
         if key_buf.len() < end_pos {
-            bail!(ErrorKind::InvalidKeyId(key_id))
+            return Err(ErrorKind::InvalidKeyId(key_id));
         }
         Ok(&key_buf[start_pos as usize..end_pos as usize])
     }

@@ -231,7 +231,7 @@ where
 }
 
 /// Helper method similar to `radixbuf::key::FixedKey::read`, but takes a revision number instead.
-fn rev_to_node<K: AsRef<[RevlogEntry]>>(changelogi: &K, rev: KeyId) -> Result<&[u8]> {
+fn rev_to_node<K: AsRef<[RevlogEntry]>>(changelogi: &K, rev: KeyId) -> radixbuf::Result<&[u8]> {
     let buf = changelogi.as_ref();
     let rev_usize: usize = rev.into();
     let entry = &buf[rev_usize];

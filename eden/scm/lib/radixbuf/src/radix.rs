@@ -77,7 +77,7 @@ use crate::base16::Base16Iter;
 use crate::errors::ErrorKind;
 use crate::key::KeyId;
 use crate::traits::Resize;
-use anyhow::{bail, Result};
+use crate::Result;
 
 /// Number of children ("pointer"s) a radix node has
 pub const RADIX_NCHILDREN: usize = 16;
@@ -98,7 +98,7 @@ impl RadixOffset {
     pub fn create<R: Resize<u32> + AsRef<[u32]>>(vec: &mut R) -> Result<Self> {
         let pos = vec.as_ref().len();
         if (pos as u32) as usize != pos {
-            bail!(ErrorKind::OffsetOverflow(pos as u64));
+            return Err(ErrorKind::OffsetOverflow(pos as u64));
         }
         vec.resize(pos + RADIX_NCHILDREN, 0);
         Ok(RadixOffset(pos as u32))
@@ -136,12 +136,12 @@ impl RadixOffset {
         let mut radix = self;
         for (i, b) in seq.enumerate() {
             if b >= RADIX_NCHILDREN as u8 {
-                bail!(ErrorKind::InvalidBase16(b));
+                return Err(ErrorKind::InvalidBase16(b));
             }
 
             let pos = radix.0 as usize + usize::from(b);
             if pos >= buf.len() {
-                bail!(ErrorKind::OffsetOverflow(pos as u64));
+                return Err(ErrorKind::OffsetOverflow(pos as u64));
             }
 
             let v = u32::from_be(buf[pos]);
@@ -173,7 +173,7 @@ impl RadixOffset {
         node: RadixOffset,
     ) -> Result<()> {
         if node.0 > 0x7fff_ffff {
-            bail!(ErrorKind::OffsetOverflow(node.0 as u64));
+            return Err(ErrorKind::OffsetOverflow(node.0 as u64));
         }
         self.write_raw(vec, index, node.0 << 1)
     }
@@ -188,7 +188,7 @@ impl RadixOffset {
     ) -> Result<()> {
         let id: u32 = key_id.into();
         if id > 0x7fff_ffff {
-            bail!(ErrorKind::OffsetOverflow(key_id.into()));
+            return Err(ErrorKind::OffsetOverflow(key_id.into()));
         }
         self.write_raw(vec, index, (id << 1) | 1)
     }
@@ -199,7 +199,7 @@ impl RadixOffset {
         let vec = vec.as_mut();
         let pos = self.0 as usize + usize::from(index);
         if pos > vec.len() {
-            bail!(ErrorKind::OffsetOverflow(pos as u64));
+            return Err(ErrorKind::OffsetOverflow(pos as u64));
         }
         vec[pos] = value.to_be();
         Ok(())
