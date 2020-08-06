@@ -185,7 +185,7 @@ impl PyNameIter {
 }
 
 impl Iterator for PyNameIter {
-    type Item = Result<Vertex>;
+    type Item = dag::Result<Vertex>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.errored {

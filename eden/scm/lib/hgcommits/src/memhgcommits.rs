@@ -58,7 +58,7 @@ impl AppendCommits for MemHgCommits {
             .cloned()
             .map(|c| (c.vertex.clone(), c))
             .collect();
-        let parent_func = |v: Vertex| -> Result<Vec<Vertex>> {
+        let parent_func = |v: Vertex| -> dag::Result<Vec<Vertex>> {
             match commits.get(&v) {
                 Some(commit) => Ok(commit.parents.clone()),
                 None => bail!("unknown commit ({:?}) at add_commits", &v),
@@ -99,94 +99,94 @@ impl StripCommits for MemHgCommits {
 }
 
 impl IdConvert for MemHgCommits {
-    fn vertex_id(&self, name: Vertex) -> Result<Id> {
+    fn vertex_id(&self, name: Vertex) -> dag::Result<Id> {
         self.dag.vertex_id(name)
     }
-    fn vertex_id_with_max_group(&self, name: &Vertex, max_group: Group) -> Result<Option<Id>> {
+    fn vertex_id_with_max_group(&self, name: &Vertex, max_group: Group) -> dag::Result<Option<Id>> {
         self.dag.vertex_id_with_max_group(name, max_group)
     }
-    fn vertex_name(&self, id: Id) -> Result<Vertex> {
+    fn vertex_name(&self, id: Id) -> dag::Result<Vertex> {
         self.dag.vertex_name(id)
     }
-    fn contains_vertex_name(&self, name: &Vertex) -> Result<bool> {
+    fn contains_vertex_name(&self, name: &Vertex) -> dag::Result<bool> {
         self.dag.contains_vertex_name(name)
     }
 }
 
 impl PrefixLookup for MemHgCommits {
-    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<Vertex>> {
+    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> dag::Result<Vec<Vertex>> {
         self.dag.vertexes_by_hex_prefix(hex_prefix, limit)
     }
 }
 
 impl DagAlgorithm for MemHgCommits {
-    fn sort(&self, set: &Set) -> Result<Set> {
+    fn sort(&self, set: &Set) -> dag::Result<Set> {
         self.dag.sort(set)
     }
-    fn parent_names(&self, name: Vertex) -> Result<Vec<Vertex>> {
+    fn parent_names(&self, name: Vertex) -> dag::Result<Vec<Vertex>> {
         self.dag.parent_names(name)
     }
-    fn all(&self) -> Result<Set> {
+    fn all(&self) -> dag::Result<Set> {
         self.dag.all()
     }
-    fn ancestors(&self, set: Set) -> Result<Set> {
+    fn ancestors(&self, set: Set) -> dag::Result<Set> {
         self.dag.ancestors(set)
     }
-    fn parents(&self, set: Set) -> Result<Set> {
+    fn parents(&self, set: Set) -> dag::Result<Set> {
         self.dag.parents(set)
     }
-    fn first_ancestor_nth(&self, name: Vertex, n: u64) -> Result<Vertex> {
+    fn first_ancestor_nth(&self, name: Vertex, n: u64) -> dag::Result<Vertex> {
         self.dag.first_ancestor_nth(name, n)
     }
-    fn heads(&self, set: Set) -> Result<Set> {
+    fn heads(&self, set: Set) -> dag::Result<Set> {
         self.dag.heads(set)
     }
-    fn children(&self, set: Set) -> Result<Set> {
+    fn children(&self, set: Set) -> dag::Result<Set> {
         self.dag.children(set)
     }
-    fn roots(&self, set: Set) -> Result<Set> {
+    fn roots(&self, set: Set) -> dag::Result<Set> {
         self.dag.roots(set)
     }
-    fn gca_one(&self, set: Set) -> Result<Option<Vertex>> {
+    fn gca_one(&self, set: Set) -> dag::Result<Option<Vertex>> {
         self.dag.gca_one(set)
     }
-    fn gca_all(&self, set: Set) -> Result<Set> {
+    fn gca_all(&self, set: Set) -> dag::Result<Set> {
         self.dag.gca_all(set)
     }
-    fn common_ancestors(&self, set: Set) -> Result<Set> {
+    fn common_ancestors(&self, set: Set) -> dag::Result<Set> {
         self.dag.common_ancestors(set)
     }
-    fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> Result<bool> {
+    fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> dag::Result<bool> {
         self.dag.is_ancestor(ancestor, descendant)
     }
-    fn heads_ancestors(&self, set: Set) -> Result<Set> {
+    fn heads_ancestors(&self, set: Set) -> dag::Result<Set> {
         self.dag.heads_ancestors(set)
     }
-    fn range(&self, roots: Set, heads: Set) -> Result<Set> {
+    fn range(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         self.dag.range(roots, heads)
     }
-    fn only(&self, reachable: Set, unreachable: Set) -> Result<Set> {
+    fn only(&self, reachable: Set, unreachable: Set) -> dag::Result<Set> {
         self.dag.only(reachable, unreachable)
     }
-    fn only_both(&self, reachable: Set, unreachable: Set) -> Result<(Set, Set)> {
+    fn only_both(&self, reachable: Set, unreachable: Set) -> dag::Result<(Set, Set)> {
         self.dag.only_both(reachable, unreachable)
     }
-    fn descendants(&self, set: Set) -> Result<Set> {
+    fn descendants(&self, set: Set) -> dag::Result<Set> {
         self.dag.descendants(set)
     }
-    fn reachable_roots(&self, roots: Set, heads: Set) -> Result<Set> {
+    fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         self.dag.reachable_roots(roots, heads)
     }
 }
 
 impl ToIdSet for MemHgCommits {
-    fn to_id_set(&self, set: &Set) -> Result<IdSet> {
+    fn to_id_set(&self, set: &Set) -> dag::Result<IdSet> {
         self.dag.to_id_set(set)
     }
 }
 
 impl ToSet for MemHgCommits {
-    fn to_set(&self, set: &IdSet) -> Result<Set> {
+    fn to_set(&self, set: &IdSet) -> dag::Result<Set> {
         self.dag.to_set(set)
     }
 }

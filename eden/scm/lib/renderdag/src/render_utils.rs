@@ -17,7 +17,7 @@ pub fn render_namedag(
 ) -> Result<String> {
     let mut renderer = crate::GraphRowRenderer::new().output().build_box_drawing();
 
-    let iter: Vec<_> = dag.all()?.iter()?.collect::<Result<_>>()?;
+    let iter: Vec<_> = dag.all()?.iter()?.collect::<dag::Result<_>>()?;
 
     let mut out = String::new();
     for node in iter {

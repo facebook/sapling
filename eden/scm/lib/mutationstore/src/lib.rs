@@ -289,7 +289,7 @@ impl MutationStore {
             .iter()
             .map(|s| VertexName::copy_from(s.as_ref()))
             .collect::<Vec<_>>();
-        let parent_func = move |node| -> Result<Vec<VertexName>> {
+        let parent_func = move |node| -> dag::Result<Vec<VertexName>> {
             let mut result = Vec::new();
             for entry in self.log.lookup(INDEX_SUCC, &node)? {
                 let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;

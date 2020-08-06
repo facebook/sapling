@@ -199,7 +199,7 @@ impl Dag {
             .insert_many(ctx, self.repo_id, mem_idmap.iter().collect::<Vec<_>>())
             .await?;
 
-        let get_vertex_parents = |vertex: Vertex| -> Result<Vec<Vertex>> {
+        let get_vertex_parents = |vertex: Vertex| -> dag::Result<Vec<Vertex>> {
             let cs_id = match mem_idmap.find_changeset_id(vertex) {
                 None => start_state.assignments.get_changeset_id(vertex)?,
                 Some(v) => v,

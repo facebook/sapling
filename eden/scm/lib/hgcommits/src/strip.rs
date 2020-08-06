@@ -38,7 +38,7 @@ pub(crate) fn migrate_commits(
     let heads: Vec<Vertex> = orig
         .heads(set.clone())?
         .iter_rev()?
-        .collect::<Result<Vec<_>>>()?;
+        .collect::<dag::Result<Vec<_>>>()?;
     let commits: Vec<HgCommit> = set
         .iter_rev()?
         .map(|vertex| -> Result<HgCommit> {
