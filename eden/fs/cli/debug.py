@@ -26,6 +26,7 @@ from typing import (
     Optional,
     Pattern,
     Tuple,
+    Type,
     Union,
     cast,
 )
@@ -46,7 +47,14 @@ from fb303_core import BaseService
 from thrift.protocol.TSimpleJSONProtocol import TSimpleJSONProtocolFactory
 from thrift.util import Serializer
 
-from . import cmd_util, stats_print, subcmd as subcmd_mod, tabulate, ui as ui_mod
+from . import (
+    cmd_util,
+    prefetch_profile as prefetch_profile_mod,
+    stats_print,
+    subcmd as subcmd_mod,
+    tabulate,
+    ui as ui_mod,
+)
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
 from .util import format_cmd, format_mount, split_inodes_by_operation_type
@@ -1265,10 +1273,11 @@ class DebugCmd(Subcmd):
         if sys.platform != "win32":
             from . import debug_posix  # noqa: F401
 
+        subcmd_add_list: List[Type[Subcmd]] = [prefetch_profile_mod.PrefetchProfileCmd]
         # Save the parser so we can use it to print help in run() if we are
         # called with no arguments.
         self.parser = parser
-        self.add_subcommands(parser, debug_cmd.commands)
+        self.add_subcommands(parser, debug_cmd.commands + subcmd_add_list)
 
     def run(self, args: argparse.Namespace) -> int:
         self.parser.print_help()

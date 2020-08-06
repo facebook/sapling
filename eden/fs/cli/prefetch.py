@@ -6,60 +6,11 @@
 import argparse
 import os
 from pathlib import Path
-from typing import Optional
 
 from facebook.eden.ttypes import GlobParams
 
-from . import subcmd as subcmd_mod, util
-from .cmd_util import get_eden_instance, require_checkout
+from .cmd_util import require_checkout
 from .subcmd import Subcmd
-
-
-prefetch_cmd = subcmd_mod.Decorator()
-
-
-@prefetch_cmd(
-    "record-profile",
-    "Start recording fetched file paths. When finish-profile is"
-    " called file paths will be saved to a prefetch profile",
-)
-class RecordProfileCmd(Subcmd):
-    def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        with instance.get_thrift_client() as client:
-            client.startRecordingBackingStoreFetch()
-        return 0
-
-
-@prefetch_cmd(
-    "finish-profile",
-    "Stop recording fetched file paths and save previously"
-    " collected fetched file paths in the output prefetch profile",
-)
-class FinishProfileCmd(Subcmd):
-    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "output_path",
-            nargs="?",
-            help="The output path to store the prefetch profile",
-        )
-
-    def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        with instance.get_thrift_client() as client:
-            files = client.stopRecordingBackingStoreFetch()
-            output_path = (
-                args.output_path
-                if args.output_path
-                else os.path.abspath("prefetch_profile.txt")
-            )
-            with open(output_path, "w") as f:
-                f.write("HgQueuedBackingStore:\n")
-                for path in files.fetchedFilePaths["HgQueuedBackingStore"]:
-                    f.write(os.fsdecode(path))
-                    f.write("\n")
-                f.write("\n")
-        return 0
 
 
 class PrefetchCmd(Subcmd):
@@ -92,7 +43,6 @@ class PrefetchCmd(Subcmd):
         parser.add_argument(
             "PATTERN", nargs="*", help="Filename patterns to match via fnmatch"
         )
-        self.add_subcommands(parser, prefetch_cmd.commands)
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, rel_path = require_checkout(args, args.repo)
@@ -117,5 +67,4 @@ class PrefetchCmd(Subcmd):
             if not args.silent:
                 for name in result.matchingFiles:
                     print(os.fsdecode(name))
-
         return 0
