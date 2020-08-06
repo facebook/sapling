@@ -18,7 +18,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use ascii::AsciiString;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
@@ -102,7 +102,8 @@ impl<'a> Blobimport<'a> {
 
         let repo_id = blobrepo.get_repoid();
 
-        let revlogrepo = RevlogRepo::open(revlogrepo_path).expect("cannot open revlogrepo");
+        let revlogrepo = RevlogRepo::open(&revlogrepo_path)
+            .with_context(|| format!("While opening revlog repo at {:?}", revlogrepo_path))?;
         let stale_bookmarks_fut = bookmark::read_bookmarks(&revlogrepo).compat();
 
         let log_step = match commits_limit {
