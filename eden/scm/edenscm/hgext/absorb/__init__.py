@@ -911,7 +911,7 @@ def overlaydiffcontext(ctx, chunks):
         lines = mdiff.splitnewlines(ctx[path].data())
         for a1, a2, blines in patches:
             lines[a1:a2] = blines
-        memworkingcopy[path] = "".join(lines)
+        memworkingcopy[path] = b"".join(lines)
     return overlaycontext(memworkingcopy, ctx)
 
 
