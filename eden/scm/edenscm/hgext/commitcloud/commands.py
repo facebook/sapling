@@ -568,7 +568,9 @@ def cloudhide(ui, repo, *revs, **opts):
 
     # Find the heads we need to remove because we are removing the last bookmark
     # to it.
-    remainingheads = set(map(pycompat.encodeutf8, cloudrefs.heads)) - removeheads
+    remainingheads = set(
+        set(map(pycompat.encodeutf8, cloudrefs.heads)) & dag.all() - removeheads
+    )
     for bookmark in removebookmarks:
         nodeutf8 = cloudrefs.bookmarks[bookmark]
         node = pycompat.encodeutf8(nodeutf8)
