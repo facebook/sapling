@@ -234,7 +234,7 @@ pub trait Tagged: Error + Send + Sync + Sized + 'static {
 
 #[derive(Debug, Error)]
 #[error("intentional error for debugging with message '{0}'")]
-struct IntentionalError(String);
+pub struct IntentionalError(String);
 
 impl Tagged for IntentionalError {
     fn metadata(&self) -> CommonMetadata {
@@ -243,9 +243,14 @@ impl Tagged for IntentionalError {
     }
 }
 
-pub fn intentional_error() -> anyhow::Result<u8> {
-    // .tagged() method on taggederror::Tagged trait attaches metadata and wraps in anyhow::Error
-    Err(IntentionalError(String::from("intentional_error")).tagged()).into()
+pub fn intentional_error(tagged: bool) -> anyhow::Result<u8> {
+    if tagged {
+        // Metadata explicitly attached with .tagged()
+        return Err(IntentionalError(String::from("intentional_error")).tagged());
+    } else {
+        // Metadata is automatically associated by taggederror_util::AnyhowEdenExt
+        bail!(IntentionalError(String::from("intentional_error")))
+    }
 }
 
 pub fn intentional_bail() -> anyhow::Result<u8> {
@@ -359,8 +364,9 @@ macro_rules! bail {
 /// might contain metadata, and is not meant to be wrapped in anyhow itself,
 /// or otherwise passed around as an error wrapper type.
 pub struct FilteredAnyhow<'a> {
-    mode: PrintMode,
     pub err: &'a anyhow::Error,
+    mode: PrintMode,
+    metadata_func: fn(&'a anyhow::Error) -> CommonMetadata,
 }
 
 impl<'a> FilteredAnyhow<'a> {
@@ -368,11 +374,18 @@ impl<'a> FilteredAnyhow<'a> {
         FilteredAnyhow {
             err,
             mode: PrintMode::NoTags,
+            metadata_func: |e| e.common_metadata(),
         }
     }
 
-    pub fn with_mode(err: &'a anyhow::Error, mode: PrintMode) -> Self {
-        FilteredAnyhow { mode, err }
+    pub fn with_metadata_func(mut self, func: fn(&'a anyhow::Error) -> CommonMetadata) -> Self {
+        self.metadata_func = func;
+        self
+    }
+
+    pub fn with_mode(mut self, mode: PrintMode) -> Self {
+        self.mode = mode;
+        self
     }
 
     pub fn no_tags(mut self) -> Self {
@@ -414,7 +427,7 @@ impl<'a> Display for FilteredAnyhow<'a> {
 
             if self.mode == PrintMode::SeparateTags {
                 write!(f, "\n\nerror tags: ")?;
-                write!(f, "{}", self.err.common_metadata())?;
+                write!(f, "{}", (self.metadata_func)(self.err))?;
             }
         }
 
@@ -459,7 +472,7 @@ impl<'a> Debug for FilteredAnyhow<'a> {
 
         if self.mode == PrintMode::SeparateTags {
             write!(f, "\n\nerror tags: ")?;
-            write!(f, "{}", self.err.common_metadata())?;
+            write!(f, "{}", (self.metadata_func)(self.err))?;
         }
 
         // No backtrace for now

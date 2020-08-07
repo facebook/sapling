@@ -1,0 +1,9 @@
+[package]
+name = "taggederror-util"
+version = "0.0.1"
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.20"
+taggederror = { path = "../taggederror" }

@@ -13,6 +13,7 @@ indexedlog = { path = "../indexedlog" }
 pipe = "0.2"
 streampager = "0.8"
 taggederror = { path = "../taggederror" }
+taggederror-util = { path = "../taggederror-util" }
 thiserror = "1.0.5"
 thrift-types = { path = "../thrift-types" }
 tracing = "0.1"

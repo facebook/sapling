@@ -7,6 +7,7 @@
 
 use std::borrow::Cow;
 use taggederror::FilteredAnyhow;
+use taggederror_util::AnyhowEdenExt;
 use thiserror::Error;
 use thrift_types::edenfs as eden;
 
@@ -73,10 +74,15 @@ pub fn print_error(err: &anyhow::Error, io: &mut crate::io::IO, args: &[String])
         if args.iter().any(|v| v == "--traceback") {
             let _ = io.write_err(format!(
                 "abort: {:?}\n",
-                FilteredAnyhow::new(err).separate_tags()
+                FilteredAnyhow::new(err)
+                    .with_metadata_func(|e| e.eden_metadata())
+                    .separate_tags()
             ));
         } else {
-            let _ = io.write_err(format!("abort: {}\n", FilteredAnyhow::new(err)));
+            let _ = io.write_err(format!(
+                "abort: {}\n",
+                FilteredAnyhow::new(err).with_metadata_func(|e| e.eden_metadata())
+            ));
         }
     }
 }

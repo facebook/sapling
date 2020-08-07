@@ -347,5 +347,5 @@ pub fn debugdynamicconfig(opts: DebugDynamicConfigOpts, _io: &mut IO, repo: Repo
 
 pub fn debugcauserusterror(_opts: NoOpts, _io: &mut IO, _repo: Repo) -> Result<u8> {
     // Add additional metadata via AnyhowExt trait to an anyhow::Error or anyhow::Result
-    Ok(intentional_error().with_fault(Fault::Request)?)
+    Ok(intentional_error(false).with_fault(Fault::Request)?)
 }

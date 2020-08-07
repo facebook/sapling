@@ -19,5 +19,6 @@ python27-sys = { version = "0.5", optional = true }
 python3-sys = { version = "0.5", optional = true }
 serde = "1"
 taggederror = { path = "../taggederror" }
+taggederror-util = { path = "../taggederror-util" }
 thiserror = "1.0.5"
 types = { path = "../types" }

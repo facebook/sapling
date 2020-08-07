@@ -9,6 +9,7 @@ use cpython::*;
 use cpython_ext::{error, ResultPyErrExt};
 
 use taggederror::{intentional_bail, intentional_error, CommonMetadata, Fault, FilteredAnyhow};
+use taggederror_util::AnyhowEdenExt;
 
 py_exception!(error, IndexedLogError);
 py_exception!(error, MetaLogError);
@@ -131,9 +132,16 @@ fn register_error_handlers() {
     }
 
     fn fallback_error_handler(py: Python, e: &error::Error, m: CommonMetadata) -> Option<PyErr> {
-        TaggedExceptionData::create_instance(py, m, format!("{:?}", FilteredAnyhow::new(e)))
-            .map(|data| PyErr::new::<RustError, _>(py, data))
-            .ok()
+        TaggedExceptionData::create_instance(
+            py,
+            m,
+            format!(
+                "{:?}",
+                FilteredAnyhow::new(e).with_metadata_func(|e| e.eden_metadata())
+            ),
+        )
+        .map(|data| PyErr::new::<RustError, _>(py, data))
+        .ok()
     }
 
     error::register("010-specific", specific_error_handler);
@@ -141,7 +149,7 @@ fn register_error_handlers() {
 }
 
 fn py_intentional_error(py: Python) -> PyResult<PyInt> {
-    Ok(intentional_error()
+    Ok(intentional_error(false)
         .map(|r| r.to_py_object(py))
         .map_pyerr(py)?)
 }

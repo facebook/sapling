@@ -14,7 +14,8 @@ pub use anyhow::{Error, Result};
 use cpython::{exc, FromPyObject, ObjectProtocol, PyClone, PyList, PyModule, PyResult, Python};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use taggederror::{AnyhowExt, CommonMetadata, TaggedError};
+use taggederror::{CommonMetadata, TaggedError};
+use taggederror_util::AnyhowEdenExt;
 
 /// Extends the `Result` type to allow conversion to `PyResult` from a native
 /// Rust result.
@@ -96,7 +97,7 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
         self.map_err(|e| {
             let e: anyhow::Error = e.into();
             let mut e = &e;
-            let metadata = e.common_metadata();
+            let metadata = e.eden_metadata();
             loop {
                 if let Some(e) = e.downcast_ref::<PyErr>() {
                     return e.inner.clone_ref(py);
