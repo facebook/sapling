@@ -431,3 +431,49 @@ Switch one more time. Bookmark stable should return and feature disappear.
   @  0 base: public
   
 
+Pull a commit from another workspace
+  $ hg pull -r b624c739a2da -q
+  $ showgraph
+  o  7 S: draft
+  |
+  | o  6 M: public  remote/master
+  |/
+  | o  4 D (W2): draft book (W2)
+  | |
+  | o  3 C (W2): draft
+  |/
+  | o  1 A (W1): draft
+  |/
+  @  0 base: public
+  
+
+Switch back to W1
+
+  $ hg cloud join -w w1 --switch -q
+  $ showgraph
+  o  6 M: public  remote/master
+  |
+  | o  5 F: public  remote/feature
+  |/
+  | o  2 B (W1): draft book (W1)
+  | |
+  | o  1 A (W1): draft
+  |/
+  @  0 base: public
+  
+
+Switch back to W2 and check that the pulled commit is there.
+  $ hg cloud join -w w2 --switch -q
+  $ showgraph
+  o  7 S: draft
+  |
+  | o  6 M: public  remote/master
+  |/
+  | o  4 D (W2): draft book (W2)
+  | |
+  | o  3 C (W2): draft
+  |/
+  | o  1 A (W1): draft
+  |/
+  @  0 base: public
+  

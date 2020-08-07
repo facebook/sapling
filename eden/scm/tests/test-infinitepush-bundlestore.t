@@ -483,6 +483,8 @@ Have to use full hash because short hashes are not supported yet
   $ hg log -G -T '{node|short} {desc} {bookmarks}'
   @  fe8283fe1190 peercommit
   |
+  | o  8872775dd97a scratch amended commit
+  | |
   | o  d8c4f54ab678 scratchcommitwithpushrebase scratch/mybranch
   | |
   | o  2b5d271c7e0d scratchcommitnobook

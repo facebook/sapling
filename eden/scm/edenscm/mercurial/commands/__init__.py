@@ -65,6 +65,7 @@ from .. import (
     templatekw,
     ui as uimod,
     util,
+    visibility,
 )
 from ..i18n import _
 from ..node import bin, hex, nullid, nullrev, short
@@ -4776,6 +4777,18 @@ def pull(ui, repo, source="default", **opts):
                 implicitbookmarks.update(
                     bookmarks.selectivepullbookmarknames(repo, remotename)
                 )
+
+            # If any revision is given, ex. pull -r HASH and the commit is known locally make it visible again.
+            if revs:
+                if visibility.enabled(repo):
+                    visibility.add(
+                        repo,
+                        [
+                            repo[r].node()
+                            for r in revs
+                            if r in repo and repo[r].mutable()
+                        ],
+                    )
 
             pullopargs = {}
             if opts.get("bookmark") or implicitbookmarks:

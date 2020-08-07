@@ -146,16 +146,16 @@ Add second remote to the paths and update to the first master
   accessedremotenames_totalnum : 3
 
 Check pulling bookmark as a revset
-TODO: need to log bookmarks passed under -r as well as normal
 
   $ hg pull -r C_bookmark
   pulling from ssh://user@dummy/remoterepo
   no changes found
   $ checkaccessedbookmarks
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
+  d91e2f962bffb715a380162e945e6df13bf7aa3c bookmarks default/C_bookmark
   206754acf7d8d6a9d471f64406dc10c55a13db13 bookmarks default/master
   a6b4ed81a38e7d63d6b8ed66264a1fecd0ae90ef bookmarks secondremote/master
-  accessedremotenames_totalnum : 3
+  accessedremotenames_totalnum : 4
 
 Check updating to the remote bookmark
 
