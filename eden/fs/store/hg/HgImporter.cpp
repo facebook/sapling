@@ -639,36 +639,31 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
   return txnID;
 }
 
+namespace {
+std::string errStr() {
+#ifndef _WIN32
+  return folly::errnoStr(errno);
+#else
+  return win32ErrorToString(GetLastError());
+#endif
+}
+} // namespace
+
 void HgImporter::readFromHelper(void* buf, uint32_t size, StringPiece context) {
   size_t bytesRead;
 
 #ifdef _WIN32
-  try {
-    bytesRead = Pipe::read(helperOut_, buf, size);
-  } catch (const std::exception& ex) {
-    // The Pipe::read() code can throw std::system_error. Translate this to
-    // HgImporterError so that the higher-level code will retry on this error.
-    HgImporterError importErr(
-        "error reading ",
-        context,
-        " from debugedenimporthelper: ",
-        folly::exceptionStr(ex));
-    XLOG(ERR) << importErr.what();
-    throw importErr;
-  }
+  auto result = Pipe::read(helperOut_, buf, size);
 #else
   auto result = folly::readFull(helperOut_, buf, size);
+#endif
   if (result < 0) {
     HgImporterError err(
-        "error reading ",
-        context,
-        " from debugedenimporthelper: ",
-        folly::errnoStr(errno));
+        "error reading ", context, " from debugedenimporthelper: ", errStr());
     XLOG(ERR) << err.what();
     throw err;
   }
   bytesRead = static_cast<size_t>(result);
-#endif
   if (bytesRead != size) {
     // The helper process closed the pipe early.
     // This generally means that it exited.
@@ -687,34 +682,18 @@ void HgImporter::writeToHelper(
     size_t numIov,
     StringPiece context) {
 #ifdef _WIN32
-  try {
-    auto result = Pipe::writeiov(
-        helperIn_, iov, folly::to_narrow(folly::to_signed(numIov)));
-  } catch (const std::exception& ex) {
-    // The Pipe::read() code can throw std::system_error.  Translate this to
-    // HgImporterError so that the higher-level code will retry on this error.
-    HgImporterError importErr(
-        "error writing ",
-        context,
-        " to debugedenimporthelper: ",
-        folly::exceptionStr(ex));
-    XLOG(ERR) << importErr.what();
-    throw importErr;
-  }
+  auto result = Pipe::writevFull(helperIn_, iov, numIov);
 #else
   auto result = folly::writevFull(helperIn_, iov, numIov);
+#endif
   if (result < 0) {
     HgImporterError err(
-        "error writing ",
-        context,
-        " to debugedenimporthelper: ",
-        folly::errnoStr(errno));
+        "error writing ", context, " to debugedenimporthelper: ", errStr());
     XLOG(ERR) << err.what();
     throw err;
   }
   // writevFull() will always write the full contents or fail, so we don't need
   // to check that the length written matches our input.
-#endif
 }
 
 const ImporterOptions& HgImporter::getOptions() const {

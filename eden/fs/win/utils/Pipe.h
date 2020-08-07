@@ -7,6 +7,7 @@
 
 #pragma once
 #include <folly/portability/IOVec.h>
+#include <folly/portability/SysTypes.h>
 #include <folly/portability/Windows.h>
 
 namespace facebook {
@@ -43,13 +44,13 @@ class Pipe {
   // on error
   //
 
-  size_t read(void* buffer, DWORD BytesToRead);
-  size_t write(void* buffer, DWORD BytesToWrite);
+  ssize_t read(void* buffer, size_t nbytes);
+  ssize_t write(void* buffer, size_t nbytes);
 
-  static size_t read(HANDLE handle, void* buffer, DWORD BytesToRead);
+  static ssize_t read(HANDLE handle, void* buffer, size_t nbytes);
 
-  static size_t write(HANDLE handle, void* buffer, DWORD BytesToWrite);
-  static size_t writeiov(HANDLE handle, iovec* iov, int count);
+  static ssize_t write(HANDLE handle, void* buffer, size_t nbytes);
+  static ssize_t writevFull(HANDLE handle, iovec* iov, int count);
 
  private:
   HANDLE readHandle_ = nullptr;

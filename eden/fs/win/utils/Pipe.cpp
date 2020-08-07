@@ -28,8 +28,6 @@ Pipe::Pipe() {
   if (!CreatePipe(&readHandle_, &writeHandle_, &sec, 0)) {
     throw makeWin32ErrorExplicit(GetLastError(), "Failed to create a pipe");
   }
-  XLOG(DBG5) << "Handle Created: Read: " << readHandle_
-             << " Write: " << writeHandle_ << std::endl;
 }
 
 Pipe::~Pipe() {
@@ -41,85 +39,66 @@ Pipe::~Pipe() {
   }
 }
 
-size_t Pipe::read(HANDLE handle, void* buffer, DWORD bytesToRead) {
-  size_t bytesRead = 0;
-  DWORD read = 0;
-  DWORD remainingBytes = bytesToRead;
+ssize_t Pipe::read(HANDLE handle, void* buffer, size_t nbytes) {
+  ssize_t bytesRead = 0;
 
-  while (remainingBytes > 0) {
+  while (nbytes > 0) {
+    DWORD read = 0;
     if (!ReadFile(
             handle,
             ((char*)buffer + bytesRead),
-            remainingBytes,
+            folly::to_narrow(nbytes),
             &read,
             nullptr)) {
-      DWORD error = GetLastError();
-      XLOGF(
-          ERR,
-          "Error while reading from the pipe : bytesRead {}, Error: {} : {}",
-          bytesRead,
-          error,
-          win32ErrorToString(error));
-
-      throw makeWin32ErrorExplicit(error, "Error while reading from the pipe");
+      return -1;
     }
     bytesRead += read;
-    remainingBytes -= read;
+    nbytes -= read;
   }
-  XLOG(DBG5) << "Pipe::read-- bytesToRead:" << bytesToRead << "bytesRead"
-             << bytesRead << std::endl;
 
   return bytesRead;
 }
-size_t Pipe::write(HANDLE handle, void* buffer, DWORD bytesToWrite) {
-  size_t bytesWritten = 0;
-  DWORD written = 0;
-  DWORD remainingBytes = bytesToWrite;
 
-  while (remainingBytes > 0) {
+ssize_t Pipe::write(HANDLE handle, void* buffer, size_t nbytes) {
+  ssize_t bytesWritten = 0;
+
+  while (nbytes > 0) {
+    DWORD written = 0;
     if (!WriteFile(
             handle,
             (void*)((char*)buffer + bytesWritten),
-            remainingBytes,
+            folly::to_narrow(nbytes),
             &written,
             nullptr)) {
-      DWORD error = GetLastError();
-      XLOGF(
-          ERR,
-          "Error while writing to the pipe : bytesWritten {}, {} : {}",
-          bytesWritten,
-          error,
-          win32ErrorToString(error));
-
-      throw makeWin32ErrorExplicit(error, "Error while writing to the pipe");
+      return -1;
     }
     bytesWritten += written;
-    remainingBytes -= written;
+    nbytes -= written;
   }
-  XLOG(DBG5) << "Pipe::Write-- bytesToWrite:" << bytesToWrite << "bytesWritten"
-             << bytesWritten << std::endl;
 
   return bytesWritten;
 }
 
-size_t Pipe::writeiov(HANDLE handle, iovec* iov, int count) {
-  size_t bytesWritten = 0;
-  DWORD written = 0;
+ssize_t Pipe::writevFull(HANDLE handle, iovec* iov, int count) {
+  ssize_t bytesWritten = 0;
 
   for (int i = 0; i < count; i++) {
-    written = write(handle, iov[i].iov_base, iov[i].iov_len);
+    auto written = write(handle, iov[i].iov_base, iov[i].iov_len);
+    if (written < 0) {
+      return written;
+    }
     bytesWritten += written;
   }
 
   return bytesWritten;
 }
 
-size_t Pipe::read(void* buffer, DWORD bytesToRead) {
-  return read(readHandle_, buffer, bytesToRead);
+ssize_t Pipe::read(void* buffer, size_t nbytes) {
+  return read(readHandle_, buffer, nbytes);
 }
 
-size_t Pipe::write(void* buffer, DWORD bytesToWrite) {
-  return write(writeHandle_, buffer, bytesToWrite);
+ssize_t Pipe::write(void* buffer, size_t nbytes) {
+  return write(writeHandle_, buffer, nbytes);
 }
 
 } // namespace eden
