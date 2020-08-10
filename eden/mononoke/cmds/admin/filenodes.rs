@@ -8,7 +8,7 @@
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -18,9 +18,10 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
 use futures::{compat::Future01CompatExt, future::TryFutureExt};
-use futures_ext::FutureExt;
+use futures_ext::FutureExt as OldFutureExt;
 use futures_old::future::{join_all, Future};
 use futures_old::{IntoFuture, Stream};
+use futures_stats::futures03::TimedFutureExt;
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
 use mononoke_types::RepoPath;
@@ -33,8 +34,10 @@ pub const FILENODES: &str = "filenodes";
 const COMMAND_ID: &str = "by-id";
 const COMMAND_REVISION: &str = "by-revision";
 const COMMAND_VALIDATE: &str = "validate";
+const COMMAND_ALL_FILENODES: &str = "all-filenodes";
 
 const ARG_ENVELOPE: &str = "envelope";
+const ARG_IS_TREE: &str = "is-tree";
 
 const ARG_REVISION: &str = "changeset-id";
 const ARG_PATHS: &str = "paths";
@@ -91,6 +94,24 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .required(true)
                         .takes_value(true)
                         .help("hg/bonsai changeset id or bookmark"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(COMMAND_ALL_FILENODES)
+                .about("count how many filenodes for a path")
+                .arg(
+                    Arg::with_name(ARG_PATH)
+                        .long(ARG_PATH)
+                        .required(true)
+                        .takes_value(true)
+                        .help("path of the filenode"),
+                )
+                .arg(
+                    Arg::with_name(ARG_IS_TREE)
+                        .long(ARG_IS_TREE)
+                        .required(false)
+                        .takes_value(false)
+                        .help("whether it's a tree"),
                 ),
         )
 }
@@ -320,6 +341,34 @@ pub async fn subcommand_filenodes<'a>(
                 .map(|_| ())
                 .from_err()
                 .boxify()
+        }
+        (COMMAND_ALL_FILENODES, Some(matches)) => {
+            let maybe_mpath = MPath::new_opt(matches.value_of(ARG_PATH).unwrap())?;
+            let is_tree = matches.is_present(ARG_IS_TREE);
+            let path = match (maybe_mpath, is_tree) {
+                (Some(path), true) => RepoPath::DirectoryPath(path),
+                (Some(path), false) => RepoPath::FilePath(path),
+                (None, true) => RepoPath::RootPath,
+                (None, false) => {
+                    return Err(
+                        anyhow!("you need to provide a non-empty path or pass --is-tree").into(),
+                    );
+                }
+            };
+
+            let repo = blobrepo.compat().await?;
+            let filenodes = repo.get_filenodes();
+            let (stats, res) = filenodes
+                .get_all_filenodes_maybe_stale(ctx.clone(), &path, repo.get_repoid())
+                .compat()
+                .timed()
+                .await;
+
+            debug!(ctx.logger(), "took {:?}", stats.completion_time);
+            for filenode in res?.do_not_handle_disabled_filenodes()? {
+                log_filenode(ctx.logger(), &path, &filenode, None);
+            }
+            return Ok(());
         }
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
