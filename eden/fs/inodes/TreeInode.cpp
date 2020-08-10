@@ -45,7 +45,6 @@
 
 #ifdef _WIN32
 #include "eden/fs/win/mount/Enumerator.h" // @manual
-#include "eden/fs/win/utils/StringConv.h" // @manual
 #else
 #include <folly/FileUtil.h>
 #include "eden/fs/fuse/DirList.h"
@@ -1874,7 +1873,7 @@ folly::Future<std::vector<FileMetadata>> TreeInode::readdir() {
 
     for (auto& [name, entry] : entries) {
       auto isDir = entry.getDtype() == dtype_t::Dir;
-      auto winName = edenToWinName(name.stringPiece());
+      auto winName = name.wide();
 
       if (!isDir) {
         // We only populates the file size for non-materialized files. For

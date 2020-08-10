@@ -25,13 +25,10 @@
 #ifdef _WIN32
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/win/utils/StringConv.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
-
 #else
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
-
 #endif // !_WIN32
 
 namespace facebook {

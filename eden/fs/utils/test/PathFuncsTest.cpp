@@ -833,3 +833,68 @@ TEST(PathFuncs, noThrow) {
     ASSERT_TRUE(std::is_nothrow_move_assignable<PathComponentPiece>::value);
   }
 }
+
+#ifdef _WIN32
+TEST(PathFuncs, PathComponentWide) {
+  PathComponent comp(L"hello");
+  EXPECT_EQ("hello", comp.stringPiece());
+  EXPECT_EQ(L"hello", comp.wide());
+
+  EXPECT_THROW_RE(
+      PathComponent(L"foo/bar"),
+      std::domain_error,
+      "containing a directory separator");
+
+  EXPECT_THROW_RE(
+      PathComponent(L"foo\\bar"),
+      std::domain_error,
+      "containing a directory separator");
+
+  EXPECT_THROW_RE(
+      PathComponent(L""),
+      std::domain_error,
+      "cannot have an empty PathComponent");
+  EXPECT_THROW_RE(
+      PathComponent(L"."), std::domain_error, "must not be \\. or \\.\\.");
+  EXPECT_THROW_RE(
+      PathComponent(L".."), std::domain_error, "must not be \\. or \\.\\.");
+}
+
+TEST(PathFuncs, RelativePathWide) {
+  RelativePath emptyRel;
+  EXPECT_EQ(L"", emptyRel.wide());
+
+  EXPECT_THROW_RE(
+      RelativePath(L"/foo/bar"), std::domain_error, "absolute path");
+  // TODO(T66260288): re-enable once fixed.
+  // EXPECT_THROW_RE(RelativePath(L"T:/foo/bar"), std::domain_error, "absolute
+  // path"); EXPECT_THROW_RE(RelativePath(L"T:\\foo\\bar"), std::domain_error,
+  // "absolute path");
+  EXPECT_THROW_RE(
+      RelativePath(L"foo/"), std::domain_error, "must not end with a slash");
+  EXPECT_THROW_RE(
+      RelativePath(L"foo\\"), std::domain_error, "must not end with a slash");
+
+  RelativePath relPath(L"foo/bar");
+  EXPECT_EQ(L"foo\\bar", relPath.wide());
+  EXPECT_EQ("foo", relPath.dirname());
+  EXPECT_EQ("bar", relPath.basename());
+
+  RelativePath relPathBack(L"foo\\bar");
+  EXPECT_EQ(L"foo\\bar", relPathBack.wide());
+  EXPECT_EQ("foo", relPathBack.dirname());
+  EXPECT_EQ("bar", relPathBack.basename());
+}
+
+TEST(PathFuncs, AbsolutePathWide) {
+  AbsolutePath abs(L"/some/dir");
+  EXPECT_EQ(L"\\some\\dir", abs.wide());
+  EXPECT_EQ("/some", abs.dirname());
+  EXPECT_EQ("dir", abs.basename());
+
+  AbsolutePath absBack(L"\\some\\dir");
+  EXPECT_EQ(L"\\some\\dir", abs.wide());
+  EXPECT_EQ("/some", absBack.dirname());
+  EXPECT_EQ("dir", absBack.basename());
+}
+#endif

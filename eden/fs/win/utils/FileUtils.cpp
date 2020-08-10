@@ -13,7 +13,6 @@
 #include <iostream>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/win/utils/StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
 
 using folly::ByteRange;
@@ -85,8 +84,7 @@ void writeFile(const void* buffer, size_t size, const wchar_t* filePath) {
   if (!fileHandle) {
     throw makeWin32ErrorExplicit(
         GetLastError(),
-        folly::sformat(
-            "Unable to create the file {}", wideToMultibyteString(filePath)));
+        folly::sformat("Unable to create the file {}", AbsolutePath(filePath)));
   }
 
   size_t bytesWritten = writeFile(fileHandle.get(), buffer, size);
@@ -107,8 +105,7 @@ void writeFileAtomic(const wchar_t* filePath, const folly::ByteRange data) {
     throw makeWin32ErrorExplicit(
         GetLastError(),
         folly::sformat(
-            "Unable to get the temp file name: {}",
-            wideToMultibyteString(filePath)));
+            "Unable to get the temp file name: {}", AbsolutePath(filePath)));
   }
 
   writeFile(data, tmpFile.c_str());
@@ -118,8 +115,7 @@ void writeFileAtomic(const wchar_t* filePath, const folly::ByteRange data) {
     DeleteFile(tmpFile.c_str());
     throw makeWin32ErrorExplicit(
         error,
-        folly::sformat(
-            "Unable to move the file: {}", wideToMultibyteString(filePath)));
+        folly::sformat("Unable to move the file: {}", AbsolutePath(filePath)));
   }
 }
 
@@ -127,7 +123,7 @@ Hash getFileSha1(AbsolutePathPiece filePath) {
   SHA_CTX ctx;
   SHA1_Init(&ctx);
 
-  auto winPath = edenToWinPath(filePath.stringPiece());
+  auto winPath = filePath.wide();
 
   FileHandle fileHandle{CreateFileW(
       winPath.c_str(),

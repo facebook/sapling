@@ -75,8 +75,7 @@ void readFile(
   if (!fileHandle) {
     throw makeWin32ErrorExplicit(
         GetLastError(),
-        folly::sformat(
-            "Unable to open the file {}", wideToMultibyteString(filePath)));
+        folly::sformat("Unable to open the file {}", AbsolutePath(filePath)));
   }
   if (bytesToRead == std::numeric_limits<size_t>::max()) {
     //
@@ -89,8 +88,7 @@ void readFile(
       throw makeWin32ErrorExplicit(
           GetLastError(),
           folly::sformat(
-              "Unable to get the file size {}",
-              wideToMultibyteString(filePath)));
+              "Unable to get the file size {}", AbsolutePath(filePath)));
     }
     bytesToRead = fileSize.QuadPart;
   }

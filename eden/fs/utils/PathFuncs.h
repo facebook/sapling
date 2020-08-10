@@ -22,6 +22,10 @@
 #include <optional>
 #include <type_traits>
 
+#ifdef _WIN32
+#include <eden/fs/win/utils/StringConv.h> // @manual
+#endif
+
 namespace facebook {
 namespace eden {
 
@@ -248,6 +252,16 @@ class PathBase :
     SanityChecker()(src);
   }
 
+#ifdef _WIN32
+  constexpr explicit PathBase(std::wstring_view src) {
+    auto str = wideToMultibyteString<Storage>(src);
+    std::replace(str.begin(), str.end(), '\\', '/');
+    path_ = str;
+
+    SanityChecker()(stringPiece());
+  }
+#endif
+
   /** Construct from an untyped string value.
    * Skips sanity checks. */
   constexpr explicit PathBase(folly::StringPiece src, SkipPathSanityCheck)
@@ -343,6 +357,14 @@ class PathBase :
   Storage&& value() && {
     return std::move(path_);
   }
+
+#ifdef _WIN32
+  std::wstring wide() const {
+    auto str = multibyteToWideString(stringPiece());
+    std::replace(str.begin(), str.end(), L'/', L'\\');
+    return str;
+  }
+#endif
 };
 
 /// Asserts that val is a well formed path component

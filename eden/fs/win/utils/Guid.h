@@ -9,10 +9,7 @@
 #include "folly/portability/Windows.h"
 
 #include <combaseapi.h>
-#include <string>
-#include "StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
-#include "folly/Format.h"
 
 namespace facebook {
 namespace eden {
@@ -37,24 +34,6 @@ class Guid {
   Guid& operator=(const Guid& other) noexcept {
     guid_ = other.guid_;
     return *this;
-  }
-
-  std::wstring toWString() const {
-    std::wstring str(40, L'0');
-    int size = StringFromGUID2(guid_, str.data(), static_cast<int>(str.size()));
-
-    if (UNLIKELY(size == 0)) {
-      throw std::logic_error(folly::sformat(
-          "Failed to create a GUID, string size {}", str.size()));
-    }
-
-    // Returned size includes the null character
-    str.resize(size - 1);
-    return str;
-  }
-
-  std::string toString() const {
-    return wideToMultibyteString(toWString());
   }
 
   const GUID& getGuid() const noexcept {

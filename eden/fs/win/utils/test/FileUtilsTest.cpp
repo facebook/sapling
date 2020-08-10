@@ -14,6 +14,7 @@
 using namespace facebook::eden;
 using std::filesystem::path;
 
+#if 0
 namespace {
 class FileUtilsTest : public ::testing::Test {
  protected:
@@ -207,3 +208,4 @@ TEST_F(FileUtilsTest, testReadFileFullWide) {
   EXPECT_EQ(read, writtenContents.size());
   DeleteFile(filePath.c_str());
 }
+#endif

@@ -81,14 +81,15 @@ HRESULT EdenDispatcher::startEnumeration(
     const PRJ_CALLBACK_DATA& callbackData,
     const GUID& enumerationId) noexcept {
   try {
-    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
+    auto relPath = RelativePath(callbackData.FilePathName);
 
     XLOGF(
         DBG6,
         "startEnumeration mount ({}) path ({}) process ({})",
         getMount().getPath(),
         relPath,
-        wideToMultibyteString(callbackData.TriggeringProcessImageFileName));
+        wideToMultibyteString<std::string>(
+            callbackData.TriggeringProcessImageFileName));
 
     auto list = getMount()
                     .getInode(relPath)
@@ -130,7 +131,7 @@ HRESULT EdenDispatcher::getEnumerationData(
     auto sessionIterator = lockedSessions->find(enumerationId);
     if (sessionIterator == lockedSessions->end()) {
       XLOG(DBG5) << "Enum instance not found: "
-                 << wideToMultibyteString(callbackData.FilePathName);
+                 << RelativePath(callbackData.FilePathName);
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
@@ -164,7 +165,7 @@ HRESULT EdenDispatcher::getEnumerationData(
       XLOGF(
           DBG6,
           "Enum {} {} size= {}",
-          wideToMultibyteString(entry->name),
+          PathComponent(entry->name),
           fileInfo.IsDirectory ? "Dir" : "File",
           fileInfo.FileSize);
 
@@ -184,7 +185,7 @@ HRESULT EdenDispatcher::getEnumerationData(
 HRESULT
 EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
-    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
+    auto relPath = RelativePath(callbackData.FilePathName);
 
     struct InodeMetadata {
       // To ensure that the OS has a record of the canonical file name, and not
@@ -234,7 +235,7 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
           PRJ_PLACEHOLDER_INFO placeholderInfo{};
           placeholderInfo.FileBasicInfo.IsDirectory = metadata->isDir;
           placeholderInfo.FileBasicInfo.FileSize = metadata->size;
-          auto inodeName = edenToWinPath(metadata->path.stringPiece());
+          auto inodeName = metadata->path.wide();
 
           HRESULT result = PrjWritePlaceholderInfo(
               context,
@@ -265,7 +266,7 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
 HRESULT
 EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
-    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
+    auto relPath = RelativePath(callbackData.FilePathName);
 
     return getMount()
         .getInode(relPath)
@@ -366,7 +367,7 @@ EdenDispatcher::getFileData(
     uint64_t byteOffset,
     uint32_t length) noexcept {
   try {
-    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
+    auto relPath = RelativePath(callbackData.FilePathName);
 
     auto content =
         getMount()
@@ -585,7 +586,7 @@ folly::Future<folly::Unit> newFileCreated(
     PCWSTR path,
     PCWSTR destPath,
     bool isDirectory) {
-  auto relPath = wideCharToEdenRelativePath(path);
+  auto relPath = RelativePath(path);
   XLOG(DBG6) << "NEW_FILE_CREATED path=" << relPath;
   return createFile(mount, relPath, isDirectory);
 }
@@ -595,7 +596,7 @@ folly::Future<folly::Unit> fileOverwritten(
     PCWSTR path,
     PCWSTR destPath,
     bool isDirectory) {
-  auto relPath = wideCharToEdenRelativePath(path);
+  auto relPath = RelativePath(path);
   XLOG(DBG6) << "FILE_OVERWRITTEN path=" << relPath;
   return materializeFile(mount, relPath);
 }
@@ -605,7 +606,7 @@ folly::Future<folly::Unit> fileHandleClosedFileModified(
     PCWSTR path,
     PCWSTR destPath,
     bool isDirectory) {
-  auto relPath = wideCharToEdenRelativePath(path);
+  auto relPath = RelativePath(path);
   XLOG(DBG6) << "FILE_HANDLE_CLOSED_FILE_MODIFIED path=" << relPath;
   return materializeFile(mount, relPath);
 }
@@ -615,8 +616,8 @@ folly::Future<folly::Unit> fileRenamed(
     PCWSTR path,
     PCWSTR destPath,
     bool isDirectory) {
-  auto oldPath = wideCharToEdenRelativePath(path);
-  auto newPath = wideCharToEdenRelativePath(destPath);
+  auto oldPath = RelativePath(path);
+  auto newPath = RelativePath(destPath);
 
   XLOG(DBG6) << "FILE_RENAMED oldPath=" << oldPath << " newPath=" << newPath;
 
@@ -639,8 +640,8 @@ folly::Future<folly::Unit> preRename(
   XLOGF(
       DBG6,
       "PRE_RENAME oldPath={} newPath={}",
-      wideCharToEdenRelativePath(path),
-      wideCharToEdenRelativePath(destPath));
+      RelativePath(path),
+      RelativePath(destPath));
   return folly::unit;
 }
 
@@ -649,7 +650,7 @@ folly::Future<folly::Unit> fileHandleClosedFileDeleted(
     PCWSTR path,
     PCWSTR destPath,
     bool isDirectory) {
-  auto oldPath = wideCharToEdenRelativePath(path);
+  auto oldPath = RelativePath(path);
   XLOG(DBG6) << "FILE_HANDLE_CLOSED_FILE_MODIFIED path=" << oldPath;
   return removeFile(mount, oldPath, isDirectory);
 }
@@ -659,7 +660,7 @@ folly::Future<folly::Unit> preSetHardlink(
     PCWSTR path,
     PCWSTR destPath,
     bool isDirectory) {
-  auto relPath = wideCharToEdenRelativePath(path);
+  auto relPath = RelativePath(path);
   XLOG(DBG6) << "PRE_SET_HARDLINK path=" << relPath;
   return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
       HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),

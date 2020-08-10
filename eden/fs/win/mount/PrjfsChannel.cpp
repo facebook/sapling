@@ -8,9 +8,9 @@
 #include "eden/fs/win/mount/PrjfsChannel.h"
 #include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
 #include "eden/fs/win/utils/Guid.h"
-#include "eden/fs/win/utils/StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
 
 using folly::sformat;
@@ -18,15 +18,15 @@ using folly::sformat;
 namespace {
 
 using facebook::eden::EdenDispatcher;
-using facebook::eden::wideCharToEdenRelativePath;
+using facebook::eden::RelativePath;
 
-#define BAIL_ON_RECURSIVE_CALL(callbackData)                                \
-  do {                                                                      \
-    if (callbackData->TriggeringProcessId == GetCurrentProcessId()) {       \
-      auto __path = wideCharToEdenRelativePath(callbackData->FilePathName); \
-      XLOG(ERR) << "Recursive EdenFS call are disallowed for: " << __path;  \
-      return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);                       \
-    }                                                                       \
+#define BAIL_ON_RECURSIVE_CALL(callbackData)                               \
+  do {                                                                     \
+    if (callbackData->TriggeringProcessId == GetCurrentProcessId()) {      \
+      auto __path = RelativePath(callbackData->FilePathName);              \
+      XLOG(ERR) << "Recursive EdenFS call are disallowed for: " << __path; \
+      return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);                      \
+    }                                                                      \
   } while (false)
 
 static EdenDispatcher* getDispatcher(
@@ -151,7 +151,7 @@ void PrjfsChannel::start(bool readOnly) {
   XLOG(INFO) << "Starting PrjfsChannel for: " << mountPath_;
   DCHECK(dispatcher->isValidDispatcher());
 
-  auto winPath = edenToWinPath(mountPath_.stringPiece());
+  auto winPath = mountPath_.wide();
 
   auto result = PrjMarkDirectoryAsPlaceholder(
       winPath.c_str(), nullptr, nullptr, mountId_);
@@ -194,7 +194,7 @@ void PrjfsChannel::deleteFile(
     RelativePathPiece path,
     PRJ_UPDATE_TYPES updateFlags) {
   XLOG(DBG6) << "Invalidating: " << path;
-  auto winPath = edenToWinPath(path.stringPiece());
+  auto winPath = path.wide();
   PRJ_UPDATE_FAILURE_CAUSES failureReason;
   HRESULT hr = PrjDeleteFile(
       mountChannel_, winPath.c_str(), updateFlags, &failureReason);
@@ -225,9 +225,9 @@ void PrjfsChannel::removeDeletedFile(RelativePathPiece path) {
 }
 
 void PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
-  auto winMountPath = edenToWinPath(mountPath_.stringPiece());
+  auto winMountPath = mountPath_.wide();
   auto fullPath = mountPath_ + path;
-  auto winPath = edenToWinPath(fullPath.stringPiece());
+  auto winPath = fullPath.wide();
 
   XLOGF(DBG6, "Adding a placeholder for: ", path);
   auto result = PrjMarkDirectoryAsPlaceholder(

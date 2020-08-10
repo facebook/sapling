@@ -22,10 +22,6 @@
 #include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-#ifdef _WIN32
-#include "eden/fs/win/utils/StringConv.h" // @manual
-#endif
-
 namespace folly {
 template <typename T>
 class Future;
