@@ -350,7 +350,6 @@ members = [
 [patch.crates-io]
 chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace2ca3cdbc2095adb1af111d211e254e2aae" }
 const-random = { git = "https://github.com/fbsource/const-random", rev = "374c5b46427fe2ffbf6acbd9c1687e0f1a809f95" }
-dashmap = { git = "https://github.com/ahornby/dashmap.git", rev = "2fb60433dc4dd70971e03c8213a715ae0bb39ea8" }
 gotham = { git = "https://github.com/krallin/gotham.git", branch = "socket_data" }
 gotham_derive = { git = "https://github.com/krallin/gotham.git", branch = "socket_data" }
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }

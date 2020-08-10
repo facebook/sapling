@@ -43,7 +43,7 @@ arc-interner = "0.4.2"
 array-init = "0.1"
 bytes = { version = "0.5", features = ["serde"] }
 clap = "2.33"
-dashmap = "3.11.7"
+dashmap = "3.11.9"
 derive_more = "0.99.3"
 filetime = "0.2.9"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
