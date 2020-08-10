@@ -35,6 +35,7 @@ from . import (
     formatter,
     graphmod,
     hintutil,
+    json,
     match as matchmod,
     mdiff,
     mergeutil,
@@ -2078,7 +2079,7 @@ class jsonchangeset(changeset_printer):
         else:
             jrev = "%d" % rev
             jnode = '"%s"' % hex(ctx.node())
-        j = lambda v: pycompat.decodeutf8(encoding.jsonescape(pycompat.encodeutf8(v)))
+        j = lambda v: json.dumps(v, paranoid=False)
 
         if self._first:
             self.ui.write("[\n {")
@@ -2094,15 +2095,15 @@ class jsonchangeset(changeset_printer):
 
         self.ui.write(_x('\n  "rev": %s') % jrev)
         self.ui.write(_x(',\n  "node": %s') % jnode)
-        self.ui.write(_x(',\n  "branch": "%s"') % j(ctx.branch()))
+        self.ui.write(_x(',\n  "branch": %s') % j(ctx.branch()))
         self.ui.write(_x(',\n  "phase": "%s"') % ctx.phasestr())
-        self.ui.write(_x(',\n  "user": "%s"') % j(ctx.user()))
+        self.ui.write(_x(',\n  "user": %s') % j(ctx.user()))
         self.ui.write(_x(',\n  "date": [%d, %d]') % ctx.date())
-        self.ui.write(_x(',\n  "desc": "%s"') % j(ctx.description()))
+        self.ui.write(_x(',\n  "desc": %s') % j(ctx.description()))
 
         self.ui.write(
             _x(',\n  "bookmarks": [%s]')
-            % ", ".join('"%s"' % j(b) for b in ctx.bookmarks())
+            % ", ".join("%s" % j(b) for b in ctx.bookmarks())
         )
         self.ui.write(
             _x(',\n  "parents": [%s]')
@@ -2118,29 +2119,29 @@ class jsonchangeset(changeset_printer):
 
             self.ui.write(
                 _x(',\n  "extra": {%s}')
-                % ", ".join('"%s": "%s"' % (j(k), j(v)) for k, v in ctx.extra().items())
+                % ", ".join("%s: %s" % (j(k), j(v)) for k, v in ctx.extra().items())
             )
 
             files = ctx.p1().status(ctx)
             self.ui.write(
-                _x(',\n  "modified": [%s]') % ", ".join('"%s"' % j(f) for f in files[0])
+                _x(',\n  "modified": [%s]') % ", ".join("%s" % j(f) for f in files[0])
             )
             self.ui.write(
-                _x(',\n  "added": [%s]') % ", ".join('"%s"' % j(f) for f in files[1])
+                _x(',\n  "added": [%s]') % ", ".join("%s" % j(f) for f in files[1])
             )
             self.ui.write(
-                _x(',\n  "removed": [%s]') % ", ".join('"%s"' % j(f) for f in files[2])
+                _x(',\n  "removed": [%s]') % ", ".join("%s" % j(f) for f in files[2])
             )
 
         elif self.ui.verbose:
             self.ui.write(
-                _x(',\n  "files": [%s]') % ", ".join('"%s"' % j(f) for f in ctx.files())
+                _x(',\n  "files": [%s]') % ", ".join("%s" % j(f) for f in ctx.files())
             )
 
             if copies:
                 self.ui.write(
                     _x(',\n  "copies": {%s}')
-                    % ", ".join('"%s": "%s"' % (j(k), j(v)) for k, v in copies)
+                    % ", ".join("%s: %s" % (j(k), j(v)) for k, v in copies)
                 )
 
         matchfn = self.matchfn
@@ -2154,7 +2155,9 @@ class jsonchangeset(changeset_printer):
                 diffordiffstat(
                     self.ui, self.repo, diffopts, prev, node, match=matchfn, stat=True
                 )
-                self.ui.write(_x(',\n  "diffstat": "%s"') % j(self.ui.popbuffer()))
+                self.ui.write(
+                    _x(',\n  "diffstat": %s') % json.dumps(self.ui.popbuffer())
+                )
             if diff:
                 self.ui.pushbuffer()
                 diffordiffstat(
