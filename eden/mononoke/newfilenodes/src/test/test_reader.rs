@@ -1033,3 +1033,87 @@ async fn test_get_filenode_with_disabled(fb: FacebookInit) -> Result<(), Error> 
     .await?;
     Ok(())
 }
+
+#[fbinit::compat_test]
+async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (reader, writer) = build_reader_writer(create_unsharded()?);
+    let reader = with_caching(reader);
+    do_add_filenode(&ctx, &writer, file_a_first_filenode(), REPO_ZERO).await?;
+
+    let dir_a_second_filenode = PreparedFilenode {
+        path: RepoPath::dir("a").unwrap(),
+        info: FilenodeInfo {
+            filenode: TWOS_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: TWOS_CSID,
+        },
+    };
+    do_add_filenode(&ctx, &writer, dir_a_second_filenode.clone(), REPO_ZERO).await?;
+
+    assert_all_filenodes(
+        &ctx,
+        &reader,
+        &RepoPath::file("a")?,
+        REPO_ZERO,
+        &vec![file_a_first_filenode().info],
+    )
+    .await?;
+
+    assert_all_filenodes(
+        &ctx,
+        &reader,
+        &RepoPath::dir("a")?,
+        REPO_ZERO,
+        &vec![dir_a_second_filenode.info],
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_point_filenode_caching(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (reader, writer) = build_reader_writer(create_unsharded()?);
+    let reader = with_caching(reader);
+    do_add_filenode(&ctx, &writer, file_a_first_filenode(), REPO_ZERO).await?;
+
+    let dir_a_second_filenode = PreparedFilenode {
+        path: RepoPath::dir("a").unwrap(),
+        info: FilenodeInfo {
+            filenode: ONES_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: TWOS_CSID,
+        },
+    };
+    do_add_filenode(&ctx, &writer, dir_a_second_filenode.clone(), REPO_ZERO).await?;
+
+    assert_filenode(
+        &ctx,
+        &reader,
+        &RepoPath::file("a")?,
+        ONES_FNID,
+        REPO_ZERO,
+        file_a_first_filenode().info,
+    )
+    .await?;
+
+    assert_filenode(
+        &ctx,
+        &reader,
+        &RepoPath::dir("a")?,
+        ONES_FNID,
+        REPO_ZERO,
+        dir_a_second_filenode.info,
+    )
+    .await?;
+
+    Ok(())
+}

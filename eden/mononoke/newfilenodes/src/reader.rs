@@ -96,10 +96,15 @@ pub fn filenode_cache_key(
     filenode: &HgFileNodeId,
 ) -> CacheKey<CachedFilenode> {
     let mut v = vec![0; pwh.hash.0.len() * 2];
+    let is_tree = pwh.is_tree as u8;
     hex_encode(pwh.hash.0.as_ref(), &mut v).expect("failed to hex encode");
-    let key = format!("filenode.{}.{}.{}", repo_id.id(), filenode, unsafe {
-        String::from_utf8_unchecked(v)
-    });
+    let key = format!(
+        "filenode.{}.{}.{}.{}",
+        repo_id.id(),
+        filenode,
+        unsafe { String::from_utf8_unchecked(v) },
+        is_tree
+    );
 
     CacheKey {
         key,
@@ -109,10 +114,14 @@ pub fn filenode_cache_key(
 
 pub fn history_cache_key(repo_id: RepositoryId, pwh: &PathWithHash<'_>) -> CacheKey<CachedHistory> {
     let mut v = vec![0; pwh.hash.0.len() * 2];
+    let is_tree = pwh.is_tree as u8;
     hex_encode(pwh.hash.0.as_ref(), &mut v).expect("failed to hex encode");
-    let key = format!("history.{}.{}", repo_id.id(), unsafe {
-        String::from_utf8_unchecked(v)
-    });
+    let key = format!(
+        "history.{}.{}.{}",
+        repo_id.id(),
+        unsafe { String::from_utf8_unchecked(v) },
+        is_tree
+    );
 
     CacheKey {
         key,
