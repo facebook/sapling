@@ -587,6 +587,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
 
     let logger = args::init_logging(fb, &matches);
+    args::init_tunables(fb, &matches, logger.clone())?;
     let service = ReadyFlagService::new();
 
     let main = do_main(fb, &matches, &logger, &service);
