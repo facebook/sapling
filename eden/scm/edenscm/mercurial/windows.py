@@ -19,6 +19,7 @@ import re
 import stat
 import sys
 import tempfile
+import time
 from typing import IO, Optional
 
 import bindings
@@ -600,9 +601,24 @@ def bindunixsocket(sock, path):
 
 
 def _cleanuptemplockfiles(dirname, basename):
+    # type: (str, str) -> None
     for susp in os.listdir(dirname):
         if not susp.startswith(basename) or not susp.endswith(".tmplock"):
             continue
+
+        # Multiple processes might be trying to take the lock at the  same
+        # time, they will all create a .tmplock file, let's not remove a file
+        # that was just created to let the other process continue.
+        try:
+            stat = os.lstat(susp)
+        except OSError:
+            continue
+
+        now = time.mktime(time.gmtime())
+        filetime = time.mktime(time.gmtime(stat.st_mtime))
+        if now > filetime + 10:
+            continue
+
         try:
             os.unlink(os.path.join(dirname, susp))
         except WindowsError:
