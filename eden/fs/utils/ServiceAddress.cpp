@@ -47,7 +47,8 @@ std::optional<SocketAddressWithHostname> ServiceAddress::addressFromSMCTier(
 #ifdef EDEN_HAVE_SERVICEROUTER
   auto tier = std::get<std::string>(name_);
   XLOG(DBG7) << "resolving with SMC tier: " << tier;
-  auto selection = selector->getSelection(tier);
+  auto selection = selector->getSelection_DEPRECATED(
+      "SRSelection_CODEMOD_ServiceAddress_50", tier);
 
   if (selection.hosts->empty()) {
     XLOG(DBG5) << "resolution of SMC tier: " << tier
