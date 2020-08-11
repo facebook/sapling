@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cloned::cloned;
@@ -19,7 +19,7 @@ use futures::{
     stream::StreamExt,
 };
 use metaconfig_types::{BlobstoreId, MultiplexId};
-use mononoke_types::{DateTime, Timestamp};
+use mononoke_types::{errors::ErrorKind, DateTime, Timestamp};
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
@@ -441,7 +441,8 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
     ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error> {
         let rows = GetByKey::query(&self.read_master_connection, key)
             .compat()
-            .await?;
+            .await
+            .with_context(|| ErrorKind::BlobKeyError(key.clone()))?;
         Ok(rows
             .into_iter()
             .map(
