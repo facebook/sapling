@@ -51,7 +51,7 @@ def check(repo):
                     % (workspacename, reponame, repo.path)
                 )
             )
-            _restart_service_subscriptions(repo.ui)
+            _restart_subscriptions(repo.ui)
     else:
         _test_service_is_running(repo.ui)
 
@@ -65,7 +65,7 @@ def remove(repo):
     vfs = _subscriptionvfs(repo)
     if vfs.exists(filename):
         vfs.tryunlink(filename)
-        _restart_service_subscriptions(repo.ui, warn_service_not_running=False)
+        _restart_subscriptions(repo.ui, warn_service_not_running=False)
 
 
 def _warn_service_not_running(ui):
@@ -88,7 +88,17 @@ def _test_service_is_running(ui):
     s.close()
 
 
-def _restart_service_subscriptions(ui, warn_service_not_running=True):
+def testservicestatus(repo):
+    if not repo.ui.configbool("commitcloud", "subscription_enabled"):
+        return False
+    port = repo.ui.configint("commitcloud", "scm_daemon_tcp_port")
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    status = s.connect_ex(("127.0.0.1", port)) == 0
+    s.close()
+    return status
+
+
+def _restart_subscriptions(ui, warn_service_not_running=True):
     port = ui.configint("commitcloud", "scm_daemon_tcp_port")
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:

@@ -103,7 +103,8 @@ Run cloud status before setting any workspace
 Run cloud status after setting a workspace
   $ hg cloud status
   Workspace: user/test/feature
-  Automatic Sync: OFF
+  Automatic Sync (on local changes): OFF
+  Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
   Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
@@ -147,7 +148,8 @@ Run cloud status after setting workspace
   $ cd client1
   $ hg cloud status
   Workspace: user/test/default
-  Automatic Sync: OFF
+  Automatic Sync (on local changes): OFF
+  Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
   Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
@@ -162,7 +164,8 @@ Enable autosync
 Run cloud status after enabling autosync
   $ hg cloud status
   Workspace: user/test/default
-  Automatic Sync: ON
+  Automatic Sync (on local changes): ON
+  Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
   Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
@@ -176,7 +179,8 @@ Disable autosync
 Run cloud status after disabling autosync
   $ hg cloud status
   Workspace: user/test/default
-  Automatic Sync: OFF
+  Automatic Sync (on local changes): OFF
+  Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
   Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
@@ -873,7 +877,8 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
 Run cloud status after failing to synchronize
   $ hg cloud status
   Workspace: user/test/default
-  Automatic Sync: OFF
+  Automatic Sync (on local changes): OFF
+  Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 17
   Last Sync Heads: 1 (0 omitted)
   Last Sync Bookmarks: 1 (0 omitted)

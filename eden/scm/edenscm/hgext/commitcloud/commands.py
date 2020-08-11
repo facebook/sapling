@@ -1212,8 +1212,19 @@ def cloudstatus(ui, repo, **opts):
         return
     ui.write(_("Workspace: %s\n") % workspacename)
 
-    autosync = "ON" if background.autobackupenabled(repo) else "OFF"
-    ui.write(_("Automatic Sync: %s\n") % autosync)
+    backgroundnabled = background.autobackupenabled(repo)
+    autosync = "ON" if backgroundnabled else "OFF"
+    ui.write(_("Automatic Sync (on local changes): %s\n") % autosync)
+
+    if backgroundnabled and subscription.testservicestatus(repo):
+        ui.write(_("Automatic Sync via 'Scm Daemon' (on remote changes): ON\n"))
+        logpath = util.expanduserpath(
+            ui.config("commitcloud", "scm_daemon_log_path", "")
+        )
+        if logpath:
+            ui.write(_("Scm Daemon Log Path: %s\n") % logpath)
+    else:
+        ui.write(_("Automatic Sync via 'Scm Daemon' (on remote changes): OFF\n"))
 
     state = syncstate.SyncState(repo, workspacename)
 
