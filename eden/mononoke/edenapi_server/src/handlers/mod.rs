@@ -58,6 +58,7 @@ define_handler!(trees_handler, data::trees);
 define_handler!(complete_trees_handler, complete_trees::complete_trees);
 define_handler!(history_handler, history::history);
 define_handler!(commit_location_to_hash_handler, commit::location_to_hash);
+define_handler!(commit_revlog_data_handler, commit::revlog_data);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -94,5 +95,9 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/commit/location_to_hash")
             .with_path_extractor::<commit::LocationToHashParams>()
             .to(commit_location_to_hash_handler);
+        route
+            .post("/:repo/commit/revlog_data")
+            .with_path_extractor::<commit::RevlogDataParams>()
+            .to(commit_revlog_data_handler);
     })
 }

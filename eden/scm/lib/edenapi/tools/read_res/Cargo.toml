@@ -11,4 +11,5 @@ types = { path = "../../../types" }
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_cbor = "0.11"
+sha-1 = "0.8"
 structopt = "0.3.7"

@@ -12,7 +12,7 @@ use thiserror::Error;
 
 use gotham_ext::error::HttpError;
 use mononoke_api::MononokeError;
-use types::Key;
+use types::{HgId, Key};
 
 /// Enum to add context to server errors.
 ///
@@ -60,6 +60,10 @@ pub enum ErrorKind {
     CommitLocationToHashRequestFailed,
     #[error("Functionality not implemented")]
     NotImplemented,
+    #[error("Commit data request failed")]
+    CommitRevlogDataRequestFailed,
+    #[error("HgId not found: {0}")]
+    HgIdNotFound(HgId),
 }
 
 /// Extension trait for converting `MononokeError`s into `HttpErrors`.

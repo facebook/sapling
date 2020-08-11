@@ -27,10 +27,27 @@ use serde_json::{json, Value};
 
 use types::{HgId, Key, RepoPathBuf};
 
-use crate::commit::{Location, LocationToHashRequest};
+use crate::commit::{CommitRevlogDataRequest, Location, LocationToHashRequest};
 use crate::data::DataRequest;
 use crate::history::HistoryRequest;
 use crate::tree::CompleteTreeRequest;
+
+/// Parse a `CommitRevlogDataRequest` from JSON.
+///
+/// Example request:
+/// ```json
+/// {
+///   "hgids": [
+///     "1bb6c3e46bcb872d5d469230350e8a7fae8f5764",
+///     "72b2678d2c0674d295d1b8d758886caeecbdaff2"
+///   ]
+/// }
+/// ```
+pub fn parse_commit_revlog_data_req(json: &Value) -> Result<CommitRevlogDataRequest> {
+    let json = json.as_object().context("input must be a JSON object")?;
+    let hgids = parse_hashes(json.get("hgids").context("missing field hgids")?)?;
+    Ok(CommitRevlogDataRequest { hgids })
+}
 
 /// Parse a `LocationToHashRequest` from JSON.
 ///
@@ -40,7 +57,7 @@ use crate::tree::CompleteTreeRequest;
 ///   "locations": [{
 ///     "known_descendant": "159a8912de890112b8d6005999cdf4988213fb2f",
 ///     "distance_to_descendant": 1,
-///     "count": 2,
+///     "count": 2
 ///   }]
 /// }
 pub fn parse_location_to_hash_req(json: &Value) -> Result<LocationToHashRequest> {
@@ -262,6 +279,12 @@ impl FromJson for CompleteTreeRequest {
 impl FromJson for LocationToHashRequest {
     fn from_json(json: &Value) -> Result<Self> {
         parse_location_to_hash_req(json)
+    }
+}
+
+impl FromJson for CommitRevlogDataRequest {
+    fn from_json(json: &Value) -> Result<Self> {
+        parse_commit_revlog_data_req(json)
     }
 }
 

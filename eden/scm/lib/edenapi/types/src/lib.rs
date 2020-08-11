@@ -31,7 +31,9 @@ pub mod history;
 pub mod json;
 pub mod tree;
 
-pub use crate::commit::{Location, LocationToHash, LocationToHashRequest};
+pub use crate::commit::{
+    CommitRevlogData, CommitRevlogDataRequest, Location, LocationToHash, LocationToHashRequest,
+};
 pub use crate::data::{DataEntry, DataError, DataRequest, DataResponse};
 pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,

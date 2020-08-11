@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 
 use types::hgid::HgId;
@@ -65,5 +66,26 @@ impl Location {
 impl LocationToHash {
     pub fn new(location: Location, hgid: HgId) -> Self {
         Self { location, hgid }
+    }
+}
+
+/// The list of Mercurial commit identifiers for which we want the commit data to be returned.
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize)]
+pub struct CommitRevlogDataRequest {
+    pub hgids: Vec<HgId>,
+}
+
+/// A mercurial commit entry as it was serialized in the revlog.
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize)]
+pub struct CommitRevlogData {
+    pub hgid: HgId,
+    pub revlog_data: Bytes,
+}
+
+impl CommitRevlogData {
+    pub fn new(hgid: HgId, revlog_data: Bytes) -> Self {
+        Self { hgid, revlog_data }
     }
 }

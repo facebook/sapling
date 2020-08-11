@@ -20,13 +20,13 @@ use std::io::{prelude::*, stdin, stdout};
 use std::path::PathBuf;
 
 use anyhow::Result;
+use edenapi_types::{
+    json::FromJson, CommitRevlogDataRequest, CompleteTreeRequest, DataRequest, HistoryRequest,
+    LocationToHashRequest,
+};
 use serde::Serialize;
 use serde_json::Value;
 use structopt::StructOpt;
-
-use edenapi_types::{
-    json::FromJson, CompleteTreeRequest, DataRequest, HistoryRequest, LocationToHashRequest,
-};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "make_req", about = "Make EdenAPI CBOR request payloads")]
@@ -35,6 +35,7 @@ enum Command {
     History(Args),
     Tree(Args),
     LocationToHash(Args),
+    CommitRevlogData(Args),
 }
 
 #[derive(Debug, StructOpt)]
@@ -51,6 +52,7 @@ fn main() -> Result<()> {
         Command::History(args) => make_req::<HistoryRequest>(args),
         Command::Tree(args) => make_req::<CompleteTreeRequest>(args),
         Command::LocationToHash(args) => make_req::<LocationToHashRequest>(args),
+        Command::CommitRevlogData(args) => make_req::<CommitRevlogDataRequest>(args),
     }
 }
 

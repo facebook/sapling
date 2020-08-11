@@ -7,12 +7,14 @@
 
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
+use bytes::Bytes;
 use context::CoreContext;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     TryStream, TryStreamExt,
 };
 use hgproto::GettreepackArgs;
+use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use mononoke_types::MPath;
@@ -147,6 +149,28 @@ impl HgRepoContext {
             .compat()
             .await?;
         Ok(result)
+    }
+
+    pub async fn revlog_commit_data(
+        &self,
+        hg_cs_id: HgChangesetId,
+    ) -> Result<Option<Bytes>, MononokeError> {
+        let ctx = self.ctx().clone();
+        let blobstore = self.blob_repo().blobstore();
+        let revlog_cs = RevlogChangeset::load(ctx, blobstore, hg_cs_id)
+            .compat()
+            .await
+            .map_err(MononokeError::from)?;
+        let revlog_cs = match revlog_cs {
+            None => return Ok(None),
+            Some(x) => x,
+        };
+
+        let mut buffer = Vec::new();
+        revlog_cs
+            .generate_for_hash_verification(&mut buffer)
+            .map_err(MononokeError::from)?;
+        Ok(Some(buffer.into()))
     }
 }
 
