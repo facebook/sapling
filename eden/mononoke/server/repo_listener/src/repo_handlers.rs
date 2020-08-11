@@ -37,7 +37,7 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use synced_commit_mapping::SqlSyncedCommitMapping;
-use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCache};
+use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCache, WarmBookmarksCacheBuilder};
 
 use crate::errors::ErrorKind;
 
@@ -285,15 +285,16 @@ pub fn repo_handlers(
                             "Starting Warm bookmarks cache for {}",
                             blobrepo.name()
                         );
-                        Ok(Some(Arc::new(
-                            WarmBookmarksCache::new_with_types(
-                                &ctx,
-                                &blobrepo,
-                                &btreeset! { MappedHgChangesetId::NAME.to_string() },
-                                BookmarkUpdateDelay::Disallow,
-                            )
-                            .await?,
-                        )))
+                        let mut warm_bookmarks_cache_builder =
+                            WarmBookmarksCacheBuilder::new(&ctx, &blobrepo);
+                        warm_bookmarks_cache_builder.add_derived_data_warmers(
+                            &btreeset! { MappedHgChangesetId::NAME.to_string() },
+                        )?;
+                        let warm_bookmarks_cache = warm_bookmarks_cache_builder
+                            .build(BookmarkUpdateDelay::Disallow)
+                            .await?;
+
+                        Ok(Some(Arc::new(warm_bookmarks_cache)))
                     } else {
                         Ok(None)
                     }

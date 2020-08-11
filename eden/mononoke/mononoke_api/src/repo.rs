@@ -58,7 +58,7 @@ use stats::prelude::*;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
-use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCache};
+use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCache, WarmBookmarksCacheBuilder};
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -197,8 +197,10 @@ impl Repo {
 
         let blobstore = blob_repo.get_blobstore().boxed();
         let skiplist_index = fetch_skiplist_index(&ctx, &skiplist_index_blobstore_key, &blobstore);
-        let warm_bookmarks_cache =
-            WarmBookmarksCache::new(&ctx, &blob_repo, BookmarkUpdateDelay::Allow);
+
+        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
+        warm_bookmarks_cache_builder.add_all_derived_data_warmers()?;
+        let warm_bookmarks_cache = warm_bookmarks_cache_builder.build(BookmarkUpdateDelay::Allow);
 
         let (
             repo_permission_checker,
@@ -275,9 +277,12 @@ impl Repo {
             },
             ..Default::default()
         };
-        let warm_bookmarks_cache =
-            WarmBookmarksCache::new(&ctx, &blob_repo, BookmarkUpdateDelay::Disallow).await?;
-        let warm_bookmarks_cache = Arc::new(warm_bookmarks_cache);
+
+        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
+        warm_bookmarks_cache_builder.add_all_derived_data_warmers()?;
+        let warm_bookmarks_cache = warm_bookmarks_cache_builder
+            .build(BookmarkUpdateDelay::Allow)
+            .await?;
 
         let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = match live_commit_sync_config {
             Some(live_commit_sync_config) => live_commit_sync_config,
@@ -288,7 +293,7 @@ impl Repo {
             name: String::from("test"),
             blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
-            warm_bookmarks_cache,
+            warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
             synced_commit_mapping,
             config,
             repo_permission_checker: ArcPermissionChecker::from(
