@@ -169,6 +169,7 @@ impl DefaultOpenOptions<OpenOptions> for IndexedLogHgIdDataStore {
         OpenOptions::new()
             .max_log_count(4)
             .max_bytes_per_log(2500 * 1000 * 1000)
+            .auto_sync_threshold(Some(250 * 1024 * 1024))
             .create(true)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]
