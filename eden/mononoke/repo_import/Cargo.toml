@@ -9,12 +9,14 @@ include = ["src/**/*.rs"]
 [dependencies]
 blobrepo = { path = "../blobrepo" }
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
+blobstore = { path = "../blobstore" }
 bookmarks = { path = "../bookmarks" }
 cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
 cross_repo_sync = { path = "../commit_rewriting/cross_repo_sync" }
 derived_data_utils = { path = "../derived_data/utils" }
 import_tools = { path = "../git/import_tools" }
+manifest = { path = "../manifest" }
 mercurial_types = { path = "../mercurial/types" }
 mononoke_types = { path = "../mononoke_types" }
 movers = { path = "../commit_rewriting/movers" }
@@ -31,7 +33,6 @@ tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../blobrepo/factory" }
-blobstore = { path = "../blobstore" }
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 sql_construct = { path = "../common/sql_construct" }

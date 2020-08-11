@@ -9,8 +9,8 @@
 use anyhow::{format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
+use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
-use clap::Arg;
 use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
@@ -18,36 +18,36 @@ use cross_repo_sync::rewrite_commit;
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
     future::TryFutureExt,
     stream::{self, StreamExt, TryStreamExt},
 };
 use import_tools::{GitimportPreferences, GitimportTarget};
+use manifest::ManifestOps;
 use mercurial_types::{HgChangesetId, MPath};
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::DefaultAction;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
 use std::num::NonZeroUsize;
 use std::path::Path;
 use tokio::{fs, io::AsyncWriteExt, process, time};
 use topo_sort::sort_topological;
 
-const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
-const ARG_DEST_PATH: &str = "dest-path";
-const ARG_BATCH_SIZE: &str = "batch-size";
-const ARG_BOOKMARK_SUFFIX: &str = "bookmark-suffix";
-const ARG_CALL_SIGN: &str = "call-sign";
-const ARG_PHAB_CHECK_DISABLED: &str = "disable-phabricator-check";
-const ARG_X_REPO_CHECK_DISABLED: &str = "disable-x-repo-check";
-const ARG_HG_SYNC_CHECK_DISABLED: &str = "disable-hg-sync-check";
-const ARG_SLEEP_TIME: &str = "sleep-time";
+mod cli;
+
+use crate::cli::{
+    setup_app, ARG_BACKUP_HASHES_FILE_PATH, ARG_BATCH_SIZE, ARG_BOOKMARK_SUFFIX, ARG_CALL_SIGN,
+    ARG_COMMIT_AUTHOR, ARG_COMMIT_DATE_RFC3339, ARG_COMMIT_MESSAGE, ARG_DEST_BOOKMARK,
+    ARG_DEST_PATH, ARG_GIT_REPOSITORY_PATH, ARG_HG_SYNC_CHECK_DISABLED, ARG_PHAB_CHECK_DISABLED,
+    ARG_SLEEP_TIME, ARG_X_REPO_CHECK_DISABLED,
+};
+
 const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
-const ARG_BACKUP_HASHES_FILE_PATH: &str = "backup-hashes-file-path";
 
 #[derive(Deserialize, Clone, Debug)]
 struct GraphqlQueryObj {
@@ -75,6 +75,12 @@ struct CheckerFlags<'a> {
     x_repo_check_disabled: bool,
     hg_sync_check_disabled: bool,
     call_sign: Option<&'a str>,
+}
+#[derive(Clone, Debug)]
+struct ChangesetArgs {
+    pub author: String,
+    pub message: String,
+    pub datetime: DateTime,
 }
 
 async fn rewrite_file_paths(
@@ -176,6 +182,7 @@ async fn move_bookmark(
     sleep_time: u64,
     mutable_counters: &SqlMutableCounters,
 ) -> Result<(), Error> {
+    info!(ctx.logger(), "Start moving the bookmark");
     if shifted_bcs.is_empty() {
         return Err(format_err!("There is no bonsai changeset present"));
     }
@@ -235,7 +242,109 @@ async fn move_bookmark(
         .await?;
         old_csid = curr_csid;
     }
+    info!(ctx.logger(), "Finished moving the bookmark");
     Ok(())
+}
+
+async fn merge_imported_commit(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    shifted_bcs: &[BonsaiChangeset],
+    dest_bookmark: &str,
+    changeset_args: ChangesetArgs,
+) -> Result<(), Error> {
+    info!(
+        ctx.logger(),
+        "Merging the imported commits into given bookmark, {}", dest_bookmark
+    );
+    let master_cs_id = match repo
+        .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new(dest_bookmark)?)
+        .compat()
+        .await?
+    {
+        Some(id) => id,
+        None => {
+            return Err(format_err!(
+                "Couldn't extract changeset id from bookmark: {}",
+                dest_bookmark
+            ))
+        }
+    };
+    let master_leaf_entries = get_leaf_entries(&ctx, &repo, master_cs_id).await?;
+
+    let imported_cs_id = match shifted_bcs.last() {
+        Some(bcs) => bcs.get_changeset_id(),
+        None => return Err(format_err!("There is no bonsai changeset present")),
+    };
+    let imported_leaf_entries = get_leaf_entries(&ctx, &repo, imported_cs_id).await?;
+
+    let intersection: Vec<MPath> = imported_leaf_entries
+        .intersection(&master_leaf_entries)
+        .cloned()
+        .collect();
+
+    if intersection.len() > 0 {
+        return Err(format_err!(
+            "There are paths present in both parents: {:?} ...",
+            intersection
+        ));
+    }
+
+    info!(ctx.logger(), "Done checking path conflicts");
+
+    info!(
+        ctx.logger(),
+        "Creating a merge bonsai changeset with parents: {}, {}", master_cs_id, imported_cs_id
+    );
+
+    let ChangesetArgs {
+        author,
+        message,
+        datetime,
+    } = changeset_args;
+
+    let merged_cs = BonsaiChangesetMut {
+        parents: vec![master_cs_id, imported_cs_id],
+        author: author.clone(),
+        author_date: datetime,
+        committer: Some(author.to_string()),
+        committer_date: Some(datetime),
+        message: message.to_string(),
+        extra: BTreeMap::new(),
+        file_changes: BTreeMap::new(),
+    }
+    .freeze()?;
+
+    let merged_cs_id = merged_cs.get_changeset_id();
+    info!(
+        ctx.logger(),
+        "Created merge bonsai: {} and changeset: {:?}", merged_cs_id, merged_cs
+    );
+
+    save_bonsai_changesets(vec![merged_cs], ctx.clone(), repo.clone())
+        .compat()
+        .await?;
+    info!(ctx.logger(), "Finished merging");
+    Ok(())
+}
+
+async fn get_leaf_entries(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+) -> Result<HashSet<MPath>, Error> {
+    let hg_cs_id = repo
+        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+        .compat()
+        .await?;
+    let hg_cs = hg_cs_id.load(ctx.clone(), &repo.get_blobstore()).await?;
+    hg_cs
+        .manifestid()
+        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .compat()
+        .map_ok(|(path, (_file_type, _filenode_id))| path)
+        .try_collect::<HashSet<_>>()
+        .await
 }
 
 async fn check_dependent_systems(
@@ -387,78 +496,7 @@ fn sort_bcs(shifted_bcs: &[BonsaiChangeset]) -> Result<Vec<BonsaiChangeset>, Err
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp::new("Import Repository")
-        .with_advanced_args_hidden()
-        .build()
-        .version("0.0.0")
-        .about("Automating repository imports")
-        .arg(
-            Arg::with_name(ARG_GIT_REPOSITORY_PATH)
-                .required(true)
-                .help("Path to a git repository to import"),
-        )
-        .arg(
-            Arg::with_name(ARG_DEST_PATH)
-                .long(ARG_DEST_PATH)
-                .required(true)
-                .takes_value(true)
-                .help("Path to the destination folder we import to"),
-        )
-        .arg(
-            Arg::with_name(ARG_BATCH_SIZE)
-                .long(ARG_BATCH_SIZE)
-                .takes_value(true)
-                .default_value("100")
-                .help("Number of commits we make visible when moving the bookmark"),
-        )
-        .arg(
-            Arg::with_name(ARG_BOOKMARK_SUFFIX)
-                .long(ARG_BOOKMARK_SUFFIX)
-                .required(true)
-                .takes_value(true)
-                .help("Suffix of the bookmark (repo_import_<suffix>)"),
-        )
-        .arg(
-            Arg::with_name(ARG_CALL_SIGN)
-                .long(ARG_CALL_SIGN)
-                .takes_value(true)
-                .help("Call sign to get commit info from Phabricator. e.g. FBS for fbsource"),
-        )
-        .arg(
-            Arg::with_name(ARG_PHAB_CHECK_DISABLED)
-                .long(ARG_PHAB_CHECK_DISABLED)
-                .takes_value(false)
-                .help("Disable waiting for Phabricator to parse commits."),
-        )
-        .arg(
-            Arg::with_name(ARG_X_REPO_CHECK_DISABLED)
-                .long(ARG_X_REPO_CHECK_DISABLED)
-                .takes_value(false)
-                .help("Disable x_repo sync check after moving the bookmark"),
-        )
-        .arg(
-            Arg::with_name(ARG_HG_SYNC_CHECK_DISABLED)
-                .long(ARG_HG_SYNC_CHECK_DISABLED)
-                .takes_value(false)
-                .help("Disable hg sync check after moving the bookmark"),
-        )
-        .arg(
-            Arg::with_name(ARG_SLEEP_TIME)
-                .long(ARG_SLEEP_TIME)
-                .takes_value(true)
-                .default_value("1")
-                .help(
-                    "Sleep time, if we fail dependent system (phabricator, hg_sync ...) checkers",
-                ),
-        )
-        .arg(
-            Arg::with_name(ARG_BACKUP_HASHES_FILE_PATH)
-                .long(ARG_BACKUP_HASHES_FILE_PATH)
-                .takes_value(true)
-                .required(true)
-                .help("Backup file path to save bonsai hashes if deriving data types fail"),
-        );
-
+    let app = setup_app();
     let matches = app.get_matches();
 
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
@@ -489,7 +527,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let sleep_time = matches.value_of(ARG_SLEEP_TIME).unwrap();
     let sleep_time = sleep_time.parse::<u64>()?;
     let backup_hashes_path = matches.value_of(ARG_BACKUP_HASHES_FILE_PATH).unwrap();
-
+    let dest_bookmark = matches.value_of(ARG_DEST_BOOKMARK).unwrap();
+    let commit_author = matches.value_of(ARG_COMMIT_AUTHOR).unwrap();
+    let commit_message = matches.value_of(ARG_COMMIT_MESSAGE).unwrap();
+    let datetime = match matches.value_of(ARG_COMMIT_DATE_RFC3339) {
+        Some(date) => DateTime::from_rfc3339(date)?,
+        None => DateTime::now(),
+    };
+    let changeset_args = ChangesetArgs {
+        author: commit_author.to_string(),
+        message: commit_message.to_string(),
+        datetime,
+    };
     args::init_cachelib(fb, &matches, None);
 
     let logger = args::init_logging(fb, &matches);
@@ -507,7 +556,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             info!(ctx.logger(), "Start deriving data types");
             derive_bonsais(&ctx, &repo, &shifted_bcs).await?;
             info!(ctx.logger(), "Finished deriving data types");
-            info!(ctx.logger(), "Start moving bookmarks");
             move_bookmark(
                 &ctx,
                 &repo,
@@ -518,7 +566,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 sleep_time,
                 &mutable_counters,
             )
-            .await
+            .await?;
+            merge_imported_commit(&ctx, &repo, &shifted_bcs, &dest_bookmark, changeset_args).await
         },
         fb,
         "repo_import",

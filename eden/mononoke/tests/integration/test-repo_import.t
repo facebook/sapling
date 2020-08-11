@@ -8,6 +8,17 @@
   $ setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo-hg"
+  $ BLOB_TYPE="blob_files" default_setup
+  hg repo
+  o  C [draft;rev=2;26805aba1e60]
+  |
+  o  B [draft;rev=1;112478962961]
+  |
+  o  A [draft;rev=0;426bada5c675]
+  $
+  blobimporting
+  starting Mononoke
+  cloning repo in hg client 'repo2'
 
 # Setup git repository
   $ mkdir "$GIT_REPO"
@@ -35,7 +46,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ repo_import "$GIT_REPO" --dest-path "new_dir/new_repo" --batch-size 3 --bookmark-suffix "new_repo" --disable-phabricator-check --disable-hg-sync-check --backup-hashes-file-path "$GIT_REPO/hashes.txt"
+  $ repo_import "$GIT_REPO" --dest-path "new_dir/new_repo" --batch-size 3 --bookmark-suffix "new_repo" --disable-phabricator-check --disable-hg-sync-check --backup-hashes-file-path "$GIT_REPO/hashes.txt" --dest-bookmark master_bookmark --commit-author user --commit-message "merging"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Started importing git commits to Mononoke (glob)
   * Created ce435b03d4ef526648f8654c61e26ae5cc1069cc => ChangesetId(Blake2(f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062)) (glob)
@@ -49,9 +60,15 @@
   * Saved bonsai changesets (glob)
   * Start deriving data types (glob)
   * Finished deriving data types (glob)
-  * Start moving bookmarks (glob)
+  * Start moving the bookmark (glob)
   * Created bookmark BookmarkName { bookmark: "repo_import_new_repo" } pointing to * (glob)
   * Set bookmark BookmarkName { bookmark: "repo_import_new_repo" } to * (glob)
+  * Finished moving the bookmark (glob)
+  * Merging the imported commits into given bookmark, master_bookmark (glob)
+  * Done checking path conflicts (glob)
+  * Creating a merge bonsai changeset with parents: *, * (glob)
+  * Created merge bonsai: * and changeset: * (glob)
+  * Finished merging (glob)
 
 # Check if we derived all the types
   $ BOOKMARK_NAME="repo_import_new_repo"
@@ -78,11 +95,22 @@
 
 # Clone the repository
   $ cd "$TESTTMP"
-  $ hgmn_clone 'ssh://user@dummy/repo' "$HG_REPO"
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo1 --noupdate -q
   $ cat "$GIT_REPO/hashes.txt"
   a159bc614d2dbd07a5ecc6476156fa464b69e884d819bbc2e854ade3e4c353b9
   a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
-  $ cd "$HG_REPO"
+  $ cd repo1
+  $ hgmn pull
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 0 files
+  adding remote bookmark repo_import_new_repo
+  $ hgmn up repo_import_new_repo
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark repo_import_new_repo)
   $ cat "new_dir/new_repo/file1"
   this is file1
   $ cat "new_dir/new_repo/file2_repo/file2"
