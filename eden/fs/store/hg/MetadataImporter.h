@@ -38,7 +38,8 @@ class MetadataImporter {
    * edenId
    */
   virtual folly::SemiFuture<std::unique_ptr<TreeMetadata>> getTreeMetadata(
-      const Hash& edenId) = 0;
+      const Hash& edenId,
+      const Hash& manifestId) = 0;
 
   /**
    * Returns if metadata fetching is supported on the current platform and
@@ -69,7 +70,8 @@ class DefaultMetadataImporter : public MetadataImporter {
       std::shared_ptr<LocalStore> /*localStore*/) {}
 
   folly::SemiFuture<std::unique_ptr<TreeMetadata>> getTreeMetadata(
-      const Hash& /*edenId*/) override;
+      const Hash& edenId,
+      const Hash& manifestId) override;
 
   bool metadataFetchingAvailable() override;
 };

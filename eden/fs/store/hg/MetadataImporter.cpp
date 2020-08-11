@@ -14,7 +14,9 @@ namespace facebook {
 namespace eden {
 
 folly::SemiFuture<std::unique_ptr<TreeMetadata>>
-DefaultMetadataImporter::getTreeMetadata(const Hash& /*edenId*/) {
+DefaultMetadataImporter::getTreeMetadata(
+    const Hash& /*edenId*/,
+    const Hash& /*manifestId*/) {
   return folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
 };
 

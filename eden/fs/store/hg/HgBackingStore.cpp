@@ -289,7 +289,8 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
   auto treeMetadataFuture =
       folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
   if (metadataImporter_->metadataFetchingAvailable()) {
-    treeMetadataFuture = metadataImporter_->getTreeMetadata(edenTreeID);
+    treeMetadataFuture =
+        metadataImporter_->getTreeMetadata(edenTreeID, manifestNode);
   }
   return fetchTreeFromHgCacheOrImporter(
              manifestNode, edenTreeID, path.copy(), commitHash)

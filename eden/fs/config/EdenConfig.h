@@ -240,6 +240,10 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<std::string> scsTierName{"scs:tier",
                                          "mononoke-scs-server",
                                          this};
+  ConfigSetting<bool> useManifestBasedFetching{
+      "scs:use-manifest-based-fetching",
+      false,
+      this};
 
   /**
    * How often the on-disk config information should be checked for changes.
