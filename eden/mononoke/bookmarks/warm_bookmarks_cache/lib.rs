@@ -111,7 +111,9 @@ impl WarmBookmarksCache {
             }
         }
 
-        warmers.push(create_warmer::<MappedHgChangesetId>(&ctx));
+        if types.contains(MappedHgChangesetId::NAME) {
+            warmers.push(create_warmer::<MappedHgChangesetId>(&ctx));
+        }
 
         if types.contains(RootUnodeManifestId::NAME) {
             warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
