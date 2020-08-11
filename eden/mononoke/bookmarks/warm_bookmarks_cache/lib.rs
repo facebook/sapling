@@ -402,7 +402,7 @@ fn spawn_bookmarks_coordinator(
                 for (key, cur_value) in &cur_bookmarks {
                     // There's a potential race condition if a bookmark was deleted
                     // and then immediately recreated with another kind (e.g. Publishing instead of
-                    // PullDefault). Because of the race WarmBookmarkCache might store a
+                    // PullDefault). Because of the race WarmBookmarksCache might store a
                     // bookmark with an old Kind.
                     // I think this is acceptable because it's going to be fixed on next iteration
                     // of the loop, and because fixing it properly is hard if not impossible -
