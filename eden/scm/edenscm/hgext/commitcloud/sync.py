@@ -107,7 +107,7 @@ def sync(repo, *args, **kwargs):
                     fp.write(encodeutf8("Success" if synced else "Failed"))
         except BaseException as e:
             with repo.svfs(_syncstatusfile, "w+") as fp:
-                fp.write(encodeutf8("Exception (%s)" % repr(e)))
+                fp.write(encodeutf8("Exception:\n%s" % e))
             raise
         return rc
 
