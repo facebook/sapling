@@ -54,7 +54,7 @@ pub struct WarmBookmarksCache {
 pub type WarmerFn =
     dyn Fn(CoreContext, BlobRepo, ChangesetId) -> OldBoxFuture<(), Error> + Send + Sync + 'static;
 
-pub type IsDerivedFn = dyn for<'a> Fn(&'a CoreContext, &'a BlobRepo, &'a ChangesetId) -> BoxFuture<'a, Result<bool, Error>>
+pub type IsWarmFn = dyn for<'a> Fn(&'a CoreContext, &'a BlobRepo, &'a ChangesetId) -> BoxFuture<'a, Result<bool, Error>>
     + Send
     + Sync;
 
@@ -66,7 +66,7 @@ pub enum BookmarkUpdateDelay {
 
 pub struct Warmer {
     warmer: Box<WarmerFn>,
-    is_derived: Box<IsDerivedFn>,
+    is_warm: Box<IsWarmFn>,
 }
 
 pub fn create_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
@@ -78,13 +78,13 @@ pub fn create_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
             .boxify()
     });
 
-    let is_derived: Box<IsDerivedFn> =
+    let is_warm: Box<IsWarmFn> =
         Box::new(|ctx: &CoreContext, repo: &BlobRepo, cs_id: &ChangesetId| {
             D::is_derived(&ctx, &repo, &cs_id)
                 .map_err(Error::from)
                 .boxed()
         });
-    Warmer { warmer, is_derived }
+    Warmer { warmer, is_warm }
 }
 
 impl WarmBookmarksCache {
@@ -190,7 +190,7 @@ async fn init_bookmarks(
         .into_iter()
         .map(|(book, cs_id)| async move {
             let kind = *book.kind();
-            if !is_derived(ctx, repo, &cs_id, warmers).await {
+            if !is_warm(ctx, repo, &cs_id, warmers).await {
                 let book_name = book.into_name();
                 let maybe_cs_id =
                     move_bookmark_back_in_history_until_derived(&ctx, &repo, &book_name, &warmers)
@@ -211,23 +211,23 @@ async fn init_bookmarks(
         .await
 }
 
-async fn is_derived(
+async fn is_warm(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: &ChangesetId,
     warmers: &[Warmer],
 ) -> bool {
-    let is_derived = warmers
+    let is_warm = warmers
         .iter()
-        .map(|warmer| (*warmer.is_derived)(ctx, repo, cs_id).map(|res| res.unwrap_or(false)))
+        .map(|warmer| (*warmer.is_warm)(ctx, repo, cs_id).map(|res| res.unwrap_or(false)))
         .collect::<FuturesUnordered<_>>();
 
-    is_derived
-        .fold(true, |acc, is_derived| future::ready(acc & is_derived))
+    is_warm
+        .fold(true, |acc, is_warm| future::ready(acc & is_warm))
         .await
 }
 
-async fn derive_all(
+async fn warm_all(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: &ChangesetId,
@@ -315,7 +315,7 @@ pub async fn find_all_underived_and_latest_derived(
             |(maybe_cs_id, _, ts)| async move {
                 match maybe_cs_id {
                     Some(cs_id) => {
-                        let derived = is_derived(ctx, repo, &cs_id, warmers).await;
+                        let derived = is_warm(ctx, repo, &cs_id, warmers).await;
                         (Some((cs_id, ts)), derived)
                     }
                     None => (None, true),
@@ -324,8 +324,8 @@ pub async fn find_all_underived_and_latest_derived(
         ))
         .buffered(100);
 
-        while let Some((maybe_cs_and_ts, is_derived)) = maybe_derived.next().await {
-            if is_derived {
+        while let Some((maybe_cs_and_ts, is_warm)) = maybe_derived.next().await {
+            if is_warm {
                 return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs_and_ts), res));
             } else {
                 if let Some(cs_and_ts) = maybe_cs_and_ts {
@@ -638,7 +638,7 @@ async fn single_bookmark_updater(
     for (underived_cs_id, ts) in underived_history {
         staleness_reporter(ts);
 
-        let res = derive_all(&ctx, &repo, &underived_cs_id, &warmers).await;
+        let res = warm_all(&ctx, &repo, &underived_cs_id, &warmers).await;
         match res {
             Ok(()) => {
                 update_bookmark(ts, underived_cs_id).await;
@@ -1015,7 +1015,7 @@ mod tests {
                     }
                 }
             }),
-            is_derived: Box::new(|ctx, repo, cs_id| {
+            is_warm: Box::new(|ctx, repo, cs_id| {
                 async move {
                     let res = RootUnodeManifestId::is_derived(&ctx, &repo, &cs_id).await?;
                     Ok(res)
@@ -1118,7 +1118,7 @@ mod tests {
                         .boxify()
                 }
             }),
-            is_derived: Box::new(|ctx, repo, cs_id| {
+            is_warm: Box::new(|ctx, repo, cs_id| {
                 async move {
                     let res = RootUnodeManifestId::is_derived(&ctx, &repo, &cs_id).await?;
                     Ok(res)
@@ -1162,8 +1162,7 @@ mod tests {
             move || {
                 cloned!(ctx, repo, master, warmers);
                 async move {
-                    let res: Result<_, Error> =
-                        Ok(is_derived(&ctx, &repo, &master, &warmers).await);
+                    let res: Result<_, Error> = Ok(is_warm(&ctx, &repo, &master, &warmers).await);
                     res
                 }
             }
