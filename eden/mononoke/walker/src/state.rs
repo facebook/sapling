@@ -95,9 +95,12 @@ impl WalkState {
     where
         K: Eq + Hash + Copy,
     {
-        visited
-            .insert(HashMemoizer::new(*k, &self.hasher_factory), ())
-            .is_none()
+        let k = HashMemoizer::new(*k, &self.hasher_factory);
+        if visited.contains_key(&k) {
+            false
+        } else {
+            visited.insert(k, ()).is_none()
+        }
     }
 
     /// If the state did not have this value present, true is returned.
@@ -111,12 +114,12 @@ impl WalkState {
     {
         let (path, id) = k;
         let mpathhash_opt = path.get_path_hash().cloned();
-        visited_with_path
-            .insert(
-                HashMemoizer::new((mpathhash_opt, *id), &self.hasher_factory),
-                (),
-            )
-            .is_none()
+        let key = HashMemoizer::new((mpathhash_opt, *id), &self.hasher_factory);
+        if visited_with_path.contains_key(&key) {
+            false
+        } else {
+            visited_with_path.insert(key, ()).is_none()
+        }
     }
 
     fn record_resolved_visit(&self, resolved: &OutgoingEdge, node_data: Option<&NodeData>) {
