@@ -19,7 +19,6 @@ pub trait SampleTrigger<K> {
     fn map_keys(&self, key: SamplingKey, walk_key: K);
 }
 
-#[derive(Debug)]
 pub struct SamplingWalkVisitor<T> {
     inner: WalkState,
     sample_node_types: HashSet<NodeType>,

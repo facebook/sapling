@@ -12,6 +12,7 @@ use ahash::RandomState;
 use array_init::array_init;
 use context::CoreContext;
 use dashmap::DashMap;
+use hash_memo::{BuildMemoHasher, EagerHashMemoizer as HashMemoizer};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, FsnodeId, MPathHash};
 use phases::Phase;
@@ -41,10 +42,9 @@ impl Add<StepStats> for StepStats {
     }
 }
 
-type BuildStateHasher = RandomState;
-type StateMap<T> = DashMap<T, (), BuildStateHasher>;
+type BuildStateHasher = BuildMemoHasher<RandomState>;
+type StateMap<T> = DashMap<HashMemoizer<T>, (), BuildStateHasher>;
 
-#[derive(Debug)]
 pub struct WalkState {
     // TODO implement ID interning to u32 or u64 for types in more than one map
     // e.g. ChangesetId, HgChangesetId, HgFileNodeId
@@ -62,26 +62,7 @@ pub struct WalkState {
     visited_hg_manifest: StateMap<(Option<MPathHash>, HgManifestId)>,
     visited_fsnode: StateMap<(Option<MPathHash>, FsnodeId)>,
     visit_count: [AtomicUsize; NodeType::MAX_ORDINAL + 1],
-}
-
-fn record<K>(visited: &StateMap<K>, k: &K) -> bool
-where
-    K: Eq + Hash + Copy,
-{
-    visited.insert(*k, ()).is_none()
-}
-
-/// If the state did not have this value present, true is returned.
-fn record_with_path<K>(
-    visited_with_path: &StateMap<(Option<MPathHash>, K)>,
-    k: &(WrappedPath, K),
-) -> bool
-where
-    K: Eq + Hash + Copy,
-{
-    let (path, id) = k;
-    let mpathhash_opt = path.get_path_hash().cloned();
-    visited_with_path.insert((mpathhash_opt, *id), ()).is_none()
+    hasher_factory: BuildStateHasher,
 }
 
 impl WalkState {
@@ -92,6 +73,7 @@ impl WalkState {
     ) -> Self {
         let fac = BuildStateHasher::default();
         Self {
+            hasher_factory: fac.clone(),
             include_node_types,
             include_edge_types,
             always_emit_edge_types,
@@ -109,6 +91,34 @@ impl WalkState {
         }
     }
 
+    fn record<K>(&self, visited: &StateMap<K>, k: &K) -> bool
+    where
+        K: Eq + Hash + Copy,
+    {
+        visited
+            .insert(HashMemoizer::new(*k, &self.hasher_factory), ())
+            .is_none()
+    }
+
+    /// If the state did not have this value present, true is returned.
+    fn record_with_path<K>(
+        &self,
+        visited_with_path: &StateMap<(Option<MPathHash>, K)>,
+        k: &(WrappedPath, K),
+    ) -> bool
+    where
+        K: Eq + Hash + Copy,
+    {
+        let (path, id) = k;
+        let mpathhash_opt = path.get_path_hash().cloned();
+        visited_with_path
+            .insert(
+                HashMemoizer::new((mpathhash_opt, *id), &self.hasher_factory),
+                (),
+            )
+            .is_none()
+    }
+
     fn record_resolved_visit(&self, resolved: &OutgoingEdge, node_data: Option<&NodeData>) {
         match (&resolved.target, node_data) {
             (
@@ -116,10 +126,12 @@ impl WalkState {
                 Some(NodeData::BonsaiPhaseMapping(Some(Phase::Public))),
             ) => {
                 // Only retain visit if already public, otherwise it could mutate between walks.
-                self.visited_bcs_phase.insert(*bcs_id, ());
+                self.visited_bcs_phase
+                    .insert(HashMemoizer::new(*bcs_id, &self.hasher_factory), ());
             }
             (Node::BonsaiHgMapping(bcs_id), Some(NodeData::BonsaiHgMapping(Some(_)))) => {
-                self.visited_bcs_mapping.insert(*bcs_id, ());
+                self.visited_bcs_mapping
+                    .insert(HashMemoizer::new(*bcs_id, &self.hasher_factory), ());
             }
             _ => (),
         }
@@ -147,7 +159,7 @@ impl VisitOne for WalkState {
         self.visit_count[k as usize].fetch_add(1, Ordering::Release);
 
         match &target_node {
-            Node::BonsaiChangeset(bcs_id) => record(&self.visited_bcs, bcs_id),
+            Node::BonsaiChangeset(bcs_id) => self.record(&self.visited_bcs, bcs_id),
             // TODO - measure if worth tracking - the mapping is cachelib enabled.
             Node::BonsaiHgMapping(bcs_id) => {
                 // Does not insert, see record_resolved_visit
@@ -157,13 +169,13 @@ impl VisitOne for WalkState {
                 // Does not insert, as can only prune visits once data resolved, see record_resolved_visit
                 !self.visited_bcs_phase.contains_key(bcs_id)
             }
-            Node::HgBonsaiMapping(hg_cs_id) => record(&self.visited_hg_cs_mapping, hg_cs_id),
-            Node::HgChangeset(hg_cs_id) => record(&self.visited_hg_cs, hg_cs_id),
-            Node::HgManifest(k) => record_with_path(&self.visited_hg_manifest, k),
-            Node::HgFileNode(k) => record_with_path(&self.visited_hg_filenode, k),
-            Node::HgFileEnvelope(id) => record(&self.visited_hg_file_envelope, id),
-            Node::FileContent(content_id) => record(&self.visited_file, content_id),
-            Node::Fsnode(k) => record_with_path(&self.visited_fsnode, k),
+            Node::HgBonsaiMapping(hg_cs_id) => self.record(&self.visited_hg_cs_mapping, hg_cs_id),
+            Node::HgChangeset(hg_cs_id) => self.record(&self.visited_hg_cs, hg_cs_id),
+            Node::HgManifest(k) => self.record_with_path(&self.visited_hg_manifest, k),
+            Node::HgFileNode(k) => self.record_with_path(&self.visited_hg_filenode, k),
+            Node::HgFileEnvelope(id) => self.record(&self.visited_hg_file_envelope, id),
+            Node::FileContent(content_id) => self.record(&self.visited_file, content_id),
+            Node::Fsnode(k) => self.record_with_path(&self.visited_fsnode, k),
             _ => true,
         }
     }
