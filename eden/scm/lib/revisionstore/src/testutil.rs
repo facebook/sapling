@@ -14,7 +14,7 @@ use futures::prelude::*;
 
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
-use edenapi_types::{DataEntry, HistoryEntry};
+use edenapi_types::{CommitRevlogData, DataEntry, HistoryEntry};
 use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
 
 use crate::{
@@ -281,6 +281,15 @@ impl EdenApi for FakeEdenApi {
         _depth: Option<usize>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<DataEntry>, EdenApiError> {
+        unimplemented!()
+    }
+
+    async fn commit_revlog_data(
+        &self,
+        _repo: String,
+        _hgids: Vec<HgId>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<CommitRevlogData>, EdenApiError> {
         unimplemented!()
     }
 }

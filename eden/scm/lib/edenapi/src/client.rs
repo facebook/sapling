@@ -15,7 +15,8 @@ use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
 use edenapi_types::{
-    CompleteTreeRequest, DataEntry, DataRequest, HistoryEntry, HistoryRequest, HistoryResponseChunk,
+    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, DataEntry, DataRequest,
+    HistoryEntry, HistoryRequest, HistoryResponseChunk,
 };
 use http_client::{HttpClient, Request};
 use types::{HgId, Key, RepoPathBuf};
@@ -35,6 +36,7 @@ mod paths {
     pub const HISTORY: &str = "history";
     pub const TREES: &str = "trees";
     pub const COMPLETE_TREES: &str = "trees/complete";
+    pub const COMMIT_REVLOG_DATA: &str = "commit/revlog_data";
 }
 
 pub struct Client {
@@ -249,6 +251,23 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         self.fetch::<DataEntry>(vec![req], progress).await
+    }
+
+    async fn commit_revlog_data(
+        &self,
+        repo: String,
+        hgids: Vec<HgId>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<CommitRevlogData>, EdenApiError> {
+        let url = self.url(paths::COMMIT_REVLOG_DATA, Some(&repo))?;
+        let commit_revlog_data_req = CommitRevlogDataRequest { hgids };
+
+        let req = self
+            .configure(Request::post(url))?
+            .cbor(&commit_revlog_data_req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch::<CommitRevlogData>(vec![req], progress).await
     }
 }
 

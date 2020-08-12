@@ -20,7 +20,9 @@ use tokio::prelude::*;
 
 use configparser::config::{ConfigSet, Options};
 use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback};
-use edenapi_types::{json::FromJson, CompleteTreeRequest, DataRequest, HistoryRequest};
+use edenapi_types::{
+    json::FromJson, CommitRevlogDataRequest, CompleteTreeRequest, DataRequest, HistoryRequest,
+};
 
 const DEFAULT_CONFIG_FILE: &str = ".hgrc.edenapi";
 
@@ -37,6 +39,8 @@ enum Command {
     Trees(Args),
     #[structopt(about = "Request complete trees")]
     CompleteTrees(Args),
+    #[structopt(about = "Request commit revlog data")]
+    CommitRevlogData(Args),
 }
 
 #[derive(Debug, StructOpt)]
@@ -78,6 +82,7 @@ async fn main() -> Result<()> {
         Command::History(args) => cmd_history(args).await,
         Command::Trees(args) => cmd_trees(args).await,
         Command::CompleteTrees(args) => cmd_complete_trees(args).await,
+        Command::CommitRevlogData(args) => cmd_commit_revlog_data(args).await,
     }
 }
 
@@ -169,6 +174,26 @@ async fn cmd_complete_trees(args: Args) -> Result<()> {
                 req.depth,
                 Some(cb),
             )
+            .await?;
+        handle_response(res, bar).await?;
+    }
+
+    Ok(())
+}
+
+async fn cmd_commit_revlog_data(args: Args) -> Result<()> {
+    let Setup {
+        repo,
+        client,
+        requests,
+    } = <Setup<CommitRevlogDataRequest>>::from_args(args)?;
+
+    for req in requests {
+        log::info!("Requesting revlog data for {} commits", req.hgids.len());
+
+        let (bar, cb) = progress_bar();
+        let res = client
+            .commit_revlog_data(repo.clone(), req.hgids, Some(cb))
             .await?;
         handle_response(res, bar).await?;
     }

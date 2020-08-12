@@ -8,7 +8,7 @@
 use anyhow::Context;
 use tokio::runtime::Runtime;
 
-use edenapi_types::{DataEntry, HistoryEntry};
+use edenapi_types::{CommitRevlogData, DataEntry, HistoryEntry};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::{EdenApi, ProgressCallback};
@@ -66,6 +66,15 @@ pub trait EdenApiBlocking: EdenApi {
             depth,
             progress,
         ))
+    }
+
+    fn commit_revlog_data_blocking(
+        &self,
+        repo: String,
+        hgids: Vec<HgId>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<BlockingFetch<CommitRevlogData>, EdenApiError> {
+        BlockingFetch::from_async(self.commit_revlog_data(repo, hgids, progress))
     }
 }
 
