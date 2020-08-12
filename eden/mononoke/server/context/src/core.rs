@@ -32,6 +32,14 @@ impl CoreContext {
         session.new_context(logger, ScubaSampleBuilder::with_discard())
     }
 
+    // Context for bulk processing like scrubbing or bulk backfilling
+    pub fn new_bulk_with_logger(fb: FacebookInit, logger: Logger) -> Self {
+        let session = SessionContainer::builder(fb)
+            .session_class(SessionClass::Background)
+            .build();
+        session.new_context(logger, ScubaSampleBuilder::with_discard())
+    }
+
     pub fn test_mock(fb: FacebookInit) -> Self {
         let session = SessionContainer::new_with_defaults(fb);
 

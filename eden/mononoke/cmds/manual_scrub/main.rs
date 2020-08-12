@@ -63,7 +63,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
 
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new_bulk_with_logger(fb, logger.clone());
 
     let scrub = async move {
         let blobstore = open_blobstore(
