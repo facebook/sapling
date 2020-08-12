@@ -31,7 +31,7 @@ use slog::{info, o, Logger};
 use std::path::Path;
 use std::sync::Arc;
 use warm_bookmarks_cache::{
-    create_warmer, find_all_underived_and_latest_derived, LatestDerivedBookmarkEntry,
+    create_derived_data_warmer, find_all_underived_and_latest_derived, LatestDerivedBookmarkEntry,
 };
 
 use crate::changesets::MicrowaveChangesets;
@@ -48,8 +48,8 @@ async fn cache_warmup_target(
     bookmark: &BookmarkName,
 ) -> Result<CacheWarmupTarget, Error> {
     let warmers = vec![
-        create_warmer::<MappedHgChangesetId>(&ctx),
-        create_warmer::<FilenodesOnlyPublic>(&ctx),
+        create_derived_data_warmer::<MappedHgChangesetId>(&ctx),
+        create_derived_data_warmer::<FilenodesOnlyPublic>(&ctx),
     ];
 
     match find_all_underived_and_latest_derived(ctx, repo, bookmark, &warmers)

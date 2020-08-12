@@ -15,12 +15,14 @@ blobrepo = { path = "../../blobrepo" }
 bookmarks = { path = ".." }
 bookmarks_types = { path = "../bookmarks_types" }
 changeset_info = { path = "../../derived_data/changeset_info" }
+consts = { path = "../../blobimport_lib/consts" }
 context = { path = "../../server/context" }
 deleted_files_manifest = { path = "../../derived_data/deleted_files_manifest" }
 derived_data = { path = "../../derived_data" }
 fsnodes = { path = "../../derived_data/fsnodes" }
 mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data" }
 mononoke_types = { path = "../../mononoke_types" }
+mutable_counters = { path = "../../mutable_counters" }
 tunables = { path = "../../tunables" }
 unodes = { path = "../../derived_data/unodes" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -39,6 +41,7 @@ blobrepo_override = { path = "../../blobrepo/override" }
 blobstore = { path = "../../blobstore" }
 delayblob = { path = "../../blobstore/delayblob" }
 fixtures = { path = "../../tests/fixtures" }
+sql_construct = { path = "../../common/sql_construct" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"

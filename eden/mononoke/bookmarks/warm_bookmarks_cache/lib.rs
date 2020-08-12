@@ -25,19 +25,22 @@ use fsnodes::RootFsnodeId;
 use futures::{
     channel::oneshot,
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, select, BoxFuture, FutureExt as NewFutureExt, TryFutureExt},
+    future::{self, select, BoxFuture, FutureExt as NewFutureExt},
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
 };
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt};
-use futures_old::Future;
+use futures_ext::BoxFuture as OldBoxFuture;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, Timestamp};
+use mutable_counters::MutableCounters;
 use slog::{debug, info, warn};
 use stats::prelude::*;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
+
+mod warmers;
+pub use warmers::{blobimport_changeset_warmer, create_derived_data_warmer};
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
@@ -69,24 +72,6 @@ pub struct Warmer {
     is_warm: Box<IsWarmFn>,
 }
 
-pub fn create_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
-    info!(ctx.logger(), "Warming {}", D::NAME);
-    let warmer: Box<WarmerFn> = Box::new(|ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| {
-        D::derive(ctx, repo, cs_id)
-            .map(|_| ())
-            .map_err(Error::from)
-            .boxify()
-    });
-
-    let is_warm: Box<IsWarmFn> =
-        Box::new(|ctx: &CoreContext, repo: &BlobRepo, cs_id: &ChangesetId| {
-            D::is_derived(&ctx, &repo, &cs_id)
-                .map_err(Error::from)
-                .boxed()
-        });
-    Warmer { warmer, is_warm }
-}
-
 pub struct WarmBookmarksCacheBuilder<'a> {
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
@@ -116,28 +101,38 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
 
         if types.contains(MappedHgChangesetId::NAME) {
             self.warmers
-                .push(create_warmer::<MappedHgChangesetId>(&self.ctx));
+                .push(create_derived_data_warmer::<MappedHgChangesetId>(&self.ctx));
         }
 
         if types.contains(RootUnodeManifestId::NAME) {
             self.warmers
-                .push(create_warmer::<RootUnodeManifestId>(&self.ctx));
+                .push(create_derived_data_warmer::<RootUnodeManifestId>(&self.ctx));
         }
         if types.contains(RootFsnodeId::NAME) {
-            self.warmers.push(create_warmer::<RootFsnodeId>(&self.ctx));
+            self.warmers
+                .push(create_derived_data_warmer::<RootFsnodeId>(&self.ctx));
         }
         if types.contains(BlameRoot::NAME) {
-            self.warmers.push(create_warmer::<BlameRoot>(&self.ctx));
+            self.warmers
+                .push(create_derived_data_warmer::<BlameRoot>(&self.ctx));
         }
         if types.contains(ChangesetInfo::NAME) {
-            self.warmers.push(create_warmer::<ChangesetInfo>(&self.ctx));
+            self.warmers
+                .push(create_derived_data_warmer::<ChangesetInfo>(&self.ctx));
         }
         if types.contains(RootDeletedManifestId::NAME) {
             self.warmers
-                .push(create_warmer::<RootDeletedManifestId>(&self.ctx));
+                .push(create_derived_data_warmer::<RootDeletedManifestId>(
+                    &self.ctx,
+                ));
         }
 
         Ok(())
+    }
+
+    pub fn add_blobimport_warmer(&mut self, mutable_counters: Arc<dyn MutableCounters>) {
+        let warmer = blobimport_changeset_warmer(self.ctx, mutable_counters);
+        self.warmers.push(warmer);
     }
 
     pub async fn build(
@@ -692,10 +687,16 @@ mod tests {
     use blobrepo_override::DangerousOverride;
     use blobstore::Blobstore;
     use cloned::cloned;
+    use consts::HIGHEST_IMPORTED_GEN_NUM;
     use delayblob::DelayedBlobstore;
     use fbinit::FacebookInit;
     use fixtures::linear;
+    use futures::future::TryFutureExt;
+    use futures_ext::FutureExt;
+    use futures_old::Future as OldFuture;
     use maplit::hashmap;
+    use mutable_counters::SqlMutableCounters;
+    use sql_construct::SqlConstruct;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
     use tokio::time;
 
@@ -707,7 +708,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
         // Unodes haven't been derived at all - so we should get an empty set of bookmarks
@@ -738,7 +739,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
         info!(ctx.logger(), "creating 5 derived commits");
@@ -789,7 +790,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
         let derived_master = resolve_cs_id(&ctx, &repo, "master").await?;
@@ -821,7 +822,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
         let derived_master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
@@ -871,7 +872,7 @@ mod tests {
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
         let master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
@@ -924,7 +925,7 @@ mod tests {
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
         info!(ctx.logger(), "created stack of commits");
@@ -1081,7 +1082,7 @@ mod tests {
 
         // Now change the warmer and make sure it derives successfully
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
         let (cancel, receiver_cancel) = oneshot::channel();
@@ -1224,7 +1225,7 @@ mod tests {
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
         let mut warmers: Vec<Warmer> = Vec::new();
-        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
         let warmers = Arc::new(warmers);
 
         let new_cs_id = CreateCommitContext::new(&ctx, &repo, vec!["master"])
@@ -1264,6 +1265,69 @@ mod tests {
             &bookmarks,
             &publishing_book,
             Some((new_cs_id, BookmarkKind::PullDefaultPublishing)),
+        )
+        .await?;
+
+        let _ = cancel.send(());
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_blobimport_warmer(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+
+        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
+        let mutable_counters = Arc::new(mutable_counters);
+        let warmer = blobimport_changeset_warmer(&ctx, mutable_counters.clone());
+        let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+
+        assert_eq!(false, (warmer.is_warm)(&ctx, &repo, &master_cs_id).await?);
+        let gen_num = repo
+            .get_generation_number(ctx.clone(), master_cs_id)
+            .compat();
+        let maybe_gen_num = gen_num.await?;
+        let gen_num = maybe_gen_num.ok_or(anyhow!("gen num for {} not found", master_cs_id))?;
+        mutable_counters
+            .set_counter(
+                ctx.clone(),
+                repo.get_repoid(),
+                HIGHEST_IMPORTED_GEN_NUM,
+                gen_num.value() as i64,
+                None,
+            )
+            .compat()
+            .await?;
+
+        assert_eq!(true, (warmer.is_warm)(&ctx, &repo, &master_cs_id).await?);
+
+        let bookmarks = repo
+            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .compat()
+            .map_ok(|(book, cs_id)| {
+                let kind = *book.kind();
+                (book.into_name(), (cs_id, kind))
+            })
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+
+        let bookmarks = Arc::new(RwLock::new(bookmarks));
+
+        let (cancel, receiver_cancel) = oneshot::channel();
+        spawn_bookmarks_coordinator(
+            bookmarks.clone(),
+            receiver_cancel,
+            ctx,
+            repo,
+            Arc::new(vec![warmer]),
+            TEST_LOOP_SLEEP,
+            BookmarkUpdateDelay::Disallow,
+        );
+        wait_for_bookmark(
+            &bookmarks,
+            &BookmarkName::new("master")?,
+            Some((master_cs_id, BookmarkKind::PullDefaultPublishing)),
         )
         .await?;
 
