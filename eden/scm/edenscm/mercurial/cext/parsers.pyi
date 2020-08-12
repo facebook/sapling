@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from typing import Callable, Dict, Iterable, Tuple, Union
+from typing import Callable, Dict, Iterable, Set, Tuple, Union
 
 # dirstatetuple is really a custom type separate from Tuple, but it behaves
 # basically like a Tuple, and we can't really get the same type checking behavior
@@ -16,10 +16,8 @@ def asciilower(s: bytes) -> bytes: ...
 def asciiupper(s: bytes) -> bytes: ...
 def jsonescapeu8fast(origstr: bytes, paranoid: bool) -> bytes: ...
 def make_file_foldmap(
-    dmap: Dict[bytes, dirstatetuple],
-    spec: int,
-    normcase_fallback: Callable[[bytes], bytes],
-) -> Dict[bytes, bytes]: ...
+    dmap: Dict[str, dirstatetuple], spec: int, normcase_fallback: Callable[[str], str]
+) -> Dict[str, str]: ...
 def dict_new_presized(minsize: int) -> Dict[str, dirstatetuple]: ...
 def parse_dirstate(
     dmap: Dict[str, dirstatetuple], copymap: Dict[str, str], st: bytes
@@ -30,6 +28,9 @@ def pack_dirstate(
     pl: Tuple[bytes, bytes],
     now: int,
 ) -> bytes: ...
+def nonnormalotherparententries(
+    dmap: Dict[str, dirstatetuple]
+) -> Tuple[Set[str], Set[str]]: ...
 
 class lazymanifest:
     def __init__(self, data: bytes) -> None: ...

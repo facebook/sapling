@@ -10,6 +10,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+# pyre-strict
+
 from __future__ import absolute_import
 
 import collections
@@ -18,7 +20,23 @@ import errno
 import os
 import stat
 import weakref
-from typing import Callable, List
+from typing import (
+    BinaryIO,
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
+
+import bindings
 
 # Using an absolute import here allows us to import localrepo even though it
 # circularly imports us.
@@ -26,6 +44,7 @@ import edenscm.mercurial.localrepo
 from edenscmnative import parsers
 
 from . import (
+    context,
     encoding,
     error,
     filesystem,
@@ -35,6 +54,7 @@ from . import (
     perftrace,
     pycompat,
     scmutil,
+    transaction,
     treedirstate,
     treestate,
     txnutil,
@@ -47,8 +67,6 @@ from .node import hex, nullid
 from .pycompat import encodeutf8
 
 
-propertycache = util.propertycache
-filecache = scmutil.filecache
 _rangemask = 0x7FFFFFFF
 
 dirstatetuple = parsers.dirstatetuple
@@ -56,24 +74,27 @@ dirstatetuple = parsers.dirstatetuple
 slowstatuswarning = _(
     "(status will still be slow next time; try to complete or abort "
     "other source control operations and then run 'hg status' again)\n"
-)
+)  # type: str
 
 
-class repocache(filecache):
+class repocache(scmutil.filecache):
     """filecache for files in .hg/"""
 
     def join(self, obj, fname):
+        # type: (dirstate, str) -> str
         return obj._opener.join(fname)
 
 
-class rootcache(filecache):
+class rootcache(scmutil.filecache):
     """filecache for files in the repository root"""
 
     def join(self, obj, fname):
+        # type: (dirstate, str) -> str
         return obj._join(fname)
 
 
 def _getfsnow(vfs):
+    # type: (vfs.abstractvfs) -> int
     """Get "now" timestamp on filesystem"""
     tmpfd, tmpname = vfs.mkstemp()
     try:
@@ -81,6 +102,19 @@ def _getfsnow(vfs):
     finally:
         os.close(tmpfd)
         vfs.unlink(tmpname)
+
+
+DirstateMapClassType = Union[
+    Type["dirstatemap"],
+    Type[treestate.treestatemap],
+    Type[treedirstate.treedirstatemap],
+]
+DirstateMapType = Union[
+    "dirstatemap", treestate.treestatemap, treedirstate.treedirstatemap
+]
+ParentChangeCallback = Callable[
+    ["dirstate", Tuple[bytes, bytes], Tuple[bytes, bytes]], None
+]
 
 
 class dirstate(object):
@@ -104,37 +138,40 @@ class dirstate(object):
         self._opener = opener
         self._validate = validate
         self._root = root
-        self._repo = weakref.proxy(repo)
+        self._repo = weakref.proxy(
+            repo
+        )  # type: edenscm.mercurial.localrepo.localrepository
         # ntpath.join(root, '') of Python 2.7.9 does not add sep if root is
         # UNC path pointing to root share (issue4557)
-        self._rootdir = pathutil.normasprefix(root)
+        self._rootdir = pathutil.normasprefix(root)  # type: str
         self._dirty = False
         self._lastnormaltime = 0
         self._ui = ui
-        self._filecache = {}
+        self._filecache = {}  # type: Dict[str, Optional[scmutil.filecacheentry]]
         self._parentwriters = 0
         self._filename = "dirstate"
-        self._pendingfilename = "%s.pending" % self._filename
-        self._plchangecallbacks = {}
-        self._origpl = None
-        self._updatedfiles = set()
+        self._pendingfilename = "%s.pending" % self._filename  # type: str
+        self._plchangecallbacks = {}  # type: Dict[str, ParentChangeCallback]
+        self._origpl = None  # type: Optional[Tuple[bytes, bytes]]
+        self._updatedfiles = set()  # type: Set[str]
         # TODO(quark): after migrating to treestate, remove legacy code.
         self._istreestate = istreestate
         self._istreedirstate = istreedirstate
         if istreestate:
             opener.makedirs("treestate")
-            self._mapcls = treestate.treestatemap
+            self._mapcls = treestate.treestatemap  # type: DirstateMapClassType
         elif istreedirstate:
             ui.deprecate("treedirstate", "treedirstate is replaced by treestate")
-            self._mapcls = treedirstate.treedirstatemap
+            self._mapcls = treedirstate.treedirstatemap  # type: DirstateMapClassType
         else:
             if "eden" not in repo.requirements:
                 ui.deprecate("dirstatemap", "dirstatemap is replaced by treestate")
-            self._mapcls = dirstatemap
+            self._mapcls = dirstatemap  # type: DirstateMapClassType
         self._fs = filesystem.physicalfilesystem(root, self)
 
     @contextlib.contextmanager
     def parentchange(self):
+        # type: () -> Generator[None, None, None]
         """Context manager for handling dirstate parents.
 
         If an exception occurs in the scope of the context manager,
@@ -151,6 +188,7 @@ class dirstate(object):
         self._parentwriters -= 1
 
     def beginparentchange(self):
+        # type: () -> None
         """Marks the beginning of a set of changes that involve changing
         the dirstate parents. If there is an exception during this time,
         the dirstate will not be written when the wlock is released. This
@@ -164,6 +202,7 @@ class dirstate(object):
         self._parentwriters += 1
 
     def endparentchange(self):
+        # type: () -> None
         """Marks the end of a set of changes that involve changing the
         dirstate parents. Once all parent changes have been marked done,
         the wlock will be free to write the dirstate on release.
@@ -176,58 +215,70 @@ class dirstate(object):
             self._parentwriters -= 1
 
     def pendingparentchange(self):
+        # type: () -> bool
         """Returns true if the dirstate is in the middle of a set of changes
         that modify the dirstate parent.
         """
         return self._parentwriters > 0
 
-    @propertycache
+    @util.propertycache
     def _map(self):
+        # type: () -> DirstateMapType
         """Return the dirstate contents (see documentation for dirstatemap)."""
         self._map = self._mapcls(self._ui, self._opener, self._root)
         return self._map
 
     @repocache("branch")
     def _branch(self):
+        # type: () -> str
         return self._opener.tryreadutf8("branch").strip() or "default"
 
     @property
     def _pl(self):
+        # type: () -> Tuple[bytes, bytes]
         return self._map.parents()
 
     def hasdir(self, d):
+        # type: (str) -> bool
         return self._map.hastrackeddir(d)
 
     @rootcache(".hgignore")
     def _ignore(self):
+        # type: () -> matchmod.gitignorematcher
         # gitignore
         globalignores = self._globalignorefiles()
         return matchmod.gitignorematcher(self._root, "", gitignorepaths=globalignores)
 
-    @propertycache
+    @util.propertycache
     def _slash(self):
+        # type: () -> bool
         return (
             self._ui.plain() or self._ui.configbool("ui", "slash")
         ) and pycompat.ossep != "/"
 
-    @propertycache
+    @util.propertycache
     def _checklink(self):
+        # type: () -> bool
         return util.checklink(self._root)
 
-    @propertycache
+    @util.propertycache
     def _checkexec(self):
+        # type: () -> bool
         return util.checkexec(self._root)
 
-    @propertycache
+    @util.propertycache
     def _checkcase(self):
+        # type: () -> bool
         return not util.fscasesensitive(self._join(".hg"))
 
     def _join(self, f):
+        # type: (str) -> str
         # much faster than os.path.join()
         # it's safe because f is always a relative path
         return self._rootdir + f
 
     def flagfunc(self, buildfallback):
+        # type: (Callable[[], Callable[[str], str]]) -> Callable[[str], str]
         if self._checklink and self._checkexec:
 
             def f(x):
@@ -243,7 +294,7 @@ class dirstate(object):
 
             return f
 
-        fallback = buildfallback()
+        fallback = buildfallback()  # type: Callable[[str], str]
         if self._checklink:
 
             def f(x):
@@ -257,6 +308,7 @@ class dirstate(object):
         if self._checkexec:
 
             def f(x):
+                # type: (str) -> str
                 if "l" in fallback(x):
                     return "l"
                 if util.isexec(self._join(x)):
@@ -267,8 +319,9 @@ class dirstate(object):
         else:
             return fallback
 
-    @propertycache
+    @util.propertycache
     def _cwd(self):
+        # type: () -> str
         # internal config: ui.forcecwd
         forcecwd = self._ui.config("ui", "forcecwd")
         if forcecwd:
@@ -276,6 +329,7 @@ class dirstate(object):
         return pycompat.getcwd()
 
     def getcwd(self):
+        # type: () -> str
         """Return the path from which a canonical path is calculated.
 
         This path should be used to resolve file patterns or to convert
@@ -296,6 +350,7 @@ class dirstate(object):
             return cwd
 
     def pathto(self, f, cwd=None):
+        # type: (str, Optional[str]) -> str
         if cwd is None:
             cwd = self.getcwd()
         path = util.pathto(self._root, cwd, f)
@@ -304,6 +359,7 @@ class dirstate(object):
         return path
 
     def __getitem__(self, key):
+        # type: (str) -> str
         """Return the current state of key (a filename) in the dirstate.
 
         States are:
@@ -316,29 +372,40 @@ class dirstate(object):
         return self._map.get(key, ("?", 0, 0, 0))[0]
 
     def __contains__(self, key):
+        # type: (str) -> bool
         return key in self._map
 
     def __iter__(self):
+        # type: () -> Iterable[str]
+        # pyre-fixme[6]: expected Iterable (maybe PEP 544 will fix this?)
         return iter(sorted(self._map))
 
     def items(self):
+        # type: () -> Iterable[Tuple[str, dirstatetuple]]
         return pycompat.iteritems(self._map)
 
-    iteritems = items
+    iteritems = items  # type: Callable[[dirstate], Iterable[Tuple[str, dirstatetuple]]]
 
     def parents(self):
+        # type: () -> List[bytes]
+        # (This always returns a list of length 2.  Perhaps we should change it to
+        # return a tuple instead.)
         return [self._validate(p) for p in self._pl]
 
     def p1(self):
+        # type: () -> bytes
         return self._validate(self._pl[0])
 
     def p2(self):
+        # type: () -> bytes
         return self._validate(self._pl[1])
 
     def branch(self):
+        # type: () -> str
         return encoding.tolocal(self._branch)
 
     def setparents(self, p1, p2=nullid):
+        # type: (bytes, bytes) -> Dict[str, str]
         """Set dirstate parents to p1 and p2.
 
         When moving from two parents to one, 'm' merged entries a
@@ -358,7 +425,7 @@ class dirstate(object):
         if self._origpl is None:
             self._origpl = self._pl
         self._map.setparents(p1, p2)
-        copies = {}
+        copies = {}  # type: Dict[str, str]
         copymap = self._map.copymap
         if oldp2 != nullid and p2 == nullid:
             candidatefiles = self._map.nonnormalset.union(self._map.otherparentset)
@@ -382,6 +449,7 @@ class dirstate(object):
         return copies
 
     def setbranch(self, branch):
+        # type: (str) -> None
         assert isinstance(branch, str)
         self._branch = encoding.fromlocal(branch)
         f = self._opener("branch", "w", atomictemp=True, checkambig=True)
@@ -395,10 +463,12 @@ class dirstate(object):
             if ce:
                 ce.refresh()
         except:  # re-raises
+            # pyre-fixme[16]: `BinaryIO` has no attribute `discard`
             f.discard()
             raise
 
     def invalidate(self):
+        # type: () -> None
         """Causes the next access to reread the dirstate.
 
         This is different from localrepo.invalidatedirstate() because it always
@@ -415,71 +485,89 @@ class dirstate(object):
         self._origpl = None
 
     def copy(self, source, dest):
+        # type: (str, str) -> None
         """Mark dest as a copy of source. Unmark dest if source is None."""
         if source == dest:
             return
         self._dirty = True
         if self._istreestate:
-            self._map.copy(source, dest)
+            tsmap = cast(treestate.treestatemap, self._map)
+            tsmap.copy(source, dest)
             # treestatemap.copymap needs to be changed via the "copy" method.
             # _updatedfiles is not used by treestatemap as it's tracked
             # internally.
             return
+        dmap = cast(Union[dirstatemap, treedirstate.treedirstatemap], self._map)
         if source is not None:
-            self._map.copymap[dest] = source
+            dmap.copymap[dest] = source
             self._updatedfiles.add(source)
             self._updatedfiles.add(dest)
-        elif self._map.copymap.pop(dest, None):
+        elif dmap.copymap.pop(dest, None):
             self._updatedfiles.add(dest)
 
     def copied(self, file):
+        # type: (str) -> Optional[str]
         if self._istreestate:
-            return self._map.copysource(file)
+            tsmap = cast(treestate.treestatemap, self._map)
+            return tsmap.copysource(file)
         else:
-            return self._map.copymap.get(file, None)
+            dmap = cast(Union[dirstatemap, treedirstate.treedirstatemap], self._map)
+            return dmap.copymap.get(file, None)
 
     def copies(self):
+        # type: () -> Dict[str, str]
         return self._map.copymap
 
     def needcheck(self, file):
+        # type: (str) -> bool
         """Mark file as need-check"""
         if not self._istreestate:
             raise error.ProgrammingError("needcheck is only supported by treestate")
-        changed = self._map.needcheck(file)
+        tsmap = cast(treestate.treestatemap, self._map)
+        changed = tsmap.needcheck(file)
         self._dirty |= changed
         return changed
 
     def clearneedcheck(self, file):
+        # type: (str) -> None
         if not self._istreestate:
             raise error.ProgrammingError("needcheck is only supported by treestate")
-        changed = self._map.clearneedcheck(file)
+        tsmap = cast(treestate.treestatemap, self._map)
+        changed = tsmap.clearneedcheck(file)
         self._dirty |= changed
 
     def setclock(self, clock):
+        # type: (str) -> None
         """Set fsmonitor clock"""
         return self.setmeta("clock", clock)
 
     def getclock(self):
+        # type: () -> Optional[str]
         """Get fsmonitor clock"""
         return self.getmeta("clock")
 
     def setmeta(self, name, value):
+        # type: (str, Optional[str]) -> None
         """Set metadata"""
         if not self._istreestate:
             raise error.ProgrammingError("setmeta is only supported by treestate")
         value = value or None
         if value != self.getmeta(name):
-            self._map.updatemetadata({name: value})
+            tsmap = cast(treestate.treestatemap, self._map)
+            tsmap.updatemetadata({name: value})
             self._dirty = True
 
     def getmeta(self, name):
+        # type: (str) -> Optional[str]
         """Get metadata"""
         if not self._istreestate:
             raise error.ProgrammingError("getmeta is only supported by treestate")
+        tsmap = cast(treestate.treestatemap, self._map)
         # Normalize "" to "None"
-        return self._map.getmetadata().get(name) or None
+        return tsmap.getmetadata().get(name) or None
 
     def _addpath(self, f, state, mode, size, mtime):
+        # type: (str, str, int, int, int) -> None
         oldstate = self[f]
         if state == "a" or oldstate == "r":
             scmutil.checkfilename(f)
@@ -501,6 +589,7 @@ class dirstate(object):
         self._map.addfile(f, oldstate, state, mode, size, mtime)
 
     def normal(self, f):
+        # type: (str) -> None
         """Mark a file normal and clean."""
         s = util.lstat(self._join(f))
         mtime = s.st_mtime
@@ -516,6 +605,7 @@ class dirstate(object):
             self._lastnormaltime = mtime
 
     def normallookup(self, f):
+        # type: (str) -> None
         """Mark a file normal, but possibly dirty."""
         if self._pl[1] != nullid:
             # if there is a merge going on and the file was either
@@ -539,6 +629,7 @@ class dirstate(object):
             self._map.copymap.pop(f, None)
 
     def otherparent(self, f):
+        # type: (str) -> None
         """Mark as coming from the other parent, always dirty."""
         if self._pl[1] == nullid:
             raise error.Abort(
@@ -554,12 +645,14 @@ class dirstate(object):
             self._map.copymap.pop(f, None)
 
     def add(self, f):
+        # type: (str) -> None
         """Mark a file added."""
         self._addpath(f, "a", 0, -1, -1)
         if not self._istreestate:
             self._map.copymap.pop(f, None)
 
     def remove(self, f):
+        # type: (str) -> None
         """Mark a file removed."""
         self._dirty = True
         oldstate = self[f]
@@ -581,12 +674,14 @@ class dirstate(object):
                 self._map.copymap.pop(f, None)
 
     def merge(self, f):
+        # type: (str) -> None
         """Mark a file merged."""
         if self._pl[1] == nullid:
             return self.normallookup(f)
         return self.otherparent(f)
 
     def untrack(self, f):
+        # type: (str) -> None
         """Stops tracking a file in the dirstate. This is useful during
         operations that want to stop tracking a file, but still have it show up
         as untracked (like hg forget)."""
@@ -598,6 +693,7 @@ class dirstate(object):
                 self._map.copymap.pop(f, None)
 
     def delete(self, f):
+        # type: (str) -> None
         """Removes a file from the dirstate entirely. This is useful during
         operations like update, to remove files from the dirstate that are known
         to be deleted."""
@@ -609,6 +705,7 @@ class dirstate(object):
                 self._map.copymap.pop(f, None)
 
     def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
+        # type: (str, str, bool, Optional[bool], Dict[str, str]) -> str
         if exists is None:
             exists = os.path.lexists(os.path.join(self._root, path))
         if not exists:
@@ -635,6 +732,7 @@ class dirstate(object):
         return folded
 
     def _normalizefile(self, path, isknown, ignoremissing=False, exists=None):
+        # type: (str, bool, bool, Optional[bool]) -> str
         normed = util.normcase(path)
         folded = self._map.filefoldmap.get(normed, None)
         if folded is None:
@@ -647,6 +745,7 @@ class dirstate(object):
         return folded
 
     def _normalize(self, path, isknown, ignoremissing=False, exists=None):
+        # type: (str, bool, bool, Optional[bool]) -> str
         normed = util.normcase(path)
         folded = self._map.filefoldmap.get(normed, None)
         if folded is None:
@@ -663,6 +762,7 @@ class dirstate(object):
         return folded
 
     def normalize(self, path, isknown=False, ignoremissing=False):
+        # type: (str, bool, bool) -> str
         """
         normalize the case of a pathname when on a casefolding filesystem
 
@@ -685,12 +785,14 @@ class dirstate(object):
         return path
 
     def clear(self):
+        # type: () -> None
         self._map.clear()
         self._lastnormaltime = 0
         self._updatedfiles.clear()
         self._dirty = True
 
     def rebuild(self, parent, allfiles, changedfiles=None, exact=False):
+        # type: (bytes, Sequence[str], Optional[Sequence[str]], bool) -> None
         # If exact is True, then assume only changedfiles can be changed, and
         # other files cannot be possibly changed. This is used by "absorb" as
         # a hint to perform a fast path for fsmonitor and sparse.
@@ -715,6 +817,7 @@ class dirstate(object):
         self._dirty = True
 
     def identity(self):
+        # type: () -> object
         """Return identity of dirstate itself to detect changing in storage
 
         If identity of previous dirstate is equal to this, writing
@@ -723,6 +826,7 @@ class dirstate(object):
         return self._map.identity
 
     def write(self, tr):
+        # type: (Optional[transaction.transaction]) -> None
         if not self._dirty:
             return
 
@@ -735,6 +839,7 @@ class dirstate(object):
         self._writedirstate(st)
 
     def _markforwrite(self):
+        # type: () -> None
         tr = self._repo.currenttransaction()
         if not tr:
             raise error.ProgrammingError("no transaction during dirstate write")
@@ -762,6 +867,7 @@ class dirstate(object):
 
     @util.propertycache
     def checkoutidentifier(self):
+        # type: () -> str
         try:
             return self._opener.readutf8("checkoutidentifier")
         except IOError as e:
@@ -770,6 +876,7 @@ class dirstate(object):
         return ""
 
     def addparentchangecallback(self, category, callback):
+        # type: (str, ParentChangeCallback) -> None
         """add a callback to be called when the wd parents are changed
 
         Callback will be called with the following arguments:
@@ -781,12 +888,14 @@ class dirstate(object):
         self._plchangecallbacks[category] = callback
 
     def _writedirstate(self, st):
+        # type: (BinaryIO) -> None
         # notify callbacks about parents change
-        if self._origpl is not None and self._origpl != self._pl:
+        origpl = self._origpl
+        if origpl is not None and origpl != self._pl:
             for c, callback in sorted(pycompat.iteritems(self._plchangecallbacks)):
-                callback(self, self._origpl, self._pl)
+                callback(self, origpl, self._pl)
             # if the first parent has changed then consider this a new checkout
-            if self._origpl[0] != self._pl[0]:
+            if origpl[0] != self._pl[0]:
                 with self._opener("checkoutidentifier", "w", atomictemp=True) as f:
                     f.write(util.makerandomidentifier().encode("utf-8"))
                 util.clearcachedproperty(self, "checkoutidentifier")
@@ -818,6 +927,7 @@ class dirstate(object):
         self._dirty = False
 
     def _dirignore(self, f):
+        # type: (str) -> bool
         if f == "":
             return False
         visitdir = self._ignore.visitdir
@@ -826,11 +936,13 @@ class dirstate(object):
         return False
 
     def _ignorefiles(self):
+        # type: () -> List[str]
         files = []
         files += self._globalignorefiles()
         return files
 
     def _globalignorefiles(self):
+        # type: () -> List[str]
         files = []
         for name, path in self._ui.configitems("ui"):
             # A path could have an optional prefix (ex. "git:") to select file
@@ -927,14 +1039,15 @@ class dirstate(object):
         # iteration may change the nonnormalset as lookup states are resolved.
         if util.safehasattr(dmap, "nonnormalsetfiltered"):
             # treestate has a fast path to filter out ignored directories.
-            ignorevisitdir = ignore.visitdir
+            ignorevisitdir = ignore.visitdir  # type: Callable[[str], Union[str, bool]]
 
             def dirfilter(path):
                 # type: (str) -> bool
                 result = ignorevisitdir(path.rstrip("/"))
                 return result == "all"
 
-            nonnormalset = dmap.nonnormalsetfiltered(dirfilter)
+            tsmap = cast(treestate.treestatemap, dmap)
+            nonnormalset = tsmap.nonnormalsetfiltered(dirfilter)
         else:
             nonnormalset = dmap.nonnormalset
 
@@ -946,7 +1059,9 @@ class dirstate(object):
 
         # audit_path is used to verify that nonnormal files still exist and are
         # not behind symlinks.
-        auditpath = pathutil.pathauditor(self._root, cached=True)
+        auditpath = pathutil.pathauditor(
+            self._root, cached=True
+        )  # type: pathutil.pathauditor
 
         def fileexists(fn):
             # type: (str) -> bool
@@ -1076,6 +1191,7 @@ class dirstate(object):
         return status
 
     def _poststatusfixup(self, status, wctx, oldid):
+        # type: (scmutil.status, context.workingctx, object) -> None
         """update dirstate for files that are actually clean"""
         poststatusbefore = self._repo.postdsstatus(afterdirstatewrite=False)
         poststatusafter = self._repo.postdsstatus(afterdirstatewrite=True)
@@ -1083,6 +1199,7 @@ class dirstate(object):
         if poststatusbefore or poststatusafter or self._dirty:
             # prevent infinite loop because fsmonitor postfixup might call
             # wctx.status()
+            # pyre-fixme[16]: localrepo has no attribute _insidepoststatusfixup
             self._repo._insidepoststatusfixup = True
             try:
                 # Updating the dirstate is optional so we don't wait on the
@@ -1096,6 +1213,7 @@ class dirstate(object):
                 # performance.
                 freshinstance = False
                 try:
+                    # pyre-fixme[16]: physicalfilesystem has no attr _fsmonitorstate
                     freshinstance = self._fs._fsmonitorstate._lastisfresh
                 except Exception:
                     pass
@@ -1139,6 +1257,7 @@ class dirstate(object):
                 self._repo._insidepoststatusfixup = False
 
     def matches(self, match):
+        # type: (matchmod.basematcher) -> Iterable[str]
         """
         return files in the dirstate (in whatever state) filtered by match
         """
@@ -1154,15 +1273,16 @@ class dirstate(object):
             if self._istreestate:
                 # treestate has a fast path to get files inside a subdirectory.
                 # files are prefixes
+                tsmap = cast(treestate.treestatemap, dmap)
                 result = set()
                 fastpathvalid = True
                 for prefix in files:
-                    if prefix in dmap:
+                    if prefix in tsmap:
                         # prefix is a file
                         result.add(prefix)
-                    elif dmap.hastrackeddir(prefix + "/"):
+                    elif tsmap.hastrackeddir(prefix + "/"):
                         # prefix is a directory
-                        result.update(dmap.keys(prefix=prefix + "/"))
+                        result.update(tsmap.keys(prefix=prefix + "/"))
                     else:
                         # unknown pattern (ex. "."), fast path is invalid
                         fastpathvalid = False
@@ -1177,12 +1297,14 @@ class dirstate(object):
         return [f for f in dmap if match(f)]
 
     def _actualfilename(self, tr):
+        # type: (Optional[transaction.transaction]) -> str
         if tr:
             return self._pendingfilename
         else:
             return self._filename
 
     def savebackup(self, tr, backupname):
+        # type: (Optional[transaction.transaction], str) -> None
         """Save current dirstate into backup file"""
         filename = self._actualfilename(tr)
         assert backupname != filename
@@ -1216,6 +1338,7 @@ class dirstate(object):
         )
 
     def restorebackup(self, tr, backupname):
+        # type: (Optional[transaction.transaction], str) -> None
         """Restore dirstate by backup file"""
         # this "invalidate()" prevents "wlock.release()" from writing
         # changes of dirstate out after restoring from backup file
@@ -1228,10 +1351,12 @@ class dirstate(object):
             o.rename(backupname, filename, checkambig=True)
 
     def clearbackup(self, tr, backupname):
+        # type: (Optional[transaction.transaction], str) -> None
         """Clear backup file"""
         self._opener.unlink(backupname)
 
     def loginfo(self, ui, prefix):
+        # type: (ui_mod.ui, str) -> None
         try:
             parents = [hex(p) if p != nullid else "" for p in self._pl]
         except Exception:
@@ -1281,30 +1406,34 @@ class dirstatemap(object):
     """
 
     def __init__(self, ui, opener, root):
+        # type: (ui_mod.ui, vfs.abstractvfs, str) -> None
         self._ui = ui
         self._opener = opener
         self._root = root
         self._filename = "dirstate"
 
-        self._parents = None
+        self._parents = None  # type: Optional[Tuple[bytes, bytes]]
         self._dirtyparents = False
 
         # for consistent view between _pl() and _read() invocations
-        self._pendingmode = None
+        self._pendingmode = None  # type: Optional[bool]
 
-    @propertycache
+    @util.propertycache
     def _map(self):
+        # type: () -> Dict[str, dirstatetuple]
         self._map = {}
         self.read()
         return self._map
 
-    @propertycache
+    @util.propertycache
     def copymap(self):
+        # type: () -> Dict[str, str]
         self.copymap = {}
         self._map
         return self.copymap
 
     def clear(self):
+        # type: () -> None
         self._map.clear()
         self.copymap.clear()
         self.setparents(nullid, nullid)
@@ -1316,34 +1445,44 @@ class dirstatemap(object):
         util.clearcachedproperty(self, "otherparentset")
 
     def iteritems(self):
+        # type: () -> Iterable[Tuple[str, dirstatetuple]]
         return pycompat.iteritems(self._map)
 
     def items(self):
+        # type: () -> Iterable[Tuple[str, dirstatetuple]]
         return pycompat.iteritems(self._map)
 
     def __len__(self):
+        # type: () -> int
         return len(self._map)
 
     def __iter__(self):
+        # type: () -> Iterable[str]
         return iter(self._map)
 
     def get(self, key, default=None):
+        # type: (str, Optional[dirstatetuple]) -> Optional[dirstatetuple]
         return self._map.get(key, default)
 
     def __contains__(self, key):
+        # type: (str) -> bool
         return key in self._map
 
     def __getitem__(self, key):
+        # type: (str) -> dirstatetuple
         return self._map[key]
 
     def keys(self):
+        # type: () -> Iterable[str]
         return self._map.keys()
 
     def preload(self):
+        # type: () -> None
         """Loads the underlying data, if it's not already loaded"""
         self._map
 
     def addfile(self, f, oldstate, state, mode, size, mtime):
+        # type: (str, str, str, int, int, int) -> None
         """Add a tracked file to the dirstate."""
         if oldstate in "?r" and "_dirs" in self.__dict__:
             self._dirs.addpath(f)
@@ -1356,6 +1495,7 @@ class dirstatemap(object):
             self.otherparentset.add(f)
 
     def removefile(self, f, oldstate, size):
+        # type: (str, str, int) -> None
         """
         Mark a file as removed in the dirstate.
 
@@ -1374,6 +1514,7 @@ class dirstatemap(object):
         self.nonnormalset.add(f)
 
     def deletefile(self, f, oldstat):
+        # type: (str, str) -> None
         """
         Removes a file from the dirstate entirely, implying it doesn't even
         exist on disk anymore and may not be untracked.
@@ -1383,6 +1524,7 @@ class dirstatemap(object):
         self.untrackfile(f, oldstat)
 
     def untrackfile(self, f, oldstate):
+        # type: (str, str) -> bool
         """
         Remove a file from the dirstate, leaving it untracked.  Returns True if
         the file was previously recorded.
@@ -1400,6 +1542,7 @@ class dirstatemap(object):
         return exists
 
     def clearambiguoustimes(self, files, now):
+        # type: (Iterable[str], int) -> None
         for f in files:
             e = self.get(f)
             if e is not None and e[0] == "n" and e[3] == now:
@@ -1407,9 +1550,11 @@ class dirstatemap(object):
                 self.nonnormalset.add(f)
 
     def _insert_tuple(self, f, state, mode, size, mtime):
+        # type: (str, str, int, int, int) -> None
         self._map[f] = dirstatetuple(state, mode, size, mtime)
 
     def nonnormalentries(self):
+        # type: () -> Tuple[Set[str], Set[str]]
         """Compute the nonnormal dirstate entries from the dmap"""
         try:
             return parsers.nonnormalotherparententries(self._map)
@@ -1423,8 +1568,9 @@ class dirstatemap(object):
                     otherparent.add(fname)
             return nonnorm, otherparent
 
-    @propertycache
+    @util.propertycache
     def filefoldmap(self):
+        # type: () -> Dict[str, str]
         """Returns a dictionary mapping normalized case paths to their
         non-normalized versions.
         """
@@ -1444,6 +1590,7 @@ class dirstatemap(object):
         return f
 
     def hastrackeddir(self, d):
+        # type: (str) -> bool
         """
         Returns True if the dirstate contains a tracked (not removed) file
         in this directory.
@@ -1451,21 +1598,25 @@ class dirstatemap(object):
         return d in self._dirs
 
     def hasdir(self, d):
+        # type: (str) -> bool
         """
         Returns True if the dirstate contains a file (tracked or removed)
         in this directory.
         """
         return d in self._alldirs
 
-    @propertycache
+    @util.propertycache
     def _dirs(self):
+        # type: () -> bindings.dirs.dirs
         return util.dirs((p for (p, s) in pycompat.iteritems(self._map) if s[0] != "r"))
 
-    @propertycache
+    @util.propertycache
     def _alldirs(self):
+        # type: () -> bindings.dirs.dirs
         return util.dirs(self._map)
 
     def _opendirstatefile(self):
+        # type: () -> BinaryIO
         fp, mode = txnutil.trypending(self._root, self._opener, self._filename)
         if self._pendingmode is not None and self._pendingmode != mode:
             fp.close()
@@ -1474,7 +1625,9 @@ class dirstatemap(object):
         return fp
 
     def parents(self):
-        if not self._parents:
+        # type: () -> Tuple[bytes, bytes]
+        parents = self._parents
+        if not parents:
             try:
                 fp = self._opendirstatefile()
                 st = fp.read(40)
@@ -1487,19 +1640,22 @@ class dirstatemap(object):
 
             l = len(st)
             if l == 40:
-                self._parents = st[:20], st[20:40]
+                parents = st[:20], st[20:40]
             elif l == 0:
-                self._parents = [nullid, nullid]
+                parents = (nullid, nullid)
             else:
                 raise error.Abort(_("working directory state appears damaged!"))
+            self._parents = parents
 
-        return self._parents
+        return parents
 
     def setparents(self, p1, p2):
+        # type: (bytes, bytes) -> None
         self._parents = (p1, p2)
         self._dirtyparents = True
 
     def read(self):
+        # type: () -> None
         # ignore HG_PENDING because identity is used only for writing
         self.identity = util.filestat.frompath(self._opener.join(self._filename))
 
@@ -1547,37 +1703,43 @@ class dirstatemap(object):
             self.setparents(*p)
 
         # Avoid excess attribute lookups by fast pathing certain checks
-        self.__contains__ = self._map.__contains__
-        self.__getitem__ = self._map.__getitem__
+        self.__contains__ = self._map.__contains__  # type: Callable[[str], bool]
+        self.__getitem__ = self._map.__getitem__  # type: Callable[[str], dirstatetuple]
         self.get = self._map.get
 
     def write(self, st, now):
+        # type: (BinaryIO, int) -> None
         st.write(parsers.pack_dirstate(self._map, self.copymap, self.parents(), now))
         st.close()
         self._dirtyparents = False
         self.nonnormalset, self.otherparentset = self.nonnormalentries()
 
-    @propertycache
+    @util.propertycache
     def nonnormalset(self):
+        # type: () -> Set[str]
         nonnorm, otherparents = self.nonnormalentries()
         self.otherparentset = otherparents
         return nonnorm
 
-    @propertycache
+    @util.propertycache
     def otherparentset(self):
+        # type: () -> Set[str]
         nonnorm, otherparents = self.nonnormalentries()
         self.nonnormalset = nonnorm
         return otherparents
 
-    @propertycache
+    @util.propertycache
     def identity(self):
+        # type: () -> util.filestat
         self._map
         return self.identity
 
-    @propertycache
+    @util.propertycache
     def dirfoldmap(self):
+        # type: () -> Dict[str, str]
         f = {}
         normcase = util.normcase
+        # pyre-fixme[16]: Iterable has no attribute __next__
         for name in self._dirs:
             f[normcase(name)] = name
         return f

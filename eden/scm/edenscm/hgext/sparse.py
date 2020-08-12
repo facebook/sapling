@@ -488,6 +488,7 @@ def _trackdirstatesizes(lui, repo):
     dirstatesize = None
     try:
         # Eden and flat dirstate.
+        # pyre-fixme[16]: treedirstatemap has no attribute _map
         dirstatesize = len(dirstate._map._map)
     except AttributeError:
         # Treestate and treedirstate.
@@ -983,16 +984,18 @@ def _wraprepo(ui, repo):
                 node = repo[changeid].hex()
 
                 def func():
-                    return pycompat.decodeutf8(repo.filectx(profile,
-                        changeid=changeid).data())
+                    return pycompat.decodeutf8(
+                        repo.filectx(profile, changeid=changeid).data()
+                    )
 
                 key = "sparseprofile:%s:%s" % (profile.replace("/", "__"), node)
                 return simplecache.memoize(
                     func, key, simplecache.stringserializer, self.ui
                 )
             except KeyError:
-                return pycompat.decodeutf8(repo.filectx(profile,
-                    changeid=changeid).data())
+                return pycompat.decodeutf8(
+                    repo.filectx(profile, changeid=changeid).data()
+                )
 
         def _sparsesignature(self, includetemp=True, config=None, revs=()):
             """Returns the signature string representing the contents of the
@@ -1018,8 +1021,9 @@ def _wraprepo(ui, repo):
                     sha1 = hashlib.sha1()
                     for r in revs:
                         try:
-                            sha1.update(pycompat.encodeutf8(self.getrawprofile(config.path,
-                                r)))
+                            sha1.update(
+                                pycompat.encodeutf8(self.getrawprofile(config.path, r))
+                            )
                             signature = sha1.hexdigest()
                         except KeyError:
                             pass
