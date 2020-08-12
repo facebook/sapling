@@ -9,6 +9,9 @@
 # GNU General Public License version 2 or any later version.
 """capabilities of well-known filesystems"""
 
+from . import pycompat
+
+
 SYMLINK = "symlink"
 HARDLINK = "hardlink"
 EXECBIT = "execbit"
@@ -23,10 +26,22 @@ _EDENFS_POSIX_CAPS = {
     ALWAYSCASESENSITIVE: True,
 }
 
+_EDENFS_WINDOWS_CAPS = {
+    SYMLINK: False,
+    HARDLINK: False,
+    EXECBIT: False,
+    ALWAYSCASESENSITIVE: False,
+}
+
+if pycompat.iswindows:
+    _EDENFS_CAPS = _EDENFS_WINDOWS_CAPS
+else:
+    _EDENFS_CAPS = _EDENFS_POSIX_CAPS
+
 _FS_CAP_TABLE = {
     "APFS": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
     "Btrfs": _ALL_CAPS,
-    "EdenFS": _EDENFS_POSIX_CAPS,
+    "EdenFS": _EDENFS_CAPS,
     "ext4": _ALL_CAPS,
     "NTFS": {
         SYMLINK: False,

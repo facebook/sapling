@@ -57,16 +57,25 @@ impl fmt::Display for FsType {
 mod windows {
     use super::*;
 
-    use std::{os::windows::ffi::OsStrExt, ptr::null_mut};
+    use std::{os::windows::ffi::OsStrExt, path::PathBuf, ptr::null_mut};
 
-    use winapi::shared::minwindef::{DWORD, MAX_PATH};
-    use winapi::um::fileapi::{CreateFileW, GetVolumeInformationByHandleW, OPEN_EXISTING};
-    use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
-    use winapi::um::winnt::{
-        FILE_GENERIC_READ, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE,
+    use winapi::{
+        shared::{
+            minwindef::{DWORD, MAX_PATH, ULONG},
+            winerror::ERROR_NOT_A_REPARSE_POINT,
+        },
+        um::{
+            fileapi::{CreateFileW, GetVolumeInformationByHandleW, OPEN_EXISTING},
+            handleapi::{CloseHandle, INVALID_HANDLE_VALUE},
+            ioapiset::DeviceIoControl,
+            winbase::FILE_FLAG_BACKUP_SEMANTICS,
+            winioctl::FSCTL_GET_REPARSE_POINT,
+            winnt::{
+                FILE_GENERIC_READ, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE,
+                IO_REPARSE_TAG_GVFS, MAXIMUM_REPARSE_DATA_BUFFER_SIZE, REPARSE_GUID_DATA_BUFFER,
+            },
+        },
     };
-
-    const FILE_ATTRIBUTE_NORMAL: u32 = 0x02000000;
 
     struct WinFileHandle {
         handle: HANDLE,
@@ -76,6 +85,48 @@ mod windows {
         fn drop(&mut self) {
             unsafe { CloseHandle(self.handle) };
         }
+    }
+
+    fn reparse_tag(handle: &WinFileHandle) -> Result<ULONG> {
+        let mut data_buffer = [0u8; MAXIMUM_REPARSE_DATA_BUFFER_SIZE as usize];
+
+        let mut bytes_written = 0;
+
+        let success = unsafe {
+            DeviceIoControl(
+                handle.handle,
+                FSCTL_GET_REPARSE_POINT,
+                null_mut(),
+                0,
+                data_buffer.as_mut_ptr() as *mut _,
+                data_buffer.len() as DWORD,
+                &mut bytes_written,
+                null_mut(),
+            )
+        };
+
+        if success == 0 {
+            let err = io::Error::last_os_error();
+
+            // In theory we should be testing if the file has a reparse point attached to it first,
+            // but it looks like files/directories in ProjectedFS appear as just plain regular
+            // files, thus try to get the reparse point and bail if it isn't one instead of
+            // failing.
+            if err.raw_os_error() == Some(ERROR_NOT_A_REPARSE_POINT as i32) {
+                Ok(0)
+            } else {
+                Err(err.into())
+            }
+        } else {
+            let reparse_buffer =
+                unsafe { &*(data_buffer.as_ptr() as *const REPARSE_GUID_DATA_BUFFER) };
+            Ok(reparse_buffer.ReparseTag)
+        }
+    }
+
+    fn is_edenfs(handle: &WinFileHandle) -> Result<bool> {
+        let tag = reparse_tag(handle)?;
+        Ok(tag == IO_REPARSE_TAG_GVFS)
     }
 
     fn open_share(path: &Path) -> Result<WinFileHandle> {
@@ -92,7 +143,7 @@ mod windows {
                 FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
                 null_mut(),
                 OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL as DWORD,
+                FILE_FLAG_BACKUP_SEMANTICS,
                 null_mut(),
             )
         };
@@ -101,6 +152,31 @@ mod windows {
             Err(io::Error::last_os_error().into())
         } else {
             Ok(WinFileHandle { handle })
+        }
+    }
+
+    fn edenfs_directory(mut path: &Path) -> Option<PathBuf> {
+        if path.is_file() {
+            // Safe to unwrap as a file always has a parent directory.
+            path = path.parent().unwrap();
+        }
+        loop {
+            let dot_hg = path.join(".hg");
+            if dot_hg.exists() {
+                // The .eden directory is at the root of the repo, don't recurse further if it's
+                // not there.
+                let dot_eden = path.join(".eden");
+                if dot_eden.exists() {
+                    return Some(dot_eden);
+                } else {
+                    return None;
+                }
+            }
+
+            path = match path.parent() {
+                None => return None,
+                Some(path) => path,
+            }
         }
     }
 
@@ -114,7 +190,14 @@ mod windows {
     }
 
     pub fn fstype(path: &Path) -> Result<FsType> {
-        let win_handle = open_share(path)?;
+        let win_handle = match edenfs_directory(path) {
+            None => open_share(path)?,
+            Some(dot_eden) => open_share(&dot_eden)?,
+        };
+
+        if is_edenfs(&win_handle)? {
+            return Ok(FsType::EDENFS);
+        }
 
         let mut fstype = [0u16; MAX_PATH];
         let exit_sts = unsafe {

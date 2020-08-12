@@ -233,13 +233,22 @@ impl VFS {
 /// Once the need to use NTFS on unices is gone (because this module solves the slowness), this
 /// hack will be removed.
 fn supports_symlinks(fs_type: &FsType) -> bool {
-    *fs_type != FsType::NTFS
+    match *fs_type {
+        FsType::NTFS => false,
+        // TODO(T66590035): Once EdenFS on Windows support symlink, remove this
+        FsType::EDENFS => !cfg!(windows),
+        _ => true,
+    }
 }
 
 /// Since Windows determines if a file is executable based on its extension, it doesn't support
 /// marking files as executable.
 fn supports_executables(fs_type: &FsType) -> bool {
-    *fs_type != FsType::NTFS
+    match *fs_type {
+        FsType::NTFS => false,
+        FsType::EDENFS => !cfg!(windows),
+        _ => true,
+    }
 }
 
 pub fn is_executable(metadata: &Metadata) -> bool {
