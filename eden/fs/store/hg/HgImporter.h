@@ -21,9 +21,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
-namespace io {
-class Cursor;
-}
+class IOBuf;
 } // namespace folly
 
 /* forward declare support classes from mercurial */
@@ -66,6 +64,8 @@ struct ImporterOptions {
    * The name of the repo
    */
   std::string repoName;
+
+  bool cat_tree_supported{false};
 };
 
 class Importer {
@@ -98,8 +98,13 @@ class Importer {
 
   /**
    * Import tree and store it in the datapack
+   *
+   * In the case where CMD_CAT_TREE is used, a valid IOBuf is return,
+   * otherwise, nullptr is returned.
    */
-  virtual void fetchTree(RelativePathPiece path, Hash pathManifestNode) = 0;
+  virtual std::unique_ptr<folly::IOBuf> fetchTree(
+      RelativePathPiece path,
+      Hash pathManifestNode) = 0;
 };
 
 /**
@@ -141,7 +146,9 @@ class HgImporter : public Importer {
       RelativePathPiece path,
       Hash blobHash) override;
   void prefetchFiles(const std::vector<HgProxyHash>& files) override;
-  void fetchTree(RelativePathPiece path, Hash pathManifestNode) override;
+  std::unique_ptr<folly::IOBuf> fetchTree(
+      RelativePathPiece path,
+      Hash pathManifestNode) override;
 
   const ImporterOptions& getOptions() const;
 
@@ -174,6 +181,7 @@ class HgImporter : public Importer {
   enum StartFlag : uint32_t {
     TREEMANIFEST_SUPPORTED = 0x01,
     MONONOKE_SUPPORTED = 0x02,
+    CAT_TREE_SUPPORTED = 0x04,
   };
   /**
    * Command type values.
@@ -181,7 +189,7 @@ class HgImporter : public Importer {
    * See hg debugedenimporthelper for a more complete description of the
    * request/response formats.
    */
-  enum : uint32_t {
+  enum CommandType : uint32_t {
     CMD_STARTED = 0,
     CMD_RESPONSE = 1,
     CMD_MANIFEST = 2,
@@ -190,6 +198,8 @@ class HgImporter : public Importer {
     CMD_FETCH_TREE = 5,
     CMD_PREFETCH_FILES = 6,
     CMD_CAT_FILE = 7,
+    CMD_GET_FILE_SIZE = 8,
+    CMD_CAT_TREE = 9,
   };
   using TransactionID = uint32_t;
   struct ChunkHeader {
@@ -260,8 +270,10 @@ class HgImporter : public Importer {
    * path.
    */
   TransactionID sendFetchTreeRequest(
+      CommandType cmd,
       RelativePathPiece path,
-      Hash pathManifestNode);
+      Hash pathManifestNode,
+      folly::StringPiece context);
 
   // Note: intentional RelativePath rather than RelativePathPiece here because
   // HgProxyHash is not movable and it was less work to make a copy here than
@@ -323,7 +335,9 @@ class HgImporterManager : public Importer {
       RelativePathPiece path,
       Hash blobHash) override;
   void prefetchFiles(const std::vector<HgProxyHash>& files) override;
-  void fetchTree(RelativePathPiece path, Hash pathManifestNode) override;
+  std::unique_ptr<folly::IOBuf> fetchTree(
+      RelativePathPiece path,
+      Hash pathManifestNode) override;
 
  private:
   template <typename Fn>

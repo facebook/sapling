@@ -301,6 +301,11 @@ ImporterOptions HgImporter::waitForHelperStart() {
     options.repoName = cursor.readFixedString(nameLength);
   }
 
+  if (flags & StartFlag::CAT_TREE_SUPPORTED) {
+    options.cat_tree_supported = true;
+    XLOG(DBG2) << "hg_import_helper supports CMD_CAT_TREE";
+  }
+
   return options;
 }
 
@@ -400,20 +405,71 @@ void HgImporter::prefetchFiles(const std::vector<HgProxyHash>& files) {
   readChunkHeader(requestID, "CMD_PREFETCH_FILES");
 }
 
-void HgImporter::fetchTree(RelativePathPiece path, Hash pathManifestNode) {
+std::unique_ptr<IOBuf> HgImporter::fetchTree(
+    RelativePathPiece path,
+    Hash pathManifestNode) {
   // Ask the hg_import_helper script to fetch data for this tree
   XLOG(DBG1) << "fetching data for tree \"" << path << "\" at manifest node "
              << pathManifestNode;
-  auto requestID = sendFetchTreeRequest(path, pathManifestNode);
 
-  ChunkHeader header;
-  header = readChunkHeader(requestID, "CMD_FETCH_TREE");
+  if (getOptions().cat_tree_supported) {
+    auto requestID = sendFetchTreeRequest(
+        CMD_CAT_TREE, path, pathManifestNode, "CMD_CAT_TREE");
 
-  if (header.dataLength != 0) {
-    throw std::runtime_error(folly::to<string>(
-        "got unexpected length ",
-        header.dataLength,
-        " for FETCH_TREE response"));
+    ChunkHeader header;
+    header = readChunkHeader(requestID, "CMD_CAT_TREE");
+
+    auto buf = IOBuf::create(header.dataLength);
+
+    readFromHelper(
+        buf->writableTail(), header.dataLength, "CMD_CAT_TREE response body");
+    buf->append(header.dataLength);
+
+    // The last 8 bytes of the response are the body length.
+    // Ensure that this looks correct, and advance the buffer past this data to
+    // the start of the actual response body.
+    //
+    // This data doesn't really need to be present in the response.  It is only
+    // here so we can double-check that the response data appears valid.
+    buf->trimEnd(sizeof(uint64_t));
+    uint64_t bodyLength;
+    memcpy(&bodyLength, buf->tail(), sizeof(uint64_t));
+    bodyLength = Endian::big(bodyLength);
+    if (bodyLength != header.dataLength - sizeof(uint64_t)) {
+      auto msg = folly::to<string>(
+          "inconsistent body length received when importing tree ",
+          pathManifestNode,
+          " (",
+          path,
+          ", ",
+          pathManifestNode,
+          "): bodyLength=",
+          bodyLength,
+          " responseLength=",
+          header.dataLength);
+      XLOG(ERR) << msg;
+      throw std::runtime_error(std::move(msg));
+    }
+
+    XLOG(DBG4) << "imported tree " << pathManifestNode << " (" << path << ", "
+               << pathManifestNode << "); length=" << bodyLength;
+
+    return buf;
+  } else {
+    auto requestID = sendFetchTreeRequest(
+        CMD_FETCH_TREE, path, pathManifestNode, "CMD_FETCH_TREE");
+
+    ChunkHeader header;
+    header = readChunkHeader(requestID, "CMD_FETCH_TREE");
+
+    if (header.dataLength != 0) {
+      throw std::runtime_error(folly::to<string>(
+          "got unexpected length ",
+          header.dataLength,
+          " for FETCH_TREE response"));
+    }
+
+    return nullptr;
   }
 }
 
@@ -614,13 +670,15 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
 }
 
 HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
+    CommandType cmd,
     RelativePathPiece path,
-    Hash pathManifestNode) {
+    Hash pathManifestNode,
+    StringPiece context) {
   stats_->getHgImporterStatsForCurrentThread().fetchTree.addValue(1);
 
   auto txnID = nextRequestID_++;
   ChunkHeader header;
-  header.command = Endian::big<uint32_t>(CMD_FETCH_TREE);
+  header.command = Endian::big<uint32_t>(cmd);
   header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
   StringPiece pathStr = path.stringPiece();
@@ -634,7 +692,7 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
   iov[1].iov_len = Hash::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
-  writeToHelper(iov, "CMD_FETCH_TREE");
+  writeToHelper(iov, context);
 
   return txnID;
 }
@@ -758,7 +816,7 @@ void HgImporterManager::prefetchFiles(const std::vector<HgProxyHash>& files) {
       [&](HgImporter* importer) { return importer->prefetchFiles(files); });
 }
 
-void HgImporterManager::fetchTree(
+std::unique_ptr<IOBuf> HgImporterManager::fetchTree(
     RelativePathPiece path,
     Hash pathManifestNode) {
   return retryOnError([&](HgImporter* importer) {

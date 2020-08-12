@@ -374,9 +374,12 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                Importer& importer = getThreadLocalImporter();
                folly::stop_watch<std::chrono::milliseconds> watch;
                RequestMetricsScope queueTracker{&liveImportTreeWatches};
-               importer.fetchTree(path, manifestNode);
+
+               auto serializedTree = importer.fetchTree(path, manifestNode);
                stats->getHgBackingStoreStatsForCurrentThread()
                    .hgBackingStoreImportTree.addValue(watch.elapsed().count());
+
+               return serializedTree;
              })
       .via(serverThreadPool_)
       .thenTry([this,
@@ -384,14 +387,28 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                 node = std::move(manifestNode),
                 treeID = std::move(edenTreeID),
                 batch = std::move(writeBatch),
-                commitId = std::move(commitId)](folly::Try<folly::Unit> val) {
-        val.value();
-        // Now try loading it again
-        unionStore_->wlock()->markForRefresh();
-        auto content =
-            unionStoreGet(*unionStore_->wlock(), ownedPath.stringPiece(), node);
-        return processTree(
-            content, node, treeID, ownedPath, commitId, batch.get());
+                commitId = std::move(commitId)](
+                   folly::Try<std::unique_ptr<IOBuf>> val) {
+        // Note: the `value` call will throw if fetchTree threw an exception
+        auto iobuf = std::move(val).value();
+        if (iobuf) {
+          // This copies the iobuf, since treemanifest are fairly small, this
+          // should be OK to do. Once the fallback path is removed, we can
+          // change processTree to take the IOBuf directly and remove this copy.
+          auto content = ConstantStringRef{
+              reinterpret_cast<const char*>(iobuf->data()), iobuf->length()};
+          return processTree(
+              content, node, treeID, ownedPath, commitId, batch.get());
+        } else {
+          // If fetchTree returns nullptr it indicates that the legacy
+          // CMD_FETCH_TREE was used and that it placed the tree in the store,
+          // so we should try loading it again
+          unionStore_->wlock()->markForRefresh();
+          auto content = unionStoreGet(
+              *unionStore_->wlock(), ownedPath.stringPiece(), node);
+          return processTree(
+              content, node, treeID, ownedPath, commitId, batch.get());
+        }
       });
 }
 

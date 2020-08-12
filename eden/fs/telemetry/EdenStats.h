@@ -223,6 +223,7 @@ class HgImporterThreadStats : public EdenThreadStatsBase {
   Timeseries manifestNodeForCommit{
       createTimeseries("hg_importer.manifest_node_for_commit")};
   Timeseries prefetchFiles{createTimeseries("hg_importer.prefetch_files")};
+  Timeseries catTree{createTimeseries("hg_importer.cat_tree")};
 };
 
 class JournalThreadStats : public EdenThreadStatsBase {
