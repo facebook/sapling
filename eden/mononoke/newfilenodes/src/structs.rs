@@ -248,7 +248,7 @@ pub struct CachedHistory {
     pub history: Vec<CachedFilenode>,
 }
 
-impl Cacheable for CachedHistory {
+impl Cacheable for Option<CachedHistory> {
     const POOL: CachePool = CachePool::FilenodesHistory;
 }
 

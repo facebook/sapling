@@ -8,7 +8,7 @@
 use anyhow::{format_err, Error};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
+use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, PreparedFilenode};
 use futures::compat::Future01CompatExt;
 use futures::FutureExt;
 use maplit::hashmap;
@@ -447,12 +447,13 @@ async fn assert_all_filenodes(
     path: &RepoPath,
     repo_id: RepositoryId,
     expected: &Vec<FilenodeInfo>,
+    limit: Option<u64>,
 ) -> Result<(), Error> {
     let res = reader
-        .get_all_filenodes_for_path(&ctx, repo_id, &path)
+        .get_all_filenodes_for_path(&ctx, repo_id, &path, limit)
         .await?;
     let res = res.do_not_handle_disabled_filenodes()?;
-    assert_eq!(&res, expected);
+    assert_eq!(res.as_ref(), Some(expected));
     Ok(())
 }
 
@@ -804,6 +805,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::RootPath,
                     REPO_ZERO,
                     &root_filenodes,
+                    None,
                 )
                 .await?;
 
@@ -813,6 +815,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::file("a").unwrap(),
                     REPO_ZERO,
                     &vec![file_a_first_filenode().info],
+                    None,
                 )
                 .await?;
 
@@ -822,8 +825,64 @@ macro_rules! filenodes_tests {
                     &RepoPath::file("b").unwrap(),
                     REPO_ZERO,
                     &vec![file_b_first_filenode().info],
+                    None,
                 )
                 .await?;
+                Ok(())
+            }
+
+            #[fbinit::test]
+            async fn get_all_filenodes_maybe_stale_limited(fb: FacebookInit) -> Result<(), Error> {
+                let ctx = CoreContext::test_mock(fb);
+                let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
+                do_add_filenodes(
+                    &ctx,
+                    &writer,
+                    vec![
+                        root_first_filenode(),
+                        root_second_filenode(),
+                        root_merge_filenode(),
+                    ],
+                    REPO_ZERO,
+                )
+                .await?;
+                do_add_filenodes(
+                    &ctx,
+                    &writer,
+                    vec![file_a_first_filenode(), file_b_first_filenode()],
+                    REPO_ZERO,
+                )
+                .await?;
+
+                let root_filenodes = vec![
+                    root_first_filenode().info,
+                    root_second_filenode().info,
+                    root_merge_filenode().info,
+                ];
+
+                assert_all_filenodes(
+                    &ctx,
+                    &reader,
+                    &RepoPath::RootPath,
+                    REPO_ZERO,
+                    &root_filenodes,
+                    Some(3),
+                )
+                .await?;
+
+                let res = reader
+                    .get_all_filenodes_for_path(&ctx, REPO_ZERO, &RepoPath::RootPath, Some(1))
+                    .await?;
+                let res = res.do_not_handle_disabled_filenodes()?;
+                assert_eq!(None, res);
+
+                let res = reader
+                    .get_all_filenodes_for_path(&ctx, REPO_ZERO, &RepoPath::RootPath, Some(2))
+                    .await?;
+                let res = res.do_not_handle_disabled_filenodes()?;
+                assert_eq!(None, res);
+
                 Ok(())
             }
 
@@ -862,6 +921,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::file("a").unwrap(),
                     REPO_ZERO,
                     &vec![file_a_first_filenode().info],
+                    None,
                 )
                 .await?;
 
@@ -871,6 +931,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::dir("a").unwrap(),
                     REPO_ZERO,
                     &vec![dir_a_first_filenode().info],
+                    None,
                 )
                 .await?;
 
@@ -935,12 +996,12 @@ async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result
     let res = with_tunables_async(
         tunables,
         reader
-            .get_all_filenodes_for_path(&ctx, REPO_ZERO, &RepoPath::RootPath)
+            .get_all_filenodes_for_path(&ctx, REPO_ZERO, &RepoPath::RootPath, None)
             .boxed(),
     )
     .await?;
 
-    if let FilenodeResult::Present(_) = res {
+    if let FilenodeRangeResult::Present(_) = res {
         panic!("expected FilenodeResult::Disabled");
     }
 
@@ -956,6 +1017,7 @@ async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result
         &RepoPath::RootPath,
         REPO_ZERO,
         &root_filenodes,
+        None,
     )
     .await?;
 
@@ -971,6 +1033,7 @@ async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result
             &RepoPath::RootPath,
             REPO_ZERO,
             &root_filenodes,
+            None,
         )
         .boxed(),
     )
@@ -1060,6 +1123,7 @@ async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
         &RepoPath::file("a")?,
         REPO_ZERO,
         &vec![file_a_first_filenode().info],
+        None,
     )
     .await?;
 
@@ -1069,6 +1133,7 @@ async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
         &RepoPath::dir("a")?,
         REPO_ZERO,
         &vec![dir_a_second_filenode.info],
+        None,
     )
     .await?;
 

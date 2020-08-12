@@ -34,7 +34,7 @@ use bookmarks::{
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureExt;
-use filenodes::{FilenodeInfo, FilenodeResult, Filenodes};
+use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes};
 use futures::future::TryFutureExt;
 use futures::stream::TryStreamExt;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -128,7 +128,8 @@ pub trait BlobRepoHg {
         &self,
         ctx: CoreContext,
         path: RepoPath,
-    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error>;
+        limit: Option<u64>,
+    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>;
 
     fn get_hg_from_bonsai_changeset(
         &self,
@@ -448,10 +449,11 @@ impl BlobRepoHg for BlobRepo {
         &self,
         ctx: CoreContext,
         path: RepoPath,
-    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
+        limit: Option<u64>,
+    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
         STATS::get_all_filenodes.add_value(1);
         self.get_filenodes()
-            .get_all_filenodes_maybe_stale(ctx, &path, self.get_repoid())
+            .get_all_filenodes_maybe_stale(ctx, &path, self.get_repoid(), limit)
     }
 
     fn get_hg_from_bonsai_changeset(

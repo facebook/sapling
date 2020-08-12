@@ -83,9 +83,15 @@ impl HgFileContext {
         let ctx = self.repo.ctx().clone();
         let blob_repo = self.repo.blob_repo().clone();
         let filenode_id = self.node_id();
-        get_file_history_maybe_incomplete(ctx, blob_repo, filenode_id, path, max_length)
-            .compat()
-            .map_err(MononokeError::from)
+        get_file_history_maybe_incomplete(
+            ctx,
+            blob_repo,
+            filenode_id,
+            path,
+            max_length.map(|len| len as u64),
+        )
+        .compat()
+        .map_err(MononokeError::from)
     }
 }
 

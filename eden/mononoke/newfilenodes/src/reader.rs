@@ -26,7 +26,7 @@ use thiserror::Error as DeriveError;
 use tokio::time::timeout;
 use tunables::tunables;
 
-use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
+use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, PreparedFilenode};
 
 use crate::connections::{AcquireReason, Connections};
 use crate::local_cache::{CacheKey, LocalCache};
@@ -47,6 +47,7 @@ define_stats! {
     range_local_cache_misses: timeseries(Sum),
     remote_cache_timeouts: timeseries(Sum),
     sql_timeouts: timeseries(Sum),
+    too_big_history: timeseries(Sum),
 }
 
 // Both of these are pretty convervative, and collected experimentally. They're here to ensure one
@@ -112,16 +113,29 @@ pub fn filenode_cache_key(
     }
 }
 
-pub fn history_cache_key(repo_id: RepositoryId, pwh: &PathWithHash<'_>) -> CacheKey<CachedHistory> {
+pub fn history_cache_key(
+    repo_id: RepositoryId,
+    pwh: &PathWithHash<'_>,
+    limit: Option<u64>,
+) -> CacheKey<Option<CachedHistory>> {
     let mut v = vec![0; pwh.hash.0.len() * 2];
     let is_tree = pwh.is_tree as u8;
     hex_encode(pwh.hash.0.as_ref(), &mut v).expect("failed to hex encode");
-    let key = format!(
-        "history.{}.{}.{}",
-        repo_id.id(),
-        unsafe { String::from_utf8_unchecked(v) },
-        is_tree
-    );
+    let key = match limit {
+        Some(limit) => format!(
+            "history.{}.limit.{}.{}.{}",
+            repo_id.id(),
+            limit,
+            unsafe { String::from_utf8_unchecked(v) },
+            is_tree
+        ),
+        None => format!(
+            "history.{}.{}.{}",
+            repo_id.id(),
+            unsafe { String::from_utf8_unchecked(v) },
+            is_tree
+        ),
+    };
 
     CacheKey {
         key,
@@ -249,14 +263,15 @@ impl FilenodesReader {
         ctx: &CoreContext,
         repo_id: RepositoryId,
         path: &RepoPath,
-    ) -> Result<FilenodeResult<Vec<FilenodeInfo>>, Error> {
+        limit: Option<u64>,
+    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
         STATS::range_gets.add_value(1);
 
         let pwh = PathWithHash::from_repo_path(&path);
-        let key = history_cache_key(repo_id, &pwh);
+        let key = history_cache_key(repo_id, &pwh, limit);
 
         if let Some(cached) = self.local_cache.get(&key) {
-            return Ok(FilenodeResult::Present(cached.try_into()?));
+            return convert_cached_filenodes(cached);
         }
 
         let permit = self.shards.acquire_history(&path).await;
@@ -264,16 +279,25 @@ impl FilenodesReader {
 
         // See above for rationale here.
         if let Some(cached) = self.local_cache.get(&key) {
-            return Ok(FilenodeResult::Present(cached.try_into()?));
+            return convert_cached_filenodes(cached);
         }
 
         STATS::range_local_cache_misses.add_value(1);
 
         if let Some(info) = enforce_remote_cache_timeout(self.remote_cache.get_history(&key)).await
         {
+            let info = info.into_option();
             // TODO: We should compress if this is too big.
-            self.local_cache.fill(&key, &(&info).into());
-            return Ok(FilenodeResult::Present(info));
+            self.local_cache
+                .fill(&key, &info.as_ref().map(|info| info.into()));
+            match info {
+                Some(info) => {
+                    return Ok(FilenodeRangeResult::Present(info));
+                }
+                None => {
+                    return Ok(FilenodeRangeResult::TooBig);
+                }
+            }
         }
 
         let cache_filler = HistoryCacheFiller {
@@ -291,12 +315,14 @@ impl FilenodesReader {
                 ctx: &ctx,
                 counter: PerfCounterType::SqlReadsReplica,
             },
+            limit,
         )
         .await?;
 
         match res {
-            FilenodeResult::Present(res) => Ok(FilenodeResult::Present(res.try_into()?)),
-            FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+            FilenodeRangeResult::Present(res) => Ok(FilenodeRangeResult::Present(res.try_into()?)),
+            FilenodeRangeResult::TooBig => Ok(FilenodeRangeResult::TooBig),
+            FilenodeRangeResult::Disabled => Ok(FilenodeRangeResult::Disabled),
         }
     }
 
@@ -310,6 +336,19 @@ impl FilenodesReader {
             let pwh = PathWithHash::from_repo_path(&c.path);
             let key = filenode_cache_key(repo_id, &pwh, &c.info.filenode);
             self.local_cache.fill(&key, &(&c.info).into())
+        }
+    }
+}
+
+fn convert_cached_filenodes(
+    cached: Option<CachedHistory>,
+) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
+    match cached {
+        Some(cached) => {
+            return Ok(FilenodeRangeResult::Present(cached.try_into()?));
+        }
+        None => {
+            return Ok(FilenodeRangeResult::TooBig);
         }
     }
 }
@@ -412,14 +451,15 @@ async fn select_partial_filenode(
 struct HistoryCacheFiller<'a> {
     local_cache: &'a LocalCache,
     remote_cache: &'a RemoteCache,
-    key: &'a CacheKey<CachedHistory>,
+    key: &'a CacheKey<Option<CachedHistory>>,
 }
 
 impl<'a> HistoryCacheFiller<'a> {
-    fn fill(&self, history: CachedHistory) {
-        self.local_cache.fill(&self.key, &history);
-        if let Ok(history) = history.try_into() {
-            self.remote_cache.fill_history(&self.key, history);
+    fn fill(&self, maybe_history: Option<CachedHistory>) {
+        self.local_cache.fill(&self.key, &maybe_history);
+        let maybe_history = maybe_history.map(|history| history.try_into()).transpose();
+        if let Ok(maybe_history) = maybe_history {
+            self.remote_cache.fill_history(&self.key, maybe_history);
         }
     }
 }
@@ -430,17 +470,24 @@ async fn select_history_from_sql(
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<FilenodeResult<CachedHistory>, Error> {
+    limit: Option<u64>,
+) -> Result<FilenodeRangeResult<CachedHistory>, Error> {
     if tunables().get_filenodes_disabled() {
         STATS::range_gets_disabled.add_value(1);
-        return Ok(FilenodeResult::Disabled);
+        return Ok(FilenodeRangeResult::Disabled);
     }
 
-    let partial = select_partial_history(&connections, repo_id, &pwh, recorder).await?;
-    let history = fill_paths(&connections, &pwh, repo_id, partial, recorder).await?;
-    let history = CachedHistory { history };
-    filler.fill(history.clone());
-    Ok(FilenodeResult::Present(history))
+    let maybe_partial =
+        select_partial_history(&connections, repo_id, &pwh, recorder, limit).await?;
+    if let Some(partial) = maybe_partial {
+        let history = fill_paths(&connections, &pwh, repo_id, partial, recorder).await?;
+        let history = CachedHistory { history };
+        filler.fill(Some(history.clone()));
+        Ok(FilenodeRangeResult::Present(history))
+    } else {
+        filler.fill(None);
+        Ok(FilenodeRangeResult::TooBig)
+    }
 }
 
 async fn select_partial_history(
@@ -448,15 +495,42 @@ async fn select_partial_history(
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<Vec<PartialFilenode>, ErrorKind> {
+    limit: Option<u64>,
+) -> Result<Option<Vec<PartialFilenode>>, ErrorKind> {
     let connection = connections.checkout(&pwh, AcquireReason::History);
 
     recorder.increment();
 
-    let rows = enforce_sql_timeout(
-        SelectAllFilenodes::query(&connection, &repo_id, &pwh.hash, pwh.sql_is_tree()).compat(),
-    )
-    .await?;
+    // Try to fetch one entry more - if we fetched limit + 1, then file
+    // history is too big.
+    let limit = limit.map(|l| l + 1);
+    let rows = match limit {
+        Some(limit) => {
+            let rows = enforce_sql_timeout(
+                SelectLimitedFilenodes::query(
+                    &connection,
+                    &repo_id,
+                    &pwh.hash,
+                    pwh.sql_is_tree(),
+                    &limit,
+                )
+                .compat(),
+            )
+            .await?;
+            if rows.len() >= limit as usize {
+                STATS::too_big_history.add_value(1);
+                return Ok(None);
+            }
+            rows
+        }
+        None => {
+            enforce_sql_timeout(
+                SelectAllFilenodes::query(&connection, &repo_id, &pwh.hash, pwh.sql_is_tree())
+                    .compat(),
+            )
+            .await?
+        }
+    };
 
     let history = rows
         .into_iter()
@@ -466,7 +540,7 @@ async fn select_partial_history(
     // TODO: It'd be nice to have some eviction here.
     // TODO: It'd be nice to chain those.
 
-    Ok(history)
+    Ok(Some(history))
 }
 
 fn convert_row_to_partial_filenode(row: FilenodeRow) -> Result<PartialFilenode, ErrorKind> {
@@ -691,6 +765,44 @@ queries! {
         WHERE filenodes.repo_id = {repo_id}
           AND filenodes.path_hash = {path_hash}
           AND filenodes.is_tree = {is_tree}
+        "
+    }
+
+    read SelectLimitedFilenodes(
+        repo_id: RepositoryId,
+        path_hash: PathHashBytes,
+        is_tree: i8,
+        limit: u64,
+    ) -> (
+        HgFileNodeId,
+        HgChangesetId,
+        Option<HgFileNodeId>,
+        Option<HgFileNodeId>,
+        i8,
+        Option<PathHashBytes>,
+        Option<HgFileNodeId>,
+    ) {
+        "
+        SELECT
+            filenodes.filenode,
+            filenodes.linknode,
+            filenodes.p1,
+            filenodes.p2,
+            filenodes.has_copyinfo,
+            fixedcopyinfo.frompath_hash,
+            fixedcopyinfo.fromnode
+        FROM filenodes
+        LEFT JOIN fixedcopyinfo
+           ON (
+                   fixedcopyinfo.repo_id = filenodes.repo_id
+               AND fixedcopyinfo.topath_hash = filenodes.path_hash
+               AND fixedcopyinfo.tonode = filenodes.filenode
+               AND fixedcopyinfo.is_tree = filenodes.is_tree
+           )
+        WHERE filenodes.repo_id = {repo_id}
+          AND filenodes.path_hash = {path_hash}
+          AND filenodes.is_tree = {is_tree}
+        LIMIT {limit}
         "
     }
 

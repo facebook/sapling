@@ -23,7 +23,7 @@ use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
-use filenodes::{FilenodeInfo, FilenodeResult, Filenodes, PreparedFilenode};
+use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode};
 use filestore::FilestoreConfig;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, Future};
@@ -237,10 +237,12 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
         ctx: CoreContext,
         path: &RepoPath,
         repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
+        limit: Option<u64>,
+    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
         delay(
             self.get_dist,
-            self.inner.get_all_filenodes_maybe_stale(ctx, path, repo_id),
+            self.inner
+                .get_all_filenodes_maybe_stale(ctx, path, repo_id, limit),
         )
         .boxify()
     }

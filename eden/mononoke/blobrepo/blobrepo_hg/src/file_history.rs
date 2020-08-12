@@ -9,8 +9,8 @@ use crate::BlobRepoHg;
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use cloned::cloned;
-use context::CoreContext;
-use filenodes::{FilenodeInfo, FilenodeResult};
+use context::{CoreContext, PerfCounterType};
+use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult};
 use futures::{
     compat::Future01CompatExt,
     stream,
@@ -25,6 +25,7 @@ use maplit::hashset;
 use mercurial_types::{
     HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath, NULL_CSID, NULL_HASH,
 };
+use stats::prelude::*;
 use std::collections::{HashMap, VecDeque};
 use thiserror::Error;
 
@@ -38,6 +39,11 @@ pub enum FilenodesRelatedResult {
     Unrelated,
     FirstAncestorOfSecond,
     SecondAncestorOfFirst,
+}
+
+define_stats! {
+    prefix = "mononoke.file_history";
+    too_big: dynamic_timeseries("{}.too_big", (repo: String); Rate, Sum),
 }
 
 /// Checks if one filenode is ancestor of another
@@ -83,7 +89,7 @@ pub fn get_file_history_maybe_incomplete(
     repo: BlobRepo,
     filenode: HgFileNodeId,
     path: MPath,
-    max_length: Option<u32>,
+    max_length: Option<u64>,
 ) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
     get_file_history(
         ctx.clone(),
@@ -122,19 +128,35 @@ pub fn get_file_history(
     repo: BlobRepo,
     filenode: HgFileNodeId,
     path: MPath,
-    max_length: Option<u32>,
+    max_length: Option<u64>,
 ) -> impl Future<Item = FilenodeResult<Vec<HgFileHistoryEntry>>, Error = Error> {
-    prefetch_history(ctx.clone(), repo.clone(), path.clone()).and_then(move |prefetched_res| {
-        match prefetched_res {
-            FilenodeResult::Present(prefetched) => {
+    prefetch_history(ctx.clone(), repo.clone(), path.clone(), max_length).and_then(
+        move |prefetched_res| match prefetched_res {
+            FilenodeRangeResult::Present(prefetched) => {
                 get_file_history_using_prefetched(ctx, repo, filenode, path, max_length, prefetched)
                     .collect()
                     .map(FilenodeResult::Present)
                     .left_future()
             }
-            FilenodeResult::Disabled => ok(FilenodeResult::Disabled).right_future(),
-        }
-    })
+            FilenodeRangeResult::TooBig => {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::FilenodesTooBigHistory);
+                STATS::too_big.add_value(1, (repo.name().clone(),));
+                get_file_history_using_prefetched(
+                    ctx,
+                    repo,
+                    filenode,
+                    path,
+                    max_length,
+                    HashMap::new(),
+                )
+                .collect()
+                .map(FilenodeResult::Present)
+                .left_future()
+            }
+            FilenodeRangeResult::Disabled => ok(FilenodeResult::Disabled).right_future(),
+        },
+    )
 }
 
 /// Prefetch and cache filenode information. Performing these fetches in bulk upfront
@@ -143,8 +165,9 @@ fn prefetch_history(
     ctx: CoreContext,
     repo: BlobRepo,
     path: MPath,
-) -> impl Future<Item = FilenodeResult<HashMap<HgFileNodeId, FilenodeInfo>>, Error = Error> {
-    repo.get_all_filenodes_maybe_stale(ctx, RepoPath::FilePath(path))
+    limit: Option<u64>,
+) -> impl Future<Item = FilenodeRangeResult<HashMap<HgFileNodeId, FilenodeInfo>>, Error = Error> {
+    repo.get_all_filenodes_maybe_stale(ctx, RepoPath::FilePath(path), limit)
         .map(|filenodes_res| {
             filenodes_res.map(|filenodes| {
                 filenodes
@@ -165,7 +188,7 @@ fn get_file_history_using_prefetched(
     repo: BlobRepo,
     startnode: HgFileNodeId,
     path: MPath,
-    max_length: Option<u32>,
+    max_length: Option<u64>,
     prefetched_history: HashMap<HgFileNodeId, FilenodeInfo>,
 ) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
     if startnode == HgFileNodeId::new(NULL_HASH) {

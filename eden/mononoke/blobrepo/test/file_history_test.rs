@@ -91,7 +91,7 @@ async fn assert_linknodes(
     expected_linknodes: Vec<HgChangesetId>,
     start_from: HgChangesetId,
     path: MPath,
-    max_length: Option<u32>,
+    max_length: Option<u64>,
 ) -> Result<(), Error> {
     let root_mf_id = start_from
         .load(ctx.clone(), &repo.get_blobstore())

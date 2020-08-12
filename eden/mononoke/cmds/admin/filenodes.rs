@@ -359,13 +359,16 @@ pub async fn subcommand_filenodes<'a>(
             let repo = blobrepo.compat().await?;
             let filenodes = repo.get_filenodes();
             let (stats, res) = filenodes
-                .get_all_filenodes_maybe_stale(ctx.clone(), &path, repo.get_repoid())
+                .get_all_filenodes_maybe_stale(ctx.clone(), &path, repo.get_repoid(), None)
                 .compat()
                 .timed()
                 .await;
 
             debug!(ctx.logger(), "took {:?}", stats.completion_time);
-            for filenode in res?.do_not_handle_disabled_filenodes()? {
+            let maybe_filenodes = res?.do_not_handle_disabled_filenodes()?;
+            let filenodes =
+                maybe_filenodes.ok_or(anyhow!("unexpected failure: history is too long?"))?;
+            for filenode in filenodes {
                 log_filenode(ctx.logger(), &path, &filenode, None);
             }
             return Ok(());

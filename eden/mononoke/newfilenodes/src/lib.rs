@@ -21,7 +21,7 @@ mod test;
 use anyhow::{Context, Error};
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::{FilenodeInfo, FilenodeResult, Filenodes, PreparedFilenode};
+use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode};
 use futures::future::{FutureExt as _, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
 use mercurial_types::HgFileNodeId;
@@ -119,12 +119,13 @@ impl Filenodes for NewFilenodes {
         ctx: CoreContext,
         path: &RepoPath,
         repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error> {
+        limit: Option<u64>,
+    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
         cloned!(self.reader, path);
 
         async move {
             let ret = reader
-                .get_all_filenodes_for_path(&ctx, repo_id, &path)
+                .get_all_filenodes_for_path(&ctx, repo_id, &path, limit)
                 .await
                 .with_context(|| ErrorKind::FailFetchFilenodeRange(path))?;
             Ok(ret)

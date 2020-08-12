@@ -74,6 +74,7 @@ define_perf_counters! {
         GetpackNumPossibleLFSFiles,
         GetpackPossibleLFSFilesSumSize,
         GetpackResponseSize,
+        FilenodesTooBigHistory,
         GettreepackDesignatedNodes,
         GettreepackNumTreepacks,
         GettreepackResponseSize,

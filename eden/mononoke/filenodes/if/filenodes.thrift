@@ -16,6 +16,8 @@ const i32 MC_SITEVER = 0
 union FilenodeInfoList {
   1: list<FilenodeInfo> Data,
   2: list<i64> Pointers,
+  // This actual value is ignored
+  3: byte TooBig,
 }
 
 struct FilenodeInfo {

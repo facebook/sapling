@@ -70,6 +70,32 @@ impl<T> FilenodeResult<T> {
     }
 }
 
+#[derive(Debug)]
+#[must_use]
+pub enum FilenodeRangeResult<T> {
+    Present(T),
+    TooBig,
+    Disabled,
+}
+
+impl<T> FilenodeRangeResult<T> {
+    pub fn map<U>(self, func: impl Fn(T) -> U) -> FilenodeRangeResult<U> {
+        match self {
+            FilenodeRangeResult::Present(t) => FilenodeRangeResult::Present(func(t)),
+            FilenodeRangeResult::TooBig => FilenodeRangeResult::TooBig,
+            FilenodeRangeResult::Disabled => FilenodeRangeResult::Disabled,
+        }
+    }
+
+    pub fn do_not_handle_disabled_filenodes(self) -> Result<Option<T>, Error> {
+        match self {
+            FilenodeRangeResult::Present(t) => Ok(Some(t)),
+            FilenodeRangeResult::TooBig => Ok(None),
+            FilenodeRangeResult::Disabled => Err(anyhow!("filenodes are disabled")),
+        }
+    }
+}
+
 impl FilenodeInfo {
     pub fn from_thrift(info: thrift::FilenodeInfo) -> Result<Self> {
         let catch_block = || {
@@ -147,7 +173,8 @@ pub trait Filenodes: Send + Sync {
         ctx: CoreContext,
         path: &RepoPath,
         repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<Vec<FilenodeInfo>>, Error>;
+        limit: Option<u64>,
+    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>;
 
     fn prime_cache(&self, ctx: &CoreContext, repo_id: RepositoryId, filenodes: &[PreparedFilenode]);
 }

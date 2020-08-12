@@ -199,8 +199,10 @@ pub fn get_unordered_file_history_for_multiple_nodes(
     filenodes: HashSet<HgFileNodeId>,
     path: &MPath,
 ) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
+    let limit = tunables::tunables().get_remotefilelog_file_history_limit();
+    let limit = if limit <= 0 { None } else { Some(limit as u64) };
     select_all(filenodes.into_iter().map(|filenode| {
-        get_file_history_maybe_incomplete(ctx.clone(), repo.clone(), filenode, path.clone(), None)
+        get_file_history_maybe_incomplete(ctx.clone(), repo.clone(), filenode, path.clone(), limit)
     }))
     .filter({
         let mut used_filenodes = HashSet::new();
