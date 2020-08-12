@@ -30,6 +30,7 @@ use maplit::btreeset;
 use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{CommitSyncConfig, RepoConfig, WireprotoLoggingConfig};
 use mononoke_types::RepositoryId;
+use mutable_counters::SqlMutableCounters;
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirectorArgs, WireprotoLogging};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{debug, info, o, Logger};
@@ -188,6 +189,7 @@ pub fn repo_handlers(
                 config.infinitepush.populate_reverse_filler_queue
                     && config.infinitepush.allow_writes;
             let repo_client_use_warm_bookmarks_cache = config.repo_client_use_warm_bookmarks_cache;
+            let warm_bookmark_cache_check_blobimport = config.warm_bookmark_cache_check_blobimport;
 
             // TODO: Don't require full config in load_hooks so we can avoid cloning the entire
             // config here.
@@ -290,6 +292,18 @@ pub fn repo_handlers(
                         warm_bookmarks_cache_builder.add_derived_data_warmers(
                             &btreeset! { MappedHgChangesetId::NAME.to_string() },
                         )?;
+                        if warm_bookmark_cache_check_blobimport {
+                            let mutable_counters =
+                                SqlMutableCounters::with_metadata_database_config(
+                                    fb,
+                                    &db_config,
+                                    mysql_options,
+                                    readonly_storage.0,
+                                )
+                                .await?;
+                            warm_bookmarks_cache_builder
+                                .add_blobimport_warmer(Arc::new(mutable_counters));
+                        }
                         let warm_bookmarks_cache = warm_bookmarks_cache_builder
                             .build(BookmarkUpdateDelay::Disallow)
                             .await?;

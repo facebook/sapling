@@ -211,6 +211,7 @@ fn parse_repo_config(
         hgsql_globalrevs_name,
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
+        warm_bookmark_cache_check_blobimport,
         ..
     } = repo_config;
 
@@ -329,6 +330,9 @@ fn parse_repo_config(
 
     let segmented_changelog_config = SegmentedChangelogConfig::default();
 
+    let warm_bookmark_cache_check_blobimport =
+        warm_bookmark_cache_check_blobimport.unwrap_or(false);
+
     Ok(RepoConfig {
         enabled,
         storage_config,
@@ -367,6 +371,7 @@ fn parse_repo_config(
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
         segmented_changelog_config,
+        warm_bookmark_cache_check_blobimport,
     })
 }
 
@@ -872,6 +877,7 @@ mod test {
             hook_max_file_size=456
             hipster_acl="foo/test"
             repo_client_use_warm_bookmarks_cache=true
+            warm_bookmark_cache_check_blobimport=true
 
             [wireproto_logging]
             scribe_category="category"
@@ -1171,6 +1177,7 @@ mod test {
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: true,
                 segmented_changelog_config: SegmentedChangelogConfig { enabled: false },
+                warm_bookmark_cache_check_blobimport: true,
             },
         );
 
@@ -1221,6 +1228,7 @@ mod test {
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: false,
                 segmented_changelog_config: SegmentedChangelogConfig { enabled: false },
+                warm_bookmark_cache_check_blobimport: false,
             },
         );
         assert_eq!(

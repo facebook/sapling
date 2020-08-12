@@ -680,6 +680,12 @@ repo_client_use_warm_bookmarks_cache=true
 CONFIG
 fi
 
+if [[ -n "${WARM_BOOKMARK_CACHE_CHECK_BLOBIMPORT:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+warm_bookmark_cache_check_blobimport=true
+CONFIG
+fi
+
 # Normally point to common storageconfig, but if none passed, create per-repo
 if [[ -z "$storageconfig" ]]; then
   storageconfig="blobstore_$reponame"

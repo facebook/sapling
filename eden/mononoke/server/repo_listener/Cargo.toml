@@ -25,6 +25,7 @@ load_limiter = { path = "../../load_limiter" }
 mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
+mutable_counters = { path = "../../mutable_counters" }
 permission_checker = { path = "../../permission_checker" }
 repo_client = { path = "../../repo_client" }
 scribe_ext = { path = "../../common/scribe_ext" }

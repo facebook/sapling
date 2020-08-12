@@ -29,6 +29,7 @@ mercurial_types = { path = "../mercurial/types" }
 metaconfig_parser = { path = "../metaconfig/parser" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }
+mutable_counters = { path = "../mutable_counters" }
 permission_checker = { path = "../permission_checker" }
 reachabilityindex = { path = "../reachabilityindex" }
 remotefilelog = { path = "../repo_client/remotefilelog" }
@@ -38,6 +39,7 @@ revset = { path = "../revset" }
 scuba_ext = { path = "../common/scuba_ext" }
 segmented_changelog = { path = "../segmented_changelog" }
 skiplist = { path = "../reachabilityindex/skiplist" }
+sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
 synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping" }
 unbundle = { path = "../repo_client/unbundle" }
@@ -62,7 +64,6 @@ thiserror = "1.0"
 [dev-dependencies]
 cross_repo_sync_test_utils = { path = "../commit_rewriting/cross_repo_sync/test_utils" }
 fixtures = { path = "../tests/fixtures" }
-sql_construct = { path = "../common/sql_construct" }
 tests_utils = { path = "../tests/utils" }
 assert_matches = "1.3"
 tokio-compat = "0.1"

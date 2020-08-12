@@ -183,6 +183,9 @@ pub struct RepoConfig {
     pub repo_client_use_warm_bookmarks_cache: bool,
     /// Configuration for Segmented Changelog.
     pub segmented_changelog_config: SegmentedChangelogConfig,
+    /// Do not consider bookmark warm unless blobimport processed it.
+    /// That means that changeset is present in both Mononoke and hg.
+    pub warm_bookmark_cache_check_blobimport: bool,
 }
 
 /// Config for derived data

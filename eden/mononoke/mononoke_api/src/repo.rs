@@ -45,6 +45,7 @@ use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     Generation, RepositoryId,
 };
+use mutable_counters::SqlMutableCounters;
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
 use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -53,6 +54,7 @@ use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
 #[cfg(test)]
 use sql_construct::SqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
 use std::collections::HashSet;
@@ -200,6 +202,17 @@ impl Repo {
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
         warm_bookmarks_cache_builder.add_all_derived_data_warmers()?;
+        if config.warm_bookmark_cache_check_blobimport {
+            let db_config = &config.storage_config.metadata;
+            let mutable_counters = SqlMutableCounters::with_metadata_database_config(
+                fb,
+                db_config,
+                mysql_options,
+                readonly_storage.0,
+            )
+            .await?;
+            warm_bookmarks_cache_builder.add_blobimport_warmer(Arc::new(mutable_counters));
+        }
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build(BookmarkUpdateDelay::Allow);
 
         let (
