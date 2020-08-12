@@ -25,17 +25,18 @@ use futures::{
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::future::{self, Future};
 use manifest::{Entry, Manifest};
-use std::{collections::BTreeMap, str, sync::Arc};
+use sorted_vector_map::SortedVectorMap;
+use std::{str, sync::Arc};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ManifestContent {
-    pub files: BTreeMap<MPathElement, HgEntryId>,
+    pub files: SortedVectorMap<MPathElement, HgEntryId>,
 }
 
 impl ManifestContent {
     pub fn new_empty() -> Self {
         Self {
-            files: BTreeMap::new(),
+            files: SortedVectorMap::new(),
         }
     }
 
@@ -47,10 +48,15 @@ impl ManifestContent {
 
     //
     // NB: filenames are sequences of non-zero bytes, not strings
-    fn parse_impl(data: &[u8]) -> Result<BTreeMap<MPathElement, HgEntryId>> {
-        let mut files = BTreeMap::new();
+    fn parse_impl(data: &[u8]) -> Result<SortedVectorMap<MPathElement, HgEntryId>> {
+        let lines = data.split(|b| *b == b'\n');
+        let mut files = match lines.size_hint() {
+            // Split returns it count in the high size hint
+            (_, Some(high)) => SortedVectorMap::with_capacity(high),
+            (_, None) => SortedVectorMap::new(),
+        };
 
-        for line in data.split(|b| *b == b'\n') {
+        for line in lines {
             if line.len() == 0 {
                 break;
             }
