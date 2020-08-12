@@ -394,7 +394,7 @@ Show all commands + options
   debugdiscovery: rev, ssh, remotecmd, insecure
   debugdrawdag: print
   debugdynamicconfig: canary
-  debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, get-file-size, fetch-tree
+  debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, cat-tree, get-file-size, fetch-tree
   debugedenrunpostupdatehook: 
   debugexistingcasecollisions: rev
   debugextensions: excludedefault, template

@@ -99,6 +99,7 @@ PROTOCOL_VERSION = 1
 
 START_FLAGS_TREEMANIFEST_SUPPORTED = 0x01
 START_FLAGS_MONONOKE_SUPPORTED = 0x02
+START_FLAGS_CAT_TREE_SUPPORTED = 0x04
 
 #
 # Message types.
@@ -115,6 +116,7 @@ CMD_FETCH_TREE = 5
 CMD_PREFETCH_FILES = 6
 CMD_CAT_FILE = 7
 CMD_GET_FILE_SIZE = 8
+CMD_CAT_TREE = 9
 
 #
 # Flag values.
@@ -291,6 +293,8 @@ class HgServer(object):
         if use_mononoke:
             flags |= START_FLAGS_MONONOKE_SUPPORTED
 
+        flags |= START_FLAGS_CAT_TREE_SUPPORTED
+
         # Options format:
         # - Protocol version number
         # - Is treemanifest supported?
@@ -393,6 +397,81 @@ class HgServer(object):
         rev_name = pycompat.decodeutf8(request.body)
         self.debug("sending manifest for revision %r", rev_name)
         self.dump_manifest(rev_name, request)
+
+    def get_tree(self, path, manifest_node):
+        # type: (str, bytes) -> bytes
+
+        # Even though get_tree would fetch the tree if missing, it has a couple
+        # of drawbacks. First, for the root manifest, it may prefetch the
+        # entire tree, second, it doesn't honor the self._treefetchdepth which
+        # avoids a lot of round trips to the server.
+        missing = self.repo.manifestlog.datastore.getmissing([(path, manifest_node)])
+        if missing:
+            try:
+                self._fetch_tree_impl(path, manifest_node)
+            except Exception as ex:
+                logging.warning(
+                    "Fetching failed, continuing as this may be spurious: %s", ex
+                )
+
+        try:
+            return self.repo.manifestlog.datastore.get("", manifest_node)
+        except Exception as ex:
+            # Now we can raise.
+            raise ResetRepoError(ex)
+
+    # pyre-fixme[56]: While applying decorator
+    #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
+    #  param but got `(self: HgServer, request: Request) -> None`.
+    @cmd(CMD_CAT_TREE)
+    def cmd_cat_tree(self, request):
+        # type: (Request) -> None
+        """
+        Handler for CMD_CAT_TREE requests.
+
+        This request asks for the full mercurial manifest contents for a given
+        manifest node and path.
+
+        Request body format:
+        - Manifest node (binary)
+          This is the 20 bytes mercurial node.
+        - Path (str)
+          This is the path to the directory
+
+        Response body format:
+          The response body is a list of manifest entries separated by a new
+          line ('\n'). Each manifest entry consists of:
+          - <file name><nul><node><flag>
+
+          Entry fields:
+          - <file name>: name of the file/directory
+          - <nul>: a nul byte ('\0')
+          - <node>: the hex file node for the entry. For a directory, this is the manifest node.
+          - <flag>: The mercurial flag character. If the mercurial flag is
+                    empty, this will be omitted. Valid flags are:
+                    'x': an executable file
+                    'l': a symlink
+                    't': a directory
+                    '': a regular file
+        """
+        if len(request.body) < SHA1_NUM_BYTES:
+            raise RuntimeError(
+                "cat_tree request data too short: len=%d" % len(request.body)
+            )
+
+        if self.treemanifest is None:
+            raise RuntimeError("treemanifest not enabled in this repository")
+
+        manifest_node = request.body[:SHA1_NUM_BYTES]
+        path = pycompat.decodeutf8(request.body[SHA1_NUM_BYTES:])
+        logging.warning(
+            "fetching tree for path %r manifest node %s", path, hex(manifest_node)
+        )
+
+        tree = self.get_tree(path, manifest_node)
+
+        length_tree = struct.pack(">Q", len(tree))
+        self.send_chunk(request, tree, length_tree)
 
     # pyre-fixme[56]: While applying decorator
     #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
@@ -548,6 +627,7 @@ class HgServer(object):
 
         try:
             self._fetch_tree_impl(path, manifest_node)
+            self.repo.commitpending()
         except Exception as ex:
             # Ugh.  Mercurial sometimes throws spurious KeyErrors
             # if this tree was created since we first initialized our
@@ -565,12 +645,10 @@ class HgServer(object):
             # We have to call repo._prefetchtrees() directly if we have a path.
             # We cannot compute the set of base nodes in this case.
             self.repo._prefetchtrees(path, mfnodes, [], [], depth=self._treefetchdepth)
-            self.repo.commitpending()
         else:
             # When querying the top-level node use repo.prefetchtrees()
             # It will compute a reasonable set of base nodes to send in the query.
             self.repo.prefetchtrees(mfnodes, depth=self._treefetchdepth)
-            self.repo.commitpending()
 
     def send_chunk(self, request, *data, **kwargs):
         # type: (Request, bytes, Any) -> None
@@ -875,6 +953,14 @@ def runedenimporthelper(repo, **opts):
         repo.ui.writebytes(data)
         return 0
 
+    cat_manifest_arg = opts.get("cat_tree")
+    if cat_manifest_arg:
+        path, manifest_node_str = cat_manifest_arg.rsplit(":", -1)
+        manifest_node = bin(manifest_node_str)
+        data = server.get_tree(path, manifest_node)
+        repo.ui.writebytes(data)
+        return 0
+
     get_file_size_arg = opts.get("get_file_size")
     if get_file_size_arg:
         path, id_str = get_file_size_arg.rsplit(":", -1)
@@ -977,6 +1063,15 @@ def runedenimporthelper(repo, **opts):
                 "Dump the file contents for the specified file at the given file revision"
             ),
             _("PATH:REV"),
+        ),
+        (
+            "",
+            "cat-tree",
+            "",
+            _(
+                "Dump the tree contents for the specified path at the given manifest node"
+            ),
+            _("PATH:NODE"),
         ),
         (
             "",
