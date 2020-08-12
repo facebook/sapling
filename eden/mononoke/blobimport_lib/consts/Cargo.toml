@@ -1,0 +1,10 @@
+[package]
+name = "consts"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["**/*.rs"]
+
+[lib]
+path = "lib.rs"

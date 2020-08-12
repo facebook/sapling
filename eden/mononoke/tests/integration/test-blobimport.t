@@ -64,3 +64,5 @@
   $ blobimport --log repo-hg/.hg repo --find-already-imported-rev-only
   * using repo "repo" repoid RepositoryId(0) (glob)
   * latest imported revision 4 (glob)
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters";
+  0|highest-imported-gen-num|5

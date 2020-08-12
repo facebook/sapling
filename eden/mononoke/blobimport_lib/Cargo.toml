@@ -12,6 +12,7 @@ blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 bonsai_git_mapping = { path = "../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { path = "../bonsai_globalrev_mapping" }
 bookmarks = { path = "../bookmarks" }
+consts = { path = "consts" }
 context = { path = "../server/context" }
 derived_data_utils = { path = "../derived_data/utils" }
 lfs_import_lib = { path = "../lfs_import_lib" }

@@ -69,6 +69,7 @@ Check blobstore-fetch, with scrub actions
   30
 
   $ mononoke_admin mutable-counters list
+  highest-imported-gen-num      =3
   $ mononoke_admin mutable-counters set foo 7
   * Value of foo in 0 set to 7 (glob)
   $ mononoke_admin mutable-counters set bar 9
@@ -76,6 +77,7 @@ Check blobstore-fetch, with scrub actions
   $ mononoke_admin mutable-counters list
   bar                           =9
   foo                           =7
+  highest-imported-gen-num      =3
   $ mononoke_admin mutable-counters get bar
   Some(9)
   $ mononoke_admin mutable-counters get baz

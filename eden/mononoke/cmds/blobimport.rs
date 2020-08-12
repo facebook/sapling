@@ -10,6 +10,7 @@
 use anyhow::{bail, format_err, Context, Error, Result};
 use ascii::AsciiString;
 use blobimport_lib;
+use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use clap::{App, Arg, ArgMatches};
 use cmdlib::{
@@ -24,11 +25,14 @@ use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join3, FutureExt, TryFutureExt},
+    future::{try_join, try_join4, FutureExt, TryFutureExt},
 };
 #[cfg(fbcode_build)]
 use mercurial_revlog::revlog::RevIdx;
 use mercurial_types::{HgChangesetId, HgNodeHash};
+use mononoke_types::ChangesetId;
+use mutable_counters::MutableCounters;
+use mutable_counters::SqlMutableCounters;
 use slog::{error, info, warn, Logger};
 use std::collections::HashMap;
 use std::fs::read;
@@ -283,7 +287,7 @@ async fn run_blobimport<'a>(
 
     let small_repo_id = args::get_source_repo_id_opt(fb, &matches)?;
 
-    let (blobrepo, globalrevs_store, synced_commit_mapping) = try_join3(
+    let (blobrepo, globalrevs_store, synced_commit_mapping, mutable_counters) = try_join4(
         if matches.is_present("no-create") {
             args::open_repo_unredacted(fb, &ctx.logger(), &matches)
                 .compat()
@@ -295,6 +299,7 @@ async fn run_blobimport<'a>(
         },
         args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches).compat(),
         args::open_sql::<SqlSyncedCommitMapping>(fb, &matches).compat(),
+        args::open_sql::<SqlMutableCounters>(fb, &matches).compat(),
     )
     .await?;
 
@@ -305,7 +310,7 @@ async fn run_blobimport<'a>(
     async move {
         let blobimport = blobimport_lib::Blobimport {
             ctx,
-            blobrepo,
+            blobrepo: blobrepo.clone(),
             revlogrepo_path,
             changeset,
             skip,
@@ -331,7 +336,7 @@ async fn run_blobimport<'a>(
         };
 
         match maybe_latest_imported_rev {
-            Some(latest_imported_rev) => {
+            Some((latest_imported_rev, latest_imported_cs_id)) => {
                 info!(
                     ctx.logger(),
                     "latest imported revision {}",
@@ -350,6 +355,14 @@ async fn run_blobimport<'a>(
                         "Using Manifold is not supported in non fbcode builds"
                     );
                 }
+
+                maybe_update_highest_imported_generation_number(
+                    &ctx,
+                    &blobrepo,
+                    &mutable_counters,
+                    latest_imported_cs_id,
+                )
+                .await?;
             }
             None => info!(ctx.logger(), "didn't import any commits"),
         };
@@ -369,6 +382,63 @@ async fn run_blobimport<'a>(
         }
     })
     .await
+}
+
+// Updating mutable_counters table to store the highest generation number that was imported.
+// This in turn can be used to track which commits exist on both mercurial and Mononoke.
+// For example, WarmBookmarkCache might consider a bookmark "warm" only if a commit is in both
+// mercurial and Mononoke.
+//
+// Note that if a commit with a lower generation number was added (e.g. if this commit forked off from
+// the main branch) then this hint will be misleading - i.e. the hint would store a higher generation
+// number then the new commit which might not be processed by blobimport yet. In that case there are
+// two options:
+// 1) Use this hint only in single-branch repos
+// 2) Accept that the hint might be incorrect sometimes.
+async fn maybe_update_highest_imported_generation_number(
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    mutable_counters: &SqlMutableCounters,
+    latest_imported_cs_id: ChangesetId,
+) -> Result<(), Error> {
+    let maybe_highest_imported_gen_num = mutable_counters
+        .get_counter(
+            ctx.clone(),
+            blobrepo.get_repoid(),
+            blobimport_lib::HIGHEST_IMPORTED_GEN_NUM,
+        )
+        .compat();
+    let new_gen_num = blobrepo
+        .get_generation_number(ctx.clone(), latest_imported_cs_id)
+        .compat();
+    let (maybe_highest_imported_gen_num, new_gen_num) =
+        try_join(maybe_highest_imported_gen_num, new_gen_num).await?;
+
+    let new_gen_num = new_gen_num.ok_or(format_err!("generation number is not set"))?;
+    let new_gen_num = match maybe_highest_imported_gen_num {
+        Some(highest_imported_gen_num) => {
+            if new_gen_num.value() as i64 > highest_imported_gen_num {
+                Some(new_gen_num)
+            } else {
+                None
+            }
+        }
+        None => Some(new_gen_num),
+    };
+
+    if let Some(new_gen_num) = new_gen_num {
+        mutable_counters
+            .set_counter(
+                ctx.clone(),
+                blobrepo.get_repoid(),
+                blobimport_lib::HIGHEST_IMPORTED_GEN_NUM,
+                new_gen_num.value() as i64,
+                maybe_highest_imported_gen_num,
+            )
+            .compat()
+            .await?;
+    }
+    Ok(())
 }
 
 #[fbinit::main]

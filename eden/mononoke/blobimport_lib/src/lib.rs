@@ -38,10 +38,12 @@ use context::CoreContext;
 use derived_data_utils::derive_data_for_csids;
 use mercurial_revlog::{revlog::RevIdx, RevlogRepo};
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
 
 use crate::changeset::UploadChangesets;
+
+pub use consts::HIGHEST_IMPORTED_GEN_NUM;
 
 // What to do with bookmarks when blobimporting a repo
 pub enum BookmarkImportPolicy {
@@ -73,7 +75,7 @@ pub struct Blobimport<'a> {
 }
 
 impl<'a> Blobimport<'a> {
-    pub async fn import(self) -> Result<Option<RevIdx>, Error> {
+    pub async fn import(self) -> Result<Option<(RevIdx, ChangesetId)>, Error> {
         let Self {
             ctx,
             blobrepo,
@@ -176,10 +178,17 @@ impl<'a> Blobimport<'a> {
         let (stale_bookmarks, mononoke_bookmarks) =
             future::try_join(stale_bookmarks_fut, mononoke_bookmarks_fut).await?;
 
-        let mut max_rev = None;
+        let mut max_rev_and_bcs_id = None;
         while let Some(chunk_result) = upload_changesets.next().await {
             let chunk = chunk_result?;
-            let new_max_rev = chunk.iter().map(|(rev, _)| rev).max().cloned();
+            for (rev, cs) in chunk.iter() {
+                let max_rev = max_rev_and_bcs_id
+                    .map(|(revidx, _)| revidx)
+                    .unwrap_or_else(RevIdx::zero);
+                if rev > &max_rev {
+                    max_rev_and_bcs_id = Some((*rev, cs.get_changeset_id()))
+                }
+            }
 
             let changesets: &Vec<_> = &chunk.into_iter().map(|(_, cs)| cs).collect();
 
@@ -249,13 +258,6 @@ impl<'a> Blobimport<'a> {
                 derivation_work,
             )
             .await?;
-
-            if let Some(new_max_rev) = new_max_rev {
-                max_rev = Some(::std::cmp::max(
-                    max_rev.unwrap_or_else(RevIdx::zero),
-                    new_max_rev,
-                ));
-            }
         }
 
         info!(
@@ -285,14 +287,16 @@ impl<'a> Blobimport<'a> {
             }
         };
 
-        Ok(max_rev)
+        Ok(max_rev_and_bcs_id)
     }
 
     /// From a stream of revisions returns the latest revision that's already imported and public
     /// From this revision it's safe to restart blobimport next time.
     /// Note that we might have a situation where revision i is imported, i+1 is not and i+2 is imported.
     /// In that case this function would return i.
-    pub async fn find_already_imported_revision(self) -> Result<Option<RevIdx>, Error> {
+    pub async fn find_already_imported_revision(
+        self,
+    ) -> Result<Option<(RevIdx, ChangesetId)>, Error> {
         let Self {
             ctx,
             blobrepo,
@@ -338,19 +342,23 @@ impl<'a> Blobimport<'a> {
 
                 let hg_cs_ids: HashMap<_, _> = hg_to_bcs_ids.into_iter().collect();
                 let s = chunk.into_iter().map(move |(revidx, hg_cs_id)| {
-                    let exists_and_public = match hg_cs_ids.get(&HgChangesetId::new(hg_cs_id)) {
-                        Some(bcs_id) => public.contains(bcs_id),
-                        None => false,
-                    };
-
-                    (revidx, exists_and_public)
+                    match hg_cs_ids.get(&HgChangesetId::new(hg_cs_id)) {
+                        Some(bcs_id) => {
+                            if public.contains(bcs_id) {
+                                Some((revidx, *bcs_id))
+                            } else {
+                                None
+                            }
+                        }
+                        None => None,
+                    }
                 });
 
                 Result::<_, Error>::Ok(stream::iter(s).map(Result::<_, Error>::Ok))
             })
             .try_flatten()
             .take_while(|res| match res {
-                Ok((_, exists)) => future::ready(*exists),
+                Ok(maybe_public_bcs_id) => future::ready(maybe_public_bcs_id.is_some()),
                 // Take errors since they will just be propagated to the caller,
                 // and if we don't take them then the caller won't know
                 // about the error.
@@ -359,7 +367,19 @@ impl<'a> Blobimport<'a> {
             .try_collect()
             .await?;
 
-        Ok(imported.last().map(|(revidx, _)| *revidx))
+        let mut max_rev_and_bcs_id = None;
+        for maybe_rev_cs in imported {
+            if let Some((rev, bcs_id)) = maybe_rev_cs {
+                let max_rev = max_rev_and_bcs_id
+                    .map(|(revidx, _)| revidx)
+                    .unwrap_or_else(RevIdx::zero);
+                if rev >= max_rev {
+                    max_rev_and_bcs_id = Some((rev, bcs_id))
+                }
+            }
+        }
+
+        Ok(max_rev_and_bcs_id)
     }
 }
 

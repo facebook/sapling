@@ -173,7 +173,7 @@ Replay in a loop
   * successful sync of entries [2] (glob)
   * successful sync of entries [3] (glob)
   * successful sync of entries [4] (glob)
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters where name = 'latest-replayed-request'";
   0|latest-replayed-request|4
 
 Make one more push from the client

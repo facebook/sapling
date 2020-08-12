@@ -184,6 +184,7 @@ members = [
     ".",
     "benchmark",
     "blobimport_lib",
+    "blobimport_lib/consts",
     "blobrepo",
     "blobrepo/blobrepo_hg",
     "blobrepo/blobsync",
