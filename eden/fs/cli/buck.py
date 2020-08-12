@@ -8,7 +8,10 @@ import errno
 import glob
 import os
 import subprocess
+import sys
 from typing import List
+
+from . import proc_utils
 
 
 def find_buck_projects_in_repo(path: str) -> List[str]:
@@ -35,25 +38,33 @@ def is_buckd_running_for_path(path: str) -> bool:
             return False
         raise
 
-    # Test whether that pid is still alive
-    try:
-        os.kill(buckd_pid, 0)
-        return True
-    except OSError:
-        return False
+    return proc_utils.new().is_process_alive(buckd_pid)
 
 
 def stop_buckd_for_path(path: str) -> None:
     print(f"Stopping buck in {path}...")
+
+    # Using BUCKVERSION=last here to avoid triggering a download of a new
+    # version of buck just to kill off buck.  This is specific to Facebook's
+    # deployment of buck, and has no impact on the behavior of the opensource
+    # buck executable.
+    # On Windows, "last" doesn't work, fallback to reading the .buckversion file.
+    if sys.platform != "win32":
+        buckversion = "last"
+    else:
+        with open(os.path.join(path, ".buckversion"), "r") as f:
+            buckversion = f.read().strip()
+
+    env = os.environ.copy()
+    env["BUCKVERSION"] = buckversion
+
     subprocess.run(
-        # Using BUCKVERSION=last here to avoid triggering a download
-        # of a new version of buck just to kill off buck.
-        # This is specific to Facebook's deployment of buck, and has
-        # no impact on the behavior of the opensource buck executable.
-        ["env", "BUCKVERSION=last", "buck", "kill"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        ["buck", "kill"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         cwd=path,
+        env=env,
+        check=True,
     )
 
 
