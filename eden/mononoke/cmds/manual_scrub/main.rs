@@ -24,6 +24,7 @@ mod scrub;
 use crate::{blobstore::open_blobstore, scrub::scrub};
 
 const ARG_STORAGE_CONFIG_NAME: &str = "storage-config-name";
+const ARG_SCHEDULED_MAX: &str = "scheduled-max";
 
 async fn bridge_to_stdout(mut recv: mpsc::Receiver<String>) -> Result<()> {
     let mut stdout = stdout();
@@ -46,10 +47,19 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
                 .takes_value(true)
                 .required(true)
                 .help("the name of the storage config to scrub"),
+        )
+        .arg(
+            Arg::with_name(ARG_SCHEDULED_MAX)
+                .long(ARG_SCHEDULED_MAX)
+                .takes_value(true)
+                .required(false)
+                .help("Maximum number of scrub keys to attempt to execute at once.  Default 100."),
         );
     let matches = app.get_matches();
     let (_, logger, mut runtime) =
         args::init_mononoke(fb, &matches, None).context("failed to initialise mononoke")?;
+
+    let scheduled_max = args::get_usize_opt(&matches, ARG_SCHEDULED_MAX).unwrap_or(100) as usize;
 
     let storage_config = args::load_storage_configs(fb, &matches)
         .context("Could not read storage configs")?
@@ -83,6 +93,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             &ctx,
             stdin.lines().map_err(Error::from),
             output,
+            scheduled_max,
         )
         .await
         .context("Scrub failed");

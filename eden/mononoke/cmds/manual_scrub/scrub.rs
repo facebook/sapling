@@ -21,9 +21,9 @@ async fn scrub_key(
     key: String,
     mut output: mpsc::Sender<String>,
 ) -> Result<()> {
-    blobstore
-        .get(ctx.clone(), key.clone())
-        .await?
+    let handle = tokio::task::spawn(blobstore.get(ctx.clone(), key.clone()));
+    handle
+        .await??
         .with_context(|| format!("Key {} is missing", &key))?;
     output.send(key).await?;
     Ok(())
@@ -34,8 +34,11 @@ pub async fn scrub(
     ctx: &CoreContext,
     keys: impl Stream<Item = Result<String>>,
     output: mpsc::Sender<String>,
+    scheduled_max: usize,
 ) -> Result<()> {
-    keys.try_for_each_concurrent(100, |key| scrub_key(blobstore, ctx, key, output.clone()))
-        .await?;
+    keys.try_for_each_concurrent(scheduled_max, |key| {
+        scrub_key(blobstore, ctx, key, output.clone())
+    })
+    .await?;
     Ok(())
 }
