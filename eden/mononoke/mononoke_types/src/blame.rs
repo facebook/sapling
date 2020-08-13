@@ -16,7 +16,10 @@ use context::CoreContext;
 use fbthrift::compact_protocol;
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use futures_old::Future as Future01;
-use std::{collections::HashMap, convert::TryFrom};
+use std::{
+    collections::{HashMap, VecDeque},
+    convert::TryFrom,
+};
 use thiserror::Error;
 use xdiff::{diff_hunks, Hunk};
 
@@ -372,12 +375,14 @@ impl Blame {
         // `add` with `remove`. That is why it is safe to just add new range from `add`
         // field after removing range from `remove`. Also note that ranges after transformation
         // below **do not** contain vaild offset.
+
+        let ranges = VecDeque::from(parent_blame.ranges);
         let (mut ranges, rest, _) = diff_hunks(parent_content, content).into_iter().fold(
-            (Vec::new(), parent_blame.ranges, 0u32),
+            (Vec::new(), ranges, 0u32),
             |(mut output, ranges, mut origin_offset), Hunk { add, remove }| {
-                // add uneffected ranges
-                let (uneffected, mid) = blame_ranges_split_at(ranges, remove.start as u32);
-                for range in uneffected {
+                // add unaffected ranges
+                let (unaffected, mid) = blame_ranges_split_at(ranges, remove.start as u32);
+                for range in unaffected {
                     origin_offset += range.length;
                     output.push(range);
                 }
@@ -466,23 +471,25 @@ impl Blame {
 
 /// Split blame ranges at a specified offset
 fn blame_ranges_split_at(
-    ranges: Vec<BlameRange>,
+    mut ranges: VecDeque<BlameRange>,
     offset: u32,
-) -> (Vec<BlameRange>, Vec<BlameRange>) {
-    let mut left = Vec::new();
-    let mut right = Vec::new();
-    for range in ranges {
+) -> (VecDeque<BlameRange>, VecDeque<BlameRange>) {
+    let mut left = VecDeque::new();
+
+    while let Some(range) = ranges.pop_front() {
         if range.offset + range.length < offset {
-            left.push(range);
-        } else if offset <= range.offset {
-            right.push(range);
+            left.push_back(range);
         } else {
             let (left_range, right_range) = range.split_at(offset);
             left.extend(left_range);
-            right.extend(right_range);
+            if let Some(right_range) = right_range {
+                ranges.push_front(right_range);
+            }
+            break;
         }
     }
-    return (left, right);
+
+    return (left, ranges);
 }
 
 /// Merge multiple blames into a single.
