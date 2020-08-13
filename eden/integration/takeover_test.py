@@ -347,7 +347,7 @@ class TakeoverTest(testcase.EdenRepoTest):
             f"\r\nUse --force if you want to forcibly restart the current daemon\r\n"
         )
         p.wait()
-        self.assertEqual(p.exitstatus, 1)
+        self.assertEqual(p.exitstatus, 4)
 
         self.assertEqual(client.getStatus(), fb303_status.STOPPING)
 

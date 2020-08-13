@@ -1421,7 +1421,7 @@ class RestartCmd(Subcmd):
 
             if not self.args.force_restart:
                 print(f"Use --force if you want to forcibly restart the current daemon")
-                return 1
+                return 4
             return await self._force_restart(instance, edenfs_pid, stop_timeout)
 
     async def _recover_after_failed_graceful_restart(

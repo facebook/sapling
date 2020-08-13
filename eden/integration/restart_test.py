@@ -188,7 +188,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         p.expect_exact(f"The current edenfs daemon (pid {orig_pid}) is still starting")
         p.expect_exact("Use --force if you want to forcibly restart the current daemon")
         p.wait()
-        self.assertEqual(p.exitstatus, 1)
+        self.assertEqual(p.exitstatus, 4)
 
         # "eden restart --force" should force the restart anyway
         p = self._spawn_restart("--force")
@@ -220,7 +220,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         )
         p.expect_exact("Use --force if you want to forcibly restart the current daemon")
         p.wait()
-        self.assertEqual(p.exitstatus, 1)
+        self.assertEqual(p.exitstatus, 4)
 
         # "eden restart --force" should force the restart anyway
         p = self._spawn_restart("--force")
@@ -255,7 +255,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         )
         p.expect_exact("Use --force if you want to forcibly restart the current daemon")
         p.wait()
-        self.assertEqual(p.exitstatus, 1)
+        self.assertEqual(p.exitstatus, 4)
 
         # "eden restart --graceful --force" should force the restart anyway
         p = self._spawn_restart("--graceful", "--force")
