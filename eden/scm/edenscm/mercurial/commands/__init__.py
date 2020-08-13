@@ -2800,10 +2800,30 @@ def grep(ui, repo, pattern, *pats, **opts):
         )
         out, err = p.communicate()
         lines = pycompat.decodeutf8(out.rstrip()).split("\n")
-        # the first line has the revision for the corpus; parse it out
-        # the format is "#HASH:timestamp"
+
         revisionline = lines[0][1:]
-        corpusrev, timestamp = revisionline.split(":", 1)
+
+        # Biggrep has two output formats. If the query only hit one shard, it
+        # returns a "#HASH:timestamp" format indicating the revision and time of
+        # the shards snapshot. If it hits multiple shards, it returns a
+        # "#name1=HASH:timestamp,name2=HASH:timestamp,name3=..." format.
+        if "=" in revisionline:
+            corpusrevs = []
+            shards = revisionline.split(",")
+            for shard in shards:
+                name, info = shard.split("=")
+                corpusrev, timestamp = info.split(":")
+                corpusrevs.append(corpusrev)
+            corpusrevs = repo.set("min(%ls)", corpusrevs)
+            if not corpusrevs:
+                raise error.Abort(
+                    _("unable to resolve biggrep revision: %s") % revisionline,
+                    hint=_("pass `--config grep.usebiggrep=False` to bypass biggrep"),
+                )
+            corpusrev = list(corpusrevs)[0].hex()
+        else:
+            corpusrev, timestamp = revisionline.split(":", 1)
+
         lines = lines[1:]
 
         resultsbyfile = {}
