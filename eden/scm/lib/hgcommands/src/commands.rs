@@ -5,16 +5,19 @@
  * GNU General Public License version 2.
  */
 
+mod root;
 mod status;
 
-use anyhow::{bail, Result};
+pub use anyhow::Result;
+pub use clidispatch::io::IO;
+pub use clidispatch::repo::Repo;
+pub use cliparser::define_flags;
+
+use anyhow::bail;
 use clidispatch::{
     command::{CommandTable, Register},
     errors,
-    io::IO,
-    repo::Repo,
 };
-use cliparser::define_flags;
 use filetime::{set_file_mtime, FileTime};
 use taggederror::{intentional_error, AnyhowExt, Fault};
 use tempfile::tempfile_in;
@@ -50,16 +53,7 @@ macro_rules! command_table {
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.
 pub fn table() -> CommandTable {
-    let mut table = command_table!(status);
-    table.register(
-        root,
-        "root",
-        r#"print the root (top) of the current working directory
-
-    Print the root directory of the current repository.
-
-    Returns 0 on success."#,
-    );
+    let mut table = command_table!(status, root);
     table.register(
         version,
         "version|vers|versi|versio",
@@ -121,11 +115,6 @@ define_flags! {
         template: String,
     }
 
-    pub struct RootOpts {
-        /// show root of the shared repo
-        shared: bool,
-    }
-
     pub struct DumpTraceOpts {
         /// time range
         #[short('t')]
@@ -170,20 +159,6 @@ define_flags! {
     }
 
     pub struct NoOpts {}
-}
-
-pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8> {
-    let path = if opts.shared {
-        repo.shared_path()
-    } else {
-        repo.path()
-    };
-
-    io.write(format!(
-        "{}\n",
-        util::path::strip_unc_prefix(&path).display()
-    ))?;
-    Ok(0)
 }
 
 pub fn version(_opts: NoOpts, io: &mut IO) -> Result<u8> {
