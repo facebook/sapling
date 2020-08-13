@@ -30,10 +30,27 @@ use types::{HgId, Key, RepoPathBuf};
 
 use std::{fs, path::Path, str::FromStr};
 
+macro_rules! command_table {
+    ( $( $module:ident $( :: $submodule:ident )* ),* ) => {{
+        let mut table = CommandTable::new();
+        $(
+            // NOTE: Consider passing 'config' to name() or doc() if we want
+            // some flexibility defining them using configs.
+            {
+                use self::$module $( :: $submodule )* as m;
+                let command_name = m::name();
+                let doc = m::doc();
+                table.register(m::run, &command_name, &doc);
+            }
+        )*
+        table
+    }}
+}
+
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.
 pub fn table() -> CommandTable {
-    let mut table = CommandTable::new();
+    let mut table = command_table!(status);
     table.register(
         root,
         "root",
@@ -48,8 +65,6 @@ pub fn table() -> CommandTable {
         "version|vers|versi|versio",
         r#"output version and copyright information"#,
     );
-    status::register(&mut table);
-    status::register(&mut table);
 
     table.register(dump_trace, "dump-trace", "export tracing information");
 

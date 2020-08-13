@@ -7,22 +7,145 @@
 
 use crate::commands::{FormatterOpts, WalkOpts};
 use anyhow::Result;
-use clidispatch::{
-    command::{CommandTable, Register},
-    errors,
-    io::IO,
-    repo::Repo,
-};
+use clidispatch::{errors, io::IO, repo::Repo};
 use cliparser::define_flags;
 
 use edenfs_client::status::{maybe_status_fastpath, PrintConfig, PrintConfigStatusTypes};
 
-/// Return the main command table including all Rust commands.
-pub(crate) fn register(table: &mut CommandTable) {
-    table.register(
-        status,
-        "status|st|sta|stat|statu",
-        r#"list files with pending changes
+define_flags! {
+    pub struct StatusOpts {
+        /// show status of all files
+        #[short('A')]
+        all: bool,
+
+        /// show only modified files
+        #[short('m')]
+        modified: bool,
+
+        /// show only added files
+        #[short('a')]
+        added: bool,
+
+        /// show only removed files
+        #[short('r')]
+        removed: bool,
+
+        /// show only deleted (but tracked) files
+        #[short('d')]
+        deleted: bool,
+
+        /// show only files without changes
+        #[short('c')]
+        clean: bool,
+
+        /// show only unknown (not tracked) files
+        #[short('u')]
+        unknown: bool,
+
+        /// show only ignored files
+        #[short('i')]
+        ignored: bool,
+
+        /// hide status prefix
+        #[short('n')]
+        no_status: bool,
+
+        /// show the terse output (EXPERIMENTAL)
+        #[short('t')]
+        terse: String,
+
+        /// show source of copied files
+        #[short('C')]
+        copies: bool,
+
+        /// end filenames with NUL, for use with xargs
+        #[short('0')]
+        print0: bool,
+
+        /// show difference from revision
+        rev: Vec<String>,
+
+        /// list the changed files of a revision
+        change: String,
+
+        /// show status relative to root
+        root_relative: bool,
+
+        walk_opts: WalkOpts,
+        formatter_opts: FormatterOpts,
+
+        #[args]
+        args: Vec<String>,
+    }
+}
+
+pub fn run(opts: StatusOpts, io: &mut IO, repo: Repo) -> Result<u8> {
+    let rev_check = opts.rev.is_empty() || (opts.rev.len() == 1 && opts.rev[0] == ".");
+
+    let args_check = opts.args.is_empty() || (opts.args.len() == 1 && opts.args[0] == "re:.");
+
+    if opts.all
+        || !opts.change.is_empty()
+        || !opts.terse.is_empty()
+        || !rev_check
+        || !opts.walk_opts.include.is_empty()
+        || !opts.walk_opts.exclude.is_empty()
+        || !opts.formatter_opts.template.is_empty()
+        || !args_check
+    {
+        return Err(errors::FallbackToPython.into());
+    }
+
+    let StatusOpts {
+        modified,
+        added,
+        removed,
+        deleted,
+        clean,
+        unknown,
+        ignored,
+        ..
+    } = opts;
+
+    let status_types = if modified || added || removed || deleted || clean || unknown || ignored {
+        PrintConfigStatusTypes {
+            modified,
+            added,
+            removed,
+            deleted,
+            clean,
+            unknown,
+            ignored,
+        }
+    } else {
+        PrintConfigStatusTypes {
+            modified: true,
+            added: true,
+            removed: true,
+            deleted: true,
+            clean: false,
+            unknown: true,
+            ignored: false,
+        }
+    };
+    let print_config = PrintConfig {
+        status_types,
+        no_status: opts.no_status,
+        copies: opts.copies,
+        endl: if opts.print0 { '\0' } else { '\n' },
+        root_relative: opts.root_relative,
+    };
+
+    let cwd = std::env::current_dir()?;
+    maybe_status_fastpath(repo.path(), &cwd, print_config, io)
+}
+
+pub fn name() -> &'static str {
+    "status|st|sta|stat|statu"
+}
+
+pub fn doc() -> &'static str {
+    r#"list files with pending changes
 
     Show status of files in the repository using the following status
     indicators::
@@ -107,134 +230,5 @@ pub(crate) fn register(table: &mut CommandTable) {
 
           hg status -v -t mardu
 
-    Returns 0 on success."#,
-    );
-}
-
-define_flags! {
-    pub struct StatusOpts {
-        /// show status of all files
-        #[short('A')]
-        all: bool,
-
-        /// show only modified files
-        #[short('m')]
-        modified: bool,
-
-        /// show only added files
-        #[short('a')]
-        added: bool,
-
-        /// show only removed files
-        #[short('r')]
-        removed: bool,
-
-        /// show only deleted (but tracked) files
-        #[short('d')]
-        deleted: bool,
-
-        /// show only files without changes
-        #[short('c')]
-        clean: bool,
-
-        /// show only unknown (not tracked) files
-        #[short('u')]
-        unknown: bool,
-
-        /// show only ignored files
-        #[short('i')]
-        ignored: bool,
-
-        /// hide status prefix
-        #[short('n')]
-        no_status: bool,
-
-        /// show the terse output (EXPERIMENTAL)
-        #[short('t')]
-        terse: String,
-
-        /// show source of copied files
-        #[short('C')]
-        copies: bool,
-
-        /// end filenames with NUL, for use with xargs
-        #[short('0')]
-        print0: bool,
-
-        /// show difference from revision
-        rev: Vec<String>,
-
-        /// list the changed files of a revision
-        change: String,
-
-        /// show status relative to root
-        root_relative: bool,
-
-        walk_opts: WalkOpts,
-        formatter_opts: FormatterOpts,
-
-        #[args]
-        args: Vec<String>,
-    }
-}
-
-fn status(opts: StatusOpts, io: &mut IO, repo: Repo) -> Result<u8> {
-    let rev_check = opts.rev.is_empty() || (opts.rev.len() == 1 && opts.rev[0] == ".");
-
-    let args_check = opts.args.is_empty() || (opts.args.len() == 1 && opts.args[0] == "re:.");
-
-    if opts.all
-        || !opts.change.is_empty()
-        || !opts.terse.is_empty()
-        || !rev_check
-        || !opts.walk_opts.include.is_empty()
-        || !opts.walk_opts.exclude.is_empty()
-        || !opts.formatter_opts.template.is_empty()
-        || !args_check
-    {
-        return Err(errors::FallbackToPython.into());
-    }
-
-    let StatusOpts {
-        modified,
-        added,
-        removed,
-        deleted,
-        clean,
-        unknown,
-        ignored,
-        ..
-    } = opts;
-
-    let status_types = if modified || added || removed || deleted || clean || unknown || ignored {
-        PrintConfigStatusTypes {
-            modified,
-            added,
-            removed,
-            deleted,
-            clean,
-            unknown,
-            ignored,
-        }
-    } else {
-        PrintConfigStatusTypes {
-            modified: true,
-            added: true,
-            removed: true,
-            deleted: true,
-            clean: false,
-            unknown: true,
-            ignored: false,
-        }
-    };
-    let print_config = PrintConfig {
-        status_types,
-        no_status: opts.no_status,
-        copies: opts.copies,
-        endl: if opts.print0 { '\0' } else { '\n' },
-        root_relative: opts.root_relative,
-    };
-
-    let cwd = std::env::current_dir()?;
-    maybe_status_fastpath(repo.path(), &cwd, print_config, io)
+    Returns 0 on success."#
 }
