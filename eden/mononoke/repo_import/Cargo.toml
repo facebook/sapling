@@ -18,14 +18,18 @@ derived_data_utils = { path = "../derived_data/utils" }
 import_tools = { path = "../git/import_tools" }
 manifest = { path = "../manifest" }
 mercurial_types = { path = "../mercurial/types" }
+metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }
 movers = { path = "../commit_rewriting/movers" }
 mutable_counters = { path = "../mutable_counters" }
+pushrebase = { path = "../pushrebase" }
 topo_sort = { path = "../common/topo_sort" }
+unbundle = { path = "../repo_client/unbundle" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+maplit = "1.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
@@ -37,4 +41,5 @@ mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 sql_construct = { path = "../common/sql_construct" }
 tests_utils = { path = "../tests/utils" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio-compat = "0.1"

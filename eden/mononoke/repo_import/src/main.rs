@@ -24,10 +24,13 @@ use futures::{
 };
 use import_tools::{GitimportPreferences, GitimportTarget};
 use manifest::ManifestOps;
+use maplit::hashset;
 use mercurial_types::{HgChangesetId, MPath};
+use metaconfig_types::RepoConfig;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::DefaultAction;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
+use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
@@ -37,6 +40,7 @@ use std::num::NonZeroUsize;
 use std::path::Path;
 use tokio::{fs, io::AsyncWriteExt, process, time};
 use topo_sort::sort_topological;
+use unbundle::get_pushrebase_hooks;
 
 mod cli;
 
@@ -250,15 +254,15 @@ async fn merge_imported_commit(
     ctx: &CoreContext,
     repo: &BlobRepo,
     shifted_bcs: &[BonsaiChangeset],
-    dest_bookmark: &str,
+    dest_bookmark: &BookmarkName,
     changeset_args: ChangesetArgs,
-) -> Result<(), Error> {
+) -> Result<ChangesetId, Error> {
     info!(
         ctx.logger(),
         "Merging the imported commits into given bookmark, {}", dest_bookmark
     );
     let master_cs_id = match repo
-        .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new(dest_bookmark)?)
+        .get_bonsai_bookmark(ctx.clone(), dest_bookmark)
         .compat()
         .await?
     {
@@ -325,7 +329,39 @@ async fn merge_imported_commit(
         .compat()
         .await?;
     info!(ctx.logger(), "Finished merging");
-    Ok(())
+    Ok(merged_cs_id)
+}
+
+async fn push_merge_commit(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    merged_cs_id: ChangesetId,
+    bookmark_to_merge_into: &BookmarkName,
+    repo_config: &RepoConfig,
+) -> Result<ChangesetId, Error> {
+    info!(ctx.logger(), "Running pushrebase");
+
+    let merged_cs = merged_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let pushrebase_flags = repo_config.pushrebase.flags;
+    let pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
+
+    let pushrebase_res = do_pushrebase_bonsai(
+        &ctx,
+        &repo,
+        &pushrebase_flags,
+        &OntoBookmarkParams::new(bookmark_to_merge_into.clone()),
+        &hashset![merged_cs],
+        &None,
+        &pushrebase_hooks,
+    )
+    .await?;
+
+    let pushrebase_cs_id = pushrebase_res.head;
+    info!(
+        ctx.logger(),
+        "Finished pushrebasing to {}", pushrebase_cs_id
+    );
+    Ok(pushrebase_cs_id)
 }
 
 async fn get_leaf_entries(
@@ -527,7 +563,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let sleep_time = matches.value_of(ARG_SLEEP_TIME).unwrap();
     let sleep_time = sleep_time.parse::<u64>()?;
     let backup_hashes_path = matches.value_of(ARG_BACKUP_HASHES_FILE_PATH).unwrap();
-    let dest_bookmark = matches.value_of(ARG_DEST_BOOKMARK).unwrap();
+    let dest_bookmark_name = matches.value_of(ARG_DEST_BOOKMARK).unwrap();
     let commit_author = matches.value_of(ARG_COMMIT_AUTHOR).unwrap();
     let commit_message = matches.value_of(ARG_COMMIT_MESSAGE).unwrap();
     let datetime = match matches.value_of(ARG_COMMIT_DATE_RFC3339) {
@@ -567,7 +603,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 &mutable_counters,
             )
             .await?;
-            merge_imported_commit(&ctx, &repo, &shifted_bcs, &dest_bookmark, changeset_args).await
+            let dest_bookmark = BookmarkName::new(dest_bookmark_name)?;
+            let merged_cs_id =
+                merge_imported_commit(&ctx, &repo, &shifted_bcs, &dest_bookmark, changeset_args)
+                    .await?;
+            let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+            push_merge_commit(&ctx, &repo, merged_cs_id, &dest_bookmark, &repo_config).await?;
+            Ok(())
         },
         fb,
         "repo_import",
@@ -580,7 +622,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        check_dependent_systems, move_bookmark, sort_bcs, CheckerFlags, LATEST_REPLAYED_REQUEST_KEY,
+        check_dependent_systems, merge_imported_commit, move_bookmark, push_merge_commit, sort_bcs,
+        ChangesetArgs, CheckerFlags, LATEST_REPLAYED_REQUEST_KEY,
     };
 
     use anyhow::Result;
@@ -590,11 +633,17 @@ mod tests {
     use fbinit::FacebookInit;
     use futures::{compat::Future01CompatExt, stream::TryStreamExt};
     use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
+    use metaconfig_types::{PushrebaseParams, RepoConfig};
+    use mononoke_types::{
+        globalrev::{Globalrev, START_COMMIT_GLOBALREV},
+        DateTime, RepositoryId,
+    };
     use mononoke_types_mocks::changesetid::{ONES_CSID as MON_CSID, TWOS_CSID};
     use mutable_counters::{MutableCounters, SqlMutableCounters};
+    use sql::rusqlite::Connection as SqliteConnection;
     use sql_construct::SqlConstruct;
     use std::time::Duration;
-    use tests_utils::drawdag::create_from_dag;
+    use tests_utils::{bookmark, drawdag::create_from_dag, CreateCommitContext};
     use tokio::time;
 
     fn create_bookmark_name(book: &str) -> BookmarkName {
@@ -768,6 +817,58 @@ mod tests {
             &mutable_counters,
         )
         .await?;
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn merge_push_commit_test(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let (repo, _con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
+            SqliteConnection::open_in_memory()?,
+            RepositoryId::new(1),
+        )?;
+
+        let master_cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("a", "a")
+            .commit()
+            .await?;
+        let imported_cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("b", "b")
+            .commit()
+            .await?;
+        let imported_cs = imported_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+
+        let dest_bookmark = bookmark(&ctx, &repo, "master").set_to(master_cs_id).await?;
+
+        let changeset_args = ChangesetArgs {
+            author: "user".to_string(),
+            message: "merging".to_string(),
+            datetime: DateTime::now(),
+        };
+
+        let merged_cs_id = merge_imported_commit(
+            &ctx,
+            &repo,
+            &[imported_cs.clone()],
+            &dest_bookmark,
+            changeset_args,
+        )
+        .await?;
+
+        let mut repo_config = RepoConfig::default();
+        repo_config.pushrebase = PushrebaseParams {
+            assign_globalrevs: true,
+            ..Default::default()
+        };
+
+        let pushed_cs_id =
+            push_merge_commit(&ctx, &repo, merged_cs_id, &dest_bookmark, &repo_config).await?;
+        let pushed_cs = pushed_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+
+        assert_eq!(
+            Globalrev::new(START_COMMIT_GLOBALREV),
+            Globalrev::from_bcs(&pushed_cs)?
+        );
         Ok(())
     }
 }

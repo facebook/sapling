@@ -69,6 +69,8 @@
   * Creating a merge bonsai changeset with parents: *, * (glob)
   * Created merge bonsai: * and changeset: * (glob)
   * Finished merging (glob)
+  * Running pushrebase (glob)
+  * Finished pushrebasing to * (glob)
 
 # Check if we derived all the types
   $ BOOKMARK_NAME="repo_import_new_repo"
@@ -106,11 +108,33 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
+  added 3 changesets with 0 changes to 0 files
+  updating bookmark master_bookmark
   adding remote bookmark repo_import_new_repo
-  $ hgmn up repo_import_new_repo
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark repo_import_new_repo)
+  $ hgmn up master_bookmark
+  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master_bookmark)
+
+  $ log -r "all()"
+  @    merging [draft;rev=5;*] (glob)
+  |\
+  | o  Add file3 [draft;rev=4;12e9a7555b29]
+  | |
+  | o  Add file1 and file2 [draft;rev=3;25f978935fdd]
+  |
+  o  C [draft;rev=2;26805aba1e60]
+  |
+  o  B [draft;rev=1;112478962961]
+  |
+  o  A [draft;rev=0;426bada5c675]
+  $
+
+  $ ls
+  A
+  B
+  C
+  new_dir
+
   $ cat "new_dir/new_repo/file1"
   this is file1
   $ cat "new_dir/new_repo/file2_repo/file2"
