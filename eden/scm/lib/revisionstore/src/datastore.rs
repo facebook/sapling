@@ -15,7 +15,7 @@ use anyhow::{bail, Result};
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 
-use edenapi_types::DataEntry;
+use edenapi_types::{FileEntry, TreeEntry};
 use types::{HgId, Key, RepoPath};
 
 pub use crate::Metadata;
@@ -61,7 +61,16 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()>;
     fn flush(&self) -> Result<Option<PathBuf>>;
 
-    fn add_entry(&self, entry: &DataEntry) -> Result<()> {
+    fn add_file(&self, entry: &FileEntry) -> Result<()> {
+        let delta = Delta {
+            data: entry.data()?,
+            base: None,
+            key: entry.key().clone(),
+        };
+        self.add(&delta, entry.metadata())
+    }
+
+    fn add_tree(&self, entry: &TreeEntry) -> Result<()> {
         let delta = Delta {
             data: entry.data()?,
             base: None,

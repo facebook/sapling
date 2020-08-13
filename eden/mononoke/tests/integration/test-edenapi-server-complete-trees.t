@@ -83,7 +83,7 @@ Start up EdenAPI server.
   $ start_edenapi_server
 
 Create and send complete tree request.
-  $ edenapi_make_req tree > req.cbor <<EOF
+  $ edenapi_make_req complete-tree > req.cbor <<EOF
   > {
   >   "rootdir": "",
   >   "mfnodes": ["$MF_NODE_1", "$MF_NODE_2"],
@@ -112,7 +112,7 @@ Create and send complete tree request.
 Confirm that the response contains only directories whose files
 were modified, and that each directory appears twice since the
 files therein were modified in both commits.
-  $ edenapi_read_res data ls res.cbor
+  $ edenapi_read_res tree ls res.cbor
   Reading from file: "res.cbor"
   3d866afaa8cdb847e3800fef742c1fe9e741f75f 
   acde3b6cc4d4d57e4cf533fd6f75ea3a4e4e49cb a1

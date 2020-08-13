@@ -16,7 +16,7 @@ use crate::{
     types::StoreKey,
 };
 
-use super::{hgid_keys, EdenApiRemoteStore, EdenApiStoreKind};
+use super::{hgid_keys, EdenApiRemoteStore, EdenApiStoreKind, File, Tree};
 
 /// A data store backed by an `EdenApiRemoteStore` and a mutable store.
 ///
@@ -37,16 +37,16 @@ impl<T: EdenApiStoreKind> EdenApiDataStore<T> {
     }
 }
 
-impl<T: EdenApiStoreKind> RemoteDataStore for EdenApiDataStore<T> {
+impl RemoteDataStore for EdenApiDataStore<File> {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let client = self.remote.client.clone();
         let repo = self.remote.repo.clone();
         let hgidkeys = hgid_keys(keys);
 
         let fetch = async move {
-            let mut response = T::prefetch(client, repo, hgidkeys, None).await?;
+            let mut response = File::prefetch_files(client, repo, hgidkeys, None).await?;
             while let Some(entry) = response.entries.try_next().await? {
-                self.store.add_entry(&entry)?;
+                self.store.add_file(&entry)?;
             }
             self.store.translate_lfs_missing(keys)
         };
@@ -61,7 +61,43 @@ impl<T: EdenApiStoreKind> RemoteDataStore for EdenApiDataStore<T> {
     }
 }
 
-impl<T: EdenApiStoreKind> HgIdDataStore for EdenApiDataStore<T> {
+impl RemoteDataStore for EdenApiDataStore<Tree> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        let client = self.remote.client.clone();
+        let repo = self.remote.repo.clone();
+        let hgidkeys = hgid_keys(keys);
+
+        let fetch = async move {
+            let mut response = Tree::prefetch_trees(client, repo, hgidkeys, None).await?;
+            while let Some(entry) = response.entries.try_next().await? {
+                self.store.add_tree(&entry)?;
+            }
+            self.store.translate_lfs_missing(keys)
+        };
+
+        let mut rt = self.remote.runtime.lock();
+        rt.block_on(fetch)
+    }
+
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        // XXX: EdenAPI does not presently support uploads.
+        Ok(keys.to_vec())
+    }
+}
+
+impl HgIdDataStore for EdenApiDataStore<File> {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        self.prefetch(&[key.clone()])?;
+        self.store.get(key)
+    }
+
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        self.prefetch(&[key.clone()])?;
+        self.store.get_meta(key)
+    }
+}
+
+impl HgIdDataStore for EdenApiDataStore<Tree> {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         self.prefetch(&[key.clone()])?;
         self.store.get(key)
@@ -100,7 +136,7 @@ mod tests {
     #[test]
     fn test_get_file() -> Result<()> {
         // Set up mocked EdenAPI file and tree stores.
-        let k = key("a", "1");
+        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let d = delta("1234", None, k.clone());
         let files = hashmap! { k.clone() => d.data.clone() };
         let trees = HashMap::new();
@@ -157,7 +193,7 @@ mod tests {
     #[test]
     fn test_get_tree() -> Result<()> {
         // Set up mocked EdenAPI file and tree stores.
-        let k = key("a", "1");
+        let k = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
         let d = delta("1234", None, k.clone());
         let files = HashMap::new();
         let trees = hashmap! { k.clone() => d.data.clone() };

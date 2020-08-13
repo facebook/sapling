@@ -84,7 +84,7 @@ async fn fetch_history_for_key(
     let file = repo
         .file(filenode_id)
         .await
-        .with_context(|| ErrorKind::DataFetchFailed(key.clone()))?
+        .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?
         .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
     // Fetch the file's history and convert the entries into

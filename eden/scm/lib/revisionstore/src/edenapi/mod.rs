@@ -14,7 +14,7 @@ use parking_lot::Mutex;
 use tokio::runtime::Runtime;
 
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback};
-use edenapi_types::DataEntry;
+use edenapi_types::{FileEntry, TreeEntry};
 use types::Key;
 
 use crate::{
@@ -122,34 +122,45 @@ pub enum Tree {}
 /// methods on an EdenAPI client.
 #[async_trait]
 pub trait EdenApiStoreKind: Send + Sync + 'static {
-    async fn prefetch(
+    async fn prefetch_files(
         client: Arc<dyn EdenApi>,
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError>;
+    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+        unimplemented!("fetching files not supported for this store")
+    }
+
+    async fn prefetch_trees(
+        client: Arc<dyn EdenApi>,
+        repo: String,
+        keys: Vec<Key>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+        unimplemented!("fetching trees not supported for this store")
+    }
 }
 
 #[async_trait]
 impl EdenApiStoreKind for File {
-    async fn prefetch(
+    async fn prefetch_files(
         client: Arc<dyn EdenApi>,
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError> {
+    ) -> Result<Fetch<FileEntry>, EdenApiError> {
         client.files(repo, keys, progress).await
     }
 }
 
 #[async_trait]
 impl EdenApiStoreKind for Tree {
-    async fn prefetch(
+    async fn prefetch_trees(
         client: Arc<dyn EdenApi>,
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError> {
+    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
         client.trees(repo, keys, progress).await
     }
 }

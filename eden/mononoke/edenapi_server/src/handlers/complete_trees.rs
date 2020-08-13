@@ -11,7 +11,7 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
-use edenapi_types::{CompleteTreeRequest, DataEntry};
+use edenapi_types::{CompleteTreeRequest, TreeEntry};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgManifestId, HgNodeHash};
 use mononoke_api::{
@@ -64,7 +64,7 @@ pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, H
 fn fetch_trees_under_path(
     repo: &HgRepoContext,
     request: CompleteTreeRequest,
-) -> Result<impl Stream<Item = Result<DataEntry, Error>>, HttpError> {
+) -> Result<impl Stream<Item = Result<TreeEntry, Error>>, HttpError> {
     let path = to_mononoke_path(request.rootdir).map_err(HttpError::e400)?;
 
     let root_nodes = request
@@ -83,12 +83,12 @@ fn fetch_trees_under_path(
         .trees_under_path(path, root_nodes, base_nodes, request.depth)
         .err_into::<Error>()
         .map_err(|e| e.context(ErrorKind::CompleteTreeRequestFailed))
-        .and_then(move |(tree, path)| async { data_entry_for_tree(tree, path) });
+        .and_then(move |(tree, path)| async { entry_for_tree(tree, path) });
 
     Ok(stream)
 }
 
-fn data_entry_for_tree(tree: HgTreeContext, path: MononokePath) -> Result<DataEntry, Error> {
+fn entry_for_tree(tree: HgTreeContext, path: MononokePath) -> Result<TreeEntry, Error> {
     let hgid = tree.node_id().into_nodehash().into();
     let path = to_hg_path(&path)?;
 
@@ -97,5 +97,5 @@ fn data_entry_for_tree(tree: HgTreeContext, path: MononokePath) -> Result<DataEn
     let parents = tree.hg_parents().into();
     let metadata = Metadata::default();
 
-    Ok(DataEntry::new(key, data, parents, metadata))
+    Ok(TreeEntry::new(key, data, parents, metadata))
 }

@@ -11,9 +11,9 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
-use edenapi_types::{DataEntry, DataRequest};
+use edenapi_types::{FileEntry, FileRequest};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
-use mercurial_types::{HgFileNodeId, HgManifestId, HgNodeHash};
+use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api::hg::{HgDataContext, HgDataId, HgRepoContext};
 use types::Key;
 
@@ -23,66 +23,55 @@ use crate::middleware::RequestContext;
 use crate::utils::{cbor_stream, get_repo, parse_cbor_request};
 
 /// XXX: This number was chosen arbitrarily.
-const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 10;
+const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 10;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct DataParams {
+pub struct FileParams {
     repo: String,
 }
 
 /// Fetch the content of the files requested by the client.
 pub async fn files(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    data::<HgFileNodeId>(state).await
-}
-
-/// Fetch the tree nodes requested by the client.
-pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    data::<HgManifestId>(state).await
-}
-
-/// Generic async function to fetch any kind of data blob
-/// whose identifier implements the `HgDataID` trait.
-async fn data<ID: HgDataId>(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
-    let params = DataParams::borrow_from(state);
+    let params = FileParams::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;
 
-    Ok(cbor_stream(fetch_all::<ID>(repo, request)))
+    Ok(cbor_stream(fetch_all_files(repo, request)))
 }
 
-/// Fetch data for all of the requested keys concurrently.
-fn fetch_all<ID: HgDataId>(
+/// Fetch files for all of the requested keys concurrently.
+fn fetch_all_files(
     repo: HgRepoContext,
-    request: DataRequest,
-) -> impl Stream<Item = Result<DataEntry, Error>> {
+    request: FileRequest,
+) -> impl Stream<Item = Result<FileEntry, Error>> {
     let fetches = request
         .keys
         .into_iter()
-        .map(move |key| fetch::<ID>(repo.clone(), key));
+        .map(move |key| fetch_file(repo.clone(), key));
 
-    stream::iter(fetches).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
+    stream::iter(fetches).buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
 }
 
-/// Fetch requested data for a single key.
+/// Fetch requested file for a single key.
 /// Note that this function consumes the repo context in order
-/// to construct a file/tree context for the requested blob.
-async fn fetch<ID: HgDataId>(repo: HgRepoContext, key: Key) -> Result<DataEntry, Error> {
-    let id = ID::from_node_hash(HgNodeHash::from(key.hgid));
+/// to construct a file context for the requested blob.
+async fn fetch_file(repo: HgRepoContext, key: Key) -> Result<FileEntry, Error> {
+    let id = HgFileNodeId::from_node_hash(HgNodeHash::from(key.hgid));
 
     let ctx = id
         .context(repo)
         .await
-        .with_context(|| ErrorKind::DataFetchFailed(key.clone()))?
+        .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?
         .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
     let (data, metadata) = ctx
         .content()
         .await
-        .with_context(|| ErrorKind::DataFetchFailed(key.clone()))?;
+        .with_context(|| ErrorKind::FileFetchFailed(key.clone()))?;
     let parents = ctx.hg_parents().into();
 
-    Ok(DataEntry::new(key, data, parents, metadata))
+    Ok(FileEntry::new(key, data, parents, metadata))
 }

@@ -26,7 +26,8 @@
 #![deny(warnings)]
 
 pub mod commit;
-pub mod data;
+pub mod complete_tree;
+pub mod file;
 pub mod history;
 pub mod json;
 pub mod tree;
@@ -34,8 +35,23 @@ pub mod tree;
 pub use crate::commit::{
     CommitRevlogData, CommitRevlogDataRequest, Location, LocationToHash, LocationToHashRequest,
 };
-pub use crate::data::{DataEntry, DataError, DataRequest, DataResponse};
+pub use crate::complete_tree::CompleteTreeRequest;
+pub use crate::file::{FileEntry, FileError, FileRequest, FileResponse};
 pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
 };
-pub use crate::tree::CompleteTreeRequest;
+pub use crate::tree::{TreeEntry, TreeError, TreeRequest, TreeResponse};
+
+use thiserror::Error;
+
+use bytes::Bytes;
+use types::{hgid::HgId, parents::Parents};
+
+#[derive(Debug, Error)]
+#[error("Invalid hash: {expected} (expected) != {computed} (computed)")]
+pub struct InvalidHgId {
+    expected: HgId,
+    computed: HgId,
+    data: Bytes,
+    parents: Parents,
+}

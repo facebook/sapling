@@ -14,7 +14,7 @@ use tokio::runtime::Runtime;
 
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
-use edenapi_types::{DataEntry, HistoryEntry};
+use edenapi_types::{FileEntry, HistoryEntry, TreeEntry};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
 use crate::stats::stats;
@@ -50,7 +50,7 @@ pub trait EdenApiPyExt: EdenApi {
                 let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
                 rt.block_on(async move {
                     let response = self.files(repo, keys, progress).await?;
-                    write_data(response, store).await
+                    write_file(response, store).await
                 })
             })
             .map_pyerr(py)?;
@@ -101,7 +101,7 @@ pub trait EdenApiPyExt: EdenApi {
                 let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
                 rt.block_on(async move {
                     let response = self.trees(repo, keys, progress).await?;
-                    write_data(response, store).await
+                    write_tree(response, store).await
                 })
             })
             .map_pyerr(py)?;
@@ -133,7 +133,7 @@ pub trait EdenApiPyExt: EdenApi {
                     let response = self
                         .complete_trees(repo, rootdir, mfnodes, basemfnodes, depth, progress)
                         .await?;
-                    write_data(response, store).await
+                    write_tree(response, store).await
                 })
             })
             .map_pyerr(py)?;
@@ -144,12 +144,22 @@ pub trait EdenApiPyExt: EdenApi {
 
 impl<T: EdenApi + ?Sized> EdenApiPyExt for T {}
 
-async fn write_data(
-    mut response: Fetch<DataEntry>,
+async fn write_file(
+    mut response: Fetch<FileEntry>,
     store: Arc<dyn HgIdMutableDeltaStore>,
 ) -> Result<Stats, EdenApiError> {
     while let Some(entry) = response.entries.try_next().await? {
-        store.add_entry(&entry)?;
+        store.add_file(&entry)?;
+    }
+    response.stats.await
+}
+
+async fn write_tree(
+    mut response: Fetch<TreeEntry>,
+    store: Arc<dyn HgIdMutableDeltaStore>,
+) -> Result<Stats, EdenApiError> {
+    while let Some(entry) = response.entries.try_next().await? {
+        store.add_tree(&entry)?;
     }
     response.stats.await
 }

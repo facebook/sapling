@@ -8,7 +8,7 @@
 //! read_res -- Read the content of EdenAPI responses
 //!
 //! This program allows querying the contents of
-//! EdenAPI CBOR data and history responses.
+//! EdenAPI CBOR file, tree, and history responses.
 
 #![deny(warnings)]
 
@@ -24,28 +24,38 @@ use sha1::{Digest, Sha1};
 use structopt::StructOpt;
 
 use edenapi_types::{
-    CommitRevlogData, DataEntry, DataError, HistoryResponseChunk, WireHistoryEntry,
+    CommitRevlogData, FileEntry, FileError, HistoryResponseChunk, TreeEntry, TreeError,
+    WireHistoryEntry,
 };
 use types::{HgId, Key, Parents, RepoPathBuf};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "read_res", about = "Read the content of EdenAPI responses")]
 enum Args {
-    Data(DataArgs),
+    Tree(TreeArgs),
+    File(FileArgs),
     History(HistoryArgs),
     CommitRevlogData(CommitRevlogDataArgs),
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(about = "Read the content of a CBOR data response")]
-enum DataArgs {
+#[structopt(about = "Read the content of a CBOR tree response")]
+enum TreeArgs {
     Ls(DataLsArgs),
     Cat(DataCatArgs),
     Check(DataCheckArgs),
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(about = "List the data entries in the response")]
+#[structopt(about = "Read the content of a CBOR file response")]
+enum FileArgs {
+    Ls(DataLsArgs),
+    Cat(DataCatArgs),
+    Check(DataCheckArgs),
+}
+
+#[derive(Debug, StructOpt)]
+#[structopt(about = "List the file or tree entries in the response")]
 struct DataLsArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
@@ -54,7 +64,7 @@ struct DataLsArgs {
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(about = "Get the content of a data entry")]
+#[structopt(about = "Get the content of an entry")]
 struct DataCatArgs {
     #[structopt(help = "Input CBOR file (stdin used if omitted)")]
     input: Option<PathBuf>,
@@ -149,34 +159,43 @@ struct CommitRevlogDataCheckArgs {
 
 fn main() -> Result<()> {
     match Args::from_args() {
-        Args::Data(args) => cmd_data(args),
+        Args::Tree(args) => cmd_tree(args),
+        Args::File(args) => cmd_file(args),
         Args::History(args) => cmd_history(args),
         Args::CommitRevlogData(args) => cmd_commit_revlog_data(args),
     }
 }
 
-fn cmd_data(args: DataArgs) -> Result<()> {
+fn cmd_tree(args: TreeArgs) -> Result<()> {
     match args {
-        DataArgs::Ls(args) => cmd_data_ls(args),
-        DataArgs::Cat(args) => cmd_data_cat(args),
-        DataArgs::Check(args) => cmd_data_check(args),
+        TreeArgs::Ls(args) => cmd_tree_ls(args),
+        TreeArgs::Cat(args) => cmd_tree_cat(args),
+        TreeArgs::Check(args) => cmd_tree_check(args),
     }
 }
 
-fn cmd_data_ls(args: DataLsArgs) -> Result<()> {
-    let entries: Vec<DataEntry> = read_input(args.input, args.limit)?;
+fn cmd_file(args: FileArgs) -> Result<()> {
+    match args {
+        FileArgs::Ls(args) => cmd_file_ls(args),
+        FileArgs::Cat(args) => cmd_file_cat(args),
+        FileArgs::Check(args) => cmd_file_check(args),
+    }
+}
+
+fn cmd_tree_ls(args: DataLsArgs) -> Result<()> {
+    let entries: Vec<TreeEntry> = read_input(args.input, args.limit)?;
     for entry in entries {
         println!("{}", entry.key());
     }
     Ok(())
 }
 
-fn cmd_data_cat(args: DataCatArgs) -> Result<()> {
+fn cmd_tree_cat(args: DataCatArgs) -> Result<()> {
     let path = RepoPathBuf::from_string(args.path)?;
     let hgid = args.hgid.parse()?;
     let key = Key::new(path, hgid);
 
-    let entries: Vec<DataEntry> = read_input(args.input, args.limit)?;
+    let entries: Vec<TreeEntry> = read_input(args.input, args.limit)?;
     let entry = entries
         .into_iter()
         .find(|entry| entry.key() == &key)
@@ -185,18 +204,53 @@ fn cmd_data_cat(args: DataCatArgs) -> Result<()> {
     write_output(args.output, &entry.data()?)
 }
 
-fn cmd_data_check(args: DataCheckArgs) -> Result<()> {
-    let entries: Vec<DataEntry> = read_input(args.input, args.limit)?;
+fn cmd_tree_check(args: DataCheckArgs) -> Result<()> {
+    let entries: Vec<TreeEntry> = read_input(args.input, args.limit)?;
     for entry in entries {
         match entry.data() {
             Ok(_) => {}
-            Err(DataError::Redacted(..)) => {
-                println!("{} [Contents redacted]", entry.key());
-            }
-            Err(DataError::MaybeHybridManifest(e)) => {
+            Err(TreeError::MaybeHybridManifest(e)) => {
                 println!("{} [Possible flat manifest hash] {}", entry.key(), e);
             }
-            Err(DataError::Corrupt(e)) => {
+            Err(TreeError::Corrupt(e)) => {
+                println!("{} [Invalid hash] {}", entry.key(), e);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn cmd_file_ls(args: DataLsArgs) -> Result<()> {
+    let entries: Vec<FileEntry> = read_input(args.input, args.limit)?;
+    for entry in entries {
+        println!("{}", entry.key());
+    }
+    Ok(())
+}
+
+fn cmd_file_cat(args: DataCatArgs) -> Result<()> {
+    let path = RepoPathBuf::from_string(args.path)?;
+    let hgid = args.hgid.parse()?;
+    let key = Key::new(path, hgid);
+
+    let entries: Vec<FileEntry> = read_input(args.input, args.limit)?;
+    let entry = entries
+        .into_iter()
+        .find(|entry| entry.key() == &key)
+        .ok_or_else(|| anyhow!("Key not found"))?;
+
+    write_output(args.output, &entry.data()?)
+}
+
+fn cmd_file_check(args: DataCheckArgs) -> Result<()> {
+    let entries: Vec<FileEntry> = read_input(args.input, args.limit)?;
+    for entry in entries {
+        match entry.data() {
+            Ok(_) => {}
+            Err(FileError::Redacted(..)) => {
+                println!("{} [Contents redacted]", entry.key());
+            }
+            Err(FileError::Corrupt(e)) => {
                 println!("{} [Invalid hash] {}", entry.key(), e);
             }
         }

@@ -21,7 +21,8 @@ use tokio::prelude::*;
 use configparser::config::{ConfigSet, Options};
 use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback};
 use edenapi_types::{
-    json::FromJson, CommitRevlogDataRequest, CompleteTreeRequest, DataRequest, HistoryRequest,
+    json::FromJson, CommitRevlogDataRequest, CompleteTreeRequest, FileRequest, HistoryRequest,
+    TreeRequest,
 };
 
 const DEFAULT_CONFIG_FILE: &str = ".hgrc.edenapi";
@@ -99,7 +100,7 @@ async fn cmd_files(args: Args) -> Result<()> {
         repo,
         client,
         requests,
-    } = <Setup<DataRequest>>::from_args(args)?;
+    } = <Setup<FileRequest>>::from_args(args)?;
 
     for req in requests {
         log::info!("Requesting content for {} files", req.keys.len(),);
@@ -137,7 +138,7 @@ async fn cmd_trees(args: Args) -> Result<()> {
         repo,
         client,
         requests,
-    } = <Setup<DataRequest>>::from_args(args)?;
+    } = <Setup<TreeRequest>>::from_args(args)?;
 
     for req in requests {
         log::info!("Requesting {} tree nodes", req.keys.len());

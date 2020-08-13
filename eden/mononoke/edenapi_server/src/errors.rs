@@ -50,8 +50,10 @@ pub enum ErrorKind {
     SerializationFailed,
     #[error("Deserialization failed")]
     DeserializationFailed,
-    #[error("Failed to fetch data for key: {0:?}")]
-    DataFetchFailed(Key),
+    #[error("Failed to fetch file for key: {0:?}")]
+    FileFetchFailed(Key),
+    #[error("Failed to fetch tree for key: {0:?}")]
+    TreeFetchFailed(Key),
     #[error("Failed to fetch history for key: {0:?}")]
     HistoryFetchFailed(Key),
     #[error("Complete tree request failed")]

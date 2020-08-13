@@ -25,9 +25,10 @@ use crate::context::ServerContext;
 
 mod commit;
 mod complete_trees;
-mod data;
+mod files;
 mod history;
 mod repos;
+mod trees;
 
 /// Macro to create a Gotham handler function from an async function.
 ///
@@ -53,8 +54,8 @@ macro_rules! define_handler {
 }
 
 define_handler!(repos_handler, repos::repos);
-define_handler!(files_handler, data::files);
-define_handler!(trees_handler, data::trees);
+define_handler!(files_handler, files::files);
+define_handler!(trees_handler, trees::trees);
 define_handler!(complete_trees_handler, complete_trees::complete_trees);
 define_handler!(history_handler, history::history);
 define_handler!(commit_location_to_hash_handler, commit::location_to_hash);
@@ -77,11 +78,11 @@ pub fn build_router(ctx: ServerContext) -> Router {
         route.get("/repos").to(repos_handler);
         route
             .post("/:repo/files")
-            .with_path_extractor::<data::DataParams>()
+            .with_path_extractor::<files::FileParams>()
             .to(files_handler);
         route
             .post("/:repo/trees")
-            .with_path_extractor::<data::DataParams>()
+            .with_path_extractor::<trees::TreeParams>()
             .to(trees_handler);
         route
             .post("/:repo/trees/complete")

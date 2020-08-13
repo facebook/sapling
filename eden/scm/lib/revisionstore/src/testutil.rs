@@ -14,7 +14,7 @@ use futures::prelude::*;
 
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
-use edenapi_types::{CommitRevlogData, DataEntry, HistoryEntry};
+use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
 use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
 
 use crate::{
@@ -204,7 +204,10 @@ impl FakeEdenApi {
         Arc::new(self)
     }
 
-    fn get(map: &HashMap<Key, Bytes>, keys: Vec<Key>) -> Result<Fetch<DataEntry>, EdenApiError> {
+    fn get_files(
+        map: &HashMap<Key, Bytes>,
+        keys: Vec<Key>,
+    ) -> Result<Fetch<FileEntry>, EdenApiError> {
         let entries = keys
             .into_iter()
             .filter_map(|key| {
@@ -214,7 +217,31 @@ impl FakeEdenApi {
                     flags: None,
                     size: Some(data.len() as u64),
                 };
-                Some(Ok(DataEntry::new(key, data, parents, metadata)))
+                Some(Ok(FileEntry::new(key, data, parents, metadata)))
+            })
+            .collect::<Vec<_>>();
+
+        Ok(Fetch {
+            meta: vec![ResponseMeta::default()],
+            entries: Box::pin(stream::iter(entries)),
+            stats: Box::pin(future::ok(Stats::default())),
+        })
+    }
+
+    fn get_trees(
+        map: &HashMap<Key, Bytes>,
+        keys: Vec<Key>,
+    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+        let entries = keys
+            .into_iter()
+            .filter_map(|key| {
+                let data = map.get(&key)?.clone();
+                let parents = Parents::default();
+                let metadata = Metadata {
+                    flags: None,
+                    size: Some(data.len() as u64),
+                };
+                Some(Ok(TreeEntry::new(key, data, parents, metadata)))
             })
             .collect::<Vec<_>>();
 
@@ -237,8 +264,8 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError> {
-        Self::get(&self.files, keys)
+    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+        Self::get_files(&self.files, keys)
     }
 
     async fn history(
@@ -268,8 +295,8 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError> {
-        Self::get(&self.trees, keys)
+    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+        Self::get_trees(&self.trees, keys)
     }
 
     async fn complete_trees(
@@ -280,7 +307,7 @@ impl EdenApi for FakeEdenApi {
         _basemfnodes: Vec<HgId>,
         _depth: Option<usize>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError> {
+    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
         unimplemented!()
     }
 

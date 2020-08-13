@@ -7,7 +7,7 @@
 
 use async_trait::async_trait;
 
-use edenapi_types::{CommitRevlogData, DataEntry, HistoryEntry};
+use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
 use http_client::Progress;
 use types::{HgId, Key, RepoPathBuf};
 
@@ -25,7 +25,7 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError>;
+    ) -> Result<Fetch<FileEntry>, EdenApiError>;
 
     async fn history(
         &self,
@@ -40,7 +40,7 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError>;
+    ) -> Result<Fetch<TreeEntry>, EdenApiError>;
 
     async fn complete_trees(
         &self,
@@ -50,7 +50,7 @@ pub trait EdenApi: Send + Sync + 'static {
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError>;
+    ) -> Result<Fetch<TreeEntry>, EdenApiError>;
 
     async fn commit_revlog_data(
         &self,

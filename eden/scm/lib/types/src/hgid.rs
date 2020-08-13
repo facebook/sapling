@@ -15,7 +15,9 @@ use anyhow::Result;
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::parents::Parents;
 use crate::sha::to_hex;
+use sha1::{Digest, Sha1};
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;
@@ -71,6 +73,22 @@ impl HgId {
         let mut fixed_bytes = [0u8; HgId::len()];
         fixed_bytes.copy_from_slice(bytes);
         Ok(HgId(fixed_bytes))
+    }
+
+    pub fn from_content(data: &[u8], parents: Parents) -> Self {
+        // Parents must be hashed in sorted order.
+        let (p1, p2) = match parents.into_nodes() {
+            (p1, p2) if p1 > p2 => (p2, p1),
+            (p1, p2) => (p1, p2),
+        };
+
+        let mut hasher = Sha1::new();
+        hasher.input(p1.as_ref());
+        hasher.input(p2.as_ref());
+        hasher.input(data);
+        let hash: [u8; 20] = hasher.result().into();
+
+        HgId::from_byte_array(hash)
     }
 
     pub fn from_byte_array(bytes: [u8; HgId::len()]) -> Self {

@@ -15,8 +15,8 @@ use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
 use edenapi_types::{
-    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, DataEntry, DataRequest,
-    HistoryEntry, HistoryRequest, HistoryResponseChunk,
+    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, FileEntry, FileRequest,
+    HistoryEntry, HistoryRequest, HistoryResponseChunk, TreeEntry, TreeRequest,
 };
 use http_client::{HttpClient, Request};
 use types::{HgId, Key, RepoPathBuf};
@@ -160,17 +160,17 @@ impl EdenApi for Client {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError> {
+    ) -> Result<Fetch<FileEntry>, EdenApiError> {
         if keys.is_empty() {
             return Err(EdenApiError::EmptyRequest);
         }
 
         let url = self.url(paths::FILES, Some(&repo))?;
-        let requests = self.prepare(&url, keys, self.config.max_files, |keys| DataRequest {
+        let requests = self.prepare(&url, keys, self.config.max_files, |keys| FileRequest {
             keys,
         })?;
 
-        self.fetch::<DataEntry>(requests, progress).await
+        self.fetch::<FileEntry>(requests, progress).await
     }
 
     async fn history(
@@ -215,17 +215,17 @@ impl EdenApi for Client {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError> {
+    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
         if keys.is_empty() {
             return Err(EdenApiError::EmptyRequest);
         }
 
         let url = self.url(paths::TREES, Some(&repo))?;
-        let requests = self.prepare(&url, keys, self.config.max_trees, |keys| DataRequest {
+        let requests = self.prepare(&url, keys, self.config.max_trees, |keys| TreeRequest {
             keys,
         })?;
 
-        self.fetch::<DataEntry>(requests, progress).await
+        self.fetch::<TreeEntry>(requests, progress).await
     }
 
     async fn complete_trees(
@@ -236,7 +236,7 @@ impl EdenApi for Client {
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<DataEntry>, EdenApiError> {
+    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
         let url = self.url(paths::COMPLETE_TREES, Some(&repo))?;
         let tree_req = CompleteTreeRequest {
             rootdir,
@@ -250,7 +250,7 @@ impl EdenApi for Client {
             .cbor(&tree_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        self.fetch::<DataEntry>(vec![req], progress).await
+        self.fetch::<TreeEntry>(vec![req], progress).await
     }
 
     async fn commit_revlog_data(
