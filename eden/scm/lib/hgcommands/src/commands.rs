@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+mod status;
+
 use anyhow::{bail, Result};
 use clidispatch::{
     command::{CommandTable, Register},
@@ -27,8 +29,6 @@ use revisionstore::{
 use types::{HgId, Key, RepoPathBuf};
 
 use std::{fs, path::Path, str::FromStr};
-
-use crate::status;
 
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.
