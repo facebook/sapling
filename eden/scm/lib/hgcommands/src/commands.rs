@@ -43,7 +43,6 @@ pub fn table() -> CommandTable {
         debug::dumpindexedlog,
         debug::dumptrace,
         debug::dynamicconfig,
-        debug::fsync,
         debug::http,
         debug::python,
         debug::store,

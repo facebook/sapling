@@ -992,7 +992,6 @@ Test list of internal help commands
    debugfileset  parse and apply a fileset specification
    debugformat   display format information about the current repository
    debugfsinfo   show information detected about current filesystem
-   debugfsync    call fsync on newly modified key storage files
    debuggentrees
                  (no help text available)
    debuggetbundle

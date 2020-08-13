@@ -24,7 +24,6 @@ encoding = { path = "../encoding" }
 env_logger = "0.7"
 filetime = "0.2.9"
 flate2 = "1"
-fsyncglob = { path = "../fsyncglob" }
 hgtime = { path = "../hgtime"}
 indexedlog = { path = "../indexedlog" }
 libc = "0.2"

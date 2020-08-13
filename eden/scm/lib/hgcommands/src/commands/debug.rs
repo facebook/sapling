@@ -16,7 +16,6 @@ pub mod causerusterror;
 pub mod dumpindexedlog;
 pub mod dumptrace;
 pub mod dynamicconfig;
-pub mod fsync;
 pub mod http;
 pub mod python;
 pub mod store;
