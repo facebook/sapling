@@ -17,6 +17,7 @@ pub struct Repo {
     config: ConfigSet,
     bundle_path: Option<PathBuf>,
     shared_path: PathBuf,
+    store_path: PathBuf,
     dot_hg_path: PathBuf,
     shared_dot_hg_path: PathBuf,
     repo_name: Option<String>,
@@ -105,6 +106,7 @@ impl Repo {
             let shared_path = read_sharedpath(&path)?;
             let dot_hg_path = path.join(".hg");
             let shared_dot_hg_path = shared_path.join(".hg");
+            let store_path = shared_dot_hg_path.join("store");
             let repo_name = config
                 .get("remotefilelog", "reponame")
                 .map(|v| v.to_string());
@@ -113,11 +115,17 @@ impl Repo {
                 config,
                 bundle_path: None,
                 shared_path,
+                store_path,
                 dot_hg_path,
                 shared_dot_hg_path,
                 repo_name,
             })
         }
+    }
+
+    /// Return the store path.
+    pub fn store_path(&self) -> &Path {
+        &self.store_path
     }
 
     /// Return the shared repo root. If the repo is not shared, return the
