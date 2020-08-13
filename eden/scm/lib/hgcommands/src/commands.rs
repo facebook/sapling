@@ -7,6 +7,7 @@
 
 mod root;
 mod status;
+mod version;
 
 pub use anyhow::Result;
 pub use clidispatch::io::IO;
@@ -53,12 +54,7 @@ macro_rules! command_table {
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.
 pub fn table() -> CommandTable {
-    let mut table = command_table!(status, root);
-    table.register(
-        version,
-        "version|vers|versi|versio",
-        r#"output version and copyright information"#,
-    );
+    let mut table = command_table!(status, root, version);
 
     table.register(dump_trace, "dump-trace", "export tracing information");
 
@@ -159,20 +155,6 @@ define_flags! {
     }
 
     pub struct NoOpts {}
-}
-
-pub fn version(_opts: NoOpts, io: &mut IO) -> Result<u8> {
-    io.write(format!(
-        r#"Mercurial Distributed SCM (version {})
-(see https://mercurial-scm.org for more information)
-
-Copyright (C) 2005-2017 Matt Mackall and others
-This is free software; see the source for copying conditions. There is NO
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-"#,
-        ::version::VERSION
-    ))?;
-    Ok(0)
 }
 
 pub fn dump_trace(opts: DumpTraceOpts, io: &mut IO, _repo: Repo) -> Result<u8> {
