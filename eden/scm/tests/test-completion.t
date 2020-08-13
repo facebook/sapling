@@ -120,6 +120,7 @@ Show debug commands if there are no other candidates
   debugfileset
   debugformat
   debugfsinfo
+  debugfsync
   debuggetbundle
   debughttp
   debugignore
@@ -401,6 +402,7 @@ Show all commands + options
   debugfileset: rev
   debugformat: template
   debugfsinfo: 
+  debugfsync: 
   debuggetbundle: head, common, type
   debughttp: 
   debugignore: 
