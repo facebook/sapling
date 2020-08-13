@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod debug;
 mod root;
 mod status;
 mod version;
@@ -14,25 +15,7 @@ pub use clidispatch::io::IO;
 pub use clidispatch::repo::Repo;
 pub use cliparser::define_flags;
 
-use anyhow::bail;
-use clidispatch::{
-    command::{CommandTable, Register},
-    errors,
-};
-use filetime::{set_file_mtime, FileTime};
-use taggederror::{intentional_error, AnyhowExt, Fault};
-use tempfile::tempfile_in;
-
-use blackbox::{event::Event, json, SessionId};
-use dynamicconfig::Generator;
-use edenapi::EdenApiBlocking;
-use revisionstore::{
-    CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, StoreKey, StoreResult,
-    UnionHgIdDataStore,
-};
-use types::{HgId, Key, RepoPathBuf};
-
-use std::{fs, path::Path, str::FromStr};
+use clidispatch::command::{CommandTable, Register};
 
 macro_rules! command_table {
     ( $( $module:ident $( :: $submodule:ident )* ),* ) => {{
@@ -54,44 +37,19 @@ macro_rules! command_table {
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.
 pub fn table() -> CommandTable {
-    let mut table = command_table!(status, root, version);
-
-    table.register(dump_trace, "dump-trace", "export tracing information");
-
-    table.register(
-        debugstore,
-        "debugstore",
-        "print information about blobstore",
-    );
-    table.register(debugpython, "debugpython|debugpy", "run python interpreter");
-    table.register(debugargs, "debug-args", "print arguments received");
-    table.register(
-        debugindexedlogdump,
-        "debugindexedlog-dump",
-        "dump indexedlog data",
-    );
-    table.register(
-        debugindexedlogrepair,
-        "debugindexedlog-repair",
-        "repair indexedlog log",
-    );
-    table.register(
-        debughttp,
-        "debughttp",
-        "check whether the EdenAPI server is reachable",
-    );
-    table.register(
-        debugdynamicconfig,
-        "debugdynamicconfig",
-        "generate the dynamic configuration",
-    );
-    table.register(
-        debugcauserusterror,
-        "debugcauserusterror",
-        "cause an error to be generated in rust for testing error handling",
-    );
-
-    table
+    command_table!(
+        debug::args,
+        debug::causerusterror,
+        debug::dumpindexedlog,
+        debug::dumptrace,
+        debug::dynamicconfig,
+        debug::http,
+        debug::python,
+        debug::store,
+        root,
+        status,
+        version
+    )
 }
 
 define_flags! {
@@ -111,213 +69,5 @@ define_flags! {
         template: String,
     }
 
-    pub struct DumpTraceOpts {
-        /// time range
-        #[short('t')]
-        time_range: String = "since 15 minutes ago",
-
-        /// blackbox session id (overrides --time-range)
-        #[short('s')]
-        session_id: i64,
-
-        /// output path (.txt, .json, .json.gz, .spans.json)
-        #[short('o')]
-        output_path: String,
-    }
-
-    pub struct DebugstoreOpts {
-        /// print blob contents
-        content: bool,
-
-        #[arg]
-        path: String,
-
-        #[arg]
-        hgid: String,
-    }
-
-    pub struct DebugPythonOpts {
-        /// modules to trace (ex. 'edenscm.* subprocess import')
-        trace: String,
-
-        #[args]
-        args: Vec<String>,
-    }
-
-    pub struct DebugArgsOpts {
-        #[args]
-        args: Vec<String>,
-    }
-
-    pub struct DebugDynamicConfigOpts {
-        /// Host name to fetch a canary config from.
-        canary: Option<String>,
-    }
-
     pub struct NoOpts {}
-}
-
-pub fn dump_trace(opts: DumpTraceOpts, io: &mut IO, _repo: Repo) -> Result<u8> {
-    let entries = {
-        let blackbox = blackbox::SINGLETON.lock();
-        let session_ids = if opts.session_id != 0 {
-            vec![SessionId(opts.session_id as u64)]
-        } else if let Some(range) = hgtime::HgTime::parse_range(&opts.time_range) {
-            // Blackbox uses milliseconds. HgTime uses seconds.
-            let ratio = 1000;
-            blackbox.session_ids_by_pattern(&json!({"start": {
-                 "timestamp_ms": ["range", range.start.unixtime.saturating_mul(ratio), range.end.unixtime.saturating_mul(ratio)]
-             }})).into_iter().collect()
-        } else {
-            return Err(
-                errors::Abort("both --time-range and --session-id are invalid".into()).into(),
-            );
-        };
-        blackbox.entries_by_session_ids(session_ids)
-    };
-
-    let mut tracing_data_list = Vec::new();
-    for entry in entries {
-        if let Event::TracingData { serialized } = entry.data {
-            if let Ok(uncompressed) = zstd::stream::decode_all(&serialized.0[..]) {
-                if let Ok(data) = mincode::deserialize(&uncompressed) {
-                    tracing_data_list.push(data)
-                }
-            }
-        }
-    }
-    let merged = tracing_collector::TracingData::merge(tracing_data_list);
-
-    crate::run::write_trace(io, &opts.output_path, &merged)?;
-
-    Ok(0)
-}
-
-pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8> {
-    let path = RepoPathBuf::from_string(opts.path)?;
-    let hgid = HgId::from_str(&opts.hgid)?;
-    let config = repo.config();
-    let cachepath = match config.get("remotefilelog", "cachepath") {
-        Some(c) => c.to_string(),
-        None => return Err(errors::Abort("remotefilelog.cachepath is not set".into()).into()),
-    };
-    let reponame = match config.get("remotefilelog", "reponame") {
-        Some(c) => c.to_string(),
-        None => return Err(errors::Abort("remotefilelog.reponame is not set".into()).into()),
-    };
-    let fullpath = format!("{}/{}/packs", cachepath, reponame);
-    let packstore = Box::new(DataPackStore::new(fullpath, CorruptionPolicy::IGNORE));
-    let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
-    let indexedstore = Box::new(IndexedLogHgIdDataStore::new(fullpath).unwrap());
-    let mut unionstore: UnionHgIdDataStore<Box<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
-    unionstore.add(packstore);
-    unionstore.add(indexedstore);
-    let k = Key::new(path, hgid);
-    if let StoreResult::Found(content) = unionstore.get(StoreKey::hgid(k))? {
-        io.write(content)?;
-    }
-    Ok(0)
-}
-
-pub fn debugpython(opts: DebugPythonOpts, io: &mut IO) -> Result<u8> {
-    let mut args = opts.args;
-    args.insert(0, "hgpython".to_string());
-    let mut interp = crate::HgPython::new(&args);
-    if !opts.trace.is_empty() {
-        // Setup tracing via edenscm.traceimport
-        let _ = interp.setup_tracing(opts.trace.clone());
-    }
-    Ok(interp.run_python(&args, io))
-}
-
-pub fn debugargs(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
-    match io.write(format!("{:?}\n", opts.args)) {
-        Ok(_) => Ok(0),
-        Err(_) => Ok(255),
-    }
-}
-
-pub fn debugindexedlogdump(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
-    for path in opts.args {
-        let _ = io.write(format!("{}\n", path));
-        let path = Path::new(&path);
-        if let Ok(meta) = indexedlog::log::LogMetadata::read_file(path) {
-            write!(io.output, "Metadata File {:?}\n{:?}\n", path, meta)?;
-        } else if path.is_dir() {
-            // Treate it as Log.
-            let log = indexedlog::log::Log::open(path, Vec::new())?;
-            write!(io.output, "Log Directory {:?}:\n{:#?}\n", path, log)?;
-        } else if path.is_file() {
-            // Treate it as Index.
-            let idx = indexedlog::index::OpenOptions::new().open(path)?;
-            write!(io.output, "Index File {:?}\n{:?}\n", path, idx)?;
-        } else {
-            io.write_err(format!("Path {:?} is not a file or directory.\n\n", path))?;
-        }
-    }
-    Ok(0)
-}
-
-pub fn debugindexedlogrepair(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
-    for path in opts.args {
-        io.write(format!("Repairing {:?}\n", path))?;
-        io.write(format!(
-            "{}\n",
-            indexedlog::log::OpenOptions::new().repair(Path::new(&path))?
-        ))?;
-        io.write("Done\n")?;
-    }
-    Ok(0)
-}
-
-pub fn debughttp(_opts: NoOpts, io: &mut IO, repo: Repo) -> Result<u8> {
-    let client = edenapi::Builder::from_config(repo.config())?.build()?;
-    let meta = client.health_blocking()?;
-    io.write(format!("{:#?}\n", &meta))?;
-    Ok(0)
-}
-
-pub fn debugdynamicconfig(opts: DebugDynamicConfigOpts, _io: &mut IO, repo: Repo) -> Result<u8> {
-    let repo_name: String = repo
-        .repo_name()
-        .map_or_else(|| "".to_string(), |s| s.to_string());
-
-    // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
-    // the config.
-    let repo_path = repo.shared_dot_hg_path();
-    if tempfile_in(&repo_path).is_err() {
-        bail!("no write access to {:?}", repo_path);
-    }
-
-    let username = repo
-        .config()
-        .get("ui", "username")
-        .and_then(|u| Some(u.to_string()))
-        .unwrap_or_else(|| "".to_string());
-
-    let config = Generator::new(repo_name, repo.shared_dot_hg_path().to_path_buf(), username)?
-        .execute(opts.canary)?;
-    let config_str = config.to_string();
-    let config_str = format!(
-        "# version={}\n# Generated by `hg debugdynamicconfig` - DO NOT MODIFY\n{}",
-        ::version::VERSION,
-        config_str
-    );
-
-    let hgrc_path = repo_path.join("hgrc.dynamic");
-
-    // If the file exists and will be unchanged, just update the mtime.
-    if hgrc_path.exists()
-        && fs::read_to_string(&hgrc_path).unwrap_or_else(|_| "".to_string()) == config_str
-    {
-        set_file_mtime(hgrc_path, FileTime::now())?;
-    } else {
-        fs::write(hgrc_path, config_str)?;
-    }
-    Ok(0)
-}
-
-pub fn debugcauserusterror(_opts: NoOpts, _io: &mut IO, _repo: Repo) -> Result<u8> {
-    // Add additional metadata via AnyhowExt trait to an anyhow::Error or anyhow::Result
-    Ok(intentional_error(false).with_fault(Fault::Request)?)
 }

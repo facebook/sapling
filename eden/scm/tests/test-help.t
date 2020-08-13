@@ -973,6 +973,10 @@ Test list of internal help commands
    debugdiscovery
                  runs the changeset discovery protocol in isolation
    debugdrawdag  read an ASCII graph from stdin and create changesets
+   debugdumpindexedlog
+                 dump indexedlog data
+   debugdumptrace
+                 export tracing information
    debugdynamicconfig
                  generate the dynamic configuration
    debugedenimporthelper
@@ -1000,10 +1004,6 @@ Test list of internal help commands
    debugindex    dump the contents of an index file
    debugindexdot
                  dump an index DAG as a graphviz dot file
-   debugindexedlog-dump
-                 dump indexedlog data
-   debugindexedlog-repair
-                 repair indexedlog log
    debuginstall  test Mercurial installation
    debugknown    test whether node ids are known to a repo
    debuglocks    show or modify state of locks

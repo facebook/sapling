@@ -22,7 +22,6 @@ Show all commands except debug commands
   copy
   diff
   doctor
-  dump-trace
   export
   files
   forget
@@ -81,7 +80,6 @@ Do not show debug commands if there are other candidates
   $ hg debugcomplete d
   diff
   doctor
-  dump-trace
 
 Show debug commands if there are no other candidates
   $ hg debugcomplete debug
@@ -111,6 +109,8 @@ Show debug commands if there are no other candidates
   debugdirstate
   debugdiscovery
   debugdrawdag
+  debugdumpindexedlog
+  debugdumptrace
   debugdynamicconfig
   debugedenimporthelper
   debugedenrunpostupdatehook
@@ -125,8 +125,6 @@ Show debug commands if there are no other candidates
   debugignore
   debugindex
   debugindexdot
-  debugindexedlog-dump
-  debugindexedlog-repair
   debuginstall
   debugknown
   debuglabelcomplete
@@ -296,7 +294,6 @@ Show aliases with -v
   copy cp
   diff
   doctor
-  dump-trace
   export
   files
   forget
@@ -393,6 +390,8 @@ Show all commands + options
   debugdirstate: nodates, datesort, json
   debugdiscovery: rev, ssh, remotecmd, insecure
   debugdrawdag: print
+  debugdumpindexedlog: 
+  debugdumptrace: time-range, session-id, output-path
   debugdynamicconfig: canary
   debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, cat-tree, get-file-size, fetch-tree
   debugedenrunpostupdatehook: 
@@ -407,8 +406,6 @@ Show all commands + options
   debugignore: 
   debugindex: changelog, manifest, dir, format
   debugindexdot: changelog, manifest, dir
-  debugindexedlog-dump: 
-  debugindexedlog-repair: 
   debuginstall: template
   debugknown: 
   debuglabelcomplete: 
@@ -460,7 +457,6 @@ Show all commands + options
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude
   doctor: 
-  dump-trace: time-range, session-id, output-path
   export: output, switch-parent, rev, pattern, text, git, binary, nodates, include, exclude
   files: rev, print0, include, exclude, template
   forget: include, exclude
