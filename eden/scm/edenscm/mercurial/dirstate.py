@@ -1608,6 +1608,12 @@ class dirstatemap(object):
     @util.propertycache
     def _dirs(self):
         # type: () -> bindings.dirs.dirs
+        """
+        Build a set of directories present in the dirstate.
+
+        Some dirstate implementation (eden for instance), don't support this,
+        and it's thus a good idea to test if "_dirs" is in self.__dict__.
+        """
         return util.dirs((p for (p, s) in pycompat.iteritems(self._map) if s[0] != "r"))
 
     @util.propertycache
@@ -1739,7 +1745,8 @@ class dirstatemap(object):
         # type: () -> Dict[str, str]
         f = {}
         normcase = util.normcase
-        # pyre-fixme[16]: Iterable has no attribute __next__
-        for name in self._dirs:
-            f[normcase(name)] = name
+        if "_dirs" in self.__dict__:
+            # pyre-fixme[16]: Iterable has no attribute __next__
+            for name in self._dirs:
+                f[normcase(name)] = name
         return f
