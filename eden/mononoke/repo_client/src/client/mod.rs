@@ -56,7 +56,7 @@ use mercurial_types::{
     HgChangesetIdsResolvedFromPrefix, HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath,
     RepoPath, NULL_CSID, NULL_HASH,
 };
-use metaconfig_types::RepoReadOnly;
+use metaconfig_types::{RepoClientKnobs, RepoReadOnly};
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use rand::{self, Rng};
 use remotefilelog::{
@@ -371,6 +371,7 @@ pub struct RepoClient {
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
     force_lfs: Arc<AtomicBool>,
     maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
+    knobs: RepoClientKnobs,
 }
 
 impl RepoClient {
@@ -384,6 +385,7 @@ impl RepoClient {
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
         maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
+        knobs: RepoClientKnobs,
     ) -> Self {
         let blobrepo = repo.blobrepo().clone();
         Self {
@@ -400,6 +402,7 @@ impl RepoClient {
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
             maybe_live_commit_sync_config,
+            knobs,
         }
     }
 
@@ -610,6 +613,7 @@ impl RepoClient {
             + Send
             + 'static,
     {
+        let allow_short_getpack_history = self.knobs.allow_short_getpack_history;
         self.command_stream(name, |ctx, command_logger| {
             let undesired_path_logger =
                 try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blobrepo()));
@@ -674,6 +678,7 @@ impl RepoClient {
                                     repo.clone(),
                                     filenodes.into_iter().collect(),
                                     &path,
+                                    allow_short_getpack_history,
                                 )
                                 .collect(),
                             );

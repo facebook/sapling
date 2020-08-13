@@ -28,7 +28,7 @@ use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use maplit::btreeset;
 use mercurial_derived_data::MappedHgChangesetId;
-use metaconfig_types::{CommitSyncConfig, RepoConfig, WireprotoLoggingConfig};
+use metaconfig_types::{CommitSyncConfig, RepoClientKnobs, RepoConfig, WireprotoLoggingConfig};
 use mononoke_types::RepositoryId;
 use mutable_counters::SqlMutableCounters;
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirectorArgs, WireprotoLogging};
@@ -58,6 +58,7 @@ struct IncompleteRepoHandler {
     preserve_raw_bundle2: bool,
     maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
     maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
+    repo_client_knobs: RepoClientKnobs,
 }
 
 #[derive(Clone)]
@@ -111,6 +112,7 @@ impl IncompleteRepoHandler {
             preserve_raw_bundle2,
             maybe_incomplete_push_redirector_args,
             maybe_warm_bookmarks_cache,
+            repo_client_knobs,
         } = self;
 
         let maybe_push_redirector_args = match maybe_incomplete_push_redirector_args {
@@ -129,6 +131,7 @@ impl IncompleteRepoHandler {
             preserve_raw_bundle2,
             maybe_push_redirector_args,
             maybe_warm_bookmarks_cache,
+            repo_client_knobs,
         })
     }
 }
@@ -143,6 +146,7 @@ pub struct RepoHandler {
     pub preserve_raw_bundle2: bool,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
     pub maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
+    pub repo_client_knobs: RepoClientKnobs,
 }
 
 pub fn repo_handlers(
@@ -190,6 +194,7 @@ pub fn repo_handlers(
                     && config.infinitepush.allow_writes;
             let repo_client_use_warm_bookmarks_cache = config.repo_client_use_warm_bookmarks_cache;
             let warm_bookmark_cache_check_blobimport = config.warm_bookmark_cache_check_blobimport;
+            let repo_client_knobs = config.repo_client_knobs.clone();
 
             // TODO: Don't require full config in load_hooks so we can avoid cloning the entire
             // config here.
@@ -374,6 +379,7 @@ pub fn repo_handlers(
                         preserve_raw_bundle2,
                         maybe_incomplete_push_redirector_args,
                         maybe_warm_bookmarks_cache,
+                        repo_client_knobs,
                     },
                 ))
             };

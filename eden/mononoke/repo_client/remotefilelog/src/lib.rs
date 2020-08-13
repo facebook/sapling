@@ -198,9 +198,18 @@ pub fn get_unordered_file_history_for_multiple_nodes(
     repo: BlobRepo,
     filenodes: HashSet<HgFileNodeId>,
     path: &MPath,
+    allow_short_getpack_history: bool,
 ) -> impl Stream<Item = HgFileHistoryEntry, Error = Error> {
-    let limit = tunables::tunables().get_remotefilelog_file_history_limit();
-    let limit = if limit <= 0 { None } else { Some(limit as u64) };
+    let limit = if allow_short_getpack_history {
+        let limit = tunables::tunables().get_remotefilelog_file_history_limit();
+        if limit <= 0 {
+            None
+        } else {
+            Some(limit as u64)
+        }
+    } else {
+        None
+    };
     select_all(filenodes.into_iter().map(|filenode| {
         get_file_history_maybe_incomplete(ctx.clone(), repo.clone(), filenode, path.clone(), limit)
     }))

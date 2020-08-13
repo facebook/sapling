@@ -186,6 +186,15 @@ pub struct RepoConfig {
     /// Do not consider bookmark warm unless blobimport processed it.
     /// That means that changeset is present in both Mononoke and hg.
     pub warm_bookmark_cache_check_blobimport: bool,
+    /// Configuration for repo_client module
+    pub repo_client_knobs: RepoClientKnobs,
+}
+
+/// Configuration for repo_client module
+#[derive(Eq, Copy, Clone, Default, Debug, PartialEq)]
+pub struct RepoClientKnobs {
+    /// Return shorter file history in getpack call
+    pub allow_short_getpack_history: bool,
 }
 
 /// Config for derived data

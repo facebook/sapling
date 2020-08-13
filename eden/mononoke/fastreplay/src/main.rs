@@ -304,6 +304,7 @@ async fn bootstrap_repositories<'a>(
                 _ => {}
             };
 
+            let repo_client_knobs = config.repo_client_knobs.clone();
             let repo = MononokeRepoBuilder::prepare(
                 bootstrap_ctx.clone(),
                 name.clone(),
@@ -343,6 +344,7 @@ async fn bootstrap_repositories<'a>(
                 repo,
                 remote_args_blobstore,
                 hash_validation_percentage,
+                repo_client_knobs,
             )?;
 
             if let Some(warmup) = warmup {

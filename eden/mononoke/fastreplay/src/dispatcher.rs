@@ -9,6 +9,7 @@ use anyhow::{Context, Error};
 use blobstore::Blobstore;
 use context::{LoggingContainer, SessionContainer};
 use fbinit::FacebookInit;
+use metaconfig_types::RepoClientKnobs;
 use repo_client::{MononokeRepo, RepoClient, WireprotoLogging};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
@@ -21,6 +22,7 @@ pub struct FastReplayDispatcher {
     wireproto_logging: Arc<WireprotoLogging>,
     remote_args_blobstore: Option<Arc<dyn Blobstore>>,
     hash_validation_percentage: usize,
+    repo_client_knobs: RepoClientKnobs,
 }
 
 impl FastReplayDispatcher {
@@ -30,6 +32,7 @@ impl FastReplayDispatcher {
         repo: MononokeRepo,
         remote_args_blobstore: Option<Arc<dyn Blobstore>>,
         hash_validation_percentage: usize,
+        repo_client_knobs: RepoClientKnobs,
     ) -> Result<Self, Error> {
         let noop_wireproto = WireprotoLogging::new(fb, repo.reponame().clone(), None, None, None)
             .context("While instantiating noop_wireproto")?;
@@ -41,6 +44,7 @@ impl FastReplayDispatcher {
             wireproto_logging: Arc::new(noop_wireproto),
             remote_args_blobstore,
             hash_validation_percentage,
+            repo_client_knobs,
         })
     }
 
@@ -60,6 +64,7 @@ impl FastReplayDispatcher {
             None, // Don't push redirect (we don't push)
             None, // No need to query live commit sync config
             None, // No need to use WarmBookmarksCache
+            self.repo_client_knobs.clone(),
         )
     }
 

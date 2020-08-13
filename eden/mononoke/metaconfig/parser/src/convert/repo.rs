@@ -14,7 +14,7 @@ use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, ComparableRegex,
     DerivedDataConfig, HookBypass, HookConfig, HookManagerParams, HookParams,
     InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
-    PushrebaseParams, ServiceWriteRestrictions, SourceControlServiceMonitoring,
+    PushrebaseParams, RepoClientKnobs, ServiceWriteRestrictions, SourceControlServiceMonitoring,
     SourceControlServiceParams, StorageConfig, UnodeVersion, WireprotoLoggingConfig,
 };
 use mononoke_types::MPath;
@@ -22,8 +22,9 @@ use regex::Regex;
 use repos::{
     RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawDerivedDataConfig,
     RawHookConfig, RawHookManagerParams, RawInfinitepushParams, RawLfsParams, RawPushParams,
-    RawPushrebaseParams, RawServiceWriteRestrictions, RawSourceControlServiceMonitoring,
-    RawSourceControlServiceParams, RawUnodeVersion, RawWireprotoLoggingConfig,
+    RawPushrebaseParams, RawRepoClientKnobs, RawServiceWriteRestrictions,
+    RawSourceControlServiceMonitoring, RawSourceControlServiceParams, RawUnodeVersion,
+    RawWireprotoLoggingConfig,
 };
 
 use crate::convert::Convert;
@@ -360,6 +361,16 @@ impl Convert for RawDerivedDataConfig {
             override_blame_filesize_limit: self
                 .override_blame_filesize_limit
                 .map(|limit| limit as u64),
+        })
+    }
+}
+
+impl Convert for RawRepoClientKnobs {
+    type Output = RepoClientKnobs;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(RepoClientKnobs {
+            allow_short_getpack_history: self.allow_short_getpack_history,
         })
     }
 }

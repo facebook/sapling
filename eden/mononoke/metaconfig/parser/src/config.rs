@@ -212,6 +212,7 @@ fn parse_repo_config(
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
         warm_bookmark_cache_check_blobimport,
+        repo_client_knobs,
         ..
     } = repo_config;
 
@@ -332,6 +333,7 @@ fn parse_repo_config(
 
     let warm_bookmark_cache_check_blobimport =
         warm_bookmark_cache_check_blobimport.unwrap_or(false);
+    let repo_client_knobs = repo_client_knobs.convert()?.unwrap_or_default();
 
     Ok(RepoConfig {
         enabled,
@@ -372,6 +374,7 @@ fn parse_repo_config(
         repo_client_use_warm_bookmarks_cache,
         segmented_changelog_config,
         warm_bookmark_cache_check_blobimport,
+        repo_client_knobs,
     })
 }
 
@@ -421,9 +424,10 @@ mod test {
         HookConfig, HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams,
         LfsParams, LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType,
         PushParams, PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig,
-        RemoteMetadataDatabaseConfig, SegmentedChangelogConfig, ShardableRemoteDatabaseConfig,
-        ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
-        SourceControlServiceParams, UnodeVersion, WireprotoLoggingConfig,
+        RemoteMetadataDatabaseConfig, RepoClientKnobs, SegmentedChangelogConfig,
+        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig,
+        SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion,
+        WireprotoLoggingConfig,
     };
     use mononoke_types::MPath;
     use nonzero_ext::nonzero;
@@ -962,6 +966,9 @@ mod test {
 
             [source_control_service_monitoring]
             bookmarks_to_report_age= ["master", "master2"]
+
+            [repo_client_knobs]
+            allow_short_getpack_history = true
         "#;
         let www_content = r#"
             repoid=1
@@ -1178,6 +1185,9 @@ mod test {
                 repo_client_use_warm_bookmarks_cache: true,
                 segmented_changelog_config: SegmentedChangelogConfig { enabled: false },
                 warm_bookmark_cache_check_blobimport: true,
+                repo_client_knobs: RepoClientKnobs {
+                    allow_short_getpack_history: true,
+                },
             },
         );
 
@@ -1229,6 +1239,7 @@ mod test {
                 repo_client_use_warm_bookmarks_cache: false,
                 segmented_changelog_config: SegmentedChangelogConfig { enabled: false },
                 warm_bookmark_cache_check_blobimport: false,
+                repo_client_knobs: RepoClientKnobs::default(),
             },
         );
         assert_eq!(
