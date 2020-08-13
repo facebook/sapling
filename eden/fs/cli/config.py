@@ -609,20 +609,47 @@ Do you want to run `eden mount %s` instead?"""
         shutil.rmtree(self._get_client_dir_for_mount_point(path))
         self._remove_path_from_directory_map(path)
 
-        # Delete the mount point
-        # It should normally contain the readme file that we put there, but nothing
-        # else.  We only delete these specific files for now rather than using
-        # shutil.rmtree() to avoid deleting files we did not create.
-        #
-        # Previous versions of Eden made the mount point directory read-only
-        # as part of "eden clone".  Make sure it is writable now so we can clean it up.
-        path.chmod(0o755)
-        try:
-            (path / NOT_MOUNTED_README_PATH).unlink()
-        except OSError as ex:
-            if ex.errno != errno.ENOENT:
-                raise
-        path.rmdir()
+        if sys.platform != "win32":
+            # Delete the mount point
+            # It should normally contain the readme file that we put there, but nothing
+            # else.  We only delete these specific files for now rather than using
+            # shutil.rmtree() to avoid deleting files we did not create.
+            #
+            # Previous versions of Eden made the mount point directory read-only
+            # as part of "eden clone".  Make sure it is writable now so we can clean it up.
+            path.chmod(0o755)
+            try:
+                (path / NOT_MOUNTED_README_PATH).unlink()
+            except OSError as ex:
+                if ex.errno != errno.ENOENT:
+                    raise
+            path.rmdir()
+        else:
+            # On Windows, the mount point contains ProjectedFS placeholder and
+            # files, remove all of them.
+
+            shutil.rmtree(path, ignore_errors=True)
+            if not path.exists():
+                return
+
+            # Somehow, we couldn't remove some of the files, sleep a bit and retry
+            time.sleep(0.5)
+
+            errors = []
+
+            def collect_errors(_f, path, ex):
+                if Path(path).is_file():
+                    errors.append((path, ex[1]))
+
+            shutil.rmtree(path, onerror=collect_errors)
+            if not path.exists():
+                return
+
+            print(f"Removing {path} failed, the following files couldn't be removed:")
+            for f in errors:
+                print(f"{f[0]}")
+
+            raise errors[0][1]
 
     def check_health(self, timeout: Optional[float] = None) -> HealthStatus:
         """

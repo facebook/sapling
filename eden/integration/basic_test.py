@@ -212,17 +212,20 @@ class BasicTest(BasicTestBase):
 
     def test_remove_checkout(self) -> None:
         self.assert_checkout_root_entries(self.expected_mount_entries)
-        self.assertTrue(self.eden.in_proc_mounts(self.mount))
+        if sys.platform != "win32":
+            self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
         self.eden.remove(self.mount)
 
-        self.assertFalse(self.eden.in_proc_mounts(self.mount))
+        if sys.platform != "win32":
+            self.assertFalse(self.eden.in_proc_mounts(self.mount))
         self.assertFalse(os.path.exists(self.mount))
 
         self.eden.clone(self.repo.path, self.mount)
 
         self.assert_checkout_root_entries(self.expected_mount_entries)
-        self.assertTrue(self.eden.in_proc_mounts(self.mount))
+        if sys.platform != "win32":
+            self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
 
 @testcase.eden_repo_test
