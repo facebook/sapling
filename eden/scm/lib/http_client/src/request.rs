@@ -236,6 +236,17 @@ impl Request {
             easy.ssl_cert(cert)?;
             easy.ssl_key(key)?;
         }
+
+        // Windows enables ssl revocation checking by default, which doesn't work inside the
+        // datacenter.
+        #[cfg(windows)]
+        {
+            use curl::easy::SslOpt;
+            let mut ssl_opts = SslOpt::new();
+            ssl_opts.no_revoke(true);
+            easy.ssl_options(&ssl_opts)?;
+        }
+
         if let Some(cainfo) = self.cainfo {
             easy.cainfo(cainfo)?;
         }
