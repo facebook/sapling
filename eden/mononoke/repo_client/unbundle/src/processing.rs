@@ -6,8 +6,8 @@
  */
 
 use crate::{
-    BundleResolverError, InfiniteBookmarkPush, NonFastForwardPolicy, PlainBookmarkPush,
-    PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
+    BundleResolverError, NonFastForwardPolicy, PlainBookmarkPush, PostResolveAction,
+    PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
     PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
 use anyhow::{anyhow, format_err, Context, Error, Result};
@@ -20,6 +20,7 @@ use bonsai_git_mapping::{
 use bookmarks::{
     BookmarkName, BookmarkTransaction, BookmarkTransactionHook, BookmarkUpdateReason, BundleReplay,
 };
+use bookmarks_movement::{BookmarkUpdatePolicy, BookmarkUpdateTargets};
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
@@ -39,7 +40,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use reverse_filler_queue::ReverseFillerQueue;
 use scribe_commit_queue::{self, LogToScribe};
 use scuba_ext::ScubaSampleBuilderExt;
-use slog::{debug, o, warn};
+use slog::{debug, warn};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
@@ -53,7 +54,6 @@ use crate::response::{
 
 enum BookmarkPush<T: Copy> {
     PlainPush(PlainBookmarkPush<T>),
-    Infinitepush(InfiniteBookmarkPush<T>),
 }
 
 define_stats! {
@@ -99,6 +99,7 @@ pub async fn run_post_resolve_action(
         PostResolveAction::InfinitePush(action) => run_infinitepush(
             ctx,
             repo,
+            bookmark_attrs,
             lca_hint,
             infinitepush_params,
             maybe_reverse_filler_queue,
@@ -465,6 +466,7 @@ fn check_bookmark_pushes_for_git_mirrors(
 async fn run_infinitepush(
     ctx: &CoreContext,
     repo: &BlobRepo,
+    bookmark_attrs: &BookmarkAttrs,
     lca_hint: &dyn LeastCommonAncestorsHint,
     infinitepush_params: &InfinitepushParams,
     maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
@@ -498,33 +500,57 @@ async fn run_infinitepush(
             .context("Failed to store mutation data")?;
     }
 
-    let bookmark = if let Some(bookmark_push) = maybe_bookmark_push {
-        let reason = BookmarkUpdateReason::Push;
-        let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
-        let maybe_bonsai_bookmark_push = filter_or_check_infinitepush_allowed(
-            ctx,
-            repo,
-            lca_hint,
-            infinitepush_params,
-            bookmark_push,
-        )
-        .await
-        .context("While verifying Infinite Push bookmark push")?;
+    let bookmark = match maybe_bookmark_push {
+        Some(bookmark_push) => {
+            let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
+            let bundle_replay_data = bundle_replay_data
+                .as_ref()
+                .map(|data| data as &dyn BundleReplay);
+            if bookmark_push.old.is_none() && bookmark_push.create {
+                bookmarks_movement::CreateBookmarkOp::new(
+                    &bookmark_push.name,
+                    bookmark_push.new,
+                    BookmarkUpdateReason::Push,
+                )
+                .only_if_scratch()
+                .with_bundle_replay_data(bundle_replay_data)
+                .run(ctx, repo, infinitepush_params, bookmark_attrs)
+                .await
+                .context("Failed to create scratch bookmark")?;
+            } else {
+                let old_target = bookmark_push.old.ok_or_else(|| {
+                    anyhow!(
+                        "Unknown bookmark: {}. Use --create to create one.",
+                        bookmark_push.name
+                    )
+                })?;
+                bookmarks_movement::UpdateBookmarkOp::new(
+                    &bookmark_push.name,
+                    BookmarkUpdateTargets {
+                        old: old_target,
+                        new: bookmark_push.new,
+                    },
+                    if bookmark_push.force {
+                        BookmarkUpdatePolicy::AnyPermittedByConfig
+                    } else {
+                        BookmarkUpdatePolicy::FastForwardOnly
+                    },
+                    BookmarkUpdateReason::Push,
+                )
+                .only_if_scratch()
+                .with_bundle_replay_data(bundle_replay_data)
+                .run(ctx, repo, lca_hint, infinitepush_params, bookmark_attrs)
+                .await
+                .context(if bookmark_push.force {
+                    "Failed to move scratch bookmark"
+                } else {
+                    "Failed to fast-forward scratch bookmark (try --force?)"
+                })?;
+            }
 
-        save_bookmark_pushes_to_db(
-            ctx,
-            repo,
-            reason,
-            &bundle_replay_data,
-            vec![maybe_bonsai_bookmark_push
-                .clone()
-                .map(BookmarkPush::Infinitepush)],
-            None,
-        )
-        .await?;
-        maybe_bonsai_bookmark_push.map(|bp| bp.name)
-    } else {
-        None
+            Some(bookmark_push.name)
+        }
+        None => None,
     };
 
     let new_commits: Vec<ChangesetId> = uploaded_bonsais
@@ -897,44 +923,6 @@ async fn check_plain_bookmark_push_allowed(
     }
 }
 
-/// Run sanity checks for infinitepush bookmark moves
-async fn filter_or_check_infinitepush_allowed(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    lca_hint: &dyn LeastCommonAncestorsHint,
-    infinitepush_params: &InfinitepushParams,
-    bp: InfiniteBookmarkPush<ChangesetId>,
-) -> Result<Option<InfiniteBookmarkPush<ChangesetId>>, Error> {
-    match &infinitepush_params.namespace {
-        Some(namespace) => {
-            // First, check that we match the namespace.
-            if !namespace.matches_bookmark(&bp.name) {
-                return Err(format_err!(
-                    "Invalid Infinitepush bookmark: {} (Infinitepush bookmarks must match pattern {})",
-                    &bp.name,
-                    namespace.as_str()
-                ));
-            }
-            // Now, check that the bookmark we want to update either exists or is being created.
-            if !(bp.old.is_some() || bp.create) {
-                let e = format_err!("Unknown bookmark: {}. Use --create to create one.", bp.name);
-                return Err(e);
-            }
-            // Finally, check that the push is a fast-forward, or --force is set.
-            if !bp.force {
-                check_is_ancestor_opt(ctx, repo, lca_hint, bp.old, bp.new)
-                    .await
-                    .map_err(|e| format_err!("{} (try --force?)", e))?
-            }
-            Ok(Some(bp))
-        }
-        None => {
-            warn!(ctx.logger(), "Infinitepush bookmark push to {} was ignored", bp.name; o!("remote" => "true"));
-            Ok(None)
-        }
-    }
-}
-
 fn check_plain_bookmark_move_preconditions(
     ctx: &CoreContext,
     bookmark: &BookmarkName,
@@ -983,11 +971,6 @@ fn add_bookmark_to_transaction(
                 _ => Ok(()),
             }
         }
-        BookmarkPush::Infinitepush(InfiniteBookmarkPush { name, new, old, .. }) => match (new, old)
-        {
-            (new, Some(old)) => txn.update_scratch(&name, new, old),
-            (new, None) => txn.create_scratch(&name, new),
-        },
     }
 }
 

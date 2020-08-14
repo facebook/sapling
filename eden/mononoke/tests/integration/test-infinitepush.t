@@ -140,17 +140,12 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:     Unknown bookmark: scratch/123. Use --create to create one.
   remote: 
   remote:   Caused by:
-  remote:     While verifying Infinite Push bookmark push
-  remote:   Caused by:
   remote:     Unknown bookmark: scratch/123. Use --create to create one.
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing an infinitepush",
-  remote:         source: Error {
-  remote:             context: "While verifying Infinite Push bookmark push",
-  remote:             source: "Unknown bookmark: scratch/123. Use --create to create one.",
-  remote:         },
+  remote:         source: "Unknown bookmark: scratch/123. Use --create to create one.",
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -176,19 +171,26 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:     While doing an infinitepush
   remote: 
   remote:   Root cause:
-  remote:     Non fastforward bookmark move from * to * (try --force?) (glob)
+  remote:     Non fast-forward bookmark move from * to * (glob)
   remote: 
   remote:   Caused by:
-  remote:     While verifying Infinite Push bookmark push
+  remote:     Failed to fast-forward scratch bookmark (try --force?)
   remote:   Caused by:
-  remote:     Non fastforward bookmark move from 58c64a8a96add9087220ca5b94cd892364562f40cbda51acfbba2dad8f5c979e to e10ec6cd13b1cbcfe2384f64bd37fc71b4bf9cfe21487d2eaf5064c1b3c0b793 (try --force?)
+  remote:     Non fast-forward bookmark move from 58c64a8a96add9087220ca5b94cd892364562f40cbda51acfbba2dad8f5c979e to e10ec6cd13b1cbcfe2384f64bd37fc71b4bf9cfe21487d2eaf5064c1b3c0b793
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing an infinitepush",
   remote:         source: Error {
-  remote:             context: "While verifying Infinite Push bookmark push",
-  remote:             source: "Non fastforward bookmark move from 58c64a8a96add9087220ca5b94cd892364562f40cbda51acfbba2dad8f5c979e to e10ec6cd13b1cbcfe2384f64bd37fc71b4bf9cfe21487d2eaf5064c1b3c0b793 (try --force?)",
+  remote:             context: "Failed to fast-forward scratch bookmark (try --force?)",
+  remote:             source: NonFastForwardMove {
+  remote:                 from: ChangesetId(
+  remote:                     Blake2(58c64a8a96add9087220ca5b94cd892364562f40cbda51acfbba2dad8f5c979e),
+  remote:                 ),
+  remote:                 to: ChangesetId(
+  remote:                     Blake2(e10ec6cd13b1cbcfe2384f64bd37fc71b4bf9cfe21487d2eaf5064c1b3c0b793),
+  remote:                 ),
+  remote:             },
   remote:         },
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)

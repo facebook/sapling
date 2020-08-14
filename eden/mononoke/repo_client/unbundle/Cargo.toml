@@ -13,6 +13,7 @@ blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
 bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 bookmarks = { path = "../../bookmarks" }
+bookmarks_movement = { path = "../../bookmarks/bookmarks_movement" }
 context = { path = "../../server/context" }
 cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync" }
 filestore = { path = "../../filestore" }

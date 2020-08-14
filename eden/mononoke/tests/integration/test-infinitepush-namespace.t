@@ -75,19 +75,24 @@ Invalid infinitepush, with pushrebase disabled
   remote:     While doing an infinitepush
   remote: 
   remote:   Root cause:
-  remote:     Invalid Infinitepush bookmark: bad/123 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)
+  remote:     Invalid scratch bookmark: bad/123 (scratch bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Caused by:
-  remote:     While verifying Infinite Push bookmark push
+  remote:     Failed to create scratch bookmark
   remote:   Caused by:
-  remote:     Invalid Infinitepush bookmark: bad/123 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)
+  remote:     Invalid scratch bookmark: bad/123 (scratch bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing an infinitepush",
   remote:         source: Error {
-  remote:             context: "While verifying Infinite Push bookmark push",
-  remote:             source: "Invalid Infinitepush bookmark: bad/123 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)",
+  remote:             context: "Failed to create scratch bookmark",
+  remote:             source: InvalidScratchBookmark {
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "bad/123",
+  remote:                 },
+  remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
+  remote:             },
   remote:         },
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
@@ -102,19 +107,24 @@ Invalid infinitepush, with pushrebase enabled
   remote:     While doing an infinitepush
   remote: 
   remote:   Root cause:
-  remote:     Invalid Infinitepush bookmark: bad/456 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)
+  remote:     Invalid scratch bookmark: bad/456 (scratch bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Caused by:
-  remote:     While verifying Infinite Push bookmark push
+  remote:     Failed to create scratch bookmark
   remote:   Caused by:
-  remote:     Invalid Infinitepush bookmark: bad/456 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)
+  remote:     Invalid scratch bookmark: bad/456 (scratch bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing an infinitepush",
   remote:         source: Error {
-  remote:             context: "While verifying Infinite Push bookmark push",
-  remote:             source: "Invalid Infinitepush bookmark: bad/456 (Infinitepush bookmarks must match pattern ^(infinitepush1|infinitepush2)/.+$)",
+  remote:             context: "Failed to create scratch bookmark",
+  remote:             source: InvalidScratchBookmark {
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "bad/456",
+  remote:                 },
+  remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
+  remote:             },
   remote:         },
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)

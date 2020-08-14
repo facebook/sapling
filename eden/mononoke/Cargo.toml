@@ -222,6 +222,7 @@ members = [
     "bonsai_hg_mapping",
     "bonsai_hg_mapping/if",
     "bookmarks",
+    "bookmarks/bookmarks_movement",
     "bookmarks/bookmarks_types",
     "bookmarks/dbbookmarks",
     "bookmarks/warm_bookmarks_cache",

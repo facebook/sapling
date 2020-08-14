@@ -69,15 +69,40 @@ Do infinitepush (aka commit cloud) push
   $ echo new > newfile
   $ hg addremove -q
   $ hg ci -m new
-  $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123"
+  $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123" --create
   pushing to ssh://user@dummy/repo
   searching for changes
-  remote: Infinitepush bookmark push to scratch/123 was ignored
+  remote: Command failed
+  remote:   Error:
+  remote:     While doing an infinitepush
+  remote: 
+  remote:   Root cause:
+  remote:     Invalid scratch bookmark: scratch/123 (scratch bookmarks are not enabled for this repo)
+  remote: 
+  remote:   Caused by:
+  remote:     Failed to create scratch bookmark
+  remote:   Caused by:
+  remote:     Invalid scratch bookmark: scratch/123 (scratch bookmarks are not enabled for this repo)
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While doing an infinitepush",
+  remote:         source: Error {
+  remote:             context: "Failed to create scratch bookmark",
+  remote:             source: ScratchBookmarksDisabled {
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "scratch/123",
+  remote:                 },
+  remote:             },
+  remote:         },
+  remote:     }
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
 
   $ tglogp
   @  1: 47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a' master_bookmark
+  o  0: 3903775176ed draft 'a' master_bookmark
   
 Bookmark push should have been ignored
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'

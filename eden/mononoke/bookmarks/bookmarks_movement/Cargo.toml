@@ -1,0 +1,18 @@
+[package]
+name = "bookmarks_movement"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+bookmarks = { path = ".." }
+bookmarks_types = { path = "../bookmarks_types" }
+context = { path = "../../server/context" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_types = { path = "../../mononoke_types" }
+reachabilityindex = { path = "../../reachabilityindex" }
+anyhow = "1.0"
+thiserror = "1.0"
