@@ -353,6 +353,7 @@ chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace
 const-random = { git = "https://github.com/fbsource/const-random", rev = "374c5b46427fe2ffbf6acbd9c1687e0f1a809f95" }
 gotham = { git = "https://github.com/krallin/gotham.git", branch = "socket_data" }
 gotham_derive = { git = "https://github.com/krallin/gotham.git", branch = "socket_data" }
+internment= { git = "https://github.com/droundy/internment", rev = "c075b045ec1b310493ec0742d1137acbdf7b7d9b" }
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-build = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
