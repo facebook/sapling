@@ -12,7 +12,7 @@ use fbinit::FacebookInit;
 use maplit::hashset;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::hash::*;
-use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams};
+use pushrebase::do_pushrebase_bonsai;
 use sql::rusqlite::Connection as SqliteConnection;
 use tests_utils::{bookmark, CreateCommitContext};
 
@@ -55,15 +55,14 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
     let hooks = [GitMappingPushrebaseHook::new(
         repo.bonsai_git_mapping().clone(),
     )];
-    let onto = OntoBookmarkParams::new(book);
 
     let rebased = do_pushrebase_bonsai(
         &ctx,
         &repo,
         &Default::default(),
-        &onto,
+        &book,
         &hashset![cs2.clone()],
-        &None,
+        None,
         &hooks,
     )
     .await?
@@ -103,9 +102,9 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         &ctx,
         &repo,
         &Default::default(),
-        &onto,
+        &book,
         &hashset![cs3.clone(), cs4.clone()],
-        &None,
+        None,
         &hooks,
     )
     .await?

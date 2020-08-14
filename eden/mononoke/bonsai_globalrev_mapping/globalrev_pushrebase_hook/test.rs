@@ -18,8 +18,8 @@ use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, RepositoryId,
 };
 use pushrebase::{
-    do_pushrebase_bonsai, OntoBookmarkParams, PushrebaseCommitHook, PushrebaseHook,
-    PushrebaseTransactionHook, RebasedChangesets,
+    do_pushrebase_bonsai, PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook,
+    RebasedChangesets,
 };
 use rand::Rng;
 use sql::rusqlite::Connection as SqliteConnection;
@@ -58,15 +58,14 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
     let book = bookmark(&ctx, &repo, "master").set_to(cs1).await?;
 
     let hooks = [GlobalrevPushrebaseHook::new(mapping, repo.get_repoid())];
-    let onto = OntoBookmarkParams::new(book);
 
     let rebased = do_pushrebase_bonsai(
         &ctx,
         &repo,
         &Default::default(),
-        &onto,
+        &book,
         &hashset![cs2.clone()],
-        &None,
+        None,
         &hooks,
     )
     .await?
@@ -96,9 +95,9 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
         &ctx,
         &repo,
         &Default::default(),
-        &onto,
+        &book,
         &hashset![cs3.clone(), cs4.clone()],
-        &None,
+        None,
         &hooks,
     )
     .await?
@@ -195,8 +194,6 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
     let root = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
     let book = bookmark(&ctx, &repo, "master").set_to(root).await?;
 
-    let onto = OntoBookmarkParams::new(book);
-
     let hooks = [
         GlobalrevPushrebaseHook::new(mapping, repo.get_repoid()),
         Box::new(SleepHook) as Box<dyn PushrebaseHook>,
@@ -214,7 +211,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
         let fut = async {
             let params = Default::default();
             let bcss = hashset![bcs];
-            do_pushrebase_bonsai(&ctx, &repo, &params, &onto, &bcss, &None, &hooks).await
+            do_pushrebase_bonsai(&ctx, &repo, &params, &book, &bcss, None, &hooks).await
         };
 
         futs.push(fut);

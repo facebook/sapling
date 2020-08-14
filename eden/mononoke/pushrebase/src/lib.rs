@@ -92,10 +92,10 @@ const MAX_REBASE_ATTEMPTS: usize = 100;
 pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"];
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
-    #[error("Bonsai not found for hg changeset: Z{0:?}")]
+pub enum PushrebaseInternalError {
+    #[error("Bonsai not found for hg changeset: {0}")]
     BonsaiNotFoundForHgChangeset(HgChangesetId),
-    #[error("Pushrebase onto bookmark not found: {0:?}")]
+    #[error("Pushrebase onto bookmark not found: {0}")]
     PushrebaseBookmarkNotFound(BookmarkName),
     #[error("Only one head is allowed in pushed set")]
     PushrebaseTooManyHeads,
@@ -109,7 +109,7 @@ pub enum ErrorKind {
     TooManyRebaseAttempts,
     #[error("Forbid pushrebase because root ({0}) is not a p1 of {1} bookmark")]
     P2RootRebaseForbidden(HgChangesetId, BookmarkName),
-    #[error("internal error: unexpected file conflicts when adding new file changes to {0}")]
+    #[error("Unexpected file conflicts when adding new file changes to {0}")]
     NewFileChangesConflict(ChangesetId),
 }
 
@@ -123,15 +123,15 @@ pub enum PushrebaseError {
     RebaseOverMerge,
     #[error("Root is too far behind")]
     RootTooFarBehind,
-    #[error("Internal error: {0:?}")]
-    Error(#[source] Error),
-    #[error("Internal error: failed to validate commit {source_cs_id} (rebased to {rebased_cs_id}): {0:?}")]
+    #[error("Pushrebase validation failed to validate commit {source_cs_id} (rebased to {rebased_cs_id})")]
     ValidationError {
         source_cs_id: ChangesetId,
         rebased_cs_id: ChangesetId,
         #[source]
         err: Error,
     },
+    #[error(transparent)]
+    Error(#[from] Error),
 }
 
 type CsIdConvertor =
@@ -206,14 +206,8 @@ impl PushrebaseConflict {
     }
 }
 
-impl From<Error> for PushrebaseError {
-    fn from(error: Error) -> Self {
-        PushrebaseError::Error(error)
-    }
-}
-
-impl From<ErrorKind> for PushrebaseError {
-    fn from(error: ErrorKind) -> Self {
+impl From<PushrebaseInternalError> for PushrebaseError {
+    fn from(error: PushrebaseInternalError) -> Self {
         PushrebaseError::Error(error.into())
     }
 }
@@ -245,21 +239,10 @@ impl PushrebaseRetryNum {
 }
 
 #[derive(Debug, Clone)]
-pub struct PushrebaseSuccessResult {
+pub struct PushrebaseOutcome {
     pub head: ChangesetId,
     pub retry_num: PushrebaseRetryNum,
     pub rebased_changesets: Vec<PushrebaseChangesetPair>,
-}
-
-#[derive(Clone)]
-pub struct OntoBookmarkParams {
-    pub bookmark: BookmarkName,
-}
-
-impl OntoBookmarkParams {
-    pub fn new(bookmark: BookmarkName) -> Self {
-        Self { bookmark }
-    }
 }
 
 /// Does a pushrebase of a list of commits `pushed` onto `onto_bookmark`
@@ -269,15 +252,15 @@ pub async fn do_pushrebase_bonsai(
     ctx: &CoreContext,
     repo: &BlobRepo,
     config: &PushrebaseFlags,
-    onto_bookmark: &OntoBookmarkParams,
+    onto_bookmark: &BookmarkName,
     pushed: &HashSet<BonsaiChangeset>,
-    maybe_hg_replay_data: &Option<HgReplayData>,
+    maybe_hg_replay_data: Option<&HgReplayData>,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
-) -> Result<PushrebaseSuccessResult, PushrebaseError> {
+) -> Result<PushrebaseOutcome, PushrebaseError> {
     let head = find_only_head_or_fail(&pushed)?;
     let roots = find_roots(&pushed);
 
-    let root = find_closest_root(&ctx, &repo, &config, &onto_bookmark, &roots).await?;
+    let root = find_closest_root(&ctx, &repo, &config, onto_bookmark, &roots).await?;
 
     let (client_cf, client_bcs) = try_join(
         find_changed_files(&ctx, &repo, root, head),
@@ -330,14 +313,14 @@ async fn rebase_in_loop(
     ctx: &CoreContext,
     repo: &BlobRepo,
     config: &PushrebaseFlags,
-    onto_bookmark: &OntoBookmarkParams,
+    onto_bookmark: &BookmarkName,
     head: ChangesetId,
     root: ChangesetId,
     client_cf: Vec<MPath>,
     client_bcs: &Vec<BonsaiChangeset>,
-    maybe_hg_replay_data: &Option<HgReplayData>,
+    maybe_hg_replay_data: Option<&HgReplayData>,
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
-) -> Result<PushrebaseSuccessResult, PushrebaseError> {
+) -> Result<PushrebaseOutcome, PushrebaseError> {
     let mut latest_rebase_attempt = root;
 
     for retry_num in 0..MAX_REBASE_ATTEMPTS {
@@ -350,7 +333,7 @@ async fn rebase_in_loop(
         );
 
         let (hooks, bookmark_val) =
-            try_join(hooks, get_onto_bookmark_value(&ctx, &repo, &onto_bookmark)).await?;
+            try_join(hooks, get_bookmark_value(&ctx, &repo, onto_bookmark)).await?;
 
         let server_bcs = fetch_bonsai_range(
             &ctx,
@@ -394,7 +377,7 @@ async fn rebase_in_loop(
         .await?;
 
         if let Some((head, rebased_changesets)) = rebase_outcome {
-            let res = PushrebaseSuccessResult {
+            let res = PushrebaseOutcome {
                 head,
                 retry_num,
                 rebased_changesets,
@@ -405,7 +388,7 @@ async fn rebase_in_loop(
         latest_rebase_attempt = bookmark_val.unwrap_or(root);
     }
 
-    Err(ErrorKind::TooManyRebaseAttempts.into())
+    Err(PushrebaseInternalError::TooManyRebaseAttempts.into())
 }
 
 async fn do_rebase(
@@ -415,8 +398,8 @@ async fn do_rebase(
     root: ChangesetId,
     head: ChangesetId,
     bookmark_val: Option<ChangesetId>,
-    onto_bookmark: &OntoBookmarkParams,
-    maybe_hg_replay_data: &Option<HgReplayData>,
+    onto_bookmark: &BookmarkName,
+    maybe_hg_replay_data: Option<&HgReplayData>,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
     retry_num: PushrebaseRetryNum,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
@@ -448,7 +431,7 @@ async fn do_rebase(
         &onto_bookmark,
         bookmark_val,
         new_head,
-        &maybe_hg_replay_data,
+        maybe_hg_replay_data,
         rebased_changesets,
         hooks,
     )
@@ -513,7 +496,7 @@ fn find_only_head_or_fail(
         Ok(commits_set.iter().next().unwrap().clone())
     } else {
         Err(PushrebaseError::Error(
-            ErrorKind::PushrebaseTooManyHeads.into(),
+            PushrebaseInternalError::PushrebaseTooManyHeads.into(),
         ))
     }
 }
@@ -542,14 +525,13 @@ async fn find_closest_root(
     ctx: &CoreContext,
     repo: &BlobRepo,
     config: &PushrebaseFlags,
-    bookmark: &OntoBookmarkParams,
+    bookmark: &BookmarkName,
     roots: &HashMap<ChangesetId, ChildIndex>,
 ) -> Result<ChangesetId, PushrebaseError> {
-    let maybe_id = get_bookmark_value(&ctx, &repo, &bookmark.bookmark).await?;
+    let maybe_id = get_bookmark_value(&ctx, &repo, bookmark).await?;
 
     if let Some(id) = maybe_id {
-        return find_closest_ancestor_root(&ctx, &repo, &config, &bookmark.bookmark, &roots, id)
-            .await;
+        return find_closest_ancestor_root(&ctx, &repo, &config, bookmark, &roots, id).await;
     }
 
     let roots = roots.iter().map(|(root, _)| {
@@ -560,7 +542,9 @@ async fn find_closest_root(
                 .get_generation_number(ctx.clone(), *root)
                 .compat()
                 .await?
-                .ok_or(PushrebaseError::from(ErrorKind::RootNotFound(*root)))?;
+                .ok_or(PushrebaseError::from(
+                    PushrebaseInternalError::RootNotFound(*root),
+                ))?;
 
             Result::<_, PushrebaseError>::Ok((*root, gen_num))
         }
@@ -571,7 +555,7 @@ async fn find_closest_root(
     let (cs_id, _) = roots
         .into_iter()
         .max_by_key(|(_, gen_num)| gen_num.clone())
-        .ok_or(PushrebaseError::from(ErrorKind::NoRoots))?;
+        .ok_or(PushrebaseError::from(PushrebaseInternalError::NoRoots))?;
 
     Ok(cs_id)
 }
@@ -605,7 +589,7 @@ async fn find_closest_ancestor_root(
 
         let id = queue.pop_front().ok_or_else(|| {
             PushrebaseError::Error(
-                ErrorKind::PushrebaseNoCommonRoot(
+                PushrebaseInternalError::PushrebaseNoCommonRoot(
                     bookmark.clone(),
                     roots.keys().cloned().collect(),
                 )
@@ -621,7 +605,7 @@ async fn find_closest_ancestor_root(
                     .await?;
 
                 return Err(PushrebaseError::Error(
-                    ErrorKind::P2RootRebaseForbidden(hgcs, bookmark.clone()).into(),
+                    PushrebaseInternalError::P2RootRebaseForbidden(hgcs, bookmark.clone()).into(),
                 ));
             }
 
@@ -866,18 +850,6 @@ fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), Pu
     }
 }
 
-/// Returns Some(ChangesetId) if bookmarks exists.
-/// Returns None if bookmarks does not exists
-async fn get_onto_bookmark_value(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    onto_bookmark: &OntoBookmarkParams,
-) -> Result<Option<ChangesetId>, PushrebaseError> {
-    let maybe_cs_id = get_bookmark_value(&ctx, &repo, &onto_bookmark.bookmark).await?;
-
-    Ok(maybe_cs_id)
-}
-
 async fn get_bookmark_value(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -1025,7 +997,7 @@ async fn rebase_changeset(
         HashSet::from_iter(new_file_changes.iter().map(|(path, _)| path));
     for (path, _) in &file_changes {
         if new_file_paths.contains(path) {
-            return Err(ErrorKind::NewFileChangesConflict(orig_cs_id).into());
+            return Err(PushrebaseInternalError::NewFileChangesConflict(orig_cs_id).into());
         }
     }
 
@@ -1228,14 +1200,13 @@ async fn find_rebased_set(
 async fn try_move_bookmark(
     ctx: CoreContext,
     repo: &BlobRepo,
-    bookmark: &OntoBookmarkParams,
+    bookmark: &BookmarkName,
     old_value: Option<ChangesetId>,
     new_value: ChangesetId,
-    maybe_hg_replay_data: &Option<HgReplayData>,
+    maybe_hg_replay_data: Option<&HgReplayData>,
     rebased_changesets: RebasedChangesets,
     hooks: Vec<Box<dyn PushrebaseTransactionHook>>,
 ) -> Result<Option<(ChangesetId, Vec<PushrebaseChangesetPair>)>, PushrebaseError> {
-    let bookmark_name = &bookmark.bookmark;
     let mut txn = repo.update_bookmark_transaction(ctx);
 
     let bundle_replay_data = match maybe_hg_replay_data {
@@ -1253,7 +1224,7 @@ async fn try_move_bookmark(
     match old_value {
         Some(old_value) => {
             txn.update(
-                &bookmark_name,
+                bookmark,
                 new_value,
                 old_value,
                 BookmarkUpdateReason::Pushrebase,
@@ -1262,7 +1233,7 @@ async fn try_move_bookmark(
         }
         None => {
             txn.create(
-                &bookmark_name,
+                &bookmark,
                 new_value,
                 BookmarkUpdateReason::Pushrebase,
                 bundle_replay,
@@ -1336,9 +1307,9 @@ mod tests {
                     .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
                     .compat()
                     .await?
-                    .ok_or(Error::from(ErrorKind::BonsaiNotFoundForHgChangeset(
-                        hg_cs_id,
-                    )))?;
+                    .ok_or(Error::from(
+                        PushrebaseInternalError::BonsaiNotFoundForHgChangeset(hg_cs_id),
+                    ))?;
 
                 let bcs = bcs_id
                     .load(ctx.clone(), repo.blobstore())
@@ -1357,10 +1328,10 @@ mod tests {
         ctx: &CoreContext,
         repo: &BlobRepo,
         config: &PushrebaseFlags,
-        onto_bookmark: &OntoBookmarkParams,
+        onto_bookmark: &BookmarkName,
         pushed_set: &HashSet<HgChangesetId>,
-        maybe_hg_replay_data: &Option<HgReplayData>,
-    ) -> Result<PushrebaseSuccessResult, PushrebaseError> {
+        maybe_hg_replay_data: Option<&HgReplayData>,
+    ) -> Result<PushrebaseOutcome, PushrebaseError> {
         let pushed = fetch_bonsai_changesets(&ctx, &repo, &pushed_set).await?;
 
         let res = do_pushrebase_bonsai(
@@ -1369,7 +1340,7 @@ mod tests {
             &config,
             &onto_bookmark,
             &pushed,
-            &maybe_hg_replay_data,
+            maybe_hg_replay_data,
             &vec![],
         )
         .await?;
@@ -1401,9 +1372,8 @@ mod tests {
         paths.unwrap()
     }
 
-    fn master_bookmark() -> OntoBookmarkParams {
+    fn master_bookmark() -> BookmarkName {
         let book = BookmarkName::new("master").unwrap();
-        let book = OntoBookmarkParams::new(book);
         book
     }
 
@@ -1411,7 +1381,7 @@ mod tests {
         ctx: &CoreContext,
         repo: &BlobRepo,
         parent: ChangesetId,
-        bookmark: &OntoBookmarkParams,
+        bookmark: &BookmarkName,
         content: BTreeMap<&str, Option<&str>>,
         should_succeed: bool,
     ) -> Result<(), Error> {
@@ -1439,7 +1409,7 @@ mod tests {
             &PushrebaseFlags::default(),
             &bookmark,
             &hgcss,
-            &None,
+            None,
         )
         .await;
 
@@ -1471,7 +1441,7 @@ mod tests {
                 .await?;
 
             let book = master_bookmark();
-            bookmark(&ctx, &repo, book.bookmark.clone())
+            bookmark(&ctx, &repo, book.clone())
                 .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
                 .await?;
 
@@ -1481,7 +1451,7 @@ mod tests {
                 &Default::default(),
                 &book,
                 &hashset![hg_cs],
-                &None,
+                None,
             )
             .map_err(|err| format_err!("{:?}", err))
             .await?;
@@ -1601,7 +1571,7 @@ mod tests {
 
             let mut book = master_bookmark();
 
-            bookmark(&ctx, &repo, book.bookmark.clone())
+            bookmark(&ctx, &repo, book.clone())
                 .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
                 .await?;
 
@@ -1614,7 +1584,7 @@ mod tests {
                 &Default::default(),
                 &book,
                 &hashset![bcs.clone()],
-                &None,
+                None,
                 &hooks[..],
             )
             .map_err(|err| format_err!("{:?}", err))
@@ -1632,14 +1602,14 @@ mod tests {
 
             // Now do the same with another non-existent bookmark,
             // make sure cs id is created.
-            book.bookmark = BookmarkName::new("newbook")?;
+            book = BookmarkName::new("newbook")?;
             do_pushrebase_bonsai(
                 &ctx,
                 &repo,
                 &Default::default(),
                 &book,
                 &hashset![bcs],
-                &None,
+                None,
                 &hooks[..],
             )
             .map_err(|err| format_err!("{:?}", err))
@@ -1689,7 +1659,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -1708,7 +1678,7 @@ mod tests {
                 &Default::default(),
                 &book,
                 &hashset![hg_cs_1, hg_cs_2],
-                &None,
+                None,
             )
             .await?;
             Ok(())
@@ -1747,7 +1717,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -1766,7 +1736,7 @@ mod tests {
                 &Default::default(),
                 &book,
                 &hashset![hg_cs_1, hg_cs_2],
-                &None,
+                None,
             )
             .await?;
 
@@ -1833,7 +1803,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -1882,7 +1852,7 @@ mod tests {
                 &config,
                 &book,
                 &hashset![hg_cs_1, hg_cs_2, hg_cs_3],
-                &None,
+                None,
             )
             .await?;
 
@@ -1940,7 +1910,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -1963,7 +1933,7 @@ mod tests {
                 &Default::default(),
                 &book,
                 &hashset![hg_cs_1, hg_cs_2, hg_cs_3],
-                &None,
+                None,
             )
             .await;
             match result {
@@ -2026,12 +1996,12 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
 
-            do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
+            do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, None).await?;
 
             Ok(())
         })
@@ -2076,12 +2046,12 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
 
-            do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
+            do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, None).await?;
 
             Ok(())
         })
@@ -2129,7 +2099,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -2139,7 +2109,7 @@ mod tests {
                 &Default::default(),
                 &book.clone(),
                 &hgcss.into_iter().collect(),
-                &None,
+                None,
             )
             .await?;
 
@@ -2159,7 +2129,7 @@ mod tests {
                 recursion_limit: Some(128),
                 ..Default::default()
             };
-            let result = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await;
+            let result = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, None).await;
             match result {
                 Err(PushrebaseError::RootTooFarBehind) => (),
                 _ => panic!("push-rebase should have failed because root too far behind"),
@@ -2169,7 +2139,7 @@ mod tests {
                 recursion_limit: Some(256),
                 ..Default::default()
             };
-            do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
+            do_pushrebase(&ctx, &repo, &config, &book, &hgcss, None).await?;
 
             Ok(())
         })
@@ -2203,7 +2173,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -2211,12 +2181,12 @@ mod tests {
                 rewritedates: false,
                 ..Default::default()
             };
-            let bcs_keep_date = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
+            let bcs_keep_date = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, None).await?;
 
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -2224,8 +2194,7 @@ mod tests {
                 rewritedates: true,
                 ..Default::default()
             };
-            let bcs_rewrite_date =
-                do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
+            let bcs_rewrite_date = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, None).await?;
 
             let bcs = bcs.load(ctx.clone(), repo.blobstore()).await?;
             let bcs_keep_date = bcs_keep_date
@@ -2274,13 +2243,12 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "2f866e7e549760934e31bf0420a873f65100ad63",
             )
             .await?;
 
-            let result =
-                do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await;
+            let result = do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, None).await;
             match result {
                 Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
                     assert_eq!(conflict, MPath::new("Dir1/file_1_in_dir1")?)
@@ -2298,7 +2266,7 @@ mod tests {
                 },
                 &book,
                 &hgcss,
-                &None,
+                None,
             )
             .await?;
 
@@ -2391,13 +2359,13 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
 
             let result =
-                do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
+                do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, None).await?;
             let result_bcs = result.head.load(ctx.clone(), repo.blobstore()).await?;
             let file_1_result = result_bcs
                 .file_changes()
@@ -2523,7 +2491,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -2550,7 +2518,7 @@ mod tests {
                         &Default::default(),
                         &book,
                         &hashset![bcs],
-                        &None,
+                        None,
                         &hooks,
                     )
                     .await
@@ -2571,8 +2539,7 @@ mod tests {
 
             let previous_master =
                 HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?;
-            let commits_between =
-                count_commits_between(ctx, repo, previous_master, book.bookmark).await?;
+            let commits_between = count_commits_between(ctx, repo, previous_master, book).await?;
 
             // `- 1` because RangeNodeStream is inclusive
             assert_eq!(commits_between - 1, num_pushes);
@@ -2607,14 +2574,13 @@ mod tests {
                 .await?;
 
             let book = BookmarkName::new("newbook")?;
-            let book = OntoBookmarkParams::new(book);
             do_pushrebase(
                 &ctx,
                 &repo,
                 &Default::default(),
                 &book,
                 &hashset![hg_cs],
-                &None,
+                None,
             )
             .await?;
             Ok(())
@@ -2637,7 +2603,6 @@ mod tests {
             let parents = vec![p];
 
             let book = BookmarkName::new("newbook")?;
-            let book = OntoBookmarkParams::new(book);
 
             let num_pushes = 10;
             let mut futs = vec![];
@@ -2661,7 +2626,7 @@ mod tests {
                         &Default::default(),
                         &book,
                         &hashset![bcs],
-                        &None,
+                        None,
                         &hooks,
                     )
                     .await
@@ -2680,7 +2645,7 @@ mod tests {
 
             assert!(has_retry_num_bigger_1);
 
-            let commits_between = count_commits_between(ctx, repo, root, book.bookmark).await?;
+            let commits_between = count_commits_between(ctx, repo, root, book).await?;
             // `- 1` because RangeNodeStream is inclusive
             assert_eq!(commits_between - 1, num_pushes);
 
@@ -2716,7 +2681,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -2727,7 +2692,7 @@ mod tests {
                 &Default::default(),
                 &book,
                 &hashset![hg_cs],
-                &Some(HgReplayData::new_with_simple_convertor(
+                Some(&HgReplayData::new_with_simple_convertor(
                     ctx.clone(),
                     RawBundle2Id::new(AS),
                     repo.clone(),
@@ -2771,7 +2736,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -2786,7 +2751,7 @@ mod tests {
                 &config,
                 &book,
                 &hashset![hg_cs],
-                &Some(HgReplayData::new_with_simple_convertor(
+                Some(&HgReplayData::new_with_simple_convertor(
                     ctx.clone(),
                     RawBundle2Id::new(AS),
                     repo.clone(),
@@ -2845,7 +2810,7 @@ mod tests {
             set_bookmark(
                 ctx.clone(),
                 repo.clone(),
-                &book.bookmark,
+                &book,
                 "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
             )
             .await?;
@@ -2856,7 +2821,7 @@ mod tests {
             };
 
             assert!(
-                do_pushrebase(&ctx, &repo, &config_forbid_p2, &book, &hgcss, &None,)
+                do_pushrebase(&ctx, &repo, &config_forbid_p2, &book, &hgcss, None)
                     .await
                     .is_err()
             );
@@ -2866,7 +2831,7 @@ mod tests {
                 ..Default::default()
             };
 
-            do_pushrebase(&ctx, &repo, &config_allow_p2, &book, &hgcss, &None).await?;
+            do_pushrebase(&ctx, &repo, &config_allow_p2, &book, &hgcss, None).await?;
 
             Ok(())
         })
@@ -2901,7 +2866,7 @@ mod tests {
                 .compat()
                 .await?;
 
-            set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
+            set_bookmark(ctx.clone(), repo.clone(), &book, &{
                 // https://github.com/rust-lang/rust/pull/64856
                 let r = format!("{}", merge_hg_cs_id);
                 r
@@ -2998,7 +2963,7 @@ mod tests {
                 &PushrebaseFlags::default(),
                 &book,
                 &hgcss,
-                &None,
+                None,
             )
             .await;
 
@@ -3015,7 +2980,7 @@ mod tests {
                 &PushrebaseFlags::default(),
                 &book,
                 &hgcss,
-                &None,
+                None,
             )
             .await?;
 
@@ -3071,7 +3036,7 @@ mod tests {
                 .await?;
 
             let book = master_bookmark();
-            set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
+            set_bookmark(ctx.clone(), repo.clone(), &book, &{
                 // https://github.com/rust-lang/rust/pull/64856
                 let r = format!("{}", hg_cs);
                 r
@@ -3093,7 +3058,7 @@ mod tests {
                 &PushrebaseFlags::default(),
                 &book,
                 &hgcss,
-                &None,
+                None,
             )
             .await?;
 
@@ -3166,7 +3131,7 @@ mod tests {
                 .await?;
 
             let book = master_bookmark();
-            set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
+            set_bookmark(ctx.clone(), repo.clone(), &book, &{
                 // https://github.com/rust-lang/rust/pull/64856
                 let r = format!("{}", hg_cs);
                 r
@@ -3185,7 +3150,7 @@ mod tests {
                 &PushrebaseFlags::default(),
                 &book,
                 &hgcss,
-                &None,
+                None,
             )
             .await?;
 
@@ -3268,7 +3233,7 @@ mod tests {
                 .await?;
 
             let book = master_bookmark();
-            set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
+            set_bookmark(ctx.clone(), repo.clone(), &book, &{
                 // https://github.com/rust-lang/rust/pull/64856
                 let r = format!("{}", hg_cs);
                 r
@@ -3287,7 +3252,7 @@ mod tests {
                 &PushrebaseFlags::default(),
                 &book,
                 &hgcss,
-                &None,
+                None,
             )
             .await?;
 
@@ -3349,7 +3314,7 @@ mod tests {
             &Default::default(),
             &master_bookmark(),
             &hashset![hg_cs],
-            &None,
+            None,
         )
         .map_err(|err| format_err!("{:?}", err))
         .await?;
@@ -3477,7 +3442,7 @@ mod tests {
             &Default::default(),
             &book,
             &hashset![bcs_merge.clone()],
-            &None,
+            None,
             &hooks[..],
         )
         .await;
@@ -3526,7 +3491,7 @@ mod tests {
         Ok(())
     }
 
-    fn should_have_conflicts(res: Result<PushrebaseSuccessResult, PushrebaseError>) {
+    fn should_have_conflicts(res: Result<PushrebaseOutcome, PushrebaseError>) {
         match res {
             Err(err) => match err {
                 PushrebaseError::Conflicts(_) => {}

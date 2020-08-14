@@ -22,7 +22,7 @@ use megarepolib::common::{
 };
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::ChangesetId;
-use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams};
+use pushrebase::do_pushrebase_bonsai;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 use skiplist::SkiplistIndex;
@@ -284,9 +284,9 @@ async fn push_merge_commit(
         &ctx,
         &repo,
         &pushrebase_flags,
-        &OntoBookmarkParams::new(bookmark_to_merge_into.clone()),
+        &bookmark_to_merge_into,
         &hashset![merge_cs],
-        &None,
+        None,
         &[],
     )
     .await?;

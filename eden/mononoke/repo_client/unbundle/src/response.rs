@@ -24,7 +24,6 @@ use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, PartI
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
 use obsolete;
-use pushrebase;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::ScubaSampleBuilderExt;
 use std::io::Cursor;

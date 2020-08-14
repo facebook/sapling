@@ -17,7 +17,7 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::BlobrepoBuilder;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::{BookmarkUpdateLog, Freshness};
+use bookmarks::{BookmarkName, BookmarkUpdateLog, Freshness};
 use bytes::Bytes;
 use clap::{Arg, ArgMatches, SubCommand};
 use cmdlib::{args, monitoring::ReadyFlagService};
@@ -34,7 +34,6 @@ use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
 use metaconfig_types::{RepoConfig, RepoReadOnly};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Timestamp};
-use pushrebase::OntoBookmarkParams;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use std::collections::HashMap;
@@ -212,7 +211,7 @@ async fn get_replay_stream<'a>(
 }
 
 struct UnbundleComplete {
-    onto_params: OntoBookmarkParams,
+    onto_bookmark: BookmarkName,
     onto_rev: Option<OntoRev>,
     target: Target,
     timestamps: HashMap<ChangesetId, Timestamp>,
@@ -317,16 +316,16 @@ async fn maybe_unbundle(
         uploaded_bonsais: changesets,
     } = action;
 
-    let onto_params = match bookmark_spec {
-        PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => onto_params,
+    let onto_bookmark = match bookmark_spec {
+        PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark) => onto_bookmark,
         _ => return Err(format_err!("Unsupported bookmark spec")),
     };
 
-    if onto_params.bookmark != onto {
+    if onto_bookmark != onto {
         return Err(format_err!(
             "Expected pushrebase for bookmark {:?}, found {:?}",
             onto,
-            onto_params.bookmark
+            onto_bookmark
         ));
     }
 
@@ -354,7 +353,7 @@ async fn maybe_unbundle(
     .await?;
 
     Ok(UnbundleOutcome::Complete(UnbundleComplete {
-        onto_params,
+        onto_bookmark,
         onto_rev,
         target,
         timestamps,
@@ -495,7 +494,7 @@ async fn do_main(
             };
 
             let UnbundleComplete {
-                onto_params,
+                onto_bookmark,
                 onto_rev,
                 target,
                 timestamps,
@@ -511,14 +510,14 @@ async fn do_main(
             };
 
             let current_cs_id = repo
-                .get_bonsai_bookmark(ctx.clone(), &onto_params.bookmark)
+                .get_bonsai_bookmark(ctx.clone(), &onto_bookmark)
                 .compat()
                 .await?;
 
             if current_cs_id != onto_rev {
                 return Err(format_err!(
                     "Expected cs_id for {:?} at {:?}, found {:?}",
-                    onto_params.bookmark,
+                    onto_bookmark,
                     onto_rev,
                     current_cs_id
                 ));
@@ -526,7 +525,7 @@ async fn do_main(
 
             info!(
                 ctx.logger(),
-                "Pushrebase starting: {}: {:?} -> {:?}", onto_params.bookmark, onto_rev, target
+                "Pushrebase starting: {}: {:?} -> {:?}", onto_bookmark, onto_rev, target
             );
 
             let mut pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
@@ -541,9 +540,9 @@ async fn do_main(
                 &ctx,
                 &repo,
                 &repo_config.pushrebase.flags,
-                &onto_params,
+                &onto_bookmark,
                 &changesets,
-                &None,
+                None,
                 pushrebase_hooks.as_ref(),
             )
             .timed()
@@ -571,7 +570,7 @@ async fn do_main(
                 pushrebase_stats.completion_time.as_micros_unchecked(),
             );
             scuba.add("age_s", age);
-            scuba.add("bookmark", onto_params.bookmark.to_string());
+            scuba.add("bookmark", onto_bookmark.to_string());
             scuba.add("to_cs_id", head.to_string());
             if let Some(current_cs_id) = current_cs_id {
                 scuba.add("from_cs_id", current_cs_id.to_string());
@@ -596,7 +595,7 @@ async fn do_main(
             info!(
                 ctx.logger(),
                 "Pushrebase completed: {}: {:?} -> {:?} (age: {}s)",
-                onto_params.bookmark,
+                onto_bookmark,
                 current_cs_id,
                 head,
                 age,

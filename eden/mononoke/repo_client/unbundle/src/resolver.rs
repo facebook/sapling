@@ -529,14 +529,14 @@ fn get_post_resolve_push(
 // and respondin purposes is treated like a pushrebase
 #[derive(Clone)]
 pub enum PushrebaseBookmarkSpec<T: Copy> {
-    NormalPushrebase(pushrebase::OntoBookmarkParams),
+    NormalPushrebase(BookmarkName),
     ForcePushrebase(PlainBookmarkPush<T>),
 }
 
 impl<T: Copy> PushrebaseBookmarkSpec<T> {
     pub fn get_bookmark_name(&self) -> &BookmarkName {
         match self {
-            PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => &onto_params.bookmark,
+            PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark) => &onto_bookmark,
             PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => &plain_push.name,
         }
     }
@@ -560,12 +560,11 @@ async fn resolve_pushrebase<'r>(
         .await
         .context("While resolving Changegroup")?;
     let cg_push = maybe_cg_push.ok_or(Error::msg("Empty pushrebase"))?;
-    let onto_params = match cg_push.mparams.get("onto") {
+    let onto_bookmark = match cg_push.mparams.get("onto") {
         Some(onto_bookmark) => {
             let v = Vec::from(onto_bookmark.as_ref());
             let onto_bookmark = String::from_utf8(v).map_err(Error::from)?;
             let onto_bookmark = BookmarkName::new(onto_bookmark)?;
-            let onto_bookmark = pushrebase::OntoBookmarkParams::new(onto_bookmark);
             onto_bookmark
         }
         None => return Err(format_err!("onto is not specified").into()),
@@ -576,11 +575,11 @@ async fn resolve_pushrebase<'r>(
         .iter()
         .any(|(_, revlog_cs)| revlog_cs.p1.is_some() && revlog_cs.p2.is_some());
 
-    let will_rebase = onto_params.bookmark != *DONOTREBASEBOOKMARK;
+    let will_rebase = onto_bookmark != *DONOTREBASEBOOKMARK;
     // Mutation information must not be present in public commits
     // See T54101162, S186586
     if !will_rebase {
-        for (_, hg_cs) in changesets {
+        for (_, hg_cs) in &cg_push.changesets {
             for key in pushrebase::MUTATION_KEYS {
                 if hg_cs.extra.as_ref().contains_key(key.as_bytes()) {
                     return Err(Error::msg("Forced push blocked because it contains mutation metadata.\n\
@@ -605,20 +604,17 @@ async fn resolve_pushrebase<'r>(
     }
 
     let (bookmark_push_part_id, bookmark_spec) = match bookmark_pushes.into_iter().next() {
-        Some(bk_push)
-            if bk_push.name != onto_params.bookmark
-                && onto_params.bookmark != *DONOTREBASEBOOKMARK =>
-        {
+        Some(bk_push) if bk_push.name != onto_bookmark && onto_bookmark != *DONOTREBASEBOOKMARK => {
             return Err(format_err!(
                 "allowed only pushes of {} bookmark: {:?}",
-                onto_params.bookmark,
+                onto_bookmark,
                 bk_push
             )
             .into());
         }
-        Some(bk_push) if onto_params.bookmark == *DONOTREBASEBOOKMARK => {
+        Some(bk_push) if onto_bookmark == *DONOTREBASEBOOKMARK => {
             (
-                // This is a force pushrebase scenario. We need to ignore `onto_params`
+                // This is a force pushrebase scenario. We need to ignore `onto_bookmark`
                 // and run normal push (using bk_push), but generate a pushrebase
                 // response.
                 // See comment next to DONOTREBASEBOOKMARK definition
@@ -628,9 +624,12 @@ async fn resolve_pushrebase<'r>(
         }
         Some(bk_push) => (
             Some(bk_push.part_id),
-            PushrebaseBookmarkSpec::NormalPushrebase(onto_params),
+            PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark),
         ),
-        None => (None, PushrebaseBookmarkSpec::NormalPushrebase(onto_params)),
+        None => (
+            None,
+            PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark),
+        ),
     };
 
     let maybe_raw_bundle2_id = resolver
@@ -1501,8 +1500,8 @@ async fn hg_pushrebase_bookmark_spec_to_bonsai(
     bookmark_spec: PushrebaseBookmarkSpec<HgChangesetId>,
 ) -> Result<PushrebaseBookmarkSpec<ChangesetId>, Error> {
     let pbs = match bookmark_spec {
-        PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => {
-            PushrebaseBookmarkSpec::NormalPushrebase(onto_params)
+        PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark) => {
+            PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark)
         }
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
             PushrebaseBookmarkSpec::ForcePushrebase(

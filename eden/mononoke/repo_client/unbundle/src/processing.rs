@@ -27,7 +27,7 @@ use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use mercurial_bundle_replay_data::BundleReplayData;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
-use pushrebase::{self, PushrebaseHook};
+use pushrebase::PushrebaseHook;
 use reachabilityindex::LeastCommonAncestorsHint;
 use reverse_filler_queue::ReverseFillerQueue;
 use scribe_commit_queue::{self, LogToScribe};
@@ -456,14 +456,14 @@ async fn run_pushrebase(
         // would turn some useful variant of `BundleResolverError` into generic
         // `BundleResolverError::Error`, which in turn would render incorrectly
         // (see definition of `BundleResolverError`).
-        PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => {
+        PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark) => {
             normal_pushrebase(
                 ctx,
                 repo,
                 &pushrebase_params,
                 &uploaded_bonsais,
                 any_merges,
-                &onto_params,
+                &onto_bookmark,
                 &maybe_hg_replay_data,
                 bookmark_attrs,
                 infinitepush_params,
@@ -617,13 +617,11 @@ async fn normal_pushrebase(
     pushrebase_params: &PushrebaseParams,
     changesets: &HashSet<BonsaiChangeset>,
     any_merges: bool,
-    onto_bookmark: &pushrebase::OntoBookmarkParams,
+    bookmark: &BookmarkName,
     maybe_hg_replay_data: &Option<pushrebase::HgReplayData>,
     bookmark_attrs: &BookmarkAttrs,
     infinitepush_params: &InfinitepushParams,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
-    let bookmark = &onto_bookmark.bookmark;
-
     check_plain_bookmark_move_preconditions(
         &ctx,
         &bookmark,
@@ -655,9 +653,9 @@ async fn normal_pushrebase(
         &ctx,
         &repo,
         &flags,
-        &onto_bookmark,
+        bookmark,
         &changesets,
-        maybe_hg_replay_data,
+        maybe_hg_replay_data.as_ref(),
         &hooks[..],
     )
     .timed()

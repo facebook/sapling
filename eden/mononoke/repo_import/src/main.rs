@@ -30,7 +30,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::DefaultAction;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
-use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams};
+use pushrebase::do_pushrebase_bonsai;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
@@ -349,9 +349,9 @@ async fn push_merge_commit(
         &ctx,
         &repo,
         &pushrebase_flags,
-        &OntoBookmarkParams::new(bookmark_to_merge_into.clone()),
+        bookmark_to_merge_into,
         &hashset![merged_cs],
-        &None,
+        None,
         &pushrebase_hooks,
     )
     .await?;

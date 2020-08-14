@@ -40,7 +40,7 @@ use mononoke_types::{
 };
 use movers::{get_large_to_small_mover, get_small_to_large_mover, Mover};
 use movers::{get_movers, Movers};
-use pushrebase::{do_pushrebase_bonsai, OntoBookmarkParams, PushrebaseError};
+use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use slog::info;
 use std::{collections::VecDeque, fmt};
 use synced_commit_mapping::{
@@ -879,9 +879,9 @@ where
                     &ctx,
                     &target_repo,
                     &pushrebase_flags,
-                    &OntoBookmarkParams::new(bookmark),
+                    &bookmark,
                     &rewritten_list,
-                    &None,
+                    None,
                     &[CrossRepoSyncPushrebaseHook::new(hash, self.repos.clone())],
                 )
                 .await;

@@ -39,7 +39,7 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfig;
 use mononoke_repo::MononokeRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
-use pushrebase::{OntoBookmarkParams, PushrebaseChangesetPair};
+use pushrebase::PushrebaseChangesetPair;
 use slog::debug;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -726,8 +726,7 @@ impl PushRedirector {
         pushrebase_bookmark_spec: PushrebaseBookmarkSpec<ChangesetId>,
     ) -> Result<PushrebaseBookmarkSpec<ChangesetId>, Error> {
         match pushrebase_bookmark_spec {
-            PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => {
-                let bookmark = onto_params.bookmark;
+            PushrebaseBookmarkSpec::NormalPushrebase(bookmark) => {
                 let bookmark = self
                     .small_to_large_commit_syncer
                     .rename_bookmark(&bookmark)
@@ -737,9 +736,7 @@ impl PushRedirector {
                         self.small_to_large_commit_syncer
                     ))?;
 
-                Ok(PushrebaseBookmarkSpec::NormalPushrebase(
-                    OntoBookmarkParams::new(bookmark),
-                ))
+                Ok(PushrebaseBookmarkSpec::NormalPushrebase(bookmark))
             }
             PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
                 let converted = self
