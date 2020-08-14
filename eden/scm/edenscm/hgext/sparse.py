@@ -1742,7 +1742,7 @@ def debugsparsematch(ui, repo, *args, **opts):
     """Filter paths using the given sparse profile
 
     Print paths that match the given sparse profile.
-    Paths are relative to repo root.
+    Paths are relative to repo root, and can use `listfile:` prefix.
 
     Unlike 'sparse files', paths to test do not have to be present in the
     working copy.
@@ -1755,7 +1755,8 @@ def debugsparsematch(ui, repo, *args, **opts):
         raise error.Abort(_("--sparse-profile is required"))
     ctx = repo[None]  # use changes in cwd
 
-    files = args
+    m = scmutil.match(ctx, pats=args, opts=opts, default="path")
+    files = m.files()
     ui.status_err(_("considering %d file(s)\n") % len(files))
 
     def getmatcher(profile):

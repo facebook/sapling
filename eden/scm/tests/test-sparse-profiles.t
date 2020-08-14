@@ -77,6 +77,20 @@ Match files with on the fly sparse profile
   flu/blu/thing.txt
   $ rm temp.sparse
 
+Match fileset
+
+  $ cat > file_list.txt <<EOF
+  > first.py
+  > second.py
+  > something/not/matched.cpp
+  > EOF
+  $ hg debugsparsematch --sparse-profile backend.sparse listfile:file_list.txt no_match.cpp third.py
+  considering 5 file(s)
+  first.py
+  second.py
+  third.py
+  $ rm file_list.txt
+
 Verify enabling two profiles works
 
   $ hg sparse enableprofile backend.sparse
