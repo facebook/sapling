@@ -5,22 +5,27 @@
  * GNU General Public License version 2.
  */
 
-#![allow(unused)]
+#![deny(warnings)]
 
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams};
 use mononoke_types::ChangesetId;
+use pushrebase::PushrebaseError;
 use thiserror::Error;
 
 mod create;
 mod delete;
 mod git_mapping;
 mod globalrev_mapping;
+mod pushrebase_onto;
 mod update;
+
+pub use pushrebase::PushrebaseOutcome;
 
 pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
+pub use crate::pushrebase_onto::PushrebaseOntoBookmarkOp;
 pub use crate::update::{BookmarkUpdatePolicy, BookmarkUpdateTargets, UpdateBookmarkOp};
 
 /// How authorization for the bookmark move should be determined.
@@ -131,6 +136,9 @@ pub enum BookmarkMovementError {
 
     #[error("Bookmark transaction failed")]
     TransactionFailed,
+
+    #[error("Pushrebase failed")]
+    PushrebaseError(#[source] PushrebaseError),
 
     #[error(transparent)]
     Error(#[from] anyhow::Error),

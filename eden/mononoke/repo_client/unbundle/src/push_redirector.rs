@@ -267,7 +267,6 @@ impl PushRedirector {
         // entry for the large repo will point to a blobstore key, which does not
         // exist in that large repo.
         let PostResolvePushRebase {
-            any_merges,
             bookmark_push_part_id,
             bookmark_spec,
             maybe_hg_replay_data,
@@ -315,7 +314,6 @@ impl PushRedirector {
         });
 
         let action = PostResolvePushRebase {
-            any_merges,
             bookmark_push_part_id,
             bookmark_spec,
             maybe_hg_replay_data,

@@ -37,13 +37,29 @@ Push another commit that conflicts
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     pushrebase failed Error(Conflict detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }]))
+  remote:     Pushrebase failed
   remote: 
   remote:   Root cause:
-  remote:     pushrebase failed Error(Conflict detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }]))
+  remote:     Conflict detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }])
+  remote: 
+  remote:   Caused by:
+  remote:     Conflict detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }])
   remote: 
   remote:   Debug context:
-  remote:     "pushrebase failed Error(Conflict detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }]))"
+  remote:     PushrebaseError(
+  remote:         Error(
+  remote:             Conflict(
+  remote:                 [
+  remote:                     BonsaiGitMappingEntry {
+  remote:                         git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b),
+  remote:                         bcs_id: ChangesetId(
+  remote:                             Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b),
+  remote:                         ),
+  remote:                     },
+  remote:                 ],
+  remote:             ),
+  remote:         ),
+  remote:     )
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

@@ -200,7 +200,6 @@ pub struct PostResolveInfinitePush {
 /// Data, needed to perform post-resolve `PushRebase` action
 #[derive(Clone)]
 pub struct PostResolvePushRebase {
-    pub any_merges: bool,
     pub bookmark_push_part_id: Option<PartId>,
     pub bookmark_spec: PushrebaseBookmarkSpec<ChangesetId>,
     pub maybe_hg_replay_data: Option<HgReplayData>,
@@ -570,11 +569,6 @@ async fn resolve_pushrebase<'r>(
         None => return Err(format_err!("onto is not specified").into()),
     };
 
-    let changesets = &cg_push.changesets.clone();
-    let any_merges = changesets
-        .iter()
-        .any(|(_, revlog_cs)| revlog_cs.p1.is_some() && revlog_cs.p2.is_some());
-
     let will_rebase = onto_bookmark != *DONOTREBASEBOOKMARK;
     // Mutation information must not be present in public commits
     // See T54101162, S186586
@@ -643,7 +637,6 @@ async fn resolve_pushrebase<'r>(
     });
 
     Ok(PostResolveAction::PushRebase(PostResolvePushRebase {
-        any_merges,
         bookmark_push_part_id,
         bookmark_spec,
         maybe_hg_replay_data,

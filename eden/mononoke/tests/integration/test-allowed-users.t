@@ -148,13 +148,18 @@ pushrebase
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     [pushrebase] This user `Some("a")` is not allowed to move `BookmarkName { bookmark: "C" }`
+  remote:     User 'a' is not permitted to move 'C'
   remote: 
   remote:   Root cause:
-  remote:     [pushrebase] This user `Some("a")` is not allowed to move `BookmarkName { bookmark: "C" }`
+  remote:     User 'a' is not permitted to move 'C'
   remote: 
   remote:   Debug context:
-  remote:     "[pushrebase] This user `Some(\"a\")` is not allowed to move `BookmarkName { bookmark: \"C\" }`"
+  remote:     PermissionDeniedUser {
+  remote:         user: "a",
+  remote:         bookmark: BookmarkName {
+  remote:             bookmark: "C",
+  remote:         },
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ MOCK_USERNAME="c" hgmn push -r . --to C

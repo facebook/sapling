@@ -13,10 +13,14 @@ bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 bookmarks = { path = ".." }
 bookmarks_types = { path = "../bookmarks_types" }
 context = { path = "../../server/context" }
+git_mapping_pushrebase_hook = { path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
+globalrev_pushrebase_hook = { path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
+pushrebase = { path = "../../pushrebase" }
 reachabilityindex = { path = "../../reachabilityindex" }
 scuba_ext = { path = "../../common/scuba_ext" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 thiserror = "1.0"

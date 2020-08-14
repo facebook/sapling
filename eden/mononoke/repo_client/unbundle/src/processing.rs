@@ -10,24 +10,23 @@ use crate::{
     PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
     PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
-use anyhow::{anyhow, format_err, Context, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
-use bookmarks_movement::{BookmarkUpdatePolicy, BookmarkUpdateTargets};
+use bookmarks_movement::{BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets};
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
     future::try_join,
     stream::{FuturesUnordered, TryStreamExt},
 };
-use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use mercurial_bundle_replay_data::BundleReplayData;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
-use pushrebase::PushrebaseHook;
+use pushrebase::{PushrebaseError, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
 use reverse_filler_queue::ReverseFillerQueue;
 use scribe_commit_queue::{self, LogToScribe};
@@ -438,7 +437,6 @@ async fn run_pushrebase(
 ) -> Result<UnbundlePushRebaseResponse, BundleResolverError> {
     debug!(ctx.logger(), "unbundle processing: running pushrebase.");
     let PostResolvePushRebase {
-        any_merges,
         bookmark_push_part_id,
         bookmark_spec,
         maybe_hg_replay_data,
@@ -462,7 +460,6 @@ async fn run_pushrebase(
                 repo,
                 &pushrebase_params,
                 &uploaded_bonsais,
-                any_merges,
                 &onto_bookmark,
                 &maybe_hg_replay_data,
                 bookmark_attrs,
@@ -616,73 +613,29 @@ async fn normal_pushrebase(
     repo: &BlobRepo,
     pushrebase_params: &PushrebaseParams,
     changesets: &HashSet<BonsaiChangeset>,
-    any_merges: bool,
     bookmark: &BookmarkName,
     maybe_hg_replay_data: &Option<pushrebase::HgReplayData>,
     bookmark_attrs: &BookmarkAttrs,
     infinitepush_params: &InfinitepushParams,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
-    check_plain_bookmark_move_preconditions(
-        &ctx,
-        &bookmark,
-        "pushrebase",
-        &bookmark_attrs,
-        &infinitepush_params,
-    )?;
-
-    let block_merges = pushrebase_params.block_merges.clone();
-    if block_merges && any_merges {
-        return Err(format_err!(
-            "Pushrebase blocked because it contains a merge commit.\n\
-             If you need this for a specific use case please contact\n\
-             the Source Control team at https://fburl.com/27qnuyl2"
+    bookmarks_movement::PushrebaseOntoBookmarkOp::new(bookmark, changesets)
+        .only_if_public()
+        .with_hg_replay_data(maybe_hg_replay_data.as_ref())
+        .run(
+            ctx,
+            repo,
+            infinitepush_params,
+            pushrebase_params,
+            bookmark_attrs,
         )
-        .into());
-    }
-
-    let hooks = get_pushrebase_hooks(&repo, &pushrebase_params);
-
-    let mut flags = pushrebase_params.flags.clone();
-    if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(bookmark) {
-        // Bookmark config overrides repo flags.rewritedates config
-        flags.rewritedates = rewritedates;
-    }
-
-    ctx.scuba().clone().log_with_msg("Pushrebase started", None);
-    let (stats, result) = pushrebase::do_pushrebase_bonsai(
-        &ctx,
-        &repo,
-        &flags,
-        bookmark,
-        &changesets,
-        maybe_hg_replay_data.as_ref(),
-        &hooks[..],
-    )
-    .timed()
-    .await;
-
-    let mut scuba_logger = ctx.scuba().clone();
-    scuba_logger.add_future_stats(&stats);
-
-    match result {
-        Ok(ref res) => {
-            scuba_logger
-                .add("pushrebase_retry_num", res.retry_num.0)
-                .log_with_msg("Pushrebase finished", None);
-        }
-        Err(ref err) => {
-            scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{:#?}", err)));
-        }
-    }
-
-    result
+        .await
+        .map(|outcome| (outcome.head, outcome.rebased_changesets))
         .map_err(|err| match err {
-            pushrebase::PushrebaseError::Conflicts(conflicts) => {
+            BookmarkMovementError::PushrebaseError(PushrebaseError::Conflicts(conflicts)) => {
                 BundleResolverError::PushrebaseConflicts(conflicts)
             }
-            _ => BundleResolverError::Error(format_err!("pushrebase failed {:?}", err)),
+            _ => BundleResolverError::Error(err.into()),
         })
-        .map(|res| (res.head, res.rebased_changesets))
 }
 
 async fn force_pushrebase(
@@ -776,36 +729,6 @@ async fn force_pushrebase(
     // Note that this push did not do any actual rebases, so we do not
     // need to provide any actual mapping, an empty Vec will do
     Ok((new_target, Vec::new()))
-}
-
-fn check_plain_bookmark_move_preconditions(
-    ctx: &CoreContext,
-    bookmark: &BookmarkName,
-    reason: &'static str,
-    bookmark_attrs: &BookmarkAttrs,
-    infinitepush_params: &InfinitepushParams,
-) -> Result<()> {
-    let user = ctx.user_unix_name();
-    if !bookmark_attrs.is_allowed_user(user, bookmark) {
-        return Err(format_err!(
-            "[{}] This user `{:?}` is not allowed to move `{:?}`",
-            reason,
-            user,
-            bookmark
-        ));
-    }
-
-    if let Some(ref namespace) = infinitepush_params.namespace {
-        if namespace.matches_bookmark(bookmark) {
-            return Err(format_err!(
-                "[{}] Only Infinitepush bookmarks are allowed to match pattern {}",
-                reason,
-                namespace.as_str(),
-            ));
-        }
-    }
-
-    Ok(())
 }
 
 async fn log_commits_to_scribe(

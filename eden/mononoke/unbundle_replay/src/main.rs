@@ -307,7 +307,6 @@ async fn maybe_unbundle(
     };
 
     let PostResolvePushRebase {
-        any_merges: _,
         bookmark_push_part_id: _,
         bookmark_spec,
         maybe_hg_replay_data: _,
