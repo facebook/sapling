@@ -42,7 +42,7 @@ use scribe_commit_queue::{self, LogToScribe};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, warn};
 use stats::prelude::*;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tunables::tunables;
 
@@ -81,7 +81,6 @@ pub async fn run_post_resolve_action(
 
     // FIXME: it's used not only in pushrebase, so it worth moving
     // populate_git_mapping outside of PushrebaseParams.
-    let populate_git_mapping = pushrebase_params.populate_git_mapping;
     let unbundle_response = match action {
         PostResolveAction::Push(action) => run_push(
             ctx,
@@ -89,8 +88,8 @@ pub async fn run_post_resolve_action(
             bookmark_attrs,
             lca_hint,
             infinitepush_params,
+            pushrebase_params,
             action,
-            populate_git_mapping,
             push_params,
         )
         .await
@@ -102,6 +101,7 @@ pub async fn run_post_resolve_action(
             bookmark_attrs,
             lca_hint,
             infinitepush_params,
+            pushrebase_params,
             maybe_reverse_filler_queue,
             action,
         )
@@ -125,8 +125,8 @@ pub async fn run_post_resolve_action(
             bookmark_attrs,
             lca_hint,
             infinitepush_params,
+            pushrebase_params,
             action,
-            populate_git_mapping,
         )
         .await
         .context("While doing a bookmark-only pushrebase")
@@ -154,8 +154,8 @@ async fn run_push(
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &dyn LeastCommonAncestorsHint,
     infinitepush_params: &InfinitepushParams,
+    pushrebase_params: &PushrebaseParams,
     action: PostResolvePush,
-    populate_git_mapping: bool,
     push_params: &PushParams,
 ) -> Result<UnbundlePushResponse, Error> {
     debug!(ctx.logger(), "unbundle processing: running push.");
@@ -182,71 +182,104 @@ async fn run_push(
             bookmark_pushes
         ));
     }
-    let maybe_bookmark_push = bookmark_pushes.pop();
 
-    let maybe_bookmark_id = match &maybe_bookmark_push {
-        Some(bp) => Some(bp.part_id),
-        None => None,
-    };
-    let reason = BookmarkUpdateReason::Push;
-    let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
-
-    let maybe_bookmark_push = match maybe_bookmark_push {
-        Some(bookmark_push) => {
-            let bp = check_plain_bookmark_push_allowed(
-                &ctx,
-                &repo,
-                &bookmark_attrs,
-                non_fast_forward_policy,
-                &infinitepush_params,
-                bookmark_push,
-                lca_hint,
-            )
-            .await?;
-            Some(bp)
-        }
-        None => None,
-    };
-
-    let uploaded_bonsais: HashMap<_, _> = uploaded_bonsais
-        .into_iter()
-        .map(|bcs| (bcs.get_changeset_id(), bcs))
-        .collect();
-
-    let new_commits = uploaded_bonsais.keys().map(|k| *k).collect::<Vec<_>>();
-
-    let mut txn_hook = None;
-    if populate_git_mapping {
-        let parents_of_uploaded =
-            check_bookmark_pushes_for_git_mirrors(&maybe_bookmark_push, &uploaded_bonsais)?;
-        let ancestors_no_git_mapping =
-            find_ancestors_without_git_mapping(&ctx, &repo, parents_of_uploaded).await?;
-
-        txn_hook = Some(upload_git_mapping_bookmark_txn_hook(
-            repo.bonsai_git_mapping().clone(),
-            uploaded_bonsais,
-            ancestors_no_git_mapping,
-        ));
+    let mut new_changeset_ids = Vec::new();
+    let mut new_changesets = HashMap::new();
+    for bcs in uploaded_bonsais {
+        let cs_id = bcs.get_changeset_id();
+        new_changeset_ids.push(cs_id);
+        new_changesets.insert(cs_id, bcs);
     }
 
-    let maybe_bookmark = maybe_bookmark_push.clone().map(|bp| bp.name);
-    let maybe_bookmark_push = maybe_bookmark_push.map(BookmarkPush::PlainPush);
+    let mut bookmark_ids = Vec::new();
+    let mut maybe_bookmark = None;
+    if let Some(bookmark_push) = bookmark_pushes.pop() {
+        bookmark_ids.push(bookmark_push.part_id);
+        let bundle_replay_data = maybe_raw_bundle2_id.map(BundleReplayData::new);
+        let bundle_replay_data = bundle_replay_data
+            .as_ref()
+            .map(|data| data as &dyn BundleReplay);
 
-    save_bookmark_pushes_to_db(
-        ctx,
-        repo,
-        reason,
-        &bundle_replay_data,
-        vec![maybe_bookmark_push],
-        txn_hook,
-    )
-    .await?;
-    let bookmark_ids = maybe_bookmark_id.into_iter().collect();
+        match (bookmark_push.old, bookmark_push.new) {
+            (None, Some(new_target)) => {
+                bookmarks_movement::CreateBookmarkOp::new(
+                    &bookmark_push.name,
+                    new_target,
+                    BookmarkUpdateReason::Push,
+                )
+                .only_if_public()
+                .with_new_changesets(new_changesets)
+                .with_bundle_replay_data(bundle_replay_data)
+                .run(
+                    ctx,
+                    repo,
+                    infinitepush_params,
+                    pushrebase_params,
+                    bookmark_attrs,
+                )
+                .await
+                .context("Failed to create bookmark")?;
+            }
+
+            (Some(old_target), Some(new_target)) => {
+                bookmarks_movement::UpdateBookmarkOp::new(
+                    &bookmark_push.name,
+                    BookmarkUpdateTargets {
+                        old: old_target,
+                        new: new_target,
+                    },
+                    if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
+                        BookmarkUpdatePolicy::AnyPermittedByConfig
+                    } else {
+                        BookmarkUpdatePolicy::FastForwardOnly
+                    },
+                    BookmarkUpdateReason::Push,
+                )
+                .only_if_public()
+                .with_new_changesets(new_changesets)
+                .with_bundle_replay_data(bundle_replay_data)
+                .run(
+                    ctx,
+                    repo,
+                    lca_hint,
+                    infinitepush_params,
+                    pushrebase_params,
+                    bookmark_attrs,
+                )
+                .await
+                .context(
+                    if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
+                        "Failed to move bookmark"
+                    } else {
+                        "Failed to fast-forward bookmark (try --force?)"
+                    },
+                )?;
+            }
+
+            (Some(old_target), None) => {
+                bookmarks_movement::DeleteBookmarkOp::new(
+                    &bookmark_push.name,
+                    old_target,
+                    BookmarkUpdateReason::Push,
+                )
+                .only_if_public()
+                .with_bundle_replay_data(bundle_replay_data)
+                .run(ctx, repo, infinitepush_params, bookmark_attrs)
+                .await
+                .context("Failed to delete bookmark")?;
+            }
+
+            (None, None) => {}
+        }
+
+        maybe_bookmark = Some(bookmark_push.name);
+    }
+
     log_commits_to_scribe(
         ctx,
         repo,
         maybe_bookmark.as_ref(),
-        new_commits,
+        new_changeset_ids,
         push_params.commit_scribe_category.clone(),
     )
     .await;
@@ -398,77 +431,13 @@ fn upload_git_mapping_bookmark_txn_hook(
     })
 }
 
-// To keep things simple we allow only a trivial push case
-// 1) Single bookmark
-// 2) all uploaded commits are reachable from this bookmark
-//
-// This function returns parents of `uploaded_bonsais` that are not in
-// uploaded_bonsais
-fn check_bookmark_pushes_for_git_mirrors(
-    bookmark_push: &Option<PlainBookmarkPush<ChangesetId>>,
-    uploaded_bonsais: &HashMap<ChangesetId, BonsaiChangeset>,
-) -> Result<HashSet<ChangesetId>, Error> {
-    let only_single_book_err = anyhow!(
-        "only pushes of a single bookmark are allowed for repos that are mirrored from git repos"
-    );
-
-    let bookmark_push = match bookmark_push {
-        Some(bp) => bp,
-        None => {
-            return Err(only_single_book_err);
-        }
-    };
-
-    let new = match bookmark_push.new {
-        Some(new) => new,
-        None => {
-            if !uploaded_bonsais.is_empty() {
-                return Err(anyhow!(
-                    "pushing new commits is not allowed with bookmark deletion"
-                ));
-            }
-            return Ok(HashSet::new());
-        }
-    };
-
-    // Do a bfs search starting from `new` to check if all changesets are found
-    let mut queue = VecDeque::new();
-    let mut visited = HashSet::new();
-    if let Some(new_bcs) = uploaded_bonsais.get(&new) {
-        queue.push_back(new_bcs);
-        visited.insert(new);
-    }
-    let mut outside_parents = HashSet::new();
-    while let Some(bcs) = queue.pop_back() {
-        for p in bcs.parents() {
-            if let Some(bcs) = uploaded_bonsais.get(&p) {
-                if !visited.insert(p) {
-                    continue;
-                }
-                queue.push_back(bcs);
-            } else {
-                outside_parents.insert(p);
-            }
-        }
-    }
-
-    if visited.len() != uploaded_bonsais.len() {
-        return Err(anyhow!(
-            "Some of the pushed commits are not reachable from the bookmark. reachable: {}, uploaded: {}",
-            visited.len(),
-            uploaded_bonsais.len()
-        ));
-    }
-
-    Ok(outside_parents)
-}
-
 async fn run_infinitepush(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &dyn LeastCommonAncestorsHint,
     infinitepush_params: &InfinitepushParams,
+    pushrebase_params: &PushrebaseParams,
     maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
     action: PostResolveInfinitePush,
 ) -> Result<UnbundleInfinitePushResponse, Error> {
@@ -514,7 +483,13 @@ async fn run_infinitepush(
                 )
                 .only_if_scratch()
                 .with_bundle_replay_data(bundle_replay_data)
-                .run(ctx, repo, infinitepush_params, bookmark_attrs)
+                .run(
+                    ctx,
+                    repo,
+                    infinitepush_params,
+                    pushrebase_params,
+                    bookmark_attrs,
+                )
                 .await
                 .context("Failed to create scratch bookmark")?;
             } else {
@@ -539,7 +514,14 @@ async fn run_infinitepush(
                 )
                 .only_if_scratch()
                 .with_bundle_replay_data(bundle_replay_data)
-                .run(ctx, repo, lca_hint, infinitepush_params, bookmark_attrs)
+                .run(
+                    ctx,
+                    repo,
+                    lca_hint,
+                    infinitepush_params,
+                    pushrebase_params,
+                    bookmark_attrs,
+                )
                 .await
                 .context(if bookmark_push.force {
                     "Failed to move scratch bookmark"
@@ -659,8 +641,8 @@ async fn run_bookmark_only_pushrebase(
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &dyn LeastCommonAncestorsHint,
     infinitepush_params: &InfinitepushParams,
+    pushrebase_params: &PushrebaseParams,
     action: PostResolveBookmarkOnlyPushRebase,
-    populate_git_mapping: bool,
 ) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, Error> {
     debug!(
         ctx.logger(),
@@ -689,7 +671,7 @@ async fn run_bookmark_only_pushrebase(
     .await?;
 
     let mut txn_hook = None;
-    if populate_git_mapping {
+    if pushrebase_params.populate_git_mapping {
         if let Some(new) = bookmark_push.new {
             let ancestors_no_git_mapping =
                 find_ancestors_without_git_mapping(&ctx, &repo, hashset! {new}).await?;
@@ -1080,98 +1062,13 @@ pub fn get_pushrebase_hooks(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use blobstore::Loadable;
     use bonsai_git_mapping::{CONVERT_REVISION_EXTRA, HGGIT_SOURCE_EXTRA};
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use maplit::{hashmap, hashset};
+    use maplit::hashset;
     use mononoke_types::hash::GitSha1;
     use mononoke_types_mocks::hash::{ONES_GIT_SHA1, TWOS_GIT_SHA1};
-    use tests_utils::{resolve_cs_id, CreateCommitContext};
-
-    #[fbinit::compat_test]
-    async fn test_check_bookmark_pushes_for_git_mirrors(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
-
-        let parent_of_master_cs_id =
-            resolve_cs_id(&ctx, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await?;
-        let cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-
-        // Moving a single bookmark to already existing commit - should be allowed
-        let res = check_bookmark_pushes_for_git_mirrors(
-            &Some(PlainBookmarkPush {
-                part_id: 0,
-                name: BookmarkName::new("master")?,
-                old: None,
-                new: Some(cs_id),
-            }),
-            &HashMap::new(),
-        );
-        assert!(res.is_ok());
-        assert_eq!(res?, hashset! {});
-
-        // Single bookmark to a single new commit - should be allowed
-        let master_bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
-
-        let res = check_bookmark_pushes_for_git_mirrors(
-            &Some(PlainBookmarkPush {
-                part_id: 0,
-                name: BookmarkName::new("master")?,
-                old: None,
-                new: Some(cs_id),
-            }),
-            &hashmap! {
-                cs_id => master_bcs.clone(),
-            },
-        );
-        assert!(res.is_ok());
-        assert_eq!(res?, hashset! {parent_of_master_cs_id});
-
-        // Single bookmark with two new commits - should be allowed
-        let parent_of_master_bcs = parent_of_master_cs_id
-            .load(ctx.clone(), repo.blobstore())
-            .await?;
-
-        let parent_of_parent_of_master_cs_id =
-            resolve_cs_id(&ctx, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await?;
-        let res = check_bookmark_pushes_for_git_mirrors(
-            &Some(PlainBookmarkPush {
-                part_id: 0,
-                name: BookmarkName::new("master")?,
-                old: None,
-                new: Some(cs_id),
-            }),
-            &hashmap! {
-                cs_id => master_bcs.clone(),
-                parent_of_master_cs_id => parent_of_master_bcs.clone(),
-            },
-        );
-        assert!(res.is_ok());
-        assert_eq!(res?, hashset! {parent_of_parent_of_master_cs_id});
-
-        // Single bookmark with one unrelated commit - should be disallowed
-        let unrelated_cs_id = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
-        let unrelated_cs_id = resolve_cs_id(&ctx, &repo, unrelated_cs_id).await?;
-        let unrelated_bcs = unrelated_cs_id.load(ctx, repo.blobstore()).await?;
-
-        let res = check_bookmark_pushes_for_git_mirrors(
-            &Some(PlainBookmarkPush {
-                part_id: 0,
-                name: BookmarkName::new("master")?,
-                old: None,
-                new: Some(cs_id),
-            }),
-            &hashmap! {
-                cs_id => master_bcs,
-                parent_of_master_cs_id => parent_of_master_bcs,
-                unrelated_cs_id => unrelated_bcs,
-            },
-        );
-        assert!(res.is_err());
-
-        Ok(())
-    }
+    use tests_utils::CreateCommitContext;
 
     #[fbinit::compat_test]
     async fn test_find_ancestors_without_git_mapping_simple(fb: FacebookInit) -> Result<(), Error> {

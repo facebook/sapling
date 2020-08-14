@@ -8,11 +8,24 @@ include = ["**/*.rs"]
 
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
+blobstore = { path = "../../blobstore" }
+bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 bookmarks = { path = ".." }
 bookmarks_types = { path = "../bookmarks_types" }
 context = { path = "../../server/context" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 reachabilityindex = { path = "../../reachabilityindex" }
+scuba_ext = { path = "../../common/scuba_ext" }
 anyhow = "1.0"
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 thiserror = "1.0"
+
+[dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
+tests_utils = { path = "../../tests/utils" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+maplit = "1.0"
+tokio-compat = "0.1"

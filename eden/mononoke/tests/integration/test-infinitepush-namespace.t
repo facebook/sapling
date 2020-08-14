@@ -154,15 +154,25 @@ Invalid push, with pushrebase disabled
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     [push] Only Infinitepush bookmarks are allowed to match pattern ^(infinitepush1|infinitepush2)/.+$
+  remote:     Invalid public bookmark: infinitepush2/123 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Caused by:
-  remote:     [push] Only Infinitepush bookmarks are allowed to match pattern ^(infinitepush1|infinitepush2)/.+$
+  remote:     Failed to create bookmark
+  remote:   Caused by:
+  remote:     Invalid public bookmark: infinitepush2/123 (only scratch bookmarks may match pattern ^(infinitepush1|infinitepush2)/.+$)
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing a push",
-  remote:         source: "[push] Only Infinitepush bookmarks are allowed to match pattern ^(infinitepush1|infinitepush2)/.+$",
+  remote:         source: Error {
+  remote:             context: "Failed to create bookmark",
+  remote:             source: InvalidPublicBookmark {
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "infinitepush2/123",
+  remote:                 },
+  remote:                 pattern: "^(infinitepush1|infinitepush2)/.+$",
+  remote:             },
+  remote:         },
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

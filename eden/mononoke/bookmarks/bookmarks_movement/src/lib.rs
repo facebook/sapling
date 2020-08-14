@@ -14,9 +14,13 @@ use mononoke_types::ChangesetId;
 use thiserror::Error;
 
 mod create;
+mod delete;
+mod git_mapping;
+mod globalrev_mapping;
 mod update;
 
 pub use crate::create::CreateBookmarkOp;
+pub use crate::delete::DeleteBookmarkOp;
 pub use crate::update::{BookmarkUpdatePolicy, BookmarkUpdateTargets, UpdateBookmarkOp};
 
 /// How authorization for the bookmark move should be determined.
@@ -91,6 +95,12 @@ impl BookmarkKindRestrictions {
 pub enum BookmarkMovementError {
     #[error("Non fast-forward bookmark move from {from} to {to}")]
     NonFastForwardMove { from: ChangesetId, to: ChangesetId },
+
+    #[error("Pushrebase required when assigning globalrevs")]
+    PushrebaseRequiredGlobalrevs,
+
+    #[error("Deletion of '{bookmark}' is prohibited")]
+    DeletionProhibited { bookmark: BookmarkName },
 
     #[error("User '{user}' is not permitted to move '{bookmark}'")]
     PermissionDeniedUser {

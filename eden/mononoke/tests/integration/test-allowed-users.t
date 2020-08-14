@@ -66,15 +66,25 @@ push new bookmark
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     [push] This user `Some("aslpavel")` is not allowed to move `BookmarkName { bookmark: "X/Y" }`
+  remote:     User 'aslpavel' is not permitted to move 'X/Y'
   remote: 
   remote:   Caused by:
-  remote:     [push] This user `Some("aslpavel")` is not allowed to move `BookmarkName { bookmark: "X/Y" }`
+  remote:     Failed to create bookmark
+  remote:   Caused by:
+  remote:     User 'aslpavel' is not permitted to move 'X/Y'
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing a push",
-  remote:         source: "[push] This user `Some(\"aslpavel\")` is not allowed to move `BookmarkName { bookmark: \"X/Y\" }`",
+  remote:         source: Error {
+  remote:             context: "Failed to create bookmark",
+  remote:             source: PermissionDeniedUser {
+  remote:                 user: "aslpavel",
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "X/Y",
+  remote:                 },
+  remote:             },
+  remote:         },
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -96,15 +106,25 @@ push updates existing bookmark
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     [push] This user `Some("aslapvel")` is not allowed to move `BookmarkName { bookmark: "A" }`
+  remote:     User 'aslapvel' is not permitted to move 'A'
   remote: 
   remote:   Caused by:
-  remote:     [push] This user `Some("aslapvel")` is not allowed to move `BookmarkName { bookmark: "A" }`
+  remote:     Failed to fast-forward bookmark (try --force?)
+  remote:   Caused by:
+  remote:     User 'aslapvel' is not permitted to move 'A'
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing a push",
-  remote:         source: "[push] This user `Some(\"aslapvel\")` is not allowed to move `BookmarkName { bookmark: \"A\" }`",
+  remote:         source: Error {
+  remote:             context: "Failed to fast-forward bookmark (try --force?)",
+  remote:             source: PermissionDeniedUser {
+  remote:                 user: "aslapvel",
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "A",
+  remote:                 },
+  remote:             },
+  remote:         },
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

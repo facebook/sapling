@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams};
-use mononoke_types::ChangesetId;
+use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 
 use crate::{BookmarkKindRestrictions, BookmarkMoveAuthorization, BookmarkMovementError};
@@ -71,6 +73,7 @@ pub struct UpdateBookmarkOp<'op> {
     reason: BookmarkUpdateReason,
     auth: BookmarkMoveAuthorization,
     kind_restrictions: BookmarkKindRestrictions,
+    new_changesets: HashMap<ChangesetId, BonsaiChangeset>,
     bundle_replay: Option<&'op dyn BundleReplay>,
 }
 
@@ -89,6 +92,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             reason,
             auth: BookmarkMoveAuthorization::Context,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
+            new_changesets: HashMap::new(),
             bundle_replay: None,
         }
     }
@@ -108,12 +112,27 @@ impl<'op> UpdateBookmarkOp<'op> {
         self
     }
 
+    /// Include bonsai changesets for changesets that have just been added to
+    /// the repository.
+    pub fn with_new_changesets(
+        mut self,
+        changesets: HashMap<ChangesetId, BonsaiChangeset>,
+    ) -> Self {
+        if self.new_changesets.is_empty() {
+            self.new_changesets = changesets;
+        } else {
+            self.new_changesets.extend(changesets.into_iter());
+        }
+        self
+    }
+
     pub async fn run(
         self,
         ctx: &'op CoreContext,
         repo: &'op BlobRepo,
         lca_hint: &'op dyn LeastCommonAncestorsHint,
         infinitepush_params: &'op InfinitepushParams,
+        pushrebase_params: &'op PushrebaseParams,
         bookmark_attrs: &'op BookmarkAttrs,
     ) -> Result<(), BookmarkMovementError> {
         self.auth
@@ -135,15 +154,33 @@ impl<'op> UpdateBookmarkOp<'op> {
             .await?;
 
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
+        let mut txn_hook = None;
 
         if is_scratch {
             txn.update_scratch(self.bookmark, self.targets.new, self.targets.old)?;
         } else {
-            unimplemented!("Non-scratch bookmark create");
-            // txn.create(bookmark, target, reason, bundle_replay)?;
+            crate::globalrev_mapping::require_globalrevs_disabled(pushrebase_params)?;
+            txn_hook = crate::git_mapping::populate_git_mapping_txn_hook(
+                ctx,
+                repo,
+                pushrebase_params,
+                self.targets.new,
+                &self.new_changesets,
+            )
+            .await?;
+            txn.update(
+                self.bookmark,
+                self.targets.new,
+                self.targets.old,
+                self.reason,
+                self.bundle_replay,
+            )?;
         }
 
-        let ok = txn.commit().await?;
+        let ok = match txn_hook {
+            Some(txn_hook) => txn.commit_with_hook(txn_hook).await?,
+            None => txn.commit().await?,
+        };
         if !ok {
             return Err(BookmarkMovementError::TransactionFailed);
         }

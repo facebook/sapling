@@ -216,15 +216,25 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     [push] Only Infinitepush bookmarks are allowed to match pattern ^scratch/.+$
+  remote:     Invalid public bookmark: scratch/123 (only scratch bookmarks may match pattern ^scratch/.+$)
   remote: 
   remote:   Caused by:
-  remote:     [push] Only Infinitepush bookmarks are allowed to match pattern ^scratch/.+$
+  remote:     Failed to create bookmark
+  remote:   Caused by:
+  remote:     Invalid public bookmark: scratch/123 (only scratch bookmarks may match pattern ^scratch/.+$)
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing a push",
-  remote:         source: "[push] Only Infinitepush bookmarks are allowed to match pattern ^scratch/.+$",
+  remote:         source: Error {
+  remote:             context: "Failed to create bookmark",
+  remote:             source: InvalidPublicBookmark {
+  remote:                 bookmark: BookmarkName {
+  remote:                     bookmark: "scratch/123",
+  remote:                 },
+  remote:                 pattern: "^scratch/.+$",
+  remote:             },
+  remote:         },
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
