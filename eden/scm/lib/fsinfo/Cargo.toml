@@ -8,4 +8,4 @@ libc = "0.2"
 anyhow = "1"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["handleapi", "fileapi", "minwindef", "winioctl"] }
+winapi = { version = "0.3", features = ["handleapi", "fileapi", "minwindef", "winioctl", "winerror", "ioapiset", "winbase"] }
