@@ -539,7 +539,7 @@ class EdenMount {
    */
   EdenStats* getStats() const;
 
-  folly::Logger& getStraceLogger() {
+  const folly::Logger& getStraceLogger() const {
     return straceLogger_;
   }
 

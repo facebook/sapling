@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/win/utils/Guid.h"
+#include <fmt/format.h>
 #include <iostream>
 #include <string>
 #include "gtest/gtest.h"
@@ -76,4 +77,14 @@ TEST(GuidTest, pointerGuids) {
 
   EXPECT_EQ(guid1, guid2);
   EXPECT_EQ(guid1, guid3);
+}
+
+TEST(GuidTest, formatGuid) {
+  static const GUID testGuid = {0x811305da,
+                                0xf51e,
+                                0x4e2d,
+                                {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
+  Guid guid1{testGuid};
+  auto s = fmt::format(FMT_STRING("{}"), guid1);
+  EXPECT_EQ(s, "{811305DA-F51E-4E2D-9201-0D12A1E7F8D5}");
 }

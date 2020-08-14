@@ -9,6 +9,7 @@
 #include "folly/portability/Windows.h"
 
 #include <combaseapi.h>
+#include <fmt/format.h>
 #include "eden/fs/win/utils/WinError.h"
 
 namespace facebook {
@@ -56,6 +57,23 @@ class Guid {
     return !(*this == other);
   }
 
+  std::string toString() const noexcept {
+    return fmt::format(
+        FMT_STRING(
+            "{{{:08X}-{:04X}-{:04X}-{:02X}{:02X}-{:02X}{:02X}{:02X}{:02X}{:02X}{:02X}}}"),
+        guid_.Data1,
+        guid_.Data2,
+        guid_.Data3,
+        guid_.Data4[0],
+        guid_.Data4[1],
+        guid_.Data4[2],
+        guid_.Data4[3],
+        guid_.Data4[4],
+        guid_.Data4[5],
+        guid_.Data4[6],
+        guid_.Data4[7]);
+  }
+
  private:
   GUID guid_;
 };
@@ -68,3 +86,13 @@ struct CompareGuid {
 
 } // namespace eden
 } // namespace facebook
+
+namespace fmt {
+template <>
+struct formatter<facebook::eden::Guid> : formatter<string_view> {
+  auto format(const facebook::eden::Guid& guid, format_context& ctx) {
+    auto s = guid.toString();
+    return formatter<string_view>::format(s, ctx);
+  }
+};
+} // namespace fmt

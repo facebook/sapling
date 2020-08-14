@@ -22,6 +22,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
+#include "eden/fs/win/utils/Guid.h"
 #include "eden/fs/win/utils/StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
 
@@ -82,14 +83,10 @@ HRESULT EdenDispatcher::startEnumeration(
     const GUID& enumerationId) noexcept {
   try {
     auto relPath = RelativePath(callbackData.FilePathName);
+    auto guid = Guid(enumerationId);
 
-    XLOGF(
-        DBG6,
-        "startEnumeration mount ({}) path ({}) process ({})",
-        getMount().getPath(),
-        relPath,
-        wideToMultibyteString<std::string>(
-            callbackData.TriggeringProcessImageFileName));
+    FB_LOGF(
+        mount_.getStraceLogger(), DBG7, "opendir({}, guid={})", relPath, guid);
 
     auto list = getMount()
                     .getInode(relPath)
@@ -100,7 +97,7 @@ HRESULT EdenDispatcher::startEnumeration(
                     .get();
 
     auto [iterator, inserted] = enumSessions_.wlock()->emplace(
-        enumerationId, make_unique<Enumerator>(enumerationId, std::move(list)));
+        enumerationId, make_unique<Enumerator>(guid, std::move(list)));
     DCHECK(inserted);
     return S_OK;
   } catch (const std::exception& ex) {
@@ -110,6 +107,9 @@ HRESULT EdenDispatcher::startEnumeration(
 
 HRESULT EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
   try {
+    FB_LOGF(
+        mount_.getStraceLogger(), DBG7, "releasedir({})", Guid(enumerationId));
+
     auto erasedCount = enumSessions_.wlock()->erase(enumerationId);
     DCHECK(erasedCount == 1);
     return S_OK;
@@ -124,11 +124,21 @@ HRESULT EdenDispatcher::getEnumerationData(
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE bufferHandle) noexcept {
   try {
+    auto guid = Guid(enumerationId);
+    FB_LOGF(
+        mount_.getStraceLogger(),
+        DBG7,
+        "readdir({}, searchExpression={})",
+        guid,
+        searchExpression == nullptr
+            ? "<nullptr>"
+            : wideToMultibyteString<std::string>(searchExpression));
+
     //
     // Error if we don't have the session.
     //
     auto lockedSessions = enumSessions_.rlock();
-    auto sessionIterator = lockedSessions->find(enumerationId);
+    auto sessionIterator = lockedSessions->find(guid);
     if (sessionIterator == lockedSessions->end()) {
       XLOG(DBG5) << "Enum instance not found: "
                  << RelativePath(callbackData.FilePathName);
@@ -186,6 +196,7 @@ HRESULT
 EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
     auto relPath = RelativePath(callbackData.FilePathName);
+    FB_LOGF(mount_.getStraceLogger(), DBG7, "lookup({})", relPath);
 
     struct InodeMetadata {
       // To ensure that the OS has a record of the canonical file name, and not
@@ -267,6 +278,7 @@ HRESULT
 EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
     auto relPath = RelativePath(callbackData.FilePathName);
+    FB_LOGF(mount_.getStraceLogger(), DBG7, "access({})", relPath);
 
     return getMount()
         .getInode(relPath)
@@ -368,6 +380,13 @@ EdenDispatcher::getFileData(
     uint32_t length) noexcept {
   try {
     auto relPath = RelativePath(callbackData.FilePathName);
+    FB_LOGF(
+        mount_.getStraceLogger(),
+        DBG7,
+        "read({}, off={}, len={})",
+        relPath,
+        byteOffset,
+        length);
 
     auto content =
         getMount()
@@ -587,7 +606,12 @@ folly::Future<folly::Unit> newFileCreated(
     PCWSTR destPath,
     bool isDirectory) {
   auto relPath = RelativePath(path);
-  XLOG(DBG6) << "NEW_FILE_CREATED path=" << relPath;
+  FB_LOGF(
+      mount.getStraceLogger(),
+      DBG7,
+      "{}({})",
+      isDirectory ? "mkdir" : "mknod",
+      relPath);
   return createFile(mount, relPath, isDirectory);
 }
 
@@ -597,7 +621,7 @@ folly::Future<folly::Unit> fileOverwritten(
     PCWSTR destPath,
     bool isDirectory) {
   auto relPath = RelativePath(path);
-  XLOG(DBG6) << "FILE_OVERWRITTEN path=" << relPath;
+  FB_LOGF(mount.getStraceLogger(), DBG7, "overwrite({})", relPath);
   return materializeFile(mount, relPath);
 }
 
@@ -607,7 +631,7 @@ folly::Future<folly::Unit> fileHandleClosedFileModified(
     PCWSTR destPath,
     bool isDirectory) {
   auto relPath = RelativePath(path);
-  XLOG(DBG6) << "FILE_HANDLE_CLOSED_FILE_MODIFIED path=" << relPath;
+  FB_LOGF(mount.getStraceLogger(), DBG7, "modified({})", relPath);
   return materializeFile(mount, relPath);
 }
 
@@ -619,7 +643,7 @@ folly::Future<folly::Unit> fileRenamed(
   auto oldPath = RelativePath(path);
   auto newPath = RelativePath(destPath);
 
-  XLOG(DBG6) << "FILE_RENAMED oldPath=" << oldPath << " newPath=" << newPath;
+  FB_LOGF(mount.getStraceLogger(), DBG7, "rename({} -> {})", oldPath, newPath);
 
   // When files are moved in and out of the repo, the rename paths are
   // empty, handle these like creation/removal of files.
@@ -637,9 +661,10 @@ folly::Future<folly::Unit> preRename(
     PCWSTR path,
     PCWSTR destPath,
     bool isDirectory) {
-  XLOGF(
-      DBG6,
-      "PRE_RENAME oldPath={} newPath={}",
+  FB_LOGF(
+      mount.getStraceLogger(),
+      DBG7,
+      "prerename({} -> {})",
       RelativePath(path),
       RelativePath(destPath));
   return folly::unit;
@@ -651,7 +676,12 @@ folly::Future<folly::Unit> fileHandleClosedFileDeleted(
     PCWSTR destPath,
     bool isDirectory) {
   auto oldPath = RelativePath(path);
-  XLOG(DBG6) << "FILE_HANDLE_CLOSED_FILE_MODIFIED path=" << oldPath;
+  FB_LOGF(
+      mount.getStraceLogger(),
+      DBG7,
+      "{}({})",
+      isDirectory ? "rmdir" : "unlink",
+      oldPath);
   return removeFile(mount, oldPath, isDirectory);
 }
 
@@ -661,7 +691,7 @@ folly::Future<folly::Unit> preSetHardlink(
     PCWSTR destPath,
     bool isDirectory) {
   auto relPath = RelativePath(path);
-  XLOG(DBG6) << "PRE_SET_HARDLINK path=" << relPath;
+  FB_LOGF(mount.getStraceLogger(), DBG7, "link({})", relPath);
   return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
       HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
       sformat("Hardlinks are not supported: {}", relPath)));
