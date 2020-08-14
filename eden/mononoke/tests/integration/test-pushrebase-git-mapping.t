@@ -29,32 +29,7 @@ Push another commit
   $ hg ci -Aqm commit2 --extra hg-git-rename-source=git --extra convert_revision=2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b
   $ hgmn push -q -r . --to master_bookmark
 
-Check that a force pushrebase it not allowed
-  $ touch file3
-  $ hg ci -Aqm commit3
-  $ hgmn push -r . --to master_bookmark --force
-  pushing rev * to destination ssh://user@dummy/repo bookmark master_bookmark (glob)
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     While doing a force pushrebase
-  remote: 
-  remote:   Root cause:
-  remote:     force_pushrebase is not allowed as it would skip populating Git mappings
-  remote: 
-  remote:   Caused by:
-  remote:     force_pushrebase is not allowed as it would skip populating Git mappings
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "While doing a force pushrebase",
-  remote:         source: "force_pushrebase is not allowed as it would skip populating Git mappings",
-  remote:     }
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
-  $ hg update -qC .^
-
-Push another commit
+Push another commit that conflicts
   $ touch file3
   $ hg ci -Aqm commit3 --extra hg-git-rename-source=git --extra convert_revision=2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b
   $ hgmn push -r . --to master_bookmark
@@ -72,7 +47,23 @@ Push another commit
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
+Force-push a commit
+  $ hg prev 2
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  [2388bc] commit1
+  $ touch file4
+  $ hg ci -Aqm commit4 --extra hg-git-rename-source=git --extra convert_revision=4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d
+  $ hgmn push -r . --to master_bookmark --force
+  pushing rev 1b5b68e81ae5 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  updating bookmark master_bookmark
+
 Check that mappings are populated
   $ get_bonsai_git_mapping
   3CEE0520D115C5973E538AFDEB6985C1DF2CFC2C8E58CE465B855D73993EFBA1|1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A
   E37E13B17B5C2B37965B2A9591A64CB2C44A68FD10F1362A595DA8C6E4EEFA41|2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B2B
+  32C125F232EF84EAD04050D1B0245B26EFFD4A8FF40292A54401A0AE40B1A63F|4D4D4D4D4D4D4D4D4D4D4D4D4D4D4D4D4D4D4D4D

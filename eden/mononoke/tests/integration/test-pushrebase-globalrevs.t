@@ -46,15 +46,20 @@ Check that a force pushrebase it not allowed
   remote:     While doing a force pushrebase
   remote: 
   remote:   Root cause:
-  remote:     force_pushrebase is not allowed when assigning Globalrevs
+  remote:     Pushrebase required when assigning globalrevs
   remote: 
   remote:   Caused by:
-  remote:     force_pushrebase is not allowed when assigning Globalrevs
+  remote:     Failed to move bookmark
+  remote:   Caused by:
+  remote:     Pushrebase required when assigning globalrevs
   remote: 
   remote:   Debug context:
   remote:     Error {
   remote:         context: "While doing a force pushrebase",
-  remote:         source: "force_pushrebase is not allowed when assigning Globalrevs",
+  remote:         source: Error {
+  remote:             context: "Failed to move bookmark",
+  remote:             source: PushrebaseRequiredGlobalrevs,
+  remote:         },
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
