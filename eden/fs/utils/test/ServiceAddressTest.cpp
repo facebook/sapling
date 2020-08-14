@@ -42,7 +42,8 @@ using namespace facebook::servicerouter;
 
 class MockServiceCacheIf : public ServiceCacheIf {
  public:
-  virtual Selection getSelection(
+  Selection getSelection_DEPRECATED(
+      const std::string& /* deprecatedCallsiteIdentifier */,
       const std::string& serviceName,
       const ServiceOptions& /* options */,
       const ConnConfigs& /* overrides */) override {
@@ -60,23 +61,7 @@ class MockServiceCacheIf : public ServiceCacheIf {
     return selection;
   }
 
-  virtual Selection getSelection_DEPRECATED(
-      const std::string& /* deprecatedCallsiteIdentifier */,
-      const std::string& serviceName,
-      const ServiceOptions& options,
-      const ConnConfigs& overrides) override {
-    return getSelection(serviceName, options, overrides);
-  }
-
-  virtual void getSelectionAsync(
-      const std::string& /* serviceName */,
-      DebugContext&& /* dbgCtx */,
-      SelectionCacheCallback&& /* callback */,
-      folly::EventBase* /* eventBase */,
-      ServiceOptions&& /* options */,
-      ConnConfigs&& /* overrides */) override {}
-
-  virtual void getSelectionAsync_DEPRECATED(
+  void getSelectionAsync_DEPRECATED(
       const std::string& /* deprecatedCallsiteIdentifier */,
       const std::string& /* serviceName */,
       DebugContext&& /* dbgCtx */,
