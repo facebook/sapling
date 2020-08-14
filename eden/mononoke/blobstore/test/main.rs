@@ -40,7 +40,7 @@ async fn roundtrip_and_link<B: BlobstoreWithLink>(
 
     let roundtrip = blobstore.get(ctx.clone(), key.clone()).await?.unwrap();
 
-    let orig_ctime = roundtrip.as_meta().as_ctime().clone();
+    let orig_ctime = roundtrip.as_meta().ctime();
 
     assert_eq!(orig_ctime.is_some(), has_ctime);
     assert_eq!(value, roundtrip.into_bytes());
@@ -54,7 +54,7 @@ async fn roundtrip_and_link<B: BlobstoreWithLink>(
 
     let newvalue = blobstore.get(ctx.clone(), newkey.clone()).await?.unwrap();
 
-    let new_ctime = newvalue.as_meta().as_ctime().clone();
+    let new_ctime = newvalue.as_meta().ctime();
     assert_eq!(new_ctime.is_some(), has_ctime);
     assert_eq!(orig_ctime, new_ctime);
     assert_eq!(value, newvalue.into_bytes());

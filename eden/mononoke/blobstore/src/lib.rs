@@ -171,12 +171,7 @@ impl BlobstoreMetadata {
     }
 
     #[inline]
-    pub fn as_ctime(&self) -> &Option<i64> {
-        &self.ctime
-    }
-
-    #[inline]
-    pub fn into_ctime(self) -> Option<i64> {
+    pub fn ctime(&self) -> Option<i64> {
         self.ctime
     }
 }

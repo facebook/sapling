@@ -69,8 +69,8 @@ impl ScrubHandler for StatsScrubHandler {
         self.inner
             .on_repair(ctx, blobstore_id, key, is_repaired, meta);
 
-        let ctime = match meta.as_ctime() {
-            Some(ctime) => ScubaValue::from(ctime.clone()),
+        let ctime = match meta.ctime() {
+            Some(ctime) => ScubaValue::from(ctime),
             None => ScubaValue::Null(NullScubaValue::Int),
         };
 
