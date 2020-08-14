@@ -1066,7 +1066,6 @@ def _wraprepo(ui, repo):
 
             This lets us reuse the key elsewhere without having to hit each
             profile file twice.
-
             """
             if not revs or revs == (None,):
                 revs = [
@@ -1731,7 +1730,14 @@ def show(ui, repo, **opts):
                 fm.write("name", "  %s\n", fname, label="sparse.exclude")
 
 
-@command("debugsparsematch", [("f", "sparse-profile", "", "sparse profile name")])
+@command(
+    "debugsparsematch",
+    [
+        ("s", "sparse-profile", [], "sparse profile to include"),
+        ("x", "exclude-sparse-profile", [], "sparse profile to exclude"),
+    ],
+    _("-s SPARSE_PROFILE [OPTION]... FILE..."),
+)
 def debugsparsematch(ui, repo, *args, **opts):
     """Filter paths using the given sparse profile
 
@@ -1744,15 +1750,37 @@ def debugsparsematch(ui, repo, *args, **opts):
     # Make it work in an edenfs checkout.
     if "eden" in repo.requirements:
         _wraprepo(ui, repo)
-    filename = opts.get("sparse_profile")
-    if not filename:
+    profiles = opts.get("sparse_profile")
+    if not profiles:
         raise error.Abort(_("--sparse-profile is required"))
-    ctx = repo["."]
-    raw = pycompat.decodeutf8(ctx[filename].data())
-    matcher, _key = repo._sparsematch_and_key(
-        revs=[nullrev], config=repo.readsparseconfig(raw=raw, filename=filename)
-    )
-    for path in args:
+    ctx = repo[None]  # use changes in cwd
+
+    files = args
+    ui.status_err(_("considering %d file(s)\n") % len(files))
+
+    def getmatcher(profile):
+        raw = pycompat.decodeutf8(ctx[profile].data())
+        return repo.sparsematch(
+            revs=[nullrev], config=repo.readsparseconfig(raw=raw, filename=profile)
+        )
+
+    def getunionmatcher(profiles):
+        matchers = [getmatcher(p) for p in profiles]
+        if not matchers:
+            return None
+        else:
+            return matchmod.union(matchers, "", "")
+
+    includematcher = getunionmatcher(opts.get("sparse_profile"))
+    excludematcher = getunionmatcher(opts.get("exclude_sparse_profile"))
+    if excludematcher is None:
+        matcher = includematcher
+    else:
+        matcher = matchmod.intersectmatchers(
+            includematcher, negatematcher(excludematcher)
+        )
+
+    for path in files:
         if matcher(path):
             ui.write(_("%s\n") % path)
 

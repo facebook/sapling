@@ -37,14 +37,45 @@ Verify enabling a single profile works
   index.html
   webpage.sparse
 
-Match files with sparse profile
+ Match files with two sparse profiles
 
-  $ hg debugsparsematch --sparse-profile webpage.sparse backend.sparse index.html foo.py bar.html
+  $ hg debugsparsematch --sparse-profile webpage.sparse --sparse-profile backend.sparse index.html foo.py bar.html
+  considering 3 file(s)
   index.html
+  foo.py
   bar.html
 
-  $ hg debugsparsematch --sparse-profile backend.sparse backend.sparse index.html foo.py bar.html
+Match files with one sparse profile
+
+  $ hg debugsparsematch --sparse-profile backend.sparse index.html foo.py bar.html
+  considering 3 file(s)
   foo.py
+
+Match files with on the fly sparse profile
+
+  $ cat > temp.sparse <<EOF
+  > [metadata]
+  > title: first version of temporary profile that would never be committed
+  > [include]
+  > *.gooby
+  > *.py
+  > EOF
+  $ hg debugsparsematch --sparse-profile temp.sparse match.gooby flu/blu/thing.txt other.py
+  considering 3 file(s)
+  match.gooby
+  other.py
+
+  $ cat > temp.sparse <<EOF
+  > [metadata]
+  > title: second version of temporary profile that would never be committed
+  > [include]
+  > path:flu/blu/
+  > *.py
+  > EOF
+  $ hg debugsparsematch --sparse-profile temp.sparse --exclude-sparse-profile backend.sparse match.gooby flu/blu/thing.txt other.py
+  considering 3 file(s)
+  flu/blu/thing.txt
+  $ rm temp.sparse
 
 Verify enabling two profiles works
 
