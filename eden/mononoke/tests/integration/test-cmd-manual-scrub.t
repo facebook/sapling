@@ -22,11 +22,9 @@ Run a heal
   $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 > /dev/null
 
 Failure time - this key will not exist
-  $ manual_scrub --storage-config-name blobstore <<EOF
-  > fake-key
-  > EOF
+  $ echo fake-key | manual_scrub --storage-config-name blobstore
   Error: Scrub failed
-  
+  * (glob)
   Caused by:
       Key fake-key is missing
   [1]
@@ -44,15 +42,25 @@ Success time - these keys will exist and be scrubbed
 Demostrate that a key exists
   $ ls "$TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0"
   $TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+
 Delete it
   $ rm "$TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0"
+
+Check that healer queue is empty
+  $ read_blobstore_sync_queue_size
+  0
+
 Scrub restores it
   $ manual_scrub --storage-config-name blobstore <<EOF
   > repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   > EOF
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0 (glob)
   repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0
-Run a heal and demonstrate that it's back
-  $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 > /dev/null
+
+Demonstrate its back
   $ ls "$TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0"
   $TESTTMP/blobstore/0/blobs/blob-repo0000.hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+
+Check that healer queue is empty
+  $ read_blobstore_sync_queue_size
+  0

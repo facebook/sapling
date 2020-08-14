@@ -175,6 +175,10 @@ impl MultiplexedBlobstoreBase {
                     != best_value.as_ref().map(BlobstoreGetData::as_bytes)
                 {
                     all_same = false;
+                } else if value.as_ref().and_then(|v| v.as_meta().ctime())
+                    > best_value.as_ref().and_then(|v| v.as_meta().ctime())
+                {
+                    best_value = value;
                 }
             }
         }

@@ -13,6 +13,7 @@ use crate::{
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
 use blobstore_sync_queue::BlobstoreSyncQueue;
+use chrono::Duration as ChronoDuration;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -20,13 +21,17 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
 };
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
-use mononoke_types::BlobstoreBytes;
+use mononoke_types::{BlobstoreBytes, DateTime};
+use once_cell::sync::OnceCell;
 use scuba::ScubaSampleBuilder;
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::fmt;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::{atomic::AtomicUsize, Arc};
+
+static DEFAULT_HEAL_MAX_BACKLOG_DAYS: i64 = 7;
+static HEAL_MAX_BACKLOG: OnceCell<ChronoDuration> = OnceCell::new();
 
 pub trait ScrubHandler: Send + Sync {
     /// Called when one of the inner stores required repair.
@@ -181,17 +186,29 @@ async fn blobstore_get(
                 }
             }
             ErrorKind::SomeMissingItem(missing_reads, Some(value)) => {
-                let entries = queue.get(ctx, &key).await?;
+                // Avoid false alarms for recently written items still on the healer queue
+                let mut do_peek_queue = true;
+                if let Some(ctime) = value.as_meta().ctime() {
+                    let now = DateTime::now().into_chrono();
+                    let peek_max = now
+                        - *HEAL_MAX_BACKLOG
+                            .get_or_init(|| ChronoDuration::days(DEFAULT_HEAL_MAX_BACKLOG_DAYS));
+                    if ctime < peek_max.timestamp() {
+                        do_peek_queue = false;
+                    }
+                }
+
+                let entries = if do_peek_queue {
+                    queue.get(ctx, &key).await?
+                } else {
+                    vec![]
+                };
                 let mut needs_repair: HashMap<BlobstoreId, &dyn Blobstore> = HashMap::new();
 
                 for k in missing_reads.iter() {
                     match scrub_stores.get(k) {
                         Some(s) => {
-                            // If key has no entries on the queue it needs repair.
-                            // Don't check individual stores in entries as that is a race vs multiplexed_put().
-                            //
-                            // TODO compare timestamp vs original_timestamp to still repair on
-                            // really old entries, will need schema change.
+                            // Key is missing in the store so needs repair
                             if entries.is_empty() {
                                 needs_repair.insert(*k, s.as_ref());
                             }
