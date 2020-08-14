@@ -72,6 +72,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
   for (auto& request : requests) {
     auto& hash = request.getRequest<HgImportRequest::BlobImport>()->hash;
     auto* promise = request.getPromise<HgImportRequest::BlobImport::Response>();
+
     XLOGF(
         DBG4,
         "Processing blob request for {} ({:p})",
@@ -207,6 +208,8 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     return folly::makeSemiFuture(std::move(blob));
   }
 
+  XLOG(DBG4) << "make blob import request for " << path << ", hash is:" << id;
+
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
   auto [request, future] = HgImportRequest::makeBlobImportRequest(
@@ -230,9 +233,25 @@ HgQueuedBackingStore::getTreeForManifest(
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids,
     ObjectFetchContext& context) {
+  // when useEdenNativePrefetch is true, fetch blobs one by one instead
+  // of grouping them and fetching in batches.
+  if (config_->getEdenConfig()->useEdenNativePrefetch.getValue()) {
+    std::vector<folly::SemiFuture<std::unique_ptr<Blob>>> futures;
+    futures.reserve(ids.size());
+    for (auto id : ids) {
+      futures.emplace_back(getBlob(id, context));
+    }
+    return folly::collectAll(futures).deferValue([](const auto& tries) {
+      for (const auto& t : tries) {
+        t.throwIfFailed();
+      }
+    });
+  }
+
   for (auto& hash : ids) {
     logBackingStoreFetch(context, hash);
   }
+
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportPrefetchWatches_);
   auto [request, future] = HgImportRequest::makePrefetchRequest(

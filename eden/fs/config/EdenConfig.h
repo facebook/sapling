@@ -293,6 +293,10 @@ class EdenConfig : private ConfigSettingManager {
       20'000'000,
       this};
 
+  ConfigSetting<bool> useEdenNativePrefetch{"store:use-eden-native-prefetch",
+                                            false,
+                                            this};
+
   /**
    * The maximum time duration allowed for a fuse request. If a request exceeds
    * this amount of time, an ETIMEDOUT error will be returned to the kernel to

@@ -916,7 +916,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
                       wantDtype = *params->wantDtype_ref(),
                       fileBlobsToPrefetch,
                       suppressFileList = *params->suppressFileList_ref(),
-                      &fetchContext](
+                      &fetchContext,
+                      config = server_->getServerState()->getEdenConfig()](
                          std::vector<GlobNode::GlobResult>&& results) mutable {
             auto out = std::make_unique<Glob>();
 
@@ -941,9 +942,11 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
               auto store = edenMount->getObjectStore();
               auto blobs = fileBlobsToPrefetch->rlock();
               std::vector<Hash> batch;
+              bool useEdenNativeFetch =
+                  config->useEdenNativePrefetch.getValue();
 
               for (auto& hash : *blobs) {
-                if (batch.size() >= 20480) {
+                if (!useEdenNativeFetch && batch.size() >= 20480) {
                   futures.emplace_back(
                       store->prefetchBlobs(batch, fetchContext));
                   batch.clear();
