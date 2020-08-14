@@ -6,8 +6,8 @@
  */
 
 use crate::{
-    BundleResolverError, NonFastForwardPolicy, PlainBookmarkPush, PostResolveAction,
-    PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
+    BundleResolverError, InfiniteBookmarkPush, NonFastForwardPolicy, PlainBookmarkPush,
+    PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
     PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
 use anyhow::{anyhow, Context, Error, Result};
@@ -186,77 +186,20 @@ async fn run_push(
             .as_ref()
             .map(|data| data as &dyn BundleReplay);
 
-        match (bookmark_push.old, bookmark_push.new) {
-            (None, Some(new_target)) => {
-                bookmarks_movement::CreateBookmarkOp::new(
-                    &bookmark_push.name,
-                    new_target,
-                    BookmarkUpdateReason::Push,
-                )
-                .only_if_public()
-                .with_new_changesets(new_changesets)
-                .with_bundle_replay_data(bundle_replay_data)
-                .run(
-                    ctx,
-                    repo,
-                    infinitepush_params,
-                    pushrebase_params,
-                    bookmark_attrs,
-                )
-                .await
-                .context("Failed to create bookmark")?;
-            }
-
-            (Some(old_target), Some(new_target)) => {
-                bookmarks_movement::UpdateBookmarkOp::new(
-                    &bookmark_push.name,
-                    BookmarkUpdateTargets {
-                        old: old_target,
-                        new: new_target,
-                    },
-                    if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
-                        BookmarkUpdatePolicy::AnyPermittedByConfig
-                    } else {
-                        BookmarkUpdatePolicy::FastForwardOnly
-                    },
-                    BookmarkUpdateReason::Push,
-                )
-                .only_if_public()
-                .with_new_changesets(new_changesets)
-                .with_bundle_replay_data(bundle_replay_data)
-                .run(
-                    ctx,
-                    repo,
-                    lca_hint,
-                    infinitepush_params,
-                    pushrebase_params,
-                    bookmark_attrs,
-                )
-                .await
-                .context(
-                    if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
-                        "Failed to move bookmark"
-                    } else {
-                        "Failed to fast-forward bookmark (try --force?)"
-                    },
-                )?;
-            }
-
-            (Some(old_target), None) => {
-                bookmarks_movement::DeleteBookmarkOp::new(
-                    &bookmark_push.name,
-                    old_target,
-                    BookmarkUpdateReason::Push,
-                )
-                .only_if_public()
-                .with_bundle_replay_data(bundle_replay_data)
-                .run(ctx, repo, infinitepush_params, bookmark_attrs)
-                .await
-                .context("Failed to delete bookmark")?;
-            }
-
-            (None, None) => {}
-        }
+        plain_push_bookmark(
+            ctx,
+            repo,
+            lca_hint,
+            infinitepush_params,
+            pushrebase_params,
+            bookmark_attrs,
+            &bookmark_push,
+            new_changesets,
+            non_fast_forward_policy,
+            BookmarkUpdateReason::Push,
+            bundle_replay_data,
+        )
+        .await?;
 
         maybe_bookmark = Some(bookmark_push.name);
     }
@@ -349,60 +292,18 @@ async fn run_infinitepush(
             let bundle_replay_data = bundle_replay_data
                 .as_ref()
                 .map(|data| data as &dyn BundleReplay);
-            if bookmark_push.old.is_none() && bookmark_push.create {
-                bookmarks_movement::CreateBookmarkOp::new(
-                    &bookmark_push.name,
-                    bookmark_push.new,
-                    BookmarkUpdateReason::Push,
-                )
-                .only_if_scratch()
-                .with_bundle_replay_data(bundle_replay_data)
-                .run(
-                    ctx,
-                    repo,
-                    infinitepush_params,
-                    pushrebase_params,
-                    bookmark_attrs,
-                )
-                .await
-                .context("Failed to create scratch bookmark")?;
-            } else {
-                let old_target = bookmark_push.old.ok_or_else(|| {
-                    anyhow!(
-                        "Unknown bookmark: {}. Use --create to create one.",
-                        bookmark_push.name
-                    )
-                })?;
-                bookmarks_movement::UpdateBookmarkOp::new(
-                    &bookmark_push.name,
-                    BookmarkUpdateTargets {
-                        old: old_target,
-                        new: bookmark_push.new,
-                    },
-                    if bookmark_push.force {
-                        BookmarkUpdatePolicy::AnyPermittedByConfig
-                    } else {
-                        BookmarkUpdatePolicy::FastForwardOnly
-                    },
-                    BookmarkUpdateReason::Push,
-                )
-                .only_if_scratch()
-                .with_bundle_replay_data(bundle_replay_data)
-                .run(
-                    ctx,
-                    repo,
-                    lca_hint,
-                    infinitepush_params,
-                    pushrebase_params,
-                    bookmark_attrs,
-                )
-                .await
-                .context(if bookmark_push.force {
-                    "Failed to move scratch bookmark"
-                } else {
-                    "Failed to fast-forward scratch bookmark (try --force?)"
-                })?;
-            }
+
+            infinitepush_scratch_bookmark(
+                ctx,
+                repo,
+                lca_hint,
+                infinitepush_params,
+                pushrebase_params,
+                bookmark_attrs,
+                &bookmark_push,
+                bundle_replay_data,
+            )
+            .await?;
 
             Some(bookmark_push.name)
         }
@@ -533,75 +434,23 @@ async fn run_bookmark_only_pushrebase(
         .as_ref()
         .map(|data| data as &dyn BundleReplay);
 
-    match (bookmark_push.old, bookmark_push.new) {
-        (None, Some(new_target)) => {
-            bookmarks_movement::CreateBookmarkOp::new(
-                &bookmark_push.name,
-                new_target,
-                BookmarkUpdateReason::Pushrebase,
-            )
-            .only_if_public()
-            .with_bundle_replay_data(bundle_replay_data)
-            .run(
-                ctx,
-                repo,
-                infinitepush_params,
-                pushrebase_params,
-                bookmark_attrs,
-            )
-            .await
-            .context("Failed to create bookmark")?;
-        }
+    // This is a bookmark-only push, so there are no new changesets.
+    let new_changesets = HashMap::new();
 
-        (Some(old_target), Some(new_target)) => {
-            bookmarks_movement::UpdateBookmarkOp::new(
-                &bookmark_push.name,
-                BookmarkUpdateTargets {
-                    old: old_target,
-                    new: new_target,
-                },
-                if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
-                    BookmarkUpdatePolicy::AnyPermittedByConfig
-                } else {
-                    BookmarkUpdatePolicy::FastForwardOnly
-                },
-                BookmarkUpdateReason::Pushrebase,
-            )
-            .only_if_public()
-            .with_bundle_replay_data(bundle_replay_data)
-            .run(
-                ctx,
-                repo,
-                lca_hint,
-                infinitepush_params,
-                pushrebase_params,
-                bookmark_attrs,
-            )
-            .await
-            .context(
-                if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
-                    "Failed to move bookmark"
-                } else {
-                    "Failed to fast-forward bookmark (try --force?)"
-                },
-            )?;
-        }
-
-        (Some(old_target), None) => {
-            bookmarks_movement::DeleteBookmarkOp::new(
-                &bookmark_push.name,
-                old_target,
-                BookmarkUpdateReason::Pushrebase,
-            )
-            .only_if_public()
-            .with_bundle_replay_data(bundle_replay_data)
-            .run(ctx, repo, infinitepush_params, bookmark_attrs)
-            .await
-            .context("Failed to delete bookmark")?;
-        }
-
-        (None, None) => {}
-    }
+    plain_push_bookmark(
+        ctx,
+        repo,
+        lca_hint,
+        infinitepush_params,
+        pushrebase_params,
+        bookmark_attrs,
+        &bookmark_push,
+        new_changesets,
+        non_fast_forward_policy,
+        BookmarkUpdateReason::Pushrebase,
+        bundle_replay_data,
+    )
+    .await?;
 
     Ok(UnbundleBookmarkOnlyPushRebaseResponse {
         bookmark_push_part_id: part_id,
@@ -670,52 +519,20 @@ async fn force_pushrebase(
         .as_ref()
         .map(|data| data as &dyn BundleReplay);
 
-    match bookmark_push.old {
-        None => {
-            bookmarks_movement::CreateBookmarkOp::new(
-                &bookmark_push.name,
-                new_target,
-                BookmarkUpdateReason::Pushrebase,
-            )
-            .only_if_public()
-            .with_new_changesets(new_changesets)
-            .with_bundle_replay_data(bundle_replay_data)
-            .run(
-                ctx,
-                repo,
-                infinitepush_params,
-                pushrebase_params,
-                bookmark_attrs,
-            )
-            .await
-            .context("Failed to create bookmark")?;
-        }
-
-        Some(old_target) => {
-            bookmarks_movement::UpdateBookmarkOp::new(
-                &bookmark_push.name,
-                BookmarkUpdateTargets {
-                    old: old_target,
-                    new: new_target,
-                },
-                BookmarkUpdatePolicy::AnyPermittedByConfig,
-                BookmarkUpdateReason::Pushrebase,
-            )
-            .only_if_public()
-            .with_new_changesets(new_changesets)
-            .with_bundle_replay_data(bundle_replay_data)
-            .run(
-                ctx,
-                repo,
-                lca_hint,
-                infinitepush_params,
-                pushrebase_params,
-                bookmark_attrs,
-            )
-            .await
-            .context("Failed to move bookmark")?;
-        }
-    }
+    plain_push_bookmark(
+        ctx,
+        repo,
+        lca_hint,
+        infinitepush_params,
+        pushrebase_params,
+        bookmark_attrs,
+        &bookmark_push,
+        new_changesets,
+        NonFastForwardPolicy::Allowed,
+        BookmarkUpdateReason::Pushrebase,
+        bundle_replay_data,
+    )
+    .await?;
 
     log_commits_to_scribe(
         ctx,
@@ -729,6 +546,153 @@ async fn force_pushrebase(
     // Note that this push did not do any actual rebases, so we do not
     // need to provide any actual mapping, an empty Vec will do
     Ok((new_target, Vec::new()))
+}
+
+async fn plain_push_bookmark(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    infinitepush_params: &InfinitepushParams,
+    pushrebase_params: &PushrebaseParams,
+    bookmark_attrs: &BookmarkAttrs,
+    bookmark_push: &PlainBookmarkPush<ChangesetId>,
+    new_changesets: HashMap<ChangesetId, BonsaiChangeset>,
+    non_fast_forward_policy: NonFastForwardPolicy,
+    reason: BookmarkUpdateReason,
+    bundle_replay_data: Option<&dyn BundleReplay>,
+) -> Result<()> {
+    match (bookmark_push.old, bookmark_push.new) {
+        (None, Some(new_target)) => {
+            bookmarks_movement::CreateBookmarkOp::new(&bookmark_push.name, new_target, reason)
+                .only_if_public()
+                .with_new_changesets(new_changesets)
+                .with_bundle_replay_data(bundle_replay_data)
+                .run(
+                    ctx,
+                    repo,
+                    infinitepush_params,
+                    pushrebase_params,
+                    bookmark_attrs,
+                )
+                .await
+                .context("Failed to create bookmark")?;
+        }
+
+        (Some(old_target), Some(new_target)) => {
+            bookmarks_movement::UpdateBookmarkOp::new(
+                &bookmark_push.name,
+                BookmarkUpdateTargets {
+                    old: old_target,
+                    new: new_target,
+                },
+                if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
+                    BookmarkUpdatePolicy::AnyPermittedByConfig
+                } else {
+                    BookmarkUpdatePolicy::FastForwardOnly
+                },
+                reason,
+            )
+            .only_if_public()
+            .with_new_changesets(new_changesets)
+            .with_bundle_replay_data(bundle_replay_data)
+            .run(
+                ctx,
+                repo,
+                lca_hint,
+                infinitepush_params,
+                pushrebase_params,
+                bookmark_attrs,
+            )
+            .await
+            .context(
+                if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
+                    "Failed to move bookmark"
+                } else {
+                    "Failed to fast-forward bookmark (try --force?)"
+                },
+            )?;
+        }
+
+        (Some(old_target), None) => {
+            bookmarks_movement::DeleteBookmarkOp::new(&bookmark_push.name, old_target, reason)
+                .only_if_public()
+                .with_bundle_replay_data(bundle_replay_data)
+                .run(ctx, repo, infinitepush_params, bookmark_attrs)
+                .await
+                .context("Failed to delete bookmark")?;
+        }
+
+        (None, None) => {}
+    }
+    Ok(())
+}
+
+async fn infinitepush_scratch_bookmark(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    infinitepush_params: &InfinitepushParams,
+    pushrebase_params: &PushrebaseParams,
+    bookmark_attrs: &BookmarkAttrs,
+    bookmark_push: &InfiniteBookmarkPush<ChangesetId>,
+    bundle_replay_data: Option<&dyn BundleReplay>,
+) -> Result<()> {
+    if bookmark_push.old.is_none() && bookmark_push.create {
+        bookmarks_movement::CreateBookmarkOp::new(
+            &bookmark_push.name,
+            bookmark_push.new,
+            BookmarkUpdateReason::Push,
+        )
+        .only_if_scratch()
+        .with_bundle_replay_data(bundle_replay_data)
+        .run(
+            ctx,
+            repo,
+            infinitepush_params,
+            pushrebase_params,
+            bookmark_attrs,
+        )
+        .await
+        .context("Failed to create scratch bookmark")?;
+    } else {
+        let old_target = bookmark_push.old.ok_or_else(|| {
+            anyhow!(
+                "Unknown bookmark: {}. Use --create to create one.",
+                bookmark_push.name
+            )
+        })?;
+        bookmarks_movement::UpdateBookmarkOp::new(
+            &bookmark_push.name,
+            BookmarkUpdateTargets {
+                old: old_target,
+                new: bookmark_push.new,
+            },
+            if bookmark_push.force {
+                BookmarkUpdatePolicy::AnyPermittedByConfig
+            } else {
+                BookmarkUpdatePolicy::FastForwardOnly
+            },
+            BookmarkUpdateReason::Push,
+        )
+        .only_if_scratch()
+        .with_bundle_replay_data(bundle_replay_data)
+        .run(
+            ctx,
+            repo,
+            lca_hint,
+            infinitepush_params,
+            pushrebase_params,
+            bookmark_attrs,
+        )
+        .await
+        .context(if bookmark_push.force {
+            "Failed to move scratch bookmark"
+        } else {
+            "Failed to fast-forward scratch bookmark (try --force?)"
+        })?;
+    }
+
+    Ok(())
 }
 
 async fn log_commits_to_scribe(
