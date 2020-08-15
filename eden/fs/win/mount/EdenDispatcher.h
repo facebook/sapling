@@ -10,13 +10,13 @@
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h>
+#include <folly/Synchronized.h>
+#include <folly/container/F14Map.h>
 #include <cstdint>
 #include <cstring>
-#include <map>
 #include <string>
 #include "eden/fs/win/mount/Enumerator.h"
 #include "eden/fs/win/utils/Guid.h"
-#include "folly/Synchronized.h"
 
 constexpr uint32_t kDispatcherCode = 0x1155aaff;
 
@@ -72,12 +72,8 @@ class EdenDispatcher {
   // The EdenMount that owns this EdenDispatcher.
   EdenMount* const mount_;
 
-  //
-  //  This will have a list of currently active enumeration sessions
-  //
-  // TODO: add the hash function and convert it to unordered_map (may be).
-  folly::Synchronized<std::map<GUID, std::unique_ptr<Enumerator>, CompareGuid>>
-      enumSessions_;
+  // Set of currently active directory enumerations.
+  folly::Synchronized<folly::F14FastMap<Guid, Enumerator>> enumSessions_;
 
   const std::string dotEdenConfig_;
 

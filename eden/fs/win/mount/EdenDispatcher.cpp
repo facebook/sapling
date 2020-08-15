@@ -88,8 +88,8 @@ HRESULT EdenDispatcher::startEnumeration(
                     })
                     .get();
 
-    auto [iterator, inserted] = enumSessions_.wlock()->emplace(
-        enumerationId, make_unique<Enumerator>(guid, std::move(list)));
+    auto [iterator, inserted] =
+        enumSessions_.wlock()->emplace(guid, std::move(list));
     DCHECK(inserted);
     return S_OK;
   } catch (const std::exception& ex) {
@@ -99,10 +99,10 @@ HRESULT EdenDispatcher::startEnumeration(
 
 HRESULT EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
   try {
-    FB_LOGF(
-        mount_->getStraceLogger(), DBG7, "releasedir({})", Guid(enumerationId));
+    auto guid = Guid(enumerationId);
+    FB_LOGF(mount_->getStraceLogger(), DBG7, "releasedir({})", guid);
 
-    auto erasedCount = enumSessions_.wlock()->erase(enumerationId);
+    auto erasedCount = enumSessions_.wlock()->erase(guid);
     DCHECK(erasedCount == 1);
     return S_OK;
   } catch (const std::exception& ex) {
@@ -126,9 +126,6 @@ HRESULT EdenDispatcher::getEnumerationData(
             ? "<nullptr>"
             : wideToMultibyteString<std::string>(searchExpression));
 
-    //
-    // Error if we don't have the session.
-    //
     auto lockedSessions = enumSessions_.rlock();
     auto sessionIterator = lockedSessions->find(guid);
     if (sessionIterator == lockedSessions->end()) {
@@ -139,26 +136,30 @@ HRESULT EdenDispatcher::getEnumerationData(
 
     auto shouldRestart =
         bool(callbackData.Flags & PRJ_CB_DATA_FLAG_ENUM_RESTART_SCAN);
-    auto& session = sessionIterator->second;
 
-    if (session->isSearchExpressionEmpty() || shouldRestart) {
+    // We won't ever get concurrent callbacks for a given enumeration, it is
+    // therefore safe to modify the session here even though we do not hold an
+    // exclusive lock to it.
+    auto& session = const_cast<Enumerator&>(sessionIterator->second);
+
+    if (session.isSearchExpressionEmpty() || shouldRestart) {
       if (searchExpression != nullptr) {
-        session->saveExpression(searchExpression);
+        session.saveExpression(searchExpression);
       } else {
-        session->saveExpression(L"*");
+        session.saveExpression(L"*");
       }
     }
 
     if (shouldRestart) {
-      session->restart();
+      session.restart();
     }
 
     //
     // Traverse the list enumeration list and fill the remaining entry. Start
     // from where the last call left off.
     //
-    for (const FileMetadata* entry; (entry = session->current());
-         session->advance()) {
+    for (const FileMetadata* entry; (entry = session.current());
+         session.advance()) {
       auto fileInfo = PRJ_FILE_BASIC_INFO();
 
       fileInfo.IsDirectory = entry->isDirectory;

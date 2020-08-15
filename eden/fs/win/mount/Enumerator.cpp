@@ -13,9 +13,7 @@
 namespace facebook {
 namespace eden {
 
-Enumerator::Enumerator(
-    const GUID& enumerationId,
-    std::vector<FileMetadata> entryList)
+Enumerator::Enumerator(std::vector<FileMetadata>&& entryList)
     : metadataList_(std::move(entryList)) {
   std::sort(
       metadataList_.begin(),

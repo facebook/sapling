@@ -78,14 +78,18 @@ class Guid {
   GUID guid_;
 };
 
-struct CompareGuid {
-  bool operator()(const GUID& left, const GUID& right) const noexcept {
-    return memcmp(&left, &right, sizeof(right)) < 0;
-  }
-};
-
 } // namespace eden
 } // namespace facebook
+
+namespace std {
+template <>
+struct hash<facebook::eden::Guid> {
+  size_t operator()(const facebook::eden::Guid& guid) const {
+    return folly::hash::SpookyHashV2::Hash64(
+        reinterpret_cast<const void*>(&guid), sizeof(guid), 0);
+  }
+};
+} // namespace std
 
 namespace fmt {
 template <>

@@ -31,29 +31,10 @@ struct FileMetadata {
   //
   size_t size{0};
 
-  //
-  // This is the hash we use to fetch Tree and Blob. When working
-  // with mercurial it is hg proxy hash.
-  //
-  Hash hash{};
-
-  FileMetadata(std::wstring name, bool isDir, size_t size)
+  FileMetadata(std::wstring&& name, bool isDir, size_t size)
       : name(std::move(name)), isDirectory(isDir), size(size) {}
 
-  FileMetadata(std::wstring name, bool isDir, size_t size, const Hash& hash)
-      : name(std::move(name)), isDirectory(isDir), size(size), hash{hash} {}
-
-  FileMetadata() = default;
-
-  bool operator==(const FileMetadata& other) const {
-    return (
-        (name == other.name) && (isDirectory == other.isDirectory) &&
-        (size == other.size) && (hash == other.hash));
-  }
-
-  bool operator!=(const FileMetadata& other) const {
-    return !(*this == other);
-  }
+  FileMetadata() = delete;
 };
 
 class Enumerator {
@@ -61,7 +42,12 @@ class Enumerator {
   Enumerator(const Enumerator&) = delete;
   Enumerator& operator=(const Enumerator&) = delete;
 
-  Enumerator(const GUID& enumerationId, std::vector<FileMetadata> entryList);
+  Enumerator(std::vector<FileMetadata>&& entryList);
+
+  Enumerator(Enumerator&& other)
+      : metadataList_(std::move(other.metadataList_)),
+        searchExpression_(std::move(other.searchExpression_)),
+        listIndex_(std::move(other.listIndex_)) {}
 
   explicit Enumerator() = delete;
 

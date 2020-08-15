@@ -1885,13 +1885,14 @@ folly::Future<std::vector<FileMetadata>> TreeInode::readdir() {
                   ->getObjectStore()
                   ->getBlobSize(
                       hash.value(), ObjectFetchContext::getNullContext())
-                  .thenValue([winName = std::move(winName)](uint64_t size) {
-                    return FileMetadata(winName, false, size);
-                  }));
+                  .thenValue(
+                      [winName = std::move(winName)](uint64_t size) mutable {
+                        return FileMetadata(std::move(winName), false, size);
+                      }));
           continue;
         }
       }
-      futures.emplace_back(FileMetadata(winName, isDir, 0));
+      futures.emplace_back(FileMetadata(std::move(winName), isDir, 0));
     }
 
     // We can release the content lock here.
