@@ -48,21 +48,21 @@ py_class!(class revlogindex |py| {
     /// Calculate `heads(ancestors(revs))`.
     def headsancestors(&self, revs: Vec<u32>) -> PyResult<Vec<u32>> {
         let revlog = self.index(py).borrow();
-        Ok(revlog.headsancestors(revs))
+        Ok(revlog.headsancestors(revs).map_pyerr(py)?)
     }
 
     /// Given public and draft head revision numbers, calculate the "phase sets".
     /// Return (publicset, draftset).
     def phasesets(&self, publicheads: Vec<u32>, draftheads: Vec<u32>) -> PyResult<(Spans, Spans)> {
         let revlog = self.index(py).borrow();
-        let (public_set, draft_set) = revlog.phasesets(publicheads, draftheads);
+        let (public_set, draft_set) = revlog.phasesets(publicheads, draftheads).map_pyerr(py)?;
         Ok((Spans(public_set), Spans(draft_set)))
     }
 
     /// Get parent revisions.
     def parentrevs(&self, rev: u32) -> PyResult<Vec<u32>> {
         let revlog = self.index(py).borrow();
-        Ok(revlog.parent_revs(rev).as_revs().to_vec())
+        Ok(revlog.parent_revs(rev).map_pyerr(py)?.as_revs().to_vec())
     }
 
     /// Insert a new revision that hasn't been written to disk.

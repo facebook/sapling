@@ -7,6 +7,7 @@
 
 use crate::errors::corruption;
 use crate::errors::unsupported;
+use crate::errors::CorruptionError;
 use crate::nodemap;
 use crate::Error;
 use crate::NodeRevMap;
@@ -55,9 +56,9 @@ use util::path::remove_file;
 
 impl RevlogIndex {
     /// Calculate `heads(ancestors(revs))`.
-    pub fn headsancestors(&self, revs: Vec<u32>) -> Vec<u32> {
+    pub fn headsancestors(&self, revs: Vec<u32>) -> dag::Result<Vec<u32>> {
         if revs.is_empty() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
 
         #[repr(u8)]
@@ -85,7 +86,7 @@ impl RevlogIndex {
                     if state == State::PotentialHead {
                         result.push(rev as u32);
                     }
-                    for &parent_rev in self.parent_revs(rev as u32).as_revs() {
+                    for &parent_rev in self.parent_revs(rev as u32)?.as_revs() {
                         if parent_rev >= min_rev {
                             states[(parent_rev - min_rev) as usize] = State::NotHead;
                         }
@@ -93,14 +94,18 @@ impl RevlogIndex {
                 }
             }
         }
-        result
+        Ok(result)
     }
 
     /// Given public and draft head revision numbers, calculate the "phase sets".
     /// Return (publicset, draftset).
     ///
     /// (only used when narrow-heads is disabled).
-    pub fn phasesets(&self, publicheads: Vec<u32>, draftheads: Vec<u32>) -> (IdSet, IdSet) {
+    pub fn phasesets(
+        &self,
+        publicheads: Vec<u32>,
+        draftheads: Vec<u32>,
+    ) -> dag::Result<(IdSet, IdSet)> {
         let mut draft_set = IdSet::empty();
         let mut public_set = IdSet::empty();
 
@@ -140,12 +145,12 @@ impl RevlogIndex {
                 // with the new "dag" abstraction.
                 Phase::Unspecified => (),
             }
-            for &parent_rev in self.parent_revs(rev as u32).as_revs() {
+            for &parent_rev in self.parent_revs(rev as u32)?.as_revs() {
                 // Propagate phases from this rev to its parents.
                 phases[parent_rev as usize] = phases[parent_rev as usize].max(phase);
             }
         }
-        (public_set, draft_set)
+        Ok((public_set, draft_set))
     }
 
     /// GCA based on linear scan.
@@ -173,12 +178,12 @@ impl RevlogIndex {
     /// [2]: https://www.mercurial-scm.org/repo/hg/rev/5bae936764bb
     /// [3]: https://www.mercurial-scm.org/repo/hg/rev/b1db258e875c
     /// [4]: https://www.mercurial-scm.org/repo/hg/rev/4add43865a9b
-    pub fn gca_revs(&self, revs: &[u32], limit: usize) -> Vec<u32> {
+    pub fn gca_revs(&self, revs: &[u32], limit: usize) -> dag::Result<Vec<u32>> {
         type BitMask = u8;
         let revcount = revs.len();
         assert!(revcount < 7);
         if revcount == 0 {
-            return Vec::new();
+            return Ok(Vec::new());
         }
 
         let allseen: BitMask = (1 << revcount) - 1;
@@ -205,7 +210,7 @@ impl RevlogIndex {
                 if sv == allseen {
                     gca.push(v);
                     if gca.len() >= limit {
-                        return gca;
+                        return Ok(gca);
                     }
                     sv |= poison;
                     if revs.iter().any(|&r| r == v) {
@@ -213,7 +218,7 @@ impl RevlogIndex {
                     }
                 }
             }
-            for &p in self.parent_revs(v).as_revs() {
+            for &p in self.parent_revs(v)?.as_revs() {
                 let sp = seen[p as usize];
                 if sv < poison {
                     if sp == 0 {
@@ -231,7 +236,7 @@ impl RevlogIndex {
             }
         }
 
-        gca
+        Ok(gca)
     }
 
     /// Range based on linear scan.
@@ -259,9 +264,9 @@ impl RevlogIndex {
     /// [3]: https://www.mercurial-scm.org/repo/hg/rev/518da3c3b6ce
     /// [4]: https://www.mercurial-scm.org/repo/hg/rev/b68c9d232db6
     /// [5]: https://www.mercurial-scm.org/repo/hg/rev/b3ad349d0e50
-    pub fn range_revs(&self, roots: &[u32], heads: &[u32]) -> Vec<u32> {
+    pub fn range_revs(&self, roots: &[u32], heads: &[u32]) -> dag::Result<Vec<u32>> {
         if roots.is_empty() || heads.is_empty() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
         let min_root = *roots.iter().min().unwrap();
         let max_head = *heads.iter().max().unwrap();
@@ -296,7 +301,7 @@ impl RevlogIndex {
             }
 
             // Add its parents to the list of nodes to visit
-            for &p in self.parent_revs(rev).as_revs() {
+            for &p in self.parent_revs(rev)?.as_revs() {
                 if p >= min_root && revstates[(p - min_root) as usize] & RS_SEEN == 0 {
                     tovisit.push_back(p);
                     revstates[(p - min_root) as usize] |= RS_SEEN;
@@ -305,7 +310,7 @@ impl RevlogIndex {
         }
 
         if reachable.is_empty() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
 
         // Find all the nodes in between the roots we found and the heads
@@ -315,7 +320,7 @@ impl RevlogIndex {
                 continue;
             }
             if self
-                .parent_revs(rev)
+                .parent_revs(rev)?
                 .as_revs()
                 .iter()
                 .any(|&p| p >= min_root && revstates[(p - min_root) as usize] & RS_REACHABLE != 0)
@@ -326,7 +331,7 @@ impl RevlogIndex {
             }
         }
 
-        reachable
+        Ok(reachable)
     }
 
     /// Whether "general delta" is enabled for this revlog.
@@ -512,16 +517,19 @@ impl RevlogIndex {
     }
 
     /// Get parent revisions.
-    pub fn parent_revs(&self, rev: u32) -> ParentRevs {
+    pub fn parent_revs(&self, rev: u32) -> dag::Result<ParentRevs> {
         let data_len = self.data_len();
         if rev >= data_len as u32 {
-            return self.pending_parents[rev as usize - data_len].clone();
+            return match self.pending_parents.get(rev as usize - data_len) {
+                Some(revs) => Ok(revs.clone()),
+                None => Id(rev as _).not_found(),
+            };
         }
 
         let data = self.data();
         let p1 = i32::from_be(data[rev as usize].p1);
         let p2 = i32::from_be(data[rev as usize].p2);
-        ParentRevs::from_p1p2(p1, p2)
+        Ok(ParentRevs::from_p1p2(p1, p2))
     }
 
     /// Get raw content from a revision.
@@ -599,7 +607,7 @@ impl RevlogIndex {
         self.pending_raw_data.push(raw_data);
     }
 
-    fn pending_parent_map(&self) -> HashMap<Vec<u8>, Vec<Vec<u8>>> {
+    fn pending_parent_map(&self) -> dag::Result<HashMap<Vec<u8>, Vec<Vec<u8>>>> {
         let mut result = HashMap::new();
         for i in 0..self.pending_nodes.len() {
             let parent_revs = &self.pending_parents[i];
@@ -612,14 +620,16 @@ impl RevlogIndex {
             let node = self.vertex_name(Id(rev as _)).unwrap();
             result.insert(node.as_ref().to_vec(), parent_nodes);
         }
-        result
+        Ok(result)
     }
 
     /// Write pending commits to disk.
     pub fn flush(&mut self) -> Result<()> {
         // Convert parent revs to parent nodes. This is because revs are
         // easy to get wrong: ex. some nodes already exist in updated revlog.
-        let parent_map = self.pending_parent_map();
+        let parent_map = self.pending_parent_map().map_err(|e| {
+            CorruptionError::Generic(format!("cannot calculate pending graph: {}", e))
+        })?;
 
         let _lock = ScopedDirLock::new(
             self.index_path
@@ -965,7 +975,7 @@ impl DagAlgorithm for RevlogIndex {
     /// Get ordered parent vertexes.
     fn parent_names(&self, name: Vertex) -> dag::Result<Vec<Vertex>> {
         let rev = self.vertex_id(name)?.0 as u32;
-        let parent_revs = self.parent_revs(rev);
+        let parent_revs = self.parent_revs(rev)?;
         let parent_revs = parent_revs.as_revs();
         let mut result = Vec::with_capacity(parent_revs.len());
         for &rev in parent_revs {
@@ -1005,18 +1015,23 @@ impl DagAlgorithm for RevlogIndex {
             included.set(id.0 as usize, true);
         }
 
-        let iter = (0..=max_rev)
-            .rev()
-            .filter(move |&rev| {
-                let should_include = included[rev as usize];
-                if should_include {
-                    for &p in dag.parent_revs(rev).as_revs() {
-                        included.set(p as usize, true);
-                    }
+        let iter = (0..=max_rev).rev().filter_map(move |rev| {
+            let should_include = included[rev as usize];
+            if should_include {
+                let parent_revs = match dag.parent_revs(rev) {
+                    Ok(revs) => revs,
+                    Err(e) => return Some(Err(e)),
+                };
+                for &p in parent_revs.as_revs() {
+                    included.set(p as usize, true);
                 }
-                should_include
-            })
-            .map(|rev| Ok(Id(rev as _)));
+            }
+            if should_include {
+                Some(Ok(Id(rev as _)))
+            } else {
+                None
+            }
+        });
 
         let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
         let set = Set::from_iter_idmap(iter, map);
@@ -1039,16 +1054,17 @@ impl DagAlgorithm for RevlogIndex {
         let dag = self.get_snapshot();
         let min_parent = id_set.iter().fold(max_id.0 as u32, |min, id| {
             let rev = id.0 as u32;
-            dag.parent_revs(rev)
-                .as_revs()
-                .iter()
-                .fold(min, |min, &p| p.min(min))
+            if let Ok(parent_revs) = dag.parent_revs(rev) {
+                parent_revs.as_revs().iter().fold(min, |min, &p| p.min(min))
+            } else {
+                min
+            }
         }) as usize;
 
         let mut included = BitVec::from_elem(max_id.0 as usize - min_parent + 1, false);
         for id in id_set {
             let rev = id.0 as u32;
-            for &p in dag.parent_revs(rev).as_revs() {
+            for &p in dag.parent_revs(rev)?.as_revs() {
                 included.set(p as usize - min_parent, true);
             }
         }
@@ -1077,14 +1093,21 @@ impl DagAlgorithm for RevlogIndex {
         let min_id = id_set.min().unwrap();
         let dag = self.get_snapshot();
         // Children: scan to the highest Id. Check parents.
-        let iter = ((min_id.0 as u32)..(dag.len() as u32))
-            .filter(move |&rev| {
-                dag.parent_revs(rev)
-                    .as_revs()
-                    .iter()
-                    .any(|&p| id_set.contains(Id(p as _)))
-            })
-            .map(|rev| Ok(Id(rev as _)));
+        let iter = ((min_id.0 as u32)..(dag.len() as u32)).filter_map(move |rev| {
+            let parent_revs = match dag.parent_revs(rev) {
+                Ok(revs) => revs,
+                Err(err) => return Some(Err(err)),
+            };
+            let should_include = parent_revs
+                .as_revs()
+                .iter()
+                .any(|&p| id_set.contains(Id(p as _)));
+            if should_include {
+                Some(Ok(Id(rev as _)))
+            } else {
+                None
+            }
+        });
 
         let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
         let set = Set::from_iter_idmap(iter, map);
@@ -1105,16 +1128,21 @@ impl DagAlgorithm for RevlogIndex {
         let max_id = id_set.max().unwrap();
         let dag = self.get_snapshot();
         // Roots: [x for x in set if (parents(x) & set) is empty]
-        let iter = id_set
-            .clone()
-            .into_iter()
-            .filter(move |i| {
-                dag.parent_revs(i.0 as _)
-                    .as_revs()
-                    .iter()
-                    .all(|&p| !id_set.contains(Id(p as _)))
-            })
-            .map(Ok);
+        let iter = id_set.clone().into_iter().filter_map(move |i| {
+            let parent_revs = match dag.parent_revs(i.0 as _) {
+                Ok(revs) => revs,
+                Err(err) => return Some(Err(err)),
+            };
+            let should_include = parent_revs
+                .as_revs()
+                .iter()
+                .all(|&p| !id_set.contains(Id(p as _)));
+            if should_include {
+                Some(Ok(i))
+            } else {
+                None
+            }
+        });
         let set = Set::from_iter_idmap(iter, self.get_snapshot());
         set.hints()
             .add_flags(Flags::ID_DESC | Flags::TOPO_DESC)
@@ -1136,7 +1164,7 @@ impl DagAlgorithm for RevlogIndex {
             let mut new_revs = Vec::new();
             // gca_revs takes at most 6 revs at one.
             for revs in revs.chunks(6) {
-                let gcas = self.gca_revs(revs, 1);
+                let gcas = self.gca_revs(revs, 1)?;
                 if gcas.is_empty() {
                     return Ok(None);
                 } else {
@@ -1168,7 +1196,7 @@ impl DagAlgorithm for RevlogIndex {
             .into());
         }
         let revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
-        let gcas = self.gca_revs(&revs, usize::max_value());
+        let gcas = self.gca_revs(&revs, usize::max_value())?;
         let spans = IdSet::from_spans(gcas.into_iter().map(|r| Id(r as _)));
         let result = Set::from_spans_idmap(spans, self.get_snapshot());
         result.hints().set_dag(self);
@@ -1182,7 +1210,7 @@ impl DagAlgorithm for RevlogIndex {
         if ancestor_rev == descendant_rev {
             return Ok(true);
         }
-        Ok(self.gca_revs(&[ancestor_rev, descendant_rev], 1).get(0) == Some(&ancestor_rev))
+        Ok(self.gca_revs(&[ancestor_rev, descendant_rev], 1)?.get(0) == Some(&ancestor_rev))
     }
 
     /// Calculates "heads" of the ancestors of the given set. That is,
@@ -1228,7 +1256,7 @@ impl DagAlgorithm for RevlogIndex {
                     if state == State::PotentialHead {
                         result_id_set.push(Id(rev as _));
                     }
-                    for &parent_rev in self.parent_revs(rev as u32).as_revs() {
+                    for &parent_rev in self.parent_revs(rev as u32)?.as_revs() {
                         if parent_rev as usize >= min_rev {
                             states[parent_rev as usize - min_rev] = State::NotHead;
                         }
@@ -1256,7 +1284,7 @@ impl DagAlgorithm for RevlogIndex {
         let head_ids = self.to_id_set(&heads)?;
         let root_revs: Vec<u32> = root_ids.into_iter().map(|i| i.0 as u32).collect();
         let head_revs: Vec<u32> = head_ids.into_iter().map(|i| i.0 as u32).collect();
-        let result_revs = self.range_revs(&root_revs, &head_revs);
+        let result_revs = self.range_revs(&root_revs, &head_revs)?;
         let result_id_set = IdSet::from_spans(result_revs.into_iter().map(|r| Id(r as _)));
         let result = Set::from_spans_idmap(result_id_set, self.get_snapshot());
         result.hints().set_dag(self);
@@ -1305,14 +1333,14 @@ impl DagAlgorithm for RevlogIndex {
             let is_unreachable = bits[rev * 2 + 1];
             if is_unreachable {
                 // Update unreachable's parents to unreachable.
-                for p in self.parent_revs(rev as u32).as_revs() {
+                for p in self.parent_revs(rev as u32)?.as_revs() {
                     bits.set((p * 2 + 1) as usize, true);
                 }
             } else if is_reachable {
                 // Push to result - only reachable from 'reachable'.
                 result.push(Id(rev as _));
                 // Parents might belong to the result set.
-                for p in self.parent_revs(rev as u32).as_revs() {
+                for p in self.parent_revs(rev as u32)?.as_revs() {
                     let i = (p * 2) as usize;
                     if !bits[i] && !bits[i + 1] {
                         bits.set(i, true);
@@ -1342,7 +1370,7 @@ impl DagAlgorithm for RevlogIndex {
         let unreachable_revs: Vec<u32> = unreachable_ids.into_iter().map(|i| i.0 as u32).collect();
         // This is a same problem to head-based public/draft phase calculation.
         let (result_unreachable_id_set, result_reachable_id_set) =
-            self.phasesets(unreachable_revs, reachable_revs);
+            self.phasesets(unreachable_revs, reachable_revs)?;
         let only = Set::from_spans_idmap(result_reachable_id_set, self.get_snapshot());
         let ancestors = Set::from_spans_idmap(result_unreachable_id_set, self.get_snapshot());
         ancestors.hints().add_flags(Flags::ANCESTORS).set_dag(self);
@@ -1365,20 +1393,24 @@ impl DagAlgorithm for RevlogIndex {
             included.set(id.0 as usize - min_id.0 as usize, true);
         }
 
-        let iter = (min_rev..(dag.len() as u32))
-            .filter(move |&rev| {
-                let should_include = included[(rev - min_rev) as usize]
-                    || dag
-                        .parent_revs(rev)
-                        .as_revs()
-                        .iter()
-                        .any(|&prev| prev >= min_rev && included[(prev - min_rev) as usize]);
-                if should_include {
-                    included.set((rev - min_rev) as usize, true);
-                }
-                should_include
-            })
-            .map(|rev| Ok(Id(rev as _)));
+        let iter = (min_rev..(dag.len() as u32)).filter_map(move |rev| {
+            let should_include = included[(rev - min_rev) as usize] || {
+                let parent_revs = match dag.parent_revs(rev) {
+                    Ok(revs) => revs,
+                    Err(err) => return Some(Err(err)),
+                };
+                parent_revs
+                    .as_revs()
+                    .iter()
+                    .any(|&prev| prev >= min_rev && included[(prev - min_rev) as usize])
+            };
+            if should_include {
+                included.set((rev - min_rev) as usize, true);
+                Some(Ok(Id(rev as _)))
+            } else {
+                None
+            }
+        });
 
         let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
         let set = Set::from_iter_idmap(iter, map);
@@ -1438,7 +1470,7 @@ impl DagAlgorithm for RevlogIndex {
                 result.push(Id(rev as _));
                 continue;
             }
-            let parent_revs = self.parent_revs(rev as _);
+            let parent_revs = self.parent_revs(rev as _)?;
             for parent_rev in parent_revs.as_revs() {
                 let parent_rev = *parent_rev as u64;
                 if parent_rev >= min_rev as _ && parent_rev <= max_rev as _ {
@@ -1578,9 +1610,9 @@ mod tests {
         let index = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
         // Read parents.
-        assert_eq!(index.parent_revs(0), ParentRevs([-1, -1]));
-        assert_eq!(index.parent_revs(1), ParentRevs([0, -1]));
-        assert_eq!(index.parent_revs(2), ParentRevs([1, -1]));
+        assert_eq!(index.parent_revs(0)?, ParentRevs([-1, -1]));
+        assert_eq!(index.parent_revs(1)?, ParentRevs([0, -1]));
+        assert_eq!(index.parent_revs(2)?, ParentRevs([1, -1]));
 
         // Read commit data.
         let read = |rev: u32| -> Result<String> {
@@ -1870,11 +1902,11 @@ commit 3"#
         let revlog3 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
         // Read parents.
-        assert_eq!(revlog3.parent_revs(0), ParentRevs([-1, -1]));
-        assert_eq!(revlog3.parent_revs(1), ParentRevs([0, -1]));
-        assert_eq!(revlog3.parent_revs(2), ParentRevs([-1, -1]));
-        assert_eq!(revlog3.parent_revs(3), ParentRevs([2, -1]));
-        assert_eq!(revlog3.parent_revs(4), ParentRevs([0, 2])); // 0: "commit 1"
+        assert_eq!(revlog3.parent_revs(0)?, ParentRevs([-1, -1]));
+        assert_eq!(revlog3.parent_revs(1)?, ParentRevs([0, -1]));
+        assert_eq!(revlog3.parent_revs(2)?, ParentRevs([-1, -1]));
+        assert_eq!(revlog3.parent_revs(3)?, ParentRevs([2, -1]));
+        assert_eq!(revlog3.parent_revs(4)?, ParentRevs([0, 2])); // 0: "commit 1"
 
         // Prefix lookup.
         assert_eq!(revlog3.vertexes_by_hex_prefix(b"0303", 2)?, vec![v(3)]);

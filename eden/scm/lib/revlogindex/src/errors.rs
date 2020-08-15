@@ -87,6 +87,12 @@ pub fn unsupported<T>(s: impl ToString) -> crate::Result<T> {
     Err(RevlogIndexError::Unsupported(s.to_string()))
 }
 
+impl From<CorruptionError> for RevlogIndexError {
+    fn from(err: CorruptionError) -> RevlogIndexError {
+        RevlogIndexError::Corruption(Box::new(err))
+    }
+}
+
 #[derive(Debug)]
 pub struct CommitNotFound(pub Vertex);
 
