@@ -427,8 +427,8 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
         Some(category) => {
             #[cfg(fbcode_build)]
             {
-                // // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
-                // // since logview is sampled anyway.
+                // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
+                // since logview is sampled anyway.
                 let logview_drain = ::slog_logview::LogViewDrain::new(fb, category).ignore_res();
                 let drain = slog::Duplicate::new(glog_drain, logview_drain);
                 Arc::new(drain.ignore_res())
