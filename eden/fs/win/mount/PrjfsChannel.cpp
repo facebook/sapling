@@ -116,13 +116,15 @@ PrjfsChannel::~PrjfsChannel() {
   }
 }
 
-void PrjfsChannel::start(bool readOnly, EdenDispatcher* dispatcher) {
+void PrjfsChannel::start(
+    bool readOnly,
+    EdenDispatcher* dispatcher,
+    bool useNegativePathCaching) {
   if (readOnly) {
     NOT_IMPLEMENTED();
   }
 
   auto callbacks = PRJ_CALLBACKS();
-  auto options = PRJ_STARTVIRTUALIZING_OPTIONS();
   callbacks.StartDirectoryEnumerationCallback = startEnumeration;
   callbacks.EndDirectoryEnumerationCallback = endEnumeration;
   callbacks.GetDirectoryEnumerationCallback = getEnumerationData;
@@ -140,10 +142,15 @@ void PrjfsChannel::start(bool readOnly, EdenDispatcher* dispatcher) {
        L""},
   };
 
-  PRJ_STARTVIRTUALIZING_OPTIONS startOpts = {};
+  auto startOpts = PRJ_STARTVIRTUALIZING_OPTIONS();
   startOpts.NotificationMappings = notificationMappings;
   startOpts.NotificationMappingsCount =
       folly::to_narrow(std::size(notificationMappings));
+
+  useNegativePathCaching_ = useNegativePathCaching;
+  if (useNegativePathCaching) {
+    startOpts.Flags = PRJ_FLAG_USE_NEGATIVE_PATH_CACHE;
+  }
 
   XLOG(INFO) << "Starting PrjfsChannel for: " << mountPath_;
   DCHECK(dispatcher->isValidDispatcher());
@@ -228,6 +235,21 @@ void PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
         "Can't add a placeholder for {}: {:x}",
         path,
         static_cast<uint32_t>(result));
+  }
+}
+
+void PrjfsChannel::flushNegativePathCache() {
+  if (useNegativePathCaching_) {
+    XLOG(DBG6) << "Flushing negative path cache";
+
+    uint32_t numFlushed = 0;
+    auto result = PrjClearNegativePathCache(mountChannel_, &numFlushed);
+    if (FAILED(result)) {
+      throwHResultErrorExplicit(
+          result, "Couldn't flush the negative path cache");
+    }
+
+    XLOGF(DBG6, "Flushed {} entries", numFlushed);
   }
 }
 

@@ -21,12 +21,17 @@ class FsChannel {
 
   FsChannel(){};
   virtual ~FsChannel() = default;
-  virtual void start(bool readOnly, EdenDispatcher* dispatcher) = 0;
+  virtual void start(
+      bool readOnly,
+      EdenDispatcher* dispatcher,
+      bool useNegativePathCaching) = 0;
   virtual void stop() = 0;
 
   virtual void removeCachedFile(RelativePathPiece path) = 0;
 
   virtual void addDirectoryPlaceholder(RelativePathPiece path) = 0;
+
+  virtual void flushNegativePathCache() = 0;
 
   struct StopData {};
   virtual folly::SemiFuture<FsChannel::StopData> getStopFuture() = 0;
@@ -34,4 +39,3 @@ class FsChannel {
 
 } // namespace eden
 } // namespace facebook
-//////////////////////////

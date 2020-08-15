@@ -404,6 +404,16 @@ class EdenConfig : private ConfigSettingManager {
 
   ConfigSetting<uint64_t> maxLogFileSize{"log:max-file-size", 50000000, this};
   ConfigSetting<uint64_t> maxRotatedLogFiles{"log:num-rotated-logs", 3, this};
+
+  /**
+   * Enable ProjectedFS's negative path caching to reduce the number of
+   * requests non existent files.
+   * Only applicable on Windows
+   */
+  ConfigSetting<bool> prjfsUseNegativePathCaching{
+      "prjfs:use-negative-path-caching",
+      true,
+      this};
 };
 } // namespace eden
 } // namespace facebook

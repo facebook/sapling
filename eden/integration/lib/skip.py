@@ -113,7 +113,6 @@ if sys.platform == "win32":
             "test_grep_directory_from_subdirectory",
         ],
         "hg.move_test.MoveTestTreeOnly": True,
-        "hg.negative_caching_test.NegativeCachingTestTreeOnly": True,
         "hg.post_clone_test.SymlinkTestTreeOnly": True,
         "hg.pull_test.PullTestTreeOnly": True,
         "hg.rebase_test.RebaseTestTreeOnly": [

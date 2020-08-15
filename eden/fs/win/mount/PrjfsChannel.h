@@ -28,7 +28,8 @@ class PrjfsChannel : public FsChannel {
 
   PrjfsChannel(EdenMount* mount);
   ~PrjfsChannel();
-  void start(bool readOnly, EdenDispatcher* dispatcher);
+  void
+  start(bool readOnly, EdenDispatcher* dispatcher, bool useNegativePathCaching);
   void stop();
 
   folly::SemiFuture<FsChannel::StopData> getStopFuture() override;
@@ -41,6 +42,8 @@ class PrjfsChannel : public FsChannel {
 
   void addDirectoryPlaceholder(RelativePathPiece path) override;
 
+  void flushNegativePathCache() override;
+
  private:
   //
   // Channel to talk to projectedFS.
@@ -50,6 +53,7 @@ class PrjfsChannel : public FsChannel {
   const AbsolutePath& mountPath_;
   Guid mountId_;
   bool isRunning_{false};
+  bool useNegativePathCaching_{true};
   folly::Promise<FsChannel::StopData> stopPromise_;
 };
 

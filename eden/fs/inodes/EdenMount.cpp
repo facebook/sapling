@@ -1210,7 +1210,12 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
         return folly::makeFutureWith(
                    [readOnly, this]() -> folly::Future<FsChannel*> {
                      auto channel = new PrjfsChannel(this);
-                     channel->start(readOnly, getDispatcher());
+                     channel->start(
+                         readOnly,
+                         getDispatcher(),
+                         serverState_->getReloadableConfig()
+                             .getEdenConfig()
+                             ->prjfsUseNegativePathCaching.getValue());
                      return channel;
                    })
             .thenTry([mountPromise, this](Try<FsChannel*>&& channel) {

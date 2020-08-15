@@ -74,6 +74,11 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
       return std::move(*conflicts_.wlock());
     });
   }
+#else
+  auto* channel = mount_->getFsChannel();
+  if (!isDryRun() && channel) {
+    channel->flushNegativePathCache();
+  }
 #endif
 
   // Release the parentsLock_.
