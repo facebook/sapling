@@ -554,7 +554,8 @@ impl RevlogIndex {
 
         let decompressed = match chunk.get(0) {
             None => chunk,
-            Some(b'u') | Some(b'\0') => {
+            Some(b'\0') => chunk,
+            Some(b'u') => {
                 chunk.drain(0..1);
                 chunk
             }
