@@ -11,13 +11,13 @@
 
 #include <ProjectedFSLib.h>
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/win/mount/EdenDispatcher.h"
 #include "eden/fs/win/mount/FsChannel.h"
 #include "eden/fs/win/utils/Guid.h"
 
 namespace facebook {
 namespace eden {
 class EdenMount;
+class EdenDispatcher;
 
 class PrjfsChannel : public FsChannel {
  public:
@@ -28,7 +28,7 @@ class PrjfsChannel : public FsChannel {
 
   PrjfsChannel(EdenMount* mount);
   ~PrjfsChannel();
-  void start(bool readOnly);
+  void start(bool readOnly, EdenDispatcher* dispatcher);
   void stop();
 
   folly::SemiFuture<FsChannel::StopData> getStopFuture() override;
@@ -52,21 +52,11 @@ class PrjfsChannel : public FsChannel {
  private:
   void deleteFile(RelativePathPiece path, PRJ_UPDATE_TYPES updateFlags);
 
-  /**
-   * getDispatcher() return the EdenDispatcher stored with in this object.
-   * This object should be same as returned by the getDispatcher() above but is
-   * fetched from a different location.
-   */
-  const EdenDispatcher* getDispatcher() const {
-    return &dispatcher_;
-  }
-
   //
   // Channel to talk to projectedFS.
   //
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 
-  EdenDispatcher dispatcher_;
   const AbsolutePath& mountPath_;
   Guid mountId_;
   bool isRunning_{false};

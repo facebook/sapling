@@ -68,15 +68,8 @@ std::string makeDotEdenConfig(EdenMount& mount) {
 constexpr uint32_t kMinChunkSize = 512 * 1024; // 512 KiB
 constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MiB
 
-EdenDispatcher::EdenDispatcher(EdenMount& mount)
-    : mount_{mount}, dotEdenConfig_{makeDotEdenConfig(mount)} {
-  XLOGF(
-      INFO,
-      "Creating Dispatcher mount (0x{:x}) root ({}) dispatcher (0x{:x})",
-      reinterpret_cast<uintptr_t>(&getMount()),
-      getMount().getPath(),
-      reinterpret_cast<uintptr_t>(this));
-}
+EdenDispatcher::EdenDispatcher(EdenMount* mount)
+    : mount_{mount}, dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
 HRESULT EdenDispatcher::startEnumeration(
     const PRJ_CALLBACK_DATA& callbackData,
@@ -86,10 +79,9 @@ HRESULT EdenDispatcher::startEnumeration(
     auto guid = Guid(enumerationId);
 
     FB_LOGF(
-        mount_.getStraceLogger(), DBG7, "opendir({}, guid={})", relPath, guid);
+        mount_->getStraceLogger(), DBG7, "opendir({}, guid={})", relPath, guid);
 
-    auto list = getMount()
-                    .getInode(relPath)
+    auto list = mount_->getInode(relPath)
                     .thenValue([](const InodePtr inode) {
                       auto treePtr = inode.asTreePtr();
                       return treePtr->readdir();
@@ -108,7 +100,7 @@ HRESULT EdenDispatcher::startEnumeration(
 HRESULT EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
   try {
     FB_LOGF(
-        mount_.getStraceLogger(), DBG7, "releasedir({})", Guid(enumerationId));
+        mount_->getStraceLogger(), DBG7, "releasedir({})", Guid(enumerationId));
 
     auto erasedCount = enumSessions_.wlock()->erase(enumerationId);
     DCHECK(erasedCount == 1);
@@ -126,7 +118,7 @@ HRESULT EdenDispatcher::getEnumerationData(
   try {
     auto guid = Guid(enumerationId);
     FB_LOGF(
-        mount_.getStraceLogger(),
+        mount_->getStraceLogger(),
         DBG7,
         "readdir({}, searchExpression={})",
         guid,
@@ -196,7 +188,7 @@ HRESULT
 EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
     auto relPath = RelativePath(callbackData.FilePathName);
-    FB_LOGF(mount_.getStraceLogger(), DBG7, "lookup({})", relPath);
+    FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({})", relPath);
 
     struct InodeMetadata {
       // To ensure that the OS has a record of the canonical file name, and not
@@ -207,8 +199,7 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
       bool isDir;
     };
 
-    return getMount()
-        .getInode(relPath)
+    return mount_->getInode(relPath)
         .thenValue(
             [](const InodePtr inode)
                 -> folly::Future<std::optional<InodeMetadata>> {
@@ -278,10 +269,9 @@ HRESULT
 EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
     auto relPath = RelativePath(callbackData.FilePathName);
-    FB_LOGF(mount_.getStraceLogger(), DBG7, "access({})", relPath);
+    FB_LOGF(mount_->getStraceLogger(), DBG7, "access({})", relPath);
 
-    return getMount()
-        .getInode(relPath)
+    return mount_->getInode(relPath)
         .thenValue([](const InodePtr) { return S_OK; })
         .thenError(
             folly::tag_t<std::system_error>{},
@@ -381,7 +371,7 @@ EdenDispatcher::getFileData(
   try {
     auto relPath = RelativePath(callbackData.FilePathName);
     FB_LOGF(
-        mount_.getStraceLogger(),
+        mount_->getStraceLogger(),
         DBG7,
         "read({}, off={}, len={})",
         relPath,
@@ -389,8 +379,7 @@ EdenDispatcher::getFileData(
         length);
 
     auto content =
-        getMount()
-            .getInode(relPath)
+        mount_->getInode(relPath)
             .thenValue([](const InodePtr inode) {
               auto fileInode = inode.asFilePtr();
               return fileInode->readAll(ObjectFetchContext::getNullContext());
@@ -730,7 +719,7 @@ HRESULT EdenDispatcher::notification(
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     } else {
       it->second(
-            getMount(),
+            *mount_,
             callbackData.FilePathName,
             destinationFileName,
             isDirectory)

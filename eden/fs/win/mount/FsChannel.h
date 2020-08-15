@@ -12,6 +12,8 @@
 namespace facebook {
 namespace eden {
 
+class EdenDispatcher;
+
 class FsChannel {
  public:
   FsChannel(const FsChannel&) = delete;
@@ -19,7 +21,7 @@ class FsChannel {
 
   FsChannel(){};
   virtual ~FsChannel() = default;
-  virtual void start(bool readOnly) = 0;
+  virtual void start(bool readOnly, EdenDispatcher* dispatcher) = 0;
   virtual void stop() = 0;
 
   virtual void removeCachedFile(RelativePathPiece path) = 0;

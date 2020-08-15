@@ -26,7 +26,7 @@ class EdenMount;
 
 class EdenDispatcher {
  public:
-  explicit EdenDispatcher(EdenMount& mount);
+  explicit EdenDispatcher(EdenMount* mount);
 
   HRESULT startEnumeration(
       const PRJ_CALLBACK_DATA& callbackData,
@@ -69,13 +69,8 @@ class EdenDispatcher {
   }
 
  private:
-  // Store a raw pointer to EdenMount. It doesn't own or maintain the lifetime
-  // of Mount. Instead, at this point, Eden dispatcher is owned by the
-  // mount.
-  EdenMount& mount_;
-  EdenMount& getMount() {
-    return mount_;
-  }
+  // The EdenMount that owns this EdenDispatcher.
+  EdenMount* const mount_;
 
   //
   //  This will have a list of currently active enumeration sessions

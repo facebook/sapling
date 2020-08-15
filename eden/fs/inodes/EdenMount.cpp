@@ -49,6 +49,7 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef _WIN32
+#include "eden/fs/win/mount/EdenDispatcher.h" // @manual
 #include "eden/fs/win/mount/PrjfsChannel.h" // @manual
 #else
 #include <folly/File.h>
@@ -198,9 +199,7 @@ EdenMount::EdenMount(
     : config_{std::move(config)},
       serverState_{std::move(serverState)},
       inodeMap_{new InodeMap(this)},
-#ifndef _WIN32
       dispatcher_{new EdenDispatcher(this)},
-#endif
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
@@ -661,6 +660,10 @@ InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
 
 FuseChannel* EdenMount::getFuseChannel() const {
   return channel_.get();
+}
+#else
+FsChannel* EdenMount::getFsChannel() const {
+  return fsChannel_.get();
 }
 #endif
 
@@ -1207,7 +1210,7 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
         return folly::makeFutureWith(
                    [readOnly, this]() -> folly::Future<FsChannel*> {
                      auto channel = new PrjfsChannel(this);
-                     channel->start(readOnly);
+                     channel->start(readOnly, getDispatcher());
                      return channel;
                    })
             .thenTry([mountPromise, this](Try<FsChannel*>&& channel) {

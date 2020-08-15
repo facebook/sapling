@@ -265,6 +265,12 @@ class EdenMount {
         state == State::SHUTTING_DOWN);
   }
 
+#ifdef _WIN32
+  /**
+   * Return the pointer to FsChannel on Windows
+   */
+  FsChannel* getFsChannel() const;
+#else
   /**
    * Get the FUSE channel for this mount point.
    *
@@ -274,6 +280,7 @@ class EdenMount {
    * no internal synchronization of its own.)
    */
   FuseChannel* getFuseChannel() const;
+#endif
 
   /**
    * Return the path to the mount point.
@@ -315,22 +322,12 @@ class EdenMount {
     return &blobAccess_;
   }
 
-#ifdef _WIN32
-  /**
-   * Return the pointer to FsChannel on Windows
-   */
-  FsChannel* getFsChannel() const {
-    return fsChannel_.get();
-  }
-#else
   /**
    * Return the EdenDispatcher used for this mount.
    */
   EdenDispatcher* getDispatcher() const {
     return dispatcher_.get();
   }
-
-#endif // !_WIN32
 
   /**
    * Return the InodeMap for this mount.
@@ -838,9 +835,7 @@ class EdenMount {
 
   std::unique_ptr<InodeMap> inodeMap_;
 
-#ifndef _WIN32
   std::unique_ptr<EdenDispatcher> dispatcher_;
-#endif
 
   std::shared_ptr<ObjectStore> objectStore_;
   std::shared_ptr<BlobCache> blobCache_;

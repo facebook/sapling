@@ -108,9 +108,7 @@ namespace facebook {
 namespace eden {
 
 PrjfsChannel::PrjfsChannel(EdenMount* mount)
-    : dispatcher_{*mount},
-      mountPath_(mount->getPath()),
-      mountId_{Guid::generate()} {}
+    : mountPath_(mount->getPath()), mountId_{Guid::generate()} {}
 
 PrjfsChannel::~PrjfsChannel() {
   if (isRunning_) {
@@ -118,7 +116,7 @@ PrjfsChannel::~PrjfsChannel() {
   }
 }
 
-void PrjfsChannel::start(bool readOnly) {
+void PrjfsChannel::start(bool readOnly, EdenDispatcher* dispatcher) {
   if (readOnly) {
     NOT_IMPLEMENTED();
   }
@@ -147,7 +145,6 @@ void PrjfsChannel::start(bool readOnly) {
   startOpts.NotificationMappingsCount =
       folly::to_narrow(std::size(notificationMappings));
 
-  auto dispatcher = getDispatcher();
   XLOG(INFO) << "Starting PrjfsChannel for: " << mountPath_;
   DCHECK(dispatcher->isValidDispatcher());
 
