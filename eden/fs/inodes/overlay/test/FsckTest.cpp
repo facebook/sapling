@@ -19,6 +19,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/FileUtils.h"
 
 using namespace facebook::eden;
 using folly::ByteRange;
@@ -280,11 +281,7 @@ std::vector<string> errorMessages(OverlayChecker& checker) {
 }
 
 std::string readFileContents(const AbsolutePath& path) {
-  std::string contents;
-  if (!folly::readFile(path.value().c_str(), contents)) {
-    throw std::runtime_error(folly::to<string>("failed to read ", path));
-  }
-  return contents;
+  return readFile(path).value();
 }
 
 std::string readFsckLog(const OverlayChecker::RepairResult& result) {

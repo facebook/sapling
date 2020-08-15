@@ -17,6 +17,7 @@
 
 using facebook::eden::AbsolutePath;
 using facebook::eden::AbsolutePathPiece;
+using facebook::eden::writeFileAtomic;
 using namespace std::chrono_literals;
 
 namespace {
@@ -99,11 +100,11 @@ class FileChangeMonitorTest : public ::testing::Test {
     rootTestDir_ = std::make_unique<TemporaryDirectory>(fcTestName_);
     auto fsPathOne = rootTestDir_->path() / "file.one";
     pathOne_ = AbsolutePath{fsPathOne.string()};
-    facebook::eden::writeFileAtomic(fsPathOne.c_str(), dataOne_);
+    writeFileAtomic(pathOne_, dataOne_).throwIfFailed();
 
     auto fsPathTwo = rootTestDir_->path() / "file.two";
     pathTwo_ = AbsolutePath{fsPathTwo.string()};
-    facebook::eden::writeFileAtomic(fsPathTwo.c_str(), dataTwo_);
+    writeFileAtomic(pathTwo_, dataTwo_).throwIfFailed();
   }
   void TearDown() override {
     rootTestDir_.reset();
@@ -174,7 +175,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileTest) {
   MockFileChangeProcessor fcp;
   auto path =
       AbsolutePath{(rootTestDir_->path() / "ModifyExistFile.txt").string()};
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
@@ -184,7 +185,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileTest) {
   EXPECT_EQ(fcp.getCallbackCount(), 1);
   EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  facebook::eden::writeFileAtomic(path.c_str(), dataTwo_);
+  writeFileAtomic(path, dataTwo_).throwIfFailed();
 
   // File should have changed (there is no throttle)
   EXPECT_EQ(fcm->getFilePath(), path.value());
@@ -196,7 +197,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileTest) {
 TEST_F(FileChangeMonitorTest, fcpMoveTest) {
   MockFileChangeProcessor fcp;
   auto path = AbsolutePath{(rootTestDir_->path() / "FcpMoveTest.txt").string()};
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
@@ -206,7 +207,7 @@ TEST_F(FileChangeMonitorTest, fcpMoveTest) {
   EXPECT_EQ(fcp.getCallbackCount(), 1);
   EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  facebook::eden::writeFileAtomic(path.c_str(), dataTwo_);
+  writeFileAtomic(path, dataTwo_).throwIfFailed();
 
   auto otherFcm = std::move(fcm);
   MockFileChangeProcessor otherFcp;
@@ -222,7 +223,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleExpiresTest) {
   MockFileChangeProcessor fcp;
   auto path = AbsolutePath{
       (rootTestDir_->path() / "ModifyExistThrottleExpiresTest.txt").string()};
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 10ms);
 
@@ -232,7 +233,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleExpiresTest) {
   EXPECT_EQ(fcp.getCallbackCount(), 1);
   EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  facebook::eden::writeFileAtomic(path.c_str(), dataTwo_);
+  writeFileAtomic(path, dataTwo_).throwIfFailed();
 
   auto rslt = fcm->invokeIfUpdated(std::ref(fcp));
   if (!rslt) {
@@ -255,7 +256,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleActiveTest) {
   MockFileChangeProcessor fcp;
   auto path = AbsolutePath{
       (rootTestDir_->path() / "ModifyExistFileThrottleActive.txt").string()};
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 10s);
 
@@ -265,7 +266,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleActiveTest) {
   EXPECT_EQ(fcp.getCallbackCount(), 1);
   EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  facebook::eden::writeFileAtomic(path.c_str(), dataTwo_);
+  writeFileAtomic(path, dataTwo_).throwIfFailed();
 
   // File change throttled
   auto rslt = fcm->invokeIfUpdated(std::ref(fcp));
@@ -313,7 +314,7 @@ TEST_F(FileChangeMonitorTest, rmFileTest) {
   MockFileChangeProcessor fcp;
   auto path =
       AbsolutePath{(rootTestDir_->path() / "ExistToNonExist.txt").string()};
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
@@ -363,7 +364,7 @@ TEST_F(FileChangeMonitorTest, createFileTest) {
   EXPECT_EQ(fcp.getErrorNum(), ENOENT);
 
   // Create the file
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   // File should have changed
   EXPECT_TRUE(fcm->invokeIfUpdated(std::ref(fcp)));
@@ -382,7 +383,7 @@ TEST_F(FileChangeMonitorTest, openFailTest) {
       AbsolutePath{(rootTestDir_->path() / "OpenFailTest.txt").string()};
 
   // Create the file
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
   chmod(path.c_str(), S_IEXEC);
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
@@ -396,7 +397,7 @@ TEST_F(FileChangeMonitorTest, openFailTest) {
   EXPECT_FALSE(fcm->invokeIfUpdated(std::ref(fcp)));
 
   // Update file - keep permissions same (inaccessible)
-  facebook::eden::writeFileAtomic(path.c_str(), dataTwo_);
+  writeFileAtomic(path, dataTwo_).throwIfFailed();
   EXPECT_EQ(chmod(path.c_str(), S_IEXEC), 0);
 
   // FileChangeMonitor will not notify if the file has changed AND there is
@@ -417,7 +418,7 @@ TEST_F(FileChangeMonitorTest, openFailFixTest) {
       AbsolutePath{(rootTestDir_->path() / "OpenFailFixTest.txt").string()};
 
   // Create the file
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
   EXPECT_EQ(chmod(path.c_str(), S_IEXEC), 0);
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);

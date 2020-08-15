@@ -1129,6 +1129,9 @@ TEST(DiffTest, emptyIgnoreFile) {
           std::make_pair("src/subdir/new.txt", ScmFileStatus::ADDED)));
 }
 
+#ifndef _WIN32
+// Disabling on Windows as writing files with \r is too painful:
+// https://stackoverflow.com/questions/21571999/handling-files-with-carriage-return-in-filename-on-windows
 TEST(DiffTest, ignoredFilePatternCarriageReturn) {
   DiffTest test({
       {"src/foo.txt", "test\n"},
@@ -1178,6 +1181,7 @@ TEST(DiffTest, ignoredFileSingleCarriageReturn) {
       *result.entries_ref(),
       UnorderedElementsAre(std::make_pair("src/Icon\r", ScmFileStatus::ADDED)));
 }
+#endif
 
 // Files under the .hg directory should never be reported in diff results
 TEST(DiffTest, ignoreHidden) {

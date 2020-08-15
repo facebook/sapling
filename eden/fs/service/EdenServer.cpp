@@ -249,11 +249,10 @@ size_t getNumberPendingFuseRequests(const EdenMount* mount) {
       kDirSeparator,
       kFusePendingRequestFile);
 
-  std::string pending_requests;
-  auto read_success =
-      folly::readFile(pending_request_path.c_str(), pending_requests);
-
-  return read_success ? folly::to<size_t>(pending_requests) : 0;
+  auto pending_requests = readFile(AbsolutePathPiece(pending_request_path));
+  return pending_requests.hasValue()
+      ? folly::to<size_t>(pending_requests.value())
+      : 0;
 }
 #endif // __linux__
 
@@ -867,7 +866,7 @@ void EdenServer::saveConfig(const cpptoml::table& root) {
   std::ostringstream stream;
   stream << root;
 
-  writeFileAtomic(configPath.c_str(), stream.str());
+  writeFileAtomic(configPath, folly::StringPiece(stream.str())).value();
 }
 
 bool EdenServer::openStorageEngine(

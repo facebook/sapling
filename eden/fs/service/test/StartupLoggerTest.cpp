@@ -25,6 +25,7 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include "eden/fs/utils/FileUtils.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -63,19 +64,11 @@ bool fileExists(folly::fs::path);
 
 class StartupLoggerTestBase : public ::testing::Test {
  protected:
-  string logPath() {
-    return logFile_.path().string();
+  AbsolutePath logPath() {
+    return AbsolutePath(logFile_.path().string());
   }
   string readLogContents() {
-    string logContents;
-    if (!folly::readFile(logPath().c_str(), logContents)) {
-      throw std::runtime_error(folly::to<string>(
-          "error reading from log file ",
-          logPath(),
-          ": ",
-          folly::errnoStr(errno)));
-    }
-    return logContents;
+    return readFile(logPath()).value();
   }
 
   TemporaryFile logFile_{"eden_test_log"};
@@ -92,12 +85,13 @@ class DaemonStartupLoggerTest : public StartupLoggerTestBase {
   template <typename Fn>
   DaemonStartupLogger::ParentResult runDaemonize(Fn&& fn) {
     DaemonStartupLogger logger;
-    auto parentInfo = logger.daemonizeImpl(logPath());
+    auto parentInfo = logger.daemonizeImpl(logPath().stringPiece());
     if (parentInfo) {
       // parent
       auto pid = parentInfo->first;
       auto& readPipe = parentInfo->second;
-      return logger.waitForChildStatus(std::move(readPipe), pid, logPath());
+      return logger.waitForChildStatus(
+          std::move(readPipe), pid, logPath().stringPiece());
     }
 
     // child
@@ -401,21 +395,21 @@ TEST_F(FileStartupLoggerTest, loggerCreatesFileIfMissing) {
 }
 
 TEST_F(FileStartupLoggerTest, loggingWritesMessagesToFile) {
-  auto logger = FileStartupLogger{logPath()};
+  auto logger = FileStartupLogger{logPath().stringPiece()};
   logger.log("hello world");
   logger.warn("warning message");
   EXPECT_EQ("hello world\nwarning message\n", readLogContents());
 }
 
 TEST_F(FileStartupLoggerTest, loggingAppendsToFileIfItAlreadyExists) {
-  ASSERT_TRUE(folly::writeFile("existing line\n"_sp, logPath().c_str()));
-  auto logger = FileStartupLogger{logPath()};
+  writeFile(logPath(), "existing line\n"_sp).throwIfFailed();
+  auto logger = FileStartupLogger{logPath().stringPiece()};
   logger.log("new line");
   EXPECT_EQ("existing line\nnew line\n", readLogContents());
 }
 
 TEST_F(FileStartupLoggerTest, successWritesMessageToFile) {
-  auto logger = FileStartupLogger{logPath()};
+  auto logger = FileStartupLogger{logPath().stringPiece()};
   logger.success();
   EXPECT_EQ(
       folly::to<std::string>("Started edenfs (pid ", getpid(), ")\n"),
@@ -425,7 +419,7 @@ TEST_F(FileStartupLoggerTest, successWritesMessageToFile) {
 TEST_F(FileStartupLoggerTest, exitUnsuccessfullyWritesMessageAndKillsProcess) {
   auto result = runFunctionInSeparateProcess(
       "exitUnsuccessfullyWritesMessageAndKillsProcessChild",
-      std::vector<std::string>{logPath()});
+      std::vector<std::string>{logPath().value()});
   EXPECT_EQ("exited with status 3", result.returnCode.str());
   EXPECT_EQ("error message\n", readLogContents());
 }

@@ -22,6 +22,7 @@
 
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -201,11 +202,12 @@ void FsOverlay::saveNextInodeNumber(InodeNumber nextInodeNumber) {
       localDir_ + PathComponentPiece{kNextInodeNumberFile};
 
   auto nextInodeVal = nextInodeNumber.get();
-  folly::writeFileAtomic(
-      nextInodeNumberPath.value().c_str(),
+  writeFileAtomic(
+      nextInodeNumberPath,
       ByteRange(
           reinterpret_cast<const uint8_t*>(&nextInodeVal),
-          reinterpret_cast<const uint8_t*>(&nextInodeVal + 1)));
+          reinterpret_cast<const uint8_t*>(&nextInodeVal + 1)))
+      .value();
 }
 
 void FsOverlay::readExistingOverlay(int infoFD) {
@@ -281,8 +283,8 @@ void FsOverlay::initNewOverlay() {
       infoHeader.data() + kInfoHeaderMagic.size(), &version, sizeof(version));
 
   auto infoPath = localDir_ + PathComponentPiece{kInfoFile};
-  folly::writeFileAtomic(
-      infoPath.stringPiece(), ByteRange(infoHeader.data(), infoHeader.size()));
+  writeFileAtomic(infoPath, ByteRange(infoHeader.data(), infoHeader.size()))
+      .value();
 }
 
 optional<overlay::OverlayDir> FsOverlay::loadOverlayDir(
@@ -625,11 +627,12 @@ void FsOverlay::writeNextInodeNumber(InodeNumber nextInodeNumber) {
   auto nextInodeNumberPath =
       localDir_ + PathComponentPiece{kNextInodeNumberFile};
 
-  folly::writeFileAtomic(
-      nextInodeNumberPath.value().c_str(),
+  writeFileAtomic(
+      nextInodeNumberPath,
       ByteRange(
           reinterpret_cast<const uint8_t*>(&nextInodeNumber),
-          reinterpret_cast<const uint8_t*>(&nextInodeNumber + 1)));
+          reinterpret_cast<const uint8_t*>(&nextInodeNumber + 1)))
+      .throwIfFailed();
 }
 
 bool FsOverlay::hasOverlayData(InodeNumber inodeNumber) {

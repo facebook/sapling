@@ -395,7 +395,9 @@ size_t TestMount::drainServerExecutor() {
 void TestMount::setInitialCommit(Hash commitHash) {
   // Write the commit hash to the snapshot file
   auto snapshotPath = config_->getSnapshotPath();
-  writeFileAtomic(snapshotPath.c_str(), commitHash.toString() + "\n");
+  writeFileAtomic(
+      snapshotPath, folly::StringPiece(commitHash.toString() + "\n"))
+      .value();
 }
 
 void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
@@ -422,7 +424,7 @@ void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   // Create the file in the File System and also update the EdenMount. In the
   // real system with Projected FS, the creation of a file with send the
   // notification which will update the EdenMount.
-  facebook::eden::writeFile(contents, absolutePath.c_str());
+  writeFile(absolutePath, contents).value();
 #else
   createResult->write(contents, /*off*/ 0).get(0ms);
   createResult->fsync(/*datasync*/ true);
@@ -454,13 +456,12 @@ void TestMount::overwriteFile(
   // Write the file in the File System and also update the EdenMount. In the
   // real system with Projected FS, the closing of a modified file with send the
   // notification which will update the EdenMount.
-  facebook::eden::writeFile(contents, absolutePath.c_str());
-  // Verify that what we wrote can be read back.
-  std::string newContents;
-  facebook::eden::readFile(absolutePath.c_str(), newContents);
-  EXPECT_EQ(newContents, contents);
-
+  writeFile(absolutePath, contents).value();
   file->materialize();
+
+  // Verify that what we wrote can be read back.
+  auto newContents = readFile(path);
+  EXPECT_EQ(newContents, contents);
 #else
   fuse_setattr_in attr;
   attr.valid = FATTR_SIZE;

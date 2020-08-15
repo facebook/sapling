@@ -55,24 +55,25 @@ class EdenConfigTest : public ::testing::Test {
   }
 
   void setupSimpleOverRideTest() {
-    auto testCaseDir = rootTestDir_->path() / simpleOverRideTest_;
-    folly::fs::create_directory(testCaseDir);
+    auto testCaseDir = AbsolutePathPiece(rootTestDir_->path().string()) +
+        PathComponent(simpleOverRideTest_);
+    folly::fs::create_directory(folly::fs::path(testCaseDir.stringPiece()));
 
-    auto userConfigDir = testCaseDir / "client";
-    folly::fs::create_directory(userConfigDir);
+    auto userConfigDir = testCaseDir + "client"_pc;
+    folly::fs::create_directory(folly::fs::path(userConfigDir.stringPiece()));
 
-    auto userConfigPath = userConfigDir / ".edenrc";
+    auto userConfigPath = userConfigDir + ".edenrc"_pc;
     auto userConfigFileData = folly::StringPiece{
         "[core]\n"
         "ignoreFile=\"${HOME}/${USER}/userCustomIgnore\"\n"
         "[mononoke]\n"
         "use-mononoke=\"false\""};
-    writeFile(userConfigFileData, userConfigPath.c_str());
+    writeFile(userConfigPath, userConfigFileData).value();
 
-    auto systemConfigDir = testCaseDir / "etc-eden";
-    folly::fs::create_directory(systemConfigDir);
+    auto systemConfigDir = testCaseDir + "etc-eden"_pc;
+    folly::fs::create_directory(folly::fs::path(systemConfigDir.stringPiece()));
 
-    auto systemConfigPath = systemConfigDir / "edenfs.rc";
+    auto systemConfigPath = systemConfigDir + "edenfs.rc"_pc;
     auto systemConfigFileData = folly::StringPiece{
         "[core]\n"
         "ignoreFile=\"/should_be_over_ridden\"\n"
@@ -81,11 +82,10 @@ class EdenConfigTest : public ::testing::Test {
         "use-mononoke=true\n"
         "[ssl]\n"
         "client-certificate=\"/system_config_cert/${USER}/foo/${USER}\"\n"};
-    writeFile(systemConfigFileData, systemConfigPath.c_str());
+    writeFile(systemConfigPath, systemConfigFileData).value();
 
-    testPathMap_[simpleOverRideTest_] = std::pair<AbsolutePath, AbsolutePath>(
-        AbsolutePath{systemConfigPath.string()},
-        AbsolutePath{userConfigPath.string()});
+    testPathMap_[simpleOverRideTest_] =
+        std::pair<AbsolutePath, AbsolutePath>(systemConfigPath, userConfigPath);
   }
 };
 } // namespace
@@ -389,42 +389,45 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
 }
 
 TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
-  auto systemConfigDir = rootTestDir_->path() / "etc-eden";
-  folly::fs::create_directory(systemConfigDir);
+  auto rootTestDir = AbsolutePathPiece(rootTestDir_->path().string());
+  auto systemConfigDir = rootTestDir + "etc-eden"_pc;
+  folly::fs::create_directory(folly::fs::path(systemConfigDir.stringPiece()));
 
-  auto userConfigPath = rootTestDir_->path() / "user-edenrc";
+  auto userConfigPath = rootTestDir + "user-edenrc"_pc;
   auto getConfig = [&]() {
-    auto config =
-        EdenConfig{"testusername"_sp,
-                   uid_t{42},
-                   AbsolutePath{"/testhomedir"_abspath},
-                   AbsolutePath{userConfigPath.string()},
-                   AbsolutePath{systemConfigDir.string()},
-                   AbsolutePath{(systemConfigDir / "system-edenrc").string()}};
+    auto config = EdenConfig{"testusername"_sp,
+                             uid_t{42},
+                             AbsolutePath("/testhomedir"),
+                             userConfigPath,
+                             systemConfigDir,
+                             systemConfigDir + "system-edenrc"_pc};
     config.loadUserConfig();
     return EdenConfig{config};
   };
 
   writeFile(
+      userConfigPath,
       "[core]\n"
-      "ignoreFile=\"${HOME}/myignore\"\n"_sp,
-      userConfigPath.c_str());
+      "ignoreFile=\"${HOME}/myignore\"\n"_sp)
+      .value();
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
       normalizeBestEffort("/testhomedir/myignore"));
 
   writeFile(
+      userConfigPath,
       "[core]\n"
-      "ignoreFile=\"/home/${USER}/myignore\"\n"_sp,
-      userConfigPath.c_str());
+      "ignoreFile=\"/home/${USER}/myignore\"\n"_sp)
+      .value();
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
       normalizeBestEffort("/home/testusername/myignore"));
 
   writeFile(
+      userConfigPath,
       "[core]\n"
-      "ignoreFile=\"/var/user/${USER_ID}/myignore\"\n"_sp,
-      userConfigPath.c_str());
+      "ignoreFile=\"/var/user/${USER_ID}/myignore\"\n"_sp)
+      .throwIfFailed();
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
       normalizeBestEffort("/var/user/42/myignore"));

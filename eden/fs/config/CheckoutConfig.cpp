@@ -62,15 +62,7 @@ CheckoutConfig::CheckoutConfig(
 ParentCommits CheckoutConfig::getParentCommits() const {
   // Read the snapshot.
   auto snapshotFile = getSnapshotPath();
-  string snapshotFileContents;
-
-#ifdef _WIN32
-  readFile(snapshotFile.c_str(), snapshotFileContents);
-#else
-  if (!folly::readFile(snapshotFile.c_str(), snapshotFileContents)) {
-    folly::throwSystemErrorExplicit(errno, "error reading eden SNAPSHOT file");
-  }
-#endif
+  auto snapshotFileContents = readFile(snapshotFile).value();
 
   StringPiece contents{snapshotFileContents};
   if (!contents.startsWith(kSnapshotFileMagic)) {
@@ -140,11 +132,7 @@ void CheckoutConfig::setParentCommits(const ParentCommits& parents) const {
   }
   size_t writtenSize = cursor - folly::io::RWPrivateCursor{&buf};
   ByteRange snapshotData{buffer.data(), writtenSize};
-#ifdef _WIN32
-  writeFileAtomic(getSnapshotPath().c_str(), snapshotData);
-#else
-  folly::writeFileAtomic(getSnapshotPath().stringPiece(), snapshotData);
-#endif
+  writeFileAtomic(getSnapshotPath(), snapshotData).value();
 }
 
 void CheckoutConfig::setParentCommits(Hash parent1, std::optional<Hash> parent2)
@@ -185,13 +173,8 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
 folly::dynamic CheckoutConfig::loadClientDirectoryMap(
     AbsolutePathPiece edenDir) {
   // Extract the JSON and strip any comments.
-  std::string jsonContents;
   auto configJsonFile = edenDir + kClientDirectoryMap;
-#ifdef _WIN32
-  readFile(configJsonFile.c_str(), jsonContents);
-#else
-  folly::readFile(configJsonFile.c_str(), jsonContents);
-#endif
+  auto jsonContents = readFile(configJsonFile).value();
   auto jsonWithoutComments = folly::json::stripComments(jsonContents);
   if (jsonWithoutComments.empty()) {
     return folly::dynamic::object();

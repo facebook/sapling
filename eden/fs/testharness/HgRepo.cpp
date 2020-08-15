@@ -17,6 +17,7 @@
 #include <unistd.h>
 
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/utils/FileUtils.h"
 
 using folly::StringPiece;
 using folly::Subprocess;
@@ -178,8 +179,10 @@ void HgRepo::writeFile(
     RelativePathPiece path,
     StringPiece contents,
     mode_t permissions) {
+  // TODO(xavierd): remove permissions from the callers.
+  (void)permissions;
   auto fullPath = path_ + path;
-  folly::writeFileAtomic(fullPath.value(), contents, permissions);
+  writeFileAtomic(fullPath, contents).value();
 }
 
 void HgRepo::symlink(StringPiece contents, RelativePathPiece path) {

@@ -20,6 +20,8 @@ using facebook::eden::Hash;
 using facebook::eden::writeFile;
 using folly::StringPiece;
 
+using namespace facebook::eden::path_literals;
+
 namespace {
 
 using folly::test::TemporaryDirectory;
@@ -27,30 +29,31 @@ using folly::test::TemporaryDirectory;
 class CheckoutConfigTest : public ::testing::Test {
  protected:
   std::unique_ptr<TemporaryDirectory> edenDir_;
-  folly::fs::path clientDir_;
-  folly::fs::path mountPoint_;
-  folly::fs::path configDotToml_;
+  AbsolutePath clientDir_;
+  AbsolutePath mountPoint_;
+  AbsolutePath configDotToml_;
 
   void SetUp() override {
     edenDir_ = std::make_unique<TemporaryDirectory>("eden_config_test_");
-    clientDir_ = edenDir_->path() / "client";
-    folly::fs::create_directory(clientDir_);
-    mountPoint_ = "/tmp/someplace";
+    auto clientDir = edenDir_->path() / "client";
+    folly::fs::create_directory(clientDir);
+    clientDir_ = AbsolutePath(clientDir.string());
+    mountPoint_ = AbsolutePath("/tmp/someplace");
 
-    auto snapshotPath = clientDir_ / "SNAPSHOT";
+    auto snapshotPath = clientDir_ + "SNAPSHOT"_pc;
     auto snapshotContents = folly::StringPiece{
         "eden\00\00\00\01"
         "\x12\x34\x56\x78\x12\x34\x56\x78\x12\x34"
         "\x56\x78\x12\x34\x56\x78\x12\x34\x56\x78",
         28};
-    writeFile(snapshotContents, snapshotPath.c_str());
+    writeFile(snapshotPath, snapshotContents).value();
 
-    configDotToml_ = clientDir_ / "config.toml";
+    configDotToml_ = clientDir_ + "config.toml"_pc;
     auto localData =
         "[repository]\n"
         "path = \"/data/users/carenthomas/fbsource\"\n"
         "type = \"git\"\n";
-    writeFile(folly::StringPiece{localData}, configDotToml_.c_str());
+    writeFile(configDotToml_, folly::StringPiece{localData}).value();
   }
 
   void TearDown() override {
@@ -63,8 +66,8 @@ class CheckoutConfigTest : public ::testing::Test {
 } // namespace
 
 TEST_F(CheckoutConfigTest, testLoadFromClientDirectory) {
-  auto config = CheckoutConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   auto parents = config->getParentCommits();
   EXPECT_EQ(
@@ -82,10 +85,10 @@ TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
       "color = \"blue\"\n"
       "[bind-mounts]\n"
       "my-path = \"path/to-my-path\"\n";
-  writeFile(folly::StringPiece{data}, configDotToml_.c_str());
+  writeFile(configDotToml_, folly::StringPiece{data}).value();
 
-  auto config = CheckoutConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   auto parents = config->getParentCommits();
   EXPECT_EQ(
@@ -95,8 +98,8 @@ TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
 }
 
 TEST_F(CheckoutConfigTest, testMultipleParents) {
-  auto config = CheckoutConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   // Overwrite the SNAPSHOT file to indicate that there are two parents
   auto snapshotContents = folly::StringPiece{
@@ -106,8 +109,8 @@ TEST_F(CheckoutConfigTest, testMultipleParents) {
       "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
       "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33",
       48};
-  auto snapshotPath = clientDir_ / "SNAPSHOT";
-  writeFile(snapshotContents, snapshotPath.c_str());
+  auto snapshotPath = clientDir_ + "SNAPSHOT"_pc;
+  writeFile(snapshotPath, snapshotContents).value();
 
   auto parents = config->getParentCommits();
   EXPECT_EQ(
@@ -117,8 +120,8 @@ TEST_F(CheckoutConfigTest, testMultipleParents) {
 }
 
 TEST_F(CheckoutConfigTest, testWriteSnapshot) {
-  auto config = CheckoutConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
 
   Hash hash1{"99887766554433221100aabbccddeeffabcdef99"};
   Hash hash2{"abcdef98765432100123456789abcdef00112233"};
@@ -162,10 +165,10 @@ void CheckoutConfigTest::testBadSnapshot(
     const char* errorRegex) {
   SCOPED_TRACE(
       folly::to<std::string>("SNAPSHOT contents: ", folly::hexlify(contents)));
-  writeFile(contents, (clientDir_ / "SNAPSHOT").c_str());
+  writeFile(clientDir_ + "SNAPSHOT"_pc, contents).value();
 
-  auto config = CheckoutConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
+  auto config =
+      CheckoutConfig::loadFromClientDirectory(mountPoint_, clientDir_);
   EXPECT_THROW_RE(config->getParentCommits(), ExceptionType, errorRegex);
 }
 

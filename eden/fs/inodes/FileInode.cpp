@@ -30,6 +30,8 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/utils/XAttr.h"
+#else
+#include "eden/fs/win/utils/FileUtils.h" // @manual
 #endif
 
 using folly::Future;
@@ -745,8 +747,7 @@ Future<string> FileInode::readAll(
         switch (state->tag) {
           case State::MATERIALIZED_IN_OVERLAY: {
 #ifdef _WIN32
-            AbsolutePath pathToFile = self->getMaterializedFilePath();
-            readFile(pathToFile.c_str(), result);
+            result = readFile(self->getMaterializedFilePath()).value();
 #else
             DCHECK(!blob);
             result = self->getOverlayFileAccess(state)->readAllContents(*self);

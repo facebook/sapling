@@ -11,6 +11,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
@@ -59,7 +60,7 @@ std::optional<size_t> calculatePrivateBytes();
  *
  * Returns std::nullopt if an error occurs reading or parsing the data.
  */
-std::optional<MemoryStats> readStatmFile(const char* filename);
+std::optional<MemoryStats> readStatmFile(AbsolutePathPiece filename);
 
 /**
  * Parse the contents of a /proc/<pid>/statm file.

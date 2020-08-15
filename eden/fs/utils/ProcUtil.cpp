@@ -16,6 +16,7 @@
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/Unistd.h>
+#include "eden/fs/utils/FileUtils.h"
 
 #ifdef __APPLE__
 #include <mach/mach_init.h> // @manual
@@ -87,21 +88,21 @@ optional<MemoryStats> readMemoryStats() {
 #elif _WIN32
   return readMemoryStatsWin();
 #else
-  return readStatmFile("/proc/self/statm");
+  return readStatmFile("/proc/self/statm"_abspath);
 #endif
 }
 
 #ifndef _WIN32
-optional<MemoryStats> readStatmFile(const char* filename) {
-  std::string contents;
-  if (!folly::readFile(filename, contents)) {
+optional<MemoryStats> readStatmFile(AbsolutePathPiece filename) {
+  auto contents = readFile(filename);
+  if (!contents.hasValue()) {
     return std::nullopt;
   }
   auto pageSize = sysconf(_SC_PAGESIZE);
   if (pageSize == -1) {
     return std::nullopt;
   }
-  return parseStatmFile(contents, pageSize);
+  return parseStatmFile(contents.value(), pageSize);
 }
 
 optional<MemoryStats> parseStatmFile(StringPiece data, size_t pageSize) {

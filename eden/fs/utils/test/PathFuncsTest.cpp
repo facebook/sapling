@@ -20,6 +20,7 @@
 #include <sstream>
 
 #include "eden/fs/testharness/TempFile.h"
+#include "eden/fs/utils/FileUtils.h"
 
 using facebook::eden::basename;
 using facebook::eden::dirname;
@@ -791,12 +792,12 @@ TEST(PathFuncs, localDirCreateRemove) {
   // Create a deep directory, and write a file inside it.
   auto testPath = tmpDirPath + "foo/bar/asdf/test.txt"_relpath;
   ensureDirectoryExists(testPath.dirname());
-  folly::writeFile(StringPiece("test\n"), testPath.c_str());
+  writeFile(testPath, StringPiece("test\n")).throwIfFailed();
 
   // Read it back just as a sanity check
-  string contents;
-  ASSERT_TRUE(folly::readFile(testPath.c_str(), contents));
-  EXPECT_EQ("test\n", contents);
+  auto contents = readFile(testPath);
+  ASSERT_TRUE(contents.hasValue());
+  EXPECT_EQ("test\n", contents.value());
 
   // Delete the first-level directory and its contents
   auto topDir = tmpDirPath + "foo"_pc;

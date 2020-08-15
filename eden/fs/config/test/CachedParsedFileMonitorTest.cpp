@@ -99,19 +99,19 @@ class CachedParsedFileMonitorTest : public ::testing::Test {
     rootTestDir_ = std::make_unique<TemporaryDirectory>(fcTestName_);
 
     pathOne_ = AbsolutePath{(rootTestDir_->path() / "file.one").string()};
-    facebook::eden::writeFile(dataOne_, pathOne_.c_str());
+    writeFile(pathOne_, dataOne_).throwIfFailed();
 
     pathTwo_ = AbsolutePath{(rootTestDir_->path() / "file.two").string()};
-    facebook::eden::writeFile(dataTwo_, pathTwo_.c_str());
+    writeFile(pathTwo_, dataTwo_).throwIfFailed();
 
     invalidParsePathOne_ =
         AbsolutePath{(rootTestDir_->path() / "invalidParse.one").string()};
-    facebook::eden::writeFile(
-        invalidParseDataOne_, invalidParsePathOne_.c_str());
+    writeFile(invalidParsePathOne_, folly::StringPiece(invalidParseDataOne_))
+        .throwIfFailed();
 
     gitIgnorePathOne_ =
         AbsolutePath{(rootTestDir_->path() / "gitignore.one").string()};
-    facebook::eden::writeFile(gitIgnoreDataOne_, gitIgnorePathOne_.c_str());
+    writeFile(gitIgnorePathOne_, gitIgnoreDataOne_).throwIfFailed();
 
     bogusPathOne_ =
         AbsolutePath{(rootTestDir_->path() / "THIS_IS_BOGUS").string()};
@@ -218,7 +218,7 @@ TEST_F(CachedParsedFileMonitorTest, updateFileNonExistToExist) {
   EXPECT_EQ(fcm->getUpdateCount(), 1);
 
   // Over-write data in file with valid data
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   // We should see the updated results (no throttle)
   rslt = fcm->getFileContents();
@@ -236,7 +236,7 @@ TEST_F(CachedParsedFileMonitorTest, updateFileExistToNonExist) {
       (rootTestDir_->path() / "ExistToNonExist.txt").string().c_str()};
 
   // Create a test file that we will subsequently delete
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm = std::make_shared<CachedParsedFileMonitor<TestFileParser>>(
       AbsolutePath{path.c_str()}, 0s);
@@ -273,7 +273,7 @@ TEST_F(CachedParsedFileMonitorTest, updateFileParseErrorToNoError) {
   EXPECT_EQ(fcm->getUpdateCount(), 1);
 
   // Over-write data in file with valid data
-  facebook::eden::writeFileAtomic(invalidParsePathOne_.c_str(), dataOne_);
+  writeFileAtomic(invalidParsePathOne_, dataOne_).throwIfFailed();
 
   // We should see the updated results (no throttle)
   rslt = fcm->getFileContents();
@@ -281,8 +281,9 @@ TEST_F(CachedParsedFileMonitorTest, updateFileParseErrorToNoError) {
   EXPECT_EQ(fcm->getUpdateCount(), 2);
 
   // Over-write data in file with invalid data
-  facebook::eden::writeFileAtomic(
-      invalidParsePathOne_.c_str(), invalidParseDataOne_);
+  writeFileAtomic(
+      invalidParsePathOne_, folly::StringPiece{invalidParseDataOne_})
+      .throwIfFailed();
 
   rslt = fcm->getFileContents();
   EXPECT_EQ(rslt.error(), invalidParseErrorCode_);
@@ -299,7 +300,7 @@ TEST_F(CachedParsedFileMonitorTest, updateNoErrorToFileParseError) {
       (rootTestDir_->path() / "UpdateNoErrorToError.txt").string().c_str()};
 
   // Create file with valid data
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm =
       std::make_shared<CachedParsedFileMonitor<TestFileParser>>(path, 0s);
@@ -308,7 +309,8 @@ TEST_F(CachedParsedFileMonitorTest, updateNoErrorToFileParseError) {
   EXPECT_EQ(fcm->getUpdateCount(), 1);
 
   // Over-write data in file with invalid data
-  facebook::eden::writeFileAtomic(path.c_str(), invalidParseDataOne_);
+  writeFileAtomic(path, folly::StringPiece{invalidParseDataOne_})
+      .throwIfFailed();
 
   rslt = fcm->getFileContents();
   EXPECT_EQ(rslt.error(), invalidParseErrorCode_);
@@ -326,7 +328,7 @@ TEST_F(CachedParsedFileMonitorTest, modifyThrottleTest) {
       (rootTestDir_->path() / "modifyThrottleTest.txt").string().c_str()};
 
   // Create file with valid data
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm =
       std::make_shared<CachedParsedFileMonitor<TestFileParser>>(path, 10s);
@@ -344,7 +346,7 @@ TEST_F(CachedParsedFileMonitorTest, modifyThrottleTest) {
   EXPECT_EQ(noThrottleFcm->getUpdateCount(), 1);
 
   // Over-write data in file
-  facebook::eden::writeFileAtomic(path.c_str(), dataTwo_);
+  writeFileAtomic(path, dataTwo_).throwIfFailed();
 
   // Throttle does not see results
   rslt = fcm->getFileContents();
@@ -362,7 +364,7 @@ TEST_F(CachedParsedFileMonitorTest, modifyTest) {
       AbsolutePath{(rootTestDir_->path() / "modifyTest.txt").string().c_str()};
 
   // Create file with valid data
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm =
       std::make_shared<CachedParsedFileMonitor<TestFileParser>>(path, 10ms);
@@ -371,7 +373,7 @@ TEST_F(CachedParsedFileMonitorTest, modifyTest) {
   EXPECT_EQ(rslt.value(), dataOne_);
   EXPECT_EQ(fcm->getUpdateCount(), 1);
 
-  facebook::eden::writeFileAtomic(path.c_str(), dataTwo_);
+  writeFileAtomic(path, dataTwo_).throwIfFailed();
   // Over-write data in file
   // Sleep over our throttle. We could increase sleep time if the o/s sleep
   // is not accurate enough (and we are seeing false positives).
@@ -388,7 +390,7 @@ TEST_F(CachedParsedFileMonitorTest, moveTest) {
       AbsolutePath{(rootTestDir_->path() / "moveTest.txt").string().c_str()};
 
   // Create file with valid data
-  facebook::eden::writeFileAtomic(path.c_str(), dataOne_);
+  writeFileAtomic(path, dataOne_).throwIfFailed();
 
   auto fcm =
       std::make_shared<CachedParsedFileMonitor<TestFileParser>>(path, 0s);
@@ -399,7 +401,7 @@ TEST_F(CachedParsedFileMonitorTest, moveTest) {
 
   auto otherFcm = std::move(fcm);
 
-  facebook::eden::writeFileAtomic(path.c_str(), dataTwo_);
+  writeFileAtomic(path, dataTwo_).throwIfFailed();
 
   rslt = otherFcm->getFileContents();
   EXPECT_EQ(rslt.value(), dataTwo_);
