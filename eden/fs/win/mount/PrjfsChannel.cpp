@@ -187,38 +187,31 @@ folly::SemiFuture<FsChannel::StopData> PrjfsChannel::getStopFuture() {
 // TODO: We need to add an extra layer to absorb all the exceptions generated in
 // Eden from leaking into FS. This would come in soon.
 
-void PrjfsChannel::deleteFile(
-    RelativePathPiece path,
-    PRJ_UPDATE_TYPES updateFlags) {
-  XLOG(DBG6) << "Invalidating: " << path;
+void PrjfsChannel::removeCachedFile(RelativePathPiece path) {
   auto winPath = path.wide();
+
+  XLOG(DBG6) << "Invalidating: " << path;
+
   PRJ_UPDATE_FAILURE_CAUSES failureReason;
-  HRESULT hr = PrjDeleteFile(
-      mountChannel_, winPath.c_str(), updateFlags, &failureReason);
-  if (hr != S_OK) {
+  auto result = PrjDeleteFile(
+      mountChannel_,
+      winPath.c_str(),
+      PRJ_UPDATE_ALLOW_DIRTY_METADATA | PRJ_UPDATE_ALLOW_DIRTY_DATA |
+          PRJ_UPDATE_ALLOW_READ_ONLY | PRJ_UPDATE_ALLOW_TOMBSTONE,
+      &failureReason);
+  if (FAILED(result)) {
     XLOGF(
         DBG6,
-        "Failed to delete disk file {} reason: {}, error: {:x}",
+        "Failed to delete disk file {}, reason: {}, error: {:x}",
         path,
         failureReason,
-        static_cast<uint32_t>(hr));
+        static_cast<uint32_t>(result));
     // We aren't maintainting the information about which files were created
     // by the user vs through Eden backing store. The Projected FS will not
     // create tombstones when the user created files are renamed or deleted.
     // Until we have that information we cannot throw an exception on failure
     // here.
   }
-}
-
-void PrjfsChannel::removeCachedFile(RelativePathPiece path) {
-  deleteFile(
-      path,
-      PRJ_UPDATE_ALLOW_DIRTY_METADATA | PRJ_UPDATE_ALLOW_DIRTY_DATA |
-          PRJ_UPDATE_ALLOW_READ_ONLY | PRJ_UPDATE_ALLOW_TOMBSTONE);
-}
-
-void PrjfsChannel::removeDeletedFile(RelativePathPiece path) {
-  deleteFile(path, PRJ_UPDATE_ALLOW_TOMBSTONE);
 }
 
 void PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {

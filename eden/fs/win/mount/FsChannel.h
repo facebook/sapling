@@ -25,7 +25,6 @@ class FsChannel {
   virtual void stop() = 0;
 
   virtual void removeCachedFile(RelativePathPiece path) = 0;
-  virtual void removeDeletedFile(RelativePathPiece path) = 0;
 
   virtual void addDirectoryPlaceholder(RelativePathPiece path) = 0;
 

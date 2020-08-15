@@ -39,19 +39,9 @@ class PrjfsChannel : public FsChannel {
    */
   void removeCachedFile(RelativePathPiece path) override;
 
-  /**
-   * Remove tombstones from the Projected FS cache. Tombstones are Windows
-   * reparse points created to keep track of deleted files on the file system.
-   * removeDeletedFile() doesn't care about the file state and will remove file
-   * in any state.
-   */
-  void removeDeletedFile(RelativePathPiece path) override;
-
   void addDirectoryPlaceholder(RelativePathPiece path) override;
 
  private:
-  void deleteFile(RelativePathPiece path, PRJ_UPDATE_TYPES updateFlags);
-
   //
   // Channel to talk to projectedFS.
   //
