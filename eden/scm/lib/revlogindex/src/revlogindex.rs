@@ -34,7 +34,7 @@ use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::convert::TryFrom;
 use std::fs;
@@ -598,8 +598,28 @@ impl RevlogIndex {
         self.pending_raw_data.push(raw_data);
     }
 
+    fn pending_parent_map(&self) -> HashMap<Vec<u8>, Vec<Vec<u8>>> {
+        let mut result = HashMap::new();
+        for i in 0..self.pending_nodes.len() {
+            let parent_revs = &self.pending_parents[i];
+            let parent_nodes = parent_revs
+                .as_revs()
+                .iter()
+                .map(|&rev| self.vertex_name(Id(rev as _)).unwrap().as_ref().to_vec())
+                .collect::<Vec<_>>();
+            let rev = self.data_len() + i;
+            let node = self.vertex_name(Id(rev as _)).unwrap();
+            result.insert(node.as_ref().to_vec(), parent_nodes);
+        }
+        result
+    }
+
     /// Write pending commits to disk.
     pub fn flush(&mut self) -> Result<()> {
+        // Convert parent revs to parent nodes. This is because revs are
+        // easy to get wrong: ex. some nodes already exist in updated revlog.
+        let parent_map = self.pending_parent_map();
+
         let _lock = ScopedDirLock::new(
             self.index_path
                 .parent()
@@ -640,32 +660,26 @@ impl RevlogIndex {
         }
 
         // Read from disk about new nodes. Do not write them again.
-        let mut existed_nodes = HashSet::new();
+        // References to them will use new revs.
+        // `existing_nodes` contain rev -> node relationship not known
+        // to the current revlog snapshot.
+        let mut existing_nodes = HashMap::new();
         if old_rev_len > self.data_len() {
             let data = BytesSlice::<RevlogEntry>::from(read_path(
                 &self.index_path,
                 Some(revlog_index_size),
                 Bytes::new(),
             )?);
-            for entry in &data.as_ref()[self.data_len()..] {
-                existed_nodes.insert(entry.node.as_ref().to_vec());
+            for (i, entry) in data.as_ref()[self.data_len()..].iter().enumerate() {
+                let rev = (self.data_len() + i) as u32;
+                existing_nodes.insert(entry.node.as_ref().to_vec(), rev);
             }
         }
 
-        // Adjust `rev` to take possible changes on-disk into consideration.
-        // For example,
-        // - On-disk revlog.i has rev 0, rev 1.
-        // - On-disk revlog.i loaded as RevlogIndex r1.
-        // - r1.insert(...), got rev 2.
-        // - On-disk revlog.i got appended to have rev 2.
-        // - r1.flush(), rev 2 was taken by the on-disk revlog, it needs to be adjusted to rev 3.
-        let adjust_rev = |rev: i32| -> i32 {
-            if rev >= self.data_len() as _ {
-                // need fixup.
-                rev + old_rev_len as i32 - self.data_len() as i32
-            } else {
-                // rev is already on-disk - no need to fix.
-                rev
+        let get_rev = |existing_nodes: &HashMap<Vec<u8>, u32>, node: &[u8]| -> Result<u32> {
+            match existing_nodes.get(node) {
+                Some(&rev) => Ok(rev),
+                None => Ok(self.nodemap.node_to_rev(node)?.unwrap()),
             }
         };
 
@@ -673,13 +687,8 @@ impl RevlogIndex {
         let mut new_index = Vec::new();
         let mut i = 0;
 
-        for ((raw, node), parents) in self
-            .pending_raw_data
-            .iter()
-            .zip(self.pending_nodes.iter())
-            .zip(self.pending_parents.iter())
-        {
-            if existed_nodes.contains(node.as_ref()) {
+        for (raw, node) in self.pending_raw_data.iter().zip(self.pending_nodes.iter()) {
+            if existing_nodes.contains_key(node.as_ref()) {
                 continue;
             }
             let raw_len = raw.len();
@@ -699,6 +708,12 @@ impl RevlogIndex {
             let offset = old_offset + new_data.len() as u64;
             let rev = old_rev_len + i;
             i += 1;
+            existing_nodes.insert(node.as_ref().to_vec(), rev as u32);
+
+            let mut parent_revs: [i32; 2] = [-1, -1];
+            for (p_id, p_node) in parent_map[node.as_ref()].iter().enumerate() {
+                parent_revs[p_id] = get_rev(&existing_nodes, p_node)? as i32;
+            }
 
             let entry = RevlogEntry {
                 offset_flags: u64::to_be(offset << 16),
@@ -706,8 +721,8 @@ impl RevlogIndex {
                 len: i32::to_be(raw_len as i32),
                 base: i32::to_be(rev as i32),
                 link: i32::to_be(rev as i32),
-                p1: i32::to_be(adjust_rev(parents.0[0])),
-                p2: i32::to_be(adjust_rev(parents.0[1])),
+                p1: i32::to_be(parent_revs[0]),
+                p2: i32::to_be(parent_revs[1]),
                 node: <[u8; 20]>::try_from(node.as_ref()).map_err(|_| {
                     crate::Error::Unsupported(format!("node is not 20-char long: {:?}", &node))
                 })?,
@@ -1826,21 +1841,21 @@ commit 3"#
         let mut revlog1 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
         let mut revlog2 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
-        revlog1.insert(v(1), vec![], b"commit 1".to_vec().into());
+        revlog1.insert(v(1), vec![], b"commit 1".to_vec().into()); // rev 0
 
         // commit 2 is lz4-friendly.
         let text = b"commit 2 (............................................)";
-        revlog1.insert(v(2), vec![0], text.to_vec().into());
+        revlog1.insert(v(2), vec![0], text.to_vec().into()); // rev 1, parent rev 0
 
-        revlog2.insert(v(3), vec![], b"commit 3".to_vec().into());
-        revlog2.insert(v(1), vec![], b"commit 1".to_vec().into()); // duplicate with revlog1
-        revlog2.insert(v(4), vec![0], b"commit 4".to_vec().into());
-        revlog2.insert(v(5), vec![1, 0], b"commit 5".to_vec().into());
+        revlog2.insert(v(3), vec![], b"commit 3".to_vec().into()); // rev 2, local 0
+        revlog2.insert(v(1), vec![], b"commit 1".to_vec().into()); // duplicate with revlog1, local 1, rev 0
+        revlog2.insert(v(4), vec![0], b"commit 4".to_vec().into()); // rev 3, local 2
+        revlog2.insert(v(5), vec![1, 0], b"commit 5".to_vec().into()); // rev 4, local 3
 
         // Inserting an existing node is ignored.
         let old_len = revlog1.len();
-        revlog1.insert(v(1), vec![], b"commit 1".to_vec().into());
-        revlog1.insert(v(2), vec![0], text.to_vec().into());
+        revlog1.insert(v(1), vec![], b"commit 1".to_vec().into()); // rev 0
+        revlog1.insert(v(2), vec![0], text.to_vec().into()); // rev 1
         assert_eq!(revlog1.len(), old_len);
 
         revlog1.flush()?;
@@ -1858,7 +1873,7 @@ commit 3"#
         assert_eq!(revlog3.parent_revs(1), ParentRevs([0, -1]));
         assert_eq!(revlog3.parent_revs(2), ParentRevs([-1, -1]));
         assert_eq!(revlog3.parent_revs(3), ParentRevs([2, -1]));
-        assert_eq!(revlog3.parent_revs(4), ParentRevs([3, 2]));
+        assert_eq!(revlog3.parent_revs(4), ParentRevs([0, 2])); // 0: "commit 1"
 
         // Prefix lookup.
         assert_eq!(revlog3.vertexes_by_hex_prefix(b"0303", 2)?, vec![v(3)]);
