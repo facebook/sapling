@@ -67,6 +67,9 @@ class changelog(object):
 
             cl.dageval(lambda: roots(ancestors([x])))
 
+            # avoid conflict with local variable named 'only'
+            cl.dageval(lambda dag: dag.only(x, y))
+
         is equivalent to:
 
             dag = cl.dag
@@ -75,7 +78,7 @@ class changelog(object):
         'extraenv' is optionally a dict. It sets extra names. For example,
         providing revset-like functions like `draft`, `public`, `bookmarks`.
         """
-        env = dict(func.func_globals)
+        env = dict(func.__globals__)
         dag = self.dag
         for name in func.func_code.co_names:
             # name is potentially a string used by LOAD_GLOBAL bytecode.
@@ -87,13 +90,17 @@ class changelog(object):
                 value = getattr(dag, name, None)
                 if value is not None:
                     env[name] = value
-        code = func.func_code
-        argdefs = func.func_defaults
-        freevars = func.func_closure
+        code = func.__code__
+        argdefs = func.__defaults__
+        closure = func.__closure__
+        name = func.__name__
         # Create a new function that uses the same logic except for different
         # env (globals).
-        newfunc = type(func)(code, env, argdefs, freevars)
-        return newfunc()
+        newfunc = type(func)(code, env, name, argdefs, closure)
+        if code.co_argcount == 1 and not argdefs:
+            return newfunc(dag)
+        else:
+            return newfunc()
 
     @property
     def idmap(self):
