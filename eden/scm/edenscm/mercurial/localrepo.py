@@ -1172,6 +1172,32 @@ class localrepository(object):
     def __iter__(self):
         return iter(self.changelog)
 
+    def dageval(self, func):
+        """Evaluate func with the current DAG context.
+
+        Unlike changelog.dageval, this function provides extra utilities:
+        - draft(): draft commits
+        - public(): public commits
+        - obsolete(): obsoleted commits
+        """
+
+        def getphaseset(repo, phase):
+            return repo.changelog.tonodes(repo._phasecache.getrevset(repo, [phase]))
+
+        def removenull(nodes):
+            return [n for n in nodes if n != nullid]
+
+        return self.changelog.dageval(
+            func,
+            extraenv={
+                "dot": lambda: removenull(self.dirstate.parents()[:1]),
+                "draft": lambda: getphaseset(self, phases.draft),
+                "lookup": lambda *names: removenull([self[n].node() for n in names]),
+                "obsolete": lambda: mutation.obsoletenodes(self),
+                "public": lambda: getphaseset(self, phases.public),
+            },
+        )
+
     def revs(self, expr, *args):
         """Find revisions matching a revset.
 
