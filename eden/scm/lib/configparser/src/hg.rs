@@ -235,7 +235,16 @@ impl ConfigSetHgExt for ConfigSet {
         let opts = Options::new().source("system").process_hgplain();
         let mut errors = Vec::new();
 
-        if env::var(HGRCPATH).is_err() {
+        // If $HGRCPATH is set, use it instead.
+        if let Ok(rcpath) = env::var("HGRCPATH") {
+            #[cfg(unix)]
+            let paths = rcpath.split(':');
+            #[cfg(windows)]
+            let paths = rcpath.split(';');
+            for path in paths {
+                errors.append(&mut self.load_path(expand_path(path), &opts));
+            }
+        } else {
             #[cfg(unix)]
             {
                 errors.append(&mut self.load_path("/etc/mercurial/system.rc", &opts));
@@ -293,16 +302,8 @@ impl ConfigSetHgExt for ConfigSet {
 
         let opts = Options::new().source("user").process_hgplain();
 
-        // If $HGRCPATH is set, use it instead.
-        if let Ok(rcpath) = env::var("HGRCPATH") {
-            #[cfg(unix)]
-            let paths = rcpath.split(':');
-            #[cfg(windows)]
-            let paths = rcpath.split(';');
-            for path in paths {
-                errors.append(&mut self.load_path(expand_path(path), &opts));
-            }
-        } else {
+        // If HGRCPATH is set, don't load user configs
+        if env::var("HGRCPATH").is_err() {
             if let Some(home_dir) = dirs::home_dir() {
                 errors.append(&mut self.load_path(home_dir.join(".hgrc"), &opts));
 
@@ -856,15 +857,17 @@ mod tests {
         #[cfg(windows)]
         let hgrcpath = "$T/1.rc;%T%/2.rc";
 
+        env::remove_var("EDITOR");
+        env::remove_var("VISUAL");
         env::set_var("T", dir.path());
         env::set_var(HGRCPATH, hgrcpath);
 
         let mut cfg = ConfigSet::new();
 
-        cfg.load_system();
+        cfg.load_user();
         assert!(cfg.sections().is_empty());
 
-        cfg.load_user();
+        cfg.load_system();
         assert_eq!(cfg.get("x", "a"), Some("1".into()));
         assert_eq!(cfg.get("y", "b"), Some("2".into()));
     }
