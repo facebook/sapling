@@ -117,17 +117,25 @@ class uiconfig(object):
             self._knownconfig = configitems.coreitems
 
     @classmethod
-    def load(cls):
+    def load(cls, repopath):
         """Create a uiconfig and load global and user configs"""
         u = cls()
         try:
-            rcfg = configparser.config.load(None)
+            # repopath should be the non-shared .hg directory
+            dothgpath = os.path.join(repopath, ".hg") if repopath else None
+            rcfg = configparser.config.load(dothgpath)
         except Exception as ex:
             raise error.ParseError(str(ex))
         u._rcfg = localrcfg(rcfg)
         root = os.path.expanduser("~")
-        u.fixconfig(root=root)
+        u.fixconfig(root=repopath or root)
         return u
+
+    def reload(self, repopath):
+        # The actual config expects the non-shared .hg directory.
+        self._rcfg.reload(os.path.join(repopath, ".hg"), list(self._pinnedconfigs))
+        # fixconfig expects the non-shard repo root, without the .hg.
+        self.fixconfig(root=repopath)
 
     def copy(self):
         return self.__class__(self)
@@ -555,80 +563,7 @@ def parselist(value):
         return value
 
 
-# Tracks which dynamicconfig paths have been background generated so we can
-# avoid spawning the generator twice. Ideally this wouldn't be necessary, or at
-# least we should be able to tie the "have we kicked off this generation" to the
-# repo object that the config belongs to. Unfortunately, Mercurial loads configs
-# before the repo object is even created, so there's not a nice place to record
-# what we've already generated for this command. Hence the awkward global
-# variable.
-bggenerated = set()
-
-
-def loaddynamicconfig(ui, path):
-    if ui.configbool("configs", "loaddynamicconfig"):
-        sharedpathfile = os.path.join(path, "sharedpath")
-        if os.path.exists(sharedpathfile):
-            with open(sharedpathfile, "rb") as f:
-                path = pycompat.decodeutf8(f.read())
-
-        hgrcdyn = os.path.join(path, "hgrc.dynamic")
-
-        # Check the version of the existing generated config. If it doesn't
-        # match the current version, regenerate it immediately.
-        try:
-            with open(hgrcdyn, "rb") as f:
-                content = pycompat.decodeutf8(f.read())
-            matches = re.search("^# version=(.*)$", content, re.MULTILINE)
-            version = matches.group(1) if matches else None
-        except IOError:
-            version = None
-
-        if version is None or version != util.version():
-            try:
-                ui.debug(
-                    "synchronously generating dynamic config - new version %s, old version %s\n"
-                    % (util.version(), version)
-                )
-                reponame = ui.config("remotefilelog", "reponame") or ""
-                generatedynamicconfig(ui, reponame, path)
-            except Exception as ex:
-                # TODO: Eventually this should throw an exception, once we're
-                # confident it's reliable.
-                ui.log(
-                    "exceptions",
-                    "unable to generate dynamicconfig",
-                    exception_type="DynamicconfigGeneration",
-                    exception_msg="unable to generate dynamicconfig: %s" % str(ex),
-                )
-
-        ui.readconfig(hgrcdyn, path)
-        mtime = logages(ui, hgrcdyn, os.path.join(path, "hgrc.remote_cache"))
-
-        generationtime = ui.configint("configs", "generationtime")
-        if (
-            generationtime != -1
-            and encoding.environ.get("HG_DEBUGDYNAMICCONFIG", "") != "1"
-        ):
-            mtimelimit = time.time() - generationtime
-            if mtime < mtimelimit:
-                # TODO: some how prevent kicking off the background process if
-                # the file is read-only or if the previous kick offs failed.
-                ui.debug("background generating dynamic config\n")
-                env = encoding.environ.copy()
-                # The environment variable prevents infiniteloops from
-                # debugdynamicconfig kicking itself off, or doing it via
-                # commands spawned from the telemetry wrapper.
-                env["HG_DEBUGDYNAMICCONFIG"] = "1"
-                # Avoid triggering background generation twice for the same
-                # path. This often happens because the ui config is loaded
-                # twice, once during dispatch before the repo is instantiated,
-                # and once during repo instantiation.
-                if path not in bggenerated:
-                    bggenerated.add(path)
-                    runbgcommand(["hg", "--cwd", path, "debugdynamicconfig"], env)
-
-
+# TODO Call this from somewhere
 def logages(ui, configpath, cachepath):
     kwargs = dict()
     for path, name in [
@@ -721,8 +656,3 @@ def applydynamicconfig(ui, reponame, sharedpath):
         configparser.applydynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
 
         validatedynamicconfig(ui)
-
-
-def generatedynamicconfig(ui, reponame, sharedpath):
-    if ui.configbool("configs", "loaddynamicconfig"):
-        configparser.generatedynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)

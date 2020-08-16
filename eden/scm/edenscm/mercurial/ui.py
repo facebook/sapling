@@ -251,11 +251,15 @@ class ui(object):
                     self._exportableenviron[k] = self.environ[k]
 
     @classmethod
-    def load(cls):
+    def load(cls, repopath=None):
         """Create a ui and load global and user configs"""
         u = cls()
-        u._uiconfig = uiconfig.uiconfig.load()
+        u._uiconfig = uiconfig.uiconfig.load(repopath)
         return u
+
+    def reloadconfigs(self, repopath=None):
+        # repopath should be the non-shared repo path without .hg/
+        self._uiconfig.reload(repopath)
 
     def copy(self):
         return self.__class__(self)

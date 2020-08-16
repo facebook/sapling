@@ -422,9 +422,7 @@ class localrepository(object):
         reponame = self.ui.config("remotefilelog", "reponame", "")
         # If the repo already exists, load the existing configs
         if self.localvfs.isdir():
-            uiconfig.loaddynamicconfig(self.ui, self.path)
-            # Load the primary config after the dynamic one, so it overwrites it
-            self.ui.readconfig(self.localvfs.join("hgrc"), self.root)
+            self.ui.reloadconfigs(self.root)
             uiconfig.validatedynamicconfig(self.ui)
         elif create:
             # If we're in the process of creating the repo, load the dynamic configs in
@@ -515,7 +513,7 @@ class localrepository(object):
         # after the sharedvfs is set up so we can generate the dynamic config in
         # the shared vfs.
         if created:
-            uiconfig.generatedynamicconfig(self.ui, reponame, self.sharedpath)
+            self.ui.reloadconfigs(self.root)
 
         self.store = store.store(
             self.requirements,
