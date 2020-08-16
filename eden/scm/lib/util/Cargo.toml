@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.19"
 dirs = "2.0.2"
 fs2 = "0.4"
 libc = "0.2"
@@ -16,3 +17,4 @@ winapi = { version = "0.3", features = ["fileapi", "winnt", "handleapi", "winbas
 
 [dev-dependencies]
 memmap = "0.7"
+tempdir = "0.3.7"

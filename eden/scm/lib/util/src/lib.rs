@@ -14,5 +14,8 @@
 //
 // Prefer using the Rust stdlib directly if possible.
 
+mod bgprocess;
 pub mod lock;
 pub mod path;
+
+pub use bgprocess::run_background;
