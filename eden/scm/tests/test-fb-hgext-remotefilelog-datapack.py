@@ -14,7 +14,7 @@ import unittest
 
 import edenscm.mercurial.ui as uimod
 import silenttestrunner
-from bindings import revisionstore
+from bindings import configparser, revisionstore
 from edenscm.hgext.remotefilelog import constants
 from edenscm.hgext.remotefilelog.datapack import datapackstore
 from edenscm.mercurial import error, pycompat
@@ -62,7 +62,8 @@ class datapacktestsbase(object):
         if packdir is None:
             packdir = self.makeTempDir()
 
-        packer = revisionstore.mutabledeltastore(packfilepath=packdir)
+        config = configparser.config()
+        packer = revisionstore.mutabledeltastore(packfilepath=packdir, config=config)
 
         for args in revisions:
             filename, node, base, content = args[0:4]
@@ -338,7 +339,8 @@ class datapacktestsbase(object):
         """Tests that the data written into a mutabledatapack can be read out
         before it has been finalized."""
         packdir = self.makeTempDir()
-        packer = revisionstore.mutabledeltastore(packfilepath=packdir)
+        config = configparser.config()
+        packer = revisionstore.mutabledeltastore(packfilepath=packdir, config=config)
 
         # Add some unused first revision for noise
         packer.add("qwert", self.getFakeHash(), nullid, b"qwertcontent")

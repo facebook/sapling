@@ -15,6 +15,10 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use bytes::Bytes;
 use parking_lot::RwLock;
 
+use configparser::{
+    config::ConfigSet,
+    hg::{ByteCount, ConfigSetHgExt},
+};
 use indexedlog::{
     log::IndexOutput,
     rotate::{OpenOptions, RotateLog},
@@ -154,8 +158,21 @@ impl Entry {
 
 impl IndexedLogHgIdDataStore {
     /// Create or open an `IndexedLogHgIdDataStore`.
-    pub fn new(path: impl AsRef<Path>) -> Result<Self> {
-        let open_options = Self::default_open_options();
+    pub fn new(path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
+        let mut open_options = Self::default_open_options();
+        if let Some(max_bytes_per_log) =
+            config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?
+        {
+            open_options = open_options.max_bytes_per_log(max_bytes_per_log.value());
+        } else if let Some(max_bytes_per_log) =
+            config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?
+        {
+            open_options = open_options.max_bytes_per_log(max_bytes_per_log.value());
+        }
+
+        if let Some(max_log_count) = config.get_opt::<u8>("indexedlog", "data.max-log-count")? {
+            open_options = open_options.max_log_count(max_log_count);
+        }
         let log = open_options.open(&path)?;
         Ok(IndexedLogHgIdDataStore {
             inner: RwLock::new(IndexedLogHgIdDataStoreInner { log }),
@@ -267,14 +284,14 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
         log.flush().unwrap();
     }
 
     #[test]
     fn test_add() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -290,7 +307,7 @@ mod tests {
     #[test]
     fn test_add_get() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -302,7 +319,7 @@ mod tests {
         log.add(&delta, &metadata).unwrap();
         log.flush().unwrap();
 
-        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
         let read_data = log.get(StoreKey::hgid(delta.key)).unwrap();
         assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), read_data);
     }
@@ -310,7 +327,7 @@ mod tests {
     #[test]
     fn test_lookup_failure() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
 
         let key = StoreKey::hgid(key("a", "1"));
         assert_eq!(log.get(key.clone()).unwrap(), StoreResult::NotFound(key));
@@ -319,7 +336,7 @@ mod tests {
     #[test]
     fn test_add_chain() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdDataStore::new(&tempdir)?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -335,7 +352,7 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdDataStore::new(&tempdir)?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -353,7 +370,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdDataStore::new(&tempdir)?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -373,7 +390,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let log = IndexedLogHgIdDataStore::new(&tempdir)?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
         let k = key("a", "3");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),

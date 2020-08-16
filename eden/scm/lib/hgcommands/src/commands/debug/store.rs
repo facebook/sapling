@@ -45,7 +45,7 @@ pub fn run(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     let fullpath = format!("{}/{}/packs", cachepath, reponame);
     let packstore = Box::new(DataPackStore::new(fullpath, CorruptionPolicy::IGNORE));
     let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
-    let indexedstore = Box::new(IndexedLogHgIdDataStore::new(fullpath).unwrap());
+    let indexedstore = Box::new(IndexedLogHgIdDataStore::new(fullpath, &config).unwrap());
     let mut unionstore: UnionHgIdDataStore<Box<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
     unionstore.add(packstore);
     unionstore.add(indexedstore);

@@ -174,6 +174,7 @@ mod tests {
     use bytes::Bytes;
     use tempfile::TempDir;
 
+    use configparser::config::ConfigSet;
     use types::testutil::*;
 
     use crate::datapack::DataPackVersion;
@@ -187,7 +188,7 @@ mod tests {
     #[test]
     fn test_delta_add_static() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHgIdDataStore::new(&tempdir)?;
+        let mut log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
         let mut multiplex = MultiplexDeltaStore::new();
         multiplex.add_store(Box::new(&mut log));
 
@@ -209,7 +210,7 @@ mod tests {
     #[test]
     fn test_delta_add_dynamic() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHgIdDataStore::new(&tempdir)?;
+        let mut log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
         let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One)?;
         let mut multiplex: MultiplexDeltaStore<Box<dyn HgIdMutableDeltaStore>> =
             MultiplexDeltaStore::new();

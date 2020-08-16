@@ -124,6 +124,7 @@ mod tests {
     use maplit::hashmap;
     use tempfile::TempDir;
 
+    use configparser::config::ConfigSet;
     use types::testutil::*;
 
     use crate::{
@@ -147,7 +148,7 @@ mod tests {
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
-        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
+        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp, &ConfigSet::new())?);
 
         // Set up `EdenApiDataStore<File>`.
         let edenapi_files = remote_files.datastore(local.clone());
@@ -181,7 +182,7 @@ mod tests {
         // Need to use a new local store since otherwise the key
         // would still be present locally from the previous fetch.
         let tmp = TempDir::new()?;
-        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
+        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp, &ConfigSet::new())?);
         let edenapi_trees = remote_trees.datastore(local.clone());
 
         // Check that the same key cannot be accessed via the tree store.
@@ -204,7 +205,7 @@ mod tests {
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
-        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
+        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp, &ConfigSet::new())?);
 
         // Set up `EdenApiDataStore<Tree>`.
         let edenapi_trees = remote_trees.datastore(local.clone());
@@ -238,7 +239,7 @@ mod tests {
         // Need to use a new local store since otherwise the key
         // would still be present locally from the previous fetch.
         let tmp = TempDir::new()?;
-        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
+        let local = Arc::new(IndexedLogHgIdDataStore::new(&tmp, &ConfigSet::new())?);
         let edenapi_files = remote_files.datastore(local);
 
         // Check that the same key cannot be accessed via the file store.
@@ -255,7 +256,7 @@ mod tests {
 
         // Set up local mutable store.
         let tmp = TempDir::new()?;
-        let store = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
+        let store = Arc::new(IndexedLogHgIdDataStore::new(&tmp, &ConfigSet::new())?);
 
         // Set up `EdenApiDataStore`.
         let edenapi = remote.datastore(store.clone());

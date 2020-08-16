@@ -1859,7 +1859,7 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir, &ConfigSet::new())?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 10);
 
@@ -1886,7 +1886,7 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir, &ConfigSet::new())?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
 
@@ -1916,7 +1916,7 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir, &ConfigSet::new())?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
 
@@ -1983,7 +1983,7 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir, &ConfigSet::new())?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
 
@@ -2053,7 +2053,7 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir, &ConfigSet::new())?);
 
         let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);
         let sha256 = match ContentHash::sha256(&blob) {

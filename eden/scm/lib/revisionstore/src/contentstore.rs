@@ -258,6 +258,7 @@ impl<'a> ContentStoreBuilder<'a> {
         )?);
         let shared_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
+            self.config,
         )?);
 
         // The shared stores should precede the local one since we expect both the number of blobs,

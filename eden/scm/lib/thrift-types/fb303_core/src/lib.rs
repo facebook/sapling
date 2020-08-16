@@ -19,6 +19,17 @@ pub mod types {
         pub const STOPPING: Self = fb303_status(3i32);
         pub const STOPPED: Self = fb303_status(4i32);
         pub const WARNING: Self = fb303_status(5i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "DEAD",
+                "STARTING",
+                "ALIVE",
+                "STOPPING",
+                "STOPPED",
+                "WARNING",
+            ]
+        }
     }
 
     impl ::std::default::Default for fb303_status {

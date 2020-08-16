@@ -31,6 +31,15 @@ pub mod types {
         pub const SystemConfig: Self = ConfigSource(1i32);
         pub const UserConfig: Self = ConfigSource(2i32);
         pub const CommandLine: Self = ConfigSource(3i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "Default",
+                "SystemConfig",
+                "UserConfig",
+                "CommandLine",
+            ]
+        }
     }
 
     impl ::std::default::Default for ConfigSource {
@@ -124,6 +133,14 @@ pub mod types {
         pub const AutoReload: Self = ConfigReloadBehavior(0i32);
         pub const NoReload: Self = ConfigReloadBehavior(1i32);
         pub const ForceReload: Self = ConfigReloadBehavior(2i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "AutoReload",
+                "NoReload",
+                "ForceReload",
+            ]
+        }
     }
 
     impl ::std::default::Default for ConfigReloadBehavior {

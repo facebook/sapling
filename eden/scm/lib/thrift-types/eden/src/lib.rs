@@ -224,6 +224,12 @@ pub mod types {
         pub fileSize: ::std::option::Option<::std::primitive::i64>,
     }
 
+    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    pub struct GetFetchedFilesResult {
+        #[serde(default)]
+        pub fetchedFilePaths: ::std::collections::BTreeMap<::std::string::String, ::std::collections::BTreeSet<crate::types::PathString>>,
+    }
+
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct WorkingDirectoryParents {
         #[serde(default)]
@@ -482,6 +488,20 @@ pub mod types {
         pub const JOURNAL_TRUNCATED: Self = EdenErrorType(6i32);
         pub const CHECKOUT_IN_PROGRESS: Self = EdenErrorType(7i32);
         pub const OUT_OF_DATE_PARENT: Self = EdenErrorType(8i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "POSIX_ERROR",
+                "WIN32_ERROR",
+                "HRESULT_ERROR",
+                "ARGUMENT_ERROR",
+                "GENERIC_ERROR",
+                "MOUNT_GENERATION_CHANGED",
+                "JOURNAL_TRUNCATED",
+                "CHECKOUT_IN_PROGRESS",
+                "OUT_OF_DATE_PARENT",
+            ]
+        }
     }
 
     impl ::std::default::Default for EdenErrorType {
@@ -592,6 +612,21 @@ pub mod types {
         pub const SHUT_DOWN: Self = MountState(7i32);
         pub const DESTROYING: Self = MountState(8i32);
         pub const INIT_ERROR: Self = MountState(9i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "UNINITIALIZED",
+                "INITIALIZING",
+                "INITIALIZED",
+                "STARTING",
+                "RUNNING",
+                "FUSE_ERROR",
+                "SHUTTING_DOWN",
+                "SHUT_DOWN",
+                "DESTROYING",
+                "INIT_ERROR",
+            ]
+        }
     }
 
     impl ::std::default::Default for MountState {
@@ -698,6 +733,15 @@ pub mod types {
         pub const MODIFIED: Self = ScmFileStatus(1i32);
         pub const REMOVED: Self = ScmFileStatus(2i32);
         pub const IGNORED: Self = ScmFileStatus(3i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "ADDED",
+                "MODIFIED",
+                "REMOVED",
+                "IGNORED",
+            ]
+        }
     }
 
     impl ::std::default::Default for ScmFileStatus {
@@ -791,6 +835,14 @@ pub mod types {
         pub const NORMAL: Self = CheckoutMode(0i32);
         pub const DRY_RUN: Self = CheckoutMode(1i32);
         pub const FORCE: Self = CheckoutMode(2i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "NORMAL",
+                "DRY_RUN",
+                "FORCE",
+            ]
+        }
     }
 
     impl ::std::default::Default for CheckoutMode {
@@ -886,6 +938,18 @@ pub mod types {
         pub const MISSING_REMOVED: Self = ConflictType(4i32);
         pub const MODIFIED_MODIFIED: Self = ConflictType(5i32);
         pub const DIRECTORY_NOT_EMPTY: Self = ConflictType(6i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "ERROR",
+                "MODIFIED_REMOVED",
+                "UNTRACKED_ADDED",
+                "REMOVED_MODIFIED",
+                "MISSING_REMOVED",
+                "MODIFIED_MODIFIED",
+                "DIRECTORY_NOT_EMPTY",
+            ]
+        }
     }
 
     impl ::std::default::Default for ConflictType {
@@ -991,6 +1055,20 @@ pub mod types {
         pub const LINK: Self = Dtype(10i32);
         pub const SOCKET: Self = Dtype(12i32);
         pub const WHITEOUT: Self = Dtype(14i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "UNKNOWN",
+                "FIFO",
+                "CHAR",
+                "DIR",
+                "BLOCK",
+                "REGULAR",
+                "LINK",
+                "SOCKET",
+                "WHITEOUT",
+            ]
+        }
     }
 
     impl ::std::default::Default for Dtype {
@@ -1093,6 +1171,13 @@ pub mod types {
     impl TracePointEvent {
         pub const START: Self = TracePointEvent(0i32);
         pub const STOP: Self = TracePointEvent(1i32);
+
+        pub fn variants() -> &'static [&'static str] {
+            &[
+                "START",
+                "STOP",
+            ]
+        }
     }
 
     impl ::std::default::Default for TracePointEvent {
@@ -2682,6 +2767,59 @@ pub mod types {
                 materialized: field_materialized.unwrap_or_default(),
                 hash: field_hash.unwrap_or_default(),
                 fileSize: field_fileSize,
+            })
+        }
+    }
+
+
+    impl ::std::default::Default for self::GetFetchedFilesResult {
+        fn default() -> Self {
+            Self {
+                fetchedFilePaths: ::std::default::Default::default(),
+            }
+        }
+    }
+
+    unsafe impl ::std::marker::Send for self::GetFetchedFilesResult {}
+    unsafe impl ::std::marker::Sync for self::GetFetchedFilesResult {}
+
+    impl ::fbthrift::GetTType for self::GetFetchedFilesResult {
+        const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+    }
+
+    impl<P> ::fbthrift::Serialize<P> for self::GetFetchedFilesResult
+    where
+        P: ::fbthrift::ProtocolWriter,
+    {
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("GetFetchedFilesResult");
+            p.write_field_begin("fetchedFilePaths", ::fbthrift::TType::Map, 1);
+            ::fbthrift::Serialize::write(&self.fetchedFilePaths, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    impl<P> ::fbthrift::Deserialize<P> for self::GetFetchedFilesResult
+    where
+        P: ::fbthrift::ProtocolReader,
+    {
+        fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            let mut field_fetchedFilePaths = ::std::option::Option::None;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::Map, 1) => field_fetchedFilePaths = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            ::std::result::Result::Ok(Self {
+                fetchedFilePaths: field_fetchedFilePaths.unwrap_or_default(),
             })
         }
     }
@@ -7997,6 +8135,210 @@ pub mod services {
         }
 
         #[derive(Clone, Debug)]
+        pub enum ClearFetchCountsExn {
+            Success(()),
+            ex(crate::types::EdenError),
+            ApplicationException(::fbthrift::ApplicationException),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for ClearFetchCountsExn {
+            fn from(exn: crate::types::EdenError) -> Self {
+                ClearFetchCountsExn::ex(exn)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for ClearFetchCountsExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
+                ClearFetchCountsExn::ApplicationException(exn)
+            }
+        }
+
+        impl ::fbthrift::GetTType for ClearFetchCountsExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+        }
+
+        impl<P> ::fbthrift::Serialize<P> for ClearFetchCountsExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
+            fn write(&self, p: &mut P) {
+                p.write_struct_begin("ClearFetchCounts");
+                match self {
+                    ClearFetchCountsExn::Success(inner) => {
+                        p.write_field_begin(
+                            "Success",
+                            ::fbthrift::TType::Void,
+                            0i16,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    ClearFetchCountsExn::ex(inner) => {
+                        p.write_field_begin(
+                            "ex",
+                            ::fbthrift::TType::Struct,
+                            1,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    ClearFetchCountsExn::ApplicationException(_) => panic!(
+                        "Bad union Alt field {} id {}",
+                        "ApplicationException",
+                        -2147483648i32,
+                    ),
+                }
+                p.write_field_stop();
+                p.write_struct_end();
+            }
+        }
+
+        impl<P> ::fbthrift::Deserialize<P> for ClearFetchCountsExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
+                let _ = p.read_struct_begin(|_| ())?;
+                let mut once = false;
+                let mut alt = ClearFetchCountsExn::Success(());
+                loop {
+                    let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
+                            p.read_field_end()?;
+                            break;
+                        }
+                        ((::fbthrift::TType::Void, 0i32), false) => {
+                            once = true;
+                            alt = ClearFetchCountsExn::Success(::fbthrift::Deserialize::read(p)?);
+                        }
+                        ((::fbthrift::TType::Struct, 1), false) => {
+                            once = true;
+                            alt = ClearFetchCountsExn::ex(::fbthrift::Deserialize::read(p)?);
+                        }
+                        ((ty, _id), false) => p.skip(ty)?,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
+                                format!(
+                                    "unwanted extra union {} field ty {:?} id {}",
+                                    "ClearFetchCountsExn",
+                                    badty,
+                                    badid,
+                                ),
+                            )
+                        )),
+                    }
+                    p.read_field_end()?;
+                }
+                p.read_struct_end()?;
+                ::std::result::Result::Ok(alt)
+            }
+        }
+
+        #[derive(Clone, Debug)]
+        pub enum ClearFetchCountsByMountExn {
+            Success(()),
+            ex(crate::types::EdenError),
+            ApplicationException(::fbthrift::ApplicationException),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for ClearFetchCountsByMountExn {
+            fn from(exn: crate::types::EdenError) -> Self {
+                ClearFetchCountsByMountExn::ex(exn)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for ClearFetchCountsByMountExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
+                ClearFetchCountsByMountExn::ApplicationException(exn)
+            }
+        }
+
+        impl ::fbthrift::GetTType for ClearFetchCountsByMountExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+        }
+
+        impl<P> ::fbthrift::Serialize<P> for ClearFetchCountsByMountExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
+            fn write(&self, p: &mut P) {
+                p.write_struct_begin("ClearFetchCountsByMount");
+                match self {
+                    ClearFetchCountsByMountExn::Success(inner) => {
+                        p.write_field_begin(
+                            "Success",
+                            ::fbthrift::TType::Void,
+                            0i16,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    ClearFetchCountsByMountExn::ex(inner) => {
+                        p.write_field_begin(
+                            "ex",
+                            ::fbthrift::TType::Struct,
+                            1,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    ClearFetchCountsByMountExn::ApplicationException(_) => panic!(
+                        "Bad union Alt field {} id {}",
+                        "ApplicationException",
+                        -2147483648i32,
+                    ),
+                }
+                p.write_field_stop();
+                p.write_struct_end();
+            }
+        }
+
+        impl<P> ::fbthrift::Deserialize<P> for ClearFetchCountsByMountExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
+                let _ = p.read_struct_begin(|_| ())?;
+                let mut once = false;
+                let mut alt = ClearFetchCountsByMountExn::Success(());
+                loop {
+                    let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
+                            p.read_field_end()?;
+                            break;
+                        }
+                        ((::fbthrift::TType::Void, 0i32), false) => {
+                            once = true;
+                            alt = ClearFetchCountsByMountExn::Success(::fbthrift::Deserialize::read(p)?);
+                        }
+                        ((::fbthrift::TType::Struct, 1), false) => {
+                            once = true;
+                            alt = ClearFetchCountsByMountExn::ex(::fbthrift::Deserialize::read(p)?);
+                        }
+                        ((ty, _id), false) => p.skip(ty)?,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
+                                format!(
+                                    "unwanted extra union {} field ty {:?} id {}",
+                                    "ClearFetchCountsByMountExn",
+                                    badty,
+                                    badid,
+                                ),
+                            )
+                        )),
+                    }
+                    p.read_field_end()?;
+                }
+                p.read_struct_end()?;
+                ::std::result::Result::Ok(alt)
+            }
+        }
+
+        #[derive(Clone, Debug)]
         pub enum GetAccessCountsExn {
             Success(crate::types::GetAccessCountsResult),
             ex(crate::types::EdenError),
@@ -8098,6 +8440,216 @@ pub mod services {
                     ::fbthrift::ApplicationException::new(
                         ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetAccessCountsExn"),
+                    )
+                    .into(),
+                )
+            }
+        }
+
+        #[derive(Clone, Debug)]
+        pub enum StartRecordingBackingStoreFetchExn {
+            Success(()),
+            ex(crate::types::EdenError),
+            ApplicationException(::fbthrift::ApplicationException),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for StartRecordingBackingStoreFetchExn {
+            fn from(exn: crate::types::EdenError) -> Self {
+                StartRecordingBackingStoreFetchExn::ex(exn)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for StartRecordingBackingStoreFetchExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
+                StartRecordingBackingStoreFetchExn::ApplicationException(exn)
+            }
+        }
+
+        impl ::fbthrift::GetTType for StartRecordingBackingStoreFetchExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+        }
+
+        impl<P> ::fbthrift::Serialize<P> for StartRecordingBackingStoreFetchExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
+            fn write(&self, p: &mut P) {
+                p.write_struct_begin("StartRecordingBackingStoreFetch");
+                match self {
+                    StartRecordingBackingStoreFetchExn::Success(inner) => {
+                        p.write_field_begin(
+                            "Success",
+                            ::fbthrift::TType::Void,
+                            0i16,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    StartRecordingBackingStoreFetchExn::ex(inner) => {
+                        p.write_field_begin(
+                            "ex",
+                            ::fbthrift::TType::Struct,
+                            1,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    StartRecordingBackingStoreFetchExn::ApplicationException(_) => panic!(
+                        "Bad union Alt field {} id {}",
+                        "ApplicationException",
+                        -2147483648i32,
+                    ),
+                }
+                p.write_field_stop();
+                p.write_struct_end();
+            }
+        }
+
+        impl<P> ::fbthrift::Deserialize<P> for StartRecordingBackingStoreFetchExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
+                let _ = p.read_struct_begin(|_| ())?;
+                let mut once = false;
+                let mut alt = StartRecordingBackingStoreFetchExn::Success(());
+                loop {
+                    let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
+                            p.read_field_end()?;
+                            break;
+                        }
+                        ((::fbthrift::TType::Void, 0i32), false) => {
+                            once = true;
+                            alt = StartRecordingBackingStoreFetchExn::Success(::fbthrift::Deserialize::read(p)?);
+                        }
+                        ((::fbthrift::TType::Struct, 1), false) => {
+                            once = true;
+                            alt = StartRecordingBackingStoreFetchExn::ex(::fbthrift::Deserialize::read(p)?);
+                        }
+                        ((ty, _id), false) => p.skip(ty)?,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
+                                format!(
+                                    "unwanted extra union {} field ty {:?} id {}",
+                                    "StartRecordingBackingStoreFetchExn",
+                                    badty,
+                                    badid,
+                                ),
+                            )
+                        )),
+                    }
+                    p.read_field_end()?;
+                }
+                p.read_struct_end()?;
+                ::std::result::Result::Ok(alt)
+            }
+        }
+
+        #[derive(Clone, Debug)]
+        pub enum StopRecordingBackingStoreFetchExn {
+            Success(crate::types::GetFetchedFilesResult),
+            ex(crate::types::EdenError),
+            ApplicationException(::fbthrift::ApplicationException),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for StopRecordingBackingStoreFetchExn {
+            fn from(exn: crate::types::EdenError) -> Self {
+                StopRecordingBackingStoreFetchExn::ex(exn)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for StopRecordingBackingStoreFetchExn {
+            fn from(exn: ::fbthrift::ApplicationException) -> Self {
+                StopRecordingBackingStoreFetchExn::ApplicationException(exn)
+            }
+        }
+
+        impl ::fbthrift::GetTType for StopRecordingBackingStoreFetchExn {
+            const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
+        }
+
+        impl<P> ::fbthrift::Serialize<P> for StopRecordingBackingStoreFetchExn
+        where
+            P: ::fbthrift::ProtocolWriter,
+        {
+            fn write(&self, p: &mut P) {
+                p.write_struct_begin("StopRecordingBackingStoreFetch");
+                match self {
+                    StopRecordingBackingStoreFetchExn::Success(inner) => {
+                        p.write_field_begin(
+                            "Success",
+                            ::fbthrift::TType::Struct,
+                            0i16,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    StopRecordingBackingStoreFetchExn::ex(inner) => {
+                        p.write_field_begin(
+                            "ex",
+                            ::fbthrift::TType::Struct,
+                            1,
+                        );
+                        inner.write(p);
+                        p.write_field_end();
+                    }
+                    StopRecordingBackingStoreFetchExn::ApplicationException(_) => panic!(
+                        "Bad union Alt field {} id {}",
+                        "ApplicationException",
+                        -2147483648i32,
+                    ),
+                }
+                p.write_field_stop();
+                p.write_struct_end();
+            }
+        }
+
+        impl<P> ::fbthrift::Deserialize<P> for StopRecordingBackingStoreFetchExn
+        where
+            P: ::fbthrift::ProtocolReader,
+        {
+            fn read(p: &mut P) -> ::anyhow::Result<Self> {
+                let _ = p.read_struct_begin(|_| ())?;
+                let mut once = false;
+                let mut alt = ::std::option::Option::None;
+                loop {
+                    let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                    match ((fty, fid as ::std::primitive::i32), once) {
+                        ((::fbthrift::TType::Stop, _), _) => {
+                            p.read_field_end()?;
+                            break;
+                        }
+                        ((::fbthrift::TType::Struct, 0i32), false) => {
+                            once = true;
+                            alt = ::std::option::Option::Some(StopRecordingBackingStoreFetchExn::Success(::fbthrift::Deserialize::read(p)?));
+                        }
+                        ((::fbthrift::TType::Struct, 1), false) => {
+                            once = true;
+                            alt = ::std::option::Option::Some(StopRecordingBackingStoreFetchExn::ex(::fbthrift::Deserialize::read(p)?));
+                        }
+                        ((ty, _id), false) => p.skip(ty)?,
+                        ((badty, badid), true) => return ::std::result::Result::Err(::std::convert::From::from(
+                            ::fbthrift::ApplicationException::new(
+                                ::fbthrift::ApplicationExceptionErrorCode::ProtocolError,
+                                format!(
+                                    "unwanted extra union {} field ty {:?} id {}",
+                                    "StopRecordingBackingStoreFetchExn",
+                                    badty,
+                                    badid,
+                                ),
+                            )
+                        )),
+                    }
+                    p.read_field_end()?;
+                }
+                p.read_struct_end()?;
+                alt.ok_or_else(||
+                    ::fbthrift::ApplicationException::new(
+                        ::fbthrift::ApplicationExceptionErrorCode::MissingResult,
+                        format!("Empty union {}", "StopRecordingBackingStoreFetchExn"),
                     )
                     .into(),
                 )
@@ -9598,10 +10150,23 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_inodeNumber: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::InodePathDebugInfo, crate::errors::eden_service::DebugGetInodePathError>> + ::std::marker::Send + 'static>>;
+        fn clearFetchCounts(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError>> + ::std::marker::Send + 'static>>;
+        fn clearFetchCountsByMount(
+            &self,
+            arg_mountPath: &crate::types::PathString,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsByMountError>> + ::std::marker::Send + 'static>>;
         fn getAccessCounts(
             &self,
             arg_duration: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError>> + ::std::marker::Send + 'static>>;
+        fn startRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>>;
+        fn stopRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>>;
         fn clearAndCompactLocalStore(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError>> + ::std::marker::Send + 'static>>;
@@ -11811,6 +12376,120 @@ pub mod client {
                 }))
                 .boxed()
         }
+        fn clearFetchCounts(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
+                p,
+                "clearFetchCounts",
+                ::fbthrift::MessageType::Call,
+                // Note: we send a 0 message sequence ID from clients because
+                // this field should not be used by the server (except for some
+                // language implementations).
+                0,
+                |p| {
+                    p.write_struct_begin("args");
+                    p.write_field_stop();
+                    p.write_struct_end();
+                },
+            ));
+            self.transport()
+                .call(request)
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
+                    let de = P::deserializer(reply);
+                    move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError> {
+                        let p = &mut p;
+                        let (_, message_type, _) = p.read_message_begin(|_| ())?;
+                        let result = match message_type {
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::eden_service::ClearFetchCountsExn = ::fbthrift::Deserialize::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::ClearFetchCountsExn::Success(x) => ::std::result::Result::Ok(x),
+                                    crate::services::eden_service::ClearFetchCountsExn::ex(err) => {
+                                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ex(err))
+                                    }
+                                    crate::services::eden_service::ClearFetchCountsExn::ApplicationException(ae) => {
+                                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ApplicationException(ae))
+                                    }
+                                }
+                            }
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ApplicationException(ae))
+                            }
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ThriftError(err))
+                            }
+                        };
+                        p.read_message_end()?;
+                        result
+                    }(de)
+                }))
+                .boxed()
+        }
+        fn clearFetchCountsByMount(
+            &self,
+            arg_mountPath: &crate::types::PathString,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsByMountError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
+                p,
+                "clearFetchCountsByMount",
+                ::fbthrift::MessageType::Call,
+                // Note: we send a 0 message sequence ID from clients because
+                // this field should not be used by the server (except for some
+                // language implementations).
+                0,
+                |p| {
+                    p.write_struct_begin("args");
+                    p.write_field_begin("arg_mountPath", ::fbthrift::TType::String, 1i16);
+                    ::fbthrift::Serialize::write(&arg_mountPath, p);
+                    p.write_field_end();
+                    p.write_field_stop();
+                    p.write_struct_end();
+                },
+            ));
+            self.transport()
+                .call(request)
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
+                    let de = P::deserializer(reply);
+                    move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsByMountError> {
+                        let p = &mut p;
+                        let (_, message_type, _) = p.read_message_begin(|_| ())?;
+                        let result = match message_type {
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::eden_service::ClearFetchCountsByMountExn = ::fbthrift::Deserialize::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::ClearFetchCountsByMountExn::Success(x) => ::std::result::Result::Ok(x),
+                                    crate::services::eden_service::ClearFetchCountsByMountExn::ex(err) => {
+                                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ex(err))
+                                    }
+                                    crate::services::eden_service::ClearFetchCountsByMountExn::ApplicationException(ae) => {
+                                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ApplicationException(ae))
+                                    }
+                                }
+                            }
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ApplicationException(ae))
+                            }
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ThriftError(err))
+                            }
+                        };
+                        p.read_message_end()?;
+                        result
+                    }(de)
+                }))
+                .boxed()
+        }
         fn getAccessCounts(
             &self,
             arg_duration: ::std::primitive::i64,
@@ -11862,6 +12541,116 @@ pub mod client {
                             ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
                                 let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
                                 ::std::result::Result::Err(crate::errors::eden_service::GetAccessCountsError::ThriftError(err))
+                            }
+                        };
+                        p.read_message_end()?;
+                        result
+                    }(de)
+                }))
+                .boxed()
+        }
+        fn startRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
+                p,
+                "startRecordingBackingStoreFetch",
+                ::fbthrift::MessageType::Call,
+                // Note: we send a 0 message sequence ID from clients because
+                // this field should not be used by the server (except for some
+                // language implementations).
+                0,
+                |p| {
+                    p.write_struct_begin("args");
+                    p.write_field_stop();
+                    p.write_struct_end();
+                },
+            ));
+            self.transport()
+                .call(request)
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
+                    let de = P::deserializer(reply);
+                    move |mut p: P::Deserializer| -> ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError> {
+                        let p = &mut p;
+                        let (_, message_type, _) = p.read_message_begin(|_| ())?;
+                        let result = match message_type {
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::eden_service::StartRecordingBackingStoreFetchExn = ::fbthrift::Deserialize::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::Success(x) => ::std::result::Result::Ok(x),
+                                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::ex(err) => {
+                                        ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ex(err))
+                                    }
+                                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::ApplicationException(ae) => {
+                                        ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ApplicationException(ae))
+                                    }
+                                }
+                            }
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ApplicationException(ae))
+                            }
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ThriftError(err))
+                            }
+                        };
+                        p.read_message_end()?;
+                        result
+                    }(de)
+                }))
+                .boxed()
+        }
+        fn stopRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
+            use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
+            use ::futures::future::{FutureExt as _, TryFutureExt as _};
+            let request = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
+                p,
+                "stopRecordingBackingStoreFetch",
+                ::fbthrift::MessageType::Call,
+                // Note: we send a 0 message sequence ID from clients because
+                // this field should not be used by the server (except for some
+                // language implementations).
+                0,
+                |p| {
+                    p.write_struct_begin("args");
+                    p.write_field_stop();
+                    p.write_struct_end();
+                },
+            ));
+            self.transport()
+                .call(request)
+                .map_err(::std::convert::From::from)
+                .and_then(|reply| ::futures::future::ready({
+                    let de = P::deserializer(reply);
+                    move |mut p: P::Deserializer| -> ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError> {
+                        let p = &mut p;
+                        let (_, message_type, _) = p.read_message_begin(|_| ())?;
+                        let result = match message_type {
+                            ::fbthrift::MessageType::Reply => {
+                                let exn: crate::services::eden_service::StopRecordingBackingStoreFetchExn = ::fbthrift::Deserialize::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::Success(x) => ::std::result::Result::Ok(x),
+                                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::ex(err) => {
+                                        ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ex(err))
+                                    }
+                                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::ApplicationException(ae) => {
+                                        ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ApplicationException(ae))
+                                    }
+                                }
+                            }
+                            ::fbthrift::MessageType::Exception => {
+                                let ae: ::fbthrift::ApplicationException = ::fbthrift::Deserialize::read(p)?;
+                                ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ApplicationException(ae))
+                            }
+                            ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
+                                let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -12942,12 +13731,38 @@ pub mod client {
                 arg_inodeNumber,
             )
         }
+        fn clearFetchCounts(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError>> + ::std::marker::Send + 'static>> {
+            self.as_ref().clearFetchCounts(
+            )
+        }
+        fn clearFetchCountsByMount(
+            &self,
+            arg_mountPath: &crate::types::PathString,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsByMountError>> + ::std::marker::Send + 'static>> {
+            self.as_ref().clearFetchCountsByMount(
+                arg_mountPath,
+            )
+        }
         fn getAccessCounts(
             &self,
             arg_duration: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError>> + ::std::marker::Send + 'static>> {
             self.as_ref().getAccessCounts(
                 arg_duration,
+            )
+        }
+        fn startRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
+            self.as_ref().startRecordingBackingStoreFetch(
+            )
+        }
+        fn stopRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
+            self.as_ref().stopRecordingBackingStoreFetch(
             )
         }
         fn clearAndCompactLocalStore(
@@ -13499,6 +14314,27 @@ pub mod server {
                 ),
             ))
         }
+        async fn clearFetchCounts(
+            &self,
+        ) -> ::std::result::Result<(), crate::services::eden_service::ClearFetchCountsExn> {
+            ::std::result::Result::Err(crate::services::eden_service::ClearFetchCountsExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
+                    "EdenService",
+                    "clearFetchCounts",
+                ),
+            ))
+        }
+        async fn clearFetchCountsByMount(
+            &self,
+            _mountPath: crate::types::PathString,
+        ) -> ::std::result::Result<(), crate::services::eden_service::ClearFetchCountsByMountExn> {
+            ::std::result::Result::Err(crate::services::eden_service::ClearFetchCountsByMountExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
+                    "EdenService",
+                    "clearFetchCountsByMount",
+                ),
+            ))
+        }
         async fn getAccessCounts(
             &self,
             _duration: ::std::primitive::i64,
@@ -13507,6 +14343,26 @@ pub mod server {
                 ::fbthrift::ApplicationException::unimplemented_method(
                     "EdenService",
                     "getAccessCounts",
+                ),
+            ))
+        }
+        async fn startRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::result::Result<(), crate::services::eden_service::StartRecordingBackingStoreFetchExn> {
+            ::std::result::Result::Err(crate::services::eden_service::StartRecordingBackingStoreFetchExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
+                    "EdenService",
+                    "startRecordingBackingStoreFetch",
+                ),
+            ))
+        }
+        async fn stopRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::result::Result<crate::types::GetFetchedFilesResult, crate::services::eden_service::StopRecordingBackingStoreFetchExn> {
+            ::std::result::Result::Err(crate::services::eden_service::StopRecordingBackingStoreFetchExn::ApplicationException(
+                ::fbthrift::ApplicationException::unimplemented_method(
+                    "EdenService",
+                    "stopRecordingBackingStoreFetch",
                 ),
             ))
         }
@@ -15681,6 +16537,102 @@ pub mod server {
             ::std::result::Result::Ok(res)
         }
 
+        async fn handle_clearFetchCounts<'a>(
+            &'a self,
+            p: &'a mut P::Deserializer,
+            _req_ctxt: &R,
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            let res = self.service.clearFetchCounts(
+            ).await;
+            let res = match res {
+                ::std::result::Result::Ok(res) => {
+                    crate::services::eden_service::ClearFetchCountsExn::Success(res)
+                }
+                ::std::result::Result::Err(crate::services::eden_service::ClearFetchCountsExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
+                }
+                ::std::result::Result::Err(crate::services::eden_service::ClearFetchCountsExn::Success(_)) => {
+                    panic!(
+                        "{} attempted to return success via error",
+                        "clearFetchCounts",
+                    )
+                }
+                ::std::result::Result::Err(exn) => exn,
+            };
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
+                p,
+                "clearFetchCounts",
+                ::fbthrift::MessageType::Reply,
+                seqid,
+                |p| ::fbthrift::Serialize::write(&res, p),
+            ));
+            ::std::result::Result::Ok(res)
+        }
+
+        async fn handle_clearFetchCountsByMount<'a>(
+            &'a self,
+            p: &'a mut P::Deserializer,
+            _req_ctxt: &R,
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let mut field_mountPath = ::std::option::Option::None;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (::fbthrift::TType::String, 1) => field_mountPath = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            let res = self.service.clearFetchCountsByMount(
+                field_mountPath.ok_or_else(|| {
+                    ::fbthrift::ApplicationException::missing_arg(
+                        "clearFetchCountsByMount",
+                        "mountPath",
+                    )
+                })?,
+            ).await;
+            let res = match res {
+                ::std::result::Result::Ok(res) => {
+                    crate::services::eden_service::ClearFetchCountsByMountExn::Success(res)
+                }
+                ::std::result::Result::Err(crate::services::eden_service::ClearFetchCountsByMountExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
+                }
+                ::std::result::Result::Err(crate::services::eden_service::ClearFetchCountsByMountExn::Success(_)) => {
+                    panic!(
+                        "{} attempted to return success via error",
+                        "clearFetchCountsByMount",
+                    )
+                }
+                ::std::result::Result::Err(exn) => exn,
+            };
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
+                p,
+                "clearFetchCountsByMount",
+                ::fbthrift::MessageType::Reply,
+                seqid,
+                |p| ::fbthrift::Serialize::write(&res, p),
+            ));
+            ::std::result::Result::Ok(res)
+        }
+
         async fn handle_getAccessCounts<'a>(
             &'a self,
             p: &'a mut P::Deserializer,
@@ -15726,6 +16678,94 @@ pub mod server {
             let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
                 p,
                 "getAccessCounts",
+                ::fbthrift::MessageType::Reply,
+                seqid,
+                |p| ::fbthrift::Serialize::write(&res, p),
+            ));
+            ::std::result::Result::Ok(res)
+        }
+
+        async fn handle_startRecordingBackingStoreFetch<'a>(
+            &'a self,
+            p: &'a mut P::Deserializer,
+            _req_ctxt: &R,
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            let res = self.service.startRecordingBackingStoreFetch(
+            ).await;
+            let res = match res {
+                ::std::result::Result::Ok(res) => {
+                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::Success(res)
+                }
+                ::std::result::Result::Err(crate::services::eden_service::StartRecordingBackingStoreFetchExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
+                }
+                ::std::result::Result::Err(crate::services::eden_service::StartRecordingBackingStoreFetchExn::Success(_)) => {
+                    panic!(
+                        "{} attempted to return success via error",
+                        "startRecordingBackingStoreFetch",
+                    )
+                }
+                ::std::result::Result::Err(exn) => exn,
+            };
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
+                p,
+                "startRecordingBackingStoreFetch",
+                ::fbthrift::MessageType::Reply,
+                seqid,
+                |p| ::fbthrift::Serialize::write(&res, p),
+            ));
+            ::std::result::Result::Ok(res)
+        }
+
+        async fn handle_stopRecordingBackingStoreFetch<'a>(
+            &'a self,
+            p: &'a mut P::Deserializer,
+            _req_ctxt: &R,
+            seqid: ::std::primitive::u32,
+        ) -> ::anyhow::Result<::fbthrift::ProtocolEncodedFinal<P>> {
+            use ::fbthrift::ProtocolReader as _;
+            let _ = p.read_struct_begin(|_| ())?;
+            loop {
+                let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                match (fty, fid as ::std::primitive::i32) {
+                    (::fbthrift::TType::Stop, _) => break,
+                    (fty, _) => p.skip(fty)?,
+                }
+                p.read_field_end()?;
+            }
+            p.read_struct_end()?;
+            let res = self.service.stopRecordingBackingStoreFetch(
+            ).await;
+            let res = match res {
+                ::std::result::Result::Ok(res) => {
+                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::Success(res)
+                }
+                ::std::result::Result::Err(crate::services::eden_service::StopRecordingBackingStoreFetchExn::ApplicationException(aexn)) => {
+                    return ::std::result::Result::Err(aexn.into())
+                }
+                ::std::result::Result::Err(crate::services::eden_service::StopRecordingBackingStoreFetchExn::Success(_)) => {
+                    panic!(
+                        "{} attempted to return success via error",
+                        "stopRecordingBackingStoreFetch",
+                    )
+                }
+                ::std::result::Result::Err(exn) => exn,
+            };
+            let res = ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
+                p,
+                "stopRecordingBackingStoreFetch",
                 ::fbthrift::MessageType::Reply,
                 seqid,
                 |p| ::fbthrift::Serialize::write(&res, p),
@@ -16418,20 +17458,24 @@ pub mod server {
                 b"debugInodeStatus" => ::std::result::Result::Ok(32usize),
                 b"debugOutstandingFuseCalls" => ::std::result::Result::Ok(33usize),
                 b"debugGetInodePath" => ::std::result::Result::Ok(34usize),
-                b"getAccessCounts" => ::std::result::Result::Ok(35usize),
-                b"clearAndCompactLocalStore" => ::std::result::Result::Ok(36usize),
-                b"debugClearLocalStoreCaches" => ::std::result::Result::Ok(37usize),
-                b"debugCompactLocalStorage" => ::std::result::Result::Ok(38usize),
-                b"unloadInodeForPath" => ::std::result::Result::Ok(39usize),
-                b"flushStatsNow" => ::std::result::Result::Ok(40usize),
-                b"invalidateKernelInodeCache" => ::std::result::Result::Ok(41usize),
-                b"getStatInfo" => ::std::result::Result::Ok(42usize),
-                b"enableTracing" => ::std::result::Result::Ok(43usize),
-                b"disableTracing" => ::std::result::Result::Ok(44usize),
-                b"getTracePoints" => ::std::result::Result::Ok(45usize),
-                b"injectFault" => ::std::result::Result::Ok(46usize),
-                b"removeFault" => ::std::result::Result::Ok(47usize),
-                b"unblockFault" => ::std::result::Result::Ok(48usize),
+                b"clearFetchCounts" => ::std::result::Result::Ok(35usize),
+                b"clearFetchCountsByMount" => ::std::result::Result::Ok(36usize),
+                b"getAccessCounts" => ::std::result::Result::Ok(37usize),
+                b"startRecordingBackingStoreFetch" => ::std::result::Result::Ok(38usize),
+                b"stopRecordingBackingStoreFetch" => ::std::result::Result::Ok(39usize),
+                b"clearAndCompactLocalStore" => ::std::result::Result::Ok(40usize),
+                b"debugClearLocalStoreCaches" => ::std::result::Result::Ok(41usize),
+                b"debugCompactLocalStorage" => ::std::result::Result::Ok(42usize),
+                b"unloadInodeForPath" => ::std::result::Result::Ok(43usize),
+                b"flushStatsNow" => ::std::result::Result::Ok(44usize),
+                b"invalidateKernelInodeCache" => ::std::result::Result::Ok(45usize),
+                b"getStatInfo" => ::std::result::Result::Ok(46usize),
+                b"enableTracing" => ::std::result::Result::Ok(47usize),
+                b"disableTracing" => ::std::result::Result::Ok(48usize),
+                b"getTracePoints" => ::std::result::Result::Ok(49usize),
+                b"injectFault" => ::std::result::Result::Ok(50usize),
+                b"removeFault" => ::std::result::Result::Ok(51usize),
+                b"unblockFault" => ::std::result::Result::Ok(52usize),
                 _ => ::std::result::Result::Err(::fbthrift::ApplicationException::unknown_method()),
             }
         }
@@ -16479,20 +17523,24 @@ pub mod server {
                 32usize => self.handle_debugInodeStatus(_p, _r, _seqid).await,
                 33usize => self.handle_debugOutstandingFuseCalls(_p, _r, _seqid).await,
                 34usize => self.handle_debugGetInodePath(_p, _r, _seqid).await,
-                35usize => self.handle_getAccessCounts(_p, _r, _seqid).await,
-                36usize => self.handle_clearAndCompactLocalStore(_p, _r, _seqid).await,
-                37usize => self.handle_debugClearLocalStoreCaches(_p, _r, _seqid).await,
-                38usize => self.handle_debugCompactLocalStorage(_p, _r, _seqid).await,
-                39usize => self.handle_unloadInodeForPath(_p, _r, _seqid).await,
-                40usize => self.handle_flushStatsNow(_p, _r, _seqid).await,
-                41usize => self.handle_invalidateKernelInodeCache(_p, _r, _seqid).await,
-                42usize => self.handle_getStatInfo(_p, _r, _seqid).await,
-                43usize => self.handle_enableTracing(_p, _r, _seqid).await,
-                44usize => self.handle_disableTracing(_p, _r, _seqid).await,
-                45usize => self.handle_getTracePoints(_p, _r, _seqid).await,
-                46usize => self.handle_injectFault(_p, _r, _seqid).await,
-                47usize => self.handle_removeFault(_p, _r, _seqid).await,
-                48usize => self.handle_unblockFault(_p, _r, _seqid).await,
+                35usize => self.handle_clearFetchCounts(_p, _r, _seqid).await,
+                36usize => self.handle_clearFetchCountsByMount(_p, _r, _seqid).await,
+                37usize => self.handle_getAccessCounts(_p, _r, _seqid).await,
+                38usize => self.handle_startRecordingBackingStoreFetch(_p, _r, _seqid).await,
+                39usize => self.handle_stopRecordingBackingStoreFetch(_p, _r, _seqid).await,
+                40usize => self.handle_clearAndCompactLocalStore(_p, _r, _seqid).await,
+                41usize => self.handle_debugClearLocalStoreCaches(_p, _r, _seqid).await,
+                42usize => self.handle_debugCompactLocalStorage(_p, _r, _seqid).await,
+                43usize => self.handle_unloadInodeForPath(_p, _r, _seqid).await,
+                44usize => self.handle_flushStatsNow(_p, _r, _seqid).await,
+                45usize => self.handle_invalidateKernelInodeCache(_p, _r, _seqid).await,
+                46usize => self.handle_getStatInfo(_p, _r, _seqid).await,
+                47usize => self.handle_enableTracing(_p, _r, _seqid).await,
+                48usize => self.handle_disableTracing(_p, _r, _seqid).await,
+                49usize => self.handle_getTracePoints(_p, _r, _seqid).await,
+                50usize => self.handle_injectFault(_p, _r, _seqid).await,
+                51usize => self.handle_removeFault(_p, _r, _seqid).await,
+                52usize => self.handle_unblockFault(_p, _r, _seqid).await,
                 bad => panic!(
                     "{}: unexpected method idx {}",
                     "EdenServiceProcessor",
@@ -16700,7 +17748,11 @@ pub mod mock {
         pub debugInodeStatus: r#impl::eden_service::debugInodeStatus<'mock>,
         pub debugOutstandingFuseCalls: r#impl::eden_service::debugOutstandingFuseCalls<'mock>,
         pub debugGetInodePath: r#impl::eden_service::debugGetInodePath<'mock>,
+        pub clearFetchCounts: r#impl::eden_service::clearFetchCounts<'mock>,
+        pub clearFetchCountsByMount: r#impl::eden_service::clearFetchCountsByMount<'mock>,
         pub getAccessCounts: r#impl::eden_service::getAccessCounts<'mock>,
+        pub startRecordingBackingStoreFetch: r#impl::eden_service::startRecordingBackingStoreFetch<'mock>,
+        pub stopRecordingBackingStoreFetch: r#impl::eden_service::stopRecordingBackingStoreFetch<'mock>,
         pub clearAndCompactLocalStore: r#impl::eden_service::clearAndCompactLocalStore<'mock>,
         pub debugClearLocalStoreCaches: r#impl::eden_service::debugClearLocalStoreCaches<'mock>,
         pub debugCompactLocalStorage: r#impl::eden_service::debugCompactLocalStorage<'mock>,
@@ -16756,7 +17808,11 @@ pub mod mock {
                 debugInodeStatus: r#impl::eden_service::debugInodeStatus::unimplemented(),
                 debugOutstandingFuseCalls: r#impl::eden_service::debugOutstandingFuseCalls::unimplemented(),
                 debugGetInodePath: r#impl::eden_service::debugGetInodePath::unimplemented(),
+                clearFetchCounts: r#impl::eden_service::clearFetchCounts::unimplemented(),
+                clearFetchCountsByMount: r#impl::eden_service::clearFetchCountsByMount::unimplemented(),
                 getAccessCounts: r#impl::eden_service::getAccessCounts::unimplemented(),
+                startRecordingBackingStoreFetch: r#impl::eden_service::startRecordingBackingStoreFetch::unimplemented(),
+                stopRecordingBackingStoreFetch: r#impl::eden_service::stopRecordingBackingStoreFetch::unimplemented(),
                 clearAndCompactLocalStore: r#impl::eden_service::clearAndCompactLocalStore::unimplemented(),
                 debugClearLocalStoreCaches: r#impl::eden_service::debugClearLocalStoreCaches::unimplemented(),
                 debugCompactLocalStorage: r#impl::eden_service::debugCompactLocalStorage::unimplemented(),
@@ -17080,6 +18136,21 @@ pub mod mock {
             let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, ::std::primitive::i64) -> _ = &mut **closure;
             ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_inodeNumber.clone())))
         }
+        fn clearFetchCounts(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError>> + ::std::marker::Send + 'static>> {
+            let mut closure = self.clearFetchCounts.closure.lock().unwrap();
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
+        }
+        fn clearFetchCountsByMount(
+            &self,
+            arg_mountPath: &crate::types::PathString,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsByMountError>> + ::std::marker::Send + 'static>> {
+            let mut closure = self.clearFetchCountsByMount.closure.lock().unwrap();
+            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPath.clone())))
+        }
         fn getAccessCounts(
             &self,
             arg_duration: ::std::primitive::i64,
@@ -17087,6 +18158,20 @@ pub mod mock {
             let mut closure = self.getAccessCounts.closure.lock().unwrap();
             let closure: &mut dyn ::std::ops::FnMut(::std::primitive::i64) -> _ = &mut **closure;
             ::std::boxed::Box::pin(::futures::future::ready(closure(arg_duration.clone())))
+        }
+        fn startRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
+            let mut closure = self.startRecordingBackingStoreFetch.closure.lock().unwrap();
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
+        }
+        fn stopRecordingBackingStoreFetch(
+            &self,
+        ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
+            let mut closure = self.stopRecordingBackingStoreFetch.closure.lock().unwrap();
+            let closure: &mut dyn ::std::ops::FnMut() -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure()))
         }
         fn clearAndCompactLocalStore(
             &self,
@@ -18565,6 +19650,84 @@ pub mod mock {
                 }
             }
 
+            pub struct clearFetchCounts<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::ClearFetchCountsError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
+            }
+
+            impl<'mock> clearFetchCounts<'mock> {
+                pub fn unimplemented() -> Self {
+                    clearFetchCounts {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "clearFetchCounts",
+                        ))),
+                    }
+                }
+
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
+
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
+
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::ClearFetchCountsError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
+                }
+            }
+
+            pub struct clearFetchCountsByMount<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut(crate::types::PathString) -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::ClearFetchCountsByMountError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
+            }
+
+            impl<'mock> clearFetchCountsByMount<'mock> {
+                pub fn unimplemented() -> Self {
+                    clearFetchCountsByMount {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "clearFetchCountsByMount",
+                        ))),
+                    }
+                }
+
+                pub fn ret(&self, value: ()) {
+                    self.mock(move |_: crate::types::PathString| value.clone());
+                }
+
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString) -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |mountPath| ::std::result::Result::Ok(mock(mountPath)));
+                }
+
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::ClearFetchCountsByMountError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
+                }
+            }
+
             pub struct getAccessCounts<'mock> {
                 pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
                     dyn ::std::ops::FnMut(::std::primitive::i64) -> ::std::result::Result<
@@ -18601,6 +19764,84 @@ pub mod mock {
                 {
                     let mut closure = self.closure.lock().unwrap();
                     *closure = ::std::boxed::Box::new(move |_: ::std::primitive::i64| ::std::result::Result::Err(exception.clone().into()));
+                }
+            }
+
+            pub struct startRecordingBackingStoreFetch<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        (),
+                        crate::errors::eden_service::StartRecordingBackingStoreFetchError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
+            }
+
+            impl<'mock> startRecordingBackingStoreFetch<'mock> {
+                pub fn unimplemented() -> Self {
+                    startRecordingBackingStoreFetch {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "startRecordingBackingStoreFetch",
+                        ))),
+                    }
+                }
+
+                pub fn ret(&self, value: ()) {
+                    self.mock(move || value.clone());
+                }
+
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> () + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
+
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::StartRecordingBackingStoreFetchError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
+                }
+            }
+
+            pub struct stopRecordingBackingStoreFetch<'mock> {
+                pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
+                    dyn ::std::ops::FnMut() -> ::std::result::Result<
+                        crate::types::GetFetchedFilesResult,
+                        crate::errors::eden_service::StopRecordingBackingStoreFetchError,
+                    > + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                >>,
+            }
+
+            impl<'mock> stopRecordingBackingStoreFetch<'mock> {
+                pub fn unimplemented() -> Self {
+                    stopRecordingBackingStoreFetch {
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|| panic!(
+                            "{}::{} is not mocked",
+                            "EdenService",
+                            "stopRecordingBackingStoreFetch",
+                        ))),
+                    }
+                }
+
+                pub fn ret(&self, value: crate::types::GetFetchedFilesResult) {
+                    self.mock(move || value.clone());
+                }
+
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut() -> crate::types::GetFetchedFilesResult + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Ok(mock()));
+                }
+
+                pub fn throw<E>(&self, exception: E)
+                where
+                    E: ::std::convert::Into<crate::errors::eden_service::StopRecordingBackingStoreFetchError>,
+                    E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
+                {
+                    let mut closure = self.closure.lock().unwrap();
+                    *closure = ::std::boxed::Box::new(move || ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
@@ -20054,6 +21295,62 @@ pub mod errors {
         }
 
         #[derive(Debug, ::thiserror::Error)]
+        pub enum ClearFetchCountsError {
+            #[error("EdenService::clearFetchCounts failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for ClearFetchCountsError {
+            fn from(e: crate::types::EdenError) -> Self {
+                ClearFetchCountsError::ex(e)
+            }
+        }
+
+        impl ::std::convert::From<::anyhow::Error> for ClearFetchCountsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                ClearFetchCountsError::ThriftError(err)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for ClearFetchCountsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                ClearFetchCountsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, ::thiserror::Error)]
+        pub enum ClearFetchCountsByMountError {
+            #[error("EdenService::clearFetchCountsByMount failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for ClearFetchCountsByMountError {
+            fn from(e: crate::types::EdenError) -> Self {
+                ClearFetchCountsByMountError::ex(e)
+            }
+        }
+
+        impl ::std::convert::From<::anyhow::Error> for ClearFetchCountsByMountError {
+            fn from(err: ::anyhow::Error) -> Self {
+                ClearFetchCountsByMountError::ThriftError(err)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for ClearFetchCountsByMountError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                ClearFetchCountsByMountError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, ::thiserror::Error)]
         pub enum GetAccessCountsError {
             #[error("EdenService::getAccessCounts failed with {0:?}")]
             ex(crate::types::EdenError),
@@ -20078,6 +21375,62 @@ pub mod errors {
         impl ::std::convert::From<::fbthrift::ApplicationException> for GetAccessCountsError {
             fn from(ae: ::fbthrift::ApplicationException) -> Self {
                 GetAccessCountsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, ::thiserror::Error)]
+        pub enum StartRecordingBackingStoreFetchError {
+            #[error("EdenService::startRecordingBackingStoreFetch failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for StartRecordingBackingStoreFetchError {
+            fn from(e: crate::types::EdenError) -> Self {
+                StartRecordingBackingStoreFetchError::ex(e)
+            }
+        }
+
+        impl ::std::convert::From<::anyhow::Error> for StartRecordingBackingStoreFetchError {
+            fn from(err: ::anyhow::Error) -> Self {
+                StartRecordingBackingStoreFetchError::ThriftError(err)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for StartRecordingBackingStoreFetchError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                StartRecordingBackingStoreFetchError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, ::thiserror::Error)]
+        pub enum StopRecordingBackingStoreFetchError {
+            #[error("EdenService::stopRecordingBackingStoreFetch failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl ::std::convert::From<crate::types::EdenError> for StopRecordingBackingStoreFetchError {
+            fn from(e: crate::types::EdenError) -> Self {
+                StopRecordingBackingStoreFetchError::ex(e)
+            }
+        }
+
+        impl ::std::convert::From<::anyhow::Error> for StopRecordingBackingStoreFetchError {
+            fn from(err: ::anyhow::Error) -> Self {
+                StopRecordingBackingStoreFetchError::ThriftError(err)
+            }
+        }
+
+        impl ::std::convert::From<::fbthrift::ApplicationException> for StopRecordingBackingStoreFetchError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                StopRecordingBackingStoreFetchError::ApplicationException(ae)
             }
         }
 
