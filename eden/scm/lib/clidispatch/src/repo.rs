@@ -35,12 +35,12 @@ impl OptionalRepo {
     ///
     /// Return None if there is no repo found from the current directory or its
     /// parent directories.
-    pub fn from_cwd(cwd: impl AsRef<Path>, config: ConfigSet) -> Result<OptionalRepo> {
+    pub fn from_cwd(cwd: impl AsRef<Path>) -> Result<OptionalRepo> {
         if let Some(path) = find_hg_repo_root(&util::path::absolute(cwd)?) {
-            let repo = Repo::from_raw_path(path, config)?;
+            let repo = Repo::from_raw_path(path)?;
             Ok(OptionalRepo::Some(repo))
         } else {
-            Ok(OptionalRepo::None(config))
+            Ok(OptionalRepo::None(configparser::hg::load()?))
         }
     }
 
@@ -50,22 +50,21 @@ impl OptionalRepo {
     pub fn from_repository_path_and_cwd(
         repository_path: impl AsRef<Path>,
         cwd: impl AsRef<Path>,
-        config: ConfigSet,
     ) -> Result<OptionalRepo> {
         let repository_path = repository_path.as_ref();
         if repository_path.as_os_str().is_empty() {
             // --repo is not specified, only use cwd.
-            return Self::from_cwd(cwd, config);
+            return Self::from_cwd(cwd);
         }
 
         if let Ok(path) = util::path::absolute(repository_path) {
             if path.join(".hg").is_dir() {
                 // `path` is a directory with `.hg`.
-                let repo = Repo::from_raw_path(path, config)?;
+                let repo = Repo::from_raw_path(path)?;
                 return Ok(OptionalRepo::Some(repo));
             } else if path.is_file() {
                 // 'path' is a bundle path
-                if let OptionalRepo::Some(mut repo) = Self::from_cwd(cwd, config)? {
+                if let OptionalRepo::Some(mut repo) = Self::from_cwd(cwd)? {
                     repo.bundle_path = Some(path);
                     return Ok(OptionalRepo::Some(repo));
                 }
@@ -93,12 +92,13 @@ impl Repo {
     /// Load the repo from explicit path.
     ///
     /// Load repo configurations.
-    fn from_raw_path<P>(path: P, mut config: ConfigSet) -> Result<Self>
+    fn from_raw_path<P>(path: P) -> Result<Self>
     where
         P: Into<PathBuf>,
     {
         let path = path.into();
         assert!(path.is_absolute());
+        let mut config = configparser::hg::load()?;
         let mut errors = config.load_hgrc(path.join(".hg/hgrc"), "repository");
         if let Some(error) = errors.pop() {
             Err(error.into())

@@ -149,11 +149,8 @@ pub fn dispatch(command_table: &CommandTable, args: &[String], io: &mut IO) -> R
     }
 
     // Load repo and configuration.
-    let mut optional_repo = OptionalRepo::from_repository_path_and_cwd(
-        &global_opts.repository,
-        &env::current_dir()?,
-        configparser::hg::load()?,
-    )?;
+    let mut optional_repo =
+        OptionalRepo::from_repository_path_and_cwd(&global_opts.repository, &env::current_dir()?)?;
     override_config(
         optional_repo.config_mut(),
         &global_opts.configfile,
