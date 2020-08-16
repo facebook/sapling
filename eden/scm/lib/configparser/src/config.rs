@@ -56,10 +56,10 @@ struct ValueLocation {
 
 /// Options that affects config setting functions like `load_path`, `parse`,
 /// and `set`.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Options {
     source: Text,
-    filters: Vec<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>,
+    filters: Vec<Arc<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>>,
 }
 
 impl ConfigSet {
@@ -558,7 +558,7 @@ impl Options {
         mut self,
         filter: Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>,
     ) -> Self {
-        self.filters.push(filter);
+        self.filters.push(Arc::new(filter));
         self
     }
 
