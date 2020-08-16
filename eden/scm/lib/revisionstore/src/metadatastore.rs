@@ -196,6 +196,7 @@ impl<'a> MetadataStoreBuilder<'a> {
 
         let shared_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
             get_indexedloghistorystore_path(&cache_path)?,
+            &self.config,
         )?);
 
         // The shared store should precede the local one for 2 reasons:

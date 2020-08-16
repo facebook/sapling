@@ -397,10 +397,11 @@ py_class!(class indexedlogdatastore |py| {
 py_class!(class indexedloghistorystore |py| {
     data store: Box<IndexedLogHgIdHistoryStore>;
 
-    def __new__(_cls, path: &PyPath) -> PyResult<indexedloghistorystore> {
+    def __new__(_cls, path: &PyPath, config: config) -> PyResult<indexedloghistorystore> {
+        let config = config.get_cfg(py);
         indexedloghistorystore::create_instance(
             py,
-            Box::new(IndexedLogHgIdHistoryStore::new(path.as_path()).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdHistoryStore::new(path.as_path(), &config).map_pyerr(py)?),
         )
     }
 

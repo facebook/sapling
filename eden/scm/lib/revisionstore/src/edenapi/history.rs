@@ -82,6 +82,7 @@ mod tests {
     use maplit::hashmap;
     use tempfile::TempDir;
 
+    use configparser::config::ConfigSet;
     use types::testutil::*;
 
     use crate::{
@@ -106,7 +107,7 @@ mod tests {
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
-        let local = Arc::new(IndexedLogHgIdHistoryStore::new(&tmp)?);
+        let local = Arc::new(IndexedLogHgIdHistoryStore::new(&tmp, &ConfigSet::new())?);
 
         // Set up `EdenApiHistoryStore`.
         let edenapi = remote.historystore(local.clone());
@@ -130,7 +131,7 @@ mod tests {
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new().unwrap();
-        let local = Arc::new(IndexedLogHgIdHistoryStore::new(&tmp).unwrap());
+        let local = Arc::new(IndexedLogHgIdHistoryStore::new(&tmp, &ConfigSet::new()).unwrap());
 
         // EdenAPI does not support fetching tree history, so it should
         // not be possible to get a history store from a tree store.

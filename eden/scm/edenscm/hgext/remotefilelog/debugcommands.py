@@ -486,7 +486,7 @@ def debughistorypack(ui, paths, **opts):
 
 def debugindexedloghistorystore(ui, paths, **opts):
     for path in paths:
-        store = revisionstore.indexedloghistorystore(path)
+        store = revisionstore.indexedloghistorystore(path, ui._uiconfig._rcfg._rcfg)
         debughistorystore(ui, store, **opts)
 
 

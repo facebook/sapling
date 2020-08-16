@@ -15,6 +15,10 @@ use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use sha1::{Digest, Sha1};
 
+use configparser::{
+    config::ConfigSet,
+    hg::{ByteCount, ConfigSetHgExt},
+};
 use indexedlog::{
     log::IndexOutput,
     rotate::{OpenOptions, RotateLog},
@@ -187,8 +191,16 @@ impl Entry {
 
 impl IndexedLogHgIdHistoryStore {
     /// Create or open an `IndexedLogHgIdHistoryStore`.
-    pub fn new(path: impl AsRef<Path>) -> Result<Self> {
-        let open_options = Self::default_open_options();
+    pub fn new(path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
+        let mut open_options = Self::default_open_options();
+        if let Some(max_bytes_per_log) =
+            config.get_opt::<ByteCount>("indexedlog", "history.max-bytes-per-log")?
+        {
+            open_options = open_options.max_bytes_per_log(max_bytes_per_log.value());
+        }
+        if let Some(max_log_count) = config.get_opt::<u8>("indexedlog", "history.max-log-count")? {
+            open_options = open_options.max_log_count(max_log_count);
+        }
         let log = open_options.open(&path)?;
         Ok(IndexedLogHgIdHistoryStore {
             inner: RwLock::new(IndexedLogHgIdHistoryStoreInner { log }),
@@ -281,7 +293,7 @@ mod tests {
     #[test]
     fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
         log.flush()?;
         Ok(())
     }
@@ -289,7 +301,7 @@ mod tests {
     #[test]
     fn test_add() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -304,7 +316,7 @@ mod tests {
     #[test]
     fn test_add_get_node_info() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -313,7 +325,7 @@ mod tests {
         log.add(&k, &nodeinfo)?;
         log.flush()?;
 
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
         let read_nodeinfo = log.get_node_info(&k)?;
         assert_eq!(Some(nodeinfo), read_nodeinfo);
         Ok(())
@@ -322,7 +334,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
         let nodes = get_nodes(&mut rng);
@@ -338,7 +350,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
         for (key, info) in nodes.iter() {
             log.add(&key, &info)?;
         }
@@ -351,7 +363,7 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
