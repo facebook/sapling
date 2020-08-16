@@ -18,10 +18,12 @@ pest_derive = "2.1.0"
 reqwest = { version = "0.10", features=["blocking"] }
 serde_json = "1.0"
 sha2 = "0.8"
+tempfile = "3.1"
 thiserror = "1.0.5"
 thrift-types = { path = "../thrift-types" }
 types = { path = "../types" }
 util = { path = "../util" }
+version = { path = "../version" , optional = true}
 zstd = "0.4"
 
 [dev-dependencies]
@@ -39,4 +41,4 @@ crate-type = ["staticlib", "lib"]
 
 [features]
 default = []
-fb = []
+fb = ["version"]
