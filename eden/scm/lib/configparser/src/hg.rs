@@ -51,21 +51,27 @@ pub trait OptionsHgExt {
 }
 
 pub trait ConfigSetHgExt {
+    fn load<S: Into<Text>, N: Into<Text>>(
+        &mut self,
+        repo_path: Option<&Path>,
+        readonly_items: Option<Vec<(S, N)>>,
+    ) -> Result<()>;
+
     /// Load system config files if `$HGRCPATH` is not set.
     /// Return errors parsing files.
-    fn load_system(&mut self) -> Vec<Error>;
+    fn load_system(&mut self, opts: Options) -> Vec<Error>;
 
     /// Load the dynamic config files for the given repo path.
     /// Returns errors parsing, generating, or fetching the configs.
-    fn load_dynamic(&mut self, repo_path: &Path) -> Result<Vec<Error>>;
+    fn load_dynamic(&mut self, repo_path: &Path, opts: Options) -> Result<Vec<Error>>;
 
     /// Load user config files (and environment variables).  If `$HGRCPATH` is
     /// set, load files listed in that environment variable instead.
     /// Return errors parsing files.
-    fn load_user(&mut self) -> Vec<Error>;
+    fn load_user(&mut self, opts: Options) -> Vec<Error>;
 
     /// Load repo config files.
-    fn load_repo(&mut self, repo_path: &Path) -> Vec<Error>;
+    fn load_repo(&mut self, repo_path: &Path, opts: Options) -> Vec<Error>;
 
     /// Load a specified config file. Respect HGPLAIN environment variables.
     /// Return errors parsing files.
@@ -98,22 +104,13 @@ pub trait FromConfigValue: Sized {
     fn try_from_str(s: &str) -> Result<Self>;
 }
 
-/// Load system, user config files.
-pub fn load() -> Result<ConfigSet> {
-    let mut set = ConfigSet::new();
-    let mut errors = vec![];
-
-    // Only load builtin configs if HGRCPATH is not set.
-    if std::env::var(HGRCPATH).is_err() {
-        errors.append(&mut set.parse(MERGE_TOOLS_CONFIG, &"merge-tools.rc".into()));
-    }
-    errors.append(&mut set.load_system());
-    errors.append(&mut set.load_user());
-
-    if !errors.is_empty() {
-        return Err(Errors(errors).into());
-    }
-    Ok(set)
+pub fn load<S: Into<Text>, N: Into<Text>>(
+    repo_path: Option<&Path>,
+    readonly_items: Option<Vec<(S, N)>>,
+) -> Result<ConfigSet> {
+    let mut cfg = ConfigSet::new();
+    cfg.load(repo_path, readonly_items)?;
+    Ok(cfg)
 }
 
 impl OptionsHgExt for Options {
@@ -240,8 +237,41 @@ impl OptionsHgExt for Options {
 }
 
 impl ConfigSetHgExt for ConfigSet {
-    fn load_system(&mut self) -> Vec<Error> {
-        let opts = Options::new().source("system").process_hgplain();
+    /// Load system, user config files.
+    fn load<S: Into<Text>, N: Into<Text>>(
+        &mut self,
+        repo_path: Option<&Path>,
+        readonly_items: Option<Vec<(S, N)>>,
+    ) -> Result<()> {
+        let mut errors = vec![];
+
+        let mut opts = Options::new();
+        if let Some(readonly_items) = readonly_items {
+            opts = opts.readonly_items(readonly_items);
+        }
+
+        // Only load builtin configs if HGRCPATH is not set.
+        if std::env::var(HGRCPATH).is_err() {
+            errors.append(&mut self.parse(MERGE_TOOLS_CONFIG, &"merge-tools.rc".into()));
+        }
+        errors.append(&mut self.load_system(opts.clone()));
+        if let Some(repo_path) = repo_path {
+            errors.append(&mut self.load_dynamic(&repo_path, opts.clone())?);
+        }
+        errors.append(&mut self.load_user(opts.clone()));
+
+        if let Some(repo_path) = repo_path {
+            errors.append(&mut self.load_repo(&repo_path, opts.clone()));
+        }
+
+        if !errors.is_empty() {
+            return Err(Errors(errors).into());
+        }
+        Ok(())
+    }
+
+    fn load_system(&mut self, opts: Options) -> Vec<Error> {
+        let opts = opts.source("system").process_hgplain();
         let mut errors = Vec::new();
 
         // If $HGRCPATH is set, use it instead.
@@ -279,7 +309,7 @@ impl ConfigSetHgExt for ConfigSet {
         errors
     }
 
-    fn load_dynamic(&mut self, repo_path: &Path) -> Result<Vec<Error>> {
+    fn load_dynamic(&mut self, repo_path: &Path, opts: Options) -> Result<Vec<Error>> {
         let mut errors = Vec::new();
 
         if self.get_or_default::<bool>("configs", "loaddynamicconfig")? {
@@ -317,10 +347,10 @@ impl ConfigSetHgExt for ConfigSet {
                     // repo config ahead of time to read the name.
                     let mut repo_hgrc_path = repo_path.join(".hg");
                     repo_hgrc_path.push("hgrc");
-                    if !temp_config.load_user().is_empty() {
+                    if !temp_config.load_user(opts.clone()).is_empty() {
                         bail!("unable to read user config to get user name");
                     }
-                    let opts = Options::new().source("temp").process_hgplain();
+                    let opts = opts.clone().source("temp").process_hgplain();
                     if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
                         bail!("unable to read repo config to get repo name");
                     }
@@ -342,7 +372,7 @@ impl ConfigSetHgExt for ConfigSet {
             }
 
             // Read hgrc.dynamic
-            let opts = Options::new().source("dynamic").process_hgplain();
+            let opts = opts.source("dynamic").process_hgplain();
             errors.append(&mut self.load_path(&dynamic_path, &opts));
 
             // Log config ages
@@ -372,7 +402,7 @@ impl ConfigSetHgExt for ConfigSet {
         Ok(errors)
     }
 
-    fn load_user(&mut self) -> Vec<Error> {
+    fn load_user(&mut self, opts: Options) -> Vec<Error> {
         let mut errors = Vec::new();
 
         // Covert "$VISUAL", "$EDITOR" to "ui.editor".
@@ -391,7 +421,7 @@ impl ConfigSetHgExt for ConfigSet {
                     "ui",
                     "editor",
                     Some(editor),
-                    &Options::new().source(format!("${}", name)),
+                    &opts.clone().source(format!("${}", name)),
                 );
                 break;
             }
@@ -402,7 +432,7 @@ impl ConfigSetHgExt for ConfigSet {
             self.set("profiling", "type", Some(profiling_type), &"$HGPROF".into());
         }
 
-        let opts = Options::new().source("user").process_hgplain();
+        let opts = opts.source("user").process_hgplain();
 
         // If HGRCPATH is set, don't load user configs
         if env::var("HGRCPATH").is_err() {
@@ -422,10 +452,10 @@ impl ConfigSetHgExt for ConfigSet {
         errors
     }
 
-    fn load_repo(&mut self, repo_path: &Path) -> Vec<Error> {
+    fn load_repo(&mut self, repo_path: &Path, opts: Options) -> Vec<Error> {
         let mut errors = Vec::new();
 
-        let opts = Options::new().source("repo").process_hgplain();
+        let opts = opts.source("repo").process_hgplain();
 
         let hgrc_path = repo_path.join("hgrc");
         errors.append(&mut self.load_path(hgrc_path, &opts));
@@ -977,10 +1007,10 @@ mod tests {
 
         let mut cfg = ConfigSet::new();
 
-        cfg.load_user();
+        cfg.load_user(Options::new());
         assert!(cfg.sections().is_empty());
 
-        cfg.load_system();
+        cfg.load_system(Options::new());
         assert_eq!(cfg.get("x", "a"), Some("1".into()));
         assert_eq!(cfg.get("y", "b"), Some("2".into()));
     }

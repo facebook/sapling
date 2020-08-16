@@ -14,7 +14,7 @@ use cpython::*;
 use configparser::{
     config::{ConfigSet, Options},
     dynamicconfig::Generator,
-    hg::{generate_dynamicconfig, load as hg_load, parse_list, OptionsHgExt},
+    hg::{generate_dynamicconfig, parse_list, ConfigSetHgExt, OptionsHgExt},
 };
 use cpython_ext::{error::ResultPyErrExt, PyNone, PyPath, PyPathBuf, Str};
 
@@ -147,9 +147,18 @@ py_class!(pub class config |py| {
     }
 
     @staticmethod
-    def load() -> PyResult<config> {
-        let cfg = hg_load().map_pyerr(py)?;
+    def load(repopath: Option<PyPathBuf>) -> PyResult<config> {
+        let repopath = repopath.as_ref().map(|p| p.as_path());
+        let mut cfg = ConfigSet::new();
+        cfg.load::<String, String>(repopath, None).map_pyerr(py)?;
         config::create_instance(py, RefCell::new(cfg))
+    }
+
+    def reload(&self, repopath: Option<PyPathBuf>, readonly_items: Option<Vec<(String, String)>>) -> PyResult<PyNone> {
+        let repopath = repopath.as_ref().map(|p| p.as_path());
+        let mut cfg = self.cfg(py).borrow_mut();
+        cfg.load(repopath, readonly_items).map_pyerr(py)?;
+        Ok(PyNone)
     }
 
     def ensure_location_supersets(

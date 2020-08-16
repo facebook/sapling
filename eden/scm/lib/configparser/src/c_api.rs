@@ -87,7 +87,7 @@ pub extern "C" fn hgrc_configset_load_system(cfg: *mut ConfigSet) -> *mut Text {
     // Forces datapath to be the empty string as it doesn't
     // appear to play a useful role in simply resolving config
     // settings for Eden.
-    errors_to_bytes(cfg.load_system())
+    errors_to_bytes(cfg.load_system(Options::new()))
 }
 
 /// Load user config files
@@ -96,7 +96,7 @@ pub extern "C" fn hgrc_configset_load_user(cfg: *mut ConfigSet) -> *mut Text {
     debug_assert!(!cfg.is_null());
     let cfg = unsafe { &mut *cfg };
 
-    errors_to_bytes(cfg.load_user())
+    errors_to_bytes(cfg.load_user(Options::new()))
 }
 
 /// Returns a Text object holding the configuration value for the corresponding

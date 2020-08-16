@@ -121,7 +121,7 @@ class uiconfig(object):
         """Create a uiconfig and load global and user configs"""
         u = cls()
         try:
-            rcfg = configparser.config.load()
+            rcfg = configparser.config.load(None)
         except Exception as ex:
             raise error.ParseError(str(ex))
         u._rcfg = localrcfg(rcfg)

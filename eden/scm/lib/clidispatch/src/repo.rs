@@ -40,7 +40,9 @@ impl OptionalRepo {
             let repo = Repo::from_raw_path(path)?;
             Ok(OptionalRepo::Some(repo))
         } else {
-            Ok(OptionalRepo::None(configparser::hg::load()?))
+            Ok(OptionalRepo::None(
+                configparser::hg::load::<String, String>(None, None)?,
+            ))
         }
     }
 
@@ -98,7 +100,7 @@ impl Repo {
     {
         let path = path.into();
         assert!(path.is_absolute());
-        let mut config = configparser::hg::load()?;
+        let mut config = configparser::hg::load::<String, String>(None, None)?;
         let mut errors = config.load_hgrc(path.join(".hg/hgrc"), "repository");
         if let Some(error) = errors.pop() {
             Err(error.into())
