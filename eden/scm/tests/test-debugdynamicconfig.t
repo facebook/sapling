@@ -184,3 +184,18 @@ Verify hgrc.dynamic is updated even if the original command is outside the repo
   [hooks]
   pretxnclose=printf "Hook ran!\n"
   
+Verify configs.disallowlist removes old configs
+- Both good_hgrc and bad_hgrc contain a foo.bar value. bad_hgrc is an old rc and therefore
+- its value should be removed even though it comes later in the load order.
+  $ cat > good_hgrc <<EOF
+  > [foo]
+  > bar = good
+  > EOF
+  $ cat > bad_hgrc <<EOF
+  > [foo]
+  > bar = bad
+  > EOF
+  $ hg -R client2 config foo.bar --configfile $TESTTMP/good_hgrc --configfile $TESTTMP/bad_hgrc --config configs.validatedynamicconfig=True --config configs.testdynamicconfigsubset=bad_hgrc --config configs.legacylist=foo.bar
+  bad
+  $ hg -R client2 config foo.bar --configfile $TESTTMP/good_hgrc --configfile $TESTTMP/bad_hgrc --config configs.validatedynamicconfig=True --config configs.testdynamicconfigsubset=bad_hgrc --config configs.legacylist=foo.bar --config configs.disallowlist=foo.bar
+  good

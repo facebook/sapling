@@ -621,11 +621,25 @@ def validatedynamicconfig(ui):
         section, key = sectionkey.split(".", 1)
         legacylist.append((section, key))
 
+    # To incrementally migrate to dynamicconfig, the disallowedlist will let us
+    # remove specific configs set by non-dynamicconfig rc files. It will only
+    # remove the value introduced by an rc in the originalrcs list, so values
+    # introduced by ".hg/hgrc", ".hg/hgrc.local", ".hg/hgrc.od", or other
+    # service specific configs will not be removed.
+    #
+    # Over time the disallowlist should grow to match the legacylist, at which
+    # point we can remove all the legacy values because they will all be removed
+    # in ensure_location_supersets anyway.
+    disallowedlist = []
+    for sectionkey in ui.configlist("configs", "disallowlist", []):
+        section, key = sectionkey.split(".", 1)
+        disallowedlist.append((section, key))
+
     testrcs = ui.configlist("configs", "testdynamicconfigsubset")
     if testrcs:
         originalrcs.extend(testrcs)
     issues = ui._uiconfig._rcfg.ensure_location_supersets(
-        "hgrc.dynamic", originalrcs, legacylist
+        "hgrc.dynamic", originalrcs, legacylist, disallowedlist
     )
 
     for section, key, dynamic_value, file_value in issues:

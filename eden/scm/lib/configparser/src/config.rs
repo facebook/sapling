@@ -427,6 +427,7 @@ impl ConfigSet {
         superset_location: String,
         subset_locations: Vec<String>,
         legacy_list: HashSet<(&str, &str)>,
+        disallow_list: HashSet<(&str, &str)>,
     ) -> SupersetVerification {
         let mut result = SupersetVerification::new();
 
@@ -439,11 +440,20 @@ impl ConfigSet {
                     continue;
                 }
 
+                let disallowed = disallow_list.contains(&(sname.as_ref(), kname.as_ref()));
+
                 let mut super_value = None;
                 let mut super_index = 10000; // Dummy place holder value
                 let mut sub_value = None;
                 let mut last_value = None;
-                for (index, value) in values.iter().enumerate() {
+                let mut values_copy = values.clone();
+
+                // Iterate in reverse so we can remove items from the end of values.
+                values_copy.reverse();
+                for (index, value) in values_copy.iter().enumerate() {
+                    // Convert the reverse index into the original index.
+                    let index = values_copy.len() - index - 1;
+
                     // Get the filename of the value's rc location
                     let location: String = match value
                         .location()
@@ -460,17 +470,36 @@ impl ConfigSet {
                         }
                     };
 
+                    // If it's a disallowed value from a subset, remove it.
+                    if disallowed && subset_locations.contains(&location) {
+                        values.remove(index);
+                        continue;
+                    }
+
                     if location == superset_location {
                         super_value = value.value().clone();
                         super_index = index;
-                    } else if subset_locations.contains(&location) {
-                        sub_value = value.value().clone();
-                        last_value = value.value().clone();
                     } else {
-                        last_value = value.value().clone();
+                        // Since we're iterating in reverse, take the first subset value and the
+                        // first value we see (i.e. the last value in the original order which is value
+                        // that will be exposed to people reading the config).
+                        if sub_value.is_none() && subset_locations.contains(&location) {
+                            sub_value = value.value().clone();
+                        }
+
+                        if last_value.is_none() {
+                            last_value = value.value().clone();
+                        }
                     }
                 }
 
+                // If it's a disallowed value from a subset, don't enforce any superset removal.
+                if disallowed {
+                    continue;
+                }
+
+                // If the superset value doesn't match the most recent subset value, remove the
+                // superset value.
                 let mut removed = false;
                 match (super_value.clone(), sub_value) {
                     // Sub does not have it, but super does (and should not)
@@ -498,8 +527,6 @@ impl ConfigSet {
                     (None, None) => (),
                 };
 
-                // If the dynamic value matches the subsets, but does not match the final actual value,
-                // remove the dynamic value so we don't change the final actual value.
                 if !removed && super_value.is_some() && super_value != last_value {
                     values.remove(super_index);
                 }
@@ -1143,6 +1170,7 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
             legacy_list.clone(),
+            HashSet::new(),
         );
         assert!(result.is_empty());
 
@@ -1154,6 +1182,7 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
             legacy_list.clone(),
+            HashSet::new(),
         );
         assert_eq!(
             result.missing,
@@ -1170,6 +1199,7 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset1".to_string()],
             legacy_list.clone(),
+            HashSet::new(),
         );
         assert!(result.is_empty());
 
@@ -1183,6 +1213,7 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
             legacy_list.clone(),
+            HashSet::new(),
         );
         assert_eq!(
             result.extra,
@@ -1206,6 +1237,7 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
             legacy_list.clone(),
+            HashSet::new(),
         );
         assert_eq!(
             result.mismatched,
@@ -1233,10 +1265,29 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset2".to_string()],
             legacy_list.clone(),
+            HashSet::new(),
         );
         assert!(result.is_empty());
         assert_eq!(
             tempcfg.get("section2", "key2"),
+            Some(Text::from_static("value3")),
+        );
+
+        // Verify disallow_list causes values to be removed.
+        let mut tempcfg = cfg.clone();
+        set(&mut tempcfg, "section3", "key3", "value3", "super");
+        set(&mut tempcfg, "section3", "key3", "valuex", "subset3");
+
+        let _ = tempcfg.ensure_location_supersets(
+            "super".to_string(),
+            vec!["subset3".to_string()],
+            legacy_list.clone(),
+            vec![("section3", "key3")]
+                .into_iter()
+                .collect::<HashSet<_>>(),
+        );
+        assert_eq!(
+            tempcfg.get("section3", "key3"),
             Some(Text::from_static("value3")),
         );
     }
