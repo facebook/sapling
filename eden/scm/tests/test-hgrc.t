@@ -18,13 +18,14 @@ Basic syntax error
 
   $ echo "invalid" > $HGRC
   $ hg version
-  hg: parse error: "$TESTTMP/hgrc":
+  hg: parse errors: "$TESTTMP*hgrc": (glob)
    --> 1:8
     |
   1 | invalid\xe2\x90\x8a (esc)
     |        ^---
     |
     = expected equal_sign
+  
   [255]
   $ echo "" > $HGRC
 
@@ -62,13 +63,14 @@ issue1829: wrong indentation
   $ echo '[foo]' > $HGRC
   $ echo '  x = y' >> $HGRC
   $ hg version
-  hg: parse error: "$TESTTMP/hgrc":
+  hg: parse errors: "$TESTTMP*hgrc": (glob)
    --> 2:3
     |
   2 |   x = y\xe2\x90\x8a (esc)
     |   ^---
     |
     = expected EOI or new_line
+  
   [255]
 
   $ $PYTHON -c "print('[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n')" \

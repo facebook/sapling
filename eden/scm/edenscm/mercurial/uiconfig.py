@@ -120,10 +120,11 @@ class uiconfig(object):
     def load(cls):
         """Create a uiconfig and load global and user configs"""
         u = cls()
-        rcfg, errors = configparser.config.load()
+        try:
+            rcfg = configparser.config.load()
+        except Exception as ex:
+            raise error.ParseError(str(ex))
         u._rcfg = localrcfg(rcfg)
-        if errors:
-            raise error.ParseError("\n\n".join(errors))
         root = os.path.expanduser("~")
         u.fixconfig(root=root)
         return u

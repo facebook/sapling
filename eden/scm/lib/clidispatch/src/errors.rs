@@ -55,6 +55,8 @@ pub fn print_error(err: &anyhow::Error, io: &mut crate::io::IO, args: &[String])
     use cliparser::parser::ParseError;
     if err.downcast_ref::<configparser::Error>().is_some() {
         let _ = io.write_err(format!("hg: parse error: {}\n", err));
+    } else if err.downcast_ref::<configparser::Errors>().is_some() {
+        let _ = io.write_err(format!("hg: parse errors: {}\n", err));
     } else if let Some(ParseError::AmbiguousCommand {
         command_name: _,
         possibilities,

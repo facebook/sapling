@@ -72,7 +72,7 @@ pub mod error;
 pub mod hg;
 pub mod parser;
 
-pub use error::Error;
+pub use error::{Error, Errors};
 
 // Re-export
 pub use minibytes::Text;

@@ -6,6 +6,7 @@
  */
 
 use std::ffi::CString;
+use std::fmt;
 use std::io;
 use std::path::PathBuf;
 use std::str;
@@ -33,4 +34,16 @@ pub enum Error {
 
     #[error("{0:?}: {1}")]
     Utf8Path(CString, #[source] str::Utf8Error),
+}
+
+#[derive(Error, Debug)]
+pub struct Errors(pub Vec<Error>);
+
+impl fmt::Display for Errors {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for error in self.0.iter() {
+            write!(f, "{}\n", error)?;
+        }
+        Ok(())
+    }
 }
