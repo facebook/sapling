@@ -13,12 +13,14 @@ use std::env;
 use std::fs::{self, read_to_string};
 use std::hash::Hash;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{Duration, SystemTime};
 
 use anyhow::{bail, Result};
 use filetime::{set_file_mtime, FileTime};
 use minibytes::Text;
 use tempfile::tempfile_in;
-use util::path::expand_path;
+use util::{path::expand_path, run_background};
 
 use crate::config::{ConfigSet, Options};
 use crate::dynamicconfig::Generator;
@@ -53,10 +55,17 @@ pub trait ConfigSetHgExt {
     /// Return errors parsing files.
     fn load_system(&mut self) -> Vec<Error>;
 
+    /// Load the dynamic config files for the given repo path.
+    /// Returns errors parsing, generating, or fetching the configs.
+    fn load_dynamic(&mut self, repo_path: &Path) -> Result<Vec<Error>>;
+
     /// Load user config files (and environment variables).  If `$HGRCPATH` is
     /// set, load files listed in that environment variable instead.
     /// Return errors parsing files.
     fn load_user(&mut self) -> Vec<Error>;
+
+    /// Load repo config files.
+    fn load_repo(&mut self, repo_path: &Path) -> Vec<Error>;
 
     /// Load a specified config file. Respect HGPLAIN environment variables.
     /// Return errors parsing files.
@@ -270,6 +279,99 @@ impl ConfigSetHgExt for ConfigSet {
         errors
     }
 
+    fn load_dynamic(&mut self, repo_path: &Path) -> Result<Vec<Error>> {
+        let mut errors = Vec::new();
+
+        if self.get_or_default::<bool>("configs", "loaddynamicconfig")? {
+            // Compute path
+            let dynamic_path = {
+                let shared_path = repo_path.join("sharedpath");
+                if shared_path.exists() {
+                    Path::new(&read_to_string(shared_path)?).join("hgrc.dynamic")
+                } else {
+                    repo_path.join("hgrc.dynamic")
+                }
+            };
+
+            // Check version
+            let content = read_to_string(&dynamic_path).ok();
+            let version = content.as_ref().and_then(|c| {
+                let mut lines = c.split("\n");
+                match lines.next() {
+                    Some(line) if line.starts_with("# version=") => Some(&line[10..]),
+                    Some(_) | None => None,
+                }
+            });
+
+            #[cfg(feature = "fb")]
+            let this_version = ::version::VERSION;
+            #[cfg(not(feature = "fb"))]
+            let this_version = "unknown";
+
+            // Synchronously generate the new config if it's out of date with our version
+            if version != Some(this_version) {
+                let (repo_name, user_name) = {
+                    let mut temp_config = ConfigSet::new();
+                    // We need to know the repo name, but that's stored in the repository configs at
+                    // the moment. In the long term we need to move that, but for now let's load the
+                    // repo config ahead of time to read the name.
+                    let mut repo_hgrc_path = repo_path.join(".hg");
+                    repo_hgrc_path.push("hgrc");
+                    if !temp_config.load_user().is_empty() {
+                        bail!("unable to read user config to get user name");
+                    }
+                    let opts = Options::new().source("temp").process_hgplain();
+                    if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
+                        bail!("unable to read repo config to get repo name");
+                    }
+
+                    (
+                        temp_config
+                            .get("remotefilelog", "reponame")
+                            .unwrap_or_default()
+                            .to_string(),
+                        temp_config
+                            .get("ui", "username")
+                            .unwrap_or_default()
+                            .to_string(),
+                    )
+                };
+
+                // Regen inline
+                generate_dynamicconfig(repo_path, repo_name, None, user_name)?;
+            }
+
+            // Read hgrc.dynamic
+            let opts = Options::new().source("dynamic").process_hgplain();
+            errors.append(&mut self.load_path(&dynamic_path, &opts));
+
+            // Log config ages
+            // - Done in python for now
+
+            // Regenerate if mtime is old.
+            let generation_time: Option<u64> = self.get_opt("configs", "generationtime")?;
+            let recursion_marker = env::var("HG_DEBUGDYNAMICCONFIG");
+
+            if recursion_marker.is_err() {
+                if let Some(generation_time) = generation_time {
+                    let generation_time = Duration::from_secs(generation_time);
+                    let mtime_age =
+                        SystemTime::now().duration_since(dynamic_path.metadata()?.modified()?)?;
+                    if mtime_age > generation_time {
+                        let mut command = Command::new("hg");
+                        command
+                            .arg("debugdynamicconfig")
+                            .args(&["--cwd", &repo_path.to_string_lossy()])
+                            .env("HG_DEBUGDYNAMICCONFIG", "1");
+                        let _ = run_background(command);
+                    }
+                }
+            }
+        }
+
+        Ok(errors)
+    }
+
     fn load_user(&mut self) -> Vec<Error> {
         let mut errors = Vec::new();
 
@@ -316,6 +418,17 @@ impl ConfigSetHgExt for ConfigSet {
                 errors.append(&mut self.load_path(config_dir.join("hg/hgrc"), &opts));
             }
         }
+
+        errors
+    }
+
+    fn load_repo(&mut self, repo_path: &Path) -> Vec<Error> {
+        let mut errors = Vec::new();
+
+        let opts = Options::new().source("repo").process_hgplain();
+
+        let hgrc_path = repo_path.join("hgrc");
+        errors.append(&mut self.load_path(hgrc_path, &opts));
 
         errors
     }
