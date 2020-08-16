@@ -9,7 +9,6 @@ use crate::remotestore::FakeRemoteStore;
 use crate::treecontentstore::TreeContentStore;
 use crate::utils::key_from_path_node_slice;
 use anyhow::Result;
-use configparser::config::{ConfigSet, Options};
 use configparser::hg::ConfigSetHgExt;
 use edenapi::{Builder as EdenApiBuilder, EdenApi};
 use log::warn;
@@ -31,11 +30,7 @@ pub struct BackingStore {
 impl BackingStore {
     pub fn new<P: AsRef<Path>>(repository: P, use_edenapi: bool) -> Result<Self> {
         let hg = repository.as_ref().join(".hg");
-        let options = Options::new();
-        let mut config = ConfigSet::new();
-        config.load_system(options.clone());
-        config.load_user(options.clone());
-        config.load_hgrc(hg.join("hgrc"), "repository");
+        let config = configparser::hg::load::<String, String>(Some(&hg), None)?;
 
         let store_path = hg.join("store");
         let mut blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
