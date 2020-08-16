@@ -13,15 +13,14 @@ use anyhow::Result;
 
 use crate::types::StoreKey;
 
-pub trait LocalStore: Send + Sync {
+pub trait StoreFromPath {
     /// Builds a Store from a filepath. The default implementation panics.
     fn from_path(_path: &Path) -> Result<Self>
     where
-        Self: Sized,
-    {
-        unimplemented!("Can't build a Store");
-    }
+        Self: Sized;
+}
 
+pub trait LocalStore: Send + Sync {
     /// Returns all the keys that aren't present in this `Store`.
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>>;
 

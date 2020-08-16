@@ -103,7 +103,7 @@ use util::path::remove_file;
 use crate::{
     dataindex::{DataIndex, DeltaBaseOffset},
     datastore::{Delta, HgIdDataStore, Metadata, StoreResult},
-    localstore::LocalStore,
+    localstore::{LocalStore, StoreFromPath},
     repack::{Repackable, ToKeys},
     sliceext::SliceExt,
     types::StoreKey,
@@ -395,11 +395,13 @@ impl HgIdDataStore for DataPack {
     }
 }
 
-impl LocalStore for DataPack {
+impl StoreFromPath for DataPack {
     fn from_path(path: &Path) -> Result<Self> {
         DataPack::new(path)
     }
+}
 
+impl LocalStore for DataPack {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys
             .iter()

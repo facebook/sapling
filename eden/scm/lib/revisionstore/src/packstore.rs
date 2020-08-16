@@ -29,7 +29,7 @@ use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     historypack::{HistoryPack, HistoryPackVersion},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
-    localstore::LocalStore,
+    localstore::{LocalStore, StoreFromPath},
     mutabledatapack::MutableDataPack,
     mutablehistorypack::MutableHistoryPack,
     repack::Repackable,
@@ -230,7 +230,7 @@ impl HistoryPackStore {
     }
 }
 
-impl<T: LocalStore + Repackable> PackStoreInner<T> {
+impl<T: LocalStore + Repackable + StoreFromPath> PackStoreInner<T> {
     /// Open new on-disk packfiles, and close removed ones.
     fn rescan(&self) -> Result<()> {
         let mut new_packs = Vec::new();
@@ -329,7 +329,7 @@ impl<T: LocalStore + Repackable> PackStoreInner<T> {
     }
 }
 
-impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
+impl<T: LocalStore + Repackable + StoreFromPath> LocalStore for PackStore<T> {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         // Since the packfiles are loaded lazily, it's possible that `get_missing` is called before
         // any packfiles have been loaded. Let's tentatively scan the store before iterating over

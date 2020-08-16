@@ -211,10 +211,6 @@ impl DefaultOpenOptions<OpenOptions> for IndexedLogHgIdHistoryStore {
 }
 
 impl LocalStore for IndexedLogHgIdHistoryStore {
-    fn from_path(path: &Path) -> Result<Self> {
-        IndexedLogHgIdHistoryStore::new(path)
-    }
-
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let inner = self.inner.read().unwrap();
         Ok(keys

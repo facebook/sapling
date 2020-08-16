@@ -26,7 +26,7 @@ use crate::{
     datastore::{HgIdDataStore, HgIdMutableDeltaStore, StoreResult},
     historypack::{HistoryPack, HistoryPackVersion},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
-    localstore::LocalStore,
+    localstore::{LocalStore, StoreFromPath},
     metadatastore::MetadataStore,
     mutabledatapack::MutableDataPack,
     mutablehistorypack::MutableHistoryPack,
@@ -87,7 +87,7 @@ enum RepackFailure {
 
 /// Repack all pack files in the paths iterator. Once repacked, the repacked packs will be removed
 /// from the filesystem.
-fn repack_packs<T: MutablePack, U: LocalStore + Repackable + ToKeys>(
+fn repack_packs<T: MutablePack, U: LocalStore + Repackable + ToKeys + StoreFromPath>(
     paths: impl IntoIterator<Item = PathBuf> + Clone,
     mut mut_pack: T,
     repack_pack: impl Fn(&U, &mut T) -> Result<()>,

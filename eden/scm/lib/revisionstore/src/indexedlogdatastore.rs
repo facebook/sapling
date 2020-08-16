@@ -193,10 +193,6 @@ impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {
 }
 
 impl LocalStore for IndexedLogHgIdDataStore {
-    fn from_path(path: &Path) -> Result<Self> {
-        IndexedLogHgIdDataStore::new(path)
-    }
-
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let inner = self.inner.read();
         Ok(keys

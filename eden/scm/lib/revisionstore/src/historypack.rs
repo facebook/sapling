@@ -101,7 +101,7 @@ use util::path::remove_file;
 use crate::{
     historyindex::HistoryIndex,
     historystore::HgIdHistoryStore,
-    localstore::LocalStore,
+    localstore::{LocalStore, StoreFromPath},
     repack::{Repackable, ToKeys},
     sliceext::SliceExt,
     types::StoreKey,
@@ -342,11 +342,13 @@ impl HgIdHistoryStore for HistoryPack {
     }
 }
 
-impl LocalStore for HistoryPack {
+impl StoreFromPath for HistoryPack {
     fn from_path(path: &Path) -> Result<Self> {
         HistoryPack::new(path)
     }
+}
 
+impl LocalStore for HistoryPack {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys
             .iter()
