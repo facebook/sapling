@@ -68,6 +68,7 @@
 
 pub mod c_api;
 pub mod config;
+pub mod dynamicconfig;
 pub mod error;
 pub mod hg;
 pub mod parser;
@@ -76,3 +77,6 @@ pub use error::{Error, Errors};
 
 // Re-export
 pub use minibytes::Text;
+
+#[cfg(feature = "fb")]
+mod fb;

@@ -27,7 +27,6 @@ pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
 pydiffhelpers = { path = "modules/pydiffhelpers" }
 pydirs = { path = "modules/pydirs" }
-pydynamicconfig = { path = "modules/pydynamicconfig" }
 pyedenapi = { path = "modules/pyedenapi" }
 pyerror = { path = "modules/pyerror" }
 pyfs = { path = "modules/pyfs" }

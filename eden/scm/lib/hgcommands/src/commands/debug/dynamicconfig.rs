@@ -10,7 +10,7 @@ use super::Repo;
 use super::Result;
 use super::IO;
 use anyhow::bail;
-use dynamicconfig::Generator;
+use configparser::dynamicconfig::Generator;
 use filetime::{set_file_mtime, FileTime};
 use std::fs;
 use tempfile::tempfile_in;

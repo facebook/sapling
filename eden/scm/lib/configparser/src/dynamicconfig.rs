@@ -20,14 +20,12 @@ use anyhow::{anyhow, bail, Result};
 use hostname;
 use minibytes::Text;
 
-use configparser::config::ConfigSet;
 use hgtime::HgTime;
 
-#[cfg(feature = "fb")]
-mod fb;
+use crate::config::ConfigSet;
 
 #[cfg(feature = "fb")]
-use fb::Repo;
+use crate::fb::Repo;
 
 #[cfg(not(feature = "fb"))]
 #[derive(Clone, Debug, PartialEq)]
@@ -127,7 +125,7 @@ pub struct Generator {
     group: HgGroup,
     shard: u8,
     user_shard: u8,
-    config: ConfigSet,
+    pub(crate) config: ConfigSet,
     platform: Platform,
     domain: Domain,
     hostname: String,
@@ -196,7 +194,7 @@ impl Generator {
     }
 
     #[cfg(test)]
-    fn set_inputs(&mut self, tiers: HashSet<String>, group: HgGroup, shard: u8) {
+    pub(crate) fn set_inputs(&mut self, tiers: HashSet<String>, group: HgGroup, shard: u8) {
         self.tiers = tiers;
         self.group = group;
         self.shard = shard;
@@ -294,7 +292,7 @@ impl Generator {
             self._execute(test_rules, canary_remote)?;
         } else {
             #[cfg(feature = "fb")]
-            self._execute(fb::fb_rules, canary_remote)?;
+            self._execute(crate::fb::fb_rules, canary_remote)?;
         }
         Ok(self.config)
     }

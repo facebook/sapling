@@ -107,7 +107,7 @@ function(rust_static_library TARGET)
   set(cargo_flags build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
   if(USE_CARGO_VENDOR)
     set(extra_cargo_env "CARGO_HOME=${RUST_CARGO_HOME}")
-    set(cargo_flags ${cargo_flags} --offline)
+    set(cargo_flags ${cargo_flags})
   endif()
 
   add_custom_target(
@@ -164,7 +164,7 @@ function(rust_executable TARGET)
   set(cargo_flags build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
   if(USE_CARGO_VENDOR)
     set(extra_cargo_env "CARGO_HOME=${RUST_CARGO_HOME}")
-    set(cargo_flags ${cargo_flags} --offline)
+    set(cargo_flags ${cargo_flags})
   endif()
 
   add_custom_target(

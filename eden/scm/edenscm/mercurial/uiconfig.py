@@ -18,7 +18,7 @@ import subprocess
 import time
 from typing import List, Optional, Tuple
 
-from bindings import configparser, dynamicconfig
+from bindings import configparser
 
 from ..hgext.extutil import runbgcommand
 from . import configitems, encoding, error, pycompat, util
@@ -718,11 +718,11 @@ def validatedynamicconfig(ui):
 
 def applydynamicconfig(ui, reponame, sharedpath):
     if ui.configbool("configs", "loaddynamicconfig"):
-        dynamicconfig.applydynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
+        configparser.applydynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
 
         validatedynamicconfig(ui)
 
 
 def generatedynamicconfig(ui, reponame, sharedpath):
     if ui.configbool("configs", "loaddynamicconfig"):
-        dynamicconfig.generatedynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
+        configparser.generatedynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
