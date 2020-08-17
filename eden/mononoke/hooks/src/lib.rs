@@ -443,7 +443,7 @@ impl HookOutcome {
         }
     }
 
-    pub fn into_rejection(self) -> Option<(String, ChangesetId, HookRejectionInfo)> {
+    pub fn into_rejection(self) -> Option<HookRejection> {
         match self {
             HookOutcome::ChangesetHook(_, HookExecution::Accepted)
             | HookOutcome::FileHook(_, HookExecution::Accepted) => None,
@@ -458,9 +458,26 @@ impl HookOutcome {
                     path: _,
                 },
                 HookExecution::Rejected(reason),
-            ) => Some((hook_name, cs_id, reason)),
+            ) => Some(HookRejection {
+                hook_name,
+                cs_id,
+                reason,
+            }),
         }
     }
+}
+
+/// Instance of a hook rejecting a changeset.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HookRejection {
+    /// The hook that rejected the changeset.
+    pub hook_name: String,
+
+    /// The changeset that was rejected.
+    pub cs_id: ChangesetId,
+
+    /// Why the hook rejected the changeset.
+    pub reason: HookRejectionInfo,
 }
 
 #[derive(Clone, Debug, PartialEq)]

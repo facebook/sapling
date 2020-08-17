@@ -106,20 +106,20 @@ impl From<bool> for NonFastForwardPolicy {
     }
 }
 
-pub struct HookFailure {
+pub struct HgHookRejection {
     pub(crate) hook_name: String,
-    pub(crate) cs_id: HgChangesetId,
-    pub(crate) info: HookRejectionInfo,
+    pub(crate) hg_cs_id: HgChangesetId,
+    pub(crate) reason: HookRejectionInfo,
 }
 
-impl HookFailure {
+impl HgHookRejection {
     pub fn get_hook_name(&self) -> &str {
         &self.hook_name
     }
 }
 
 pub enum BundleResolverError {
-    HookError(Vec<HookFailure>),
+    HookError(Vec<HgHookRejection>),
     PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
     Error(Error),
     RateLimitExceeded {
@@ -146,7 +146,7 @@ impl From<BundleResolverError> for Error {
                     .map(|failure| {
                         format!(
                             "{} for {}: {}",
-                            failure.hook_name, failure.cs_id, failure.info.long_description
+                            failure.hook_name, failure.hg_cs_id, failure.reason.long_description
                         )
                     })
                     .collect();

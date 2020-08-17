@@ -7,7 +7,9 @@
 
 #![deny(warnings)]
 
-use crate::{resolver::HookFailure, BundleResolverError, PostResolveAction, PostResolvePushRebase};
+use crate::{
+    resolver::HgHookRejection, BundleResolverError, PostResolveAction, PostResolvePushRebase,
+};
 use anyhow::Context;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -23,7 +25,7 @@ use futures::{
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as _};
 use futures_old::future::ok;
 use futures_stats::TimedFutureExt;
-use hooks::{HookManager, HookOutcome};
+use hooks::{HookManager, HookOutcome, HookRejection};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use scuba_ext::ScubaSampleBuilderExt;
@@ -131,15 +133,21 @@ async fn run_hooks_on_changesets(
     let remap_cs = &remap_cs;
     let rejections = rejections
         .into_iter()
-        .map(|(hook_name, cs_id, info)| async move {
-            let cs_id = remap_cs(cs_id).await?;
+        .map(
+            |HookRejection {
+                 hook_name,
+                 cs_id,
+                 reason,
+             }| async move {
+                let hg_cs_id = remap_cs(cs_id).await?;
 
-            Result::<_, anyhow::Error>::Ok(HookFailure {
-                hook_name,
-                cs_id,
-                info,
-            })
-        })
+                Result::<_, anyhow::Error>::Ok(HgHookRejection {
+                    hook_name,
+                    hg_cs_id,
+                    reason,
+                })
+            },
+        )
         .collect::<FuturesUnordered<_>>()
         .try_collect()
         .await?;
