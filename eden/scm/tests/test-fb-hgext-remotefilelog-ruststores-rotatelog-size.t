@@ -28,45 +28,45 @@
 Test max-bytes-per-log
   $ clone master shallow2 --noupdate
   $ ls_l $(findfilessorted $CACHEDIR/master/ | grep 'datastore.*log')
-  -rw-rw-r--      12 $TESTTMP/hgcache/master/indexedlogdatastore/0/log
+  * 12 *0* (glob)
   $ cd shallow2
 
   $ setconfig indexedlog.data.max-bytes-per-log=10
   $ hg up -q 0
   $ ls_l $(findfilessorted $CACHEDIR/master/ | grep 'datastore.*log')
-  -rw-rw-r--      70 $TESTTMP/hgcache/master/indexedlogdatastore/0/log
-  -rw-rw-r--      12 $TESTTMP/hgcache/master/indexedlogdatastore/1/log
+  * 70 *0* (glob)
+  * 12 *1* (glob)
   $ hg up -q 1
   $ ls_l $(findfilessorted $CACHEDIR/master/ | grep 'datastore.*log')
-  -rw-rw-r--      70 $TESTTMP/hgcache/master/indexedlogdatastore/0/log
-  -rw-rw-r--      70 $TESTTMP/hgcache/master/indexedlogdatastore/1/log
-  -rw-rw-r--      12 $TESTTMP/hgcache/master/indexedlogdatastore/2/log
+  * 70 *0* (glob)
+  * 70 *1* (glob)
+  * 12 *2* (glob)
   $ hg up -q 2
   $ ls_l $(findfilessorted $CACHEDIR/master/ | grep 'datastore.*log')
-  -rw-rw-r--      70 $TESTTMP/hgcache/master/indexedlogdatastore/0/log
-  -rw-rw-r--      70 $TESTTMP/hgcache/master/indexedlogdatastore/1/log
-  -rw-rw-r--      70 $TESTTMP/hgcache/master/indexedlogdatastore/2/log
-  -rw-rw-r--      12 $TESTTMP/hgcache/master/indexedlogdatastore/3/log
+  * 70 *0* (glob)
+  * 70 *1* (glob)
+  * 70 *2* (glob)
+  * 12 *3* (glob)
 
   $ setconfig indexedlog.data.max-bytes-per-log=100
   $ hg up -q null
-  $ clearcache
+  $ rm -rf $CACHEDIR/master
 
   $ hg up -q 0
   $ ls_l $(findfilessorted $CACHEDIR/master/ | grep 'datastore.*log')
-  -rw-rw-r--      70 $TESTTMP/hgcache/master/indexedlogdatastore/0/log
+  * * *0* (glob)
   $ hg up -q 1
   $ ls_l $(findfilessorted $CACHEDIR/master/ | grep 'datastore.*log')
-  -rw-rw-r--     128 $TESTTMP/hgcache/master/indexedlogdatastore/0/log
-  -rw-rw-r--      12 $TESTTMP/hgcache/master/indexedlogdatastore/1/log
+  * 128 *0* (glob)
+  * 12 *1* (glob)
   $ hg up -q 2
   $ ls_l $(findfilessorted $CACHEDIR/master/ | grep 'datastore.*log')
-  -rw-rw-r--     128 $TESTTMP/hgcache/master/indexedlogdatastore/0/log
-  -rw-rw-r--      70 $TESTTMP/hgcache/master/indexedlogdatastore/1/log
+  * 128 *0* (glob)
+  * 70 *1* (glob)
 
 Test max-log-count
   $ hg up -q null
-  $ clearcache
+  $ rm -rf $CACHEDIR/master
   $ setconfig indexedlog.data.max-bytes-per-log=10 indexedlog.data.max-log-count=3
   $ hg up -q 0
   $ findfilessorted $CACHEDIR/master/ | grep 'datastore.*log' | wc -l | sed -e 's/ //g'
