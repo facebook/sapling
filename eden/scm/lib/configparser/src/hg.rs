@@ -314,14 +314,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         if self.get_or_default::<bool>("configs", "loaddynamicconfig")? {
             // Compute path
-            let dynamic_path = {
-                let shared_path = repo_path.join("sharedpath");
-                if shared_path.exists() {
-                    Path::new(&read_to_string(shared_path)?).join("hgrc.dynamic")
-                } else {
-                    repo_path.join("hgrc.dynamic")
-                }
-            };
+            let dynamic_path = get_shared_path(repo_path)?.join("hgrc.dynamic");
 
             // Check version
             let content = read_to_string(&dynamic_path).ok();
@@ -873,6 +866,17 @@ fn parse_list_internal(value: &str) -> Vec<String> {
     parts
 }
 
+fn get_shared_path(repo_path: &Path) -> Result<PathBuf> {
+    let shared_path = repo_path.join("sharedpath");
+    Ok(if shared_path.exists() {
+        let raw = read_to_string(shared_path)?;
+        let trimmed = raw.trim_end_matches("\n");
+        PathBuf::from(trimmed)
+    } else {
+        repo_path.to_path_buf()
+    })
+}
+
 pub fn generate_dynamicconfig(
     repo_path: &Path,
     repo_name: String,
@@ -880,14 +884,7 @@ pub fn generate_dynamicconfig(
     user_name: String,
 ) -> Result<()> {
     // Resolve sharedpath
-    let repo_path = {
-        let shared_path = repo_path.join("sharedpath");
-        if shared_path.exists() {
-            PathBuf::from(read_to_string(shared_path)?)
-        } else {
-            repo_path.to_path_buf()
-        }
-    };
+    let repo_path = get_shared_path(repo_path)?;
 
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.

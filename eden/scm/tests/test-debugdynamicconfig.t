@@ -92,6 +92,9 @@ Verify we generate and load from a shared repo
   updating working directory
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd shared_copy
+- Test the case where sharedpath ends in newlines.
+  $ echo >> .hg/sharedpath
+  $ echo >> .hg/sharedpath
   $ hg debugdynamicconfig
   $ test -f .hg/hgrc.dynamic
   [1]
