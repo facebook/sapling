@@ -15,6 +15,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
 use bookmarks_movement::{BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets};
+use chrono::Utc;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
@@ -709,6 +710,7 @@ async fn log_commits_to_scribe(
 
     let repo_id = repo.get_repoid();
     let bookmark = bookmark.map(|bm| bm.as_str());
+    let received_timestamp = Utc::now();
 
     let futs: FuturesUnordered<_> = changesets
         .into_iter()
@@ -737,6 +739,7 @@ async fn log_commits_to_scribe(
                     parents,
                     ctx.user_unix_name().as_deref(),
                     ctx.source_hostname().as_deref(),
+                    received_timestamp,
                 );
                 queue.queue_commit(&ci)
             }

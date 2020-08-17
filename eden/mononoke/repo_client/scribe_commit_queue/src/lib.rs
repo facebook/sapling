@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use chrono::{DateTime, Utc};
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
 use scribe_ext::Scribe;
 use serde_derive::Serialize;
@@ -22,6 +23,8 @@ pub struct CommitInfo<'a> {
     user_unix_name: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     source_hostname: Option<&'a str>,
+    #[serde(with = "::chrono::serde::ts_seconds")]
+    received_timestamp: DateTime<Utc>,
 }
 
 impl<'a> CommitInfo<'a> {
@@ -33,6 +36,7 @@ impl<'a> CommitInfo<'a> {
         parents: Vec<ChangesetId>,
         user_unix_name: Option<&'a str>,
         source_hostname: Option<&'a str>,
+        received_timestamp: DateTime<Utc>,
     ) -> Self {
         Self {
             repo_id,
@@ -42,6 +46,7 @@ impl<'a> CommitInfo<'a> {
             parents,
             user_unix_name,
             source_hostname,
+            received_timestamp,
         }
     }
 }
