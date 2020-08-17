@@ -130,7 +130,7 @@ def disconnected(repo):
     """
     Returns True if the user has manually disconnected from a workspace.
     """
-    disconnected = _get(repo, "disconnected")
+    disconnected = _get(repo, "is_disconnected")
     if disconnected is None or isinstance(disconnected, bool):
         return disconnected
     return util.parsebool(disconnected)
@@ -151,4 +151,4 @@ def clearworkspace(repo):
     with repo.wlock(), repo.lock(), repo.svfs.open(
         filename, "wb", atomictemp=True
     ) as f:
-        f.write(b"[commitcloud]\ndisconnected=true\n")
+        f.write(b"[commitcloud]\nis_disconnected=true\n")
