@@ -8,12 +8,10 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+sh % "configure dummyssh"
+sh % "enable commitcloud infinitepush"
+
 sh % "cat" << r"""
-[ui]
-ssh = python "$TESTDIR/dummyssh"
-[extensions]
-commitcloud =
-infinitepush =
 [commitcloud]
 hostname = testhost
 servicetype = local

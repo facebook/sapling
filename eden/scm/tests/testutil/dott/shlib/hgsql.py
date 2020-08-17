@@ -90,15 +90,17 @@ preferuncompressed=True
 uncompressed=True
 
 [ui]
-ssh=python "$TESTDIR/dummyssh"
+ssh={0}
 """.format(
-            **config
+            shlib.DUMMYSSH, **config
         )
     )
 
 
 def initclient(name):
-    shlib.hg("init", "--config=extensions.hgsql=!", "--config=format.usehgsql=false", name)
+    shlib.hg(
+        "init", "--config=extensions.hgsql=!", "--config=format.usehgsql=false", name
+    )
     configureclient(name)
 
 
@@ -106,6 +108,8 @@ def configureclient(name):
     open(os.path.join(name, ".hg/hgrc"), "ab").write(
         r"""
 [ui]
-ssh=python "$TESTDIR/dummyssh"
-"""
+ssh={}
+""".format(
+            shlib.DUMMYSSH
+        )
     )

@@ -41,7 +41,7 @@ pull a tag
 pull via ssh
 # dummyssh doesn't actually work with Git, but it gets far enough to prove that
 # the connection succeeded and git was invoked.
-  $ hg -R hgrepo pull --config paths.default=git+ssh://user@dummy/gitrepo --config ui.ssh=$TESTDIR/dummyssh
+  $ hg -R hgrepo pull --config paths.default=git+ssh://user@dummy/gitrepo --config ui.ssh="$(dummysshcmd)"
   fatal: '/gitrepo' does not appear to be a git repository
   pulling from git+ssh://user@dummy/gitrepo
   abort: git remote error: The remote server unexpectedly closed the connection.

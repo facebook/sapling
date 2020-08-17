@@ -106,7 +106,7 @@ empty default pull
 
   $ hg paths
   default = ssh://user@dummy/remote
-  $ hg pull -e "\"$PYTHON\" \"$TESTDIR/dummyssh\""
+  $ hg pull -e "$(dummysshcmd)"
   pulling from ssh://user@dummy/remote
   searching for changes
   no changes found
@@ -128,7 +128,7 @@ updating rc
 
   $ echo "default-push = ssh://user@dummy/remote" >> .hg/hgrc
   $ echo "[ui]" >> .hg/hgrc
-  $ echo "ssh = \"$PYTHON\" \"$TESTDIR/dummyssh\"" >> .hg/hgrc
+  $ echo "ssh = $(dummysshcmd)" >> .hg/hgrc
 
 find outgoing
 
@@ -196,7 +196,7 @@ check remote tip
 test pushkeys and bookmarks
 
   $ cd ../local
-  $ hg debugpushkey --config ui.ssh="\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote namespaces
+  $ hg debugpushkey --config ui.ssh="$(dummysshcmd)" ssh://user@dummy/remote namespaces
   bookmarks	
   namespaces	
   phases	
@@ -211,7 +211,7 @@ test pushkeys and bookmarks
   no changes found
   exporting bookmark foo
   [1]
-  $ hg debugpushkey --config ui.ssh="\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote bookmarks
+  $ hg debugpushkey --config ui.ssh="$(dummysshcmd)" ssh://user@dummy/remote bookmarks
   foo	1160648e36cec0054048a7edc4110c6f84fde594
   $ hg book -f foo
   $ hg push --traceback
@@ -317,20 +317,20 @@ hide outer repo
 
 Test remote paths with spaces (issue2983):
 
-  $ hg init --ssh "\"$PYTHON\" \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"
+  $ hg init --ssh "$(dummysshcmd)" "ssh://user@dummy/a repo"
   $ touch "$TESTTMP/a repo/test"
   $ hg -R 'a repo' commit -A -m "test"
   adding test
-  $ hg id --ssh "\"$PYTHON\" \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"
+  $ hg id --ssh "$(dummysshcmd)" "ssh://user@dummy/a repo"
   be090ea66256
 
-  $ hg id --ssh "\"$PYTHON\" \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo#noNoNO"
+  $ hg id --ssh "$(dummysshcmd)" "ssh://user@dummy/a repo#noNoNO"
   abort: unknown revision 'noNoNO'!
   [255]
 
 Test (non-)escaping of remote paths with spaces when cloning (issue3145):
 
-  $ hg clone --ssh "\"$PYTHON\" \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"
+  $ hg clone --ssh "$(dummysshcmd)" "ssh://user@dummy/a repo"
   destination directory: a repo
   abort: destination 'a repo' is not empty
   [255]
@@ -512,11 +512,11 @@ remote hook failure is attributed to remote
 
   $ echo "pretxnchangegroup.fail = python:$TESTTMP/failhook:hook" >> remote/.hg/hgrc
 
-  $ hg -q --config ui.ssh="\"$PYTHON\" $TESTDIR/dummyssh" clone ssh://user@dummy/remote hookout
+  $ hg -q --config ui.ssh="$(dummysshcmd)" clone ssh://user@dummy/remote hookout
   $ cd hookout
   $ touch hookfailure
   $ hg -q commit -A -m 'remote hook failure'
-  $ hg --config ui.ssh="\"$PYTHON\" $TESTDIR/dummyssh" push
+  $ hg --config ui.ssh="$(dummysshcmd)" push
   pushing to ssh://user@dummy/remote
   searching for changes
   remote: pretxnchangegroup.fail hook failed
@@ -545,7 +545,7 @@ abort during pull is properly reported as such
 
 abort with no error hint when there is a ssh problem when pulling
 
-  $ hg pull ssh://brokenrepository -e "\"$PYTHON\" \"$TESTDIR/dummyssh\""
+  $ hg pull ssh://brokenrepository -e "$(dummysshcmd)"
   pulling from ssh://brokenrepository/
   abort: no suitable response from remote hg!
   [255]

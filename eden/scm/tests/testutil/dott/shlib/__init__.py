@@ -66,6 +66,11 @@ else:
     raise RuntimeError("Cannot find TESTDIR")
 
 
+DUMMYSSH = os.environ.get("DUMMYSSH")
+if DUMMYSSH is None:
+    DUMMYSSH = "python {}/dummyssh".format(TESTDIR)
+
+
 try:
     from edenscm.mercurial import encoding, util, pycompat
     import bindings
@@ -353,6 +358,14 @@ def setmodernconfig():
         "experimental.evolution=obsolete",
         "remotenames.rename.default=remote",
     )
+
+
+def configure(*args):
+    for arg in args:
+        if arg == "dummyssh":
+            setconfig("ui.ssh={}".format(DUMMYSSH))
+        else:
+            raise RuntimeError("Unrecognised configure: {}".format(arg))
 
 
 _newrepoid = 0

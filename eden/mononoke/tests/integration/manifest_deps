@@ -51,4 +51,5 @@ OSS_DEPS = {
     "TEST_CERTS": "//eden/mononoke/tests/integration/certs",
     "TEST_FIXTURES": "//eden/mononoke/tests/integration",
     "TEST_ROOT_PUBLIC": "//eden/mononoke/tests/integration",
+    "GET_FREE_SOCKET": "//eden/mononoke/tests/integration/get_free_socket.py",
 }

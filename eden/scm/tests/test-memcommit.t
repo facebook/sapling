@@ -183,7 +183,7 @@ is not the case.
   $ initclient()
   > {
   >   hg init "$1"
-  >   ( cd "$1" && setconfig ui.ssh="python \"$TESTDIR/dummyssh\"" )
+  >   ( cd "$1" && configure dummyssh )
   > }
 #endif
 

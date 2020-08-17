@@ -92,7 +92,7 @@ preferuncompressed=True
 uncompressed=True
 
 [ui]
-ssh=python "$HGSQL_TESTDIR/dummyssh"
+ssh=$(dummysshcmd)
 EOF
 }
 
@@ -104,6 +104,6 @@ function initclient() {
 configureclient() {
   cat >> $1/.hg/hgrc <<EOF
 [ui]
-ssh=python "$HGSQL_TESTDIR/dummyssh"
+ssh=$(dummysshcmd)
 EOF
 }

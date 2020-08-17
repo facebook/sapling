@@ -25,10 +25,10 @@ commitcloud=
 infinitepush=
 pullcreatemarkers=
 [ui]
-ssh=python "$INFINITEPUSH_TESTDIR/dummyssh"
+ssh=$(dummysshcmd)
 [infinitepush]
 branchpattern=re:scratch/.*
-bgssh = python "$INFINITEPUSH_TESTDIR/dummyssh" -bgssh
+bgssh=$(dummysshcmd) -bgssh
 [remotenames]
 autopullhoistpattern=re:^[a-z0-9A-Z/]*$
 hoist=default
@@ -48,7 +48,7 @@ EOF
 setupsqlclienthgrc() {
 cat << EOF >> .hg/hgrc
 [ui]
-ssh=python "$INFINITEPUSH_TESTDIR/dummyssh"
+ssh=$(dummysshcmd)
 [extensions]
 infinitepush=
 [infinitepush]
@@ -62,7 +62,7 @@ EOF
 setupsqlserverhgrc() {
 cat << EOF >> .hg/hgrc
 [ui]
-ssh=python "$INFINITEPUSH_TESTDIR/dummyssh"
+ssh=$(dummysshcmd)
 [extensions]
 infinitepush=
 [infinitepush]

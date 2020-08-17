@@ -8,16 +8,10 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+sh % "configure dummyssh"
+sh % "enable amend commitcloud infinitepush rebase remotenames share"
+
 sh % "cat" << r"""
-[extensions]
-amend =
-commitcloud =
-infinitepush =
-rebase =
-remotenames =
-share =
-[ui]
-ssh = python "$TESTDIR/dummyssh"
 [infinitepush]
 branchpattern = re:scratch/.*
 [commitcloud]

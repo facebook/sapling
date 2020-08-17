@@ -1,25 +1,16 @@
 #chg-compatible
 
-
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "gitlookup= " >> $HGRCPATH
-  $ echo "gitrevset= " >> $HGRCPATH
-  $ echo "extorder= " >> $HGRCPATH
-  $ echo '[ui]' >> $HGRCPATH
-  $ echo 'ssh = python "$RUNTESTDIR/dummyssh"' >> $HGRCPATH
+  $ enable gitlookup gitrevset extorder
+  $ configure dummyssh
   $ . "$TESTDIR/infinitepush/library.sh"
 
 Set up infinitepush and make sure it's loaded before gitrevset
   $ setupcommon
-  $ echo '[extorder]' >> $HGRCPATH
-  $ echo 'infinitepush = gitlookup' >> $HGRCPATH
+  $ setconfig extorder.infinitepush=gitlookup
 
   $ hg init repo
   $ cd repo
-  $ cd .hg
-  $ echo '[gitlookup]' >> hgrc
-  $ echo "mapfile = $TESTTMP/repo/.hg/git-mapfile" >> hgrc
-  $ cd ..
+  $ setconfig gitlookup.mapfile="$TESTTMP/repo/.hg/git-mapfile"
   $ setupserver
   $ touch a
   $ hg add a

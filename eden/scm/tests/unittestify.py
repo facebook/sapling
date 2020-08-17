@@ -47,6 +47,13 @@ try:
         "//eden/mononoke/edenapi_server:edenapi_server",
         pathutils.BuildRuleTypes.RUST_BINARY,
     )
+    dummyssh = pathutils.get_build_rule_output_path(
+        "//eden/scm/tests:dummyssh3", pathutils.BuildRuleTypes.PYTHON_BINARY
+    )
+    get_free_socket = pathutils.get_build_rule_output_path(
+        "//eden/mononoke/tests/integration:get_free_socket",
+        pathutils.BuildRuleTypes.PYTHON_BINARY,
+    )
 except ImportError:
     # Used by :hg_run_tests and :hg_watchman_run_tests unittest target
     hgpath = os.environ.get("HGTEST_HG")
@@ -55,6 +62,8 @@ except ImportError:
     mononoke_server = os.environ.get("HGTEST_MONONOKE_SERVER")
     mononoke_hgcli = os.environ.get("HGTEST_MONONOKE_HGCLI")
     edenapi_server = os.environ.get("HGTEST_EDENAPI_SERVER")
+    dummyssh = os.environ.get("HGTEST_DUMMYSSH")
+    get_free_socket = os.environ.get("HGTEST_GET_FREE_SOCKET")
 
 
 if watchman is not None and not os.path.exists(str(watchman)):
@@ -103,12 +112,15 @@ def prepareargsenv(runtestsdir, port=None):
     env["HGPYTHONPATH"] = pythonpath
     # set other environments useful for buck testing
     env["HGTEST_NORMAL_LAYOUT"] = "0"
+    if dummyssh is not None:
+        env["DUMMYSSH"] = dummyssh
 
     # Variables needed for mononoke integration
     if os.environ.get("USE_MONONOKE"):
         env["MONONOKE_SERVER"] = mononoke_server
         env["MONONOKE_HGCLI"] = mononoke_hgcli
         env["EDENAPI_SERVER"] = edenapi_server
+        env["GET_FREE_SOCKET"] = get_free_socket
 
     return args, env
 

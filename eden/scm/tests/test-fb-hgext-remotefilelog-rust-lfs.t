@@ -8,20 +8,14 @@
   $ setconfig remotefilelog.useruststore=True
   $ setconfig remotefilelog.lfs=True lfs.threshold=10B lfs.url=file:$TESTTMP/lfs
 
-  $ $PYTHON <<'EOF'
-  > with open('blob', 'wb') as f:
-  >     f.write(b'THIS IS A BINARY LFS BLOB\0')
-  > EOF
+  $ printf 'THIS IS A BINARY LFS BLOB\0' > blob
 
   $ hg commit -qAm lfs1
 
   $ echo 'THIS IS ANOTHER LFS BLOB' > blob
   $ hg commit -qAm lfs2
 
-  $ $PYTHON <<'EOF'
-  > with open('blob', 'wb') as f:
-  >     f.write(b'THIS IS A BINARY LFS BLOB\0')
-  > EOF
+  $ printf 'THIS IS A BINARY LFS BLOB\0' > blob
   $ hg commit -qAm lfs3
 
   $ findfilessorted .hg/store/lfs

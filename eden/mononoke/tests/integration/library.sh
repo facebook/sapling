@@ -47,18 +47,7 @@ function killandwait {
 }
 
 function get_free_socket {
-
-# From https://unix.stackexchange.com/questions/55913/whats-the-easiest-way-to-find-an-unused-local-port
-  cat > "$TESTTMP/get_free_socket.py" <<EOF
-import socket
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('', 0))
-addr = s.getsockname()
-print(addr[1])
-s.close()
-EOF
-
-  python "$TESTTMP/get_free_socket.py"
+  "$GET_FREE_SOCKET"
 }
 
 # return random value from [1, max_value]

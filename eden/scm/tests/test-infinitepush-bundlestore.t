@@ -229,7 +229,7 @@ Test with pushrebase
   > [infinitepush]
   > branchpattern=re:scratch/.+
   > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
+  > ssh = $(dummysshcmd)
   > EOF
   $ mkcommit scratchcommitwithpushrebase
   $ hg push -r . --to scratch/mybranch
@@ -260,7 +260,7 @@ Change the order of pushrebase and infinitepush
   > [infinitepush]
   > branchpattern=re:scratch/.+
   > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
+  > ssh = $(dummysshcmd)
   > EOF
   $ mkcommit scratchcommitwithpushrebase2
   $ hg push -r . --to scratch/mybranch

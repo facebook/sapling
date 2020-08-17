@@ -9,7 +9,7 @@ historypackv1=True
 remotefilelog=
 rebase=
 [ui]
-ssh=python "$TESTDIR/dummyssh"
+ssh=$(dummysshcmd)
 [server]
 preferuncompressed=True
 [experimental]

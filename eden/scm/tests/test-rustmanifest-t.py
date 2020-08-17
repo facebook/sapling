@@ -24,15 +24,8 @@ def listcommitandmanifesthashes(rev):
 
 sh % '. "$TESTDIR/library.sh"'
 
-sh % "cat" << r"""
-[extensions]
-treemanifest=
-remotenames=
-remotefilelog=
-pushrebase=
-[ui]
-ssh = python "$TESTDIR/dummyssh"
-""" >> "$HGRCPATH"
+sh % "configure dummyssh"
+sh % "enable treemanifest remotenames remotefilelog pushrebase"
 
 # Check manifest behavior with empty commit
 sh % "hginit emptycommit"

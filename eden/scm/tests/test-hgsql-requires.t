@@ -30,11 +30,11 @@ Test that hgsql is a requirement
 
 Ensure streaming clones to non-hgsql repos work
   $ cd ..
-  $ hg clone --config extensions.hgsql=! --config ui.ssh='python "$TESTDIR/dummyssh"' --uncompressed ssh://user@dummy/master client2 | grep "streaming all changes"
+  $ hg clone --config extensions.hgsql=! --config ui.ssh="$(dummysshcmd)" --uncompressed ssh://user@dummy/master client2 | grep "streaming all changes"
   streaming all changes
 
 Ensure streaming clones to hgsql repos work
-  $ hg clone --config extensions.hgsql= --config ui.ssh='python "$TESTDIR/dummyssh"' --uncompressed ssh://user@dummy/master client3
+  $ hg clone --config extensions.hgsql= --config ui.ssh="$(dummysshcmd)" --uncompressed ssh://user@dummy/master client3
   streaming all changes
   4 files to transfer, 294 bytes of data
   transferred 294 bytes in * seconds (*) (glob)

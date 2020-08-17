@@ -9,7 +9,7 @@ up-to-date while some internal states might be not.
   $ shorttraceback
   $ . "$TESTDIR/hgsql/library.sh"
   $ enable treemanifest remotefilelog remotenames pushrebase
-  $ setconfig hgsql.initialsync=false treemanifest.treeonly=1 treemanifest.sendtrees=1 remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache ui.ssh="python $TESTDIR/dummyssh" pushrebase.verbose=1 experimental.bundle2lazylocking=True
+  $ setconfig hgsql.initialsync=false treemanifest.treeonly=1 treemanifest.sendtrees=1 remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache ui.ssh="$(dummysshcmd)" pushrebase.verbose=1 experimental.bundle2lazylocking=True
 
   $ newrepo state1
   $ echo remotefilelog >> .hg/requires

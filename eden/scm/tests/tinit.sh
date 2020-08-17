@@ -7,6 +7,15 @@ if [ -n "$USE_MONONOKE" ] ; then
   . "$TESTDIR/../../mononoke/tests/integration/library.sh"
 fi
 
+dummysshcmd() {
+  if [ -n "$DUMMYSSH" ]
+  then
+    echo "$DUMMYSSH"
+  else
+    echo "$PYTHON $TESTDIR/dummyssh"
+  fi
+}
+
 # Create a new repo
 newrepo() {
   reponame="$1"
@@ -60,7 +69,7 @@ clone() {
     --config "extensions.treemanifest=" \
     --config "remotefilelog.reponame=$servername" \
     --config "treemanifest.treeonly=True" \
-    --config ui.ssh="\"$PYTHON\" $TESTDIR/dummyssh" \
+    --config "ui.ssh=$(dummysshcmd)" \
     --config "ui.remotecmd=$remotecmd"
 
   cat >> $clientname/.hg/hgrc <<EOF
@@ -84,7 +93,7 @@ sendtrees=True
 treeonly=True
 
 [ui]
-ssh=$PYTHON "$TESTDIR/dummyssh"
+ssh=$(dummysshcmd)
 
 [tweakdefaults]
 rebasekeepdate=True
@@ -114,7 +123,7 @@ configure() {
     case "$name" in
       dummyssh)
         export DUMMYSSH_STABLE_ORDER=1
-        setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\""
+        setconfig ui.ssh="$(dummysshcmd)"
         ;;
       mutation)
         setconfig \
