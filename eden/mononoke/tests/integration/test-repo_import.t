@@ -19,6 +19,17 @@
   blobimporting
   starting Mononoke
   cloning repo in hg client 'repo2'
+  $ setup_configerator_configs
+  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
+  > {
+  > "per_repo": {
+  >   "0": {
+  >      "draft_push": false,
+  >      "public_push": false
+  >    }
+  >   }
+  > }
+  > EOF
 
 # Setup git repository
   $ mkdir "$GIT_REPO"
@@ -46,8 +57,21 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ repo_import "$GIT_REPO" --dest-path "new_dir/new_repo" --batch-size 3 --bookmark-suffix "new_repo" --disable-phabricator-check --disable-hg-sync-check --backup-hashes-file-path "$GIT_REPO/hashes.txt" --dest-bookmark master_bookmark --commit-author user --commit-message "merging"
+  $ repo_import "$GIT_REPO" \
+  > --dest-path "new_dir/new_repo" \
+  > --batch-size 3 \
+  > --bookmark-suffix "new_repo" \
+  > --disable-phabricator-check \
+  > --disable-hg-sync-check \
+  > --backup-hashes-file-path "$GIT_REPO/hashes.txt" \
+  > --dest-bookmark master_bookmark \
+  > --commit-author user \
+  > --commit-message "merging" \
+  > --test-instance \
+  > --local-configerator-path="$TESTTMP/configerator"
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * Initializing CfgrLiveCommitSyncConfig (glob)
+  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Started importing git commits to Mononoke (glob)
   * Created ce435b03d4ef526648f8654c61e26ae5cc1069cc => ChangesetId(Blake2(f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062)) (glob)
   * Created 2c01e4a5658421e2bfcd08e31d9b69399319bcd3 => ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb)) (glob)

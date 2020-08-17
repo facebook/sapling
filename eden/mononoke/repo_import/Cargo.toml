@@ -16,6 +16,7 @@ context = { path = "../server/context" }
 cross_repo_sync = { path = "../commit_rewriting/cross_repo_sync" }
 derived_data_utils = { path = "../derived_data/utils" }
 import_tools = { path = "../git/import_tools" }
+live_commit_sync_config = { path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { path = "../manifest" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }
@@ -25,6 +26,7 @@ mutable_counters = { path = "../mutable_counters" }
 pushrebase = { path = "../pushrebase" }
 topo_sort = { path = "../common/topo_sort" }
 unbundle = { path = "../repo_client/unbundle" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 clap = "2.33"

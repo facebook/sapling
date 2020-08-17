@@ -26,6 +26,7 @@ pub const ARG_COMMIT_DATE_RFC3339: &'static str = "commit-date-rfc3339";
 pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Import Repository")
         .with_advanced_args_hidden()
+        .with_test_args()
         .build()
         .version("0.0.0")
         .about("Automating repository imports")

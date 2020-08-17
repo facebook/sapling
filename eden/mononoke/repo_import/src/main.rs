@@ -11,6 +11,7 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
+use cached_config::ConfigStore;
 use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
@@ -23,6 +24,7 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
 };
 use import_tools::{GitimportPreferences, GitimportTarget};
+use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_types::{HgChangesetId, MPath};
@@ -530,6 +532,47 @@ fn sort_bcs(shifted_bcs: &[BonsaiChangeset]) -> Result<Vec<BonsaiChangeset>, Err
     Ok(sorted_bcs)
 }
 
+// Note: pushredirection only works from small repo to large repo.
+async fn check_repo_not_pushredirected<'a>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    maybe_config_store: &Option<ConfigStore>,
+    repos: &HashMap<String, RepoConfig>,
+) -> Result<(), Error> {
+    let repo_id = repo.get_repoid();
+    let config_store = maybe_config_store
+        .as_ref()
+        .ok_or(format_err!("failed to instantiate ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let enabled = live_commit_sync_config.push_redirector_enabled_for_public(repo_id);
+
+    if enabled {
+        let commit_sync_config =
+            match live_commit_sync_config.get_current_commit_sync_config(&ctx, repo_id) {
+                Ok(config) => config,
+                Err(e) => return Err(format_err!("Failed to fetch commit sync config: {}", e)),
+            };
+        let large_repo_id = commit_sync_config.large_repo_id;
+        let (large_repo_name, _) = match repos
+            .iter()
+            .find(|(_, repo_config)| repo_config.repoid == large_repo_id)
+        {
+            Some(result) => result,
+            None => {
+                return Err(format_err!(
+                    "Couldn't fetch the large repo config we pushredirect into"
+                ))
+            }
+        };
+
+        return Err(format_err!(
+            "The destination repo pushredirects to repo {}, and we can't import into a repo that push-redirects.",
+            large_repo_name
+        ));
+    }
+    Ok(())
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = setup_app();
@@ -583,6 +626,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     block_execute(
         async {
             let repo = repo.compat().await?;
+            let maybe_config_store = args::maybe_init_config_store(fb, &logger, &matches);
+            let configs = args::load_repo_configs(fb, &matches)?;
+            check_repo_not_pushredirected(&ctx, &repo, &maybe_config_store, &configs.repos).await?;
+
             let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
                 .compat()
                 .await?;
@@ -622,16 +669,22 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        check_dependent_systems, merge_imported_commit, move_bookmark, push_merge_commit, sort_bcs,
-        ChangesetArgs, CheckerFlags, LATEST_REPLAYED_REQUEST_KEY,
+        check_dependent_systems, check_repo_not_pushredirected, merge_imported_commit,
+        move_bookmark, push_merge_commit, sort_bcs, ChangesetArgs, CheckerFlags,
+        LATEST_REPLAYED_REQUEST_KEY,
     };
 
     use anyhow::Result;
     use blobstore::Loadable;
     use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
+    use cached_config::{ConfigStore, TestSource};
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::{compat::Future01CompatExt, stream::TryStreamExt};
+    use live_commit_sync_config::{
+        CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS, CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
+        CONFIGERATOR_PUSHREDIRECT_ENABLE,
+    };
     use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
     use metaconfig_types::{PushrebaseParams, RepoConfig};
     use mononoke_types::{
@@ -642,6 +695,8 @@ mod tests {
     use mutable_counters::{MutableCounters, SqlMutableCounters};
     use sql::rusqlite::Connection as SqliteConnection;
     use sql_construct::SqlConstruct;
+    use std::collections::HashMap;
+    use std::sync::Arc;
     use std::time::Duration;
     use tests_utils::{bookmark, drawdag::create_from_dag, CreateCommitContext};
     use tokio::time;
@@ -651,7 +706,7 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn move_bookmark_test(fb: FacebookInit) -> Result<()> {
+    async fn test_move_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
         let batch_size: usize = 2;
@@ -724,7 +779,7 @@ mod tests {
         Set counter     2               2                        Ok(())
     */
     #[fbinit::compat_test]
-    async fn hg_sync_check_test(fb: FacebookInit) -> Result<()> {
+    async fn test_hg_sync_check(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
         let checker_flags = CheckerFlags {
@@ -821,7 +876,7 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn merge_push_commit_test(fb: FacebookInit) -> Result<()> {
+    async fn test_merge_push_commit(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, _con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
             SqliteConnection::open_in_memory()?,
@@ -869,6 +924,126 @@ mod tests {
             Globalrev::new(START_COMMIT_GLOBALREV),
             Globalrev::from_bcs(&pushed_cs)?
         );
+        Ok(())
+    }
+
+    const PUSHREDIRECTOR_PUBLIC_ENABLED: &str = r#"{
+        "per_repo": {
+            "1": {
+                "draft_push": false,
+                "public_push": true
+            },
+            "2": {
+                "draft_push": true,
+                "public_push": false
+            }
+        }
+    }"#;
+
+    const CURRENT_COMMIT_SYNC_CONFIG: &str = r#"{
+        "repos": {
+            "large_repo_1": {
+                "large_repo_id": 0,
+                "common_pushrebase_bookmarks": ["b1"],
+                "small_repos": [
+                    {
+                        "repoid": 1,
+                        "default_action": "prepend_prefix",
+                        "default_prefix": "f1",
+                        "bookmark_prefix": "bp1/",
+                        "mapping": {"d": "dd"},
+                        "direction": "large_to_small"
+                    },
+                    {
+                        "repoid": 2,
+                        "default_action": "prepend_prefix",
+                        "default_prefix": "f2",
+                        "bookmark_prefix": "bp2/",
+                        "mapping": {"d": "ddd"},
+                        "direction": "small_to_large"
+                    }
+                ],
+                "version_name": "TEST_VERSION_NAME_LIVE_1"
+            }
+        }
+    }"#;
+
+    const EMTPY_COMMMIT_SYNC_ALL: &str = r#"{
+        "repos": {}
+    }"#;
+
+    fn insert_repo_config(id: i32, repos: &mut HashMap<String, RepoConfig>) {
+        let repo_config = RepoConfig {
+            repoid: RepositoryId::new(id),
+            ..Default::default()
+        };
+        repos.insert(format!("repo{}", id), repo_config);
+    }
+
+    /*
+        repo0: no push-redirection => pass
+        repo1: push-redirects to repo0 => error: "The destination repo..."
+        repo2: draft push-redirects => pass
+    */
+    #[fbinit::compat_test]
+    async fn test_check_repo_not_pushredirected(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let test_source = Arc::new(TestSource::new());
+
+        let mut repos: HashMap<String, RepoConfig> = HashMap::new();
+
+        test_source.insert_config(
+            CONFIGERATOR_PUSHREDIRECT_ENABLE,
+            PUSHREDIRECTOR_PUBLIC_ENABLED,
+            0,
+        );
+
+        test_source.insert_config(
+            CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
+            CURRENT_COMMIT_SYNC_CONFIG,
+            0,
+        );
+
+        test_source.insert_config(
+            CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
+            EMTPY_COMMMIT_SYNC_ALL,
+            0,
+        );
+
+        test_source.insert_to_refresh(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string());
+        test_source.insert_to_refresh(CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS.to_string());
+        test_source.insert_to_refresh(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string());
+
+        let config_store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
+        let maybe_config_store = Some(config_store);
+
+        let (repo0, _) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
+            SqliteConnection::open_in_memory()?,
+            RepositoryId::new(0),
+        )?;
+
+        insert_repo_config(0, &mut repos);
+        check_repo_not_pushredirected(&ctx, &repo0, &maybe_config_store, &repos).await?;
+
+        let (repo1, _) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
+            SqliteConnection::open_in_memory()?,
+            RepositoryId::new(1),
+        )?;
+
+        insert_repo_config(1, &mut repos);
+        assert!(
+            check_repo_not_pushredirected(&ctx, &repo1, &maybe_config_store, &repos)
+                .await
+                .is_err()
+        );
+
+        let (repo2, _) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
+            SqliteConnection::open_in_memory()?,
+            RepositoryId::new(2),
+        )?;
+
+        insert_repo_config(2, &mut repos);
+        check_repo_not_pushredirected(&ctx, &repo2, &maybe_config_store, &repos).await?;
         Ok(())
     }
 }
