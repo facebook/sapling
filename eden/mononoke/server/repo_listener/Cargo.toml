@@ -17,6 +17,7 @@ cmdlib = { path = "../../cmdlib" }
 context = { path = "../context" }
 derived_data = { path = "../../derived_data" }
 hgproto = { path = "../../hgproto" }
+hook_manager_factory = { path = "../../hooks/hook_manager_factory" }
 hooks = { path = "../../hooks" }
 hooks_content_stores = { path = "../../hooks/content-stores" }
 limits = { path = "../../../../configerator/structs/scm/mononoke/loadshedding" }

@@ -1,0 +1,16 @@
+[package]
+name = "hook_manager_factory"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+context = { path = "../../server/context" }
+hooks = { path = ".." }
+hooks_content_stores = { path = "../content-stores" }
+metaconfig_types = { path = "../../metaconfig/types" }
+scuba_ext = { path = "../../common/scuba_ext" }
+anyhow = "1.0"

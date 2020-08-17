@@ -24,8 +24,7 @@ use futures::{
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::{future, Future};
-use hooks::{hook_loader::load_hooks, HookManager};
-use hooks_content_stores::blobrepo_text_only_fetcher;
+use hook_manager_factory::make_hook_manager;
 use maplit::btreeset;
 use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{CommitSyncConfig, RepoClientKnobs, RepoConfig, WireprotoLoggingConfig};
@@ -180,15 +179,11 @@ pub fn repo_handlers(
             let cache_warmup_params = config.cache_warmup.clone();
             let scuba_table = config.scuba_table.clone();
             let scuba_local_path = config.scuba_local_path.clone();
-            let hooks_scuba_table = config.scuba_table_hooks.clone();
-            let hooks_scuba_local_path = config.scuba_local_path_hooks.clone();
-            let hook_max_file_size = config.hook_max_file_size.clone();
             let db_config = config.storage_config.metadata.clone();
             let hash_validation_percentage = config.hash_validation_percentage.clone();
             let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
             let wireproto_logging = config.wireproto_logging.clone();
             let commit_sync_config = config.commit_sync_config.clone();
-            let hook_manager_params = config.hook_manager_params.clone();
             let record_infinitepush_writes: bool =
                 config.infinitepush.populate_reverse_filler_queue
                     && config.infinitepush.allow_writes;
@@ -196,8 +191,8 @@ pub fn repo_handlers(
             let warm_bookmark_cache_check_blobimport = config.warm_bookmark_cache_check_blobimport;
             let repo_client_knobs = config.repo_client_knobs.clone();
 
-            // TODO: Don't require full config in load_hooks so we can avoid cloning the entire
-            // config here.
+            // TODO: Don't require ownership of config in load_hooks so we can avoid cloning the entire
+            // config here, and instead just pass a reference.
             let hook_config = config.clone();
 
             // And clone a few things of which we only have one but which we're going to need one
@@ -241,23 +236,15 @@ pub fn repo_handlers(
                 }
                 scuba_logger = scuba_logger.with_seq("seq");
 
-                let mut hooks_scuba = ScubaSampleBuilder::with_opt_table(fb, hooks_scuba_table);
-                hooks_scuba.add("repo", reponame.clone());
-                if let Some(hooks_scuba_local_path) = hooks_scuba_local_path {
-                    hooks_scuba = hooks_scuba.with_log_file(hooks_scuba_local_path)?;
-                }
-
-                info!(logger, "Creating HookManager");
-                let mut hook_manager = HookManager::new(
-                    ctx.fb,
-                    blobrepo_text_only_fetcher(blobrepo.clone(), hook_max_file_size),
-                    hook_manager_params.unwrap_or_default(),
-                    hooks_scuba,
+                info!(logger, "Creating HookManager and loading hooks");
+                let hook_manager = make_hook_manager(
+                    &ctx,
+                    &blobrepo,
+                    hook_config,
+                    reponame.as_str(),
+                    &disabled_hooks,
                 )
                 .await?;
-
-                info!(logger, "Loading hooks");
-                load_hooks(fb, &mut hook_manager, hook_config, &disabled_hooks)?;
 
                 let repo = builder.finalize(Arc::new(hook_manager));
 

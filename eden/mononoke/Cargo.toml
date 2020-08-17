@@ -284,6 +284,7 @@ members = [
     "hook_tailer",
     "hooks",
     "hooks/content-stores",
+    "hooks/hook_manager_factory",
     "lfs_import_lib",
     "lfs_protocol",
     "lfs_server",
