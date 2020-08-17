@@ -16,7 +16,7 @@ use futures::stream::TryStreamExt;
 use mononoke_types::ChangesetId;
 use tests_utils::drawdag::create_from_dag;
 
-use crate::repo::{Repo, RepoContext};
+use crate::repo::{BookmarkFreshness, Repo, RepoContext};
 
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
     let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
@@ -52,7 +52,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
 
     repo.move_bookmark("trunk", changesets["E"], false).await?;
     let trunk = repo
-        .resolve_bookmark("trunk")
+        .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark should be set");
     assert_eq!(trunk.id(), changesets["E"]);
@@ -65,7 +65,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
         .is_err());
     repo.move_bookmark("trunk", changesets["G"], true).await?;
     let trunk = repo
-        .resolve_bookmark("trunk")
+        .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark should be set");
     assert_eq!(trunk.id(), changesets["G"]);

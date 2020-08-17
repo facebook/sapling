@@ -20,7 +20,7 @@ use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures::stream::TryStreamExt;
 
 use crate::{
-    changeset_path_diff::ChangesetPathDiffContext, ChangesetId, ChangesetIdPrefix,
+    BookmarkFreshness, ChangesetId, ChangesetIdPrefix, ChangesetPathDiffContext,
     ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution, CoreContext,
     FileId, FileMetadata, FileType, HgChangesetId, HgChangesetIdPrefix, Mononoke, MononokePath,
     TreeEntry, TreeId,
@@ -102,7 +102,7 @@ async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
     .await?;
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let cs = repo
-        .resolve_bookmark("master")
+        .resolve_bookmark("master", BookmarkFreshness::MostRecent)
         .await?
         .expect("bookmark exists");
 

@@ -18,9 +18,8 @@ use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStora
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobstore_factory::make_metadata_sql_factory;
-use bookmarks::{
-    BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks, Freshness,
-};
+pub use bookmarks::Freshness as BookmarkFreshness;
+use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks};
 use cached_config::ConfigStore;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -698,20 +697,19 @@ impl RepoContext {
     pub async fn resolve_bookmark(
         &self,
         bookmark: impl AsRef<str>,
+        freshness: BookmarkFreshness,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let bookmark = BookmarkName::new(bookmark.as_ref())?;
-        let mut cs_id = self.warm_bookmarks_cache().get(&bookmark);
 
-        if cs_id.is_none() {
-            // The bookmark wasn't in the warm bookmark cache.  Check
-            // the blobrepo directly in case this is a bookmark that
-            // has just been created.
-            cs_id = self
-                .blob_repo()
-                .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
-                .compat()
-                .await?;
-        }
+        let cs_id = match freshness {
+            BookmarkFreshness::MaybeStale => self.warm_bookmarks_cache().get(&bookmark),
+            BookmarkFreshness::MostRecent => {
+                self.blob_repo()
+                    .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
+                    .compat()
+                    .await?
+            }
+        };
 
         Ok(cs_id.map(|cs_id| ChangesetContext::new(self.clone(), cs_id)))
     }
@@ -885,7 +883,7 @@ impl RepoContext {
             .attribute_expected::<dyn Bookmarks>()
             .list(
                 self.ctx.clone(),
-                Freshness::MaybeStale,
+                BookmarkFreshness::MaybeStale,
                 &prefix,
                 kinds,
                 &pagination,

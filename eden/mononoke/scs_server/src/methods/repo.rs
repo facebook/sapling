@@ -19,8 +19,9 @@ use futures_util::{StreamExt, TryStreamExt};
 use manifest::{Entry, Manifest};
 use maplit::btreemap;
 use mononoke_api::{
-    ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution, CreateChange,
-    CreateCopyInfo, FileId, FileType, MononokePath,
+    BookmarkFreshness, ChangesetPrefixSpecifier, ChangesetSpecifier,
+    ChangesetSpecifierPrefixResolution, CreateChange, CreateCopyInfo, FileId, FileType,
+    MononokePath,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use source_control as thrift;
@@ -43,7 +44,10 @@ impl SourceControlServiceImpl {
         params: thrift::RepoResolveBookmarkParams,
     ) -> Result<thrift::RepoResolveBookmarkResponse, errors::ServiceError> {
         let repo = self.repo(ctx, &repo).await?;
-        match repo.resolve_bookmark(params.bookmark_name).await? {
+        match repo
+            .resolve_bookmark(params.bookmark_name, BookmarkFreshness::MaybeStale)
+            .await?
+        {
             Some(cs) => {
                 let ids = map_commit_identity(&cs, &params.identity_schemes).await?;
                 Ok(thrift::RepoResolveBookmarkResponse {

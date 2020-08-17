@@ -49,7 +49,7 @@ pub use crate::changeset_path_diff::ChangesetPathDiffContext;
 pub use crate::errors::MononokeError;
 pub use crate::file::{FileContext, FileId, FileMetadata, FileType};
 pub use crate::path::MononokePath;
-pub use crate::repo::RepoContext;
+pub use crate::repo::{BookmarkFreshness, RepoContext};
 pub use crate::repo_write::create_changeset::{CreateChange, CreateCopyInfo};
 pub use crate::repo_write::RepoWriteContext;
 pub use crate::specifiers::{
