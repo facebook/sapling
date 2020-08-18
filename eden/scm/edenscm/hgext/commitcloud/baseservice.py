@@ -120,6 +120,17 @@ def topological(graph):
     return order
 
 
+class SingletonDecorator(object):
+    def __init__(self, klass):
+        self.klass = klass
+        self.instance = None
+
+    def __call__(self, *args, **kwds):
+        if not self.instance:
+            self.instance = self.klass(*args, **kwds)
+        return self.instance
+
+
 class BaseService(pycompat.ABC):
     def _makereferences(self, data):
         """Makes a References object from JSON data

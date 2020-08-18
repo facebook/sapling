@@ -131,6 +131,10 @@ Switch workspace from a public commit
  
 Switch workspace using merge strategy
   $ hg cloud join -w w2_rename --merge
+  abort: this repository can not be switched to the 'user/test/w2_rename' workspace
+  the workspace doesn't exist (please use --create option to create the workspace)
+  [255]
+  $ hg cloud join -w w2_rename --merge --create
   commitcloud: this repository will be reconnected from the 'user/test/w2' to the 'user/test/w2_rename' workspace
   commitcloud: all local commits and bookmarks will be merged into 'user/test/w2_rename' workspace
   commitcloud: this repository is now connected to the 'user/test/w2_rename' workspace for the 'server' repo
@@ -475,5 +479,26 @@ Switch back to W2 and check that the pulled commit is there.
   |/
   | o  1 A (W1): draft
   |/
+  @  0 base: public
+  
+ 
+
+Test switch to non default non-existent workspace
+  $ hg cloud join --switch -w brand_new_empty
+  abort: this repository can not be switched to the 'user/test/brand_new_empty' workspace
+  the workspace doesn't exist (please use --create option to create the workspace)
+  [255]
+  $ hg cloud join --switch -w brand_new_empty --create
+  commitcloud: synchronizing 'server' with 'user/test/w2'
+  commitcloud: commits synchronized
+  finished in * (glob)
+  commitcloud: now this repository will be switched from the 'user/test/w2' to the 'user/test/brand_new_empty' workspace
+  commitcloud: this repository is now connected to the 'user/test/brand_new_empty' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/brand_new_empty'
+  commitcloud: commits synchronized
+  finished in * (glob)
+  $ showgraph
+  o  6 M: public  remote/master
+  |
   @  0 base: public
   

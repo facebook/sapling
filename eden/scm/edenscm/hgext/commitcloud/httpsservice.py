@@ -44,7 +44,7 @@ DEFAULT_TIMEOUT = 180
 MAX_CONNECT_RETRIES = 2
 
 
-class HttpsCommitCloudService(baseservice.BaseService):
+class _HttpsCommitCloudService(baseservice.BaseService):
     """Commit Cloud Client uses http endpoint to communicate with
        the commit cloud service
     """
@@ -517,3 +517,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         )
         if "error" in response:
             raise ccerror.ServiceError(self.ui, response["error"])
+
+
+# Make sure that the HttpsCommitCloudService is a singleton
+HttpsCommitCloudService = baseservice.SingletonDecorator(_HttpsCommitCloudService)

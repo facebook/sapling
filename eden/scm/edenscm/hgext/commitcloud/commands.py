@@ -106,6 +106,14 @@ subcmd = cloud.subcommand(
     [
         ("", "switch", None, _("switch to another workspace")),
         ("", "merge", None, _("merge to another workspace")),
+        (
+            "",
+            "create",
+            None,
+            _(
+                "create the workspace if it doesn't exist (applicable to all non default workspace)"
+            ),
+        ),
     ]
     + workspace.workspaceopts
     + pullopts
@@ -131,6 +139,7 @@ def cloudjoin(ui, repo, **opts):
 
     switch = opts.get("switch")
     merge = opts.get("merge")
+    create = opts.get("create")
 
     if switch and merge:
         ui.status(
@@ -166,6 +175,20 @@ def cloudjoin(ui, repo, **opts):
                 component="commitcloud",
             )
             return 1
+
+        # check that the workspace exists if the destination workspace
+        # doesn't equal to the default workspace for the current user
+        if not create and workspace != workspace.defaultworkspace(ui):
+            if not service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
+                ccutil.getreponame(repo), workspacename
+            ):
+                raise error.Abort(
+                    _(
+                        "this repository can not be switched to the '%s' workspace\n"
+                        "the workspace doesn't exist (please use --create option to create the workspace)"
+                    )
+                    % workspacename
+                )
 
         if switch:
             # sync all the current commits and bookmarks before switching

@@ -14,7 +14,7 @@ from edenscm.mercurial.i18n import _
 from . import baseservice, error as ccerror, workspace as ccworkspace
 
 
-class LocalService(baseservice.BaseService):
+class _LocalService(baseservice.BaseService):
     """Local commit-cloud service implemented using files on disk.
 
     There is no locking, so this is suitable only for use in unit tests.
@@ -301,3 +301,7 @@ class LocalService(baseservice.BaseService):
         else:
             raise error.Abort(_("unknown workspace: %s") % workspace)
         self._saveworkspaces(allworkspaces)
+
+
+# Make sure that the LocalService is a singleton
+LocalService = baseservice.SingletonDecorator(_LocalService)
