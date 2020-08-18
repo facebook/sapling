@@ -14,7 +14,7 @@ use thiserror::Error;
 use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-use crate::InvalidHgId;
+use crate::{is_default, InvalidHgId};
 
 #[derive(Debug, Error)]
 pub enum TreeError {
@@ -45,11 +45,17 @@ impl TreeError {
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
 pub struct TreeEntry {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     key: Key,
+
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
     data: Bytes,
+
+    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
     parents: Parents,
+
+    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
     metadata: Metadata,
 }
 
@@ -109,13 +115,15 @@ impl TreeEntry {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub struct TreeRequest {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     pub keys: Vec<Key>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct TreeResponse {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     pub entries: Vec<TreeEntry>,
 }
 

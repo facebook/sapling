@@ -55,3 +55,7 @@ pub struct InvalidHgId {
     data: Bytes,
     parents: Parents,
 }
+
+fn is_default<T: Default + PartialEq>(v: &T) -> bool {
+    v == &T::default()
+}
