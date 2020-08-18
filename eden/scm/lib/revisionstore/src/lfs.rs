@@ -594,10 +594,6 @@ impl LocalStore for LfsStore {
             })
             .collect())
     }
-
-    fn translate_lfs_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.get_missing(keys)
-    }
 }
 
 /// When a file was copied, Mercurial expects the blob that the store returns to contain this copy
@@ -748,10 +744,6 @@ impl HgIdDataStore for LfsMultiplexer {
 impl LocalStore for LfsMultiplexer {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.union.get_missing(keys)
-    }
-
-    fn translate_lfs_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.union.translate_lfs_missing(keys)
     }
 }
 

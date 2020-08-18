@@ -216,7 +216,7 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
         span.record("hit_count", &hits);
         span.record("size", &size);
 
-        self.store.translate_lfs_missing(keys)
+        self.store.get_missing(keys)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {

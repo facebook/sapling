@@ -1108,6 +1108,62 @@ mod tests {
         }
 
         #[fbinit::test]
+        fn test_memcache_no_duplicate_fetch() -> Result<()> {
+            let _mock = Lazy::force(&MOCK);
+
+            let cachedir = TempDir::new()?;
+            let localdir = TempDir::new()?;
+            let config = make_config(&cachedir);
+
+            let k = key("a", "1234");
+            let data = Bytes::from(&[1, 2, 3, 4][..]);
+
+            let mut map = HashMap::new();
+            map.insert(k.clone(), (data.clone(), None));
+            let mut remotestore = FakeHgIdRemoteStore::new();
+            remotestore.data(map);
+
+            let memcache = Arc::new(MemcacheStore::new(&config)?);
+            let store = ContentStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .remotestore(Arc::new(remotestore))
+                .memcachestore(memcache.clone())
+                .build()?;
+
+            // This populates memcache
+            let data_get = store.get(StoreKey::hgid(k.clone()))?;
+            assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
+
+            // Wait to make sure it's there.
+            loop {
+                let memcache_data = memcache
+                    .get_data_iter(&[k.clone()])
+                    .collect::<Result<Vec<_>>>()?;
+                if !memcache_data.is_empty() {
+                    assert_eq!(memcache_data[0].data, data);
+                    break;
+                }
+            }
+
+            let cachedir = TempDir::new()?;
+            let localdir = TempDir::new()?;
+            let config = make_config(&cachedir);
+
+            let mut remotestore = FakeHgIdRemoteStore::new();
+            remotestore.data(HashMap::new());
+            let store = ContentStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .remotestore(Arc::new(remotestore))
+                .memcachestore(memcache.clone())
+                .build()?;
+
+            // The data is only in the memcache store, this should succeed.
+            assert_eq!(store.prefetch(&vec![StoreKey::hgid(k.clone())])?, vec![]);
+
+            Ok(())
+        }
+
+        #[fbinit::test]
         fn test_memcache_lfs() -> Result<()> {
             let _mock = Lazy::force(&MOCK);
 

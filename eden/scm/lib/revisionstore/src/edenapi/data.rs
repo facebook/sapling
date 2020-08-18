@@ -48,7 +48,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
             while let Some(entry) = response.entries.try_next().await? {
                 self.store.add_file(&entry)?;
             }
-            self.store.translate_lfs_missing(keys)
+            self.store.get_missing(keys)
         };
 
         let mut rt = self.remote.runtime.lock();
@@ -72,7 +72,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
             while let Some(entry) = response.entries.try_next().await? {
                 self.store.add_tree(&entry)?;
             }
-            self.store.translate_lfs_missing(keys)
+            self.store.get_missing(keys)
         };
 
         let mut rt = self.remote.runtime.lock();

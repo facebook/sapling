@@ -111,7 +111,7 @@ impl RemoteDataStore for FakeRemoteDataStore {
             }
         }
 
-        self.store.translate_lfs_missing(keys)
+        self.store.get_missing(keys)
     }
 
     fn upload(&self, _keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
