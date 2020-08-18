@@ -302,6 +302,11 @@ class sshpeer(wireproto.wirepeer):
         # reader thread will notice that it reaches EOF and becomes joinable.
         self._pipeo.close()
 
+        _totalbytessent += self._pipeo._totalbytes
+
+        # Clear the pipe to indicate this has already been cleaned up.
+        self._pipeo = None
+
         # Wait for the stderr thread to complete reading all stderr text from
         # the remote ssh process (i.e. hitting EOF).
         #
@@ -332,7 +337,6 @@ class sshpeer(wireproto.wirepeer):
         # SIGPIPE if it writes a bit more to its stdout.
         self._pipei.close()
 
-        _totalbytessent += self._pipeo._totalbytes
         _totalbytesreceived += self._pipei._totalbytes
         self.ui.log(
             "sshbytes",
