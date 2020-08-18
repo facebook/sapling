@@ -129,7 +129,7 @@ start mononoke
   $ mononoke
   $ wait_for_mononoke
   $ hgmn debugwireargs ssh://user@dummy/disabled_repo one two --three three
-  remote: * ERRO Requested repo "disabled_repo" does not exist or disabled (glob)
+  remote: Requested repo "disabled_repo" does not exist or is disabled
   abort: no suitable response from remote hg!
   [255]
   $ hgmn debugwireargs ssh://user@dummy/repo one two --three three

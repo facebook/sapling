@@ -13,11 +13,8 @@ use clap::App;
 use cloned::cloned;
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
-use slog::info;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use futures::channel::oneshot;
+use slog::{error, info};
 
 #[cfg(fbcode_build)]
 use openssl as _; // suppress unused crate warning - only used outside fbcode
@@ -79,7 +76,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     info!(root_log, "Creating repo listeners");
 
     let service = ReadyFlagService::new();
-    let terminate = Arc::new(AtomicBool::new(false));
+    let (terminate_sender, terminate_receiver) = oneshot::channel::<()>();
 
     let repo_listeners = {
         cloned!(root_log);
@@ -98,7 +95,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .to_string(),
             acceptor,
             service.clone(),
-            terminate.clone(),
+            terminate_receiver,
             config_source,
             cmdlib::args::parse_readonly_storage(&matches),
             cmdlib::args::parse_blobstore_options(&matches),
@@ -121,7 +118,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         || {},
         args::get_shutdown_grace_period(&matches)?,
         async {
-            terminate.store(true, Ordering::Relaxed);
+            match terminate_sender.send(()) {
+                Err(err) => error!(root_log, "could not send termination signal: {:?}", err),
+                _ => {}
+            }
             repo_listener::wait_for_connections_closed().await;
         },
         args::get_shutdown_timeout(&matches)?,

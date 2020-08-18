@@ -10,37 +10,36 @@ use std::io as std_io;
 use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{bail, format_err, Context, Error, Result};
 use bytes::Bytes;
+use clap::ArgMatches;
 use context::generate_session_id;
-use fbinit::FacebookInit;
-use futures_old::{future, stream, Future, Sink, Stream};
-use hostname::get_hostname;
-use slog::{debug, error, o, Drain, Logger};
-
 use dns_lookup::lookup_addr;
+use failure_ext::{err_downcast_ref, SlogKVError};
+use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
+use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::{pin_mut, select};
+use futures_ext::StreamExt as OtherStreamExt;
+use futures_old::{future, Sink, Stream};
+use futures_stats::TimedFutureExt;
+use futures_util::compat::Stream01CompatExt;
+use futures_util::future::FutureExt;
+use hostname::get_hostname;
 use libc::c_ulong;
 use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
-use tokio_io::codec::{FramedRead, FramedWrite};
-use tokio_io::AsyncRead;
-use tokio_openssl::{SslConnectorExt, SslStream};
-use users::get_current_username;
-
-use tokio::net::TcpStream;
-use tokio::util::FutureExt as TokioFutureExt;
-
-use clap::ArgMatches;
-
-use failure_ext::{err_downcast_ref, SlogKVError};
-use futures::compat::Future01CompatExt;
-use futures_ext::StreamExt;
-use futures_stats::TimedFutureExt;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};
+use slog::{debug, error, o, Drain, Logger};
 use sshrelay::{
     Preamble, Priority, SenderBytesWrite, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream,
     Stdio,
 };
+use tokio::net::TcpStream;
+use tokio::time::timeout;
+use tokio_openssl::SslStream;
+use tokio_util::codec::{FramedRead, FramedWrite};
+use users::get_current_username;
 
 mod fdio;
 
@@ -254,16 +253,13 @@ impl<'a> StdioRelay<'a> {
         };
 
         let addr: SocketAddr = path.parse()?;
-        TcpStream::connect(&addr)
-            .map_err(|err| format_err!("connecting to Mononoke {} socket '{}' failed", path, err))
-            .and_then(move |socket| {
-                let async_connector = connector
-                    .connect_async(&ssl_common_name, socket)
-                    .timeout(Duration::from_secs(15));
-                async_connector.map_err(|err| format_err!("async connect error {}", err))
-            })
-            .compat()
+        let sock = TcpStream::connect(&addr)
             .await
+            .with_context(|| format!("failed: connecting to '{}'", path))?;
+
+        tokio_openssl::connect(connector.configure()?, &ssl_common_name, sock)
+            .await
+            .with_context(|| format!("tls failed: talking to '{}'", path))
     }
 
     async fn internal_run(self, stdio: Stdio) -> Result<(), Error> {
@@ -274,30 +270,32 @@ impl<'a> StdioRelay<'a> {
             stderr,
         } = stdio;
 
-        let socket = self.establish_connection().await?;
+        let socket = timeout(Duration::from_secs(15), self.establish_connection())
+            .await
+            .with_context(|| format!("timed out: connecting to '{}'", self.path))??;
 
         // Wrap the socket with the ssh codec
-        let (socket_read, socket_write) = socket.split();
+        let (socket_read, socket_write) = tokio::io::split(socket);
         let rx = FramedRead::new(socket_read, SshDecoder::new());
         let tx = FramedWrite::new(socket_write, SshEncoder::new());
 
-        let preamble = stream::once(Ok(SshMsg::new(SshStream::Preamble(preamble), Bytes::new())));
+        let preamble =
+            stream::once(async { Ok(SshMsg::new(SshStream::Preamble(preamble), Bytes::new())) });
 
         // Start a task to copy from stdin to the socket
         let stdin_future = preamble
-            .chain(stdin.map(|buf| SshMsg::new(SshStream::Stdin, buf)))
-            .forward(tx)
-            .map_err(Error::from)
-            .map(|_| ());
+            .chain(stdin.map(|buf| SshMsg::new(SshStream::Stdin, buf)).compat())
+            .forward(tx);
 
         // A task to copy from the socket, then use streamfork() to split the
         // input between stdout and stderr.
         let stdout_future = rx
+            .compat()
             .streamfork(
                 // a sink each for stdout and stderr, prefixed with With to remove the
                 // SshMsg framing and expose the raw data
-                stdout.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
-                stderr.with(|m| future::ok::<_, Error>(SshMsg::data(m))),
+                stdout.with(|m: SshMsg| future::ok::<_, Error>(m.data())),
+                stderr.with(|m: SshMsg| future::ok::<_, Error>(m.data())),
                 |msg| -> Result<bool> {
                     // Select a sink based on the stream
                     match msg.stream() {
@@ -307,29 +305,29 @@ impl<'a> StdioRelay<'a> {
                     }
                 },
             )
-            .map(|_| ());
+            .compat();
 
-        stdout_future
-            .then(|res| {
-                match res {
-                    Ok(res) => Ok(res),
-                    Err(err) => {
-                        // TODO(stash): T39586884 "Connection reset" can happen in case
-                        // of error on the Mononoke server
-                        let res = err_downcast_ref!(
-                            err,
-                            ioerr: std_io::Error => ioerr.kind() == ::std::io::ErrorKind::ConnectionReset,
-                        );
-                        match res {
-                            Some(true) => Ok(()),
-                            _ => Err(err),
-                        }
+        pin_mut!(stdin_future, stdout_future);
+
+        let res = select! {
+            res = stdout_future.fuse() => match res {
+                Ok(_) => Ok(()),
+                Err(err) => {
+                    // TODO(stash): T39586884 "Connection reset" can happen in case
+                    // of error on the Mononoke server
+                    let res = err_downcast_ref!(
+                        err,
+                        ioerr: std_io::Error => ioerr.kind() == ::std::io::ErrorKind::ConnectionReset,
+                    );
+                    match res {
+                        Some(true) => Ok(()),
+                        _ => Err(err),
                     }
                 }
-            })
-            .select(stdin_future)
-            .map(|_| ())
-            .map_err(|(err, _)| err)
-            .compat().await
+            },
+            res = stdin_future.fuse() => Ok(()),
+        };
+
+        res
     }
 }

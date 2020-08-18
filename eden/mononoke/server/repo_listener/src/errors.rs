@@ -12,8 +12,6 @@ use thiserror::Error;
 pub enum ErrorKind {
     #[error("connection does not start with preamble")]
     NoConnectionPreamble,
-    #[error("connection error while reading preamble")]
-    ConnectionError,
     #[error("connection does not have a client certificate")]
     ConnectionNoClientCertificate,
     #[error("Unauthorized access, permission denied")]

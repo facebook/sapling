@@ -5,8 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use crate::errors::ErrorKind;
+use crate::security_checker::ConnectionsSecurityChecker;
+use std::collections::{BTreeSet, HashMap};
+
+use anyhow::{anyhow, Context, Error, Result};
 use async_limiter::AsyncLimiter;
+use bytes::Bytes;
 use cached_config::ConfigHandle;
 use context::{
     generate_session_id, is_quicksand, LoggingContainer, SessionClass, SessionContainer,
@@ -15,14 +20,16 @@ use context::{
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use futures_old::{Future, Sink, Stream};
+use futures_old::{sync::mpsc::Sender, Future, Sink, Stream};
 use futures_stats::TimedFutureExt;
 use hgproto::{sshproto, HgProtoHandler};
+use itertools::join;
 use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use load_limiter::{LoadLimiterBuilder, Metric};
 use maplit::{hashmap, hashset};
+use permission_checker::MononokeIdentity;
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
@@ -98,23 +105,15 @@ async fn set_blobstore_limiters(builder: &mut SessionContainerBuilder, priority:
 
 pub async fn request_handler(
     fb: FacebookInit,
-    RepoHandler {
-        logger,
-        mut scuba,
-        wireproto_logging,
-        repo,
-        hash_validation_percentage,
-        preserve_raw_bundle2,
-        maybe_push_redirector_args,
-        maybe_warm_bookmarks_cache,
-        repo_client_knobs,
-    }: RepoHandler,
+    repo_handlers: Arc<HashMap<String, RepoHandler>>,
+    security_checker: Arc<ConnectionsSecurityChecker>,
+    identities: BTreeSet<MononokeIdentity>,
     stdio: Stdio,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     addr: IpAddr,
     maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
     scribe: Scribe,
-) {
+) -> Result<()> {
     let Stdio {
         stdin,
         stdout,
@@ -137,35 +136,62 @@ pub async fn request_handler(
         }
     };
 
+    // We don't have a repository yet, so create without server drain
+    let conn_log = create_conn_logger(stderr.clone(), None, &session_id);
+
+    let handler = repo_handlers
+        .get(&preamble.reponame)
+        .cloned()
+        .ok_or_else(|| {
+            error!(
+                conn_log,
+                "Requested repo \"{}\" does not exist or is disabled", preamble.reponame;
+                "remote" => "true"
+            );
+
+            anyhow!("unknown repo: {}", preamble.reponame)
+        })?;
+
+    let RepoHandler {
+        logger,
+        mut scuba,
+        wireproto_logging,
+        repo,
+        hash_validation_percentage,
+        preserve_raw_bundle2,
+        maybe_push_redirector_args,
+        maybe_warm_bookmarks_cache,
+        repo_client_knobs,
+    } = handler;
+
+    // Upgrade log to include server drain
+    let conn_log = create_conn_logger(stderr.clone(), Some(logger), &session_id);
+
+    scuba
+        .add_preamble(&preamble)
+        .add("client_ip", addr.to_string())
+        .add("client_identities", join(identities.iter(), ","));
+
+    let is_allowed = security_checker
+        .check_if_connections_allowed(&identities)
+        .await
+        .with_context(|| {
+            format!(
+                "failed to check if connection is allowed for client: '{}'",
+                addr
+            )
+        })?;
+    if !is_allowed {
+        let err: Error = ErrorKind::AuthorizationFailed.into();
+        scuba.log_with_msg("Authorization failed", format!("{}", err));
+        error!(conn_log, "Authorization failed: {}", err; "remote" => "true");
+
+        return Err(err);
+    }
+
     // Info per wireproto command within this session
     let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
     let trace = TraceContext::new(TraceId::from_string(session_id.to_string()), Instant::now());
-
-    // Per-connection logging drain that forks output to normal log and back to client stderr
-    let conn_log = {
-        let stderr_write = SenderBytesWrite {
-            chan: stderr.wait(),
-        };
-        let client_drain = slog_term::PlainSyncDecorator::new(stderr_write);
-        let client_drain = SimpleFormatWithError::new(client_drain);
-        let client_drain = KVFilter::new(client_drain, Level::Critical).only_pass_any_on_all_keys(
-            (hashmap! {
-                "remote".into() => hashset!["true".into(), "remote_only".into()],
-            })
-            .into(),
-        );
-
-        let server_drain = KVFilter::new(logger, Level::Critical).always_suppress_any(
-            (hashmap! {
-                "remote".into() => hashset!["remote_only".into()],
-            })
-            .into(),
-        );
-
-        // Don't fail logging if the client goes away
-        let drain = slog::Duplicate::new(client_drain, server_drain).ignore_res();
-        Logger::root(drain, o!("session_uuid" => format!("{}", session_id)))
-    };
 
     let priority = match Priority::extract_from_preamble(&preamble) {
         Ok(Some(p)) => {
@@ -228,7 +254,7 @@ pub async fn request_handler(
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         conn_log.clone(),
-        stdin,
+        stdin.map(bytes_ext::copy_from_new),
         RepoClient::new(
             repo,
             session.clone(),
@@ -250,6 +276,7 @@ pub async fn request_handler(
     let endres = proto_handler
         .inspect(move |bytes| session.bump_load(Metric::EgressBytes, bytes.len() as f64))
         .map_err(Error::from)
+        .map(bytes_ext::copy_from_old)
         .forward(stdout)
         .map(|_| ());
 
@@ -300,6 +327,8 @@ pub async fn request_handler(
     // NOTE: This results a Result that we ignore here. There isn't really anything we can (or
     // should) do if this errors out.
     let _ = scuba.log_with_trace(fb, &trace).compat().await;
+
+    Ok(())
 }
 
 fn loadlimiting_configs(
@@ -348,6 +377,40 @@ fn hostname_scheme(hostname: &str) -> &str {
     match index {
         Some(index) => hostname.split_at(index).0,
         None => hostname,
+    }
+}
+
+fn create_conn_logger(
+    stderr: Sender<Bytes>,
+    server_logger: Option<Logger>,
+    session_id: &SessionId,
+) -> Logger {
+    let decorator = o!("session_uuid" => format!("{}", session_id));
+    let stderr_write = SenderBytesWrite {
+        chan: stderr.wait(),
+    };
+    let client_drain = slog_term::PlainSyncDecorator::new(stderr_write);
+    let client_drain = SimpleFormatWithError::new(client_drain);
+    let client_drain = KVFilter::new(client_drain, Level::Critical).only_pass_any_on_all_keys(
+        (hashmap! {
+            "remote".into() => hashset!["true".into(), "remote_only".into()],
+        })
+        .into(),
+    );
+
+    if let Some(logger) = server_logger {
+        let server_drain = KVFilter::new(logger, Level::Critical).always_suppress_any(
+            (hashmap! {
+                "remote".into() => hashset!["remote_only".into()],
+            })
+            .into(),
+        );
+
+        // Don't fail logging if the client goes away
+        let drain = slog::Duplicate::new(client_drain, server_drain).ignore_res();
+        Logger::root(drain, decorator)
+    } else {
+        Logger::root(client_drain.ignore_res(), decorator)
     }
 }
 

@@ -6,14 +6,14 @@
  */
 
 #![deny(warnings)]
-// TODO(T33448938) use of deprecated item 'tokio_old::timer::Deadline': use Timeout instead
-#![allow(deprecated)]
 #![feature(never_type)]
+#![recursion_limit = "256"]
 
 mod connection_acceptor;
 mod errors;
 mod repo_handlers;
 mod request_handler;
+mod security_checker;
 
 pub use crate::connection_acceptor::wait_for_connections_closed;
 
@@ -21,13 +21,13 @@ use anyhow::Result;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
+use futures::channel::oneshot;
 use futures::compat::Future01CompatExt;
 use openssl::ssl::SslAcceptor;
 use scribe_ext::Scribe;
 use slog::{debug, Logger};
 use sql_ext::facebook::MysqlOptions;
 use std::collections::{HashMap, HashSet};
-use std::sync::{atomic::AtomicBool, Arc};
 
 use cmdlib::monitoring::ReadyFlagService;
 use metaconfig_types::{CommonConfig, RepoConfig};
@@ -46,7 +46,7 @@ pub async fn create_repo_listeners(
     sockname: String,
     tls_acceptor: SslAcceptor,
     service: ReadyFlagService,
-    terminate_process: Arc<AtomicBool>,
+    terminate_process: oneshot::Receiver<()>,
     config_store: Option<ConfigStore>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
@@ -79,6 +79,5 @@ pub async fn create_repo_listeners(
         config_store,
         scribe,
     )
-    .compat()
     .await
 }

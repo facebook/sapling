@@ -17,7 +17,7 @@ use futures_ext::BoxStream;
 use maplit::hashmap;
 use serde::{Deserialize, Serialize};
 use session_id::SessionId;
-use tokio_io::codec::{Decoder, Encoder};
+use tokio_util::codec::{Decoder, Encoder};
 
 use netstring::{NetstringDecoder, NetstringEncoder};
 
@@ -50,7 +50,7 @@ impl io::Write for SenderBytesWrite {
 
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.chan
-            .send(Bytes::from(buf))
+            .send(Bytes::copy_from_slice(buf))
             .map(|_| buf.len())
             .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
     }
@@ -107,7 +107,7 @@ impl SshMsg {
     where
         T: AsRef<[u8]>,
     {
-        Self::new(stream, Bytes::from(t.as_ref()))
+        Self::new(stream, Bytes::copy_from_slice(t.as_ref()))
     }
 
     pub fn stream(&self) -> SshStream {
@@ -266,14 +266,14 @@ impl SshEnvVars {
 #[cfg(test)]
 mod test {
     use bytes::{BufMut, BytesMut};
-    use tokio_io::codec::{Decoder, Encoder};
+    use tokio_util::codec::{Decoder, Encoder};
 
     use super::SshStream::*;
     use super::*;
 
     trait ToBytes: AsRef<[u8]> {
         fn bytes(&self) -> Bytes {
-            Bytes::from(self.as_ref())
+            Bytes::copy_from_slice(self.as_ref())
         }
     }
 
