@@ -2115,6 +2115,7 @@ mod tests {
         }
 
         #[test]
+        #[cfg(not(windows))]
         fn test_lfs_proxy_no_http() -> Result<()> {
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
@@ -2141,6 +2142,7 @@ mod tests {
         }
 
         #[test]
+        #[cfg(not(windows))]
         fn test_lfs_proxy_http() -> Result<()> {
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
