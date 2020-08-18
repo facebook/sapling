@@ -58,7 +58,7 @@ def doctor(ui, **opts):
         return
     repohgpath = os.path.join(repopath, ".hg")
     vfs = vfsmod.vfs(repohgpath)
-    sharedhgpath = vfs.tryread("sharedpath") or repohgpath
+    sharedhgpath = vfs.tryreadutf8("sharedpath").rstrip("\n") or repohgpath
     svfs = vfsmod.vfs(os.path.join(sharedhgpath, "store"))
 
     ui.write(_("checking internal storage\n"))
