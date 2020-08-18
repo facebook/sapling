@@ -1015,7 +1015,7 @@ def _check(repo, r, ui, tool, fcd, files):
         _toolbool(ui, tool, "checkconflicts")
         or "conflicts" in _toollist(ui, tool, "check")
     ):
-        if re.search("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data(), re.MULTILINE):
+        if re.search(b"^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data(), re.MULTILINE):
             r = 1
 
     checked = False
