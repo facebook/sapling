@@ -173,60 +173,73 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
         hashes: Vec<ChangesetId>,
         excludes: Vec<ChangesetId>,
     ) -> BonsaiNodeStream {
+        let changeset_fetcher = changeset_fetcher.clone();
         add_generations_by_bonsai(
             ctx.clone(),
-            stream::iter_ok(excludes.into_iter()).boxify(),
+            stream::iter_ok(hashes.into_iter()).boxify(),
             changeset_fetcher.clone(),
         )
         .collect()
         .join(
             add_generations_by_bonsai(
                 ctx.clone(),
-                stream::iter_ok(hashes.into_iter()).boxify(),
+                stream::iter_ok(excludes.into_iter()).boxify(),
                 changeset_fetcher.clone(),
             )
             .collect(),
         )
-        .map({
-            let changeset_fetcher = changeset_fetcher.clone();
-            move |(exclude_generations, hashes_generations)| {
-                let mut next_generation = BTreeMap::new();
-                let current_exclude_generation = exclude_generations
-                    .iter()
-                    .map(|(_node, gen)| gen)
-                    .max()
-                    .cloned();
-                let mut sorted_unique_generations = UniqueHeap::new();
-                for (hash, generation) in hashes_generations {
-                    next_generation
-                        .entry(generation.clone())
-                        .or_insert_with(HashSet::new)
-                        .insert(hash);
-                    // insert into our sorted list of generations
-                    sorted_unique_generations.push(generation);
-                }
-
-                Self {
-                    ctx,
-                    changeset_fetcher: changeset_fetcher.clone(),
-                    lca_hint_index,
-                    next_generation,
-                    // Start with a fake state - maximum generation number and no entries
-                    // for it (see drain below)
-                    current_generation: Generation::max_gen(),
-                    pending_changesets: SelectAll::default(),
-                    exclude_ancestors_future: ok(NodeFrontier::from_iter(exclude_generations))
-                        .boxify(),
-                    current_exclude_generation,
-                    drain: hashset! {}.into_iter().peekable(),
-                    sorted_unique_generations,
-                }
-                .boxify()
-            }
+        .map(move |(hashes_generations, exclude_generations)| {
+            Self::new_with_excludes_gen_num(
+                ctx,
+                &changeset_fetcher,
+                lca_hint_index,
+                hashes_generations,
+                exclude_generations,
+            )
         })
         .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
         .from_err()
         .flatten_stream()
+        .boxify()
+    }
+
+    pub fn new_with_excludes_gen_num(
+        ctx: CoreContext,
+        changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+        lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
+        hashes_generations: Vec<(ChangesetId, Generation)>,
+        exclude_generations: Vec<(ChangesetId, Generation)>,
+    ) -> BonsaiNodeStream {
+        let mut next_generation = BTreeMap::new();
+        let current_exclude_generation = exclude_generations
+            .iter()
+            .map(|(_node, gen)| gen)
+            .max()
+            .cloned();
+        let mut sorted_unique_generations = UniqueHeap::new();
+        for (hash, generation) in hashes_generations {
+            next_generation
+                .entry(generation.clone())
+                .or_insert_with(HashSet::new)
+                .insert(hash);
+            // insert into our sorted list of generations
+            sorted_unique_generations.push(generation);
+        }
+
+        Self {
+            ctx,
+            changeset_fetcher: changeset_fetcher.clone(),
+            lca_hint_index,
+            next_generation,
+            // Start with a fake state - maximum generation number and no entries
+            // for it (see drain below)
+            current_generation: Generation::max_gen(),
+            pending_changesets: SelectAll::default(),
+            exclude_ancestors_future: ok(NodeFrontier::from_iter(exclude_generations)).boxify(),
+            current_exclude_generation,
+            drain: hashset! {}.into_iter().peekable(),
+            sorted_unique_generations,
+        }
         .boxify()
     }
 
