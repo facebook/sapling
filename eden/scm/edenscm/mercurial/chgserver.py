@@ -268,7 +268,6 @@ class chgcmdserver(commandserver.server):
         # Environment variables might change, reload env.
         util._reloadenv()
         args = self._readlist()
-        args = [pycompat.decodeutf8(a) for a in args]
         pycompat.sysargv[1:] = args
         origui = uimod.ui
         # Use the class patched by _newchgui so 'system' and 'pager' requests
@@ -293,9 +292,9 @@ class chgcmdserver(commandserver.server):
             newenv = dict(  # ignore below bc pyre doesn't like list to kv conversion
                 # pyre-fixme[6]: Expected `Mapping[Variable[_KT], Variable[_VT]]`
                 #  for 1st param but got `Generator[List[str], None, None]`.
-                pycompat.decodeutf8(s).split("=", 1)
+                s.split("=", 1)
                 for s in l
-                if b"=" in s
+                if "=" in s
             )
         except ValueError:
             raise ValueError("unexpected value in setenv request")

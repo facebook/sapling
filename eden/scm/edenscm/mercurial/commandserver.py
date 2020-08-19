@@ -238,11 +238,12 @@ class server(object):
         return self._read(length)
 
     def _readlist(self):
-        # type: () -> List[bytes]
+        # type: () -> List[str]
         """read a list of NULL separated strings from the channel"""
         s = self._readstr()
         if s:
-            return s.split(b"\0")
+            s = pycompat.decodeutf8(s)
+            return s.split("\0")
         else:
             return []
 
