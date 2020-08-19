@@ -76,6 +76,7 @@ else:
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
         "test-bookmarks-filler.t",  # Probably missing binary
         "test-cmd-manual-scrub.t",  # Just wrong outout
+        "test-edenapi-server-commit-revlog-data.t",  # Missing eden/scm's commands
         "test-edenapi-server-complete-trees.t",  # Missing eden/scm's commands
         "test-edenapi-server-files.t",  # Missing eden/scm's commands
         "test-edenapi-server-history.t",  # Missing eden/scm's commands
