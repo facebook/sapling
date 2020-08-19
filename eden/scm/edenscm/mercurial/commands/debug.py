@@ -1550,9 +1550,8 @@ def debuginstall(ui, **opts):
 
     # templates
     p = templater.templatepaths()
-    fm.write("templatedirs", "checking templates (%s)...\n", " ".join(p))
-    fm.condwrite(not p, "", _(" no template directories found\n"))
     if p:
+        fm.write("templatedirs", "checking templates (%s)...\n", " ".join(p))
         m = templater.templatepath("map-cmdline.default")
         if m:
             # template found, check if it is working
@@ -1569,9 +1568,8 @@ def debuginstall(ui, **opts):
         fm.condwrite(
             not m, "defaulttemplatenotfound", _(" template '%s' not found\n"), "default"
         )
-    if not p:
-        problems += 1
-    fm.condwrite(not p, "", _(" (templates seem to have been installed incorrectly)\n"))
+        if not p:
+            problems += 1
 
     # editor
     editor = ui.geteditor()
