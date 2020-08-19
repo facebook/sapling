@@ -105,9 +105,8 @@ pub(crate) const TERMINATIONS: TestFixture = TestFixture {
     missing: &["A", "F", "X"],
 };
 
-const LONG_MESSAGE: &'static str = "long message 1\nlong message 2\nlong message 3\n\n";
-const VERY_LONG_MESSAGE: &'static str =
-    "very long message 1\nvery long message 2\nvery long message 3\n\n\
+const LONG_MESSAGE: &str = "long message 1\nlong message 2\nlong message 3\n\n";
+const VERY_LONG_MESSAGE: &str = "very long message 1\nvery long message 2\nvery long message 3\n\n\
      very long message 4\nvery long message 5\nvery long message 6\n\n";
 
 pub(crate) const LONG_MESSAGES: TestFixture = TestFixture {

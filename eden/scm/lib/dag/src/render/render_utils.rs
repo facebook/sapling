@@ -5,29 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use crate::render::{Ancestor, Renderer};
+use super::render::{Ancestor, Renderer};
+use crate::DagAlgorithm;
+use crate::VertexName;
 use anyhow::Result;
-use dag::DagAlgorithm;
-use dag::VertexName;
 
 /// Render a NameDag or MemNameDag into a String.
 pub fn render_namedag(
     dag: &(impl DagAlgorithm + ?Sized),
     get_message: impl Fn(&VertexName) -> Option<String>,
 ) -> Result<String> {
-    let mut renderer = crate::GraphRowRenderer::new().output().build_box_drawing();
+    let mut renderer = super::GraphRowRenderer::new().output().build_box_drawing();
 
-    let iter: Vec<_> = dag.all()?.iter()?.collect::<dag::Result<_>>()?;
+    let iter: Vec<_> = dag.all()?.iter()?.collect::<crate::Result<_>>()?;
 
     let mut out = String::new();
     for node in iter {
         let parents = dag
             .parent_names(node.clone())?
             .into_iter()
-            .map(|parent| Ancestor::Parent(parent))
+            .map(Ancestor::Parent)
             .collect();
         let mut name = format!("{:?}", &node);
-        let message = get_message(&node).unwrap_or(String::new());
+        let message = get_message(&node).unwrap_or_default();
         let row = if name.len() == 1 {
             renderer.next_row(node, parents, name, message)
         } else {

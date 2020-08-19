@@ -7,10 +7,10 @@
 
 use std::marker::PhantomData;
 
-use crate::ascii::AsciiRenderer;
-use crate::ascii_large::AsciiLargeRenderer;
-use crate::box_drawing::BoxDrawingRenderer;
-use crate::render::{GraphRow, Renderer};
+use super::ascii::AsciiRenderer;
+use super::ascii_large::AsciiLargeRenderer;
+use super::box_drawing::BoxDrawingRenderer;
+use super::render::{GraphRow, Renderer};
 
 pub(crate) struct OutputRendererOptions {
     pub(crate) min_row_height: usize,

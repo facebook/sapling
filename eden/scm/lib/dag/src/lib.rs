@@ -23,6 +23,7 @@ pub mod namedag;
 pub mod nameset;
 pub mod ops;
 pub mod protocol;
+pub mod render;
 mod segment;
 pub mod spanset;
 pub mod utils;

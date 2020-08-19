@@ -7,14 +7,14 @@
 
 use std::collections::{HashMap, HashSet};
 
-use dag::namedag::MemNameDag;
-use dag::ops::ImportAscii;
-use dag::DagAlgorithm;
-use dag::VertexName;
+use crate::namedag::MemNameDag;
+use crate::ops::ImportAscii;
+use crate::DagAlgorithm;
+use crate::VertexName;
 use unicode_width::UnicodeWidthStr;
 
-use crate::render::{Ancestor, Renderer};
-use crate::test_fixtures::TestFixture;
+use super::render::{Ancestor, Renderer};
+use super::test_fixtures::TestFixture;
 
 pub(crate) fn render_string(
     fixture: &TestFixture,
