@@ -46,7 +46,7 @@ EDENSCM_BINS = {
 # fbcode repos have the same folder layout)
 OSS_DEPS = {
     "BINARY_HGPYTHON": "python2.7",
-    "DUMMYSSH": "//eden/mononoke/tests/integration/dummyssh.sh",
+    "DUMMYSSH": "//eden/scm/tests/dummyssh3.py",
     "RUN_TESTS_LIBRARY": "//eden/scm/tests",
     "TEST_CERTS": "//eden/mononoke/tests/integration/certs",
     "TEST_FIXTURES": "//eden/mononoke/tests/integration",
