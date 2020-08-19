@@ -5,22 +5,4 @@
  * GNU General Public License version 2.
  */
 
-mod ascii;
-mod ascii_large;
-mod box_drawing;
-mod column;
-mod output;
-mod render;
-mod render_utils;
-
-#[cfg(test)]
-mod test_fixtures;
-
-#[cfg(test)]
-mod test_utils;
-
-pub use crate::ascii::AsciiRenderer;
-pub use crate::ascii_large::AsciiLargeRenderer;
-pub use crate::box_drawing::BoxDrawingRenderer;
-pub use crate::render::{Ancestor, GraphRowRenderer, LinkLine, NodeLine, PadLine, Renderer};
-pub use crate::render_utils::render_namedag;
+pub use dag::render::*;

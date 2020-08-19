@@ -10,8 +10,8 @@ use std::collections::BTreeMap;
 
 use bitflags::bitflags;
 
-use crate::column::{Column, ColumnsExt};
-use crate::output::OutputRendererBuilder;
+use super::column::{Column, ColumnsExt};
+use super::output::OutputRendererBuilder;
 
 pub trait Renderer<N> {
     type Output;
@@ -252,8 +252,7 @@ where
                 .filter(|parent| {
                     parent
                         .id()
-                        .map(|parent| self.columns.find(&parent).is_none())
-                        .unwrap_or(true)
+                        .map_or(true, |parent| self.columns.find(&parent).is_none())
                 })
                 .count()
                 .saturating_sub(empty_columns);
@@ -357,6 +356,7 @@ where
                     // parent column.  The pad line for the old parent
                     // column is now blank.
                     link_line[column] |= LinkLine::RIGHT_FORK;
+                    #[allow(clippy::needless_range_loop)]
                     for i in column + 1..parent_column {
                         link_line[i] |= LinkLine::HORIZONTAL;
                     }
@@ -375,6 +375,7 @@ where
             // If the parents extend beyond the columns adjacent to the node, draw a horizontal
             // line between the two outermost parents.
             if min_pi + 1 != column || column + 1 != max_pi {
+                #[allow(clippy::needless_range_loop)]
                 for i in min(min_pi, column) + 1..max(max_pi, column) {
                     link_line[i] |= LinkLine::HORIZONTAL;
                     need_link_line = true;
@@ -392,6 +393,7 @@ where
             }
 
             // Each parent forks towards the node column.
+            #[allow(clippy::comparison_chain)]
             for (&i, p) in parent_columns.iter() {
                 pad_lines[i] = self.columns[i].to_pad_line();
                 if i < column {

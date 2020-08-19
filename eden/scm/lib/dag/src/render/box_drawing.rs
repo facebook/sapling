@@ -9,8 +9,8 @@ use std::marker::PhantomData;
 
 use itertools::Itertools;
 
-use crate::output::OutputRendererOptions;
-use crate::render::{Ancestor, GraphRow, LinkLine, NodeLine, PadLine, Renderer};
+use super::output::OutputRendererOptions;
+use super::render::{Ancestor, GraphRow, LinkLine, NodeLine, PadLine, Renderer};
 
 mod glyph {
     pub(super) const SPACE: usize = 0;
@@ -162,6 +162,7 @@ where
         out.push_str("\n");
 
         // Render the link line
+        #[allow(clippy::if_same_then_else)]
         if let Some(link_row) = line.link_line {
             let mut link_line = String::new();
             for cur in link_row.iter() {
@@ -289,9 +290,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::super::test_fixtures::{self, TestFixture};
+    use super::super::test_utils::{render_string, render_string_with_order};
     use crate::render::GraphRowRenderer;
-    use crate::test_fixtures::{self, TestFixture};
-    use crate::test_utils::{render_string, render_string_with_order};
 
     fn render(fixture: &TestFixture) -> String {
         let mut renderer = GraphRowRenderer::new().output().build_box_drawing();

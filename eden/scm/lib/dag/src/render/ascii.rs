@@ -9,8 +9,8 @@ use std::marker::PhantomData;
 
 use itertools::Itertools;
 
-use crate::output::OutputRendererOptions;
-use crate::render::{Ancestor, GraphRow, LinkLine, NodeLine, PadLine, Renderer};
+use super::output::OutputRendererOptions;
+use super::render::{Ancestor, GraphRow, LinkLine, NodeLine, PadLine, Renderer};
 
 pub struct AsciiRenderer<N, R>
 where
@@ -214,9 +214,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::super::test_fixtures::{self, TestFixture};
+    use super::super::test_utils::render_string;
     use crate::render::GraphRowRenderer;
-    use crate::test_fixtures::{self, TestFixture};
-    use crate::test_utils::render_string;
 
     fn render(fixture: &TestFixture) -> String {
         let mut renderer = GraphRowRenderer::new().output().build_ascii();
