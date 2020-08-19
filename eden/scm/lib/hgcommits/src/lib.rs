@@ -36,11 +36,13 @@ pub struct HgCommit {
     pub raw_text: Bytes,
 }
 
+mod doublewrite;
 mod hgsha1commits;
 mod memhgcommits;
 mod revlog;
 mod strip;
 
+pub use doublewrite::DoubleWriteCommits;
 pub use hgsha1commits::HgCommits;
 pub use memhgcommits::MemHgCommits;
 pub use revlog::RevlogCommits;
