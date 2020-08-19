@@ -290,10 +290,10 @@ class changelog(object):
         # type: (Union[int, bytes], Optional[IO], bool) -> bytes
         if nodeorrev in {nullid, nullrev}:
             return b""
-        if isinstance(nodeorrev, int):
-            node = self.node(nodeorrev)
-        else:
+        if isinstance(nodeorrev, bytes):
             node = nodeorrev
+        else:
+            node = self.node(nodeorrev)
         text = self.inner.getcommitrawtext(node)
         if text is None:
             raise error.LookupError(node, self.indexfile, _("no node"))

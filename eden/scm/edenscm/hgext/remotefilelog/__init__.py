@@ -613,15 +613,10 @@ def onetimeclientsetup(ui):
         node = orig(self, *args)
         newlen = len(self)
         if oldlen != newlen:
+            linknode = node
             for oldargs in pendingfilecommits:
-                log, rt, tr, link, p1, p2, n, fl, c, m = oldargs
-                linknode = self.node(link)
-                if linknode == node:
-                    log.addrawrevision(rt, tr, linknode, p1, p2, n, fl, c, m)
-                else:
-                    raise error.ProgrammingError(
-                        "pending multiple integer revisions are not supported"
-                    )
+                log, rt, tr, _link, p1, p2, n, fl, c, m = oldargs
+                log.addrawrevision(rt, tr, linknode, p1, p2, n, fl, c, m)
         else:
             # "link" is actually wrong here (it is set to len(changelog))
             # if changelog remains unchanged, skip writing file revisions
