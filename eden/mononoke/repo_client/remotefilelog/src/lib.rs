@@ -50,8 +50,8 @@ pub enum ErrorKind {
 pub enum RemotefilelogBlobKind {
     /// An inline filenode. This represents its size.
     Inline(u64),
-    /// An LFS filenode.
-    Lfs,
+    /// An LFS filenode, together with the actual file size.
+    Lfs(u64),
 }
 
 struct RemotefilelogBlob {
@@ -67,6 +67,13 @@ impl fmt::Debug for RemotefilelogBlob {
     }
 }
 
+pub struct GetpackBlobInfo {
+    pub filesize: u64,
+    // weight is equal to file size if it's a non-lfs blobs
+    // or it's zero for lfs blobs
+    pub weight: u64,
+}
+
 /// Create a blob for getpack v1. This returns a future that resolves with an estimated weight for
 /// this blob (this is NOT trying to be correct, it's just a rough estimate!), and the blob's
 /// bytes.
@@ -77,7 +84,7 @@ pub fn create_getpack_v1_blob(
     validate_hash: bool,
 ) -> impl Future<
     Item = (
-        u64,
+        GetpackBlobInfo,
         impl Future<Item = (HgFileNodeId, Bytes), Error = Error>,
     ),
     Error = Error,
@@ -92,9 +99,12 @@ pub fn create_getpack_v1_blob(
     .map(move |RemotefilelogBlob { kind, data }| {
         use RemotefilelogBlobKind::*;
 
-        let weight = match kind {
-            Inline(size) => size,
-            Lfs => unreachable!(), // lfs_threshold = None implies no LFS blobs.
+        let getpack_blob_data = match kind {
+            Inline(size) => GetpackBlobInfo {
+                filesize: size,
+                weight: size,
+            },
+            Lfs(_) => unreachable!(), // lfs_threshold = None implies no LFS blobs.
         };
 
         let fut = data.rescue_redacted().map(move |(meta_bytes, file_bytes)| {
@@ -105,7 +115,7 @@ pub fn create_getpack_v1_blob(
             (node, buff.freeze())
         });
 
-        (weight, fut)
+        (getpack_blob_data, fut)
     })
 }
 
@@ -119,7 +129,7 @@ pub fn create_getpack_v2_blob(
     validate_hash: bool,
 ) -> impl Future<
     Item = (
-        u64,
+        GetpackBlobInfo,
         impl Future<Item = (HgFileNodeId, Bytes, Metadata), Error = Error>,
     ),
     Error = Error,
@@ -129,16 +139,26 @@ pub fn create_getpack_v2_blob(
             use RemotefilelogBlobKind::*;
 
             let (weight, metadata) = match kind {
-                Inline(size) => (
-                    size,
-                    Metadata {
-                        size: None,
-                        flags: None,
-                    },
-                ),
-                Lfs => {
+                Inline(size) => {
+                    let getpack_blob_data = GetpackBlobInfo {
+                        filesize: size,
+                        weight: size,
+                    };
+                    (
+                        getpack_blob_data,
+                        Metadata {
+                            size: None,
+                            flags: None,
+                        },
+                    )
+                }
+                Lfs(size) => {
+                    let getpack_blob_data = GetpackBlobInfo {
+                        filesize: size,
+                        weight: 0,
+                    };
                     let flags = Some(RevFlags::REVIDX_EXTSTORED.into());
-                    (0, Metadata { size: None, flags })
+                    (getpack_blob_data, Metadata { size: None, flags })
                 }
             };
 
@@ -308,7 +328,7 @@ fn prepare_blob(
                         .boxify();
 
                     RemotefilelogBlob {
-                        kind: RemotefilelogBlobKind::Lfs,
+                        kind: RemotefilelogBlobKind::Lfs(file_size),
                         data: blob_fut,
                     }
                 }

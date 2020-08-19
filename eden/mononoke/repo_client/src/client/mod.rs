@@ -61,6 +61,7 @@ use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use rand::{self, Rng};
 use remotefilelog::{
     create_getpack_v1_blob, create_getpack_v2_blob, get_unordered_file_history_for_multiple_nodes,
+    GetpackBlobInfo,
 };
 use revisionstore_types::Metadata;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -606,7 +607,7 @@ impl RepoClient {
         name: &'static str,
     ) -> BoxStream<BytesOld, Error>
     where
-        WeightedContent: Future<Item = (u64, Content), Error = Error> + Send + 'static,
+        WeightedContent: Future<Item = (GetpackBlobInfo, Content), Error = Error> + Send + 'static,
         Content:
             Future<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error> + Send + 'static,
         GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, SessionLfsParams, bool) -> WeightedContent
@@ -688,10 +689,11 @@ impl RepoClient {
                                 move |blobs| {
                                     undesired_path_logger.maybe_log_file(
                                         Some(&path),
-                                        blobs.iter().map(|(size, _)| *size),
+                                        blobs.iter().map(|(blobinfo, _)| blobinfo.filesize),
                                     );
 
-                                    let total_weight = blobs.iter().map(|(size, _)| size).sum();
+                                    let total_weight =
+                                        blobs.iter().map(|(blob_info, _)| blob_info.weight).sum();
                                     let content_futs = blobs.into_iter().map(|(_, fut)| fut);
                                     let contents_and_history = future_old::join_all(content_futs)
                                         .join(history_fut)
