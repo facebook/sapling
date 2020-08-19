@@ -242,7 +242,7 @@ def diffidtonode(repo, diffid):
         remoterepo = hg.peer(repo, {}, peerpath)
         remoterev = remoterepo.lookup("_gitlookup_git_%s" % gitrev)
 
-        repo.ui.debug("[diffrev] HG rev is %s\n" % remoterev.encode("hex"))
+        repo.ui.debug("[diffrev] HG rev is %s\n" % hex(remoterev))
         if not remoterev:
             repo.ui.debug("[diffrev] Falling back to linear search\n")
             node = localgetdiff(repo, diffid)
