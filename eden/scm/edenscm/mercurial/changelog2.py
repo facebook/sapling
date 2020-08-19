@@ -80,7 +80,7 @@ class changelog(object):
         """
         env = dict(func.__globals__)
         dag = self.dag
-        for name in func.func_code.co_names:
+        for name in func.__code__.co_names:
             # name is potentially a string used by LOAD_GLOBAL bytecode.
             if extraenv is not None and name in extraenv:
                 # Provided by 'extraenv'.
