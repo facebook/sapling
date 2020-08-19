@@ -10,6 +10,3 @@ minibytes = { path = "../minibytes" }
 revlogindex = { path = "../revlogindex" }
 serde = { version = "1", features = ["derive"] }
 zstore = { path = "../zstore" }
-
-[dev-dependencies]
-quickcheck = "0.9"
