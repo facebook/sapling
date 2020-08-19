@@ -9,6 +9,7 @@ use crate::id::{Group, VertexName};
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
 use crate::ops::ImportAscii;
+use crate::render::render_namedag;
 use crate::DagAlgorithm;
 use crate::IdMap;
 use crate::InverseDag;
@@ -193,6 +194,76 @@ fn test_generic_dag_reachable_roots(dag: impl DagAlgorithm + DagAddHeads) -> Res
     Ok(())
 }
 
+fn test_generic_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
+    let ascii = r#"
+            J K
+           /|\|\
+          G H I H
+          |/|/|
+          E F |
+         /|/|\|
+        A B C D"#;
+    let dag1 = from_ascii_with_heads(dag, ascii, Some(&["J", "K"][..]));
+
+    let dir = tempdir().unwrap();
+    let mut dag2 = NameDag::open(&dir.path())?;
+    dag2.import_and_flush(&dag1, nameset("J"))?;
+    assert_eq!(
+        render(&dag2),
+        r#"
+            K
+            ├─╮
+            │ │ J
+            ╭─┬─┤
+            │ I │
+            │ ├───╮
+            H │ │ │
+            ├─────╮
+            │ │ │ F
+            │ ╭───┼─╮
+            │ D │ │ │
+            │   │ │ │
+            │   │ │ C
+            │   │ │
+            │   G │
+            ├───╯ │
+            E     │
+            ├─────╮
+            │     B
+            │
+            A"#
+    );
+
+    // Check that dag2 is actually flushed to disk.
+    let dag3 = NameDag::open(&dir.path())?;
+    assert_eq!(
+        render(&dag3),
+        r#"
+            K
+            ├─╮
+            │ │ J
+            ╭─┬─┤
+            │ I │
+            │ ├───╮
+            H │ │ │
+            ├─────╮
+            │ │ │ F
+            │ ╭───┼─╮
+            │ D │ │ │
+            │   │ │ │
+            │   │ │ C
+            │   │ │
+            │   G │
+            ├───╯ │
+            E     │
+            ├─────╮
+            │     B
+            │
+            A"#
+    );
+    Ok(())
+}
+
 fn test_generic_dag2(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     let ascii = r#"
             J K
@@ -246,6 +317,11 @@ fn test_inverse_dag() {
 #[test]
 fn test_dag_reachable_roots() {
     test_generic_dag_reachable_roots(MemNameDag::new()).unwrap()
+}
+
+#[test]
+fn test_dag_import() {
+    test_generic_dag_import(MemNameDag::new()).unwrap()
 }
 
 #[test]
@@ -1101,4 +1177,8 @@ pub fn test_generic_dag<D: DagAddHeads + DagAlgorithm + Send + Sync + 'static>(
     test_generic_dag_inverse(new_dag()).unwrap();
     test_generic_dag_reachable_roots(new_dag()).unwrap();
     test_generic_dag_beautify(new_dag).unwrap()
+}
+
+fn render(dag: &(impl DagAlgorithm + ?Sized)) -> String {
+    render_namedag(dag, |_| None).unwrap()
 }

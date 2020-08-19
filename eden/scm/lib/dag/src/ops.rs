@@ -309,6 +309,21 @@ pub trait DagPersistent {
     ) -> Result<()>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>;
+
+    /// Import from another (potentially large) DAG. Write to disk immediately.
+    fn import_and_flush(
+        &mut self,
+        dag: &(impl DagAlgorithm + ?Sized),
+        master_heads: NameSet,
+    ) -> Result<()> {
+        let heads = dag.heads(dag.all()?)?;
+        let non_master_heads = heads - master_heads.clone();
+        let master_heads: Vec<VertexName> = master_heads.iter()?.collect::<Result<Vec<_>>>()?;
+        let non_master_heads: Vec<VertexName> =
+            non_master_heads.iter()?.collect::<Result<Vec<_>>>()?;
+        let parent_func = |v| dag.parent_names(v);
+        self.add_heads_and_flush(parent_func, &master_heads, &non_master_heads)
+    }
 }
 
 /// Import ASCII graph to DAG.
