@@ -7,6 +7,7 @@
 
 use crate::strip;
 use crate::AppendCommits;
+use crate::DescribeBackend;
 use crate::HgCommit;
 use crate::ReadCommitText;
 use crate::StripCommits;
@@ -187,5 +188,26 @@ impl ToIdSet for MemHgCommits {
 impl ToSet for MemHgCommits {
     fn to_set(&self, set: &IdSet) -> dag::Result<Set> {
         self.dag.to_set(set)
+    }
+}
+
+impl DescribeBackend for MemHgCommits {
+    fn algorithm_backend(&self) -> &'static str {
+        "segments"
+    }
+
+    fn describe_backend(&self) -> String {
+        r#"Backend (memory):
+  Local:
+    Memory
+Feature Providers:
+  Commit Graph Algorithms:
+    Memory
+  Commit Hash / Rev Lookup:
+    Memory
+  Commit Data (user, message):
+    Memory
+"#
+        .to_string()
     }
 }

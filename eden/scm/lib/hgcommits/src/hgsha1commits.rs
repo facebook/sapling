@@ -7,6 +7,7 @@
 
 use crate::strip;
 use crate::AppendCommits;
+use crate::DescribeBackend;
 use crate::HgCommit;
 use crate::ReadCommitText;
 use crate::StripCommits;
@@ -37,9 +38,9 @@ use zstore::Zstore;
 /// Commits using the HG SHA1 hash function. Stored on disk.
 pub struct HgCommits {
     commits: Zstore,
-    commits_path: PathBuf,
+    pub(crate) commits_path: PathBuf,
     dag: Dag,
-    dag_path: PathBuf,
+    pub(crate) dag_path: PathBuf,
 }
 
 impl HgCommits {
@@ -236,5 +237,30 @@ impl ToIdSet for HgCommits {
 impl ToSet for HgCommits {
     fn to_set(&self, set: &IdSet) -> dag::Result<Set> {
         self.dag.to_set(set)
+    }
+}
+
+impl DescribeBackend for HgCommits {
+    fn algorithm_backend(&self) -> &'static str {
+        "segments"
+    }
+
+    fn describe_backend(&self) -> String {
+        format!(
+            r#"Backend (non-lazy segments):
+  Local:
+    Segments + IdMap: {}
+    Zstore: {}
+Feature Providers:
+  Commit Graph Algorithms:
+    Segments
+  Commit Hash / Rev Lookup:
+    IdMap
+  Commit Data (user, message):
+    Zstore
+"#,
+            self.dag_path.display(),
+            self.commits_path.display()
+        )
     }
 }
