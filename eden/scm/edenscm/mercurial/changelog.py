@@ -346,7 +346,7 @@ class changelog(revlog.revlog):
 
         self.zstore = zstore
 
-    def userust(self, name):
+    def userust(self, name=None):
         return False
 
     @property

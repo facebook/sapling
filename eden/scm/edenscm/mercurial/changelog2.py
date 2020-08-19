@@ -35,7 +35,7 @@ class changelog(object):
         self._visibleheads = self._loadvisibleheads(svfs)
         self._uiconfig = uiconfig
 
-    def userust(self, name):
+    def userust(self, name=None):
         return True
 
     @property

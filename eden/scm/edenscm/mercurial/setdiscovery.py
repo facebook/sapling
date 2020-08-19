@@ -263,7 +263,9 @@ def findcommonheads(
         if res is not None:
             return res
 
-    if ui.configbool("experimental", "findcommonheadsnew"):
+    # The Rust changelog is incompatible with the old discovery logic
+    # that uses revlog details. Enforce the new discovery logic.
+    if ui.configbool("experimental", "findcommonheadsnew") or local.changelog.userust():
         return _findcommonheadsnew(
             ui,
             local,
