@@ -73,8 +73,7 @@ issue1829: wrong indentation
   
   [255]
 
-  $ $PYTHON -c "print('[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n')" \
-  > > $HGRC
+  $ printf '[foo]\nbar = a\n b\n c \n  de\n fg \nbaz = bif cb \n' > $HGRC
   $ hg showconfig foo
   foo.bar=a\nb\nc\nde\nfg
   foo.baz=bif cb

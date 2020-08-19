@@ -2,7 +2,7 @@
 
   $ hg init
 
-  $ $PYTHON -c 'open("a", "wb").write(b"confuse str.splitlines\nembedded\rnewline\n")'
+  $ printf "confuse str.splitlines\nembedded\rnewline\n" > a
   $ hg ci -Ama -d '1 0'
   adding a
 

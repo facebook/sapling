@@ -7,7 +7,7 @@ flag should probably live in somewhere else)
   $ setconfig phases.publish=false
 
   $ rebasewithdag() {
-  >   N=`$PYTHON -c "print($N+1)"`
+  >   N=$((N+1))
   >   hg init repo$N && cd repo$N
   >   hg debugdrawdag
   >   hg rebase "$@" > _rebasetmp

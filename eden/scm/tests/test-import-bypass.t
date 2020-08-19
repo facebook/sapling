@@ -208,7 +208,7 @@ Test patch.eol is handled
 (this also tests that editor is not invoked for '--bypass', if the
 commit message is explicitly specified, regardless of '--edit')
 
-  $ $PYTHON -c 'open("a", "wb").write(b"a\r\n")'
+  $ printf "a\r\n" > a
   $ hg ci -m makeacrlf
   $ HGEDITOR=cat hg import -m 'should fail because of eol' --edit --bypass ../test.diff
   applying ../test.diff

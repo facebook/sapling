@@ -273,7 +273,7 @@ test substring match: '^' should only match at the beginning
 
 match in last "line" without newline
 
-  $ $PYTHON -c 'fp = open("noeol", "wb"); fp.write(b"no infinite loop"); fp.close();'
+  $ printf "no infinite loop" > noeol
   $ hg ci -Amnoeol
   adding noeol
   $ hg histgrep loop

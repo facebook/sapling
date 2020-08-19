@@ -76,9 +76,8 @@
 
 7) Ensure the paths point to the right contents:
   $ getcontents() { # Usage: getcontents <path> <version>
-  >  local script="import sys, json; print(json.load(sys.stdin)[0][\"conflicts\"][$1][\"$2\"][\"contents\"])"
-  >  local result=`hg resolve --tool internal:dumpjson --all | python -c "$script"`
-  >  echo "$result"
+  >  local script="import sys, json; ui.writebytes(('%s\n' % json.load(sys.stdin)[0][\"conflicts\"][$1][\"$2\"][\"contents\"]).encode('utf-8'))"
+  >  hg resolve --tool internal:dumpjson --all | hg debugsh -c "$script"
   > }
   $ echo `getcontents 0 "base"`
   Unconflicted base, F1
@@ -537,7 +536,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
 Test case 9: Source is a binary file, dest is a file (base is still a file)
   $ cd ..
   $ reset
-  $ python -c 'f = open("file", "w"); f.write("\x00")'
+  $ printf '\0' > file
   $ hg commit -Aqm "source"
   $ hg up -q 0
   $ echo "change" > file
@@ -581,7 +580,7 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   $ echo "change" > file
   $ hg commit -Aqm "source"
   $ hg up -q 0
-  $ python -c 'f = open("file", "w"); f.write("\x00")'
+  $ printf '\0' > file
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg

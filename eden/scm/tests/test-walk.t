@@ -482,12 +482,12 @@ Test patterns:
 
 Test listfile and listfile0
 
-  $ $PYTHON -c "open('listfile0', 'wb').write(b'fenugreek\0new\0')"
+  $ printf 'fenugreek\0new\0' > listfile0
   $ hg debugwalk -I 'listfile0:listfile0'
   matcher: <treematcher rules=['fenugreek/**', 'new/**']>
   f  fenugreek  fenugreek
   f  new        new
-  $ $PYTHON -c "open('listfile', 'wb').write(b'fenugreek\nnew\r\nmammals/skunk\n')"
+  $ printf 'fenugreek\nnew\r\nmammals/skunk\n' > listfile
   $ hg debugwalk -I 'listfile:listfile'
   matcher: <treematcher rules=['fenugreek/**', 'new/**', 'mammals/skunk/**']>
   f  fenugreek      fenugreek
@@ -513,7 +513,8 @@ Test split patterns on overflow
 
   $ cd t
   $ echo fennel > overflow.list
-  $ $PYTHON -c "for i in range(200): print('x' * 100)" >> overflow.list
+  $ hg debugsh -c "for i in range(100): ui.write('x' * 100 + '\n')" >> overflow.list
+  $ hg debugsh -c "for i in range(100): ui.write('x' * 100 + '\n')" >> overflow.list
   $ echo fenugreek >> overflow.list
   $ hg debugwalk 'listfile:overflow.list' 2>&1 | egrep -v '(^matcher: |^xxx)'
   f  fennel     fennel     exact

@@ -364,7 +364,7 @@ test binary conversion (issue1359)
   $ mkdir git-repo3
   $ cd git-repo3
   $ git init-db >/dev/null 2>/dev/null
-  $ $PYTHON -c 'open("b", "wb").write(bytearray(range(256))*16)'
+  $ hg debugsh -c 'open("b", "wb").write(bytearray(range(256))*16)'
   $ git add b
   $ commit -a -m addbinary
   $ cd ..
@@ -381,7 +381,7 @@ convert binary file
   $ cd git-repo3-hg
   $ hg up -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ $PYTHON -c 'print(len(open("b", "rb").read()))'
+  $ hg debugsh -c 'ui.write("%s\n" % len(open("b", "rb").read()))'
   4096
   $ cd ..
 

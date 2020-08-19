@@ -392,7 +392,7 @@ Add other draft stacks
 
 Recent arg select days correctly
   $ echo 1 >> b
-  $ myday=`$PYTHON -c 'import time; print(int(time.time()) - 24 * 3600 * 20)'`
+  $ myday=`hg debugsh -c 'import time; ui.write(str(int(time.time()) - 24 * 3600 * 20))'`
   $ hg commit --date "$myday 0" -m test2
   $ hg update 0 -q
   $ hg log -Gr 'smartlog(master="master", heads=((date(-15) & draft()) + .))' -T compact

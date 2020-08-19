@@ -9,7 +9,7 @@
   >     ui.write('This is the foo command\n')
   > EOF
 
-  $ setconfig "extensions.foo=python-base64:`python -c 'import base64; print(base64.b64encode(open(\"foo.py\", "rb").read()).decode("utf-8").replace(\"\\n\",\"\"))'`"
+  $ setconfig "extensions.foo=python-base64:`hg debugsh -c 'import base64; ui.writebytes(base64.b64encode(open(\"foo.py\", \"rb\").read()).decode("utf-8").replace(\"\\n\",\"\").encode("utf-8"))'`"
 
   $ hg foo
   This is the foo command

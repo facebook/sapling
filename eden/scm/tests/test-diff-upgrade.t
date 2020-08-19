@@ -13,7 +13,7 @@ make a combination of new, changed and deleted file
 
   $ echo regular > regular
   $ echo rmregular > rmregular
-  $ $PYTHON -c "open('bintoregular', 'wb').write(b'\0')"
+  $ printf '\0' > bintoregular
   $ touch rmempty
   $ echo exec > exec
   $ chmod +x exec
@@ -23,7 +23,7 @@ make a combination of new, changed and deleted file
   $ echo unsetexec > unsetexec
   $ chmod +x unsetexec
   $ echo binary > binary
-  $ $PYTHON -c "open('rmbinary', 'wb').write(b'\0')"
+  $ printf '\0' > rmbinary
   $ hg ci -Am addfiles
   adding binary
   adding bintoregular
@@ -47,8 +47,8 @@ make a combination of new, changed and deleted file
   $ rm rmexec
   $ chmod +x setexec
   $ chmod -x unsetexec
-  $ $PYTHON -c "open('binary', 'wb').write(b'\0\0')"
-  $ $PYTHON -c "open('newbinary', 'wb').write(b'\0')"
+  $ printf '\0\0' > binary
+  $ printf '\0' > newbinary
   $ rm rmbinary
   $ hg addremove -s 0
   adding newbinary
