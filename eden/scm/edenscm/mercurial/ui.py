@@ -1361,7 +1361,9 @@ class ui(object):
             editor = self.geteditor()
 
             # Special cases to avoid shelling out
-            if editor == "cat":
+            if editor == "internal:none":
+                pass
+            elif editor == "cat":
                 # Print the text
                 self.write(text)
             elif editor == "cat>":

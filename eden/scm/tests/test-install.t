@@ -15,7 +15,7 @@ hg debuginstall
   checking available compression engines for wire protocol (*zlib*) (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (default)
-  checking commit editor... (* -c "import sys; sys.exit(0)") (glob)
+  checking commit editor (internal:none)
   checking username (test)
   no problems detected
 
@@ -29,8 +29,7 @@ hg debuginstall JSON
     "defaulttemplate": "default",
     "defaulttemplateerror": null,
     "defaulttemplatenotfound": "default",
-    "editor": "* -c \"import sys; sys.exit(0)\"", (glob)
-    "editornotfound": false,
+    "editor": "internal:none",
     "encoding": "utf-8",
     "encodingerror": null,
     "extensionserror": null,
@@ -44,8 +43,7 @@ hg debuginstall JSON
     "pythonver": "*.*.*", (glob)
     "templatedirs": "*mercurial?templates", (glob)
     "username": "test",
-    "usernameerror": null,
-    "vinotfound": false
+    "usernameerror": null
    }
   ]
 
@@ -66,7 +64,7 @@ hg debuginstall with no username
   checking available compression engines for wire protocol (*zlib*) (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (default)
-  checking commit editor... (* -c "import sys; sys.exit(0)") (glob)
+  checking commit editor (internal:none)
   checking username...
    no username supplied
    (specify a username in your configuration file)
@@ -84,7 +82,7 @@ exception message in JSON
     "defaulttemplateerror": null,
     "encodingerror": "unknown encoding: invalidenc",
     "extensionserror": null,
-    "usernameerror": "no username supplied",
+    "usernameerror": "no username supplied"
 
 path variables are expanded (~ is the same as $TESTTMP)
   $ mkdir tools
@@ -108,7 +106,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   checking available compression engines for wire protocol (*zlib*) (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (default)
-  checking commit editor... (* -c "import sys; sys.exit(0)") (glob)
+  checking commit editor (internal:none)
   checking username (test)
   no problems detected
 

@@ -1576,30 +1576,31 @@ def debuginstall(ui, **opts):
     # editor
     editor = ui.geteditor()
     editor = util.expandpath(editor)
-    fm.write("editor", _("checking commit editor... (%s)\n"), editor)
-    cmdpath = util.findexe(pycompat.shlexsplit(editor)[0])
-    fm.condwrite(
-        not cmdpath and editor == "vi",
-        "vinotfound",
-        _(
-            " No commit editor set and can't find %s in PATH\n"
-            " (specify a commit editor in your configuration"
-            " file)\n"
-        ),
-        not cmdpath and editor == "vi" and editor,
-    )
-    fm.condwrite(
-        not cmdpath and editor != "vi",
-        "editornotfound",
-        _(
-            " Can't find editor '%s' in PATH\n"
-            " (specify a commit editor in your configuration"
-            " file)\n"
-        ),
-        not cmdpath and editor,
-    )
-    if not cmdpath and editor != "vi":
-        problems += 1
+    fm.write("editor", _("checking commit editor (%s)\n"), editor)
+    if editor != "internal:none":
+        cmdpath = util.findexe(pycompat.shlexsplit(editor)[0])
+        fm.condwrite(
+            not cmdpath and editor == "vi",
+            "vinotfound",
+            _(
+                " No commit editor set and can't find %s in PATH\n"
+                " (specify a commit editor in your configuration"
+                " file)\n"
+            ),
+            not cmdpath and editor == "vi" and editor,
+        )
+        fm.condwrite(
+            not cmdpath and editor != "vi",
+            "editornotfound",
+            _(
+                " Can't find editor '%s' in PATH\n"
+                " (specify a commit editor in your configuration"
+                " file)\n"
+            ),
+            not cmdpath and editor,
+        )
+        if not cmdpath and editor != "vi":
+            problems += 1
 
     # check username
     username = None
