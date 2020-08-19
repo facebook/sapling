@@ -7,6 +7,7 @@
 
 use crate::strip;
 use crate::AppendCommits;
+use crate::DescribeBackend;
 use crate::HgCommit;
 use crate::ReadCommitText;
 use crate::StripCommits;
@@ -30,7 +31,7 @@ use std::path::PathBuf;
 /// HG commits stored on disk using the revlog format.
 pub struct RevlogCommits {
     revlog: RevlogIndex,
-    dir: PathBuf,
+    pub(crate) dir: PathBuf,
 }
 
 impl RevlogCommits {
@@ -177,5 +178,30 @@ impl ToIdSet for RevlogCommits {
 impl ToSet for RevlogCommits {
     fn to_set(&self, set: &IdSet) -> dag::Result<Set> {
         self.revlog.to_set(set)
+    }
+}
+
+impl DescribeBackend for RevlogCommits {
+    fn algorithm_backend(&self) -> &'static str {
+        "revlog"
+    }
+
+    fn describe_backend(&self) -> String {
+        format!(
+            r#"Backend (revlog):
+  Local:
+    Revlog: {}
+    Nodemap: {}
+Feature Providers:
+  Commit Graph Algorithms:
+    Revlog
+  Commit Hash / Rev Lookup:
+    Nodemap
+  Commit Data (user, message):
+    Revlog
+"#,
+            self.dir.join("00changelog.{i,d}").display(),
+            self.dir.join("00changelog.nodemap").display(),
+        )
     }
 }

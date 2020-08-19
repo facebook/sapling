@@ -28,6 +28,14 @@ pub trait AppendCommits {
     fn flush(&mut self, master_heads: &[Vertex]) -> Result<()>;
 }
 
+pub trait DescribeBackend {
+    /// Name of the DagAlgorithm backend.
+    fn algorithm_backend(&self) -> &'static str;
+
+    /// Describe what storage backend is being used.
+    fn describe_backend(&self) -> String;
+}
+
 /// Parameter used by `add_commits`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HgCommit {

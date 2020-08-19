@@ -6,6 +6,7 @@
  */
 
 use crate::AppendCommits;
+use crate::DescribeBackend;
 use crate::HgCommit;
 use crate::HgCommits;
 use crate::ReadCommitText;
@@ -163,5 +164,33 @@ impl ToIdSet for DoubleWriteCommits {
 impl ToSet for DoubleWriteCommits {
     fn to_set(&self, set: &IdSet) -> dag::Result<Set> {
         self.commits.to_set(set)
+    }
+}
+
+impl DescribeBackend for DoubleWriteCommits {
+    fn algorithm_backend(&self) -> &'static str {
+        "segments"
+    }
+
+    fn describe_backend(&self) -> String {
+        format!(
+            r#"Backend (doublewrite):
+  Local:
+    Segments + IdMap: {}
+    Zstore: {}
+    Revlog + Nodemap: {}
+Feature Providers:
+  Commit Graph Algorithms:
+    Segments
+  Commit Hash / Rev Lookup:
+    IdMap
+  Commit Data (user, message):
+    Zstore (incomplete)
+    Revlog
+"#,
+            self.commits.dag_path.display(),
+            self.commits.commits_path.display(),
+            self.revlog.dir.join("00changelog.{i,d,nodemap}").display(),
+        )
     }
 }
