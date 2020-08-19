@@ -14,6 +14,7 @@ use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
 use dag::ops::IdConvert;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
@@ -24,6 +25,8 @@ use dag::Id;
 use dag::Set;
 use dag::Vertex;
 use hgcommits::AppendCommits;
+use hgcommits::DescribeBackend;
+use hgcommits::DoubleWriteCommits;
 use hgcommits::HgCommit;
 use hgcommits::HgCommits;
 use hgcommits::MemHgCommits;
@@ -37,6 +40,7 @@ pub trait Commits:
     ReadCommitText
     + StripCommits
     + AppendCommits
+    + DescribeBackend
     + DagAlgorithm
     + IdConvert
     + PrefixLookup
@@ -48,6 +52,7 @@ pub trait Commits:
 impl Commits for HgCommits {}
 impl Commits for MemHgCommits {}
 impl Commits for RevlogCommits {}
+impl Commits for DoubleWriteCommits {}
 
 py_class!(pub class commits |py| {
     data inner: RefCell<Box<dyn Commits + Send + 'static>>;
@@ -114,6 +119,18 @@ py_class!(pub class commits |py| {
         idmap::idmap::from_idmap(py, self.clone_ref(py))
     }
 
+    /// Name of the backend used for DAG algorithms.
+    def algorithmbackend(&self) -> PyResult<Str> {
+        let inner = self.inner(py).borrow();
+        Ok(inner.algorithm_backend().to_string().into())
+    }
+
+    /// Describe the backend.
+    def describebackend(&self) -> PyResult<Str> {
+        let inner = self.inner(py).borrow();
+        Ok(inner.describe_backend().into())
+    }
+
     /// Construct `commits` from a revlog (`00changelog.i` and `00changelog.d`).
     @staticmethod
     def openrevlog(dir: &PyPath) -> PyResult<Self> {
@@ -125,6 +142,14 @@ py_class!(pub class commits |py| {
     @staticmethod
     def opensegments(segmentsdir: &PyPath, commitsdir: &PyPath) -> PyResult<Self> {
         let inner = HgCommits::new(segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
+        Self::from_commits(py, inner)
+    }
+
+    /// Construct "double write" `commits` from both revlog and segmented
+    /// changelog.
+    @staticmethod
+    def opendoublewrite(revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath) -> PyResult<Self> {
+        let inner = DoubleWriteCommits::new(revlogdir.as_path(), segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 
