@@ -1057,10 +1057,8 @@ void EdenServiceHandler::async_tm_getScmStatusV2(
             }));
   })
       .thenTry([cb = std::move(callback)](
-                   folly::Try<std::unique_ptr<GetScmStatusResult>>&&
-                       result) mutable {
-        apache::thrift::HandlerCallback<std::unique_ptr<GetScmStatusResult>>::
-            completeInThread(std::move(cb), std::move(result));
+                   folly::Try<std::unique_ptr<GetScmStatusResult>>&& result) {
+        cb->complete(std::move(result));
       });
 }
 
@@ -1091,9 +1089,8 @@ void EdenServiceHandler::async_tm_getScmStatus(
             hash, listIgnored, /*enforceCurrentParent=*/false, request));
   })
       .thenTry([cb = std::move(callback)](
-                   folly::Try<std::unique_ptr<ScmStatus>>&& result) mutable {
-        apache::thrift::HandlerCallback<std::unique_ptr<ScmStatus>>::
-            completeInThread(std::move(cb), std::move(result));
+                   folly::Try<std::unique_ptr<ScmStatus>>&& result) {
+        cb->complete(std::move(result));
       });
 }
 
