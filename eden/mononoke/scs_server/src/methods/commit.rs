@@ -9,7 +9,6 @@ use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 
 use context::CoreContext;
-use futures::compat::Stream01CompatExt;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::{future, try_join};
 use mononoke_api::{
@@ -401,7 +400,6 @@ impl SourceControlServiceImpl {
                 params.after.as_deref(),
                 limit,
             )?
-            .compat()
             .try_collect::<Vec<_>>()
             .await?;
         let continue_after = match limit {
