@@ -49,7 +49,7 @@ use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
 use phases::{Phase, Phases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
-use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+use revset::{add_generations_by_bonsai, DifferenceOfUnionsOfAncestorsNodeStream};
 use slog::{debug, info, o};
 use stats::prelude::*;
 use std::{
@@ -274,30 +274,53 @@ async fn find_commits_to_send(
     );
 
     let (heads, excludes) = try_join!(heads, excludes)?;
-
     let changeset_fetcher = blobrepo.get_changeset_fetcher();
-    let nodes_to_send = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
+    let heads = add_generations_by_bonsai(
         ctx.clone(),
-        &changeset_fetcher,
+        old_stream::iter_ok(heads.into_iter()).boxify(),
+        changeset_fetcher.clone(),
+    )
+    .collect()
+    .compat();
+    let excludes = add_generations_by_bonsai(
+        ctx.clone(),
+        old_stream::iter_ok(excludes.into_iter()).boxify(),
+        changeset_fetcher.clone(),
+    )
+    .collect()
+    .compat();
+    let (heads, excludes) = try_join!(heads, excludes)?;
+
+    let mut notified_expensive_getbundle = false;
+    let min_heads_gen_num = heads.iter().map(|(_, gen)| gen).min();
+    let max_excludes_gen_num = excludes.iter().map(|(_, gen)| gen).max();
+    match (min_heads_gen_num, max_excludes_gen_num) {
+        (Some(min_heads), Some(max_excludes)) => {
+            if min_heads.difference_from(*max_excludes).unwrap_or(0) > GETBUNDLE_COMMIT_NUM_WARN {
+                warn_expensive_getbundle(&ctx);
+                notified_expensive_getbundle = true;
+            }
+        }
+        _ => {}
+    };
+
+    let nodes_to_send = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes_gen_num(
+        ctx.clone(),
+        &blobrepo.get_changeset_fetcher(),
         lca_hint.clone(),
         heads,
         excludes,
     )
     .inspect({
         let mut i = 0;
-        let mut notified = false;
         move |_| {
             i += 1;
-            if i > GETBUNDLE_COMMIT_NUM_WARN && !notified {
-                info!(
-                    ctx.logger(),
-                    "your repository is out of date and pulling new commits might take a long time. \
-                    Please consider recloning your repository since it might be much faster"
-                    ; o!("remote" => "true")
-                );
-                notified = true;
+            if i > GETBUNDLE_COMMIT_NUM_WARN && !notified_expensive_getbundle {
+                warn_expensive_getbundle(&ctx);
+                notified_expensive_getbundle = true;
             }
-    }})
+        }
+    })
     .collect()
     .compat()
     .await?;
@@ -309,6 +332,15 @@ async fn find_commits_to_send(
     );
 
     Ok(nodes_to_send.into_iter().rev().collect())
+}
+
+fn warn_expensive_getbundle(ctx: &CoreContext) {
+    info!(
+        ctx.logger(),
+        "your repository is out of date and pulling new commits might take a long time. \
+        Please consider recloning your repository since it might be much faster"
+        ; o!("remote" => "true")
+    );
 }
 
 async fn create_hg_changeset_part(

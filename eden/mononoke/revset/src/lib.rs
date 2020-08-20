@@ -12,6 +12,7 @@ use futures_ext::BoxStream;
 use mononoke_types::ChangesetId;
 
 mod setcommon;
+pub use setcommon::add_generations_by_bonsai;
 
 mod intersectnodestream;
 pub use crate::intersectnodestream::IntersectNodeStream;
