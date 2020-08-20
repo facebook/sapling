@@ -213,6 +213,7 @@ fn parse_repo_config(
         repo_client_use_warm_bookmarks_cache,
         warm_bookmark_cache_check_blobimport,
         repo_client_knobs,
+        phabricator_callsign,
         ..
     } = repo_config;
 
@@ -375,6 +376,7 @@ fn parse_repo_config(
         segmented_changelog_config,
         warm_bookmark_cache_check_blobimport,
         repo_client_knobs,
+        phabricator_callsign,
     })
 }
 
@@ -882,6 +884,7 @@ mod test {
             hipster_acl="foo/test"
             repo_client_use_warm_bookmarks_cache=true
             warm_bookmark_cache_check_blobimport=true
+            phabricator_callsign="FBS"
 
             [wireproto_logging]
             scribe_category="category"
@@ -977,6 +980,7 @@ mod test {
             storage_config="files"
             hgsql_name = "www-foobar"
             hgsql_globalrevs_name = "www-barfoo"
+            phabricator_callsign="WWW"
 
             [storage.files.metadata.local]
             local_db_path = "/tmp/www"
@@ -1188,6 +1192,7 @@ mod test {
                 repo_client_knobs: RepoClientKnobs {
                     allow_short_getpack_history: true,
                 },
+                phabricator_callsign: Some("FBS".to_string()),
             },
         );
 
@@ -1240,6 +1245,7 @@ mod test {
                 segmented_changelog_config: SegmentedChangelogConfig { enabled: false },
                 warm_bookmark_cache_check_blobimport: false,
                 repo_client_knobs: RepoClientKnobs::default(),
+                phabricator_callsign: Some("WWW".to_string()),
             },
         );
         assert_eq!(

@@ -188,6 +188,8 @@ pub struct RepoConfig {
     pub warm_bookmark_cache_check_blobimport: bool,
     /// Configuration for repo_client module
     pub repo_client_knobs: RepoClientKnobs,
+    /// Callsign to check phabricator commits
+    pub phabricator_callsign: Option<String>,
 }
 
 /// Configuration for repo_client module

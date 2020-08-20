@@ -48,10 +48,10 @@ mod cli;
 mod tests;
 
 use crate::cli::{
-    setup_app, ARG_BACKUP_HASHES_FILE_PATH, ARG_BATCH_SIZE, ARG_BOOKMARK_SUFFIX, ARG_CALL_SIGN,
-    ARG_COMMIT_AUTHOR, ARG_COMMIT_DATE_RFC3339, ARG_COMMIT_MESSAGE, ARG_DEST_BOOKMARK,
-    ARG_DEST_PATH, ARG_GIT_REPOSITORY_PATH, ARG_HG_SYNC_CHECK_DISABLED, ARG_PHAB_CHECK_DISABLED,
-    ARG_SLEEP_TIME, ARG_X_REPO_CHECK_DISABLED,
+    setup_app, ARG_BACKUP_HASHES_FILE_PATH, ARG_BATCH_SIZE, ARG_BOOKMARK_SUFFIX, ARG_COMMIT_AUTHOR,
+    ARG_COMMIT_DATE_RFC3339, ARG_COMMIT_MESSAGE, ARG_DEST_BOOKMARK, ARG_DEST_PATH,
+    ARG_GIT_REPOSITORY_PATH, ARG_HG_SYNC_CHECK_DISABLED, ARG_PHAB_CHECK_DISABLED, ARG_SLEEP_TIME,
+    ARG_X_REPO_CHECK_DISABLED,
 };
 
 const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
@@ -77,11 +77,11 @@ struct GraphqlInputVariables {
     commit: String,
 }
 #[derive(Debug)]
-struct CheckerFlags<'a> {
+struct CheckerFlags {
     phab_check_disabled: bool,
     x_repo_check_disabled: bool,
     hg_sync_check_disabled: bool,
-    call_sign: Option<&'a str>,
+    call_sign: Option<String>,
 }
 #[derive(Clone, Debug)]
 struct ChangesetArgs {
@@ -185,7 +185,7 @@ async fn move_bookmark(
     shifted_bcs: &[BonsaiChangeset],
     batch_size: usize,
     bookmark_suffix: &str,
-    checker_flags: &CheckerFlags<'_>,
+    checker_flags: &CheckerFlags,
     sleep_time: u64,
     mutable_counters: &SqlMutableCounters,
 ) -> Result<(), Error> {
@@ -389,7 +389,7 @@ async fn get_leaf_entries(
 async fn check_dependent_systems(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    checker_flags: &CheckerFlags<'_>,
+    checker_flags: &CheckerFlags,
     hg_csid: HgChangesetId,
     sleep_time: u64,
     mutable_counters: &SqlMutableCounters,
@@ -594,16 +594,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let phab_check_disabled = matches.is_present(ARG_PHAB_CHECK_DISABLED);
     let x_repo_check_disabled = matches.is_present(ARG_X_REPO_CHECK_DISABLED);
     let hg_sync_check_disabled = matches.is_present(ARG_HG_SYNC_CHECK_DISABLED);
-    let call_sign = matches.value_of(ARG_CALL_SIGN);
-    if !phab_check_disabled && call_sign.is_none() {
-        return Err(format_err!("Call sign was not specified"));
-    }
-    let checker_flags = CheckerFlags {
-        phab_check_disabled,
-        x_repo_check_disabled,
-        hg_sync_check_disabled,
-        call_sign,
-    };
     let sleep_time = matches.value_of(ARG_SLEEP_TIME).unwrap();
     let sleep_time = sleep_time.parse::<u64>()?;
     let backup_hashes_path = matches.value_of(ARG_BACKUP_HASHES_FILE_PATH).unwrap();
@@ -627,13 +617,28 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     block_execute(
         async {
             let repo = repo.compat().await?;
+            let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+            let call_sign = repo_config.phabricator_callsign.clone();
+            if !phab_check_disabled && call_sign.is_none() {
+                return Err(format_err!(
+                    "The repo we import to doesn't have a callsign.
+                     Make sure the callsign for the repo is set in configerator:
+                     e.g CF/../source/scm/mononoke/repos/repos/hg.cinc"
+                ));
+            }
+            let checker_flags = CheckerFlags {
+                phab_check_disabled,
+                x_repo_check_disabled,
+                hg_sync_check_disabled,
+                call_sign,
+            };
             let maybe_config_store = args::maybe_init_config_store(fb, &logger, &matches);
             let configs = args::load_repo_configs(fb, &matches)?;
-            check_repo_not_pushredirected(&ctx, &repo, &maybe_config_store, &configs.repos).await?;
-
             let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
                 .compat()
                 .await?;
+
+            check_repo_not_pushredirected(&ctx, &repo, &maybe_config_store, &configs.repos).await?;
             let mut shifted_bcs =
                 rewrite_file_paths(&ctx, &repo, &path, &prefix, &backup_hashes_path).await?;
             shifted_bcs = sort_bcs(&shifted_bcs)?;
@@ -655,7 +660,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let merged_cs_id =
                 merge_imported_commit(&ctx, &repo, &shifted_bcs, &dest_bookmark, changeset_args)
                     .await?;
-            let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
             push_merge_commit(&ctx, &repo, merged_cs_id, &dest_bookmark, &repo_config).await?;
             Ok(())
         },

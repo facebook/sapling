@@ -49,7 +49,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
         let batch_size: usize = 2;
-        let call_sign = Some("FBS");
+        let call_sign = Some("FBS".to_string());
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
             x_repo_check_disabled: true,
