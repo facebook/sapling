@@ -265,7 +265,13 @@ class HgServer(object):
 
     def _is_mononoke_supported(self, name):
         # type: (str) -> bool
-        return name in ["fbsource", "www", "ovrsource"]
+        # `name` comes from `repo.name`.
+        # The treemanifest extension sets `repo.name` to `remotefilelog.reponame`,
+        # falling back to "unknown" if it isn't set.
+        # If treemanifest isn't loaded somehow, then `repo.name` will be None.
+        # If name is set and not unknown, then we know that we have mononoke
+        # available to us.
+        return (name is not None) and (name != "unknown")
 
     def _gen_options(self):
         # type: () -> bytes
