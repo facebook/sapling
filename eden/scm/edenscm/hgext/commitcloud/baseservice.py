@@ -257,8 +257,15 @@ class BaseService(pycompat.ABC):
         """
 
     @abstractmethod
-    def getsmartlog(self, reponame, workspace, repo):
+    def getsmartlog(self, reponame, workspace, repo, flags=[]):
         """Gets the workspace smartlog
+        """
+
+    @abstractmethod
+    def getsmartlogbyversion(
+        self, reponame, workspace, repo, date, version, limit, flags=[]
+    ):
+        """Gets the workspace smartlog by version
         """
 
     @abstractmethod

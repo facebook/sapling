@@ -344,11 +344,11 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         )
 
     @perftrace.tracefunc("Get Commit Cloud Smartlog")
-    def getsmartlog(self, reponame, workspace, repo, limit):
+    def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):
         self.ui.debug("sending 'get_smartlog' request\n", component="commitcloud")
 
         path = "/commit_cloud/get_smartlog"
-        data = {"repo_name": reponame, "workspace": workspace}
+        data = {"repo_name": reponame, "workspace": workspace, "flags": flags}
 
         start = util.timer()
         response = self._send(path, data)
@@ -382,13 +382,25 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             raise ccerror.UnexpectedError(self.ui, e)
 
     @perftrace.tracefunc("Get Commit Cloud Smartlog By Version")
-    def getsmartlogbyversion(self, reponame, workspace, repo, date, version, limit):
+    def getsmartlogbyversion(
+        self, reponame, workspace, repo, date, version, limit, flags=[]
+    ):
         self.ui.debug("sending 'get_old_smartlog' request\n", component="commitcloud")
         path = "/commit_cloud/get_smartlog_by_version"
         if date:
-            data = {"repo_name": reponame, "workspace": workspace, "timestamp": date[0]}
+            data = {
+                "repo_name": reponame,
+                "workspace": workspace,
+                "timestamp": date[0],
+                "flags": flags,
+            }
         else:
-            data = {"repo_name": reponame, "workspace": workspace, "version": version}
+            data = {
+                "repo_name": reponame,
+                "workspace": workspace,
+                "version": version,
+                "flags": flags,
+            }
 
         start = util.timer()
         response = self._send(path, data)
