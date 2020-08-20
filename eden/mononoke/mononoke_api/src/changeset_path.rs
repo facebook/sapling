@@ -27,7 +27,6 @@ use futures::compat::Future01CompatExt;
 use futures::future::{try_join_all, FutureExt, Shared, TryFutureExt};
 use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
-use futures_old::Future as FutureLegacy;
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
     Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, Generation, ManifestUnodeId,
@@ -267,6 +266,7 @@ impl ChangesetPathContext {
         })?;
 
         fetch_blame(ctx, repo, csid, mpath.clone())
+            .compat()
             .map_err(|error| match error {
                 BlameError::NoSuchPath(_)
                 | BlameError::IsDirectory(_)
@@ -274,7 +274,6 @@ impl ChangesetPathContext {
                 BlameError::DeriveError(e) => MononokeError::from(e),
                 _ => MononokeError::from(Error::from(error)),
             })
-            .compat()
             .await
     }
 
