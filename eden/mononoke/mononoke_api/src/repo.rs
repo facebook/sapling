@@ -701,15 +701,20 @@ impl RepoContext {
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let bookmark = BookmarkName::new(bookmark.as_ref())?;
 
-        let cs_id = match freshness {
+        let mut cs_id = match freshness {
             BookmarkFreshness::MaybeStale => self.warm_bookmarks_cache().get(&bookmark),
-            BookmarkFreshness::MostRecent => {
-                self.blob_repo()
-                    .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
-                    .compat()
-                    .await?
-            }
+            BookmarkFreshness::MostRecent => None,
         };
+
+        // If the bookmark wasn't found in the warm bookmarks cache, it might
+        // be a scratch bookmark, so always do the look-up.
+        if cs_id.is_none() {
+            cs_id = self
+                .blob_repo()
+                .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
+                .compat()
+                .await?
+        }
 
         Ok(cs_id.map(|cs_id| ChangesetContext::new(self.clone(), cs_id)))
     }
