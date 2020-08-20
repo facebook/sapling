@@ -433,6 +433,12 @@ def cloudauth(ui, repo, **opts):
             "show interactive view for historical versions of smartlog",
         ),
         ("", "all", None, "show all history in interactive history view"),
+        (
+            "",
+            "force-original-backend",
+            None,
+            "serve the smartlog from original mercurial backup infrastructure, rather than from the Mononoke backend regardless of the configuration (ADVANCED)",
+        ),
     ]
     + workspace.workspaceopts,
 )
@@ -467,13 +473,18 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
         component="commitcloud",
     )
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
+
+    flags = []
+    if opts.get("force_original_backend"):
+        flags.append("USE_ORIGINAL_BACKEND")
+
     if parseddate is None and not version:
         with progress.spinner(ui, _("fetching")):
-            slinfo = serv.getsmartlog(reponame, workspacename, repo, 0)
+            slinfo = serv.getsmartlog(reponame, workspacename, repo, 0, flags)
     else:
         with progress.spinner(ui, _("fetching")):
             slinfo = serv.getsmartlogbyversion(
-                reponame, workspacename, repo, parseddate, version, 0
+                reponame, workspacename, repo, parseddate, version, 0, flags
             )
     if parseddate or version:
         formatteddate = time.strftime(

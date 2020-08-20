@@ -28,6 +28,9 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
         def __init__(self, ui, repo, versions):
             interactiveui.viewframe.__init__(self, ui, repo, -1)
             self.versions = versions
+            self.flags = []
+            if opts.get("force_original_backend"):
+                self.flags.append("USE_ORIGINAL_BACKEND")
 
         def render(self):
             ui = self.ui
@@ -43,7 +46,9 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                 self.index = len(self.versions) - 1
             if self.index == -1:
                 with progress.spinner(ui, _("fetching")):
-                    slinfo = serv.getsmartlog(reponame, workspacename, repo, limit)
+                    slinfo = serv.getsmartlog(
+                        reponame, workspacename, repo, limit, self.flags
+                    )
                 ui.status(_("Current Smartlog:\n\n"))
             else:
                 with progress.spinner(ui, _("fetching")):
@@ -54,6 +59,7 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                         None,
                         self.versions[self.index]["version_number"],
                         limit,
+                        self.flags,
                     )
                 formatteddate = time.strftime(
                     "%Y-%m-%d %H:%M:%S", time.localtime(slinfo.timestamp)
