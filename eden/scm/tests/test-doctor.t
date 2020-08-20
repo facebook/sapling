@@ -4,6 +4,10 @@
 
   $ setconfig format.use-symlink-atomic-write=1
 
+Enable writing to hgcommits/v1:
+
+  $ setconfig format.use-zstore-commit-data=1 format.use-zstore-commit-data-revlog-fallback=1
+
 Test indexedlogdatapack
 
   $ . "$TESTDIR/library.sh"
@@ -51,6 +55,7 @@ Break the repo in various ways:
 #else
   $ echo foo > .hg/store/metalog/roots/meta
 #endif
+  $ rm .hg/store/hgcommits/v1/index2-id
   $ rm .hg/store/allheads/meta
 
 Check the repo is broken (exit code is non-zero):
@@ -63,6 +68,7 @@ Test that 'hg doctor' can fix them:
   $ hg doctor
   checking internal storage
   mutation: repaired
+  hgcommits/v1: repaired
   metalog: repaired
   allheads: repaired
   indexedlogdatastore: repaired

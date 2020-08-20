@@ -16,6 +16,7 @@ from bindings import (
     revisionstore,
     tracing,
     treestate as rawtreestate,
+    zstore,
 )
 
 from .. import (
@@ -71,6 +72,7 @@ def doctor(ui, **opts):
         ui.write_err(_("changelog: cannot fix automatically (consider reclone)\n"))
         return 1
 
+    repairsvfs(ui, svfs, "hgcommits/v1", zstore.zstore)
     ml = repairsvfs(ui, svfs, "metalog", metalog.metalog)
     repairvisibleheads(ui, ml, cl)
     repairtreestate(ui, vfs, repopath, cl)
