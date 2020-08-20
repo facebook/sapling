@@ -65,6 +65,14 @@ def getsyncingobsmarkers(repo):
     if repo.sharedvfs.exists(_obsmarkerssyncing):
         with repo.sharedvfs.open(_obsmarkerssyncing) as f:
             _version, markers = obsolete._readmarkers(f.read())
+
+    # developer config: commitcloud.maxsendmarkers
+    # set to -1 to disable this completely
+    maxsendmarkers = repo.ui.configint("commitcloud", "maxsendmarkers", 500)
+    if maxsendmarkers >= 0 and len(markers) > maxsendmarkers:
+        # Sending too many markers is unlikely to work.  Just send the most recent
+        # ones.
+        markers = markers[-maxsendmarkers:]
     return markers
 
 
