@@ -12,7 +12,6 @@ pub const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
 pub const ARG_DEST_PATH: &str = "dest-path";
 pub const ARG_BATCH_SIZE: &str = "batch-size";
 pub const ARG_BOOKMARK_SUFFIX: &str = "bookmark-suffix";
-pub const ARG_CALL_SIGN: &str = "call-sign";
 pub const ARG_PHAB_CHECK_DISABLED: &str = "disable-phabricator-check";
 pub const ARG_X_REPO_CHECK_DISABLED: &str = "disable-x-repo-check";
 pub const ARG_HG_SYNC_CHECK_DISABLED: &str = "disable-hg-sync-check";
@@ -55,12 +54,6 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true)
                 .takes_value(true)
                 .help("Suffix of the bookmark (repo_import_<suffix>)"),
-        )
-        .arg(
-            Arg::with_name(ARG_CALL_SIGN)
-                .long(ARG_CALL_SIGN)
-                .takes_value(true)
-                .help("Call sign to get commit info from Phabricator. e.g. FBS for fbsource"),
         )
         .arg(
             Arg::with_name(ARG_PHAB_CHECK_DISABLED)
