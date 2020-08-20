@@ -378,8 +378,12 @@ impl ConfigSetHgExt for ConfigSet {
             if recursion_marker.is_err() {
                 if let Some(generation_time) = generation_time {
                     let generation_time = Duration::from_secs(generation_time);
-                    let mtime_age =
-                        SystemTime::now().duration_since(dynamic_path.metadata()?.modified()?)?;
+                    let mtime_age = SystemTime::now()
+                        .duration_since(dynamic_path.metadata()?.modified()?)
+                        // An error from duration_since means 'now' is older than
+                        // 'last_modified'. In that case, let's assume the file
+                        // is brand new and has an age of 0.
+                        .unwrap_or(Duration::from_secs(0));
                     if mtime_age > generation_time {
                         let mut command = Command::new("hg");
                         command
