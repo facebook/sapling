@@ -29,23 +29,24 @@ use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::future::try_join_all;
-use futures::stream::{StreamExt, TryStreamExt};
+use futures::stream::{Stream, StreamExt, TryStreamExt};
 use futures::try_join;
-use futures_old::stream::Stream;
 use itertools::Itertools;
 #[cfg(test)]
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mercurial_types::Globalrev;
-#[cfg(test)]
-use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::{CommonConfig, RepoConfig};
+#[cfg(test)]
+use metaconfig_types::{InfinitepushNamespace, InfinitepushParams, SourceControlServiceParams};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     Generation, RepositoryId,
 };
 use mutable_counters::SqlMutableCounters;
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
+#[cfg(test)]
+use regex::Regex;
 use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
 use segmented_changelog::SegmentedChangelog;
@@ -283,6 +284,12 @@ impl Repo {
 
         let config = RepoConfig {
             commit_sync_config: init_commit_sync_config,
+            infinitepush: InfinitepushParams {
+                namespace: Some(InfinitepushNamespace::new(
+                    Regex::new("scratch/.+").unwrap(),
+                )),
+                ..Default::default()
+            },
             source_control_service: SourceControlServiceParams {
                 permit_writes: true,
                 ..Default::default()
@@ -841,7 +848,7 @@ impl RepoContext {
         prefix: Option<&str>,
         after: Option<&str>,
         limit: Option<u64>,
-    ) -> Result<impl Stream<Item = (String, ChangesetId), Error = MononokeError>, MononokeError>
+    ) -> Result<impl Stream<Item = Result<(String, ChangesetId), MononokeError>>, MononokeError>
     {
         let kinds = if include_scratch {
             if prefix.is_none() {
@@ -896,8 +903,7 @@ impl RepoContext {
             )
             .map_ok(|(bookmark, cs_id)| (bookmark.into_name().into_string(), cs_id))
             .map_err(MononokeError::from)
-            .boxed()
-            .compat();
+            .boxed();
         Ok(bookmarks)
     }
 

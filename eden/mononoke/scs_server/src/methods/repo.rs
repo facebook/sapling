@@ -13,7 +13,6 @@ use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, Local};
 use context::CoreContext;
 use futures::{compat::Future01CompatExt, future::try_join_all, try_join};
-use futures_old::stream::Stream;
 use futures_util::stream::FuturesOrdered;
 use futures_util::{StreamExt, TryStreamExt};
 use manifest::{Entry, Manifest};
@@ -152,8 +151,7 @@ impl SourceControlServiceImpl {
                 params.after.as_deref(),
                 limit,
             )?
-            .collect()
-            .compat()
+            .try_collect::<Vec<_>>()
             .await?;
         let continue_after = match limit {
             Some(limit) if bookmarks.len() as u64 >= limit => {
