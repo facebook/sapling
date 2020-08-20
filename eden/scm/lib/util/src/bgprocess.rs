@@ -7,7 +7,9 @@
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
-use std::process::{Child, Command, Stdio};
+#[cfg(unix)]
+use std::process::Stdio;
+use std::process::{Child, Command};
 
 use anyhow::Result;
 #[cfg(windows)]
