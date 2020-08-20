@@ -31,6 +31,9 @@ _obsmarkerssyncing = "commitcloudsyncingobsmarkers"
 
 
 def addpendingobsmarkers(repo, markers):
+    if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+        return
+
     with lockmod.lock(repo.svfs, _obsmarkerslockname, timeout=_obsmarkerslocktimeout):
         with repo.svfs.open(_obsmarkerspending, "ab") as f:
             offset = f.tell()
@@ -46,6 +49,9 @@ def getsyncingobsmarkers(repo):
 
     The caller must hold the backup lock.
     """
+    if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+        return []
+
     # Move any new obsmarkers from the pending file to the syncing file
     with lockmod.lock(repo.svfs, _obsmarkerslockname, timeout=_obsmarkerslocktimeout):
         if repo.svfs.exists(_obsmarkerspending):
@@ -78,4 +84,7 @@ def getsyncingobsmarkers(repo):
 
 def clearsyncingobsmarkers(repo):
     """Clears all syncing obsmarkers.  The caller must hold the backup lock."""
+    if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+        return
+
     repo.sharedvfs.tryunlink(_obsmarkerssyncing)
