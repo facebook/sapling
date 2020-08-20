@@ -203,7 +203,7 @@ def _sync(
 
     with repo.ui.configoverride(
         {("treemanifest", "prefetchdraftparents"): False}, "cloudsync"
-    ), repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
+    ), repo.wlock(), repo.lock():
 
         if origheads != _getheads(repo) or origbookmarks != _getbookmarks(repo):
             # Another transaction changed the repository while we were backing
@@ -214,32 +214,45 @@ def _sync(
             raise ccerror.SynchronizationError(ui, _("repo changed while backing up"))
 
         synced = False
+        attempt = 0
         while not synced:
 
-            # Apply any changes from the cloud to the local repo.
-            if cloudrefs.version != fetchversion:
-                _applycloudchanges(
-                    repo, remotepath, lastsyncstate, cloudrefs, maxage, state, tr
+            if attempt >= 3:
+                raise ccerror.SynchronizationError(
+                    ui, _("failed to sync after %s attempts") % attempt
                 )
-            elif (
-                _isremotebookmarkssyncenabled(repo.ui)
-                and not lastsyncstate.remotebookmarks
-            ):
-                # We're up-to-date, but didn't sync remote bookmarks last time.
-                # Sync them now.
-                cloudrefs = serv.getreferences(reponame, workspacename, 0)
-                _forcesyncremotebookmarks(
-                    repo, cloudrefs, lastsyncstate, remotepath, tr
+            attempt += 1
+
+            with repo.transaction("cloudsync") as tr:
+
+                # Apply any changes from the cloud to the local repo.
+                if cloudrefs.version != fetchversion:
+                    _applycloudchanges(
+                        repo, remotepath, lastsyncstate, cloudrefs, maxage, state, tr
+                    )
+                elif (
+                    _isremotebookmarkssyncenabled(repo.ui)
+                    and not lastsyncstate.remotebookmarks
+                ):
+                    # We're up-to-date, but didn't sync remote bookmarks last time.
+                    # Sync them now.
+                    cloudrefs = serv.getreferences(reponame, workspacename, 0)
+                    _forcesyncremotebookmarks(
+                        repo, cloudrefs, lastsyncstate, remotepath, tr
+                    )
+
+                # Check if any omissions are now included in the repo
+                _checkomissions(repo, remotepath, lastsyncstate, tr)
+
+            # We committed the transaction so that data downloaded from the cloud is
+            # committed.  Start a new transaction for uploading the local changes.
+            with repo.transaction("cloudsync") as tr:
+
+                # Send updates to the cloud.  If this fails then we have lost the race
+                # to update the server and must start again.
+                synced, cloudrefs = _submitlocalchanges(
+                    repo, reponame, workspacename, lastsyncstate, failed, serv, tr
                 )
-
-            # Check if any omissions are now included in the repo
-            _checkomissions(repo, remotepath, lastsyncstate, tr)
-
-            # Send updates to the cloud.  If this fails then we have lost the race
-            # to update the server and must start again.
-            synced, cloudrefs = _submitlocalchanges(
-                repo, reponame, workspacename, lastsyncstate, failed, serv, tr
-            )
 
     # Update the backup bookmarks with any changes we have made by syncing.
     backupbookmarks.pushbackupbookmarks(repo, remotepath, getconnection, state)

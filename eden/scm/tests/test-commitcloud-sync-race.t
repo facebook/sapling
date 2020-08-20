@@ -104,8 +104,8 @@ Let the background sync we started earlier continue, and start a concurrent clou
   remote: pushing 1 commit:
   remote:     1292cc1f1c17  commit2
   commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
-  commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17
+  commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   commitcloud: commits synchronized
   finished in 0.00 sec
 
