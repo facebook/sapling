@@ -144,15 +144,37 @@ class changelog(object):
     def torevs(self):
         """Convert a Set using commit hashes to an IdSet using numbers
 
+        Does not preserve laziness of the set. Can be slow on large sets,
+        unless they are backed by efficient Rust structures.
+
         The Set is usually obtained via `self.dag` APIs.
         """
         return self.inner.torevs
+
+    def torevset(self, nodes, reverse=False):
+        """Convert to a smartset.nameset for revset compatibility.
+
+        Preserve laziness of the set.
+
+        `nodes` should be obtained via `self.dag` APIs.
+
+        New code should avoid this and use the native node-based interface
+        instead.
+
+        The Rust set uses DESC order by default. Setting `reverse` to True
+        will reverse the order.
+        """
+        return smartset.nameset(self, nodes, reverse)
 
     def tonodes(self, revs):
         """Convert an IdSet to Set. The reverse of torevs."""
         # 'idset' has a fast path - pass the Rust-binding 'spans' directly.
         if isinstance(revs, smartset.idset):
             return self.inner.tonodes(revs._spans)
+        # 'nameset' has a fast path - it contains the Rust nameset that uses
+        # nodes directly.
+        if isinstance(revs, smartset.nameset):
+            return revs._set
         return self.inner.tonodes(revs)
 
     def _loadvisibleheads(self, svfs):
