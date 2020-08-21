@@ -512,15 +512,15 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         workspaces = response["workspaces_data"]
         return self._makeworkspacesinfo(workspaces)
 
-    @perftrace.tracefunc("Archive Workspace")
-    def archiveworkspace(self, reponame, workspace):
-        """Archive the given workspace
+    @perftrace.tracefunc("Archive/Restore Workspace")
+    def updateworkspacearchive(self, reponame, workspace, archived):
+        """Archive or Restore the given workspace
         """
         self.ui.debug(
             "sending 'update_workspace_archive' request\n", component="commitcloud"
         )
         path = "/commit_cloud/update_workspace_archive"
-        data = {"repo_name": reponame, "workspace": workspace, "archived": True}
+        data = {"repo_name": reponame, "workspace": workspace, "archived": archived}
         start = util.timer()
         response = self._send(path, data)
         elapsed = util.timer() - start

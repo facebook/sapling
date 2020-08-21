@@ -283,7 +283,9 @@ class _LocalService(baseservice.BaseService):
                 )
             )
 
-    def archiveworkspace(self, reponame, workspace):
+    def updateworkspacearchive(self, reponame, workspace, archived):
+        """Archive or Restore the given workspace
+        """
         allworkspaces = self.getworkspaces(reponame, None)
         found = next(
             (winfo for winfo in allworkspaces if winfo.name == workspace), None
@@ -297,7 +299,7 @@ class _LocalService(baseservice.BaseService):
         if found:
             allworkspaces.append(
                 baseservice.WorkspaceInfo(
-                    name=found.name, archived=True, version=found.version
+                    name=found.name, archived=archived, version=found.version
                 )
             )
         else:

@@ -43,6 +43,7 @@ workspaces:
         default
 run `hg cloud sl -w <workspace name>` to view the commits
 run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
+run `hg cloud list --all` to list all workspaces, including deleted
 """
 
 sh % "hg cloud list --all" == r"""
@@ -75,4 +76,30 @@ run `hg cloud join -w <workspace name> --switch` to switch to a different worksp
 sh % "hg cloud list" == r"""
 commitcloud: searching workspaces for the 'server' repo
 no active workspaces found with the prefix user/test/
+"""
+
+sh % "hg cloud undelete -w default" == r"""
+commitcloud: workspace user/test/default has been restored
+"""
+
+sh % "hg cloud list" == r"""
+commitcloud: searching workspaces for the 'server' repo
+workspaces:
+        default
+run `hg cloud sl -w <workspace name>` to view the commits
+run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
+run `hg cloud list --all` to list all workspaces, including deleted
+"""
+
+sh % "hg cloud undelete -w old" == r"""
+commitcloud: workspace user/test/old has been restored
+"""
+
+sh % "hg cloud list" == r"""
+commitcloud: searching workspaces for the 'server' repo
+workspaces:
+        default
+        old
+run `hg cloud sl -w <workspace name>` to view the commits
+run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
 """
