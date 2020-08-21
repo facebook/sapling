@@ -326,7 +326,7 @@ pub(crate) mod tests {
             assert_eq!(format!("{:?}", &all), "<spans [A:G+0:6]>");
 
             let ac: NameSet = "A C".into();
-            ac.hints().set_dag(dag);
+            ac.hints().set_dag(dag.snapshot_dag()?);
 
             let intersection = all.intersection(&ac);
             // should not be "<and ...>"
@@ -410,7 +410,7 @@ pub(crate) mod tests {
             );
 
             // Binding to the Dag enables fast paths.
-            bfg.hints().set_dag(dag);
+            bfg.hints().set_dag(dag.snapshot_dag()?);
 
             // 'heads' has a fast path that uses 'heads_ancestors' to do the calculation.
             // (in this case the result is incorrect because the hints are wrong).

@@ -967,7 +967,7 @@ impl DagAlgorithm for RevlogIndex {
                 spans.push(id);
             }
             let result = Set::from_spans_idmap(spans, self.get_snapshot());
-            result.hints().set_dag(self);
+            result.hints().set_dag(self.snapshot_dag()?);
             Ok(result)
         }
     }
@@ -992,7 +992,10 @@ impl DagAlgorithm for RevlogIndex {
             IdSet::from(Id(0)..=Id(self.len() as u64 - 1))
         };
         let result = Set::from_spans_idmap(id_set, self.get_snapshot());
-        result.hints().add_flags(Flags::FULL).set_dag(self);
+        result
+            .hints()
+            .add_flags(Flags::FULL)
+            .set_dag(self.snapshot_dag()?);
         Ok(result)
     }
 
@@ -1038,7 +1041,7 @@ impl DagAlgorithm for RevlogIndex {
         set.hints()
             .add_flags(Flags::ID_DESC | Flags::TOPO_DESC | Flags::ANCESTORS)
             .set_max_id(max_id)
-            .set_dag(self);
+            .set_dag(self.snapshot_dag()?);
 
         Ok(set)
     }
@@ -1079,7 +1082,7 @@ impl DagAlgorithm for RevlogIndex {
 
         let idmap = dag;
         let result = Set::from_spans_idmap(id_spans, idmap);
-        result.hints().set_dag(self);
+        result.hints().set_dag(self.snapshot_dag()?);
         Ok(result)
     }
 
@@ -1114,7 +1117,7 @@ impl DagAlgorithm for RevlogIndex {
         set.hints()
             .add_flags(Flags::ID_ASC)
             .set_min_id(min_id)
-            .set_dag(self);
+            .set_dag(self.snapshot_dag()?);
         Ok(set)
     }
 
@@ -1148,7 +1151,7 @@ impl DagAlgorithm for RevlogIndex {
             .add_flags(Flags::ID_DESC | Flags::TOPO_DESC)
             .set_min_id(min_id)
             .set_max_id(max_id)
-            .set_dag(self);
+            .set_dag(self.snapshot_dag()?);
         Ok(set)
     }
 
@@ -1199,7 +1202,7 @@ impl DagAlgorithm for RevlogIndex {
         let gcas = self.gca_revs(&revs, usize::max_value())?;
         let spans = IdSet::from_spans(gcas.into_iter().map(|r| Id(r as _)));
         let result = Set::from_spans_idmap(spans, self.get_snapshot());
-        result.hints().set_dag(self);
+        result.hints().set_dag(self.snapshot_dag()?);
         Ok(result)
     }
 
@@ -1265,7 +1268,7 @@ impl DagAlgorithm for RevlogIndex {
             }
         }
         let result = Set::from_spans_idmap(result_id_set, self.get_snapshot());
-        result.hints().set_dag(self);
+        result.hints().set_dag(self.snapshot_dag()?);
         Ok(result)
     }
 
@@ -1287,7 +1290,7 @@ impl DagAlgorithm for RevlogIndex {
         let result_revs = self.range_revs(&root_revs, &head_revs)?;
         let result_id_set = IdSet::from_spans(result_revs.into_iter().map(|r| Id(r as _)));
         let result = Set::from_spans_idmap(result_id_set, self.get_snapshot());
-        result.hints().set_dag(self);
+        result.hints().set_dag(self.snapshot_dag()?);
         Ok(result)
     }
 
@@ -1358,7 +1361,7 @@ impl DagAlgorithm for RevlogIndex {
         }
 
         let result = Set::from_spans_idmap(result, self.get_snapshot());
-        result.hints().set_dag(self);
+        result.hints().set_dag(self.snapshot_dag()?);
         Ok(result)
     }
 
@@ -1373,8 +1376,11 @@ impl DagAlgorithm for RevlogIndex {
             self.phasesets(unreachable_revs, reachable_revs)?;
         let only = Set::from_spans_idmap(result_reachable_id_set, self.get_snapshot());
         let ancestors = Set::from_spans_idmap(result_unreachable_id_set, self.get_snapshot());
-        ancestors.hints().add_flags(Flags::ANCESTORS).set_dag(self);
-        only.hints().set_dag(self);
+        ancestors
+            .hints()
+            .add_flags(Flags::ANCESTORS)
+            .set_dag(self.snapshot_dag()?);
+        only.hints().set_dag(self.snapshot_dag()?);
         Ok((only, ancestors))
     }
 
@@ -1417,7 +1423,7 @@ impl DagAlgorithm for RevlogIndex {
         set.hints()
             .add_flags(Flags::ID_ASC)
             .set_min_id(min_id)
-            .set_dag(self);
+            .set_dag(self.snapshot_dag()?);
         Ok(set)
     }
 
@@ -1484,7 +1490,7 @@ impl DagAlgorithm for RevlogIndex {
         }
 
         let result = Set::from_spans_idmap(result, self.get_snapshot());
-        result.hints().set_dag(self);
+        result.hints().set_dag(self.snapshot_dag()?);
         Ok(result)
     }
 

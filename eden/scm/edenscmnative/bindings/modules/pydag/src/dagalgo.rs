@@ -143,4 +143,8 @@ impl dagalgo {
     pub fn from_dag(py: Python, dag: impl DagAlgorithm + Send + Sync + 'static) -> PyResult<Self> {
         Self::create_instance(py, Arc::new(dag))
     }
+
+    pub fn from_arc_dag(py: Python, dag: Arc<dyn DagAlgorithm + Send + Sync>) -> PyResult<Self> {
+        Self::create_instance(py, dag)
+    }
 }

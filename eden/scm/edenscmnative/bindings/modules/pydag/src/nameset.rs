@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::dagalgo::dagalgo;
 use crate::idmap::NULL_NODE;
 use anyhow::Result;
 use cpython::*;
@@ -89,6 +90,14 @@ py_class!(pub class nameset |py| {
 
     def last(&self) -> PyResult<Option<PyBytes>> {
         Ok(self.inner(py).last().map_pyerr(py)?.map(|name| PyBytes::new(py, name.as_ref())))
+    }
+
+    /// Obtain an optional dag bound to this set.
+    def dag(&self) -> PyResult<Option<dagalgo>> {
+        match self.inner(py).dag() {
+            Some(dag) => dagalgo::from_arc_dag(py, dag).map(Some),
+            None => Ok(None),
+        }
     }
 
     def hints(&self) -> PyResult<HashMap<&'static str, PyObject>> {

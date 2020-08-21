@@ -9,6 +9,7 @@
 //!
 //! See [`NameSet`] for the main structure.
 
+use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
 use crate::Id;
@@ -177,6 +178,11 @@ impl NameSet {
             }
         }
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
+    }
+
+    /// Obtain the attached dag if available.
+    pub fn dag(&self) -> Option<Arc<dyn DagAlgorithm + Send + Sync>> {
+        self.hints().dag()
     }
 }
 
