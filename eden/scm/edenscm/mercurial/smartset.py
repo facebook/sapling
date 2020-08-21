@@ -621,6 +621,175 @@ class idset(abstractsmartset):
         return "<%s%s %s>" % (type(self).__name__, d, self._spans)
 
 
+class nameset(abstractsmartset):
+    """Wrapper around Rust's NameSet that meets the smartset interface.
+
+    The Rust NameSet uses commit hashes for its public interface.
+    This object does conversions to fit in the abstractsmartset interface
+    which uses revision numbers.
+
+    Unlike idset, this object can preserve more types of Rust set,
+    including lazy sets.
+    """
+
+    def __init__(self, changelog, nameset, reverse=False):
+        assert isinstance(nameset, bindings.dag.nameset)
+        assert changelog.userust("dag")
+        self._changelog = changelog
+        self._set = nameset
+        self._torev = changelog.idmap.node2id
+        self._tonode = changelog.idmap.id2node
+        # This controls the order of the set.
+        self._reversed = reverse
+
+    @property
+    def fastasc(self):
+        hints = self._set.hints()
+        if hints.get("asc"):
+
+            def getiter(it=self._set.iter(), torev=self._torev):
+                for node in it:
+                    yield torev(node)
+
+            return getiter
+        return None
+
+    @property
+    def fastdesc(self):
+        hints = self._set.hints()
+        if hints.get("desc"):
+
+            def getiter(it=self._set.iter(), torev=self._torev):
+                for node in it:
+                    yield torev(node)
+
+            return getiter
+        return None
+
+    def __iter__(self):
+        if self._reversed:
+            it = self._set.iterrev()
+        else:
+            it = self._set.iter()
+        torev = self._torev
+        for node in it:
+            yield torev(node)
+
+    def __contains__(self, rev):
+        try:
+            node = self._tonode(rev)
+        except error.CommitLookupError:
+            return False
+        return node in self._set
+
+    def __nonzero__(self):
+        return bool(self._set.first())
+
+    __bool__ = __nonzero__
+
+    @property
+    def _ascending(self):
+        hints = self._set.hints()
+        if hints.get("desc"):
+            result = False
+        elif hints.get("asc"):
+            result = True
+        else:
+            result = None
+        if self._reversed and result is not None:
+            result = not result
+        return result
+
+    def sort(self, reverse=False):
+        if self._ascending is None:
+            self._set = self._changelog.dag.sort(self._set)
+        self._reversed = False
+        if reverse:
+            # want desc
+            self._reversed = self._ascending is True
+        else:
+            # want asc
+            self._reversed = self._ascending is False
+
+    def reverse(self):
+        self._reversed = not self._reversed
+
+    def __len__(self):
+        return len(self._set)
+
+    def isascending(self):
+        if self._reversed:
+            return bool(self._set.hints().get("desc"))
+        else:
+            return bool(self._set.hints().get("asc"))
+
+    def isdescending(self):
+        if self._reversed:
+            return bool(self._set.hints().get("asc"))
+        else:
+            return bool(self._set.hints().get("desc"))
+
+    def istopo(self):
+        return False
+
+    def first(self):
+        if self._reversed:
+            node = self._set.last()
+        else:
+            node = self._set.first()
+        if node:
+            return self._torev(node)
+
+    def last(self):
+        if self._reversed:
+            node = self._set.first()
+        else:
+            node = self._set.last()
+        if node:
+            return self._torev(node)
+
+    def _setop(self, other, op):
+        # try to use native set operations as fast paths
+
+        # Extract the Rust binding object.
+        ty = type(other)
+        if ty is idset:
+            # convert idset to nameset
+            otherset = self._changelog.tonodes(other)
+        elif ty is nameset:
+            otherset = other._set
+        else:
+            otherset = None
+        if otherset is not None:
+            # set operation by the Rust layer
+            newset = getattr(self._set, op)(otherset)
+            s = nameset(self._changelog, newset)
+            # preserve order
+            if self.isascending():
+                s.sort()
+            elif self.isdescending():
+                s.sort(reverse=True)
+        else:
+            # slow path
+            s = getattr(super(nameset, self), op)(other)
+        return s
+
+    def __and__(self, other):
+        return self._setop(other, "__and__")
+
+    def __sub__(self, other):
+        return self._setop(other, "__sub__")
+
+    def __add__(self, other):
+        # XXX: This is an aggressive optimization. It does not always respect
+        # orders.
+        return self._setop(other, "__add__")
+
+    def __repr__(self):
+        d = {False: "-", True: "+", None: ""}[self._ascending]
+        return "<%s%s %s>" % (type(self).__name__, d, self._set)
+
+
 class filteredset(abstractsmartset):
     """Duck type for baseset class which iterates lazily over the revisions in
     the subset and contains a function which tests for membership in the
