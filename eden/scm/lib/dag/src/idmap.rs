@@ -351,6 +351,105 @@ impl Clone for MemIdMap {
     }
 }
 
+/// Return value of `assign_head`.
+#[derive(Debug, Default)]
+pub struct AssignHeadOutcome {
+    /// New flat segments.
+    pub segments: Vec<FlatSegment>,
+}
+
+impl AssignHeadOutcome {
+    /// The id of the head.
+    pub fn head_id(&self) -> Option<Id> {
+        self.segments.last().map(|s| s.high)
+    }
+
+    /// Merge with another (newer) `AssignHeadOutcome`.
+    pub fn merge(&mut self, rhs: Self) {
+        if rhs.segments.is_empty() {
+            return;
+        }
+        if self.segments.is_empty() {
+            *self = rhs;
+            return;
+        }
+
+        // sanity check: should be easy to verify - next_free_id provides
+        // incremental ids.
+        debug_assert!(self.segments.last().unwrap().high < rhs.segments[0].low);
+
+        // NOTE: Consider merging segments for slightly better perf.
+        self.segments.extend(rhs.segments);
+    }
+
+    /// Add graph edges: id -> parent_ids. Used by `assign_head`.
+    fn push_edge(&mut self, id: Id, parent_ids: &[Id]) {
+        let new_seg = || FlatSegment {
+            low: id,
+            high: id,
+            parents: parent_ids.to_vec(),
+        };
+
+        // sanity check: this should be easy to verify - assign_head gets new ids
+        // by `next_free_id()`, which should be incremental.
+        debug_assert!(
+            self.segments.last().map_or(Id(0), |s| s.high + 1) < id + 1,
+            "push_edge(id={}, parent_ids={:?}) called out of order ({:?})",
+            id,
+            parent_ids,
+            self
+        );
+
+        if parent_ids.len() != 1 || parent_ids[0] + 1 != id {
+            // Start a new segment.
+            self.segments.push(new_seg());
+        } else {
+            // Try to reuse the existing last segment.
+            if let Some(seg) = self.segments.last_mut() {
+                if seg.high + 1 == id {
+                    seg.high = id;
+                } else {
+                    self.segments.push(new_seg());
+                }
+            } else {
+                self.segments.push(new_seg());
+            }
+        }
+    }
+
+    #[cfg(test)]
+    /// Verify against a parent function. For testing only.
+    pub fn verify(&self, parent_func: impl Fn(Id) -> Result<Vec<Id>>) {
+        for seg in &self.segments {
+            assert_eq!(
+                parent_func(seg.low).unwrap(),
+                seg.parents,
+                "parents mismtach for {} ({:?})",
+                seg.low,
+                &self
+            );
+            for id in (seg.low + 1).0..=seg.high.0 {
+                let id = Id(id);
+                assert_eq!(
+                    parent_func(id).unwrap(),
+                    vec![id - 1],
+                    "parents mismatch for {} ({:?})",
+                    id,
+                    &self
+                );
+            }
+        }
+    }
+}
+
+/// Used as part of `AssignedIds`.
+#[derive(Debug)]
+pub struct FlatSegment {
+    pub low: Id,
+    pub high: Id,
+    pub parents: Vec<Id>,
+}
+
 /// DAG-aware write operations.
 pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     /// Assign an id for a head in a DAG. This implies ancestors of the
@@ -367,7 +466,12 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     /// New `id`s inserted by this function will have the specified `group`.
     /// Existing `id`s that are ancestors of `head` will get re-assigned
     /// if they have a higher `group`.
-    fn assign_head<F>(&mut self, head: VertexName, parents_by_name: F, group: Group) -> Result<Id>
+    fn assign_head<F>(
+        &mut self,
+        head: VertexName,
+        parents_by_name: F,
+        group: Group,
+    ) -> Result<AssignHeadOutcome>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {
@@ -406,16 +510,23 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
         //
         // The code below is optimized for cases where p1 branch is linear,
         // but p2 branch is not.
+        let mut outcome = AssignHeadOutcome::default();
 
         // Emulate the stack in heap to avoid overflow.
+        #[derive(Debug)]
         enum Todo {
-            /// Visit parents. Finally assign self.
+            /// Visit parents. Finally assign self. This will eventually turn into AssignedId.
             Visit(VertexName),
 
             /// Assign a number if not assigned. Parents are visited.
-            Assign(VertexName),
+            /// The `usize` provides the length of parents.
+            Assign(VertexName, usize),
+
+            /// Assigned Id. Will be picked by and pushed to the current `parent_ids` stack.
+            AssignedId(Id),
         }
-        use Todo::{Assign, Visit};
+        use Todo::{Assign, AssignedId, Visit};
+        let mut parent_ids: Vec<Id> = Vec::new();
 
         let mut todo_stack: Vec<Todo> = vec![Visit(head.clone())];
         while let Some(todo) = todo_stack.pop() {
@@ -423,33 +534,49 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                 Visit(head) => {
                     // If the id was not assigned, or was assigned to a higher group,
                     // (re-)assign it to this group.
-                    if let None = self.vertex_id_with_max_group(&head, group)? {
-                        todo_stack.push(Todo::Assign(head.clone()));
-                        // If the parent was not assigned, or was assigned to a higher group,
-                        // (re-)assign the parent to this group.
-                        for unassigned_parent in parents_by_name(head)?
-                            .into_iter()
-                            .filter(|p| match self.vertex_id_with_max_group(&p, group) {
-                                Ok(Some(_)) => false,
-                                _ => true,
-                            })
+                    match self.vertex_id_with_max_group(&head, group)? {
+                        None => {
+                            let parents = parents_by_name(head.clone())?;
+                            todo_stack.push(Todo::Assign(head, parents.len()));
+                            // If the parent was not assigned, or was assigned to a higher group,
+                            // (re-)assign the parent to this group.
                             // "rev" is the "optimization"
-                            .rev()
-                        {
-                            todo_stack.push(Todo::Visit(unassigned_parent));
+                            for p in parents.into_iter().rev() {
+                                match self.vertex_id_with_max_group(&p, group) {
+                                    Ok(Some(id)) => todo_stack.push(Todo::AssignedId(id)),
+                                    _ => todo_stack.push(Todo::Visit(p)),
+                                }
+                            }
+                        }
+                        Some(id) => {
+                            // Inlined Assign(id, ...) -> AssignedId(id)
+                            parent_ids.push(id);
                         }
                     }
                 }
-                Assign(head) => {
-                    if let None = self.vertex_id_with_max_group(&head, group)? {
-                        let id = self.next_free_id(group)?;
-                        self.insert(id, head.as_ref())?;
-                    }
+                Assign(head, parent_len) => {
+                    let parent_start = parent_ids.len() - parent_len;
+                    let id = match self.vertex_id_with_max_group(&head, group)? {
+                        Some(id) => id,
+                        None => {
+                            let id = self.next_free_id(group)?;
+                            self.insert(id, head.as_ref())?;
+                            let parents = &parent_ids[parent_start..];
+                            outcome.push_edge(id, parents);
+                            id
+                        }
+                    };
+                    parent_ids.truncate(parent_start);
+                    // Inlined AssignId(id);
+                    parent_ids.push(id);
+                }
+                AssignedId(id) => {
+                    parent_ids.push(id);
                 }
             }
         }
 
-        self.vertex_id(head)
+        Ok(outcome)
     }
 }
 
