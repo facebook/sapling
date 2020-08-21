@@ -283,6 +283,11 @@ pub trait DagAlgorithm {
     fn reachable_roots(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
         default_impl::reachable_roots(self, roots, heads)
     }
+
+    /// Get a snapshot of the current graph that can operate separately.
+    ///
+    /// This makes it easier to fight with borrowck.
+    fn snapshot_dag(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
 }
 
 /// Add vertexes recursively to the DAG.

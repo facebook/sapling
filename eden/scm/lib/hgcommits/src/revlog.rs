@@ -27,6 +27,7 @@ use revlogindex::RevlogIndex;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 /// HG commits stored on disk using the revlog format.
 pub struct RevlogCommits {
@@ -166,6 +167,9 @@ impl DagAlgorithm for RevlogCommits {
     }
     fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         self.revlog.reachable_roots(roots, heads)
+    }
+    fn snapshot_dag(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+        self.revlog.snapshot_dag()
     }
 }
 

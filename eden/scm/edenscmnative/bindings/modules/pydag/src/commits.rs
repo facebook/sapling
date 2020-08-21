@@ -34,6 +34,7 @@ use hgcommits::ReadCommitText;
 use hgcommits::RevlogCommits;
 use hgcommits::StripCommits;
 use std::cell::RefCell;
+use std::sync::Arc;
 
 /// A combination of other traits: commit read/write + DAG algorithms.
 pub trait Commits:
@@ -278,6 +279,11 @@ impl DagAlgorithm for commits {
     fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         let py = unsafe { Python::assume_gil_acquired() };
         self.inner(py).borrow().reachable_roots(roots, heads)
+    }
+
+    fn snapshot_dag(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+        let py = unsafe { Python::assume_gil_acquired() };
+        self.inner(py).borrow().snapshot_dag()
     }
 }
 

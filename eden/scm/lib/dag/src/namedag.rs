@@ -627,6 +627,11 @@ impl<T: ToSet + NameDagStorage> DagAlgorithm for T {
         result.hints().set_dag(self);
         Ok(result)
     }
+
+    /// Get a snapshot of the current graph.
+    fn snapshot_dag(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+        NameDagStorage::snapshot_dag(self)
+    }
 }
 
 /// Extract the ANCESTORS flag if the set with the `hints` is bound to a

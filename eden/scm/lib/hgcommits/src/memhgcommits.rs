@@ -27,6 +27,7 @@ use dag::Vertex;
 use minibytes::Bytes;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 /// HG commits in memory.
 pub struct MemHgCommits {
@@ -176,6 +177,9 @@ impl DagAlgorithm for MemHgCommits {
     }
     fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         self.dag.reachable_roots(roots, heads)
+    }
+    fn snapshot_dag(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+        self.dag.snapshot_dag()
     }
 }
 

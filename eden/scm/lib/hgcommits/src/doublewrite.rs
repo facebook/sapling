@@ -25,6 +25,7 @@ use dag::Set;
 use dag::Vertex;
 use minibytes::Bytes;
 use std::path::Path;
+use std::sync::Arc;
 
 /// Segmented Changelog + Revlog.
 ///
@@ -152,6 +153,9 @@ impl DagAlgorithm for DoubleWriteCommits {
     }
     fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         self.commits.reachable_roots(roots, heads)
+    }
+    fn snapshot_dag(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+        self.commits.snapshot_dag()
     }
 }
 
