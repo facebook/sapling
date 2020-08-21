@@ -50,6 +50,7 @@ impl IntersectionSet {
         let (lhs, rhs) = if lhs.hints().contains(Flags::FULL)
             && !rhs.hints().contains(Flags::FULL)
             && !rhs.hints().contains(Flags::FILTER)
+            && lhs.hints().is_dag_compatible(rhs.hints())
         {
             (rhs, lhs)
         } else {
