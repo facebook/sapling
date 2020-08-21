@@ -165,7 +165,11 @@ impl MutationStore {
             let x = entry.preds[0];
             // Find all "P"s, as in P -> ... -> X, and X -> Y.
             let x_set = VertexName::copy_from(x.as_ref()).into();
-            let ps = dag.ancestors(x_set)? & pred_set.clone();
+            let x_ancestors = match dag.ancestors(x_set) {
+                Ok(set) => set,
+                Err(_) => continue, // might have cycles
+            };
+            let ps = x_ancestors & pred_set.clone();
             for p in ps.iter()? {
                 let p = Node::from_slice(p?.as_ref())?;
                 let y = entry.succ;
@@ -263,7 +267,18 @@ impl MutationStore {
     /// Advanced version of `get_dag`. Specify whether to include successors or
     /// predecessors explicitly.
     pub fn get_dag_advanced(&self, nodes: Vec<Node>, flags: DagFlags) -> Result<MemNameDag> {
-        // Include successors recursively.
+        // Raw parent map. Might contain cycles.
+        let mut parent_map = HashMap::<Node, Vec<Node>>::new();
+        let mut non_heads = HashSet::<Node>::new();
+        let mut add_parent = |parent: &Node, child: &Node| {
+            let parents = parent_map.entry(child.clone()).or_default();
+            if !parents.contains(parent) {
+                parents.push(parent.clone());
+                non_heads.insert(parent.clone());
+            }
+        };
+
+        // Visit nodes. Fill parent map.
         let mut to_visit = nodes;
         let mut connected = HashSet::new();
         while let Some(node) = to_visit.pop() {
@@ -273,6 +288,7 @@ impl MutationStore {
             if flags.contains(DagFlags::SUCCESSORS) {
                 for entry in self.log.lookup(INDEX_PRED, &node)? {
                     let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                    add_parent(&node, &entry.succ);
                     to_visit.push(entry.succ);
                 }
             }
@@ -280,35 +296,36 @@ impl MutationStore {
                 for entry in self.log.lookup(INDEX_SUCC, &node)? {
                     let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
                     for pred in entry.preds {
+                        add_parent(&pred, &node);
                         to_visit.push(pred);
                     }
                 }
             }
         }
-        let mut heads = connected
-            .iter()
-            .map(|s| VertexName::copy_from(s.as_ref()))
-            .collect::<Vec<_>>();
-        let parent_func = move |node| -> dag::Result<Vec<VertexName>> {
-            let mut result = Vec::new();
-            for entry in self.log.lookup(INDEX_SUCC, &node)? {
-                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))
-                    .map_err(|e| dag::errors::BackendError::Other(e.into()))?;
-                for pred in entry.preds {
-                    if connected.contains(&pred) {
-                        let parent_node = VertexName::copy_from(pred.as_ref());
-                        if parent_node != node && !result.contains(&parent_node) {
-                            result.push(parent_node);
-                        }
-                    }
-                }
+
+        // Construct parent_func.
+        let parent_func = |node: VertexName| -> dag::Result<Vec<VertexName>> {
+            match parent_map.get(&Node::from_slice(node.as_ref()).unwrap()) {
+                None => Ok(Vec::new()),
+                Some(parents) => Ok(parents
+                    .iter()
+                    .map(|n| VertexName::copy_from(n.as_ref()))
+                    .collect()),
             }
-            Ok(result)
         };
         let parent_func = dag::utils::break_parent_func_cycle(parent_func);
 
+        // Calculate heads. This makes multiple things more efficient:
+        // `add_heads`, `break_parent_func_cycle`, and the resulting graph.
+        let mut heads: Vec<Node> = connected.difference(&non_heads).cloned().collect();
+        heads.sort_unstable();
+        let heads: Vec<VertexName> = heads
+            .into_iter()
+            .map(|n| VertexName::copy_from(n.as_ref()))
+            .collect();
+
+        // Construct the graph.
         let mut dag = MemNameDag::new();
-        heads.sort();
         dag.add_heads(parent_func, &heads)?;
         Ok(dag)
     }
@@ -481,32 +498,24 @@ mod tests {
         }
         ms.flush()?;
 
+        // Nothing - cycles without a head is not rendered.
+        assert_eq!(render(&ms, "A")?, "\n");
+        assert_eq!(render(&ms, "B")?, "\n");
+        assert_eq!(render(&ms, "C")?, "\n");
+
+        // Add a "head" to "revive" the graph.
+        add(&mut ms, "C", "D")?;
+        ms.flush()?;
         assert_eq!(
-            render(&ms, "A")?,
+            render(&ms, "D")?,
             r#"
-            o  4141414141414141414141414141414141414141 (A)
+            o  4444444444444444444444444444444444444444 (D)
             │
             o  4343434343434343434343434343434343434343 (C)
             │
-            o  4242424242424242424242424242424242424242 (B)"#
-        );
-        assert_eq!(
-            render(&ms, "B")?,
-            r#"
-            o  4141414141414141414141414141414141414141 (A)
+            o  4242424242424242424242424242424242424242 (B)
             │
-            o  4343434343434343434343434343434343434343 (C)
-            │
-            o  4242424242424242424242424242424242424242 (B)"#
-        );
-        assert_eq!(
-            render(&ms, "C")?,
-            r#"
-            o  4141414141414141414141414141414141414141 (A)
-            │
-            o  4343434343434343434343434343434343434343 (C)
-            │
-            o  4242424242424242424242424242424242424242 (B)"#
+            o  4141414141414141414141414141414141414141 (A)"#
         );
 
         Ok(())
@@ -534,9 +543,9 @@ mod tests {
             │
             o  5858585858585858585858585858585858585858 (X)
             │
+            o  4545454545454545454545454545454545454545 (E)
+            │
             │ o  5151515151515151515151515151515151515151 (Q)
-            │ │
-            o │  4545454545454545454545454545454545454545 (E)
             ├─╯
             o  5050505050505050505050505050505050505050 (P)"#
         );
@@ -548,9 +557,9 @@ mod tests {
             r#"
             o    5959595959595959595959595959595959595959 (Y)
             ├─╮
-            o │  5858585858585858585858585858585858585858 (X)
-            │ │
             │ o  5151515151515151515151515151515151515151 (Q)
+            │ │
+            o │  5858585858585858585858585858585858585858 (X)
             │ │
             o │  4545454545454545454545454545454545454545 (E)
             ├─╯
