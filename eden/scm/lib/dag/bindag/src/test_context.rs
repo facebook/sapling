@@ -6,6 +6,7 @@
  */
 
 use crate::{parse_bindag, ParentRevs};
+use dag::OnDiskIdDag;
 use dag::{namedag::LowLevelAccess, ops::DagPersistent, spanset::SpanSet, Id, NameDag, VertexName};
 use std::collections::HashSet;
 use std::ops::Range;
@@ -104,6 +105,11 @@ impl<T> GeneralTestContext<T> {
     /// Convert a SpanSet (used by IdDag) to plain revs (used by `parents`).
     pub fn to_plain_revs(&self, set: &SpanSet) -> Vec<usize> {
         set.iter().map(|i| self.idmap[i.0 as usize]).collect()
+    }
+
+    /// Get the IdDag reference.
+    pub fn id_dag(&self) -> &OnDiskIdDag {
+        self.dag.dag()
     }
 
     /// Make `revs` in the range of parents.
