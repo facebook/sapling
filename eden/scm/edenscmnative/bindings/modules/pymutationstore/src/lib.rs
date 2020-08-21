@@ -15,7 +15,7 @@ use cpython::*;
 use cpython_ext::{PyNone, PyPath, ResultPyErrExt, Str};
 use thiserror::Error;
 
-use ::mutationstore::{MutationStore, Repair};
+use ::mutationstore::{DagFlags, MutationStore, Repair};
 use pydag::dagalgo::dagalgo;
 use pydag::Names;
 use types::mutation::MutationEntry;
@@ -247,13 +247,21 @@ py_class!(class mutationstore |py| {
     /// The returned graph supports DAG related calculations like
     /// ancestors, heads, roots, etc.
     ///
-    /// Only 1:1 replacements are considered. Non 1:1 operations
+    /// If successors is True, follow successors.
+    /// If predecessors is True, follow predecessors.
     /// like split, fold are ignored.
-    def getdag(&self, nodes: Vec<PyBytes>) -> PyResult<dagalgo> {
+    def getdag(&self, nodes: Vec<PyBytes>, successors: bool = true, predecessors: bool = true) -> PyResult<dagalgo> {
         let nodes = nodes
             .into_iter()
             .map(|n| Node::from_slice(n.data(py))).collect::<Result<Vec<_>, _>>().map_pyerr(py)?;
-        let dag = self.mut_store(py).borrow().get_dag(nodes).map_pyerr(py)?;
+        let mut flags = DagFlags::empty();
+        if successors {
+            flags |= DagFlags::SUCCESSORS;
+        }
+        if predecessors {
+            flags |= DagFlags::PREDECESSORS;
+        }
+        let dag = self.mut_store(py).borrow().get_dag_advanced(nodes, flags).map_pyerr(py)?;
         dagalgo::from_dag(py, dag)
     }
 
