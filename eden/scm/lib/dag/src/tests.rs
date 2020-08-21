@@ -427,6 +427,37 @@ Lv3: R0-11[]"#
 }
 
 #[test]
+fn test_segment_non_master() {
+    let ascii = r#"
+a----b----c----d----e----f----g----------h----i
+     \                    \             /
+      h---i---j---k        l---m---n---o
+               \                \
+                -----------------p---q"#;
+    let built = build_segments(ascii, "i q", 3);
+    assert_eq!(
+        built.ascii[0],
+        r#"
+N0---N1---N2---N3---N4---N5---N6---------N11--N12
+     \                    \             /
+      N11-N12-j---k        N7--N8--N9--N10
+               \                \
+                -----------------p---q
+Lv0: RN0-N6[] N7-N10[N5] N11-N12[N0, N6, N10]"#
+    );
+    assert_eq!(
+        built.ascii[1],
+        r#"
+N0---N1---N2---N3---N4---N5---N6---------N11--N12
+     \                    \             /
+      N11-N12-N13-k        N7--N8--N9--N10
+               \                \
+                -----------------N14-N15
+Lv0: RN0-N6[] N7-N10[N5] N11-N12[N0, N6, N10] N13-N13[N12] N14-N15[N13, N8]"#
+    );
+}
+
+#[test]
 fn test_segment_examples() {
     assert_eq!(
         build_segments(ASCII_DAG1, "L", 3).ascii[0],
@@ -1091,8 +1122,12 @@ impl IdMap {
                 if let Ok(Some(name)) = self.find_name_by_id(id) {
                     let name = String::from_utf8(name.to_vec()).unwrap();
                     let id_str = format!("{:01$}", id, name.len());
-                    if name.len() + 1 == id_str.len() {
-                        // Try to replace while maintaining width
+                    // Try to replace while maintaining width
+                    if name.len() + 2 == id_str.len() {
+                        result = result
+                            .replace(&format!("{}--", name), &id_str)
+                            .replace(&format!("{}  ", name), &id_str);
+                    } else if name.len() + 1 == id_str.len() {
                         result = result
                             .replace(&format!("{}-", name), &id_str)
                             .replace(&format!("{} ", name), &id_str);
