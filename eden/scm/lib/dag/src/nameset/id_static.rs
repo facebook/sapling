@@ -105,7 +105,7 @@ impl IdStaticSet {
     pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdConvert + Send + Sync>) -> Self {
         let hints = Hints::default();
         hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
-        hints.set_id_map(&map);
+        hints.set_id_map(map.clone());
         if spans.is_empty() {
             hints.add_flags(Flags::EMPTY);
         } else {

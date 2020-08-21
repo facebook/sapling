@@ -12,7 +12,7 @@ use bitflags::bitflags;
 use parking_lot::RwLock;
 use std::fmt;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
-use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize};
+use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 
 bitflags! {
@@ -55,7 +55,7 @@ pub struct Hints {
     flags: AtomicU32,
     min_id: AtomicU64,
     max_id: AtomicU64,
-    id_map_ptr: AtomicUsize,
+    id_map: RwLock<IdMapSnapshot>,
     dag: RwLock<DagSnapshot>,
 }
 
@@ -120,11 +120,8 @@ impl Hints {
         self
     }
 
-    pub fn set_id_map(&self, ptr: &Arc<dyn IdConvert + Send + Sync>) -> &Self {
-        let map_ref: &dyn IdConvert = ptr.as_ref();
-        // std::raw::TraitObject is not stable yet.
-        let vptr: [usize; 2] = unsafe { std::mem::transmute(map_ref) };
-        self.id_map_ptr.store(vptr[0], Release);
+    pub fn set_id_map(&self, id_map: impl Into<IdMapSnapshot>) -> &Self {
+        *self.id_map.write() = id_map.into();
         self
     }
 
@@ -134,19 +131,22 @@ impl Hints {
     }
 
     pub fn inherit_id_map(&self, other: &Hints) -> &Self {
-        let ptr = other.id_map_ptr.load(Acquire);
-        self.id_map_ptr.store(ptr, Release);
-        self
+        self.set_id_map(other)
     }
 
     pub fn inherit_dag(&self, other: &Hints) -> &Self {
         self.set_dag(other)
     }
 
-    pub fn is_id_map_compatible(&self, other: &Hints) -> bool {
-        let ptr1 = self.id_map_ptr.load(Acquire);
-        let ptr2 = other.id_map_ptr.load(Acquire);
-        ptr1 == ptr2
+    #[allow(clippy::vtable_address_comparisons)]
+    pub fn is_id_map_compatible(&self, other: impl Into<IdMapSnapshot>) -> bool {
+        let lhs = self.id_map.read().clone().0;
+        let rhs = other.into().0;
+        match (lhs, rhs) {
+            (None, None) => true,
+            (Some(l), Some(r)) => Arc::ptr_eq(&l, &r),
+            (None, Some(_)) | (Some(_), None) => false,
+        }
     }
 
     #[allow(clippy::vtable_address_comparisons)]
@@ -162,6 +162,10 @@ impl Hints {
 
     pub fn dag(&self) -> Option<Arc<dyn DagAlgorithm + Send + Sync>> {
         self.dag.read().clone().0
+    }
+
+    pub fn id_map(&self) -> Option<Arc<dyn IdConvert + Send + Sync>> {
+        self.id_map.read().clone().0
     }
 }
 
@@ -180,13 +184,28 @@ impl From<Arc<dyn DagAlgorithm + Send + Sync>> for DagSnapshot {
     }
 }
 
+#[derive(Clone, Default)]
+pub struct IdMapSnapshot(Option<Arc<dyn IdConvert + Send + Sync>>);
+
+impl From<&Hints> for IdMapSnapshot {
+    fn from(hints: &Hints) -> Self {
+        hints.id_map.read().clone()
+    }
+}
+
+impl From<Arc<dyn IdConvert + Send + Sync>> for IdMapSnapshot {
+    fn from(dag: Arc<dyn IdConvert + Send + Sync>) -> Self {
+        IdMapSnapshot(Some(dag))
+    }
+}
+
 impl Clone for Hints {
     fn clone(&self) -> Self {
         Self {
             flags: AtomicU32::new(self.flags.load(Acquire)),
             min_id: AtomicU64::new(self.min_id.load(Acquire)),
             max_id: AtomicU64::new(self.max_id.load(Acquire)),
-            id_map_ptr: AtomicUsize::new(self.id_map_ptr.load(Acquire)),
+            id_map: RwLock::new(self.id_map.read().clone()),
             dag: RwLock::new(self.dag.read().clone()),
         }
     }
