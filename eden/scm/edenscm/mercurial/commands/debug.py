@@ -456,9 +456,57 @@ def debugcapabilities(ui, path, **opts):
                 ui.write(_x("    %s\n") % v)
 
 
-@command("debugchangelog", [], "")
-def debugchangelog(ui, repo):
+@command("debugchangelog", [("", "migrate", "", _("migrate to another format"))], "")
+def debugchangelog(ui, repo, migrate=None):
+    """show or migrate changelog backend
+
+    If --migrate is not set, print details about the current changelog backend.
+
+    If --migrate is set, migrate to a specified format. Supported choices
+    are:
+
+    - pythonrevlog
+
+      - The original revlog backend provided by C and Python code.
+
+    - rustrevlog
+
+      - The revlog backend provided by Rust code.
+
+    - doublewrite
+
+      - A hybrid of revlog and segments: segments backend for commit graph
+        algorithms and hash translation; revlog backend for commit text
+      - Commit text won't be migrated. Revlog is still used to get commit text.
+      - Cheap to migrate back to revlog backend.
+      - Migration can take a few minutes for a large repo.
+
+    - fullsegments
+
+      - New segments backend for everything.
+      - Commit text will be fully migrated. Revlog is no longer necessary.
+      - Migration can take tens of minutes for a large repo.
+
+    In the future there might be lazy backends that use network for commit hashes
+    or text. Right now, none of the above is lazy.
+
+    Migration does not delete old data for easier rolling back.
+    """
     cl = repo.changelog
+    if migrate:
+        if migrate == "revlog":
+            changelog2.migratetorevlog(repo)
+        elif migrate == "rustrevlog":
+            changelog2.migratetorevlog(repo, rust=True)
+        elif migrate == "pythonrevlog":
+            changelog2.migratetorevlog(repo, python=True)
+        elif migrate == "doublewrite":
+            changelog2.migratetodoublewrite(repo)
+        elif migrate == "fullsegments":
+            changelog2.migratetosegments(repo)
+        else:
+            raise error.Abort(_("invalid changelog format: %s") % migrate)
+        return
     if isinstance(cl, changelog2.changelog):
         ui.write(_("The changelog is backed by Rust. More backend information:\n"))
         ui.write(_("%s") % cl.inner.describebackend())

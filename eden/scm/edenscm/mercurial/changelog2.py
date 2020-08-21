@@ -9,11 +9,25 @@ from typing import IO, Optional, Union
 
 import bindings
 
-from . import encoding, error, mdiff, revlog, util, visibility
+from . import (
+    bookmarks as bookmod,
+    changelog as changelogmod,
+    encoding,
+    error,
+    mdiff,
+    progress,
+    revlog,
+    util,
+    visibility,
+)
 from .changelog import changelogrevision, hgcommittext, readfiles
 from .i18n import _
 from .node import hex, nullid, nullrev, wdirid, wdirrev
 from .pycompat import encodeutf8
+
+
+SEGMENTS_DIR = "segments/v1"
+HGCOMMITS_DIR = "hgcommits/v1"
 
 
 class changelog(object):
@@ -50,9 +64,19 @@ class changelog(object):
 
     @classmethod
     def opensegments(cls, svfs, uiconfig):
-        segmentsdir = svfs.join("segments/v1")
-        hgcommitsdir = svfs.join("hgcommits/v1")
+        segmentsdir = svfs.join(SEGMENTS_DIR)
+        hgcommitsdir = svfs.join(HGCOMMITS_DIR)
         inner = bindings.dag.commits.opensegments(segmentsdir, hgcommitsdir)
+        return cls(svfs, inner, uiconfig)
+
+    @classmethod
+    def opendoublewrite(cls, svfs, uiconfig):
+        revlogdir = svfs.join("")
+        segmentsdir = svfs.join(SEGMENTS_DIR)
+        hgcommitsdir = svfs.join(HGCOMMITS_DIR)
+        inner = bindings.dag.commits.opendoublewrite(
+            revlogdir, segmentsdir, hgcommitsdir
+        )
         return cls(svfs, inner, uiconfig)
 
     @property
@@ -492,3 +516,127 @@ class nodemap(object):
 
     def destroying(self):
         pass
+
+
+def migratetodoublewrite(repo):
+    """Migrate to "double write" backend.
+
+    Commit graph and IdMap use segments, commit text falls back to revlog.
+    This can take about 1 minute for a large repo.
+    """
+    if "doublewritechangelog" in repo.storerequirements:
+        return
+    svfs = repo.svfs
+    revlogdir = svfs.join("")
+    segmentsdir = svfs.join(SEGMENTS_DIR)
+    hgcommitsdir = svfs.join(HGCOMMITS_DIR)
+    with repo.lock():
+        master = list(repo.nodes("present(%s)", bookmod.mainbookmark(repo)))
+        with progress.spinner(repo.ui, _("migrating commit graph")):
+            bindings.dag.commits.migraterevlogtosegments(
+                revlogdir, segmentsdir, hgcommitsdir, master
+            )
+        repo.storerequirements.discard("pythonrevlogchangelog")
+        repo.storerequirements.discard("rustrevlogchangelog")
+        repo.storerequirements.discard("segmentedchangelog")
+        repo.storerequirements.add("doublewritechangelog")
+        repo._writestorerequirements()
+        repo.invalidatechangelog()
+
+
+def migratetosegments(repo):
+    """Migrate to full "segmentedchangelog" backend.
+
+    Commit graph, IdMap, commit text are all backed by segmented changelog.
+    This can take 10+ minutes for a large repo.
+    """
+    if "segmentedchangelog" in repo.storerequirements:
+        return
+    svfs = repo.svfs
+    revlogdir = svfs.join("")
+    segmentsdir = svfs.join(SEGMENTS_DIR)
+    hgcommitsdir = svfs.join(HGCOMMITS_DIR)
+    with repo.lock():
+        zstore = bindings.zstore.zstore(svfs.join(HGCOMMITS_DIR))
+        cl = repo.changelog
+        with progress.bar(
+            repo.ui, _("migrating commit text"), _("commits"), len(cl)
+        ) as prog:
+            clnode = cl.node
+            clparents = cl.parents
+            clrevision = cl.revision
+            contains = zstore.__contains__
+            insert = zstore.insert
+            textwithheader = changelogmod.textwithheader
+            try:
+                for rev in cl.revs():
+                    node = clnode(rev)
+                    if contains(node):
+                        continue
+                    text = clrevision(rev)
+                    p1, p2 = clparents(node)
+                    newnode = insert(textwithheader(text, p1, p2))
+                    assert node == newnode
+                    prog.value += 1
+            finally:
+                # In case of Ctrl+C, flush commits in memory so we can continue
+                # next time.
+                zstore.flush()
+
+        master = list(repo.nodes("present(%s)", bookmod.mainbookmark(repo)))
+        with progress.spinner(repo.ui, _("migrating commit graph")):
+            bindings.dag.commits.migraterevlogtosegments(
+                revlogdir, segmentsdir, hgcommitsdir, master
+            )
+
+        repo.storerequirements.discard("doublewritechangelog")
+        repo.storerequirements.discard("pythonrevlogchangelog")
+        repo.storerequirements.discard("rustrevlogchangelog")
+        repo.storerequirements.add("segmentedchangelog")
+        repo._writestorerequirements()
+        repo.invalidatechangelog()
+
+
+def migratetorevlog(repo, python=False, rust=False):
+    """Migrate to revlog backend.
+
+    If python is True, set repo requirement to use Python + C revlog backend.
+    If rust is True, set repo requirement to use Rust revlog backend.
+    If neither is True, the backed is dynamically decided by the
+    experimental.rust-commits config.
+    """
+    svfs = repo.svfs
+    with repo.lock():
+        # Migrate from segmentedchangelog
+        if "segmentedchangelog" in repo.storerequirements:
+            srccl = repo.changelog
+            dstcl = changelog.openrevlog(svfs, repo.ui.uiconfig())
+            with progress.bar(
+                repo.ui, _("migrating commits"), _("commits"), len(srccl)
+            ) as prog:
+                hasnode = dstcl.hasnode
+                getparents = srccl.dag.parentnames
+                gettext = srccl.inner.getcommitrawtext
+                addcommits = dstcl.inner.addcommits
+                try:
+                    for node in srccl.dag.all().iterrev():
+                        if hasnode(node):
+                            continue
+                        parents = getparents(node)
+                        btext = gettext(node)
+                        addcommits([(node, parents, btext)])
+                        prog.value += 1
+                finally:
+                    # In case of Ctrl+C, flush commits in memory so we can continue
+                    # next time.
+                    dstcl.inner.flush([])
+        repo.storerequirements.discard("doublewritechangelog")
+        repo.storerequirements.discard("pythonrevlogchangelog")
+        repo.storerequirements.discard("rustrevlogchangelog")
+        repo.storerequirements.discard("segmentedchangelog")
+        if python:
+            repo.storerequirements.add("pythonrevlogchangelog")
+        if rust:
+            repo.storerequirements.add("rustrevlogchangelog")
+        repo._writestorerequirements()
+        repo.invalidatechangelog()
