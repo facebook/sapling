@@ -1,0 +1,10 @@
+[package]
+name = "gitdag"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1"
+dag = { path = ".." }
+git2 = "0.13"
+tracing = "0.1"
