@@ -30,210 +30,154 @@ Continue repo setup
   $ touch d && hg add d && hg ci -md
 
   $ hg debugmakepublic master
-  $ hg log -G -T compact
-  @  [feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
-  |    d
+  $ hg log -G -T "{node|short} {bookmarks} {desc}"
+  @  db92053d5c83 feature2 d
   |
-  o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
+  o  38d85b506754 master c2
   |
-  o  :b68836a6e2ca   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |    c1
+  o  ec7553f7b382  c1
   |
-  | o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
+  | o  49cdb4091aca feature1 b
+  |/
+  o  b68836a6e2ca  a2
   |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
-  |
-  o     df4fd610a3d6   1970-01-01 00:00 +0000   test
-       a1
+  o  df4fd610a3d6  a1
   
 
 Basic test
-  $ hg smartlog -T compact
-  @  [feature2]   db92053d5c83   1970-01-01 00:00 +0000   test
-  |    d
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}'
+  @  db92053d5c83 feature2 d
   |
-  o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  .    c2
+  o  38d85b506754 master c2
   .
-  | o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  49cdb4091aca feature1 b
+  |/
+  o  b68836a6e2ca  a2
   |
 
 With commit info
   $ echo "hello" >c2 && hg ci --amend
-  $ hg smartlog -T compact --commit-info
-  @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  |    d
-  |
-  |   M c2
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --commit-info
+  @  05d10250273e feature2 d M c2
   |   A d
   |
-  o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  .    c2
+  o  38d85b506754 master c2
   .
-  | o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  49cdb4091aca feature1 b
+  |/
+  o  b68836a6e2ca  a2
   |
 
 As a revset
-  $ hg log -G -T compact -r 'smartlog()'
-  @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  |    d
+  $ hg log -G -T '{node|short} {bookmarks} {desc}' -r 'smartlog()'
+  @  05d10250273e feature2 d
   |
-  o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
+  o  38d85b506754 master c2
   |
-  | o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  49cdb4091aca feature1 b
+  |/
+  o  b68836a6e2ca  a2
   |
 
 With --master
 
-  $ hg smartlog -T compact --master 1
-  @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  |    d
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --master 1
+  @  05d10250273e feature2 d
   |
-  o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  .    c2
+  o  38d85b506754 master c2
   .
-  | o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  49cdb4091aca feature1 b
+  |/
+  o  b68836a6e2ca  a2
   |
 
 Specific revs
-  $ hg smartlog -T compact -r 2 -r 4
-  o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  .    c2
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 2 -r 4
+  o  38d85b506754 master c2
   .
-  | o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  49cdb4091aca feature1 b
+  |/
+  o  b68836a6e2ca  a2
   |
 
-  $ hg smartlog -T compact -r 'smartlog()' -r 0
-  @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  |    d
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'smartlog()' -r 0
+  @  05d10250273e feature2 d
   |
-  o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  .    c2
+  o  38d85b506754 master c2
   .
-  | o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
+  | o  49cdb4091aca feature1 b
+  |/
+  o  b68836a6e2ca  a2
   |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
-  |
-  o     df4fd610a3d6   1970-01-01 00:00 +0000   test
-       a1
+  o  df4fd610a3d6  a1
   
 
 Test master ordering
   $ hg debugmakepublic 49cdb4091aca
 
   $ hg boo -f master -r 49cdb4091aca
-  $ hg smartlog -T compact
-  o  [feature1,master]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |    b
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}'
+  o  49cdb4091aca feature1 master b
   |
-  | @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  | |    d
+  | @  05d10250273e feature2 d
   | |
-  | o     38d85b506754   1970-01-01 00:00 +0000   test
-  | |    c2
+  | o  38d85b506754  c2
   | |
-  | o  :b68836a6e2ca   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |/     c1
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  ec7553f7b382  c1
+  |/
+  o  b68836a6e2ca  a2
   |
 
 Test overriding master
   $ hg debugmakepublic 38d85b506754
 
   $ hg boo -f master -r 38d85b506754
-  $ hg smartlog -T compact
-  @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  |    d
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}'
+  @  05d10250273e feature2 d
   |
-  o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  .    c2
+  o  38d85b506754 master c2
   .
-  | o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  49cdb4091aca feature1 b
+  |/
+  o  b68836a6e2ca  a2
   |
 
   $ hg debugmakepublic feature1
 
-  $ hg smartlog -T compact --master feature1
-  o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |    b
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --master feature1
+  o  49cdb4091aca feature1 b
   |
-  | @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  | |    d
+  | @  05d10250273e feature2 d
   | |
-  | o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  | |    c2
+  | o  38d85b506754 master c2
   | |
-  | o  :b68836a6e2ca   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |/     c1
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  ec7553f7b382  c1
+  |/
+  o  b68836a6e2ca  a2
   |
 
-  $ hg smartlog -T compact --config smartlog.master=feature1
-  o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |    b
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --config smartlog.master=feature1
+  o  49cdb4091aca feature1 b
   |
-  | @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  | |    d
+  | @  05d10250273e feature2 d
   | |
-  | o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  | |    c2
+  | o  38d85b506754 master c2
   | |
-  | o  :b68836a6e2ca   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |/     c1
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  ec7553f7b382  c1
+  |/
+  o  b68836a6e2ca  a2
   |
 
-  $ hg smartlog -T compact --config smartlog.master=feature2 --master feature1
-  o  [feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |    b
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --config smartlog.master=feature2 --master feature1
+  o  49cdb4091aca feature1 b
   |
-  | @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  | |    d
+  | @  05d10250273e feature2 d
   | |
-  | o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  | |    c2
+  | o  38d85b506754 master c2
   | |
-  | o  :b68836a6e2ca   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |/     c1
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  ec7553f7b382  c1
+  |/
+  o  b68836a6e2ca  a2
   |
 
   $ hg debugmakepublic .
@@ -241,36 +185,28 @@ Test overriding master
 Test with weird bookmark names
 
   $ hg book -r 2 foo-bar
-  $ hg smartlog -r 'foo-bar + .' -T compact
-  @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  .    d
+  $ hg smartlog -r 'foo-bar + .' -T '{node|short} {bookmarks} {desc}'
+  @  05d10250273e feature2 d
   .
-  | o  [feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  49cdb4091aca feature1 foo-bar b
+  |/
+  o  b68836a6e2ca  a2
   |
 
   $ hg debugmakepublic foo-bar
 
-  $ hg smartlog --config smartlog.master=foo-bar -T compact
-  o  [feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |    b
+  $ hg smartlog --config smartlog.master=foo-bar -T '{node|short} {bookmarks} {desc}'
+  o  49cdb4091aca feature1 foo-bar b
   |
-  | @  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  | |    d
+  | @  05d10250273e feature2 d
   | |
-  | o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  | |    c2
+  | o  38d85b506754 master c2
   | |
-  | o  :b68836a6e2ca   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |/     c1
+  | o  ec7553f7b382  c1
+  |/
+  o  b68836a6e2ca  a2
   |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
-  |
-  $ hg smartlog --config smartlog.master=xxxx -T compact
+  $ hg smartlog --config smartlog.master=xxxx -T '{node|short} {bookmarks} {desc}'
   abort: unknown revision 'xxxx'!
   [255]
 
@@ -281,27 +217,20 @@ Test with two unrelated histories
   $ touch u1 && hg add u1 && hg ci -mu1
   $ touch u2 && hg add u2 && hg ci -mu2
 
-  $ hg smartlog  -T compact
-  @     806aaef35296   1970-01-01 00:00 +0000   test
-  |    u2
+  $ hg smartlog  -T '{node|short} {bookmarks} {desc}'
+  @  806aaef35296  u2
   |
-  o  :000000000000   8749dc393678   1970-01-01 00:00 +0000   test
-       u1
+  o  8749dc393678  u1
   
-  o  [feature2]:38d85b506754   05d10250273e   1970-01-01 00:00 +0000   test
-  |    d
+  o  05d10250273e feature2 d
   |
-  o  [master]   38d85b506754   1970-01-01 00:00 +0000   test
-  |    c2
+  o  38d85b506754 master c2
   |
-  o  :b68836a6e2ca   ec7553f7b382   1970-01-01 00:00 +0000   test
-  |    c1
+  o  ec7553f7b382  c1
   |
-  | o  [feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  |/     b
-  |
-  o     b68836a6e2ca   1970-01-01 00:00 +0000   test
-  |    a2
+  | o  49cdb4091aca feature1 foo-bar b
+  |/
+  o  b68836a6e2ca  a2
   |
 
 
@@ -313,53 +242,39 @@ A draft stack at the top
   $ hg bookmark curr
   $ hg bookmark master -r 1
   $ hg debugmakepublic -r 1
-  $ hg smartlog -T compact --all
-  o     2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
-  |    r3
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all
+  o  2dc09a01254d  r3
   |
-  o     01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
-  |    r2
+  o  01241442b3c2  r2
   |
-  o  [master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r1
+  o  66f7d451a68b master r1
   |
-  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
-    o     2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
-    |    r3
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
+    o  2dc09a01254d  r3
     |
-    o     01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
-   /     r2
-  |
-  o  [master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r1
+    o  01241442b3c2  r2
+   /
+  o  66f7d451a68b master r1
   |
 
 Different number of lines per node
 
-  $ hg smartlog -T '{rev}' --all --config smartlog.indentnonpublic=1
-    o  3
+  $ hg smartlog -T '{node|short}\n{bookmarks}\n{desc}\n{author}\n{date|isodate}\n' --all --config smartlog.indentnonpublic=1
+    o  2dc09a01254d
     |
-    o  2
+    |  r3
+    |  debugbuilddag
+    |  1970-01-01 00:00 +0000
+    o  01241442b3c2
    /
-  o  1
-  |
-  $ hg smartlog -T 'default' --all --config smartlog.indentnonpublic=1
-    o  commit:      2dc09a01254d
-    |  user:        debugbuilddag
-    |  date:        Thu Jan 01 00:00:03 1970 +0000
-    |  summary:     r3
-    |
-    o  commit:      01241442b3c2
-   /   user:        debugbuilddag
-  |    date:        Thu Jan 01 00:00:02 1970 +0000
-  |    summary:     r2
-  |
-  o  commit:      66f7d451a68b
-  |  bookmark:    master
-  |  user:        debugbuilddag
-  |  date:        Thu Jan 01 00:00:01 1970 +0000
-  |  summary:     r1
-  |
+  |    r2
+  |    debugbuilddag
+  |    1970-01-01 00:00 +0000
+  o  66f7d451a68b
+  |  master
+  |  r1
+  |  debugbuilddag
+  |  1970-01-01 00:00 +0000
 
 Add other draft stacks
   $ hg up 1 -q
@@ -370,24 +285,18 @@ Add other draft stacks
   $ hg up 2 -q
   $ echo 2 > b
   $ hg ci -A b -m b -q
-  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
-    o     a60fccdcd9e9   1970-01-01 00:00 +0000   test
-    |    a
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
+    o  a60fccdcd9e9  a
     |
-    o  :66f7d451a68b   8d92afe5abfd   1970-01-01 00:00 +0000   test
-   /     a
-  |
-  | @  :01241442b3c2   401cd6213b51   1970-01-01 00:00 +0000   test
-  | |    b
+    o  8d92afe5abfd  a
+   /
+  | @  401cd6213b51  b
   | |
-  | | o     2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
-  | |/     r3
-  | |
-  | o     01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
-  |/     r2
-  |
-  o  [master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r1
+  | | o  2dc09a01254d  r3
+  | |/
+  | o  01241442b3c2  r2
+  |/
+  o  66f7d451a68b master r1
   |
 
 Recent arg select days correctly
@@ -395,29 +304,22 @@ Recent arg select days correctly
   $ myday=`hg debugsh -c 'import time; ui.write(str(int(time.time()) - 24 * 3600 * 20))'`
   $ hg commit --date "$myday 0" -m test2
   $ hg update 0 -q
-  $ hg log -Gr 'smartlog(master="master", heads=((date(-15) & draft()) + .))' -T compact
-  o  [master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r1
+  $ hg log -Gr 'smartlog(master="master", heads=((date(-15) & draft()) + .))' -T '{node|short} {bookmarks} {desc}'
+  o  66f7d451a68b master r1
   |
-  @     1ea73414a91b   1970-01-01 00:00 +0000   debugbuilddag
-       r0
+  @  1ea73414a91b  r0
   
 
-  $ hg log -Gr 'smartlog((date(-25) & draft()) + .)' -T compact
-  o   * (glob)
-  |    test2
+  $ hg log -Gr 'smartlog((date(-25) & draft()) + .)' -T '{bookmarks} {desc}'
+  o   test2
   |
-  o  :01241442b3c2   401cd6213b51   1970-01-01 00:00 +0000   test
-  |    b
+  o   b
   |
-  o     01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
-  |    r2
+  o   r2
   |
-  o  [master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r1
+  o  master r1
   |
-  @     1ea73414a91b   1970-01-01 00:00 +0000   debugbuilddag
-       r0
+  @   r0
   
 Make sure public commits that are descendants of master are not drawn
   $ cd ..
@@ -426,37 +328,28 @@ Make sure public commits that are descendants of master are not drawn
   $ hg debugbuilddag '+5'
   $ hg bookmark master -r 1
   $ hg debugmakepublic -r 1
-  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
-    o     bebd167eb94d   1970-01-01 00:00 +0000   debugbuilddag
-    |    r4
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
+    o  bebd167eb94d  r4
     |
-    o     2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
-    |    r3
+    o  2dc09a01254d  r3
     |
-    o     01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
-   /     r2
-  |
-  o  [master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r1
+    o  01241442b3c2  r2
+   /
+  o  66f7d451a68b master r1
   |
   $ hg debugmakepublic 3
   $ hg up -q 4
-  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
-    @     bebd167eb94d   1970-01-01 00:00 +0000   debugbuilddag
-   /     r4
-  |
-  o     2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
-  .    r3
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
+    @  bebd167eb94d  r4
+   /
+  o  2dc09a01254d  r3
   .
-  o  [master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r1
+  o  66f7d451a68b master r1
   |
   $ hg debugmakepublic 4
-  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
-  @     bebd167eb94d   1970-01-01 00:00 +0000   debugbuilddag
-  .    r4
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
+  @  bebd167eb94d  r4
   .
-  o  [master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
-  |    r1
+  o  66f7d451a68b master r1
   |
 
