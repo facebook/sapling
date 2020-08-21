@@ -38,7 +38,7 @@ void BackingStoreLogger::logImport(
   std::optional<std::string> cmdline;
   if (pid) {
 #ifndef _WIN32
-    cmdline = processNameCache_->getProcessName(pid.value());
+    cmdline = processNameCache_->getSpacedProcessName(pid.value());
 #endif
   }
 
