@@ -71,7 +71,7 @@ impl IntersectionSet {
             hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
         }
         hints.inherit_id_map(&lhs.hints()).inherit_dag(&lhs.hints());
-        let compatible = hints.is_id_map_compatible(&rhs.hints());
+        let compatible = hints.is_id_map_compatible(rhs.hints());
         match (lhs.hints().min_id(), rhs.hints().min_id(), compatible) {
             (Some(id), None, _) | (Some(id), Some(_), false) | (None, Some(id), true) => {
                 hints.set_min_id(id);

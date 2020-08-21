@@ -163,7 +163,7 @@ impl IdLazySet {
             state: State::Incomplete,
         };
         let hints = Hints::default();
-        hints.set_id_map(&map);
+        hints.set_id_map(map.clone());
         Self {
             inner: Arc::new(Mutex::new(inner)),
             map,

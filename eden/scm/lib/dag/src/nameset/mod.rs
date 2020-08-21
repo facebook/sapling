@@ -184,6 +184,11 @@ impl NameSet {
     pub fn dag(&self) -> Option<Arc<dyn DagAlgorithm + Send + Sync>> {
         self.hints().dag()
     }
+
+    /// Obtain the attached IdMap if available.
+    pub fn id_map(&self) -> Option<Arc<dyn IdConvert + Send + Sync>> {
+        self.hints().id_map()
+    }
 }
 
 impl BitAnd for NameSet {
