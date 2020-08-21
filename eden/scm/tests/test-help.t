@@ -943,6 +943,8 @@ Test list of internal help commands
    debugcauserusterror
                  cause an error to be generated in rust for testing error
                  handling
+   debugchangelog
+                 (no help text available)
    debugcheckcasecollisions
                  check for case collisions against a commit
    debugcheckoutidentifier

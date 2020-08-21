@@ -34,6 +34,7 @@ from .. import (
     bookmarks,
     bundle2,
     changegroup,
+    changelog2,
     cmdutil,
     color,
     context,
@@ -453,6 +454,18 @@ def debugcapabilities(ui, path, **opts):
             ui.write(_x("  %s\n") % key)
             for v in values:
                 ui.write(_x("    %s\n") % v)
+
+
+@command("debugchangelog", [], "")
+def debugchangelog(ui, repo):
+    cl = repo.changelog
+    if isinstance(cl, changelog2.changelog):
+        ui.write(_("The changelog is backed by Rust. More backend information:\n"))
+        ui.write(_("%s") % cl.inner.describebackend())
+    else:
+        ui.write(_("The changelog is backed by Python + C revlog.\n"))
+        if type(cl.nodemap).__module__ == "edenscmnative.clindex":
+            ui.write(_("The clindex extension is used for commit hash lookups.\n"))
 
 
 @command("debugcheckstate", [], "")
