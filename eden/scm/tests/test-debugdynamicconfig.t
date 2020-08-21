@@ -203,6 +203,7 @@ Verify configs.disallowlist removes old configs
   $ hg -R client2 config foo.bar --configfile $TESTTMP/good_hgrc --configfile $TESTTMP/bad_hgrc --config configs.validatedynamicconfig=True --config configs.testdynamicconfigsubset=bad_hgrc --config configs.legacylist=foo.bar --config configs.disallowlist=foo.bar
   good
 
+#if no-osx
 Verify fake timestamps dont crash
   $ touch -d tomorrow client2/.hg/hgrc.dynamic
   $ cd client2
@@ -211,3 +212,4 @@ Verify fake timestamps dont crash
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
+#endif
