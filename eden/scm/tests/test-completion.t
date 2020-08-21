@@ -91,6 +91,7 @@ Show debug commands if there are no other candidates
   debugbundle
   debugcapabilities
   debugcauserusterror
+  debugchangelog
   debugcheckcasecollisions
   debugcheckoutidentifier
   debugcheckstate
@@ -373,6 +374,7 @@ Show all commands + options
   debugbundle: all, part-type, spec
   debugcapabilities: 
   debugcauserusterror: 
+  debugchangelog: 
   debugcheckcasecollisions: rev
   debugcheckoutidentifier: 
   debugcheckstate: 
