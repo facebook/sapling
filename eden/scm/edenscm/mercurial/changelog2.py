@@ -86,6 +86,14 @@ class changelog(object):
         )
         return cls(svfs, inner, uiconfig)
 
+    @classmethod
+    def opengitsegments(cls, svfs, uiconfig):
+        segmentsdir = svfs.join(SEGMENTS_DIR)
+        gitdir = svfs.readutf8("gitdir")
+        metalog = svfs.metalog
+        inner = bindings.dag.commits.opengitsegments(gitdir, segmentsdir, metalog)
+        return cls(svfs, inner, uiconfig)
+
     @property
     def dag(self):
         """Get the DAG with algorithms. Require rust-commit."""
@@ -570,9 +578,7 @@ def migratetodoublewrite(repo):
             bindings.dag.commits.migraterevlogtosegments(
                 revlogdir, segmentsdir, hgcommitsdir, master
             )
-        repo.storerequirements.discard("pythonrevlogchangelog")
-        repo.storerequirements.discard("rustrevlogchangelog")
-        repo.storerequirements.discard("segmentedchangelog")
+        _removechangelogrequirements(repo)
         repo.storerequirements.add("doublewritechangelog")
         repo._writestorerequirements()
         repo.invalidatechangelog()
@@ -623,9 +629,7 @@ def migratetosegments(repo):
                 revlogdir, segmentsdir, hgcommitsdir, master
             )
 
-        repo.storerequirements.discard("doublewritechangelog")
-        repo.storerequirements.discard("pythonrevlogchangelog")
-        repo.storerequirements.discard("rustrevlogchangelog")
+        _removechangelogrequirements(repo)
         repo.storerequirements.add("segmentedchangelog")
         repo._writestorerequirements()
         repo.invalidatechangelog()
@@ -642,7 +646,12 @@ def migratetorevlog(repo, python=False, rust=False):
     svfs = repo.svfs
     with repo.lock():
         # Migrate from segmentedchangelog
+        needmigrate = False
         if "segmentedchangelog" in repo.storerequirements:
+            needmigrate = True
+        if "gitchangelog" in repo.storerequirements:
+            needmigrate = True
+        if needmigrate:
             srccl = repo.changelog
             dstcl = changelog.openrevlog(svfs, repo.ui.uiconfig())
             with progress.bar(
@@ -664,13 +673,18 @@ def migratetorevlog(repo, python=False, rust=False):
                     # In case of Ctrl+C, flush commits in memory so we can continue
                     # next time.
                     dstcl.inner.flush([])
-        repo.storerequirements.discard("doublewritechangelog")
-        repo.storerequirements.discard("pythonrevlogchangelog")
-        repo.storerequirements.discard("rustrevlogchangelog")
-        repo.storerequirements.discard("segmentedchangelog")
+        _removechangelogrequirements(repo)
         if python:
             repo.storerequirements.add("pythonrevlogchangelog")
         if rust:
             repo.storerequirements.add("rustrevlogchangelog")
         repo._writestorerequirements()
         repo.invalidatechangelog()
+
+
+def _removechangelogrequirements(repo):
+    repo.storerequirements.discard("doublewritechangelog")
+    repo.storerequirements.discard("gitchangelog")
+    repo.storerequirements.discard("pythonrevlogchangelog")
+    repo.storerequirements.discard("rustrevlogchangelog")
+    repo.storerequirements.discard("segmentedchangelog")

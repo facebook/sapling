@@ -349,6 +349,8 @@ class localrepository(object):
         "segmentedchangelog",
         # segmented changelog (full idmap, partial hgcommits) + revlog
         "doublewritechangelog",
+        # git segments changelog
+        "gitchangelog",
     }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
@@ -1037,6 +1039,11 @@ class localrepository(object):
             # Log it so we know when to get rid of this bandaid fix.
             if deleted:
                 self.ui.log("features", feature="remove-svfs-dottmp")
+
+            if "gitchangelog" in self.storerequirements:
+                return changelog2.changelog.opengitsegments(
+                    self.svfs, self.ui.uiconfig()
+                )
 
             if "doublewritechangelog" in self.storerequirements:
                 return changelog2.changelog.opendoublewrite(
