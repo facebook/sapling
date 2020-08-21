@@ -1551,7 +1551,9 @@ class localrepository(object):
                 main = bookmarks.mainbookmark(repo)
                 mainnodes = []
                 if main in repo:
-                    mainnodes.append(repo[main].node())
+                    node = repo[main].node()
+                    if node != nullid:
+                        mainnodes.append(node)
                 cl.inner.flush(mainnodes)
 
         def releasefn(tr, success):
