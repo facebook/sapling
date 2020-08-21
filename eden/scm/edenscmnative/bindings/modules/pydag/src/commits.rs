@@ -27,12 +27,14 @@ use dag::Vertex;
 use hgcommits::AppendCommits;
 use hgcommits::DescribeBackend;
 use hgcommits::DoubleWriteCommits;
+use hgcommits::GitSegmentedCommits;
 use hgcommits::HgCommit;
 use hgcommits::HgCommits;
 use hgcommits::MemHgCommits;
 use hgcommits::ReadCommitText;
 use hgcommits::RevlogCommits;
 use hgcommits::StripCommits;
+use pymetalog::metalog as PyMetaLog;
 use std::cell::RefCell;
 use std::sync::Arc;
 
@@ -54,6 +56,7 @@ impl Commits for HgCommits {}
 impl Commits for MemHgCommits {}
 impl Commits for RevlogCommits {}
 impl Commits for DoubleWriteCommits {}
+impl Commits for GitSegmentedCommits {}
 
 py_class!(pub class commits |py| {
     data inner: RefCell<Box<dyn Commits + Send + 'static>>;
@@ -163,6 +166,17 @@ py_class!(pub class commits |py| {
     @staticmethod
     def opendoublewrite(revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath) -> PyResult<Self> {
         let inner = DoubleWriteCommits::new(revlogdir.as_path(), segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
+        Self::from_commits(py, inner)
+    }
+
+    /// Construct "git segmented" `commits` from a git repo and segmented
+    /// changelog.
+    @staticmethod
+    def opengitsegments(gitdir: &PyPath, segmentsdir: &PyPath, metalog: PyMetaLog) -> PyResult<Self> {
+        let inner = py.allow_threads(|| GitSegmentedCommits::new(gitdir.as_path(), segmentsdir.as_path())).map_pyerr(py)?;
+        let meta = metalog.metalog_refcell(py);
+        let mut meta = meta.borrow_mut();
+        inner.export_git_references(&mut meta).map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 

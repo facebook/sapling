@@ -45,12 +45,14 @@ pub struct HgCommit {
 
 mod doublewrite;
 pub(crate) mod errors;
+mod git;
 mod hgsha1commits;
 mod memhgcommits;
 mod revlog;
 mod strip;
 
 pub use doublewrite::DoubleWriteCommits;
+pub use git::GitSegmentedCommits;
 pub use hgsha1commits::HgCommits;
 pub use memhgcommits::MemHgCommits;
 pub use revlog::RevlogCommits;

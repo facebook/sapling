@@ -6,6 +6,8 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 dag = { path = "../dag" }
+gitdag = { path = "../dag/gitdag" }
+metalog = { path = "../metalog" }
 minibytes = { path = "../minibytes" }
 revlogindex = { path = "../revlogindex" }
 serde = { version = "1", features = ["derive"] }

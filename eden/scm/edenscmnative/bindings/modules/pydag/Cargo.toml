@@ -9,6 +9,7 @@ cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
 dag = { path = "../../../../lib/dag" }
 hgcommits = { path = "../../../../lib/hgcommits" }
+pymetalog = { path = "../pymetalog" }
 renderdag = { path = "../../../../lib/renderdag" }
 
 [features]
