@@ -29,6 +29,7 @@ from .pycompat import encodeutf8
 
 SEGMENTS_DIR = "segments/v1"
 HGCOMMITS_DIR = "hgcommits/v1"
+GIT_DIR_FILE = "gitdir"
 
 
 class changelog(object):
@@ -49,6 +50,8 @@ class changelog(object):
         # TODO: Consider moving visibleheads out?
         self._visibleheads = self._loadvisibleheads(svfs)
         self._uiconfig = uiconfig
+        # Do not verify hg hash if git hash is being used.
+        self._verifyhghash = not svfs.exists(GIT_DIR_FILE)
 
     def userust(self, name=None):
         if name == "revset":
@@ -89,7 +92,7 @@ class changelog(object):
     @classmethod
     def opengitsegments(cls, svfs, uiconfig):
         segmentsdir = svfs.join(SEGMENTS_DIR)
-        gitdir = svfs.readutf8("gitdir")
+        gitdir = svfs.readutf8(GIT_DIR_FILE)
         metalog = svfs.metalog
         inner = bindings.dag.commits.opengitsegments(gitdir, segmentsdir, metalog)
         return cls(svfs, inner, uiconfig)
@@ -363,6 +366,14 @@ class changelog(object):
         text = self.inner.getcommitrawtext(node)
         if text is None:
             raise error.LookupError(node, self.indexfile, _("no node"))
+        # check HG SHA1 hash
+        if self._verifyhghash:
+            p1, p2 = self.parents(node)[:2]
+            if revlog.hash(text, p1, p2) != node:
+                raise error.RevlogError(
+                    _("integrity check failed on commit %s") % hex(node)
+                )
+
         return text
 
     def nodesbetween(self, roots, heads):
