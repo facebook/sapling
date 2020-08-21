@@ -32,6 +32,7 @@ use std::collections::HashSet;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use zstore::Id20;
 use zstore::Zstore;
 
@@ -232,6 +233,9 @@ impl DagAlgorithm for HgCommits {
     }
     fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         self.dag.reachable_roots(roots, heads)
+    }
+    fn snapshot_dag(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+        self.dag.snapshot_dag()
     }
 }
 
