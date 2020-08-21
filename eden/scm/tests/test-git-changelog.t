@@ -10,6 +10,7 @@ Prepare a git repo:
 
   $ git init -q gitrepo
   $ cd gitrepo
+  $ git config core.autocrlf false
   $ echo 1 > alpha
   $ git add alpha
   $ git commit -q -malpha
