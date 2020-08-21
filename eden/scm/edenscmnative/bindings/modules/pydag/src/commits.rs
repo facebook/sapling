@@ -145,6 +145,18 @@ py_class!(pub class commits |py| {
         Self::from_commits(py, inner)
     }
 
+    /// Migrate from revlog to segmented changelog (full IdMap).
+    ///
+    /// This does not migrate commit texts and therefore only useful for
+    /// doublewrite backend.
+    @staticmethod
+    def migraterevlogtosegments(revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath, master: Names) -> PyResult<PyNone> {
+        let revlog = RevlogCommits::new(revlogdir.as_path()).map_pyerr(py)?;
+        let mut segments = HgCommits::new(segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
+        py.allow_threads(|| segments.import_dag(revlog, master.0)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     /// Construct "double write" `commits` from both revlog and segmented
     /// changelog.
     @staticmethod
