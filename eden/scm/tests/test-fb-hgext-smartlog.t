@@ -3,6 +3,8 @@
   $ disable treemanifest
   $ enable smartlog
   $ readconfig <<EOF
+  > [format]
+  > use-segmented-changelog=1
   > [experimental]
   > graphstyle.grandparent=|
   > graphstyle.missing=|
@@ -30,7 +32,7 @@ Continue repo setup
   $ touch d && hg add d && hg ci -md
 
   $ hg debugmakepublic master
-  $ hg log -G -T "{node|short} {bookmarks} {desc}"
+  $ hg log -G -T "{node|short} {bookmarks} {desc}" -r 'sort(:, topo)'
   @  db92053d5c83 feature2 d
   |
   o  38d85b506754 master c2
@@ -72,9 +74,9 @@ As a revset
   $ hg log -G -T '{node|short} {bookmarks} {desc}' -r 'smartlog()'
   @  05d10250273e feature2 d
   |
-  o  38d85b506754 master c2
-  |
   | o  49cdb4091aca feature1 b
+  | |
+  o |  38d85b506754 master c2
   |/
   o  b68836a6e2ca  a2
   |
@@ -82,30 +84,30 @@ As a revset
 With --master
 
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --master 'desc(a2)'
-  @  05d10250273e feature2 d
+  o  49cdb4091aca feature1 b
   |
-  o  38d85b506754 master c2
-  .
-  | o  49cdb4091aca feature1 b
+  | @  05d10250273e feature2 d
+  | |
+  | o  38d85b506754 master c2
   |/
   o  b68836a6e2ca  a2
   |
 
 Specific revs
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'desc(b)' -r 'desc(c2)'
-  o  38d85b506754 master c2
-  .
-  | o  49cdb4091aca feature1 b
+  o  49cdb4091aca feature1 b
+  |
+  | o  38d85b506754 master c2
   |/
   o  b68836a6e2ca  a2
   |
 
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'smartlog()' -r 'desc(a1)'
-  @  05d10250273e feature2 d
+  o  49cdb4091aca feature1 b
   |
-  o  38d85b506754 master c2
-  .
-  | o  49cdb4091aca feature1 b
+  | @  05d10250273e feature2 d
+  | |
+  | o  38d85b506754 master c2
   |/
   o  b68836a6e2ca  a2
   |
