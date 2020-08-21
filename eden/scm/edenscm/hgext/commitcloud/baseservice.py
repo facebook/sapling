@@ -142,8 +142,8 @@ class BaseService(pycompat.ABC):
             Result represents struct References from this module
         """
         version = data["version"]
-        newheads = [h for h in data["heads"]]
-        newbookmarks = {n: v for n, v in data["bookmarks"].items()}
+        newheads = [h for h in data.get("heads", [])]
+        newbookmarks = {n: v for n, v in data.get("bookmarks", {}).items()}
         newobsmarkers = [
             (
                 nodemod.bin(m["pred"]),
@@ -153,13 +153,13 @@ class BaseService(pycompat.ABC):
                 (m["date"], m["tz"]),
                 tuple(nodemod.bin(p) for p in m["predparents"]),
             )
-            for m in data["new_obsmarkers_data"]
+            for m in data.get("new_obsmarkers_data", [])
         ]
         headdates = {h: d for h, d in data.get("head_dates", {}).items()}
         newremotebookmarks = self._decoderemotebookmarks(
             data.get("remote_bookmarks", [])
         )
-        newsnapshots = [s for s in data["snapshots"]]
+        newsnapshots = [s for s in data.get("snapshots", [])]
 
         return References(
             version,
