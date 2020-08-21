@@ -17,6 +17,7 @@ from . import (
     mdiff,
     progress,
     revlog,
+    smartset,
     util,
     visibility,
 )
@@ -147,10 +148,12 @@ class changelog(object):
         """
         return self.inner.torevs
 
-    @property
-    def tonodes(self):
+    def tonodes(self, revs):
         """Convert an IdSet to Set. The reverse of torevs."""
-        return self.inner.tonodes
+        # 'idset' has a fast path - pass the Rust-binding 'spans' directly.
+        if isinstance(revs, smartset.idset):
+            return self.inner.tonodes(revs._spans)
+        return self.inner.tonodes(revs)
 
     def _loadvisibleheads(self, svfs):
         return visibility.visibleheads(svfs)
