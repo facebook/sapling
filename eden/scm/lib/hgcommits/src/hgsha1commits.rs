@@ -53,6 +53,13 @@ impl HgCommits {
         };
         Ok(result)
     }
+
+    /// Import another DAG. `main` specifies the main branch for commit graph
+    /// optimization.
+    pub fn import_dag(&mut self, other: impl DagAlgorithm, main: Set) -> Result<()> {
+        self.dag.import_and_flush(&other, main)?;
+        Ok(())
+    }
 }
 
 impl AppendCommits for HgCommits {
