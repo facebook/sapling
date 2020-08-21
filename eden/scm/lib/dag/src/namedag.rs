@@ -38,7 +38,6 @@ use crate::ops::IdMapEq;
 use crate::ops::IdMapSnapshot;
 use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
-use crate::ops::ToSet;
 use crate::spanset::SpanSet;
 use crate::Result;
 use indexedlog::multi;
@@ -380,7 +379,7 @@ impl DagAddHeads for MemNameDag {
 // See [`IdDag`] for the actual implementations of these algorithms.
 
 /// DAG related read-only algorithms.
-impl<T: ToSet + NameDagStorage + Send + Sync> DagAlgorithm for T {
+impl<T: NameDagStorage + Send + Sync> DagAlgorithm for T {
     /// Sort a `NameSet` topologically.
     fn sort(&self, set: &NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::TOPO_DESC)
@@ -431,10 +430,6 @@ impl<T: ToSet + NameDagStorage + Send + Sync> DagAlgorithm for T {
             return Ok(set);
         }
         let spans = self.to_id_set(&set)?;
-        #[cfg(test)]
-        {
-            self.to_set(&spans)?.assert_eq(set.clone());
-        }
         let spans = self.dag().ancestors(spans)?;
         let result = NameSet::from_spans_idmap(spans, self.clone_map());
         result

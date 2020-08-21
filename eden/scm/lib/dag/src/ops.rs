@@ -451,10 +451,12 @@ impl<T: IdConvert + IdMapEq> ToIdSet for T {
     }
 }
 
-impl<T: IdMapSnapshot> ToSet for T {
+impl<T: IdMapSnapshot + DagAlgorithm> ToSet for T {
     /// Converts [`SpanSet`] to [`NameSet`].
     fn to_set(&self, set: &IdSet) -> Result<NameSet> {
         let id_map = self.id_map_snapshot()?;
-        Ok(NameSet::from_spans_idmap(set.clone(), id_map))
+        let result = NameSet::from_spans_idmap(set.clone(), id_map);
+        result.hints().set_dag(self.snapshot_dag()?);
+        Ok(result)
     }
 }
