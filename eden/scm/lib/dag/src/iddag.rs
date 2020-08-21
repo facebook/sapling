@@ -362,9 +362,9 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// (`level - 1`) segments. Each high level segment covers at most `size`
     /// `level - 1` segments.
     ///
-    /// If `drop_last` is `true`, the last segment is dropped because it's
-    /// likely to be incomplete. This helps reduce fragmentation if segments
-    /// are built frequently.
+    /// If `drop_last` is `true`, the last segment per group is dropped because
+    /// it's likely to be incomplete. This helps reduce fragmentation if
+    /// segments are built frequently.
     ///
     /// Return number of segments inserted.
     fn build_high_level_segments(&mut self, level: Level, drop_last: bool) -> Result<usize> {
@@ -375,6 +375,8 @@ impl<Store: IdDagStore> IdDag<Store> {
         let size = self.new_seg_size;
 
         let mut insert_count = 0;
+        let mut new_segments_per_group = Vec::new();
+        let mut lower_segments_len = 0;
         for &group in Group::ALL.iter() {
             // `get_parents` is on the previous level of segments.
             let get_parents = |head: Id| -> Result<Vec<Id>> {
@@ -390,6 +392,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 
                 // Find all segments on the previous level that haven't been built.
                 let segments: Vec<_> = self.next_segments(low, level - 1)?;
+                lower_segments_len += segments.len();
 
                 // Sanity check: They should be sorted and connected.
                 for i in 1..segments.len() {
@@ -445,22 +448,28 @@ impl<Store: IdDagStore> IdDag<Store> {
                     new_segments.push(segment_info);
                 }
 
-                // No point to introduce new levels if it has the same segment count
-                // as the lower level.
-                if segments.len() == new_segments.len()
-                    && self.max_level < level
-                    && group == Group::MASTER
-                {
-                    return Ok(0);
-                }
-
-                // Drop the last segment. It could be incomplete.
-                if drop_last {
-                    new_segments.pop();
-                }
-
                 new_segments
             };
+
+            new_segments_per_group.push(new_segments);
+        }
+
+        // No point to introduce new levels if it has the same segment count
+        // as the lower level.
+        if level > self.max_level
+            && new_segments_per_group
+                .iter()
+                .fold(0, |acc, s| acc + s.len())
+                >= lower_segments_len
+        {
+            return Ok(0);
+        }
+
+        for mut new_segments in new_segments_per_group {
+            // Drop the last segment. It could be incomplete.
+            if drop_last {
+                new_segments.pop();
+            }
 
             insert_count += new_segments.len();
 
