@@ -45,6 +45,6 @@ pub fn test_range<T: AsRef<[usize]>>(
     assert_eq!(
         plain_range, namedag_range,
         "range({:?}::{:?})",
-        &roots, &heads
+        &plain_roots, &plain_heads
     );
 }

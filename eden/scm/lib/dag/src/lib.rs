@@ -37,6 +37,7 @@ pub use spanset::SpanSet;
 
 pub type Level = u8;
 pub type InProcessIdDag = IdDag<iddagstore::InProcessStore>;
+pub type OnDiskIdDag = IdDag<iddagstore::IndexedLogStore>;
 
 // Short aliases for main public types.
 pub type Dag = NameDag;
