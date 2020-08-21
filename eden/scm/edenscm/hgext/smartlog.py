@@ -391,6 +391,14 @@ def smartlogrevset(repo, subset, x):
     masterset -= smartset.baseset([nodemod.nullrev])
     if nodemod.nullrev in heads:
         heads.remove(nodemod.nullrev)
+
+    cl = repo.changelog
+    if cl.algorithmbackend == "segments":
+        heads = cl.tonodes(heads)
+        master = cl.tonodes(masterset)
+        nodes = smartlognodes(repo, heads, master)
+        return subset & smartset.idset(cl.torevs(nodes))
+
     # Explicitly disable revnum deprecation warnings.
     with repo.ui.configoverride({("devel", "legacy.revnum:real"): ""}):
         # Select ancestors that are draft.
@@ -418,6 +426,28 @@ def smartlogrevset(repo, subset, x):
         revs = repo.revs("%ld - %ld", revs, hiderevs)
 
     return subset & revs
+
+
+def smartlognodes(repo, headnodes, masternodes):
+    """Calculate nodes based on new DAG abstraction.
+    This function does not use revs or revsets.
+    """
+    draftnodes = repo.dageval(lambda: ancestors(headnodes) & draft())
+    nodes = repo.dageval(
+        lambda: parents(draftnodes) | draftnodes | headnodes | masternodes
+    )
+
+    # Include the ancestor of above commits to make the graph connected.
+    nodes = repo.dageval(lambda: gcaall(public() & nodes) | nodes)
+
+    # Collapse long obsoleted stack - only keep their heads and roots.
+    # This is incompatible with automation (namely, nuclide-core) yet.
+    if repo.ui.configbool("smartlog", "collapse-obsolete") and not repo.ui.plain():
+        obsnodes = repo.dageval(lambda: nodes & obsolete())
+        hidenodes = repo.dageval(lambda: obsnodes - heads(obsnodes) - roots(obsnodes))
+        nodes = nodes - hidenodes
+
+    return nodes
 
 
 @revsetpredicate("interestingbookmarks()")
