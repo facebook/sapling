@@ -477,7 +477,7 @@ class changelog(object):
         if not inclusive:
             nodes = dag.parents(nodes)
         ancestornodes = dag.ancestors(nodes)
-        return self.torevs(ancestornodes)
+        return self.torevset(ancestornodes)
 
     def commonancestorsheads(self, a, b):
         """Return heads(::a & ::b)"""
