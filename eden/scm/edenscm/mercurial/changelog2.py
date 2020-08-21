@@ -53,6 +53,10 @@ class changelog(object):
         return True
 
     @property
+    def algorithmbackend(self):
+        return self.inner.algorithmbackend()
+
+    @property
     def opener(self):
         return self.svfs
 
