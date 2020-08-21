@@ -10,12 +10,10 @@ use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use dag::DagAlgorithm;
-use dag::InverseDag;
 use dag::Vertex;
 use std::sync::Arc;
 
 py_class!(pub class dagalgo |py| {
-    // Arc is used for 'inverse'.
     data dag: Arc<dyn DagAlgorithm + Send + Sync + 'static>;
 
     /// Sort a set.
@@ -138,13 +136,6 @@ py_class!(pub class dagalgo |py| {
         };
         let dag = self.dag(py);
         Ok(renderdag::render_namedag(dag.as_ref(), get_message).map_pyerr(py)?.into())
-    }
-
-    /// Inverse the DAG. Swap parents and children.
-    def inverse(&self) -> PyResult<Self> {
-        let dag = self.dag(py).clone();
-        let inversed = InverseDag::new(dag);
-        Self::from_dag(py, inversed)
     }
 });
 

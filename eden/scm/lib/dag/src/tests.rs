@@ -12,12 +12,10 @@ use crate::ops::ImportAscii;
 use crate::render::render_namedag;
 use crate::DagAlgorithm;
 use crate::IdMap;
-use crate::InverseDag;
 use crate::NameDag;
 use crate::NameSet;
 use crate::Result;
 use crate::SpanSet;
-use std::sync::Arc;
 use tempfile::tempdir;
 
 #[cfg(test)]
@@ -70,25 +68,6 @@ fn test_generic_dag1(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "A C I");
     assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "F J");
     assert_eq!(expand(dag.gca_all(nameset("J K H"))?), "G");
-    Ok(())
-}
-
-fn test_generic_dag_inverse(
-    dag: impl DagAlgorithm + DagAddHeads + Send + Sync + 'static,
-) -> Result<()> {
-    let dag = InverseDag::new(Arc::new(from_ascii(dag, ASCII_DAG1)));
-    assert_eq!(expand(dag.all()?), "A B C D E F G H I J K L");
-    assert_eq!(
-        expand(dag.descendants(nameset("H I"))?),
-        "A B C D E F G H I"
-    );
-    assert_eq!(expand(dag.children(nameset("H I E"))?), "B D G");
-    assert_eq!(expand(dag.parents(nameset("G D L"))?), "E H I");
-    assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "A C I");
-    assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "F J");
-    assert_eq!(expand(dag.gca_all(nameset("J H"))?), "K");
-    assert_eq!(expand(dag.range(nameset("F"), nameset("D"))?), "D E F");
-    assert_eq!(expand(dag.range(nameset("D"), nameset("F"))?), "");
     Ok(())
 }
 
@@ -307,11 +286,6 @@ fn test_generic_dag2(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
 #[test]
 fn test_mem_namedag() {
     test_generic_dag1(MemNameDag::new()).unwrap()
-}
-
-#[test]
-fn test_inverse_dag() {
-    test_generic_dag_inverse(MemNameDag::new()).unwrap()
 }
 
 #[test]
@@ -1174,7 +1148,6 @@ pub fn test_generic_dag<D: DagAddHeads + DagAlgorithm + Send + Sync + 'static>(
 ) {
     test_generic_dag1(new_dag()).unwrap();
     test_generic_dag2(new_dag()).unwrap();
-    test_generic_dag_inverse(new_dag()).unwrap();
     test_generic_dag_reachable_roots(new_dag()).unwrap();
     test_generic_dag_beautify(new_dag).unwrap()
 }
