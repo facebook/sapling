@@ -27,12 +27,14 @@ pub mod id_static;
 pub mod intersection;
 pub mod lazy;
 pub mod legacy;
+pub mod meta;
 pub mod r#static;
 pub mod union;
 
 use self::hints::Flags;
 use self::hints::Hints;
 use self::id_static::IdStaticSet;
+use self::meta::MetaSet;
 
 /// A [`NameSet`] contains an immutable list of names.
 ///
@@ -77,6 +79,15 @@ impl NameSet {
     /// Creates from [`SpanSet`] and [`IdMap`]. Used by [`NameDag`].
     pub fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdConvert + Send + Sync>) -> NameSet {
         Self::from_query(IdStaticSet::from_spans_idmap(spans, map))
+    }
+
+    /// Creates from a function that evaluates to a [`NameSet`], and a
+    /// `contains` fast path.
+    pub fn from_evaluate_contains(
+        evaluate: impl Fn() -> Result<NameSet> + Send + Sync + 'static,
+        contains: impl Fn(&MetaSet, &VertexName) -> Result<bool> + Send + Sync + 'static,
+    ) -> NameSet {
+        Self::from_query(MetaSet::from_evaluate(evaluate).with_contains(contains))
     }
 
     /// Calculates the subset that is only in self, not in other.
