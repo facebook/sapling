@@ -100,6 +100,13 @@ py_class!(pub class nameset |py| {
         }
     }
 
+    /// Convert the set to a plain static set.
+    def flatten(&self) -> PyResult<Names> {
+        let inner = self.inner(py);
+        let set = inner.flatten().map_pyerr(py)?;
+        Ok(Names(set))
+    }
+
     def hints(&self) -> PyResult<HashMap<&'static str, PyObject>> {
         let mut result = HashMap::new();
         let hints = self.inner(py).hints();
