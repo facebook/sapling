@@ -81,7 +81,7 @@ As a revset
 
 With --master
 
-  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --master 1
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --master 'desc(a2)'
   @  05d10250273e feature2 d
   |
   o  38d85b506754 master c2
@@ -92,7 +92,7 @@ With --master
   |
 
 Specific revs
-  $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 2 -r 4
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'desc(b)' -r 'desc(c2)'
   o  38d85b506754 master c2
   .
   | o  49cdb4091aca feature1 b
@@ -100,7 +100,7 @@ Specific revs
   o  b68836a6e2ca  a2
   |
 
-  $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'smartlog()' -r 0
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'smartlog()' -r 'desc(a1)'
   @  05d10250273e feature2 d
   |
   o  38d85b506754 master c2
@@ -184,7 +184,7 @@ Test overriding master
 
 Test with weird bookmark names
 
-  $ hg book -r 2 foo-bar
+  $ hg book -r 'desc(b)' foo-bar
   $ hg smartlog -r 'foo-bar + .' -T '{node|short} {bookmarks} {desc}'
   @  05d10250273e feature2 d
   .
@@ -240,8 +240,8 @@ A draft stack at the top
   $ cd repo2
   $ hg debugbuilddag '+4'
   $ hg bookmark curr
-  $ hg bookmark master -r 1
-  $ hg debugmakepublic -r 1
+  $ hg bookmark master -r 'desc(r1)'
+  $ hg debugmakepublic -r 'desc(r1)'
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all
   o  2dc09a01254d  r3
   |
@@ -277,12 +277,12 @@ Different number of lines per node
   |  1970-01-01 00:00 +0000
 
 Add other draft stacks
-  $ hg up 1 -q
+  $ hg up 'desc(r1)' -q
   $ echo 1 > a
   $ hg ci -A a -m a -q
   $ echo 2 >> a
   $ hg ci -A a -m a -q
-  $ hg up 2 -q
+  $ hg up 'desc(r2)' -q
   $ echo 2 > b
   $ hg ci -A b -m b -q
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
@@ -303,7 +303,7 @@ Recent arg select days correctly
   $ echo 1 >> b
   $ myday=`hg debugsh -c 'import time; ui.write(str(int(time.time()) - 24 * 3600 * 20))'`
   $ hg commit --date "$myday 0" -m test2
-  $ hg update 0 -q
+  $ hg update 'desc(r0)' -q
   $ hg log -Gr 'smartlog(master="master", heads=((date(-15) & draft()) + .))' -T '{node|short} {bookmarks} {desc}'
   o  66f7d451a68b master r1
   |
@@ -326,8 +326,8 @@ Make sure public commits that are descendants of master are not drawn
   $ hg init repo3
   $ cd repo3
   $ hg debugbuilddag '+5'
-  $ hg bookmark master -r 1
-  $ hg debugmakepublic -r 1
+  $ hg bookmark master -r 'desc(r1)'
+  $ hg debugmakepublic -r 'desc(r1)'
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
     o  bebd167eb94d  r4
     |
@@ -337,8 +337,8 @@ Make sure public commits that are descendants of master are not drawn
    /
   o  66f7d451a68b master r1
   |
-  $ hg debugmakepublic 3
-  $ hg up -q 4
+  $ hg debugmakepublic 'desc(r3)'
+  $ hg up -q 'desc(r4)'
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
     @  bebd167eb94d  r4
    /
@@ -346,7 +346,7 @@ Make sure public commits that are descendants of master are not drawn
   .
   o  66f7d451a68b master r1
   |
-  $ hg debugmakepublic 4
+  $ hg debugmakepublic 'desc(r4)'
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
   @  bebd167eb94d  r4
   .
