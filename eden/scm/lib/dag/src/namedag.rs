@@ -19,6 +19,7 @@ use crate::iddag::SyncableIdDag;
 use crate::iddagstore::IdDagStore;
 use crate::iddagstore::InProcessStore;
 use crate::iddagstore::IndexedLogStore;
+use crate::idmap::AssignHeadOutcome;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapAssignHead;
 use crate::idmap::IdMapBuildParents;
@@ -244,15 +245,18 @@ impl DagAddHeads for NameDag {
         let group = Group::NON_MASTER;
 
         // Update IdMap. Keep track of what heads are added.
+        let mut outcome = AssignHeadOutcome::default();
         for head in heads.iter() {
             if self.map.find_id_by_name(head.as_ref())?.is_none() {
-                self.map.assign_head(head.clone(), &parents, group)?;
+                outcome.merge(self.map.assign_head(head.clone(), &parents, group)?);
                 self.pending_heads.push(head.clone());
             }
         }
 
         // Update segments in the NON_MASTER group.
         let parent_ids_func = self.map.build_get_parents_by_id(&parents);
+        #[cfg(test)]
+        outcome.verify(&parent_ids_func);
         let id = self.map.next_free_id(group)?;
         if id > group.min_id() {
             self.dag.build_segments_volatile(id - 1, &parent_ids_func)?;
@@ -356,14 +360,18 @@ impl DagAddHeads for MemNameDag {
     {
         // For simplicity, just use the master group for now.
         let group = Group::MASTER;
+        let mut outcome = AssignHeadOutcome::default();
         for head in heads.iter() {
             if self.map.contains_vertex_name(head)? {
                 continue;
             }
-            self.map.assign_head(head.clone(), &parents, group)?;
+            outcome.merge(self.map.assign_head(head.clone(), &parents, group)?);
         }
 
         let parent_ids_func = self.map.build_get_parents_by_id(&parents);
+        #[cfg(test)]
+        outcome.verify(&parent_ids_func);
+
         let id = self.map.next_free_id(group)?;
         if id > group.min_id() {
             self.dag.build_segments_volatile(id - 1, &parent_ids_func)?;
@@ -736,6 +744,7 @@ where
     F: Fn(VertexName) -> Result<Vec<VertexName>>,
 {
     // Update IdMap.
+    let mut outcome = AssignHeadOutcome::default();
     for (nodes, group) in [
         (master_heads, Group::MASTER),
         (non_master_heads, Group::NON_MASTER),
@@ -743,13 +752,16 @@ where
     .iter()
     {
         for node in nodes.iter() {
-            map.assign_head(node.clone(), &parent_names_func, *group)?;
+            outcome.merge(map.assign_head(node.clone(), &parent_names_func, *group)?);
         }
     }
 
     // Update segments.
     {
         let parent_ids_func = map.build_get_parents_by_id(&parent_names_func);
+        #[cfg(test)]
+        outcome.verify(&parent_ids_func);
+
         for &group in Group::ALL.iter() {
             let id = map.next_free_id(group)?;
             if id > group.min_id() {
