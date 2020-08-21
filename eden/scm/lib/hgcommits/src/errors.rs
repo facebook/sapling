@@ -44,6 +44,18 @@ impl From<zstore::Error> for CommitError {
     }
 }
 
+impl From<gitdag::git2::Error> for CommitError {
+    fn from(err: gitdag::git2::Error) -> Self {
+        anyhow::Error::from(err).into()
+    }
+}
+
+impl From<metalog::Error> for CommitError {
+    fn from(err: metalog::Error) -> Self {
+        anyhow::Error::from(err).into()
+    }
+}
+
 pub fn test_only(name: &str) -> CommitError {
     dag::Error::Programming(format!("{} should only be used in tests", name)).into()
 }

@@ -21,7 +21,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-py_class!(class metalog |py| {
+py_class!(pub class metalog |py| {
     data log: RefCell<MetaLog>;
     data path: String;
 
@@ -140,3 +140,9 @@ py_class!(class metalog |py| {
         py.allow_threads(|| MetaLog::repair(path)).map_pyerr(py).map(Into::into)
     }
 });
+
+impl self::metalog {
+    pub fn metalog_refcell<'a>(&'a self, py: Python<'a>) -> &'a RefCell<MetaLog> {
+        self.log(py)
+    }
+}
