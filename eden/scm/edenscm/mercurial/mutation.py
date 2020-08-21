@@ -289,6 +289,20 @@ class obsoletecache(object):
         with perftrace.trace("Compute Obsolete Nodes"):
             perftrace.traceflag("mutation")
 
+            cl = repo.changelog
+            torevs = getattr(cl, "torevs", None)
+            # Use native path if modern DAG API is available.
+            if torevs is not None:
+                getphase = repo._phasecache.getrevset
+                tonodes = cl.tonodes
+                draftnodes = tonodes(getphase(repo, [phases.draft]))
+                publicnodes = tonodes(getphase(repo, [phases.public]))
+                ms = repo._mutationstore
+                obsolete = ms.calculateobsolete(publicnodes, draftnodes)
+                self.obsolete[None] = obsolete
+                self.complete[None] = True
+                return obsolete
+
             # Testing each node separately will result in lots of repeated tests.
             # Instead, we can do the following:
             # - Compute all nodes that are obsolete because one of their closest

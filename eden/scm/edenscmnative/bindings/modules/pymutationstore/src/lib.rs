@@ -17,6 +17,7 @@ use thiserror::Error;
 
 use ::mutationstore::{MutationStore, Repair};
 use pydag::dagalgo::dagalgo;
+use pydag::Names;
 use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::{VLQDecode, VLQEncode};
@@ -254,6 +255,12 @@ py_class!(class mutationstore |py| {
             .map(|n| Node::from_slice(n.data(py))).collect::<Result<Vec<_>, _>>().map_pyerr(py)?;
         let dag = self.mut_store(py).borrow().get_dag(nodes).map_pyerr(py)?;
         dagalgo::from_dag(py, dag)
+    }
+
+    /// Calculate the `obsolete` set from `public` and `draft` sets.
+    def calculateobsolete(&self, public: Names, draft: Names) -> PyResult<Names> {
+        let store = self.mut_store(py).borrow();
+        Ok(Names(store.calculate_obsolete(public.0, draft.0).map_pyerr(py)?))
     }
 
     @staticmethod
