@@ -350,6 +350,10 @@ class changelog(revlog.revlog):
         return False
 
     @property
+    def algorithmbackend(self):
+        return "revlog-cpy"
+
+    @property
     def dag(self):
         """Get the DAG with algorithms. Require rust-commit."""
         return None
