@@ -279,8 +279,10 @@ impl NameSetQuery for IdLazySet {
 }
 
 #[cfg(test)]
+#[allow(clippy::redundant_clone)]
 pub(crate) mod tests {
     use super::super::tests::*;
+    use super::super::NameSet;
     use super::*;
     use std::collections::HashSet;
     use std::convert::TryInto;
@@ -375,6 +377,38 @@ pub(crate) mod tests {
         assert_eq!(format!("{:2.2?}", &set), "<lazy [01+1, 03+3]+ 1 + ? more>");
         iter.next();
         assert_eq!(format!("{:1.3?}", &set), "<lazy [010+1] + 2 more>");
+    }
+
+    #[test]
+    fn test_flatten() {
+        let set1 = NameSet::from_query(lazy_set(&[3, 2, 4]));
+        let set2 = NameSet::from_query(lazy_set(&[3, 7, 6]));
+        set2.hints().inherit_id_map(set1.hints());
+
+        // Show flatten by names, and flatten by ids.
+        // The first should be <static ...>, the second should be <spans ...>.
+        let show = |set: NameSet| {
+            [
+                format!("{:5.2?}", set.flatten_names().unwrap()),
+                format!("{:5.2?}", set.flatten().unwrap()),
+            ]
+        };
+
+        assert_eq!(
+            show(set1.clone() | set2.clone()),
+            [
+                "<static [03, 02, 04, 07, 06]>",
+                "<spans [07+7, 06+6, 04+4, 03+3, 02+2]>"
+            ]
+        );
+        assert_eq!(
+            show(set1.clone() & set2.clone()),
+            ["<static [03]>", "<spans [03+3]>"]
+        );
+        assert_eq!(
+            show(set1.clone() - set2.clone()),
+            ["<static [02, 04]>", "<spans [04+4, 02+2]>"]
+        );
     }
 
     quickcheck::quickcheck! {

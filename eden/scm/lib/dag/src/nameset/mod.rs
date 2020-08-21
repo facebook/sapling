@@ -36,6 +36,7 @@ use self::hints::Flags;
 use self::hints::Hints;
 use self::id_static::IdStaticSet;
 use self::meta::MetaSet;
+use self::r#static::StaticSet;
 
 /// A [`NameSet`] contains an immutable list of names.
 ///
@@ -188,6 +189,50 @@ impl NameSet {
     /// Obtain the attached IdMap if available.
     pub fn id_map(&self) -> Option<Arc<dyn IdConvert + Send + Sync>> {
         self.hints().id_map()
+    }
+
+    /// Convert the current set into a flat static set so it can be used in some
+    /// fast paths. This is useful for some common sets like `obsolete()` that
+    /// might be represented by a complex expression.
+    pub fn flatten(&self) -> Result<NameSet> {
+        match self.id_map() {
+            Some(id_map) => {
+                // Convert to IdStaticSet
+                self.flatten_id(id_map)
+            }
+            None => {
+                // Convert to StaticSet
+                self.flatten_names()
+            }
+        }
+    }
+
+    /// Convert this set to a static id set.
+    pub fn flatten_id(&self, id_map: Arc<dyn IdConvert + Send + Sync>) -> Result<NameSet> {
+        if self.as_any().is::<IdStaticSet>() {
+            return Ok(self.clone());
+        }
+        let mut ids = Vec::with_capacity(self.count()?);
+        for vertex in self.iter()? {
+            let id = id_map.vertex_id(vertex?)?;
+            ids.push(id);
+        }
+        ids.sort_unstable_by_key(|i| u64::MAX - i.0);
+        let spans = SpanSet::from_sorted_spans(ids);
+        let flat_set = NameSet::from_spans_idmap(spans, id_map);
+        flat_set.hints().replace(self.hints());
+        Ok(flat_set)
+    }
+
+    /// Convert this set to a static name set.
+    pub fn flatten_names(&self) -> Result<NameSet> {
+        if self.as_any().is::<StaticSet>() {
+            return Ok(self.clone());
+        }
+        let names = self.iter()?.collect::<Result<Vec<_>>>()?;
+        let flat_set = Self::from_static_names(names);
+        flat_set.hints().replace(self.hints());
+        Ok(flat_set)
     }
 }
 
@@ -457,6 +502,20 @@ pub(crate) mod tests {
         0202,
         0303,
     ]>>>"#
+        );
+    }
+
+    #[test]
+    fn test_flatten() {
+        let set = NameSet::from_static_names(vec![to_name(2)])
+            .union(&NameSet::from_static_names(vec![to_name(1)]))
+            .difference(
+                &NameSet::from_static_names(vec![to_name(3)])
+                    .intersection(&NameSet::from_static_names(vec![to_name(2), to_name(3)])),
+            );
+        assert_eq!(
+            format!("{:?}", set.flatten().unwrap()),
+            "<static [0202, 0101]>"
         );
     }
 

@@ -138,6 +138,19 @@ impl Hints {
         self.set_dag(other)
     }
 
+    pub fn replace(&self, other: &Hints) -> &Self {
+        self.update_flags_with(|_| other.flags())
+            .inherit_id_map(other)
+            .inherit_dag(other);
+        if let Some(id) = other.min_id() {
+            self.set_min_id(id);
+        }
+        if let Some(id) = other.max_id() {
+            self.set_max_id(id);
+        }
+        self
+    }
+
     #[allow(clippy::vtable_address_comparisons)]
     pub fn is_id_map_compatible(&self, other: impl Into<IdMapSnapshot>) -> bool {
         let lhs = self.id_map.read().clone().0;
