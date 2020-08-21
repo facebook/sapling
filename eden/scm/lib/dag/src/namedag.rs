@@ -194,22 +194,20 @@ impl DagPersistent for NameDag {
         //
         // PERF: There could be a fast path that does not re-assign numbers.
         // But in practice we might always want to re-assign master commits.
-        let parents_map = self.pending_graph()?;
-        let mut non_master_heads = Vec::new();
-        std::mem::swap(&mut self.pending_heads, &mut non_master_heads);
+        let snapshot = self.try_snapshot()?;
+        let parents = {
+            let snapshot = snapshot.clone();
+            move |name| snapshot.parent_names(name)
+        };
+        let non_master_heads = &snapshot.pending_heads;
 
         self.reload()?;
-        let parents = |name| {
-            parents_map
-                .get(&name)
-                .cloned()
-                .ok_or_else(|| name.not_found_error())
-        };
-        let flush_result = self.add_heads_and_flush(&parents, master_heads, &non_master_heads);
+
+        let flush_result = self.add_heads_and_flush(&parents, master_heads, non_master_heads);
         if let Err(flush_err) = flush_result {
             // Attempt to add back commits to revert the side effect of 'reload()'.
             // No slot for "add_heads" error.
-            let _ = self.add_heads(&parents, &non_master_heads);
+            let _ = self.add_heads(&parents, non_master_heads);
             return Err(flush_err);
         }
         Ok(())
@@ -278,25 +276,6 @@ impl NameDag {
         self.dag.reload()?;
         self.pending_heads.clear();
         Ok(())
-    }
-
-    /// Return parent relationship for non-master vertexes reachable from heads
-    /// added by `add_heads`.
-    fn pending_graph(&self) -> Result<HashMap<VertexName, Vec<VertexName>>> {
-        let mut parents_map: HashMap<VertexName, Vec<VertexName>> = Default::default();
-        let mut to_visit: Vec<VertexName> = self.pending_heads.clone();
-        while let Some(name) = to_visit.pop() {
-            let group = self.map.find_id_by_name(name.as_ref())?.map(|i| i.group());
-            if group == Some(Group::MASTER) {
-                continue;
-            }
-            let parents = self.parent_names(name.clone())?;
-            for parent in parents.iter() {
-                to_visit.push(parent.clone());
-            }
-            parents_map.insert(name, parents);
-        }
-        Ok(parents_map)
     }
 
     /// Invalidate cached content. Call this after changing the graph.
