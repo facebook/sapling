@@ -83,7 +83,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 fn register_error_handlers() {
-    fn specific_error_handler(py: Python, e: &error::Error, _m: CommonMetadata) -> Option<PyErr> {
+    fn specific_error_handler(py: Python, e: &error::Error, m: CommonMetadata) -> Option<PyErr> {
         // Extract inner io::Error out.
         // Why does Python need the low-level IOError? It doesn't have to.
         // Consider:
@@ -95,6 +95,24 @@ fn register_error_handlers() {
         if let Some(revlogindex::Error::Corruption(e)) = e.downcast_ref::<revlogindex::Error>() {
             if let revlogindex::errors::CorruptionError::Io(e) = e.as_ref() {
                 return Some(cpython_ext::error::translate_io_error(py, e));
+            }
+        }
+        if let Some(hgcommits::Error::Dag(e)) = e.downcast_ref::<hgcommits::Error>() {
+            match e {
+                dag::Error::Backend(ref backend_error) => match backend_error.as_ref() {
+                    dag::errors::BackendError::Io(e) => {
+                        return Some(cpython_ext::error::translate_io_error(py, &e))
+                    }
+                    dag::errors::BackendError::Other(e) => return specific_error_handler(py, e, m),
+                    _ => (),
+                },
+                dag::Error::VertexNotFound(_) | dag::Error::IdNotFound(_) => {
+                    return Some(PyErr::new::<CommitLookupError, _>(
+                        py,
+                        cpython_ext::Str::from(e.to_string()),
+                    ));
+                }
+                _ => (),
             }
         }
 

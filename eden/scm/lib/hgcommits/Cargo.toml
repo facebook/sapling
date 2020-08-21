@@ -9,4 +9,5 @@ dag = { path = "../dag" }
 minibytes = { path = "../minibytes" }
 revlogindex = { path = "../revlogindex" }
 serde = { version = "1", features = ["derive"] }
+thiserror = "1"
 zstore = { path = "../zstore" }

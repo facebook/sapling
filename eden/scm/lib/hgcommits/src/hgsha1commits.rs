@@ -10,9 +10,8 @@ use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
 use crate::ReadCommitText;
+use crate::Result;
 use crate::StripCommits;
-use anyhow::ensure;
-use anyhow::Result;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
@@ -91,12 +90,9 @@ impl AppendCommits for HgCommits {
         for commit in commits {
             let text = text_with_header(&commit.raw_text, &commit.parents)?;
             let vertex = Vertex::copy_from(self.commits.insert(&text, &[])?.as_ref());
-            ensure!(
-                vertex == commit.vertex,
-                "hash mismatch ({:?} != {:?})",
-                vertex,
-                commit.vertex
-            );
+            if vertex != commit.vertex {
+                return Err(crate::Error::HashMismatch(vertex, commit.vertex.clone()));
+            }
         }
 
         // Write commit graph to DAG.
