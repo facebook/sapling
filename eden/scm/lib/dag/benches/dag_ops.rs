@@ -28,7 +28,7 @@ fn main() {
 
     let id_map_dir = tempdir().unwrap();
     let mut id_map = IdMap::open(id_map_dir.path()).unwrap();
-    id_map
+    let outcome = id_map
         .assign_head(head_name.clone(), &parents_by_name, Group::MASTER)
         .unwrap();
 
@@ -37,10 +37,18 @@ fn main() {
 
     let dag_dir = tempdir().unwrap();
 
-    bench("building segments", || {
+    bench("building segments (old)", || {
         let mut dag = IdDag::open(&dag_dir.path()).unwrap();
         elapsed(|| {
             dag.build_segments_volatile(head_id, &parents_by_id)
+                .unwrap();
+        })
+    });
+
+    bench("building segments (new)", || {
+        let mut dag = IdDag::open(&dag_dir.path()).unwrap();
+        elapsed(|| {
+            dag.build_segments_volatile_from_assign_head_outcome(&outcome)
                 .unwrap();
         })
     });

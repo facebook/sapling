@@ -22,8 +22,6 @@ use crate::iddagstore::IndexedLogStore;
 use crate::idmap::AssignHeadOutcome;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapAssignHead;
-use crate::idmap::IdMapBuildParents;
-use crate::idmap::IdMapWrite;
 use crate::idmap::MemIdMap;
 use crate::idmap::SyncableIdMap;
 use crate::nameset::hints::Flags;
@@ -47,6 +45,9 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::path::Path;
 use std::sync::Arc;
+
+#[cfg(test)]
+use crate::idmap::IdMapBuildParents;
 
 /// A DAG that uses VertexName instead of ids as vertexes.
 ///
@@ -254,15 +255,14 @@ impl DagAddHeads for NameDag {
         }
 
         // Update segments in the NON_MASTER group.
-        let parent_ids_func = self.map.build_get_parents_by_id(&parents);
         #[cfg(test)]
-        outcome.verify(&parent_ids_func);
-        let id = self.map.next_free_id(group)?;
-        if id > group.min_id() {
-            self.dag.build_segments_volatile(id - 1, &parent_ids_func)?;
+        {
+            let parent_ids_func = self.map.build_get_parents_by_id(&parents);
+            outcome.verify(&parent_ids_func);
         }
 
-        drop(parent_ids_func);
+        self.dag
+            .build_segments_volatile_from_assign_head_outcome(&outcome)?;
 
         // Update snapshot_map so the changes become visible to queries.
         self.snapshot_map = Arc::new(self.map.try_clone()?);
@@ -368,16 +368,15 @@ impl DagAddHeads for MemNameDag {
             outcome.merge(self.map.assign_head(head.clone(), &parents, group)?);
         }
 
-        let parent_ids_func = self.map.build_get_parents_by_id(&parents);
         #[cfg(test)]
-        outcome.verify(&parent_ids_func);
-
-        let id = self.map.next_free_id(group)?;
-        if id > group.min_id() {
-            self.dag.build_segments_volatile(id - 1, &parent_ids_func)?;
+        {
+            let parent_ids_func = self.map.build_get_parents_by_id(&parents);
+            outcome.verify(&parent_ids_func);
         }
+
+        self.dag
+            .build_segments_volatile_from_assign_head_outcome(&outcome)?;
         self.snapshot_map = Arc::new(self.map.clone());
-        drop(parent_ids_func);
         self.invalidate_snapshot();
         Ok(())
     }
@@ -758,16 +757,13 @@ where
 
     // Update segments.
     {
-        let parent_ids_func = map.build_get_parents_by_id(&parent_names_func);
         #[cfg(test)]
-        outcome.verify(&parent_ids_func);
-
-        for &group in Group::ALL.iter() {
-            let id = map.next_free_id(group)?;
-            if id > group.min_id() {
-                dag.build_segments_persistent(id - 1, &parent_ids_func)?;
-            }
+        {
+            let parent_ids_func = map.build_get_parents_by_id(&parent_names_func);
+            outcome.verify(&parent_ids_func);
         }
+
+        dag.build_segments_persistent_from_assign_head_outcome(&outcome)?;
     }
 
     // Rebuild non-master ids and segments.

@@ -8,6 +8,7 @@
 use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::iddagstore::{GetLock, IdDagStore, InProcessStore, IndexedLogStore};
+use crate::idmap::AssignHeadOutcome;
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
@@ -220,6 +221,60 @@ impl<Store: IdDagStore> IdDag<Store> {
         }
         count += self.build_all_high_level_segments(false)?;
         Ok(count)
+    }
+
+    /// Similar to `build_segments_volatile`, but takes `AssignHeadOutcome` instead
+    /// of `get_parents`.
+    pub fn build_segments_volatile_from_assign_head_outcome(
+        &mut self,
+        outcome: &AssignHeadOutcome,
+    ) -> Result<usize> {
+        let mut count = self.build_flat_segments_from_assign_head_outcome(outcome)?;
+        count += self.build_all_high_level_segments(false)?;
+        Ok(count)
+    }
+
+    /// Build flat segments using the outcome from `add_head`.
+    /// This is not public because it does not keep high-level segments in sync.
+    fn build_flat_segments_from_assign_head_outcome(
+        &mut self,
+        outcome: &AssignHeadOutcome,
+    ) -> Result<usize> {
+        if outcome.segments.is_empty() {
+            return Ok(0);
+        }
+
+        // TODO: Modify the last segment if it can concat the first new segment.
+
+        let mut head_ids: HashSet<Id> = self.heads(self.master_group()?)?.iter().collect();
+        let mut get_flags = |parents: &[Id], head: Id| {
+            let mut flags = SegmentFlags::empty();
+            if parents.is_empty() {
+                flags |= SegmentFlags::HAS_ROOT
+            }
+            if head.group() == Group::MASTER {
+                for p in parents.iter() {
+                    head_ids.remove(p);
+                }
+                if head_ids.is_empty() {
+                    flags |= SegmentFlags::ONLY_HEAD;
+                }
+                head_ids.insert(head);
+            }
+            flags
+        };
+        for seg in &outcome.segments {
+            // `next_free_id` has cost. Therefore the check is only on debug build.
+            debug_assert_eq!(
+                seg.low,
+                self.next_free_id(0, seg.low.group())?,
+                "outcome low id mismatch"
+            );
+
+            let flags = get_flags(&seg.parents, seg.high);
+            self.insert(flags, 0, seg.low, seg.high, &seg.parents)?;
+        }
+        Ok(outcome.segments.len())
     }
 
     /// Incrementally build flat (level 0) segments towards `high` (inclusive).
@@ -1159,6 +1214,19 @@ impl<Store: IdDagStore> SyncableIdDag<Store> {
     {
         let mut count = 0;
         count += self.dag.build_flat_segments(high, get_parents, 0)?;
+        count += self.dag.build_all_high_level_segments(true)?;
+        Ok(count)
+    }
+
+    /// Similar to `build_segments_persistent`, but takes `AssignHeadOutcome` instead
+    /// of `get_parents`.
+    pub fn build_segments_persistent_from_assign_head_outcome(
+        &mut self,
+        outcome: &AssignHeadOutcome,
+    ) -> Result<usize> {
+        let mut count = self
+            .dag
+            .build_flat_segments_from_assign_head_outcome(outcome)?;
         count += self.dag.build_all_high_level_segments(true)?;
         Ok(count)
     }
