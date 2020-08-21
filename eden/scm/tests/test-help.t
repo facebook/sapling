@@ -944,7 +944,7 @@ Test list of internal help commands
                  cause an error to be generated in rust for testing error
                  handling
    debugchangelog
-                 (no help text available)
+                 show or migrate changelog backend
    debugcheckcasecollisions
                  check for case collisions against a commit
    debugcheckoutidentifier

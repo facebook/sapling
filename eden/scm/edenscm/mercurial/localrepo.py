@@ -341,7 +341,14 @@ class localrepository(object):
         "narrowheads",
         "zstorecommitdata",
         "invalidatelinkrev",
+        # python revlog
+        "pythonrevlogchangelog",
+        # rust revlog
+        "rustrevlogchangelog",
+        # pure segmented changelog (full idmap, full hgommits)
         "segmentedchangelog",
+        # segmented changelog (full idmap, partial hgcommits) + revlog
+        "doublewritechangelog",
     }
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
@@ -1031,14 +1038,25 @@ class localrepository(object):
             if deleted:
                 self.ui.log("features", feature="remove-svfs-dottmp")
 
+            if "doublewritechangelog" in self.storerequirements:
+                return changelog2.changelog.opendoublewrite(
+                    self.svfs, self.ui.uiconfig()
+                )
             if "segmentedchangelog" in self.storerequirements:
                 return changelog2.changelog.opensegments(self.svfs, self.ui.uiconfig())
 
             if (
-                self.ui.configbool("experimental", "rust-commits")
-                and self.ui.configbool("experimental", "rust-commits")
-                and getattr(self.svfs, "options", {}).get("bypass-revlog-transaction")
-                and not "hgsql" in self.requirements
+                (
+                    (
+                        self.ui.configbool("experimental", "rust-commits")
+                        and getattr(self.svfs, "options", {}).get(
+                            "bypass-revlog-transaction"
+                        )
+                    )
+                    or "rustrevlogchangelog" in self.storerequirements
+                )
+                and "hgsql" not in self.requirements
+                and "pythonrevlogchangelog" not in self.storerequirements
             ):
                 return changelog2.changelog.openrevlog(self.svfs, self.ui.uiconfig())
 

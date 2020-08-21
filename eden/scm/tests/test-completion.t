@@ -374,7 +374,7 @@ Show all commands + options
   debugbundle: all, part-type, spec
   debugcapabilities: 
   debugcauserusterror: 
-  debugchangelog: 
+  debugchangelog: migrate
   debugcheckcasecollisions: rev
   debugcheckoutidentifier: 
   debugcheckstate: 
