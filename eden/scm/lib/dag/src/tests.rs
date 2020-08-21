@@ -23,6 +23,8 @@ use crate::iddag::FirstAncestorConstraint;
 #[cfg(test)]
 use crate::namedag::MemNameDag;
 #[cfg(test)]
+use crate::ops::IdConvert;
+#[cfg(test)]
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 #[cfg(test)]
 use crate::Id;
@@ -634,6 +636,31 @@ Lv2: R0-12[] N0-N5[1, 9]"#
         built.name_dag.map.find_name_by_id(id).unwrap().unwrap(),
         b"q"
     );
+}
+
+#[test]
+fn test_namedag_reassign_master() -> crate::Result<()> {
+    let dir = tempdir().unwrap();
+    let mut dag = NameDag::open(&dir.path())?;
+    dag = from_ascii(dag, "A-B-C");
+
+    // The in-memory DAG can answer parent_names questions.
+    assert_eq!(format!("{:?}", dag.parent_names("A".into())?), "[]");
+    assert_eq!(format!("{:?}", dag.parent_names("C".into())?), "[B]");
+
+    // First flush, A, B, C are non-master.
+    dag.flush(&[]).unwrap();
+
+    assert_eq!(format!("{:?}", dag.vertex_id("A".into())?), "N0");
+    assert_eq!(format!("{:?}", dag.vertex_id("C".into())?), "N2");
+
+    // Second flush, making B master without adding new vertexes.
+    dag.flush(&["B".into()]).unwrap();
+    assert_eq!(format!("{:?}", dag.vertex_id("A".into())?), "0");
+    assert_eq!(format!("{:?}", dag.vertex_id("B".into())?), "1");
+    assert_eq!(format!("{:?}", dag.vertex_id("C".into())?), "N0");
+
+    Ok(())
 }
 
 #[test]
