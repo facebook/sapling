@@ -73,7 +73,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 
     // env_logger cannot be inited twice. So this will fail (as expected)
     // if hgcommands is nested (ex. for "hg continue").
-    let _ = env_logger::try_init();
+    let _ = env_logger::builder().format_timestamp_millis().try_init();
 
     let exit_code = {
         let _guard = span.enter();
