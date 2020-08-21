@@ -274,8 +274,8 @@ class BaseService(pycompat.ABC):
         """
 
     @abstractmethod
-    def archiveworkspace(self, reponame, workspace):
-        """Archive the given workspace
+    def updateworkspacearchive(self, reponame, workspace, archive):
+        """Archive or Restore the given workspace
         """
 
     @staticmethod

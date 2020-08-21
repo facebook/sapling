@@ -819,6 +819,10 @@ def cloudlistworspaces(ui, repo, **opts):
             "run `hg cloud join -w <workspace name> --switch` to switch to a different workspace\n"
         )
     )
+    if activeonly and archived:
+        ui.status(
+            _("run `hg cloud list --all` to list all workspaces, including deleted\n")
+        )
 
 
 @subcmd("deleteworkspace|delete", [] + workspace.workspaceopts)
@@ -842,11 +846,28 @@ def clouddeleteworkspace(ui, repo, **opts):
         return
 
     reponame = ccutil.getreponame(repo)
-    service.get(ui, tokenmod.TokenLocator(ui).token).archiveworkspace(
-        reponame, workspacename
+    service.get(ui, tokenmod.TokenLocator(ui).token).updateworkspacearchive(
+        reponame, workspacename, True
     )
     ui.status(
         _("workspace %s has been deleted\n") % workspacename, component="commitcloud"
+    )
+
+
+@subcmd("undeleteworkspace|undelete", [] + workspace.workspaceopts)
+def cloudundeleteworkspace(ui, repo, **opts):
+    """Restore (unarchive) workspace in commit cloud"""
+
+    workspacename = workspace.parseworkspace(ui, opts)
+    if workspacename is None:
+        raise error.Abort(_("workspace name should be provided\n"))
+
+    reponame = ccutil.getreponame(repo)
+    service.get(ui, tokenmod.TokenLocator(ui).token).updateworkspacearchive(
+        reponame, workspacename, False
+    )
+    ui.status(
+        _("workspace %s has been restored\n") % workspacename, component="commitcloud"
     )
 
 
