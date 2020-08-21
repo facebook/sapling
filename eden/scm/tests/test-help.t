@@ -1006,6 +1006,7 @@ Test list of internal help commands
    debugindex    dump the contents of an index file
    debugindexdot
                  dump an index DAG as a graphviz dot file
+   debuginitgit  init a repo from a git backend
    debuginstall  test Mercurial installation
    debugknown    test whether node ids are known to a repo
    debuglocks    show or modify state of locks

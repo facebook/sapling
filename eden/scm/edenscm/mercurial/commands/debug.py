@@ -1477,6 +1477,30 @@ def debugindexdot(ui, repo, file_=None, **opts):
     ui.write("}\n")
 
 
+@command(
+    "debuginitgit",
+    [("", "git-dir", "", _("path to git backend"))],
+    _("--git-dir PATH -- DEST"),
+    norepo=True,
+)
+def debuginitgit(ui, destpath, **opts):
+    """init a repo from a git backend
+
+    Currently this is very limited. Bookmarks, trees, files, exchange do not
+    work as expected. It's only useful for testing the changelog backend.
+    """
+    gitdir = os.path.realpath(opts.get("git_dir"))
+    if not os.path.exists(os.path.join(gitdir, "refs")):
+        raise error.Abort(_("invalid --git-dir: %s") % gitdir)
+    repo = hg.peer(ui, opts, ui.expandpath(destpath), create=True).local()
+    with repo.lock(), repo.transaction("initgit"):
+        repo.svfs.writeutf8("gitdir", gitdir)
+        repo.storerequirements.add("gitchangelog")
+        repo._writestorerequirements()
+        repo.invalidatechangelog()
+        visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
+
+
 @command("debuginstall", [] + cmdutil.formatteropts, "", norepo=True)
 def debuginstall(ui, **opts):
     """test Mercurial installation

@@ -126,6 +126,7 @@ Show debug commands if there are no other candidates
   debugignore
   debugindex
   debugindexdot
+  debuginitgit
   debuginstall
   debugknown
   debuglabelcomplete
@@ -408,6 +409,7 @@ Show all commands + options
   debugignore: 
   debugindex: changelog, manifest, dir, format
   debugindexdot: changelog, manifest, dir
+  debuginitgit: git-dir
   debuginstall: template
   debugknown: 
   debuglabelcomplete: 
