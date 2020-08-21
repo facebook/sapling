@@ -9,6 +9,7 @@ use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::Id;
 use bitflags::bitflags;
+use parking_lot::RwLock;
 use std::fmt;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize};
@@ -55,7 +56,7 @@ pub struct Hints {
     min_id: AtomicU64,
     max_id: AtomicU64,
     id_map_ptr: AtomicUsize,
-    dag_ptr: AtomicUsize,
+    dag: RwLock<DagSnapshot>,
 }
 
 impl Hints {
@@ -127,10 +128,8 @@ impl Hints {
         self
     }
 
-    pub fn set_dag(&self, ptr: &dyn DagAlgorithm) -> &Self {
-        // std::raw::TraitObject is not stable yet.
-        let ptr: DagPtr = ptr.into();
-        self.dag_ptr.store(ptr.0, Release);
+    pub fn set_dag(&self, dag: impl Into<DagSnapshot>) -> &Self {
+        *self.dag.write() = dag.into();
         self
     }
 
@@ -141,9 +140,7 @@ impl Hints {
     }
 
     pub fn inherit_dag(&self, other: &Hints) -> &Self {
-        let ptr = other.dag_ptr.load(Acquire);
-        self.dag_ptr.store(ptr, Release);
-        self
+        self.set_dag(other)
     }
 
     pub fn is_id_map_compatible(&self, other: &Hints) -> bool {
@@ -152,27 +149,34 @@ impl Hints {
         ptr1 == ptr2
     }
 
-    pub fn is_dag_compatible(&self, other: impl Into<DagPtr>) -> bool {
-        let ptr1 = self.dag_ptr.load(Acquire);
-        let ptr2 = other.into().0;
-        ptr1 == ptr2
+    #[allow(clippy::vtable_address_comparisons)]
+    pub fn is_dag_compatible(&self, other: impl Into<DagSnapshot>) -> bool {
+        let lhs = self.dag.read().clone().0;
+        let rhs = other.into().0;
+        match (lhs, rhs) {
+            (None, None) => true,
+            (Some(l), Some(r)) => Arc::ptr_eq(&l, &r),
+            (None, Some(_)) | (Some(_), None) => false,
+        }
+    }
+
+    pub fn dag(&self) -> Option<Arc<dyn DagAlgorithm + Send + Sync>> {
+        self.dag.read().clone().0
     }
 }
 
-pub struct DagPtr(usize);
+#[derive(Clone, Default)]
+pub struct DagSnapshot(Option<Arc<dyn DagAlgorithm + Send + Sync>>);
 
-impl From<&Hints> for DagPtr {
+impl From<&Hints> for DagSnapshot {
     fn from(hints: &Hints) -> Self {
-        DagPtr(hints.dag_ptr.load(Acquire))
+        hints.dag.read().clone()
     }
 }
 
-impl From<&dyn DagAlgorithm> for DagPtr {
-    fn from(ptr: &dyn DagAlgorithm) -> Self {
-        // std::raw::TraitObject is not stable yet.
-        // XXX: This is in theory unsound because pointer address can be reused.
-        let vptr: [usize; 2] = unsafe { std::mem::transmute(ptr) };
-        DagPtr(vptr[0])
+impl From<Arc<dyn DagAlgorithm + Send + Sync>> for DagSnapshot {
+    fn from(dag: Arc<dyn DagAlgorithm + Send + Sync>) -> Self {
+        DagSnapshot(Some(dag))
     }
 }
 
@@ -183,7 +187,7 @@ impl Clone for Hints {
             min_id: AtomicU64::new(self.min_id.load(Acquire)),
             max_id: AtomicU64::new(self.max_id.load(Acquire)),
             id_map_ptr: AtomicUsize::new(self.id_map_ptr.load(Acquire)),
-            dag_ptr: AtomicUsize::new(self.dag_ptr.load(Acquire)),
+            dag: RwLock::new(self.dag.read().clone()),
         }
     }
 }
