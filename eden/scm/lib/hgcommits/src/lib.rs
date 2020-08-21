@@ -9,7 +9,6 @@
 //!
 //! Commits stored in HG format and backed by efficient `dag` structures.
 
-use anyhow::Result;
 use dag::Vertex;
 use minibytes::Bytes;
 use serde::Deserialize;
@@ -45,6 +44,7 @@ pub struct HgCommit {
 }
 
 mod doublewrite;
+pub(crate) mod errors;
 mod hgsha1commits;
 mod memhgcommits;
 mod revlog;
@@ -55,3 +55,6 @@ pub use hgsha1commits::HgCommits;
 pub use memhgcommits::MemHgCommits;
 pub use revlog::RevlogCommits;
 pub use strip::StripCommits;
+
+pub use errors::CommitError as Error;
+pub type Result<T> = std::result::Result<T, Error>;
