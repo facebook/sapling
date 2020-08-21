@@ -349,6 +349,10 @@ def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
     unfi = repo
     state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
+    cl = repo.changelog
+    if cl.algorithmbackend == "segments":
+        backedup = repo.dageval(lambda: draft() & ancestors(state.heads))
+        return subset & cl.torevset(backedup)
     backedup = unfi.revs("not public() and ::%ln", state.heads)
     return smartset.filteredset(subset & repo.revs("draft()"), lambda r: r in backedup)
 
@@ -358,6 +362,10 @@ def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
     unfi = repo
     state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
+    cl = repo.changelog
+    if cl.algorithmbackend == "segments":
+        notbackedup = repo.dageval(lambda: draft() - ancestors(state.heads))
+        return subset & cl.torevset(notbackedup)
     backedup = unfi.revs("not public() and ::%ln", state.heads)
     return smartset.filteredset(
         subset & repo.revs("not public() - hidden()"), lambda r: r not in backedup
