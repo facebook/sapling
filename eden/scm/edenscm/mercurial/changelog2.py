@@ -51,6 +51,8 @@ class changelog(object):
         self._uiconfig = uiconfig
 
     def userust(self, name=None):
+        if name == "revset":
+            return self._uiconfig.configbool("experimental", "changelog2-revset")
         return True
 
     @property
@@ -168,6 +170,9 @@ class changelog(object):
 
     def tonodes(self, revs):
         """Convert an IdSet to Set. The reverse of torevs."""
+        # translate fullreposet to dag.all() that preserves the 'full' hint.
+        if isinstance(revs, smartset.fullreposet):
+            return self.dag.all()
         # 'idset' has a fast path - pass the Rust-binding 'spans' directly.
         if isinstance(revs, smartset.idset):
             return self.inner.tonodes(revs._spans)

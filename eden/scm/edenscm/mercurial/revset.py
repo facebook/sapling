@@ -254,9 +254,21 @@ def _makerangeset(repo, subset, m, n, order):
 
 def dagrange(repo, subset, x, y, order):
     r = fullreposet(repo)
-    xs = dagop.reachableroots(
-        repo, getset(repo, r, x), getset(repo, r, y), includepath=True
-    )
+    xs = getset(repo, r, x)
+    ys = getset(repo, r, y)
+
+    # rust changelog alternative path
+    cl = repo.changelog
+    if cl.userust("revset"):
+        t = cl.tonodes
+        # special case: null::ys == ::ys (rust dag does not have null)
+        if node.nullrev in xs:
+            nodes = cl.dag.ancestors(t(ys))
+        else:
+            nodes = cl.dag.range(t(xs), t(ys))
+        return subset & cl.torevset(nodes)
+
+    xs = dagop.reachableroots(repo, xs, ys, includepath=True)
     return subset & xs
 
 
@@ -474,10 +486,62 @@ def ancestor(repo, subset, x):
     return baseset()
 
 
+def _depth(init, func, startdepth, stopdepth):
+    """General purposed (slow) depth handling.
+
+    func could be parents, children, etc.
+    (func(x) - x) being an empty set is considered as a stop condition.
+
+    startdepth starts with 0, is inclusive.
+    stopdepth is exclusive.
+
+    The return value None should be treated as an empty set.
+    """
+    result = None
+    current = init
+
+    i = 0
+    while stopdepth is None or i < stopdepth:
+        if startdepth is None or i >= startdepth:
+            # include 'current' in result
+            if result is None:
+                result = current
+            else:
+                result |= current
+        current = func(current) - current
+        # empty set?
+        if current.first() is None:
+            break
+        i += 1
+
+    return result
+
+
 def _ancestors(repo, subset, x, followfirst=False, startdepth=None, stopdepth=None):
     heads = getset(repo, fullreposet(repo), x)
+
+    # special case: ancestors(null) == null (used by log -fr null)
+    # Ideally `null` can be handled by the Rust graph in a different
+    # way.
+    if node.nullrev in heads and len(heads) == 1:
+        return subset & heads
+
     if not heads:
         return baseset()
+
+    # rust changelog alternative path
+    cl = repo.changelog
+    if cl.userust("revset") and not followfirst:
+        headnodes = cl.tonodes(heads)
+        if stopdepth is None and startdepth is None:
+            return subset & cl.torevset(cl.dag.ancestors(headnodes))
+        else:
+            # slow path calling parents n times
+            nodes = _depth(
+                headnodes, cl.dag.parents, startdepth, stopdepth
+            ) or cl.dag.sort([])
+            return subset & cl.torevset(nodes)
+
     s = dagop.revancestors(repo, heads, followfirst, startdepth, stopdepth)
     return subset & s
 
@@ -495,6 +559,7 @@ def ancestors(repo, subset, x):
     if "set" not in args:
         # i18n: "ancestors" is a keyword
         raise error.ParseError(_("ancestors takes at least 1 argument"))
+
     startdepth, stopdepth = _getdepthargs("ancestors", args)
     return _ancestors(
         repo, subset, args["set"], startdepth=startdepth, stopdepth=stopdepth
@@ -802,6 +867,15 @@ def children(repo, subset, x):
     """Child changesets of changesets in set.
     """
     s = getset(repo, fullreposet(repo), x)
+
+    # rust changelog alternative path
+    cl = repo.changelog
+    if cl.userust("revset"):
+        nodes = repo.dageval(
+            lambda dag: dag.children(cl.tonodes(s)) & (draft() + public())
+        )
+        return subset & cl.torevset(nodes)
+
     cs = _children(repo, subset, s)
     return subset & cs
 
@@ -897,6 +971,27 @@ def _descendants(repo, subset, x, followfirst=False, startdepth=None, stopdepth=
     roots = getset(repo, fullreposet(repo), x)
     if not roots:
         return baseset()
+
+    # rust changelog alternative path
+    cl = repo.changelog
+    if cl.userust("revset"):
+        heads = repo.heads()
+        rootnodes = cl.tonodes(roots)
+        if startdepth is None and stopdepth is None:
+            # special case: null::heads == ::heads (rust dag does not have null)
+            if node.nullrev in roots:
+                return subset & cl.torevset(cl.dag.ancestors(heads))
+            return subset & cl.torevset(cl.dag.range(rootnodes, heads))
+        else:
+            # slow path: call children n times.
+            # NOTE: This does not handle 'null' special case.
+            nodes = _depth(
+                rootnodes, cl.dag.children, startdepth, stopdepth
+            ) or cl.dag.sort([])
+            # filter by visible heads
+            nodes = cl.dag.ancestors(heads) & nodes
+            return subset & cl.torevset(nodes)
+
     if repo.ui.configbool("experimental", "narrow-heads"):
         if startdepth is not None or stopdepth is not None:
             raise error.Abort(_("depth is not supported in the current setup"))
@@ -920,6 +1015,7 @@ def descendants(repo, subset, x):
     if "set" not in args:
         # i18n: "descendants" is a keyword
         raise error.ParseError(_("descendants takes at least 1 argument"))
+
     startdepth, stopdepth = _getdepthargs("descendants", args)
     return _descendants(
         repo, subset, args["set"], startdepth=startdepth, stopdepth=stopdepth
@@ -1231,6 +1327,14 @@ def followlines(repo, subset, x):
 def getall(repo, subset, x):
     """All changesets, the same as ``0:tip``.
     """
+
+    # rust changelog alternative path
+    cl = repo.changelog
+    if cl.userust("revset"):
+        return subset & cl.torevset(
+            repo.dageval(lambda: public() + draft()), reverse=True
+        )
+
     if repo.ui.configbool("experimental", "narrow-heads"):
         revs = repo.revs("::head()")
         return subset & revs
@@ -1379,6 +1483,12 @@ def heads(repo, subset, x):
     """Members of set with no children in set.
     """
     s = getset(repo, subset, x)
+
+    # rust changelog alternative path
+    cl = repo.changelog
+    if cl.userust("revset"):
+        return subset & cl.torevset(cl.dag.heads(cl.tonodes(s)))
+
     ps = parents(repo, subset, x)
     return s - ps
 
@@ -1610,8 +1720,15 @@ def obsolete(repo, subset, x):
     # i18n: "obsolete" is a keyword
     getargs(x, 0, 0, _("obsolete takes no arguments"))
     if mutation.enabled(repo):
+        nodes = mutation.obsoletenodes(repo)
+
+        # rust changelog alternative path
+        cl = repo.changelog
+        if cl.userust("revset"):
+            return subset & cl.torevset(nodes)
+
         clrev = repo.changelog.rev
-        obsoletes = baseset([clrev(n) for n in mutation.obsoletenodes(repo)])
+        obsoletes = baseset([clrev(n) for n in nodes])
     else:
         obsoletes = obsmod.getrevs(repo, "obsolete")
     return subset & obsoletes
@@ -1628,6 +1745,7 @@ def only(repo, subset, x):
     # i18n: "only" is a keyword
     args = getargs(x, 1, 2, _("only takes one or two arguments"))
     include = getset(repo, fullreposet(repo), args[0])
+
     if len(args) == 1:
         if not include:
             return baseset()
@@ -1640,6 +1758,12 @@ def only(repo, subset, x):
         ]
     else:
         exclude = getset(repo, fullreposet(repo), args[1])
+
+    # rust changelog alternative path
+    cl = repo.changelog
+    if cl.userust("revset"):
+        t = cl.tonodes
+        return subset & cl.torevset(cl.dag.only(t(include), t(exclude)))
 
     results = set(cl.findmissingrevs(common=exclude, heads=include))
     # XXX we should turn this into a baseset instead of a set, smartset may do
@@ -1755,11 +1879,17 @@ def parents(repo, subset, x):
     if x is None:
         ps = set(p.rev() for p in repo[x].parents())
     else:
-        ps = set()
+        s = getset(repo, fullreposet(repo), x)
+
+        # rust changelog alternative path
         cl = repo.changelog
+        if cl.userust("revset"):
+            return subset & cl.torevset(cl.dag.parents(cl.tonodes(s)))
+
+        ps = set()
         up = ps.update
         parentrevs = cl.parentrevs
-        for r in getset(repo, fullreposet(repo), x):
+        for r in s:
             try:
                 up(parentrevs(r))
             except error.WdirUnsupported:
@@ -1774,7 +1904,7 @@ def _phase(repo, subset, *targets):
 
 
 @predicate("draft()", safe=True)
-def draft(repo, subset, x):
+def getdraft(repo, subset, x):
     """Changeset in draft phase."""
     # i18n: "draft" is a keyword
     getargs(x, 0, 0, _("draft takes no arguments"))
@@ -1880,7 +2010,7 @@ def _phaseandancestors(repo, subset, x):
 
 
 @predicate("public()", safe=True, weight=3)
-def public(repo, subset, x):
+def getpublic(repo, subset, x):
     """Changeset in public phase."""
     # i18n: "public" is a keyword
     getargs(x, 0, 0, _("public takes no arguments"))
@@ -2095,6 +2225,12 @@ def roots(repo, subset, x):
     """Changesets in set with no parent changeset in set.
     """
     s = getset(repo, fullreposet(repo), x)
+
+    # rust changelog alternative path
+    cl = repo.changelog
+    if cl.userust("revset"):
+        return subset & cl.torevset(cl.dag.roots(cl.tonodes(s)))
+
     parents = repo.changelog.parentrevs
 
     def filter(r):
