@@ -301,7 +301,7 @@ pub(crate) mod tests {
                 assert_eq!(f(z() & a2()), "<and <static [Z]> <spans [A:G+0:6]>>");
                 assert_eq!(f(z() | a2()), "<or <static [Z]> <spans [A:G+0:6]>>");
                 assert_eq!(f(z() - a2()), "<diff <static [Z]> <spans [A:G+0:6]>>");
-                assert_eq!(f(a1() & z()), "<and <static [Z]> <spans [A:G+0:6]>>");
+                assert_eq!(f(a1() & z()), "<and <spans [A:G+0:6]> <static [Z]>>");
                 assert_eq!(f(a1() | z()), "<or <spans [A:G+0:6]> <static [Z]>>");
                 assert_eq!(f(a1() - z()), "<diff <spans [A:G+0:6]> <static [Z]>>");
 
