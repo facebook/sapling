@@ -20,6 +20,7 @@ parking_lot = "0.10"
 serde = { version = "1", features = ["derive"] }
 tempfile = "3.0.7"
 thiserror = "1"
+tracing = "0.1"
 
 [dev-dependencies]
 bindag = { path = "bindag" }

@@ -22,6 +22,7 @@ use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::File;
 use std::path::Path;
+use tracing::{debug_span, field, trace};
 
 /// Structure to store a DAG of integers, with indexes to speed up ancestry queries.
 ///
@@ -272,6 +273,13 @@ impl<Store: IdDagStore> IdDag<Store> {
             );
 
             let flags = get_flags(&seg.parents, seg.high);
+            tracing::trace!(
+                "inserting flat segment {}..={} {:?} {:?}",
+                seg.low,
+                seg.high,
+                &seg.parents,
+                &flags
+            );
             self.insert(flags, 0, seg.low, seg.high, &seg.parents)?;
         }
         Ok(outcome.segments.len())
@@ -462,6 +470,14 @@ impl<Store: IdDagStore> IdDag<Store> {
                 } else {
                     SegmentFlags::empty()
                 };
+                tracing::trace!(
+                    "inserting lv{} segment {}..{} {:?} {:?}",
+                    level,
+                    low,
+                    high,
+                    &parents,
+                    &flags
+                );
                 self.insert(flags, level, low, high, &parents)?;
             }
         }
@@ -483,6 +499,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         let mut total = 0;
         for level in 1.. {
             let count = self.build_high_level_segments(level, drop_last)?;
+            tracing::debug!("new lv{} segments: {}", level, count);
             if count == 0 {
                 break;
             }
@@ -535,9 +552,12 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// ```
     pub fn ancestors(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let mut set: SpanSet = set.into();
+        let tracing_span = debug_span!("ancestors", result = "", set = field::debug(&set));
+        let _scope = tracing_span.enter();
         if set.count() > 2 {
             // Try to (greatly) reduce the size of the `set` to make calculation cheaper.
             set = self.heads_ancestors(set)?;
+            trace!("ancestors: simplified to {:?}", &set);
         }
         let mut result = SpanSet::empty();
         let mut to_visit: BinaryHeap<_> = set.iter().collect();
@@ -546,10 +566,12 @@ impl<Store: IdDagStore> IdDag<Store> {
                 // If `id` is in `result`, then `ancestors(id)` are all in `result`.
                 continue;
             }
+            trace!("ancestors: lookup {:?}", id);
             let flat_seg = self.find_flat_segment_including_id(id)?;
             if let Some(ref s) = flat_seg {
                 if s.only_head()? {
                     // Fast path.
+                    trace!("ancestors: push ..={:?} (only head fast path)", id);
                     result.push_span((Id::MIN..=id).into());
                     break 'outer;
                 }
@@ -558,8 +580,11 @@ impl<Store: IdDagStore> IdDag<Store> {
                 let seg = self.find_segment_by_head_and_level(id, level)?;
                 if let Some(seg) = seg {
                     let span = seg.span()?.into();
+                    trace!("ancestors: push lv{} {:?}", level, &span);
                     result.push_span(span);
-                    for parent in seg.parents()? {
+                    let parents = seg.parents()?;
+                    trace!("ancestors: follow parents {:?}", &parents);
+                    for parent in parents {
                         to_visit.push(parent);
                     }
                     continue 'outer;
@@ -567,13 +592,20 @@ impl<Store: IdDagStore> IdDag<Store> {
             }
             if let Some(seg) = flat_seg {
                 let span = (seg.span()?.low..=id).into();
+                trace!("ancestors: push lv0 {:?}", &span);
                 result.push_span(span);
-                for parent in seg.parents()? {
+                let parents = seg.parents()?;
+                trace!("ancestors: follow parents {:?}", &parents);
+                for parent in parents {
                     to_visit.push(parent);
                 }
             } else {
                 return bug("flat segments are expected to cover everything but they are not");
             }
+        }
+
+        if !tracing_span.is_disabled() {
+            tracing_span.record("result", &field::debug(&result));
         }
 
         Ok(result)
@@ -587,6 +619,9 @@ impl<Store: IdDagStore> IdDag<Store> {
         let mut result = SpanSet::empty();
         let mut set = set.into();
 
+        let tracing_span = debug_span!("parents", result = "", set = field::debug(&set));
+        let _scope = tracing_span.enter();
+
         'outer: while let Some(head) = set.max() {
             // For high-level segments. If the set covers the entire segment, then
             // the parents is (the segment - its head + its parents).
@@ -599,6 +634,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                         parent_set.push_set(&SpanSet::from_spans(seg.parents()?));
                         set = set.difference(&seg_set);
                         result = result.union(&parent_set);
+                        trace!("parents: push lv{} {:?}", level, &parent_set);
                         continue 'outer;
                     }
                 }
@@ -629,7 +665,12 @@ impl<Store: IdDagStore> IdDag<Store> {
             };
 
             set = set.difference(&seg_set);
+            trace!("parents: push lv0 {:?}", &parent_set);
             result = result.union(&parent_set);
+        }
+
+        if !tracing_span.is_disabled() {
+            tracing_span.record("result", &field::debug(&result));
         }
 
         Ok(result)
@@ -754,6 +795,8 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// Calculate children of the given set.
     pub fn children(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let set = set.into();
+        let tracing_span = debug_span!("children", result = "", set = field::debug(&set));
+        let _scope = tracing_span.enter();
 
         // The algorithm works as follows:
         // - Iterate through level N segments [1].
@@ -808,6 +851,11 @@ impl<Store: IdDagStore> IdDag<Store> {
                     if overlapped_parents == parents.len()
                         && intersection.count() + 1 == span.count()
                     {
+                        trace!(
+                            "children: push lv{} {:?} (rootless fast path)",
+                            level,
+                            &span
+                        );
                         ctx.result.push_span(span);
                         continue;
                     }
@@ -824,6 +872,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                                 .iter()
                                 .map(|s| s.low + 1..=s.high + 1),
                         );
+                        trace!("children: push {:?}", &seg_children);
                         ctx.result.push_set(&seg_children);
                     }
                 }
@@ -833,6 +882,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                         visit_segments(ctx, span, level - 1)?;
                     } else {
                         // child(any parent) = lowest id in this flag segment.
+                        trace!("children: push {:?} (overlapped parents)", &span.low);
                         ctx.result.push_span(span.low.into());
                     }
                 }
@@ -849,6 +899,11 @@ impl<Store: IdDagStore> IdDag<Store> {
         };
 
         visit_segments(&mut ctx, (Id::MIN..=Id::MAX).into(), self.max_level)?;
+
+        if !tracing_span.is_disabled() {
+            tracing_span.record("result", &field::debug(&ctx.result));
+        }
+
         Ok(ctx.result)
     }
 
@@ -940,9 +995,18 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// ```
     pub fn range(&self, roots: impl Into<SpanSet>, heads: impl Into<SpanSet>) -> Result<SpanSet> {
         // Pre-calculate ancestors.
-        let ancestors = self.ancestors(heads)?;
+        let heads = heads.into();
         let roots = roots.into();
 
+        let tracing_span = debug_span!(
+            "range",
+            result = "",
+            roots = field::debug(&roots),
+            heads = field::debug(&heads),
+        );
+        let _scope = tracing_span.enter();
+
+        let ancestors = self.ancestors(heads)?;
         if ancestors.is_empty() || roots.is_empty() {
             return Ok(SpanSet::empty());
         }
@@ -979,6 +1043,7 @@ impl<Store: IdDagStore> IdDag<Store> {
             range: Span,
             level: Level,
         ) -> Result<()> {
+            trace!("range: visit {:?}", &range);
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
@@ -1010,6 +1075,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                     && ctx.ancestors.contains(span.high)
                     && overlapped_parents.all()?
                 {
+                    trace!("range: push lv{} {:?}", level, &span);
                     ctx.result.push_span(span);
                     continue;
                 }
@@ -1030,7 +1096,9 @@ impl<Store: IdDagStore> IdDag<Store> {
                     };
                     let span_high = intersection.max().unwrap();
                     if span_high >= span_low {
-                        ctx.result.push_span(Span::from(span_low..=span_high));
+                        let span = Span::from(span_low..=span_high);
+                        trace!("range: push lv0 {:?}", &span);
+                        ctx.result.push_span(span);
                     }
                 } else {
                     // Go deeper.
@@ -1054,6 +1122,11 @@ impl<Store: IdDagStore> IdDag<Store> {
         if ctx.roots_min <= ctx.ancestors_max {
             visit_segments(&mut ctx, (Id::MIN..=Id::MAX).into(), self.max_level)?;
         }
+
+        if !tracing_span.is_disabled() {
+            tracing_span.record("result", &field::debug(&ctx.result));
+        }
+
         Ok(ctx.result)
     }
 
@@ -1065,6 +1138,9 @@ impl<Store: IdDagStore> IdDag<Store> {
         // is known to be `all()`.
 
         let roots = set.into();
+        let tracing_span = debug_span!("descendants", result = "", set = field::debug(&roots),);
+        let _scope = tracing_span.enter();
+
         if roots.is_empty() {
             return Ok(SpanSet::empty());
         }
@@ -1104,6 +1180,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                     Ok(!ctx.this.ancestors(p)?.intersection(&ctx.roots).is_empty())
                 });
                 if !seg.has_root()? && overlapped_parents.all()? {
+                    trace!("range: push lv{} {:?}", level, &span);
                     ctx.result.push_span(span);
                     continue;
                 }
@@ -1116,6 +1193,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                     };
                     let span_high = span.high;
                     if span_high >= span_low {
+                        trace!("range: push lv0 {:?}", &span);
                         ctx.result.push_span(Span::from(span_low..=span_high));
                     }
                 } else {
@@ -1135,6 +1213,10 @@ impl<Store: IdDagStore> IdDag<Store> {
         };
 
         visit_segments(&mut ctx, (Id::MIN..=Id::MAX).into(), self.max_level)?;
+
+        if !tracing_span.is_disabled() {
+            tracing_span.record("result", &field::debug(&ctx.result));
+        }
         Ok(ctx.result)
     }
 }
