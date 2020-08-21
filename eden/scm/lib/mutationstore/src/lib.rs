@@ -27,9 +27,12 @@
 //! an error to refer to later commits, and any entry that causes a cycle will
 //! be ignored.
 
+#![allow(clippy::redundant_closure)]
+
 use anyhow::Result;
 use bitflags::bitflags;
 use dag::namedag::MemNameDag;
+use dag::nameset::meta::MetaSet;
 use dag::ops::DagAddHeads;
 use dag::DagAlgorithm;
 use dag::Set;
@@ -42,6 +45,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Cursor;
 use std::path::Path;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::SeqCst;
 use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::VLQDecodeAt;
@@ -212,6 +217,84 @@ impl MutationStore {
         self.log.flush()?;
         self.pending.clear();
         Ok(())
+    }
+
+    fn try_clone(&self) -> Result<Self> {
+        Ok(Self {
+            log: self.log.try_clone()?,
+            pending: self.pending.clone(),
+        })
+    }
+
+    /// Calculate the "obsolete" set, a subset of `draft` with visible successors.
+    /// A vertex that is in `public` or `draft` is considered visible.
+    ///
+    /// For best performance, the callsite should consider calling
+    /// `dag.sort(result)` to bind the `result` of this function to the main
+    /// commit graph.
+    pub fn calculate_obsolete(&self, public: Set, draft: Set) -> Result<Set> {
+        let visible = public | draft.clone();
+        let this = self.try_clone()?;
+
+        // Evaluate `obsolete()` for all `draft`.
+        // A draft is obsoleted if it has a visible successor.
+        let evaluate = {
+            let visible = visible.clone();
+            move || -> dag::Result<Set> {
+                // Vertex -> Node.
+                let draft_nodes = draft
+                    .iter()?
+                    .filter_map(|v| v.ok().and_then(|v| Node::from_slice(v.as_ref()).ok()))
+                    .collect::<Vec<Node>>();
+
+                // Obtain the obsolete graph about draft successors.
+                let obsdag = this
+                    .get_dag_advanced(draft_nodes, DagFlags::SUCCESSORS)
+                    .map_err(|e| dag::errors::BackendError::Other(e))?;
+
+                // Filter out invisible successors.
+                let obsvisible = obsdag.ancestors(obsdag.all()? & visible.clone())?;
+
+                // Heads of `obsvisible` are not obsoleted. Other part (parent) of
+                // `obsvisible` are obsoleted.
+                let obsoleted = obsdag.parents(obsvisible)?;
+
+                // Filter out unknown nodes.
+                let obsoleted = draft.clone() & obsoleted;
+
+                // Flatten the set for performance.
+                Ok(obsoleted.flatten()?)
+            }
+        };
+
+        // Spot check `obsolete()` for nodes.
+        //
+        // This is faster for revsets like `smallset & obsolete()`, where
+        // smallset is way smaller than `draft()`.
+        let contains_count = AtomicUsize::new(0);
+        let this = self.try_clone()?;
+        let contains = move |set: &MetaSet, v: &VertexName| -> dag::Result<bool> {
+            // If "contains" is called a few times, calculate the full "obsolete()"
+            // and use that instead.
+            if contains_count.fetch_add(1, SeqCst) > 4 {
+                set.evaluate()?.contains(v)
+            } else if let Ok(id) = Node::from_slice(v.as_ref()) {
+                let obsdag = this
+                    .get_dag_advanced(vec![id], DagFlags::SUCCESSORS)
+                    .map_err(|e| dag::errors::BackendError::Other(e))?;
+                Ok((obsdag.all()? & visible.clone()).count()? > 1)
+            } else {
+                Ok(false)
+            }
+        };
+
+        // The set has 2 code paths: contains, and full iteration.
+        //
+        // The contains test can be used to spot check a few nodes without
+        // calculating the full set (ex. smallset & obsolete()).
+        //
+        // The full iteration is used in other cases.
+        Ok(Set::from_evaluate_contains(evaluate, contains))
     }
 
     pub fn get_successors_sets(&self, node: Node) -> Result<Vec<Vec<Node>>> {
@@ -569,9 +652,60 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn test_calculate_obsolete() -> Result<()> {
+        let dir = TempDir::new("mutationstore")?;
+        let mut ms = MutationStore::open(dir.path())?;
+
+        // C   F  # C -> F
+        // |   |
+        // B D E  # B -> D -> E
+        //  \|/   # X -> Y
+        // X Y Z  # Y, Z are public; X, B, E, C are draft
+
+        for (pred, succ) in [("B", "D"), ("D", "E"), ("C", "F"), ("X", "Y")].iter() {
+            add(&mut ms, pred, succ)?;
+        }
+        let public = Set::from_static_names(vec![v("Y"), v("Z")]);
+        let draft = Set::from_static_names(vec![v("B"), v("E"), v("C"), v("X")]);
+        let obsolete = ms.calculate_obsolete(public, draft)?;
+
+        // B is obsoleted. It has a visible successor E (draft).
+        assert!(obsolete.contains(&v("B"))?);
+
+        // X is obsoleted. It has a visible successor Y (public).
+        assert!(obsolete.contains(&v("X"))?);
+
+        // C does not have a visible successor.
+        assert!(!obsolete.contains(&v("C"))?);
+
+        // D is not visible.
+        assert!(!obsolete.contains(&v("D"))?);
+
+        // A is not a draft.
+        assert!(!obsolete.contains(&v("A"))?);
+
+        // The set is not evaluated yet.
+        assert_eq!(format!("{:?}", &obsolete), "<meta ?>");
+
+        // E does not have a successor.
+        assert!(!obsolete.contains(&v("E"))?);
+
+        // Enough "contains" check. The set should be evaluated now.
+        // (0x42 == b'B', 0x58 == b'X')
+        assert_eq!(format!("{:.2?}", &obsolete), "<meta <static [42, 58]>>");
+
+        Ok(())
+    }
+
     /// Create a node from a single-char string.
     fn n(s: impl ToString) -> Node {
         Node::from_slice(s.to_string().repeat(Node::len()).as_bytes()).unwrap()
+    }
+
+    /// Create a vertex from a single-char string.
+    fn v(s: impl ToString) -> VertexName {
+        n(s).as_ref().to_vec().into()
     }
 
     /// Add (test) edges to the mutation store.
