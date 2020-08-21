@@ -38,6 +38,7 @@ use std::path::Path;
 /// [`IdDag`] is often used together with [`IdMap`] to allow customized names
 /// on vertexes. The [`NameDag`] type provides an easy-to-use interface to
 /// keep [`IdDag`] and [`IdMap`] in sync.
+#[derive(Clone)]
 pub struct IdDag<Store> {
     store: Store,
     max_level: Level,
@@ -93,6 +94,16 @@ impl IdDag<IndexedLogStore> {
     /// The default value is Usually good enough.
     pub fn set_new_segment_size(&mut self, size: usize) {
         self.new_seg_size = size.max(2);
+    }
+
+    /// Attempt to clone the `IdDag`.
+    pub fn try_clone(&self) -> Result<Self> {
+        let store = self.store.try_clone()?;
+        Ok(Self {
+            store,
+            max_level: self.max_level,
+            new_seg_size: self.new_seg_size,
+        })
     }
 }
 

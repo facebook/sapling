@@ -42,7 +42,9 @@ use crate::ops::ToSet;
 use crate::spanset::SpanSet;
 use crate::Result;
 use indexedlog::multi;
+use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet};
+use std::ops::Deref;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -65,7 +67,13 @@ pub struct NameDag {
     /// expensive.
     pub(crate) snapshot_map: Arc<dyn IdConvert + Send + Sync>,
 
-    mlog: multi::MultiLog,
+    /// A read-only snapshot of the `NameDag`.
+    /// Lazily calculated.
+    snapshot: RwLock<Option<Arc<NameDag>>>,
+
+    /// `MultiLog` controls on-disk metadata.
+    /// `None` for read-only `NameDag`,
+    mlog: Option<multi::MultiLog>,
 
     /// Heads added via `add_heads` that are not flushed yet.
     pending_heads: Vec<VertexName>,
@@ -79,6 +87,7 @@ pub struct MemNameDag {
     dag: IdDag<InProcessStore>,
     map: MemIdMap,
     snapshot_map: Arc<dyn IdConvert + Send + Sync>,
+    snapshot: RwLock<Option<Arc<MemNameDag>>>,
 }
 
 impl NameDag {
@@ -99,7 +108,8 @@ impl NameDag {
             dag,
             map,
             snapshot_map,
-            mlog,
+            snapshot: Default::default(),
+            mlog: Some(mlog),
             pending_heads: Default::default(),
         })
     }
@@ -142,7 +152,11 @@ impl DagPersistent for NameDag {
         //
         // Reload meta. This drops in-memory changes, which is fine because we have
         // checked there are no in-memory changes at the beginning.
-        let lock = self.mlog.lock()?;
+        if self.mlog.is_none() {
+            return bug("MultiLog should be Some for read-write NameDag");
+        }
+        let mlog = self.mlog.as_mut().unwrap();
+        let lock = mlog.lock()?;
         let mut map = self.map.prepare_filesystem_sync()?;
         let mut dag = self.dag.prepare_filesystem_sync()?;
 
@@ -158,10 +172,11 @@ impl DagPersistent for NameDag {
         // Write to disk.
         map.sync()?;
         dag.sync(std::iter::once(&mut self.dag))?;
-        self.mlog.write_meta(&lock)?;
+        mlog.write_meta(&lock)?;
 
         // Update snapshot_map.
         self.snapshot_map = Arc::new(self.map.try_clone()?);
+        self.invalidate_snapshot();
         Ok(())
     }
 
@@ -246,8 +261,11 @@ impl DagAddHeads for NameDag {
             self.dag.build_segments_volatile(id - 1, &parent_ids_func)?;
         }
 
+        drop(parent_ids_func);
+
         // Update snapshot_map so the changes become visible to queries.
         self.snapshot_map = Arc::new(self.map.try_clone()?);
+        self.invalidate_snapshot();
 
         Ok(())
     }
@@ -280,6 +298,36 @@ impl NameDag {
         }
         Ok(parents_map)
     }
+
+    /// Invalidate cached content. Call this after changing the graph.
+    fn invalidate_snapshot(&mut self) {
+        *self.snapshot.write() = None;
+    }
+
+    /// Attempt to get a snapshot of this graph.
+    fn try_snapshot(&self) -> Result<Arc<Self>> {
+        if let Some(s) = self.snapshot.read().deref() {
+            return Ok(s.clone());
+        }
+
+        let mut snapshot = self.snapshot.write();
+        match snapshot.deref() {
+            Some(s) => Ok(s.clone()),
+            None => {
+                let cloned = Self {
+                    dag: self.dag.try_clone()?,
+                    map: self.map.try_clone()?,
+                    snapshot_map: self.snapshot_map.clone(),
+                    snapshot: Default::default(),
+                    mlog: None,
+                    pending_heads: self.pending_heads.clone(),
+                };
+                let result = Arc::new(cloned);
+                *snapshot = Some(result.clone());
+                Ok(result)
+            }
+        }
+    }
 }
 
 impl MemNameDag {
@@ -289,6 +337,35 @@ impl MemNameDag {
             dag: IdDag::new_in_process(),
             map: MemIdMap::new(),
             snapshot_map: Arc::new(MemIdMap::new()),
+            snapshot: Default::default(),
+        }
+    }
+
+    /// Invalidate cached content. Call this after changing the graph.
+    fn invalidate_snapshot(&mut self) {
+        *self.snapshot.write() = None;
+    }
+
+    /// Get a snapshot of this graph.
+    fn snapshot(&self) -> Arc<Self> {
+        if let Some(s) = self.snapshot.read().deref() {
+            return s.clone();
+        }
+
+        let mut snapshot = self.snapshot.write();
+        match snapshot.deref() {
+            Some(s) => s.clone(),
+            None => {
+                let cloned = Self {
+                    dag: self.dag.clone(),
+                    map: self.map.clone(),
+                    snapshot_map: self.snapshot_map.clone(),
+                    snapshot: Default::default(),
+                };
+                let result = Arc::new(cloned);
+                *snapshot = Some(result.clone());
+                result
+            }
         }
     }
 }
@@ -314,6 +391,8 @@ impl DagAddHeads for MemNameDag {
             self.dag.build_segments_volatile(id - 1, &parent_ids_func)?;
         }
         self.snapshot_map = Arc::new(self.map.clone());
+        drop(parent_ids_func);
+        self.invalidate_snapshot();
         Ok(())
     }
 }
@@ -733,6 +812,9 @@ pub trait NameDagStorage: IdMapEq {
 
     /// (Cheaply) clone the map.
     fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync>;
+
+    /// (Relatively cheaply) clone the dag.
+    fn snapshot_dag(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
 }
 
 impl NameDagStorage for NameDag {
@@ -748,6 +830,9 @@ impl NameDagStorage for NameDag {
     fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync> {
         self.snapshot_map.clone()
     }
+    fn snapshot_dag(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+        Ok(self.try_snapshot()? as Arc<dyn DagAlgorithm + Send + Sync>)
+    }
 }
 
 impl NameDagStorage for MemNameDag {
@@ -762,6 +847,9 @@ impl NameDagStorage for MemNameDag {
     }
     fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync> {
         self.snapshot_map.clone()
+    }
+    fn snapshot_dag(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+        Ok(self.snapshot() as Arc<dyn DagAlgorithm + Send + Sync>)
     }
 }
 

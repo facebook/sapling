@@ -366,6 +366,15 @@ impl IndexedLogStore {
         Self { log, path }
     }
 
+    pub fn try_clone(&self) -> Result<IndexedLogStore> {
+        let log = self.log.try_clone()?;
+        let store = IndexedLogStore {
+            log,
+            path: self.path.clone(),
+        };
+        Ok(store)
+    }
+
     pub fn try_clone_without_dirty(&self) -> Result<IndexedLogStore> {
         let log = self.log.try_clone_without_dirty()?;
         let store = IndexedLogStore {
@@ -382,6 +391,7 @@ enum StoreId {
     NonMaster(usize),
 }
 
+#[derive(Clone)]
 pub struct InProcessStore {
     master_segments: Vec<Segment>,
     non_master_segments: Vec<Segment>,
