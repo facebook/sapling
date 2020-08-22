@@ -27,7 +27,8 @@ BackingStoreLogger::BackingStoreLogger(
 
 void BackingStoreLogger::logImport(
     ObjectFetchContext& context,
-    RelativePathPiece importPath) {
+    RelativePathPiece importPath,
+    ObjectFetchContext::ObjectType fetchedType) {
   if (!loggingAvailable_) {
     return;
   }
@@ -58,10 +59,27 @@ void BackingStoreLogger::logImport(
         folly::to<std::string>(cause_string, " - ", causeDetail.value());
   }
 
+  std::string typeString = "<invalid>";
+  switch (fetchedType) {
+    case ObjectFetchContext::ObjectType::Blob:
+      typeString = "Blob";
+      break;
+    case ObjectFetchContext::ObjectType::BlobMetadata:
+      typeString = "Blob Metadata";
+      break;
+    case ObjectFetchContext::ObjectType::Tree:
+      typeString = "Tree";
+      break;
+    case ObjectFetchContext::ObjectType::kObjectTypeEnumMax:
+      // invalid string prolly good here
+      break;
+  }
+
   logger_->logEvent(ServerDataFetch{std::move(cause_string),
                                     pid,
                                     std::move(cmdline),
-                                    std::move(importPathString)});
+                                    std::move(importPathString),
+                                    std::move(typeString)});
 }
 
 } // namespace eden

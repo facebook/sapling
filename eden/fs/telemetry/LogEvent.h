@@ -207,6 +207,7 @@ struct ServerDataFetch {
   std::optional<pid_t> client_pid;
   std::optional<std::string> client_cmdline;
   std::string fetched_path;
+  std::string fetched_object_type;
 
   void populate(DynamicEvent& event) const {
     event.addString("interface", cause);
@@ -217,6 +218,7 @@ struct ServerDataFetch {
       event.addString("client_cmdline", client_cmdline.value());
     }
     event.addString("fetched_path", fetched_path);
+    event.addString("fetched_object_type", fetched_object_type);
   }
 };
 

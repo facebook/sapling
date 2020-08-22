@@ -10,13 +10,13 @@
 #include <folly/Executor.h>
 #include <string>
 
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
 class UnboundedQueueExecutor;
-class ObjectFetchContext;
 class StructuredLogger;
 class ProcessNameCache;
 
@@ -29,7 +29,10 @@ class BackingStoreLogger {
   // for unit tests so that a no-op logger can be passed into the backing store
   BackingStoreLogger() = default;
 
-  void logImport(ObjectFetchContext& context, RelativePathPiece importPath);
+  void logImport(
+      ObjectFetchContext& context,
+      RelativePathPiece importPath,
+      ObjectFetchContext::ObjectType fetchedType);
 
  private:
   std::shared_ptr<StructuredLogger> logger_;

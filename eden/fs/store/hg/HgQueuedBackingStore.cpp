@@ -186,7 +186,7 @@ void HgQueuedBackingStore::processRequest() {
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     const Hash& id,
     ObjectFetchContext& context) {
-  logBackingStoreFetch(context, id);
+  logBackingStoreFetch(context, id, ObjectFetchContext::ObjectType::Tree);
 
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
@@ -201,7 +201,8 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     ObjectFetchContext& context) {
   auto proxyHash = HgProxyHash(localStore_.get(), id, "getBlob");
   auto path = proxyHash.path();
-  logBackingStoreFetch(context, path);
+
+  logBackingStoreFetch(context, path, ObjectFetchContext::ObjectType::Blob);
 
   if (auto blob =
           backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
@@ -249,7 +250,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
   }
 
   for (auto& hash : ids) {
-    logBackingStoreFetch(context, hash);
+    logBackingStoreFetch(context, hash, ObjectFetchContext::ObjectType::Blob);
   }
 
   auto importTracker =
@@ -263,7 +264,8 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
 
 void HgQueuedBackingStore::logBackingStoreFetch(
     ObjectFetchContext& context,
-    std::variant<RelativePathPiece, Hash> identifier) {
+    std::variant<RelativePathPiece, Hash> identifier,
+    ObjectFetchContext::ObjectType type) {
   if (!config_) {
     return;
   }
@@ -291,7 +293,7 @@ void HgQueuedBackingStore::logBackingStoreFetch(
 
   if (RelativePathPiece(logFetchPath.value())
           .isParentDirOf(RelativePathPiece(path))) {
-    logger_->logImport(context, path);
+    logger_->logImport(context, path, type);
   }
 }
 

@@ -112,7 +112,8 @@ class HgQueuedBackingStore : public BackingStore {
    */
   void logBackingStoreFetch(
       ObjectFetchContext& context,
-      std::variant<RelativePathPiece, Hash> identifer);
+      std::variant<RelativePathPiece, Hash> identifer,
+      ObjectFetchContext::ObjectType type);
 
   /**
    * gets the watches timing `object` imports that are `stage`
