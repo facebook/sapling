@@ -55,6 +55,13 @@ def dagwalker(repo, revs):
     if not revs:
         return
 
+    simplifygrandparents = repo.ui.configbool("log", "simplify-grandparents")
+    cl = repo.changelog
+    if cl.algorithmbackend != "segments":
+        simplifygrandparents = False
+    if simplifygrandparents:
+        rootnodes = cl.tonodes(revs)
+
     gpcache = {}
 
     for rev in revs:
@@ -71,13 +78,23 @@ def dagwalker(repo, revs):
         for mpar in mpars:
             gp = gpcache.get(mpar)
             if gp is None:
-                # precompute slow query as we know reachableroots() goes
-                # through all revs (issue4782)
-                if not isinstance(revs, smartset.baseset):
-                    revs = smartset.baseset(revs)
-                gp = gpcache[mpar] = sorted(
-                    set(dagop.reachableroots(repo, revs, [mpar]))
-                )
+                if simplifygrandparents:
+                    gp = gpcache[mpar] = cl.torevs(
+                        cl.dageval(
+                            lambda: headsancestors(
+                                ancestors(cl.tonodes([mpar])) & rootnodes
+                            )
+                        )
+                    )
+
+                else:
+                    # precompute slow query as we know reachableroots() goes
+                    # through all revs (issue4782)
+                    if not isinstance(revs, smartset.baseset):
+                        revs = smartset.baseset(revs)
+                    gp = gpcache[mpar] = sorted(
+                        set(dagop.reachableroots(repo, revs, [mpar]))
+                    )
             if not gp:
                 parents.append((MISSINGPARENT, mpar))
                 pset.add(mpar)

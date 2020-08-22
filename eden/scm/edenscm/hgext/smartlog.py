@@ -232,6 +232,13 @@ def getdag(ui, repo, revs, master):
         else:
             return list()
 
+    simplifygrandparents = ui.configbool("log", "simplify-grandparents")
+    cl = repo.changelog
+    if cl.algorithmbackend != "segments":
+        simplifygrandparents = False
+    if simplifygrandparents:
+        rootnodes = cl.tonodes(revs)
+
     # For each rev we need to show, compute it's parents in the dag.
     # If we have to reach for a grandparent, insert a fake node so we
     # can show '...' in the graph.
@@ -259,9 +266,18 @@ def getdag(ui, repo, revs, master):
         for mpar in mpars:
             gp = gpcache.get(mpar)
             if gp is None:
-                gp = gpcache[mpar] = dagop.reachableroots(
-                    repo, smartset.baseset(revs), [mpar]
-                )
+                if simplifygrandparents:
+                    gp = gpcache[mpar] = cl.torevs(
+                        cl.dageval(
+                            lambda: headsancestors(
+                                ancestors(cl.tonodes([mpar])) & rootnodes
+                            )
+                        )
+                    )
+                else:
+                    gp = gpcache[mpar] = dagop.reachableroots(
+                        repo, smartset.baseset(revs), [mpar]
+                    )
             if not gp:
                 parents.append((graphmod.MISSINGPARENT, mpar))
             else:

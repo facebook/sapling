@@ -1615,6 +1615,46 @@ proxy.
     Optional. Always use the proxy, even for localhost and any entries
     in ``http_proxy.no``. (default: False)
 
+
+``log``
+-------
+
+``simplify-grandparents``
+   Controls whether grandparents of indeterminate commits get simplified
+   for graph log. If set to true, edges from an indeterminate X to its
+   (grand)parent Y will be hidden if X has another (grand)parent Z and
+   Y is a (grand)parent of Z.
+
+   For example::
+
+      E
+      |
+      D
+      |\
+      B C
+      |/
+      A
+
+   When logging A, B, E with this config off, the result is::
+
+      E
+      :\
+      : B
+      :/
+      A
+
+   When logging A, B, E with this config on, the result will be::
+
+      E
+      :
+      B
+      |
+      A
+
+   This feature requires a modern commit graph backend. It is turned
+   off if an older commit graph backend is used. (default: True)
+
+
 ``merge``
 ---------
 
