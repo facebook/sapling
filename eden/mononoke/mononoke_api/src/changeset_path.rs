@@ -50,6 +50,13 @@ pub struct HistoryEntry {
     pub changeset_id: ChangesetId,
 }
 
+#[derive(Default)]
+pub struct ChangesetPathHistoryOptions {
+    pub until_timestamp: Option<i64>,
+    pub descendants_of: Option<ChangesetId>,
+    pub follow_history_across_deletions: bool,
+}
+
 pub enum PathEntry {
     NotPresent,
     Tree(TreeContext),
@@ -281,16 +288,14 @@ impl ChangesetPathContext {
     /// a history of the path.
     pub async fn history(
         &self,
-        until_timestamp: Option<i64>,
-        descendants_of: Option<ChangesetId>,
-        follow_history_across_deletions: bool,
+        opts: ChangesetPathHistoryOptions,
     ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_, MononokeError>
     {
         let ctx = self.changeset.ctx().clone();
         let repo = self.repo().blob_repo().clone();
         let mpath = self.path.as_mpath();
 
-        let descendants_of = match descendants_of {
+        let descendants_of = match opts.descendants_of {
             Some(descendants_of) => Some((
                 descendants_of,
                 repo.get_changeset_fetcher()
@@ -427,7 +432,7 @@ impl ChangesetPathContext {
         };
         let cs_info_enabled = self.repo().derive_changeset_info_enabled();
 
-        let history_across_deletions = if follow_history_across_deletions {
+        let history_across_deletions = if opts.follow_history_across_deletions {
             HistoryAcrossDeletions::Track
         } else {
             HistoryAcrossDeletions::DontTrack
@@ -439,7 +444,7 @@ impl ChangesetPathContext {
             self.changeset.id(),
             FilterVisitor {
                 cs_info_enabled,
-                until_timestamp,
+                until_timestamp: opts.until_timestamp,
                 descendants_of,
                 cache: HashMap::new(),
                 skiplist_index: self.repo().skiplist_index().clone(),

@@ -52,6 +52,12 @@ pub struct ChangesetContext {
         Shared<Pin<Box<dyn Future<Output = Result<RootUnodeManifestId, MononokeError>> + Send>>>,
 }
 
+#[derive(Default)]
+pub struct ChangesetHistoryOptions {
+    pub until_timestamp: Option<i64>,
+    pub descendants_of: Option<ChangesetId>,
+}
+
 impl fmt::Debug for ChangesetContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -607,10 +613,11 @@ impl ChangesetContext {
     /// Returns a stream of `ChangesetContext` for the history of the repository from this commit.
     pub async fn history(
         &self,
-        until_timestamp: Option<i64>,
-        descendants_of: Option<ChangesetId>,
+        opts: ChangesetHistoryOptions,
     ) -> impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_ {
-        let descendants_of = descendants_of.map(|id| Self::new(self.repo().clone(), id));
+        let descendants_of = opts
+            .descendants_of
+            .map(|id| Self::new(self.repo().clone(), id));
         if let Some(ancestor) = descendants_of.as_ref() {
             // If the the start commit is not descendant of the argument exit early.
             match ancestor.is_ancestor_of(self.id()).await {
@@ -623,7 +630,7 @@ impl ChangesetContext {
         let cs_info_enabled = self.repo.derive_changeset_info_enabled();
 
         // Helper allowing us to terminate walk when we reach `until_timestamp`.
-        let terminate = until_timestamp.map(move |until_timestamp| {
+        let terminate = opts.until_timestamp.map(move |until_timestamp| {
             move |changeset_id| async move {
                 let info = if cs_info_enabled {
                     ChangesetInfo::derive(

@@ -41,9 +41,10 @@ pub mod tree;
 #[cfg(test)]
 mod test;
 
-pub use crate::changeset::{ChangesetContext, Generation};
+pub use crate::changeset::{ChangesetContext, ChangesetHistoryOptions, Generation};
 pub use crate::changeset_path::{
-    unified_diff, ChangesetPathContext, CopyInfo, PathEntry, UnifiedDiff, UnifiedDiffMode,
+    unified_diff, ChangesetPathContext, ChangesetPathHistoryOptions, CopyInfo, PathEntry,
+    UnifiedDiff, UnifiedDiffMode,
 };
 pub use crate::changeset_path_diff::ChangesetPathDiffContext;
 pub use crate::errors::MononokeError;

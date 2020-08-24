@@ -12,8 +12,8 @@ use context::CoreContext;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::{future, try_join};
 use mononoke_api::{
-    unified_diff, ChangesetContext, ChangesetId, ChangesetSpecifier, CopyInfo, MononokeError,
-    MononokePath, UnifiedDiffMode,
+    unified_diff, ChangesetContext, ChangesetHistoryOptions, ChangesetId, ChangesetSpecifier,
+    CopyInfo, MononokeError, MononokePath, UnifiedDiffMode,
 };
 use source_control as thrift;
 
@@ -358,7 +358,12 @@ impl SourceControlServiceImpl {
             .into());
         }
 
-        let history_stream = changeset.history(after_timestamp, descendants_of).await;
+        let history_stream = changeset
+            .history(ChangesetHistoryOptions {
+                until_timestamp: after_timestamp,
+                descendants_of,
+            })
+            .await;
         let history = collect_history(
             history_stream,
             skip,

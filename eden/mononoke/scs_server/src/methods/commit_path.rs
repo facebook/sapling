@@ -8,7 +8,7 @@
 use context::CoreContext;
 use dedupmap::DedupMap;
 use futures::future;
-use mononoke_api::{ChangesetSpecifier, MononokeError, PathEntry};
+use mononoke_api::{ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
 use std::borrow::Cow;
 use std::collections::{BTreeSet, HashMap};
@@ -236,11 +236,11 @@ impl SourceControlServiceImpl {
         }
 
         let history_stream = path
-            .history(
-                after_timestamp.clone(),
+            .history(ChangesetPathHistoryOptions {
+                until_timestamp: after_timestamp.clone(),
                 descendants_of,
-                params.follow_history_across_deletions,
-            )
+                follow_history_across_deletions: params.follow_history_across_deletions,
+            })
             .await?;
         let history = collect_history(
             history_stream,
