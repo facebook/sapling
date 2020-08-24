@@ -80,3 +80,15 @@ pub use minibytes::Text;
 
 #[cfg(feature = "fb")]
 mod fb;
+
+#[cfg(test)]
+use lazy_static::lazy_static;
+#[cfg(test)]
+use parking_lot::Mutex;
+
+#[cfg(test)]
+lazy_static! {
+    /// Lock for the environment.  This should be acquired by tests that rely on particular
+    /// environment variable values that might be overwritten by other tests.
+    pub static ref ENV_LOCK: Mutex<()> = Mutex::new(());
+}

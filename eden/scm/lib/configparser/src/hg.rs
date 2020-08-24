@@ -928,15 +928,7 @@ mod tests {
     use tempdir::TempDir;
 
     use crate::config::tests::write_file;
-
-    use lazy_static::lazy_static;
-    use parking_lot::Mutex;
-
-    lazy_static! {
-        /// Lock for the environment.  This should be acquired by tests that rely on particular
-        /// environment variable values that might be overwritten by other tests.
-        static ref ENV_LOCK: Mutex<()> = Mutex::new(());
-    }
+    use crate::ENV_LOCK;
 
     #[test]
     fn test_basic_hgplain() {
@@ -991,6 +983,8 @@ mod tests {
 
     #[test]
     fn test_hgrcpath() {
+        let _guard = crate::ENV_LOCK.lock();
+
         let dir = TempDir::new("test_hgrcpath").unwrap();
 
         write_file(dir.path().join("1.rc"), "[x]\na=1");
@@ -1003,13 +997,18 @@ mod tests {
 
         env::remove_var("EDITOR");
         env::remove_var("VISUAL");
+        env::remove_var("HGPROF");
         env::set_var("T", dir.path());
         env::set_var(HGRCPATH, hgrcpath);
 
         let mut cfg = ConfigSet::new();
 
         cfg.load_user(Options::new());
-        assert!(cfg.sections().is_empty());
+        assert!(
+            cfg.sections().is_empty(),
+            "sections {:?} is not empty",
+            cfg.sections()
+        );
 
         cfg.load_system(Options::new());
         assert_eq!(cfg.get("x", "a"), Some("1".into()));
