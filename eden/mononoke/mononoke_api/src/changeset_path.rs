@@ -54,6 +54,7 @@ pub struct HistoryEntry {
 pub struct ChangesetPathHistoryOptions {
     pub until_timestamp: Option<i64>,
     pub descendants_of: Option<ChangesetId>,
+    pub exclude_changeset_and_ancestors: Option<ChangesetId>,
     pub follow_history_across_deletions: bool,
 }
 
@@ -306,10 +307,22 @@ impl ChangesetPathContext {
             None => None,
         };
 
+        let exclude_changeset_and_ancestors = match opts.exclude_changeset_and_ancestors {
+            Some(exclude_changeset_and_ancestors) => Some((
+                exclude_changeset_and_ancestors,
+                repo.get_changeset_fetcher()
+                    .get_generation_number(ctx.clone(), exclude_changeset_and_ancestors)
+                    .compat()
+                    .await?,
+            )),
+            None => None,
+        };
+
         struct FilterVisitor {
             cs_info_enabled: bool,
             until_timestamp: Option<i64>,
             descendants_of: Option<(ChangesetId, Generation)>,
+            exclude_changeset_and_ancestors: Option<(ChangesetId, Generation)>,
             cache: HashMap<(Option<ChangesetId>, Vec<ChangesetId>), Vec<ChangesetId>>,
             skiplist_index: Arc<SkiplistIndex>,
         };
@@ -386,6 +399,71 @@ impl ChangesetPathContext {
                     .filter_map(identity)
                     .collect();
                 }
+                // Excluding changesest and its ancestors needs to terminate the BFS branch that
+                // passes over the changeeset - but not neccesarily visits it because the changeset
+                // doesn't need to be a part of given path history. We can enforce that by checking
+                // if any of the passed nodes is ancestor of excluded changeset and terminate the
+                // branch at those points.
+                // To mininimize the number of ancestry checks (which are O(n)) we only do them
+                // when the tree traversal goes from a node with generation larger than excluded
+                // changeset to generation lower of equal - as only then we have a change of
+                // "passing" such changeset.
+                if let Some((
+                    exclude_changeset_and_ancestors,
+                    exclude_changeset_and_ancestors_gen,
+                )) = self.exclude_changeset_and_ancestors
+                {
+                    let changeset_fetcher = &repo.get_changeset_fetcher();
+                    let skiplist_index = &skiplist_index;
+
+                    let descendant_cs_gen = if let Some(descendant_cs_id) = descendant_cs_id {
+                        Some(
+                            changeset_fetcher
+                                .get_generation_number(ctx.clone(), descendant_cs_id)
+                                .compat()
+                                .await?,
+                        )
+                    } else {
+                        None
+                    };
+
+                    cs_ids = try_join_all(cs_ids.into_iter().map(|cs_id| {
+                        async move {
+                            let cs_gen = changeset_fetcher
+                                .get_generation_number(ctx.clone(), cs_id)
+                                .compat()
+                                .await?;
+
+                            // If the cs_gen is below the cutoff point
+                            if cs_gen <= exclude_changeset_and_ancestors_gen {
+                                // and the edge if going from above the cutoff.
+                                if descendant_cs_gen.is_none()
+                                    || descendant_cs_gen
+                                        .filter(|gen| gen > &exclude_changeset_and_ancestors_gen)
+                                        .is_some()
+                                {
+                                    // Check the ancestry relationship.
+                                    if skiplist_index
+                                        .query_reachability(
+                                            ctx,
+                                            changeset_fetcher,
+                                            exclude_changeset_and_ancestors,
+                                            cs_id,
+                                        )
+                                        .await?
+                                    {
+                                        return Ok::<_, MononokeError>(None);
+                                    }
+                                }
+                            }
+                            Ok(Some(cs_id))
+                        }
+                    }))
+                    .await?
+                    .into_iter()
+                    .filter_map(identity)
+                    .collect();
+                }
                 Ok(cs_ids)
             }
         }
@@ -446,6 +524,7 @@ impl ChangesetPathContext {
                 cs_info_enabled,
                 until_timestamp: opts.until_timestamp,
                 descendants_of,
+                exclude_changeset_and_ancestors,
                 cache: HashMap::new(),
                 skiplist_index: self.repo().skiplist_index().clone(),
             },

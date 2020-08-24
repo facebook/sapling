@@ -239,6 +239,7 @@ impl SourceControlServiceImpl {
             .history(ChangesetPathHistoryOptions {
                 until_timestamp: after_timestamp.clone(),
                 descendants_of,
+                exclude_changeset_and_ancestors: None,
                 follow_history_across_deletions: params.follow_history_across_deletions,
             })
             .await?;

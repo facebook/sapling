@@ -330,6 +330,37 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
         vec![changesets["a4"], changesets["m1"]]
     );
 
+    let a_history_with_exclusion: Vec<_> = a_path
+        .history(ChangesetPathHistoryOptions {
+            exclude_changeset_and_ancestors: Some(changesets["a3"]),
+            follow_history_across_deletions: true,
+            ..Default::default()
+        })
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        a_history_with_exclusion,
+        vec![changesets["a4"], changesets["m1"]]
+    );
+
+    let a_history_with_exclusion: Vec<_> = a_path
+        .history(ChangesetPathHistoryOptions {
+            exclude_changeset_and_ancestors: Some(changesets["b1"]),
+            until_timestamp: Some(2500),
+            follow_history_across_deletions: true,
+            ..Default::default()
+        })
+        .await?
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        a_history_with_exclusion,
+        vec![changesets["a4"], changesets["m1"], changesets["a3"]]
+    );
+
     Ok(())
 }
 
