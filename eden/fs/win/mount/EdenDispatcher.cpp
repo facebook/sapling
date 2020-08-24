@@ -71,30 +71,23 @@ constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MiB
 EdenDispatcher::EdenDispatcher(EdenMount* mount)
     : mount_{mount}, dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
-HRESULT EdenDispatcher::startEnumeration(
-    const PRJ_CALLBACK_DATA& callbackData,
-    const GUID& enumerationId) noexcept {
-  try {
-    auto relPath = RelativePath(callbackData.FilePathName);
-    auto guid = Guid(enumerationId);
+folly::Future<folly::Unit> EdenDispatcher::opendir(
+    RelativePath path,
+    const Guid guid) {
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
 
-    FB_LOGF(
-        mount_->getStraceLogger(), DBG7, "opendir({}, guid={})", relPath, guid);
+  return mount_->getInode(path)
+      .thenValue([](const InodePtr inode) {
+        auto treePtr = inode.asTreePtr();
+        return treePtr->readdir();
+      })
+      .thenValue([this, guid = std::move(guid)](auto&& dirents) {
+        auto [iterator, inserted] =
+            enumSessions_.wlock()->emplace(guid, std::move(dirents));
+        DCHECK(inserted);
 
-    auto list = mount_->getInode(relPath)
-                    .thenValue([](const InodePtr inode) {
-                      auto treePtr = inode.asTreePtr();
-                      return treePtr->readdir();
-                    })
-                    .get();
-
-    auto [iterator, inserted] =
-        enumSessions_.wlock()->emplace(guid, std::move(list));
-    DCHECK(inserted);
-    return S_OK;
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+        return folly::unit;
+      });
 }
 
 HRESULT EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
@@ -185,111 +178,56 @@ HRESULT EdenDispatcher::getEnumerationData(
   }
 }
 
-HRESULT
-EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
-  try {
-    auto relPath = RelativePath(callbackData.FilePathName);
-    FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({})", relPath);
+folly::Future<std::optional<InodeMetadata>> EdenDispatcher::lookup(
+    RelativePath path) {
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({})", path);
 
-    struct InodeMetadata {
-      // To ensure that the OS has a record of the canonical file name, and not
-      // just whatever case was used to lookup the file, we capture the
-      // relative path here.
-      RelativePath path;
-      size_t size;
-      bool isDir;
-    };
-
-    return mount_->getInode(relPath)
-        .thenValue(
-            [](const InodePtr inode)
-                -> folly::Future<std::optional<InodeMetadata>> {
-              return inode->stat(ObjectFetchContext::getNullContext())
-                  .thenValue([inode = std::move(inode)](struct stat&& stat) {
-                    // Ensure that the OS has a record of the canonical
-                    // file name, and not just whatever case was used to
-                    // lookup the file
-                    size_t size = stat.st_size;
-                    return InodeMetadata{
-                        *inode->getPath(), size, inode->isDir()};
-                  });
-            })
-        .thenError(
-            folly::tag_t<std::system_error>{},
-            [relPath = std::move(relPath), this](const std::system_error& ex)
-                -> folly::Future<std::optional<InodeMetadata>> {
-              if (isEnoent(ex)) {
-                if (relPath == kDotEdenConfigPath) {
-                  return folly::makeFuture(
-                      InodeMetadata{relPath, dotEdenConfig_.length(), false});
-                } else {
-                  XLOG(DBG6) << relPath << ": File not found";
-                  return folly::makeFuture(std::nullopt);
-                }
+  return mount_->getInode(path)
+      .thenValue(
+          [](const InodePtr inode)
+              -> folly::Future<std::optional<InodeMetadata>> {
+            return inode->stat(ObjectFetchContext::getNullContext())
+                .thenValue([inode = std::move(inode)](struct stat&& stat) {
+                  // Ensure that the OS has a record of the canonical
+                  // file name, and not just whatever case was used to
+                  // lookup the file
+                  size_t size = stat.st_size;
+                  return InodeMetadata{*inode->getPath(), size, inode->isDir()};
+                });
+          })
+      .thenError(
+          folly::tag_t<std::system_error>{},
+          [path = std::move(path), this](const std::system_error& ex)
+              -> folly::Future<std::optional<InodeMetadata>> {
+            if (isEnoent(ex)) {
+              if (path == kDotEdenConfigPath) {
+                return folly::makeFuture(InodeMetadata{
+                    std::move(path), dotEdenConfig_.length(), false});
+              } else {
+                XLOG(DBG6) << path << ": File not found";
+                return folly::makeFuture(std::nullopt);
               }
-              return folly::makeFuture<std::optional<InodeMetadata>>(ex);
-            })
-        .thenValue([context = callbackData.NamespaceVirtualizationContext](
-                       const std::optional<InodeMetadata>&& metadata) {
-          if (!metadata) {
-            return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-          }
-
-          PRJ_PLACEHOLDER_INFO placeholderInfo{};
-          placeholderInfo.FileBasicInfo.IsDirectory = metadata->isDir;
-          placeholderInfo.FileBasicInfo.FileSize = metadata->size;
-          auto inodeName = metadata->path.wide();
-
-          HRESULT result = PrjWritePlaceholderInfo(
-              context,
-              inodeName.c_str(),
-              &placeholderInfo,
-              sizeof(placeholderInfo));
-
-          if (FAILED(result)) {
-            XLOGF(
-                DBG6,
-                "{}: {:x} ({})",
-                metadata->path,
-                result,
-                win32ErrorToString(result));
-          }
-
-          return result;
-        })
-        .thenError(
-            folly::tag_t<std::exception>{},
-            [](const std::exception& ex) { return exceptionToHResult(ex); })
-        .get();
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+            }
+            return folly::makeFuture<std::optional<InodeMetadata>>(ex);
+          });
 }
 
-HRESULT
-EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
-  try {
-    auto relPath = RelativePath(callbackData.FilePathName);
-    FB_LOGF(mount_->getStraceLogger(), DBG7, "access({})", relPath);
+folly::Future<bool> EdenDispatcher::access(RelativePath path) {
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "access({})", path);
 
-    return mount_->getInode(relPath)
-        .thenValue([](const InodePtr) { return S_OK; })
-        .thenError(
-            folly::tag_t<std::system_error>{},
-            [relPath = std::move(relPath)](const std::system_error& ex) {
-              if (isEnoent(ex)) {
-                if (relPath == kDotEdenConfigPath) {
-                  return folly::makeFuture(S_OK);
-                }
-                return folly::makeFuture(
-                    HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+  return mount_->getInode(path)
+      .thenValue([](const InodePtr) { return true; })
+      .thenError(
+          folly::tag_t<std::system_error>{},
+          [path = std::move(path)](const std::system_error& ex) {
+            if (isEnoent(ex)) {
+              if (path == kDotEdenConfigPath) {
+                return folly::makeFuture(true);
               }
-              return folly::makeFuture<HRESULT>(ex);
-            })
-        .get();
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+              return folly::makeFuture(false);
+            }
+            return folly::makeFuture<bool>(ex);
+          });
 }
 
 namespace {

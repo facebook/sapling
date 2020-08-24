@@ -24,13 +24,20 @@ namespace facebook {
 namespace eden {
 class EdenMount;
 
+struct InodeMetadata {
+  // To ensure that the OS has a record of the canonical file name, and not
+  // just whatever case was used to lookup the file, we capture the
+  // relative path here.
+  RelativePath path;
+  size_t size;
+  bool isDir;
+};
+
 class EdenDispatcher {
  public:
   explicit EdenDispatcher(EdenMount* mount);
 
-  HRESULT startEnumeration(
-      const PRJ_CALLBACK_DATA& callbackData,
-      const GUID& enumerationId) noexcept;
+  folly::Future<folly::Unit> opendir(RelativePath path, const Guid guid);
 
   HRESULT getEnumerationData(
       const PRJ_CALLBACK_DATA& callbackData,
@@ -40,9 +47,9 @@ class EdenDispatcher {
 
   HRESULT endEnumeration(const GUID& enumerationId) noexcept;
 
-  HRESULT
-  getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept;
+  folly::Future<std::optional<InodeMetadata>> lookup(RelativePath path);
 
+  folly::Future<bool> access(RelativePath path);
   HRESULT
   queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept;
 

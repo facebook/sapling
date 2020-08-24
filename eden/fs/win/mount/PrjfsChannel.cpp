@@ -18,7 +18,11 @@ using folly::sformat;
 namespace {
 
 using facebook::eden::EdenDispatcher;
+using facebook::eden::exceptionToHResult;
+using facebook::eden::Guid;
+using facebook::eden::InodeMetadata;
 using facebook::eden::RelativePath;
+using facebook::eden::win32ErrorToString;
 
 #define BAIL_ON_RECURSIVE_CALL(callbackData)                               \
   do {                                                                     \
@@ -42,8 +46,22 @@ static HRESULT startEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getDispatcher(callbackData)
-      ->startEnumeration(*callbackData, *enumerationId);
+
+  try {
+    auto path = RelativePath(callbackData->FilePathName);
+    auto guid = Guid(*enumerationId);
+    return getDispatcher(callbackData)
+        ->opendir(std::move(path), std::move(guid))
+        .thenValue([](auto&&) { return S_OK; })
+        .thenError(
+            folly::tag_t<std::exception>{},
+            [](const std::exception& ex) { return exceptionToHResult(ex); })
+        .get();
+
+    return S_OK;
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
+  }
 }
 
 static HRESULT endEnumeration(
@@ -70,12 +88,70 @@ static HRESULT getEnumerationData(
 static HRESULT getPlaceholderInfo(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getDispatcher(callbackData)->getFileInfo(*callbackData);
+
+  try {
+    auto path = RelativePath(callbackData->FilePathName);
+    return getDispatcher(callbackData)
+        ->lookup(std::move(path))
+        .thenValue([context = callbackData->NamespaceVirtualizationContext](
+                       const std::optional<InodeMetadata>&& optMetadata) {
+          if (!optMetadata) {
+            return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+          }
+          auto metadata = std::move(optMetadata).value();
+
+          PRJ_PLACEHOLDER_INFO placeholderInfo{};
+          placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDir;
+          placeholderInfo.FileBasicInfo.FileSize = metadata.size;
+          auto inodeName = metadata.path.wide();
+
+          HRESULT result = PrjWritePlaceholderInfo(
+              context,
+              inodeName.c_str(),
+              &placeholderInfo,
+              sizeof(placeholderInfo));
+
+          if (FAILED(result)) {
+            XLOGF(
+                DBG6,
+                "{}: {:x} ({})",
+                metadata.path,
+                result,
+                win32ErrorToString(result));
+          }
+
+          return result;
+        })
+        .thenError(
+            folly::tag_t<std::exception>{},
+            [](const std::exception& ex) { return exceptionToHResult(ex); })
+        .get();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
+  }
 }
 
 static HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getDispatcher(callbackData)->queryFileName(*callbackData);
+
+  try {
+    auto path = RelativePath(callbackData->FilePathName);
+    return getDispatcher(callbackData)
+        ->access(std::move(path))
+        .thenValue([](bool present) {
+          if (present) {
+            return S_OK;
+          } else {
+            return HRESULT(ERROR_FILE_NOT_FOUND);
+          }
+        })
+        .thenError(
+            folly::tag_t<std::exception>{},
+            [](const std::exception& ex) { return exceptionToHResult(ex); })
+        .get();
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
+  }
 }
 
 static HRESULT getFileData(
