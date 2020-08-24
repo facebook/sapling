@@ -80,7 +80,11 @@ fn addlines(
                 Some(b'-') => a.append(py, to_object(py, s)),
                 _ => {
                     a.append(py, to_object(py, s));
-                    b.append(py, to_object(py, &s[1..]));
+                    if s.is_empty() {
+                        // Ignore empty lines at EOF
+                    } else {
+                        b.append(py, to_object(py, &s[1..]));
+                    }
                 }
             }
         }
