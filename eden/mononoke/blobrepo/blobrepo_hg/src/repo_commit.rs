@@ -20,7 +20,7 @@ use futures_ext::{
     StreamExt as OldStreamExt,
 };
 use futures_old::future::{
-    self as old_future, Future as OldFuture, Shared, SharedError, SharedItem,
+    self as old_future, result, Future as OldFuture, Shared, SharedError, SharedItem,
 };
 use futures_old::stream::Stream as OldStream;
 use futures_old::sync::oneshot;
@@ -269,6 +269,9 @@ impl UploadEntries {
         node_id: HgNodeHash,
         is_tree: bool,
     ) -> OldBoxFuture<(), Error> {
+        if node_id == NULL_HASH {
+            return result(Ok(())).boxify();
+        }
         let key = if is_tree {
             HgManifestId::new(node_id).blobstore_key()
         } else {
