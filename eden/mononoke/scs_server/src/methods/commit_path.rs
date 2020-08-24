@@ -7,7 +7,7 @@
 
 use context::CoreContext;
 use dedupmap::DedupMap;
-use futures::future;
+use futures::{future, try_join};
 use mononoke_api::{ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
 use std::borrow::Cow;
@@ -204,11 +204,29 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitPathHistoryResponse, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path(&commit_path.path)?;
-        let descendants_of = if let Some(descendants_of) = params.descendants_of {
-            Some(self.changeset_id(&repo, &descendants_of).await?)
-        } else {
-            None
-        };
+        let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
+            async {
+                if let Some(descendants_of) = &params.descendants_of {
+                    Ok::<_, errors::ServiceError>(Some(
+                        self.changeset_id(&repo, &descendants_of).await?,
+                    ))
+                } else {
+                    Ok(None)
+                }
+            },
+            async {
+                if let Some(exclude_changeset_and_ancestors) =
+                    &params.exclude_changeset_and_ancestors
+                {
+                    Ok::<_, errors::ServiceError>(Some(
+                        self.changeset_id(&repo, &exclude_changeset_and_ancestors)
+                            .await?,
+                    ))
+                } else {
+                    Ok(None)
+                }
+            }
+        )?;
 
         let limit: usize = check_range_and_convert("limit", params.limit, 0..)?;
         let skip: usize = check_range_and_convert("skip", params.skip, 0..)?;
@@ -239,7 +257,7 @@ impl SourceControlServiceImpl {
             .history(ChangesetPathHistoryOptions {
                 until_timestamp: after_timestamp.clone(),
                 descendants_of,
-                exclude_changeset_and_ancestors: None,
+                exclude_changeset_and_ancestors,
                 follow_history_across_deletions: params.follow_history_across_deletions,
             })
             .await?;
