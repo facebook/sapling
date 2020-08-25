@@ -109,7 +109,7 @@ push updates existing bookmark
   remote:     User 'aslapvel' is not permitted to move 'A'
   remote: 
   remote:   Caused by:
-  remote:     Failed to fast-forward bookmark (try --force?)
+  remote:     Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
   remote:   Caused by:
   remote:     User 'aslapvel' is not permitted to move 'A'
   remote: 
@@ -117,7 +117,7 @@ push updates existing bookmark
   remote:     Error {
   remote:         context: "While doing a push",
   remote:         source: Error {
-  remote:             context: "Failed to fast-forward bookmark (try --force?)",
+  remote:             context: "Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)",
   remote:             source: PermissionDeniedUser {
   remote:                 user: "aslapvel",
   remote:                 bookmark: BookmarkName {

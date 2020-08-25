@@ -690,7 +690,10 @@ async fn plain_push_bookmark(
                             if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
                                 "Failed to move bookmark"
                             } else {
-                                "Failed to fast-forward bookmark (try --force?)"
+                                concat!(
+                                    "Failed to fast-forward bookmark (set pushvar ",
+                                    "NON_FAST_FORWARD=true for a non-fast-forward move)",
+                                )
                             },
                         )))
                     }

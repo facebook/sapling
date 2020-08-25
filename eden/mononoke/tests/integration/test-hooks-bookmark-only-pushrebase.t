@@ -122,7 +122,7 @@ attempt a non-fast-forward move, it should fail
   remote:     Non fast-forward bookmark move from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
   remote: 
   remote:   Caused by:
-  remote:     Failed to fast-forward bookmark (try --force?)
+  remote:     Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
   remote:   Caused by:
   remote:     Non fast-forward bookmark move from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
   remote: 
@@ -130,7 +130,7 @@ attempt a non-fast-forward move, it should fail
   remote:     Error {
   remote:         context: "While doing a bookmark-only pushrebase",
   remote:         source: Error {
-  remote:             context: "Failed to fast-forward bookmark (try --force?)",
+  remote:             context: "Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)",
   remote:             source: NonFastForwardMove {
   remote:                 from: ChangesetId(
   remote:                     Blake2(cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b),
@@ -144,7 +144,7 @@ attempt a non-fast-forward move, it should fail
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
-the error message is misleading - we must specify a pushvar to allow the non-fast-forward move.
+specify the pushvar to allow the non-fast-forward move.
   $ hgmn push -r . --to main --pushvar NON_FAST_FORWARD=true
   pushing rev af09fbbc2f05 to destination ssh://user@dummy/repo bookmark main
   searching for changes
