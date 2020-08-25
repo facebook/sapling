@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::convert::TryInto;
 
 use anyhow::{anyhow, Context, Result};
@@ -17,7 +17,7 @@ use metaconfig_types::{
     PushrebaseParams, RepoClientKnobs, ServiceWriteRestrictions, SourceControlServiceMonitoring,
     SourceControlServiceParams, StorageConfig, UnodeVersion, WireprotoLoggingConfig,
 };
-use mononoke_types::MPath;
+use mononoke_types::{MPath, PrefixTrie};
 use regex::Regex;
 use repos::{
     RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawDerivedDataConfig,
@@ -304,7 +304,7 @@ impl Convert for RawServiceWriteRestrictions {
             .map(|raw| {
                 raw.into_iter()
                     .map(|path| MPath::new_opt(path.as_bytes()))
-                    .collect::<Result<BTreeSet<_>>>()
+                    .collect::<Result<PrefixTrie>>()
             })
             .transpose()?
             .unwrap_or_default();

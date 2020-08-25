@@ -26,7 +26,7 @@ use std::{
 
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
-use mononoke_types::{MPath, RepositoryId};
+use mononoke_types::{BonsaiChangeset, MPath, PrefixTrie, RepositoryId};
 use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
@@ -1136,6 +1136,36 @@ impl SourceControlServiceParams {
         }
         false
     }
+
+    /// Returns true if the named service is permitted to modify all of the paths
+    /// that a bonsai changeset modifies.
+    pub fn service_write_paths_permitted<'cs>(
+        &self,
+        service_identity: impl AsRef<str>,
+        bonsai: &'cs BonsaiChangeset,
+    ) -> Result<(), &'cs MPath> {
+        if let Some(restrictions) = self
+            .service_write_restrictions
+            .get(service_identity.as_ref())
+        {
+            // Currently path prefixes are only used to grant permission.
+            // This means we only need to check if all of the bonsai paths
+            // are covered by the prefixes in the configuration.
+            //
+            // In the future, we may want to add exclusions to the paths
+            // (e.g. dir1/ is permitted except for dir1/subdir1/).  When
+            // this happens we'll need to do a manifest diff, as the bonsai
+            // changes won't include dir1/subdir1/ files if dir1 is
+            // replaced by a file.
+            let trie = &restrictions.permitted_path_prefixes;
+            for path in bonsai.file_changes_map().keys() {
+                if !trie.contains_prefix(path) {
+                    return Err(path);
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Restrictions on writes for services.
@@ -1145,7 +1175,7 @@ pub struct ServiceWriteRestrictions {
     pub permitted_methods: HashSet<String>,
 
     /// The service is permitted to modify files with these path prefixes.
-    pub permitted_path_prefixes: BTreeSet<Option<MPath>>,
+    pub permitted_path_prefixes: PrefixTrie,
 
     /// The service is permitted to modify these bookmarks.
     pub permitted_bookmarks: HashSet<String>,

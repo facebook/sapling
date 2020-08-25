@@ -9,7 +9,7 @@
 
 use bookmarks_types::BookmarkName;
 use itertools::Itertools;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, MPath};
 use pushrebase::PushrebaseError;
 use thiserror::Error;
 
@@ -55,6 +55,9 @@ pub enum BookmarkMovementError {
         service_name: String,
         bookmark: BookmarkName,
     },
+
+    #[error("Service '{service_name}' is not permitted to modify path '{path}'")]
+    PermissionDeniedServicePath { service_name: String, path: MPath },
 
     #[error(
         "Invalid scratch bookmark: {bookmark} (scratch bookmarks must match pattern {pattern})"

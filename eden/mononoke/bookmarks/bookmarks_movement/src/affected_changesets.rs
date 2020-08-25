@@ -252,9 +252,26 @@ impl AffectedChangesets {
                 }
             }
             BookmarkMoveAuthorization::Service(service_name, scs_params) => {
-                let _s = scs_params;
-                let _n = service_name;
-                // TODO(mbthomas): check path restrictions
+                let additional_changesets = self
+                    .load_additional_changesets(
+                        ctx,
+                        repo,
+                        lca_hint,
+                        bookmark_attrs,
+                        bookmark,
+                        additional_changesets,
+                    )
+                    .await
+                    .context("Failed to load additional affected changesets")?;
+
+                for cs in self.iter().chain(additional_changesets.iter()) {
+                    if let Err(path) = scs_params.service_write_paths_permitted(service_name, cs) {
+                        return Err(BookmarkMovementError::PermissionDeniedServicePath {
+                            service_name: service_name.clone(),
+                            path: path.clone(),
+                        });
+                    }
+                }
             }
         }
 
