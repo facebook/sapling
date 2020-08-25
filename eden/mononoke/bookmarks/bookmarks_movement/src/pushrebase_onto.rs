@@ -6,9 +6,11 @@
  */
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use blobrepo::BlobRepo;
+use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
@@ -18,14 +20,16 @@ use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use hooks::HookManager;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::BonsaiChangeset;
+use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::ScubaSampleBuilderExt;
 
-use crate::hook_running::run_hooks;
-use crate::{BookmarkKindRestrictions, BookmarkMoveAuthorization, BookmarkMovementError};
+use crate::affected_changesets::{AdditionalChangesets, AffectedChangesets};
+use crate::restrictions::{BookmarkKindRestrictions, BookmarkMoveAuthorization};
+use crate::BookmarkMovementError;
 
 pub struct PushrebaseOntoBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
-    changesets: &'op HashSet<BonsaiChangeset>,
+    affected_changesets: AffectedChangesets,
     auth: BookmarkMoveAuthorization,
     kind_restrictions: BookmarkKindRestrictions,
     pushvars: Option<&'op HashMap<String, Bytes>>,
@@ -36,12 +40,12 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
 impl<'op> PushrebaseOntoBookmarkOp<'op> {
     pub fn new(
         bookmark: &'op BookmarkName,
-        changesets: &'op HashSet<BonsaiChangeset>,
+        changesets: HashSet<BonsaiChangeset>,
     ) -> PushrebaseOntoBookmarkOp<'op> {
         PushrebaseOntoBookmarkOp {
             bookmark,
-            changesets,
-            auth: BookmarkMoveAuthorization::Context,
+            affected_changesets: AffectedChangesets::with_source_changesets(changesets),
+            auth: BookmarkMoveAuthorization::User,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
             pushvars: None,
             hg_replay: None,
@@ -69,9 +73,10 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
     }
 
     pub async fn run(
-        self,
+        mut self,
         ctx: &'op CoreContext,
         repo: &'op BlobRepo,
+        lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
         bookmark_attrs: &'op BookmarkAttrs,
@@ -81,7 +86,11 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             .check_authorized(ctx, bookmark_attrs, self.bookmark)?;
 
         if pushrebase_params.block_merges {
-            let any_merges = self.changesets.iter().any(BonsaiChangeset::is_merge);
+            let any_merges = self
+                .affected_changesets
+                .source_changesets()
+                .iter()
+                .any(BonsaiChangeset::is_merge);
             if any_merges {
                 return Err(anyhow!(
                     "Pushrebase blocked because it contains a merge commit.\n\
@@ -92,20 +101,25 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             }
         }
 
-        let is_scratch = self
+        let kind = self
             .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
-        if !is_scratch {
-            run_hooks(
+        self.affected_changesets
+            .check_restrictions(
                 ctx,
+                repo,
+                lca_hint,
+                bookmark_attrs,
                 hook_manager,
                 self.bookmark,
-                self.changesets.iter(),
                 self.pushvars,
+                BookmarkUpdateReason::Pushrebase,
+                kind,
+                &self.auth,
+                AdditionalChangesets::None,
             )
             .await?;
-        }
 
         let mut pushrebase_hooks = Vec::new();
 
@@ -134,7 +148,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             repo,
             &flags,
             self.bookmark,
-            self.changesets,
+            self.affected_changesets.source_changesets(),
             self.hg_replay,
             pushrebase_hooks.as_slice(),
         )

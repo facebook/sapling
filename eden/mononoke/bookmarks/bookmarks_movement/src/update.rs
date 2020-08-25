@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
@@ -18,10 +18,10 @@ use hooks::HookManager;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
-use tunables::tunables;
 
-use crate::hook_running::{load_additional_bonsais, run_hooks};
-use crate::{BookmarkKindRestrictions, BookmarkMoveAuthorization, BookmarkMovementError};
+use crate::affected_changesets::{AdditionalChangesets, AffectedChangesets};
+use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
+use crate::BookmarkMovementError;
 
 /// The old and new changeset during a bookmark update.
 ///
@@ -79,7 +79,7 @@ pub struct UpdateBookmarkOp<'op> {
     reason: BookmarkUpdateReason,
     auth: BookmarkMoveAuthorization,
     kind_restrictions: BookmarkKindRestrictions,
-    new_changesets: HashMap<ChangesetId, BonsaiChangeset>,
+    affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
     bundle_replay: Option<&'op dyn BundleReplay>,
 }
@@ -97,9 +97,9 @@ impl<'op> UpdateBookmarkOp<'op> {
             targets,
             update_policy,
             reason,
-            auth: BookmarkMoveAuthorization::Context,
+            auth: BookmarkMoveAuthorization::User,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
-            new_changesets: HashMap::new(),
+            affected_changesets: AffectedChangesets::new(),
             pushvars: None,
             bundle_replay: None,
         }
@@ -131,59 +131,12 @@ impl<'op> UpdateBookmarkOp<'op> {
         mut self,
         changesets: HashMap<ChangesetId, BonsaiChangeset>,
     ) -> Self {
-        if self.new_changesets.is_empty() {
-            self.new_changesets = changesets;
-        } else {
-            self.new_changesets.extend(changesets.into_iter());
-        }
+        self.affected_changesets.add_new_changesets(changesets);
         self
     }
 
-    async fn run_hooks(
-        &self,
-        ctx: &CoreContext,
-        repo: &BlobRepo,
-        hook_manager: &HookManager,
-        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
-        bookmark_attrs: &BookmarkAttrs,
-    ) -> Result<(), BookmarkMovementError> {
-        if self.reason == BookmarkUpdateReason::Push && tunables().get_disable_hooks_on_plain_push()
-        {
-            // Skip running hooks for this plain push.
-            return Ok(());
-        }
-
-        if hook_manager.hooks_exist_for_bookmark(self.bookmark) {
-            let additional_changesets = load_additional_bonsais(
-                ctx,
-                repo,
-                lca_hint,
-                bookmark_attrs,
-                self.bookmark,
-                self.targets.new,
-                Some(self.targets.old),
-                &self.new_changesets,
-            )
-            .await
-            .context("Failed to load additional changesets")?;
-
-            run_hooks(
-                ctx,
-                hook_manager,
-                self.bookmark,
-                self.new_changesets
-                    .values()
-                    .chain(additional_changesets.iter()),
-                self.pushvars,
-            )
-            .await?;
-        }
-
-        Ok(())
-    }
-
     pub async fn run(
-        self,
+        mut self,
         ctx: &'op CoreContext,
         repo: &'op BlobRepo,
         lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
@@ -195,7 +148,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         self.auth
             .check_authorized(ctx, bookmark_attrs, self.bookmark)?;
 
-        let is_scratch = self
+        let kind = self
             .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
@@ -210,33 +163,49 @@ impl<'op> UpdateBookmarkOp<'op> {
             )
             .await?;
 
-        if !is_scratch {
-            self.run_hooks(ctx, repo, hook_manager, lca_hint, bookmark_attrs)
-                .await?;
-        }
-
+        self.affected_changesets
+            .check_restrictions(
+                ctx,
+                repo,
+                lca_hint,
+                bookmark_attrs,
+                hook_manager,
+                self.bookmark,
+                self.pushvars,
+                self.reason,
+                kind,
+                &self.auth,
+                AdditionalChangesets::Range {
+                    head: self.targets.new,
+                    base: self.targets.old,
+                },
+            )
+            .await?;
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
         let mut txn_hook = None;
 
-        if is_scratch {
-            txn.update_scratch(self.bookmark, self.targets.new, self.targets.old)?;
-        } else {
-            crate::globalrev_mapping::require_globalrevs_disabled(pushrebase_params)?;
-            txn_hook = crate::git_mapping::populate_git_mapping_txn_hook(
-                ctx,
-                repo,
-                pushrebase_params,
-                self.targets.new,
-                &self.new_changesets,
-            )
-            .await?;
-            txn.update(
-                self.bookmark,
-                self.targets.new,
-                self.targets.old,
-                self.reason,
-                self.bundle_replay,
-            )?;
+        match kind {
+            BookmarkKind::Scratch => {
+                txn.update_scratch(self.bookmark, self.targets.new, self.targets.old)?;
+            }
+            BookmarkKind::Public => {
+                crate::globalrev_mapping::require_globalrevs_disabled(pushrebase_params)?;
+                txn_hook = crate::git_mapping::populate_git_mapping_txn_hook(
+                    ctx,
+                    repo,
+                    pushrebase_params,
+                    self.targets.new,
+                    &self.affected_changesets.new_changesets(),
+                )
+                .await?;
+                txn.update(
+                    self.bookmark,
+                    self.targets.new,
+                    self.targets.old,
+                    self.reason,
+                    self.bundle_replay,
+                )?;
+            }
         }
 
         let ok = match txn_hook {

@@ -12,7 +12,8 @@ use context::CoreContext;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams};
 use mononoke_types::ChangesetId;
 
-use crate::{BookmarkKindRestrictions, BookmarkMoveAuthorization, BookmarkMovementError};
+use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
+use crate::BookmarkMovementError;
 
 pub struct DeleteBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
@@ -34,7 +35,7 @@ impl<'op> DeleteBookmarkOp<'op> {
             bookmark,
             old_target,
             reason,
-            auth: BookmarkMoveAuthorization::Context,
+            auth: BookmarkMoveAuthorization::User,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
             bundle_replay: None,
         }
@@ -65,11 +66,11 @@ impl<'op> DeleteBookmarkOp<'op> {
         self.auth
             .check_authorized(ctx, bookmark_attrs, self.bookmark)?;
 
-        let is_scratch = self
+        let kind = self
             .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
 
-        if is_scratch || bookmark_attrs.is_fast_forward_only(self.bookmark) {
+        if kind == BookmarkKind::Scratch || bookmark_attrs.is_fast_forward_only(self.bookmark) {
             // Cannot delete scratch or fast-forward-only bookmarks.
             return Err(BookmarkMovementError::DeletionProhibited {
                 bookmark: self.bookmark.clone(),
