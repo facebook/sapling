@@ -255,10 +255,10 @@ impl ConfigSetHgExt for ConfigSet {
         if std::env::var(HGRCPATH).is_err() {
             errors.append(&mut self.parse(MERGE_TOOLS_CONFIG, &"merge-tools.rc".into()));
         }
-        errors.append(&mut self.load_system(opts.clone()));
         if let Some(repo_path) = repo_path {
             errors.append(&mut self.load_dynamic(&repo_path, opts.clone())?);
         }
+        errors.append(&mut self.load_system(opts.clone()));
         errors.append(&mut self.load_user(opts.clone()));
 
         if let Some(repo_path) = repo_path {
