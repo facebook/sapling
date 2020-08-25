@@ -327,11 +327,29 @@ impl SourceControlServiceImpl {
         params: thrift::CommitHistoryParams,
     ) -> Result<thrift::CommitHistoryResponse, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
-        let descendants_of = if let Some(descendants_of) = params.descendants_of {
-            Some(self.changeset_id(&repo, &descendants_of).await?)
-        } else {
-            None
-        };
+        let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
+            async {
+                if let Some(descendants_of) = &params.descendants_of {
+                    Ok::<_, errors::ServiceError>(Some(
+                        self.changeset_id(&repo, &descendants_of).await?,
+                    ))
+                } else {
+                    Ok(None)
+                }
+            },
+            async {
+                if let Some(exclude_changeset_and_ancestors) =
+                    &params.exclude_changeset_and_ancestors
+                {
+                    Ok::<_, errors::ServiceError>(Some(
+                        self.changeset_id(&repo, &exclude_changeset_and_ancestors)
+                            .await?,
+                    ))
+                } else {
+                    Ok(None)
+                }
+            }
+        )?;
 
         let limit: usize = check_range_and_convert("limit", params.limit, 0..)?;
         let skip: usize = check_range_and_convert("skip", params.skip, 0..)?;
@@ -362,7 +380,7 @@ impl SourceControlServiceImpl {
             .history(ChangesetHistoryOptions {
                 until_timestamp: after_timestamp,
                 descendants_of,
-                exclude_changeset_and_ancestors: None,
+                exclude_changeset_and_ancestors,
             })
             .await;
         let history = collect_history(
