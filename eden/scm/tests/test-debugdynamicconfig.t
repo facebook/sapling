@@ -206,7 +206,7 @@ Verify configs.disallowlist removes old configs
   $ cd client2
 #if no-osx
 Verify fake timestamps dont crash
-  $ touch -d tomorrow client2/.hg/hgrc.dynamic
+  $ touch -d tomorrow .hg/hgrc.dynamic
   $ hg log -r tip --config configs.generationtime=1
   commit:      000000000000
   user:        
