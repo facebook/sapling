@@ -48,6 +48,9 @@ Setup config repo:
   > permitted_methods = ["create_bookmark", "move_bookmark"]
   > permitted_path_prefixes = ["J", "K"]
   > permitted_bookmarks = ["other"]
+  > [source_control_service.service_write_restrictions.no-paths-service]
+  > permitted_methods = ["create_bookmark", "move_bookmark"]
+  > permitted_bookmarks = ["nopaths"]
   > [[bookmarks]]
   > name="trunk"
   > only_fast_forward=true
@@ -240,6 +243,11 @@ write restrictions do prevent moving a bookmark over a path that is not allowed
 write restrictions don't prevent moving a bookmark over a path that is permitted
 this time we also use another bookmark as the target
   $ scsc move-bookmark -R repo --name other -B newkilo --service-id restricted-service
+
+a service with no permitted paths can't create a bookmark that touches anything
+  $ scsc create-bookmark -R repo --name nopaths -i $J --service-id no-paths-service
+  error: SourceControlService::repo_create_bookmark failed with InternalError { reason: "Service \'no-paths-service\' is not permitted to modify path \'J\'", backtrace: None, source_chain: ["Service \'no-paths-service\' is not permitted to modify path \'J\'"] }
+  [1]
 
 trunk can't be deleted
   $ scsc delete-bookmark -R repo --name trunk

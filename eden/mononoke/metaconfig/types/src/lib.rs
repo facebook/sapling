@@ -1145,6 +1145,17 @@ impl SourceControlServiceParams {
         false
     }
 
+    /// Returns true if the named service is permitted to modify all paths.
+    pub fn service_write_all_paths_permitted(&self, service_identity: impl AsRef<str>) -> bool {
+        if let Some(restrictions) = self
+            .service_write_restrictions
+            .get(service_identity.as_ref())
+        {
+            return restrictions.permitted_path_prefixes.contains_everything();
+        }
+        false
+    }
+
     /// Returns true if the named service is permitted to modify all of the paths
     /// that a bonsai changeset modifies.
     pub fn service_write_paths_permitted<'cs>(

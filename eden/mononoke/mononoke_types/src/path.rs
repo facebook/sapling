@@ -941,6 +941,11 @@ impl PrefixTrie {
             }
         }
     }
+
+    /// Returns true if this trie contains all paths.
+    pub fn contains_everything(&self) -> bool {
+        self == &PrefixTrie::Included
+    }
 }
 
 impl Default for PrefixTrie {
@@ -1426,5 +1431,12 @@ mod test {
         assert!(!prefixes.contains_prefix(&path("g")));
         assert!(!prefixes.contains_prefix(&path("g/i")));
         assert!(!prefixes.contains_prefix(&path("g/i/h")));
+        assert!(!prefixes.contains_everything());
+
+        // Adding the empty path makes the trie contain everything
+        assert!(prefixes.add(&None));
+        assert!(prefixes.contains_prefix(&path("a/b/c")));
+        assert!(prefixes.contains_prefix(&path("x/y/z")));
+        assert!(prefixes.contains_everything());
     }
 }

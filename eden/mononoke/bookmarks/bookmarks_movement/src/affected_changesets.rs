@@ -252,6 +252,10 @@ impl AffectedChangesets {
                 }
             }
             BookmarkMoveAuthorization::Service(service_name, scs_params) => {
+                if scs_params.service_write_all_paths_permitted(service_name) {
+                    return Ok(());
+                }
+
                 let additional_changesets = self
                     .load_additional_changesets(
                         ctx,
