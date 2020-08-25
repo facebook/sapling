@@ -213,3 +213,13 @@ Verify fake timestamps dont crash
   date:        Thu Jan 01 00:00:00 1970 +0000
   
 #endif
+
+Verify read-only permissions dont block commands from succeeding due to
+hgrc.dynamic write errors.
+
+  $ echo > .hg/hgrc.dynamic
+  $ chmod a-w .hg/hgrc.dynamic
+  $ hg log -r tip
+  abort: Permission denied (os error 13)
+  [255]
+  $ chmod u+w .hg/hgrc.dynamic
