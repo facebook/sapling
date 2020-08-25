@@ -63,13 +63,14 @@ def is_bind_mount(path: Path) -> bool:
 def make_scratch_dir(checkout: EdenCheckout, subdir: Path) -> Path:
     sub = Path("edenfs") / Path("redirections") / subdir
 
-    if sys.platform == "win32":
+    mkscratch = mkscratch_bin()
+    if sys.platform == "win32" and not mkscratch:
         return make_temp_dir(checkout.path, sub)
 
     return Path(
         subprocess.check_output(
             [
-                mkscratch_bin(),
+                os.fsdecode(mkscratch),
                 "path",
                 os.fsdecode(checkout.path),
                 "--subdir",
