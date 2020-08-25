@@ -605,7 +605,7 @@ def safesend(self, str):
             self.sock.sendall(str)
     except socket.error as v:
         reraise = True
-        if v[0] == errno.EPIPE:  # Broken pipe
+        if v.errno == errno.EPIPE:  # Broken pipe
             if self._HTTPConnection__state == httplib._CS_REQ_SENT:
                 self._broken_pipe_resp = None
                 self._broken_pipe_resp = self.getresponse()

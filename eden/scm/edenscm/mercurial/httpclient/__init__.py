@@ -832,7 +832,7 @@ class HTTPConnection(object):
                     # data if the server is still sending us content.
                     continue
                 except socket.error as e:
-                    if e[0] != errno.EPIPE and not was_first:
+                    if e.errno != errno.EPIPE and not was_first:
                         raise
 
             # outgoing data
@@ -859,15 +859,15 @@ class HTTPConnection(object):
                             out = data
                     amt = w[0].send(out)
                 except socket.error as e:
-                    if e[0] == ssl.SSL_ERROR_WANT_WRITE and self.ssl:
+                    if e.errno == ssl.SSL_ERROR_WANT_WRITE and self.ssl:
                         # This means that SSL hasn't flushed its buffer into
                         # the socket yet.
                         # TODO: find a way to block on ssl flushing its buffer
                         # similar to selecting on a raw socket.
                         continue
-                    if e[0] == errno.EWOULDBLOCK or e[0] == errno.EAGAIN:
+                    if e.errno == errno.EWOULDBLOCK or e.errno == errno.EAGAIN:
                         continue
-                    elif e[0] not in (errno.ECONNRESET, errno.EPIPE) and not first:
+                    elif e.errno not in (errno.ECONNRESET, errno.EPIPE) and not first:
                         raise
                     self._reconnect("write", pheaders)
                     amt = self.sock.send(out)

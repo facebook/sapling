@@ -137,7 +137,7 @@ class wsgirequest(object):
             try:
                 self.server_write(thing)
             except socket.error as inst:
-                if inst[0] != errno.ECONNRESET:
+                if inst.errno != errno.ECONNRESET:
                     raise
 
     def writelines(self, lines):

@@ -104,7 +104,7 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
         try:
             self.do_hgweb()
         except socket.error as inst:
-            if inst[0] != errno.EPIPE:
+            if inst.errno != errno.EPIPE:
                 raise
 
     def do_POST(self):
