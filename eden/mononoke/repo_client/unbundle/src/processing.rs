@@ -6,15 +6,16 @@
  */
 
 use crate::{
-    BundleResolverError, InfiniteBookmarkPush, NonFastForwardPolicy, PlainBookmarkPush,
-    PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
-    PostResolvePushRebase, PushrebaseBookmarkSpec,
+    BundleResolverError, BundleResolverResultExt, InfiniteBookmarkPush, NonFastForwardPolicy,
+    PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
+    PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
 use anyhow::{anyhow, Context, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
 use bookmarks_movement::{BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets};
+use bytes::Bytes;
 use chrono::Utc;
 use context::CoreContext;
 use futures::{
@@ -24,6 +25,7 @@ use futures::{
 };
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
+use hooks::HookManager;
 use mercurial_bundle_replay_data::BundleReplayData;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
@@ -37,6 +39,7 @@ use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use tunables::tunables;
 
+use crate::hook_running::{map_hook_rejections, HookRejectionRemapper};
 use crate::rate_limits::enforce_commit_rate_limits;
 use crate::response::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
@@ -59,6 +62,7 @@ pub async fn run_post_resolve_action(
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     push_params: &PushParams,
+    hook_manager: &HookManager,
     maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
     action: PostResolveAction,
 ) -> Result<UnbundleResponse, BundleResolverError> {
@@ -74,6 +78,7 @@ pub async fn run_post_resolve_action(
             repo,
             bookmark_attrs,
             lca_hint,
+            hook_manager,
             infinitepush_params,
             pushrebase_params,
             action,
@@ -87,6 +92,7 @@ pub async fn run_post_resolve_action(
             repo,
             bookmark_attrs,
             lca_hint,
+            hook_manager,
             infinitepush_params,
             pushrebase_params,
             maybe_reverse_filler_queue,
@@ -102,6 +108,7 @@ pub async fn run_post_resolve_action(
             lca_hint,
             infinitepush_params,
             pushrebase_params,
+            hook_manager,
             action,
         )
         .await
@@ -111,6 +118,7 @@ pub async fn run_post_resolve_action(
             repo,
             bookmark_attrs,
             lca_hint,
+            hook_manager,
             infinitepush_params,
             pushrebase_params,
             action,
@@ -140,20 +148,23 @@ async fn run_push(
     repo: &BlobRepo,
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &dyn LeastCommonAncestorsHint,
+    hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     action: PostResolvePush,
     push_params: &PushParams,
-) -> Result<UnbundlePushResponse, Error> {
+) -> Result<UnbundlePushResponse, BundleResolverError> {
     debug!(ctx.logger(), "unbundle processing: running push.");
     let PostResolvePush {
         changegroup_id,
         mut bookmark_pushes,
         mutations,
         maybe_raw_bundle2_id,
+        maybe_pushvars,
         non_fast_forward_policy,
         uploaded_bonsais,
         uploaded_hg_changeset_ids,
+        hook_rejection_remapper,
     } = action;
 
     if tunables().get_mutation_accept_for_infinitepush() {
@@ -167,7 +178,8 @@ async fn run_push(
         return Err(anyhow!(
             "only push to at most one bookmark is allowed, got {:?}",
             bookmark_pushes
-        ));
+        )
+        .into());
     }
 
     let mut new_changeset_ids = Vec::new();
@@ -194,11 +206,14 @@ async fn run_push(
             infinitepush_params,
             pushrebase_params,
             bookmark_attrs,
+            hook_manager,
             &bookmark_push,
             new_changesets,
             non_fast_forward_policy,
             BookmarkUpdateReason::Push,
+            maybe_pushvars.as_ref(),
             bundle_replay_data,
+            hook_rejection_remapper.as_ref(),
         )
         .await?;
 
@@ -254,11 +269,12 @@ async fn run_infinitepush(
     repo: &BlobRepo,
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &dyn LeastCommonAncestorsHint,
+    hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
     action: PostResolveInfinitePush,
-) -> Result<UnbundleInfinitePushResponse, Error> {
+) -> Result<UnbundleInfinitePushResponse, BundleResolverError> {
     debug!(ctx.logger(), "unbundle processing: running infinitepush");
     let PostResolveInfinitePush {
         changegroup_id,
@@ -301,6 +317,7 @@ async fn run_infinitepush(
                 infinitepush_params,
                 pushrebase_params,
                 bookmark_attrs,
+                hook_manager,
                 &bookmark_push,
                 bundle_replay_data,
             )
@@ -335,6 +352,7 @@ async fn run_pushrebase(
     lca_hint: &dyn LeastCommonAncestorsHint,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
+    hook_manager: &HookManager,
     action: PostResolvePushRebase,
 ) -> Result<UnbundlePushRebaseResponse, BundleResolverError> {
     debug!(ctx.logger(), "unbundle processing: running pushrebase.");
@@ -342,9 +360,10 @@ async fn run_pushrebase(
         bookmark_push_part_id,
         bookmark_spec,
         maybe_hg_replay_data,
-        maybe_pushvars: _,
+        maybe_pushvars,
         commonheads,
         uploaded_bonsais,
+        hook_rejection_remapper,
     } = action;
 
     // FIXME: stop cloning when this fn is async
@@ -363,9 +382,12 @@ async fn run_pushrebase(
                 &pushrebase_params,
                 &uploaded_bonsais,
                 &onto_bookmark,
+                maybe_pushvars.as_ref(),
                 &maybe_hg_replay_data,
                 bookmark_attrs,
                 infinitepush_params,
+                hook_manager,
+                hook_rejection_remapper.as_ref(),
             )
             .await?
         }
@@ -374,11 +396,14 @@ async fn run_pushrebase(
             repo,
             &pushrebase_params,
             lca_hint,
+            hook_manager,
             uploaded_bonsais,
             plain_push,
+            maybe_pushvars.as_ref(),
             &maybe_hg_replay_data,
             bookmark_attrs,
             infinitepush_params,
+            hook_rejection_remapper.as_ref(),
         )
         .await
         .context("While doing a force pushrebase")?,
@@ -415,10 +440,11 @@ async fn run_bookmark_only_pushrebase(
     repo: &BlobRepo,
     bookmark_attrs: &BookmarkAttrs,
     lca_hint: &dyn LeastCommonAncestorsHint,
+    hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     action: PostResolveBookmarkOnlyPushRebase,
-) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, Error> {
+) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, BundleResolverError> {
     debug!(
         ctx.logger(),
         "unbundle processing: running bookmark-only pushrebase."
@@ -426,7 +452,9 @@ async fn run_bookmark_only_pushrebase(
     let PostResolveBookmarkOnlyPushRebase {
         bookmark_push,
         maybe_raw_bundle2_id,
+        maybe_pushvars,
         non_fast_forward_policy,
+        hook_rejection_remapper,
     } = action;
 
     let part_id = bookmark_push.part_id;
@@ -445,11 +473,14 @@ async fn run_bookmark_only_pushrebase(
         infinitepush_params,
         pushrebase_params,
         bookmark_attrs,
+        hook_manager,
         &bookmark_push,
         new_changesets,
         non_fast_forward_policy,
         BookmarkUpdateReason::Pushrebase,
+        maybe_pushvars.as_ref(),
         bundle_replay_data,
+        hook_rejection_remapper.as_ref(),
     )
     .await?;
 
@@ -458,18 +489,22 @@ async fn run_bookmark_only_pushrebase(
     })
 }
 
-async fn normal_pushrebase(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    pushrebase_params: &PushrebaseParams,
-    changesets: &HashSet<BonsaiChangeset>,
-    bookmark: &BookmarkName,
-    maybe_hg_replay_data: &Option<pushrebase::HgReplayData>,
-    bookmark_attrs: &BookmarkAttrs,
-    infinitepush_params: &InfinitepushParams,
+async fn normal_pushrebase<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
+    pushrebase_params: &'a PushrebaseParams,
+    changesets: &'a HashSet<BonsaiChangeset>,
+    bookmark: &'a BookmarkName,
+    maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
+    maybe_hg_replay_data: &'a Option<pushrebase::HgReplayData>,
+    bookmark_attrs: &'a BookmarkAttrs,
+    infinitepush_params: &'a InfinitepushParams,
+    hook_manager: &'a HookManager,
+    hook_rejection_remapper: &'a dyn HookRejectionRemapper,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
-    bookmarks_movement::PushrebaseOntoBookmarkOp::new(bookmark, changesets)
+    match bookmarks_movement::PushrebaseOntoBookmarkOp::new(bookmark, changesets)
         .only_if_public()
+        .with_pushvars(maybe_pushvars)
         .with_hg_replay_data(maybe_hg_replay_data.as_ref())
         .run(
             ctx,
@@ -477,15 +512,22 @@ async fn normal_pushrebase(
             infinitepush_params,
             pushrebase_params,
             bookmark_attrs,
+            hook_manager,
         )
         .await
-        .map(|outcome| (outcome.head, outcome.rebased_changesets))
-        .map_err(|err| match err {
+    {
+        Ok(outcome) => Ok((outcome.head, outcome.rebased_changesets)),
+        Err(err) => match err {
             BookmarkMovementError::PushrebaseError(PushrebaseError::Conflicts(conflicts)) => {
-                BundleResolverError::PushrebaseConflicts(conflicts)
+                Err(BundleResolverError::PushrebaseConflicts(conflicts))
             }
-            _ => BundleResolverError::Error(err.into()),
-        })
+            BookmarkMovementError::HookFailure(rejections) => {
+                let rejections = map_hook_rejections(rejections, hook_rejection_remapper).await?;
+                Err(BundleResolverError::HookError(rejections))
+            }
+            _ => Err(BundleResolverError::Error(err.into())),
+        },
+    }
 }
 
 async fn force_pushrebase(
@@ -493,12 +535,15 @@ async fn force_pushrebase(
     repo: &BlobRepo,
     pushrebase_params: &PushrebaseParams,
     lca_hint: &dyn LeastCommonAncestorsHint,
+    hook_manager: &HookManager,
     uploaded_bonsais: HashSet<BonsaiChangeset>,
     bookmark_push: PlainBookmarkPush<ChangesetId>,
+    maybe_pushvars: Option<&HashMap<String, Bytes>>,
     maybe_hg_replay_data: &Option<pushrebase::HgReplayData>,
     bookmark_attrs: &BookmarkAttrs,
     infinitepush_params: &InfinitepushParams,
-) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error> {
+    hook_rejection_remapper: &dyn HookRejectionRemapper,
+) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let new_target = bookmark_push
         .new
         .ok_or_else(|| anyhow!("new changeset is required for force pushrebase"))?;
@@ -527,11 +572,14 @@ async fn force_pushrebase(
         infinitepush_params,
         pushrebase_params,
         bookmark_attrs,
+        hook_manager,
         &bookmark_push,
         new_changesets,
         NonFastForwardPolicy::Allowed,
         BookmarkUpdateReason::Pushrebase,
+        maybe_pushvars,
         bundle_replay_data,
+        hook_rejection_remapper,
     )
     .await?;
 
@@ -556,12 +604,15 @@ async fn plain_push_bookmark(
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     bookmark_attrs: &BookmarkAttrs,
+    hook_manager: &HookManager,
     bookmark_push: &PlainBookmarkPush<ChangesetId>,
     new_changesets: HashMap<ChangesetId, BonsaiChangeset>,
     non_fast_forward_policy: NonFastForwardPolicy,
     reason: BookmarkUpdateReason,
+    maybe_pushvars: Option<&HashMap<String, Bytes>>,
     bundle_replay_data: Option<&dyn BundleReplay>,
-) -> Result<()> {
+    hook_rejection_remapper: &dyn HookRejectionRemapper,
+) -> Result<(), BundleResolverError> {
     match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
             bookmarks_movement::CreateBookmarkOp::new(&bookmark_push.name, new_target, reason)
@@ -574,13 +625,14 @@ async fn plain_push_bookmark(
                     infinitepush_params,
                     pushrebase_params,
                     bookmark_attrs,
+                    hook_manager,
                 )
                 .await
                 .context("Failed to create bookmark")?;
         }
 
         (Some(old_target), Some(new_target)) => {
-            bookmarks_movement::UpdateBookmarkOp::new(
+            let res = bookmarks_movement::UpdateBookmarkOp::new(
                 &bookmark_push.name,
                 BookmarkUpdateTargets {
                     old: old_target,
@@ -595,6 +647,7 @@ async fn plain_push_bookmark(
             )
             .only_if_public()
             .with_new_changesets(new_changesets)
+            .with_pushvars(maybe_pushvars)
             .with_bundle_replay_data(bundle_replay_data)
             .run(
                 ctx,
@@ -603,15 +656,28 @@ async fn plain_push_bookmark(
                 infinitepush_params,
                 pushrebase_params,
                 bookmark_attrs,
+                hook_manager,
             )
-            .await
-            .context(
-                if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
-                    "Failed to move bookmark"
-                } else {
-                    "Failed to fast-forward bookmark (try --force?)"
+            .await;
+            match res {
+                Ok(()) => (),
+                Err(err) => match err {
+                    BookmarkMovementError::HookFailure(rejections) => {
+                        let rejections =
+                            map_hook_rejections(rejections, hook_rejection_remapper).await?;
+                        return Err(BundleResolverError::HookError(rejections));
+                    }
+                    _ => {
+                        return Err(BundleResolverError::Error(Error::from(err).context(
+                            if non_fast_forward_policy == NonFastForwardPolicy::Allowed {
+                                "Failed to move bookmark"
+                            } else {
+                                "Failed to fast-forward bookmark (try --force?)"
+                            },
+                        )))
+                    }
                 },
-            )?;
+            }
         }
 
         (Some(old_target), None) => {
@@ -635,6 +701,7 @@ async fn infinitepush_scratch_bookmark(
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     bookmark_attrs: &BookmarkAttrs,
+    hook_manager: &HookManager,
     bookmark_push: &InfiniteBookmarkPush<ChangesetId>,
     bundle_replay_data: Option<&dyn BundleReplay>,
 ) -> Result<()> {
@@ -652,6 +719,7 @@ async fn infinitepush_scratch_bookmark(
             infinitepush_params,
             pushrebase_params,
             bookmark_attrs,
+            hook_manager,
         )
         .await
         .context("Failed to create scratch bookmark")?;
@@ -684,6 +752,7 @@ async fn infinitepush_scratch_bookmark(
             infinitepush_params,
             pushrebase_params,
             bookmark_attrs,
+            hook_manager,
         )
         .await
         .context(if bookmark_push.force {

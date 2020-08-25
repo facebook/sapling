@@ -9,6 +9,8 @@
 
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
+use hooks::HookRejection;
+use itertools::Itertools;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams};
 use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseError;
@@ -18,6 +20,7 @@ mod create;
 mod delete;
 mod git_mapping;
 mod globalrev_mapping;
+mod hook_running;
 mod pushrebase_onto;
 mod update;
 
@@ -25,6 +28,7 @@ pub use pushrebase::PushrebaseOutcome;
 
 pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
+pub use crate::hook_running::run_hooks;
 pub use crate::pushrebase_onto::PushrebaseOntoBookmarkOp;
 pub use crate::update::{BookmarkUpdatePolicy, BookmarkUpdateTargets, UpdateBookmarkOp};
 
@@ -137,9 +141,24 @@ pub enum BookmarkMovementError {
     #[error("Bookmark transaction failed")]
     TransactionFailed,
 
+    #[error("Hooks failed:\n{}", describe_hook_rejections(.0.as_slice()))]
+    HookFailure(Vec<HookRejection>),
+
     #[error("Pushrebase failed")]
     PushrebaseError(#[source] PushrebaseError),
 
     #[error(transparent)]
     Error(#[from] anyhow::Error),
+}
+
+fn describe_hook_rejections(rejections: &[HookRejection]) -> String {
+    rejections
+        .iter()
+        .map(|rejection| {
+            format!(
+                "  {} for {}: {}",
+                rejection.hook_name, rejection.cs_id, rejection.reason.long_description
+            )
+        })
+        .join("\n")
 }

@@ -9,6 +9,7 @@ use crate::changegroup::{
     convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
 };
 use crate::errors::*;
+use crate::hook_running::{make_hook_rejection_remapper, HookRejectionRemapper};
 use crate::stats::*;
 use crate::upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use crate::upload_changesets::upload_changeset;
@@ -51,6 +52,7 @@ use pushrebase::HgReplayData;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, trace};
 use std::collections::{HashMap, HashSet};
+use std::fmt::Display;
 use std::sync::{Arc, Mutex};
 use topo_sort::sort_topological;
 use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
@@ -175,15 +177,36 @@ impl From<BundleResolverError> for Error {
     }
 }
 
+pub trait BundleResolverResultExt<T> {
+    fn context<C>(self, context: C) -> Result<T, BundleResolverError>
+    where
+        C: Display + Send + Sync + 'static;
+}
+
+impl<T> BundleResolverResultExt<T> for Result<T, BundleResolverError> {
+    fn context<C>(self, context: C) -> Result<T, BundleResolverError>
+    where
+        C: Display + Send + Sync + 'static,
+    {
+        match self {
+            Ok(v) => Ok(v),
+            Err(BundleResolverError::Error(err)) => Err(err.context(context).into()),
+            Err(e) => Err(e),
+        }
+    }
+}
+
 /// Data, needed to perform post-resolve `Push` action
 pub struct PostResolvePush {
     pub changegroup_id: Option<PartId>,
     pub bookmark_pushes: Vec<PlainBookmarkPush<ChangesetId>>,
     pub mutations: Vec<HgMutationEntry>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub non_fast_forward_policy: NonFastForwardPolicy,
     pub uploaded_bonsais: UploadedBonsais,
     pub uploaded_hg_changeset_ids: UploadedHgChangesetIds,
+    pub hook_rejection_remapper: Arc<dyn HookRejectionRemapper>,
 }
 
 /// Data, needed to perform post-resolve `InfinitePush` action
@@ -206,13 +229,16 @@ pub struct PostResolvePushRebase {
     pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub commonheads: CommonHeads,
     pub uploaded_bonsais: UploadedBonsais,
+    pub hook_rejection_remapper: Arc<dyn HookRejectionRemapper>,
 }
 
 /// Data, needed to perform post-resolve `BookmarkOnlyPushRebase` action
 pub struct PostResolveBookmarkOnlyPushRebase {
     pub bookmark_push: PlainBookmarkPush<ChangesetId>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub non_fast_forward_policy: NonFastForwardPolicy,
+    pub hook_rejection_remapper: Arc<dyn HookRejectionRemapper>,
 }
 
 /// An action to take after the `unbundle` bundle2 was completely resolved
@@ -288,6 +314,7 @@ pub async fn resolve<'a>(
                 ctx,
                 resolver,
                 bundle2,
+                maybe_pushvars,
                 non_fast_forward_policy,
                 maybe_full_content,
             )
@@ -313,6 +340,7 @@ pub async fn resolve<'a>(
             ctx,
             resolver,
             bundle2,
+            maybe_pushvars,
             non_fast_forward_policy,
             maybe_full_content,
             move || pure_push_allowed,
@@ -371,6 +399,7 @@ async fn resolve_push<'r>(
     ctx: &'r CoreContext,
     resolver: Bundle2Resolver<'r>,
     bundle2: OldBoxStream<Bundle2Item, Error>,
+    maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
@@ -448,14 +477,19 @@ async fn resolve_push<'r>(
         )
         .map(PostResolveAction::InfinitePush)
     } else {
+        let hook_rejection_remapper =
+            make_hook_rejection_remapper(&ctx, resolver.repo.clone()).into();
+
         get_post_resolve_push(
             changegroup_id,
             maybe_bonsai_bookmark_push,
             mutations,
             maybe_raw_bundle2_id,
+            maybe_pushvars,
             non_fast_forward_policy,
             uploaded_bonsais,
             uploaded_hg_changeset_ids,
+            hook_rejection_remapper,
         )
         .map(PostResolveAction::Push)
     }
@@ -496,9 +530,11 @@ fn get_post_resolve_push(
     maybe_bonsai_bookmark_push: Option<AllBookmarkPushes<ChangesetId>>,
     mutations: Vec<HgMutationEntry>,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
     uploaded_bonsais: UploadedBonsais,
     uploaded_hg_changeset_ids: UploadedHgChangesetIds,
+    hook_rejection_remapper: Arc<dyn HookRejectionRemapper>,
 ) -> Result<PostResolvePush, Error> {
     let bookmark_pushes = match maybe_bonsai_bookmark_push {
         Some(AllBookmarkPushes::Inifinitepush(_bookmark_push)) => {
@@ -515,9 +551,11 @@ fn get_post_resolve_push(
         bookmark_pushes,
         mutations,
         maybe_raw_bundle2_id,
+        maybe_pushvars,
         non_fast_forward_policy,
         uploaded_bonsais,
         uploaded_hg_changeset_ids,
+        hook_rejection_remapper,
     })
 }
 
@@ -636,6 +674,8 @@ async fn resolve_pushrebase<'r>(
         HgReplayData::new_with_simple_convertor(ctx.clone(), raw_bundle2_id, repo)
     });
 
+    let hook_rejection_remapper = make_hook_rejection_remapper(&ctx, resolver.repo.clone()).into();
+
     Ok(PostResolveAction::PushRebase(PostResolvePushRebase {
         bookmark_push_part_id,
         bookmark_spec,
@@ -643,6 +683,7 @@ async fn resolve_pushrebase<'r>(
         maybe_pushvars,
         commonheads,
         uploaded_bonsais,
+        hook_rejection_remapper,
     }))
 }
 
@@ -651,6 +692,7 @@ async fn resolve_bookmark_only_pushrebase<'r>(
     ctx: &'r CoreContext,
     resolver: Bundle2Resolver<'r>,
     bundle2: OldBoxStream<Bundle2Item, Error>,
+    maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
 ) -> Result<PostResolveAction, Error> {
@@ -682,12 +724,15 @@ async fn resolve_bookmark_only_pushrebase<'r>(
         .await?;
     let bookmark_push =
         plain_hg_bookmark_push_to_bonsai(ctx, &resolver.repo, bookmark_push).await?;
+    let hook_rejection_remapper = make_hook_rejection_remapper(&ctx, resolver.repo.clone()).into();
 
     Ok(PostResolveAction::BookmarkOnlyPushRebase(
         PostResolveBookmarkOnlyPushRebase {
             bookmark_push,
             maybe_raw_bundle2_id,
+            maybe_pushvars,
             non_fast_forward_policy,
+            hook_rejection_remapper,
         },
     ))
 }

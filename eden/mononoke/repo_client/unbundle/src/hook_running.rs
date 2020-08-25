@@ -7,150 +7,105 @@
 
 #![deny(warnings)]
 
-use crate::{
-    resolver::HgHookRejection, BundleResolverError, PostResolveAction, PostResolvePushRebase,
-};
-use anyhow::Context;
+use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use bookmarks::BookmarkName;
-use bytes::Bytes;
+use bookmarks_movement::BookmarkMovementError;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::BoxFuture,
-    stream::{FuturesUnordered, TryStreamExt},
-    FutureExt, TryFutureExt,
-};
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as _};
-use futures_old::future::ok;
-use futures_stats::TimedFutureExt;
-use hooks::{HookManager, HookOutcome, HookRejection};
-use mercurial_types::HgChangesetId;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
-use scuba_ext::ScubaSampleBuilderExt;
-use std::{collections::HashMap, sync::Arc};
+use futures::compat::Future01CompatExt;
+use futures::future::{BoxFuture, FutureExt};
+use futures::stream::{self, StreamExt, TryStreamExt};
+use hooks::{HookManager, HookRejection};
 
-pub trait RemapAsyncFn = (Fn(ChangesetId) -> BoxFuture<'static, Result<HgChangesetId, BundleResolverError>>)
+use crate::resolver::{HgHookRejection, PostResolveAction, PostResolvePushRebase};
+use crate::BundleResolverError;
+
+/// A function to remap hook rejections from Bonsai to Hg.
+pub trait HookRejectionRemapper = (Fn(HookRejection) -> BoxFuture<'static, Result<HgHookRejection, Error>>)
     + Send
     + Sync
     + 'static;
 
-pub fn run_remapped_hooks(
-    ctx: CoreContext,
-    hook_manager: Arc<HookManager>,
-    action: &PostResolveAction,
-    remap_cs: impl RemapAsyncFn,
-) -> OldBoxFuture<(), BundleResolverError> {
-    match action {
-        // TODO: Need to run hooks on Push, not just PushRebase
-        PostResolveAction::Push(_) => ok(()).boxify(),
-        PostResolveAction::InfinitePush(_) => ok(()).boxify(),
-        PostResolveAction::PushRebase(action) => {
-            run_pushrebase_hooks(ctx, action, hook_manager, remap_cs)
-        }
-        PostResolveAction::BookmarkOnlyPushRebase(_) => ok(()).boxify(),
-    }
-}
-
-pub fn run_hooks(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    hook_manager: Arc<HookManager>,
-    action: &PostResolveAction,
-) -> OldBoxFuture<(), BundleResolverError> {
-    run_remapped_hooks(ctx.clone(), hook_manager, action, move |cs| {
-        let repo = repo.clone();
-        let ctx = ctx.clone();
-        async move {
-            repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
-                .compat()
-                .await
-                .map_err(|e| e.into())
-        }
-        .boxed()
-    })
-}
-
-fn run_pushrebase_hooks(
-    ctx: CoreContext,
-    action: &PostResolvePushRebase,
-    hook_manager: Arc<HookManager>,
-    remap_cs: impl RemapAsyncFn,
-) -> OldBoxFuture<(), BundleResolverError> {
-    // The changesets that will be pushed
-    let changesets = action.uploaded_bonsais.clone();
-    let maybe_pushvars = action.maybe_pushvars.clone();
-    // FIXME: stop cloning when this fn is async
-    let bookmark = action.bookmark_spec.get_bookmark_name().clone();
-
-    async move {
-        run_hooks_on_changesets(
-            &ctx,
-            &*hook_manager,
-            changesets.iter(),
-            bookmark,
-            maybe_pushvars,
-            remap_cs,
-        )
-        .await?;
-        Ok(())
-    }
-    .boxed()
-    .compat()
-    .boxify()
-}
-
-async fn run_hooks_on_changesets(
+pub fn make_hook_rejection_remapper(
     ctx: &CoreContext,
-    hook_manager: &HookManager,
-    changesets: impl Iterator<Item = &BonsaiChangeset> + Clone + itertools::Itertools,
-    bookmark: BookmarkName,
-    maybe_pushvars: Option<HashMap<String, Bytes>>,
-    remap_cs: impl RemapAsyncFn,
-) -> Result<(), BundleResolverError> {
-    let (stats, hook_outcomes) = hook_manager
-        .run_hooks_for_bookmark(&ctx, changesets, &bookmark, maybe_pushvars.as_ref())
-        .timed()
-        .await;
-    let hook_outcomes = hook_outcomes.context("While running hooks")?;
-
-    let rejections = hook_outcomes
-        .into_iter()
-        .filter_map(HookOutcome::into_rejection)
-        .collect::<Vec<_>>();
-
-    ctx.scuba()
-        .clone()
-        .add_future_stats(&stats)
-        .add("hook_rejections", rejections.len())
-        .log_with_msg("Executed hooks", None);
-
-    if rejections.is_empty() {
-        return Ok(());
-    }
-
-    let remap_cs = &remap_cs;
-    let rejections = rejections
-        .into_iter()
-        .map(
-            |HookRejection {
-                 hook_name,
-                 cs_id,
-                 reason,
-             }| async move {
-                let hg_cs_id = remap_cs(cs_id).await?;
-
-                Result::<_, anyhow::Error>::Ok(HgHookRejection {
+    repo: BlobRepo,
+) -> Box<dyn HookRejectionRemapper> {
+    let ctx = ctx.clone();
+    Box::new(
+        move |HookRejection {
+                  hook_name,
+                  cs_id,
+                  reason,
+              }| {
+            let ctx = ctx.clone();
+            let repo = repo.clone();
+            async move {
+                let hg_cs_id = repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                    .compat()
+                    .await?;
+                Ok(HgHookRejection {
                     hook_name,
                     hg_cs_id,
                     reason,
                 })
-            },
-        )
-        .collect::<FuturesUnordered<_>>()
-        .try_collect()
-        .await?;
+            }
+            .boxed()
+        },
+    )
+}
 
-    Err(BundleResolverError::HookError(rejections))
+pub(crate) async fn map_hook_rejections(
+    rejections: Vec<HookRejection>,
+    hook_rejection_remapper: &dyn HookRejectionRemapper,
+) -> Result<Vec<HgHookRejection>, Error> {
+    stream::iter(rejections)
+        .map(move |rejection| async move { (*hook_rejection_remapper)(rejection).await })
+        .buffered(10)
+        .try_collect()
+        .await
+        .context("Failed to remap hook rejections")
+}
+
+pub async fn run_hooks(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    hook_manager: &HookManager,
+    action: &PostResolveAction,
+) -> Result<(), BundleResolverError> {
+    match action {
+        // TODO: Need to run hooks on Push, not just Pushrebase
+        PostResolveAction::Push(_) => Ok(()),
+        PostResolveAction::InfinitePush(_) => Ok(()),
+        PostResolveAction::BookmarkOnlyPushRebase(_) => Ok(()),
+        PostResolveAction::PushRebase(action) => {
+            run_pushrebase_hooks(ctx, repo, hook_manager, action).await
+        }
+    }
+}
+
+async fn run_pushrebase_hooks(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    hook_manager: &HookManager,
+    action: &PostResolvePushRebase,
+) -> Result<(), BundleResolverError> {
+    match bookmarks_movement::run_hooks(
+        ctx,
+        hook_manager,
+        action.bookmark_spec.get_bookmark_name(),
+        action.uploaded_bonsais.iter(),
+        action.maybe_pushvars.as_ref(),
+    )
+    .await
+    {
+        Ok(()) => Ok(()),
+        Err(BookmarkMovementError::HookFailure(rejections)) => {
+            let hook_rejection_remapper = make_hook_rejection_remapper(ctx, repo.clone());
+            let rejections =
+                map_hook_rejections(rejections, hook_rejection_remapper.as_ref()).await?;
+            Err(BundleResolverError::HookError(rejections))
+        }
+        Err(e) => Err(Error::from(e).into()),
+    }
 }

@@ -5,19 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::anyhow;
 use blobrepo::BlobRepo;
 use bookmarks_types::BookmarkName;
+use bytes::Bytes;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
+use hooks::HookManager;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::BonsaiChangeset;
 use scuba_ext::ScubaSampleBuilderExt;
 
+use crate::hook_running::run_hooks;
 use crate::{BookmarkKindRestrictions, BookmarkMoveAuthorization, BookmarkMovementError};
 
 pub struct PushrebaseOntoBookmarkOp<'op> {
@@ -25,6 +28,7 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
     changesets: &'op HashSet<BonsaiChangeset>,
     auth: BookmarkMoveAuthorization,
     kind_restrictions: BookmarkKindRestrictions,
+    pushvars: Option<&'op HashMap<String, Bytes>>,
     hg_replay: Option<&'op pushrebase::HgReplayData>,
 }
 
@@ -39,6 +43,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             changesets,
             auth: BookmarkMoveAuthorization::Context,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
+            pushvars: None,
             hg_replay: None,
         }
     }
@@ -50,6 +55,11 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
 
     pub fn only_if_public(mut self) -> Self {
         self.kind_restrictions = BookmarkKindRestrictions::OnlyPublic;
+        self
+    }
+
+    pub fn with_pushvars(mut self, pushvars: Option<&'op HashMap<String, Bytes>>) -> Self {
+        self.pushvars = pushvars;
         self
     }
 
@@ -65,6 +75,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
         bookmark_attrs: &'op BookmarkAttrs,
+        hook_manager: &'op HookManager,
     ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
         self.auth
             .check_authorized(ctx, bookmark_attrs, self.bookmark)?;
@@ -81,8 +92,20 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             }
         }
 
-        self.kind_restrictions
+        let is_scratch = self
+            .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
+
+        if !is_scratch {
+            run_hooks(
+                ctx,
+                hook_manager,
+                self.bookmark,
+                self.changesets.iter(),
+                self.pushvars,
+            )
+            .await?;
+        }
 
         let mut pushrebase_hooks = Vec::new();
 

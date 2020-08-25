@@ -280,11 +280,9 @@ async fn maybe_unbundle(
 
     let hooks_outcome = match hook_manager {
         Some(hook_manager) => {
-            let (hook_stats, hooks_outcome) =
-                run_hooks(ctx.clone(), repo.clone(), hook_manager.clone(), &resolution)
-                    .compat()
-                    .timed()
-                    .await;
+            let (hook_stats, hooks_outcome) = run_hooks(ctx, repo, hook_manager, &resolution)
+                .timed()
+                .await;
 
             Some((hook_stats, hooks_outcome.err().map(Error::from)))
         }
@@ -313,6 +311,7 @@ async fn maybe_unbundle(
         maybe_pushvars: _,
         commonheads: _,
         uploaded_bonsais: changesets,
+        hook_rejection_remapper: _,
     } = action;
 
     let onto_bookmark = match bookmark_spec {

@@ -126,6 +126,17 @@ impl HookManager {
         self.reviewers_membership.clone()
     }
 
+    pub fn hooks_exist_for_bookmark(&self, bookmark: &BookmarkName) -> bool {
+        if self.bookmark_hooks.contains_key(bookmark) {
+            return true;
+        }
+
+        let bookmark = bookmark.as_str();
+        self.regex_hooks
+            .iter()
+            .any(|(regex, _)| regex.is_match(bookmark))
+    }
+
     fn hooks_for_bookmark<'a>(
         &'a self,
         bookmark: &BookmarkName,

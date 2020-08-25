@@ -10,11 +10,15 @@ use std::collections::HashMap;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
+use bytes::Bytes;
 use context::CoreContext;
+use hooks::HookManager;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
+use tunables::tunables;
 
+use crate::hook_running::run_hooks;
 use crate::{BookmarkKindRestrictions, BookmarkMoveAuthorization, BookmarkMovementError};
 
 /// The old and new changeset during a bookmark update.
@@ -74,6 +78,7 @@ pub struct UpdateBookmarkOp<'op> {
     auth: BookmarkMoveAuthorization,
     kind_restrictions: BookmarkKindRestrictions,
     new_changesets: HashMap<ChangesetId, BonsaiChangeset>,
+    pushvars: Option<&'op HashMap<String, Bytes>>,
     bundle_replay: Option<&'op dyn BundleReplay>,
 }
 
@@ -93,6 +98,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             auth: BookmarkMoveAuthorization::Context,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
             new_changesets: HashMap::new(),
+            pushvars: None,
             bundle_replay: None,
         }
     }
@@ -104,6 +110,11 @@ impl<'op> UpdateBookmarkOp<'op> {
 
     pub fn only_if_public(mut self) -> Self {
         self.kind_restrictions = BookmarkKindRestrictions::OnlyPublic;
+        self
+    }
+
+    pub fn with_pushvars(mut self, pushvars: Option<&'op HashMap<String, Bytes>>) -> Self {
+        self.pushvars = pushvars;
         self
     }
 
@@ -126,6 +137,31 @@ impl<'op> UpdateBookmarkOp<'op> {
         self
     }
 
+    async fn run_hooks(
+        &self,
+        ctx: &CoreContext,
+        hook_manager: &HookManager,
+    ) -> Result<(), BookmarkMovementError> {
+        if self.reason == BookmarkUpdateReason::Push && tunables().get_disable_hooks_on_plain_push()
+        {
+            // Skip running hooks for this plain push.
+            return Ok(());
+        }
+
+        if hook_manager.hooks_exist_for_bookmark(self.bookmark) {
+            run_hooks(
+                ctx,
+                hook_manager,
+                self.bookmark,
+                self.new_changesets.values(),
+                self.pushvars,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
     pub async fn run(
         self,
         ctx: &'op CoreContext,
@@ -134,6 +170,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
         bookmark_attrs: &'op BookmarkAttrs,
+        hook_manager: &'op HookManager,
     ) -> Result<(), BookmarkMovementError> {
         self.auth
             .check_authorized(ctx, bookmark_attrs, self.bookmark)?;
@@ -152,6 +189,10 @@ impl<'op> UpdateBookmarkOp<'op> {
                 &self.targets,
             )
             .await?;
+
+        if !is_scratch {
+            self.run_hooks(ctx, hook_manager).await?;
+        }
 
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
         let mut txn_hook = None;

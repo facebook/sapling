@@ -1561,14 +1561,22 @@ impl HgCommands for RepoClient {
                             Err(e) => Err(e.into()),
                             Ok((action, bypass_readonly)) => {
                                 let unbundle_future = async {
-                                    run_hooks(ctx.clone(), blobrepo.clone(), hook_manager, &action)
-                                        .compat()
-                                        .await?;
-
                                     let response = match client
                                         .maybe_get_pushredirector_for_action(&ctx, &action)?
                                     {
                                         Some(push_redirector) => {
+                                            // Push-redirection will cause
+                                            // hooks to be run in the large
+                                            // repo, but we must also run them
+                                            // in the small repo.
+                                            run_hooks(
+                                                &ctx,
+                                                &blobrepo,
+                                                hook_manager.as_ref(),
+                                                &action,
+                                            )
+                                            .await?;
+
                                             let ctx = ctx.with_mutated_scuba(|mut sample| {
                                                 sample.add(
                                                     "target_repo_name",
@@ -1599,6 +1607,7 @@ impl HgCommands for RepoClient {
                                                 &infinitepush_params,
                                                 &pushrebase_params,
                                                 &push_params,
+                                                hook_manager.as_ref(),
                                                 maybe_reverse_filler_queue,
                                                 action,
                                             )

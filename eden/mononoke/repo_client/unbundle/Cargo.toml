@@ -11,7 +11,6 @@ backsyncer = { path = "../../commit_rewriting/backsyncer" }
 blobrepo = { path = "../../blobrepo" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
-bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 bookmarks = { path = "../../bookmarks" }
 bookmarks_movement = { path = "../../bookmarks/bookmarks_movement" }
 context = { path = "../../server/context" }
@@ -57,9 +56,7 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 hex = "0.4"
-itertools = "0.8"
 lazy_static = "1.0"
-maplit = "1.0"
 quickcheck = "0.9"
 sha2 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
@@ -68,9 +65,6 @@ tokio = "0.1"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
-fixtures = { path = "../../tests/fixtures" }
 mercurial_types-mocks = { path = "../../mercurial/types/mocks" }
-mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
-tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio-compat = "0.1"
+itertools = "0.8"

@@ -87,15 +87,17 @@ impl RepoWriteContext {
                 old: old_target,
                 new: Some(target),
             };
+            let hook_rejection_remapper =
+                unbundle::make_hook_rejection_remapper(self.ctx(), self.blob_repo().clone()).into();
 
             PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {
                 bookmark_push,
                 maybe_raw_bundle2_id: None,
+                maybe_pushvars: None,
                 non_fast_forward_policy: allow_non_fast_forward.into(),
+                hook_rejection_remapper,
             })
         };
-
-        let _hook_manager = &self.hook_manager();
 
         let _response = run_post_resolve_action(
             self.ctx(),
@@ -105,6 +107,7 @@ impl RepoWriteContext {
             &self.config().infinitepush,
             &self.config().pushrebase,
             &self.config().push,
+            self.hook_manager().as_ref(),
             None, // maybe_reverse_filler_queue
             action,
         )

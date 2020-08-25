@@ -7,12 +7,14 @@
 
 #![deny(warnings)]
 
-use crate::{run_post_resolve_action, run_remapped_hooks};
+use crate::run_post_resolve_action;
 use crate::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,
     UnbundlePushRebaseResponse, UnbundlePushResponse, UnbundleResponse,
 };
 
+use crate::hook_running::HookRejectionRemapper;
+use crate::resolver::HgHookRejection;
 use crate::InfiniteBookmarkPush;
 use crate::PlainBookmarkPush;
 use crate::PushrebaseBookmarkSpec;
@@ -35,6 +37,7 @@ use futures::{
     try_join,
 };
 use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
+use hooks::HookRejection;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfig;
 use mononoke_repo::MononokeRepo;
@@ -45,7 +48,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use topo_sort::sort_topological;
-use tunables::tunables;
 
 /// An auxillary struct, which contains nearly
 /// everything needed to create a full `PushRedirector`
@@ -171,6 +173,7 @@ impl PushRedirector {
             &infinitepush_params,
             &puhsrebase_params,
             &push_params,
+            self.repo.hook_manager().as_ref(),
             self.repo.maybe_reverse_filler_queue(),
             large_repo_action,
         )
@@ -178,6 +181,60 @@ impl PushRedirector {
         self.convert_unbundle_response(ctx.clone(), large_repo_response)
             .await
             .map_err(BundleResolverError::from)
+    }
+
+    fn make_hook_rejection_remapper(
+        &self,
+        ctx: CoreContext,
+        large_to_small: HashMap<ChangesetId, ChangesetId>,
+    ) -> Arc<dyn HookRejectionRemapper> {
+        Arc::new({
+            let small_repo = self.small_to_large_commit_syncer.get_source_repo().clone();
+            let large_repo = self.small_to_large_commit_syncer.get_target_repo().clone();
+            let small_repo_id = self.small_to_large_commit_syncer.get_source_repo_id();
+            let large_repo_id = self.small_to_large_commit_syncer.get_target_repo_id();
+            let mapping = self.small_to_large_commit_syncer.mapping.clone();
+            move |HookRejection {
+                      hook_name,
+                      cs_id,
+                      reason,
+                  }| {
+                cloned!(small_repo, large_repo, ctx, large_to_small, mapping);
+                // For the benefit of the user seeing the error, remap the commit hash back
+                // to the small repo, so that while the error message may contain large repo
+                // paths, the commit hash is the one you have in your small repo
+                async move {
+                    let (repo, cs_id) = match large_to_small.get(&cs_id) {
+                        Some(&small_cs_id) => (small_repo, small_cs_id),
+                        None => match mapping
+                            .get(ctx.clone(), large_repo_id, cs_id, small_repo_id)
+                            .compat()
+                            .await?
+                        {
+                            Some((small_cs_id, _)) => (small_repo, small_cs_id),
+                            None => {
+                                // The changeset doesn't map into the small
+                                // repo.  Just use the large repo's changeset
+                                // id.
+                                (large_repo, cs_id)
+                            }
+                        },
+                    };
+
+                    let hg_cs_id = repo
+                        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                        .compat()
+                        .await?;
+
+                    Ok(HgHookRejection {
+                        hook_name,
+                        hg_cs_id,
+                        reason,
+                    })
+                }
+                .boxed()
+            }
+        })
     }
 
     /// Convert `PostResolveAction` enum in a small-to-large direction
@@ -227,9 +284,11 @@ impl PushRedirector {
             bookmark_pushes,
             mutations: _,
             maybe_raw_bundle2_id,
+            maybe_pushvars,
             non_fast_forward_policy,
             uploaded_bonsais,
             uploaded_hg_changeset_ids: _,
+            hook_rejection_remapper: _,
         } = orig;
 
         let uploaded_bonsais = self
@@ -241,14 +300,23 @@ impl PushRedirector {
         }))
         .await?;
 
+        let large_to_small = uploaded_bonsais
+            .iter()
+            .map(|(small_cs_id, large_bcs)| (large_bcs.get_changeset_id(), *small_cs_id))
+            .collect::<HashMap<_, _>>();
+
+        let hook_rejection_remapper = self.make_hook_rejection_remapper(ctx, large_to_small);
+
         Ok(PostResolvePush {
             changegroup_id,
             bookmark_pushes,
             mutations: Default::default(),
             maybe_raw_bundle2_id,
+            maybe_pushvars,
             non_fast_forward_policy,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
             uploaded_hg_changeset_ids: Default::default(),
+            hook_rejection_remapper,
         })
     }
 
@@ -273,6 +341,7 @@ impl PushRedirector {
             maybe_pushvars,
             commonheads,
             uploaded_bonsais,
+            hook_rejection_remapper: _,
         } = orig;
 
         let uploaded_bonsais = self
@@ -313,6 +382,8 @@ impl PushRedirector {
             }
         });
 
+        let hook_rejection_remapper = self.make_hook_rejection_remapper(ctx, large_to_small);
+
         let action = PostResolvePushRebase {
             bookmark_push_part_id,
             bookmark_spec,
@@ -320,40 +391,8 @@ impl PushRedirector {
             maybe_pushvars,
             commonheads,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
+            hook_rejection_remapper,
         };
-
-        // We've uploaded commits to the large repo at this point - now run hooks in the large
-        // repo, against the commits that have just been remapped from small repo to large repo.
-        if !tunables().get_run_pushredirected_hooks_in_large_repo_killswitch() {
-            run_remapped_hooks(
-                ctx.clone(),
-                self.repo.hook_manager(),
-                &PostResolveAction::PushRebase(action.clone()),
-                {
-                    let source_repo = self.small_to_large_commit_syncer.get_source_repo().clone();
-                    move |cs| {
-                        cloned!(source_repo, ctx, large_to_small);
-                        // For the benefit of the user seeing the error, remap the commit hash back
-                        // to the small repo, so that while the error message may contain large repo
-                        // paths, the commit hash is the one you have in your small repo
-                        async move {
-                            let cs = large_to_small
-                                .get(&cs)
-                                .ok_or_else(|| format_err!("{} doesn't remap in small repo", cs))?;
-
-                            source_repo
-                                .get_hg_from_bonsai_changeset(ctx.clone(), *cs)
-                                .compat()
-                                .await
-                                .map_err(|e| e.into())
-                        }
-                        .boxed()
-                    }
-                },
-            )
-            .compat()
-            .await?;
-        }
 
         Ok(action)
     }
@@ -408,7 +447,9 @@ impl PushRedirector {
         let PostResolveBookmarkOnlyPushRebase {
             bookmark_push,
             maybe_raw_bundle2_id,
+            maybe_pushvars,
             non_fast_forward_policy,
+            hook_rejection_remapper: _,
         } = orig;
 
         let bookmark_push = self
@@ -416,10 +457,14 @@ impl PushRedirector {
             .await
             .context("while converting converting plain bookmark push small-to-large")?;
 
+        let hook_rejection_remapper = self.make_hook_rejection_remapper(ctx, HashMap::new());
+
         Ok(PostResolveBookmarkOnlyPushRebase {
             bookmark_push,
             maybe_raw_bundle2_id,
+            maybe_pushvars,
             non_fast_forward_policy,
+            hook_rejection_remapper,
         })
     }
 

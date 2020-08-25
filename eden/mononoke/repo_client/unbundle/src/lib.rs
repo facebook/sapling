@@ -23,14 +23,14 @@ mod stats;
 mod upload_blobs;
 mod upload_changesets;
 
-pub use hook_running::{run_hooks, run_remapped_hooks};
+pub use hook_running::{make_hook_rejection_remapper, run_hooks};
 pub use processing::{get_pushrebase_hooks, run_post_resolve_action};
 pub use push_redirector::{PushRedirector, PushRedirectorArgs};
 pub use resolver::{
-    resolve, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush,
-    NonFastForwardPolicy, PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
-    PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
-    UploadedBonsais, UploadedHgChangesetIds,
+    resolve, BundleResolverError, BundleResolverResultExt, Changesets, CommonHeads,
+    InfiniteBookmarkPush, NonFastForwardPolicy, PlainBookmarkPush, PostResolveAction,
+    PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
+    PostResolvePushRebase, PushrebaseBookmarkSpec, UploadedBonsais, UploadedHgChangesetIds,
 };
 pub use response::{
     UnbundleBookmarkOnlyPushRebaseResponse, UnbundleInfinitePushResponse,

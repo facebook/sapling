@@ -73,11 +73,11 @@ pub struct MononokeTunables {
     undesired_path_prefix_to_log: TunableString,
     pushrebase_disable_rebased_commit_validation: AtomicBool,
     filenodes_disabled: AtomicBool,
-    run_pushredirected_hooks_in_large_repo_killswitch: AtomicBool,
     skiplist_max_skips_without_yield: AtomicI64,
     deduplicated_put_sampling_rate: AtomicI64,
     disable_repo_client_warm_bookmarks_cache: AtomicBool,
     remotefilelog_file_history_limit: AtomicI64,
+    disable_hooks_on_plain_push: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
