@@ -394,6 +394,9 @@ pub struct BookmarkParams {
     pub rewrite_dates: Option<bool>,
     /// Only users matching this pattern will be allowed to move this bookmark
     pub allowed_users: Option<ComparableRegex>,
+    /// Skip hooks for changesets that are already ancestors of these
+    /// bookmarks
+    pub hooks_skip_ancestors_of: Vec<BookmarkName>,
 }
 
 /// The type of the hook

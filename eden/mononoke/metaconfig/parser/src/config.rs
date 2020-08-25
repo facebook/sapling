@@ -1082,6 +1082,7 @@ mod test {
                         only_fast_forward: false,
                         allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap().into()),
                         rewrite_dates: None,
+                        hooks_skip_ancestors_of: vec![],
                     },
                     BookmarkParams {
                         bookmark: Regex::new("[^/]*/stable").unwrap().into(),
@@ -1089,6 +1090,7 @@ mod test {
                         only_fast_forward: false,
                         allowed_users: None,
                         rewrite_dates: None,
+                        hooks_skip_ancestors_of: vec![],
                     },
                 ],
                 hooks: vec![

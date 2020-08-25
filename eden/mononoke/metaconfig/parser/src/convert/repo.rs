@@ -163,6 +163,12 @@ impl Convert for RawBookmarkConfig {
             .transpose()?
             .map(ComparableRegex::new);
         let rewrite_dates = self.rewrite_dates;
+        let hooks_skip_ancestors_of = self
+            .hooks_skip_ancestors_of
+            .unwrap_or_default()
+            .into_iter()
+            .map(BookmarkName::new)
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(BookmarkParams {
             bookmark: bookmark_or_regex,
@@ -170,6 +176,7 @@ impl Convert for RawBookmarkConfig {
             only_fast_forward,
             allowed_users,
             rewrite_dates,
+            hooks_skip_ancestors_of,
         })
     }
 }
