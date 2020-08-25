@@ -51,6 +51,7 @@
 #ifdef _WIN32
 #include "eden/fs/win/mount/EdenDispatcher.h" // @manual
 #include "eden/fs/win/mount/PrjfsChannel.h" // @manual
+#include "eden/fs/win/utils/Subprocess.h" // @manual
 #else
 #include <folly/File.h>
 #include <folly/Subprocess.h>
@@ -434,30 +435,35 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::removeBindMount(
   auto absRepoPath = getPath() + repoPath;
   return serverState_->getPrivHelper()->bindUnMount(absRepoPath.stringPiece());
 }
+#endif // !_WIN32
 
 folly::SemiFuture<Unit> EdenMount::performBindMounts() {
-  return folly::makeSemiFutureWith([&] {
-           std::vector<std::string> argv{FLAGS_edenfsctlPath,
-                                         "redirect",
-                                         "fixup",
-                                         "--mount",
-                                         getPath().c_str()};
-           return futureSubprocess(folly::Subprocess(argv));
-         })
-      .deferValue([&](folly::ProcessReturnCode&& returnCode) {
-        if (returnCode.state() == folly::ProcessReturnCode::EXITED &&
-            returnCode.exitStatus() == 0) {
-          return folly::unit;
-        }
-        folly::CalledProcessError err(returnCode);
-        throw std::runtime_error(folly::to<std::string>(
-            "Failed to run `",
-            FLAGS_edenfsctlPath,
-            " fixup --mount ",
-            getPath(),
-            "`: ",
-            folly::exceptionStr(err)));
-      })
+  std::vector<std::string> argv{
+      FLAGS_edenfsctlPath, "redirect", "fixup", "--mount", getPath().c_str()};
+#ifndef _WIN32
+  auto redirectFuture =
+      folly::makeSemiFutureWith(
+          [&] { return futureSubprocess(folly::Subprocess(argv)); })
+          .deferValue([&](folly::ProcessReturnCode&& returnCode) {
+            if (returnCode.state() == folly::ProcessReturnCode::EXITED &&
+                returnCode.exitStatus() == 0) {
+              return folly::unit;
+            }
+            folly::CalledProcessError err(returnCode);
+            throw std::runtime_error(folly::to<std::string>(
+                "Failed to run `",
+                FLAGS_edenfsctlPath,
+                " fixup --mount ",
+                getPath(),
+                "`: ",
+                folly::exceptionStr(err)));
+          });
+#else
+  auto redirectFuture =
+      folly::makeSemiFutureWith([&] { Subprocess redirect(argv); });
+#endif // !_WIN32
+
+  return std::move(redirectFuture)
       .deferError([&](folly::exception_wrapper err) {
         throw std::runtime_error(folly::to<std::string>(
             "Failed to run `",
@@ -468,7 +474,6 @@ folly::SemiFuture<Unit> EdenMount::performBindMounts() {
             folly::exceptionStr(err)));
       });
 }
-#endif // !_WIN32
 
 EdenMount::~EdenMount() {}
 

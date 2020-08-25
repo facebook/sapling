@@ -1381,10 +1381,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                 return makeFuture<std::shared_ptr<EdenMount>>(
                     std::move(edenMount));
               } else {
-#ifdef _WIN32
-                return makeFuture<std::shared_ptr<EdenMount>>(
-                    std::move(edenMount));
-#else
                 // Perform all of the bind mounts associated with the
                 // client.  We don't need to do this for the takeover
                 // case as they are already mounted.
@@ -1397,7 +1393,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                       return edenMount;
                     })
                     .via(getServerState()->getThreadPool().get());
-#endif
               }
             })
             .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
