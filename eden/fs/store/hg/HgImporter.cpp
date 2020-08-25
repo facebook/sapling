@@ -218,9 +218,9 @@ HgImporter::HgImporter(
 
   helper_.createSubprocess(
       cmd,
-      repoPath.value().str().c_str(),
       std::move(childInPipe),
-      std::move(childOutPipe));
+      std::move(childOutPipe),
+      repoPath);
   helperIn_ = helper_.childInPipe_->writeHandle();
   helperOut_ = helper_.childOutPipe_->readHandle();
 

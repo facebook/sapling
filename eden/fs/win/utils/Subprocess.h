@@ -6,26 +6,33 @@
  */
 
 #pragma once
+
 #include <memory>
 #include <string>
 #include <vector>
+#include <optional>
+
+#include "eden/fs/win/utils/Pipe.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
-class Pipe;
-
 class Subprocess {
  public:
-  Subprocess();
-  Subprocess(const std::vector<std::string>& cmd);
-  ~Subprocess();
+  Subprocess() = default;
+
+  explicit Subprocess(const std::vector<std::string>& cmd) {
+    createSubprocess(cmd, std::make_unique<Pipe>(), std::make_unique<Pipe>());
+  }
+
+  ~Subprocess() = default;
 
   void createSubprocess(
       const std::vector<std::string>& cmd,
-      const char* currentDir = nullptr,
-      std::unique_ptr<Pipe> childInPipe = nullptr,
-      std::unique_ptr<Pipe> childOutPipe = nullptr);
+      std::unique_ptr<Pipe> childInPipe,
+      std::unique_ptr<Pipe> childOutPipe,
+      std::optional<AbsolutePathPiece> currentDir = std::nullopt);
 
   std::unique_ptr<Pipe> childInPipe_;
   std::unique_ptr<Pipe> childOutPipe_;

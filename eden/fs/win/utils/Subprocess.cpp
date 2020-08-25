@@ -5,31 +5,21 @@
  * GNU General Public License version 2.
  */
 
-#include "Subprocess.h"
+#include "eden/fs/win/utils/Subprocess.h"
+
 #include <fcntl.h>
-#include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Windows.h>
 #include <io.h>
-#include <iostream>
-#include <string>
-#include "Pipe.h"
 
 namespace facebook {
 namespace eden {
-using namespace std;
-
-Subprocess::Subprocess() {}
-Subprocess::Subprocess(const std::vector<string>& cmd) {
-  createSubprocess(cmd);
-}
-
-Subprocess::~Subprocess() {}
 
 void Subprocess::createSubprocess(
-    const std::vector<string>& cmd,
-    const char* currentDir,
+    const std::vector<std::string>& cmd,
     std::unique_ptr<Pipe> childInPipe,
-    std::unique_ptr<Pipe> childOutPipe) {
+    std::unique_ptr<Pipe> childOutPipe,
+    std::optional<AbsolutePathPiece> currentDir) {
   childInPipe_ = std::move(childInPipe);
   childOutPipe_ = std::move(childOutPipe);
 
@@ -53,7 +43,7 @@ void Subprocess::createSubprocess(
 
   PROCESS_INFORMATION procInfo{};
   STARTUPINFOEXA startupInfo{};
-  bool status = FALSE;
+  bool status = false;
 
   startupInfo.StartupInfo.cb = sizeof(STARTUPINFOEXA);
 
@@ -95,12 +85,17 @@ void Subprocess::createSubprocess(
         "UpdateProcThreadAttribute failed");
   }
 
-  string cmdToProcess;
+  std::string cmdToProcess;
   for (auto& str : cmd) {
     cmdToProcess += str + " ";
   }
 
   XLOG(DBG1) << "Creating the process: " << cmdToProcess.c_str();
+
+  const char* cwd = NULL;
+  if (currentDir) {
+    cwd = currentDir->stringPiece().data();
+  }
 
   status = CreateProcessA(
       nullptr,
@@ -110,7 +105,7 @@ void Subprocess::createSubprocess(
       TRUE, // inherit the handles
       EXTENDED_STARTUPINFO_PRESENT,
       nullptr,
-      currentDir,
+      cwd,
       &startupInfo.StartupInfo,
       &procInfo);
 
