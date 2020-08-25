@@ -115,6 +115,7 @@ async fn start(
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
+    let disabled_hooks = args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?;
     let trusted_proxy_idents = parse_identities(&matches)?;
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
     let config_store = args::maybe_init_config_store(fb, &logger, &matches)
@@ -130,6 +131,7 @@ async fn start(
         readonly_storage,
         blobstore_options,
         config_store,
+        disabled_hooks,
     )
     .await?;
 
@@ -231,6 +233,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_fb303_args()
         .with_all_repos()
         .with_shutdown_timeout_args()
+        .with_disabled_hooks_args()
         .with_test_args()
         .build()
         .arg(

@@ -9,7 +9,7 @@
 #![feature(bool_to_option)]
 #![deny(warnings)]
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -78,6 +78,7 @@ impl Mononoke {
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
         config_store: ConfigStore,
+        disabled_hooks: HashMap<String, HashSet<String>>,
     ) -> Result<Self, Error> {
         let common_config = configs.common;
         let repos = future::join_all(
@@ -87,6 +88,7 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
+                        let disabled_hooks = disabled_hooks.get(&name).cloned().unwrap_or_default();
                         cloned!(logger, common_config, blobstore_options, config_store);
                         async move {
                             info!(logger, "Initializing repo: {}", &name);
@@ -101,6 +103,7 @@ impl Mononoke {
                                 readonly_storage,
                                 blobstore_options,
                                 config_store,
+                                disabled_hooks,
                             )
                             .await
                             .expect("failed to initialize repo");

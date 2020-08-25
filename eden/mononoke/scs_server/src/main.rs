@@ -58,6 +58,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_all_repos()
         .with_shutdown_timeout_args()
         .with_scuba_logging_args()
+        .with_disabled_hooks_args()
         .with_test_args()
         .build()
         .arg(
@@ -106,6 +107,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         args::parse_readonly_storage(&matches),
         args::parse_blobstore_options(&matches),
         config_store,
+        args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
     ))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));

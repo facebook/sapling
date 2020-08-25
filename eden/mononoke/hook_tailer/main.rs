@@ -238,6 +238,7 @@ impl HookExecutionSummary {
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = cmdlib::args::MononokeApp::new("run hooks against repo")
         .with_advanced_args_hidden()
+        .with_disabled_hooks_args()
         .build()
         .version("0.0.0")
         .arg(
@@ -312,5 +313,5 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .help("Log hook execution statistics to a file (CSV format)"),
         );
 
-    cmdlib::args::add_disabled_hooks_args(app)
+    app
 }

@@ -95,6 +95,8 @@ impl RepoWriteContext {
             })
         };
 
+        let _hook_manager = &self.hook_manager();
+
         let _response = run_post_resolve_action(
             self.ctx(),
             self.blob_repo(),

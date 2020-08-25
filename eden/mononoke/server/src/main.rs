@@ -24,6 +24,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .with_shutdown_timeout_args()
         .with_all_repos()
         .with_test_args()
+        .with_disabled_hooks_args()
         .build()
         .version("0.0.0")
         .about("serve repos")
@@ -41,7 +42,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         );
 
     let app = args::add_mcrouter_args(app);
-    let app = args::add_disabled_hooks_args(app);
     let app = args::add_scribe_logging_args(app);
     app
 }

@@ -116,6 +116,9 @@ pub struct MononokeApp {
     /// Adds --scuba-dataset and --scuba-log-file for scuba logging.
     scuba_logging: bool,
 
+    /// Adds --disabled-hooks for disabling hooks.
+    disabled_hooks: bool,
+
     /// Adds --fb303-thrift-port
     fb303: bool,
 
@@ -146,6 +149,7 @@ impl MononokeApp {
             source_repo: false,
             shutdown_timeout: false,
             scuba_logging: false,
+            disabled_hooks: false,
             fb303: false,
             test_args: false,
         }
@@ -203,6 +207,12 @@ impl MononokeApp {
     /// This command has arguments for scuba logging.
     pub fn with_scuba_logging_args(mut self) -> Self {
         self.scuba_logging = true;
+        self
+    }
+
+    /// This command has arguments for disabled hooks.
+    pub fn with_disabled_hooks_args(mut self) -> Self {
+        self.disabled_hooks = true;
         self
     }
 
@@ -309,6 +319,10 @@ impl MononokeApp {
 
         if self.scuba_logging {
             app = add_scuba_logging_args(app);
+        }
+
+        if self.disabled_hooks {
+            app = add_disabled_hooks_args(app);
         }
 
         if self.fb303 {
@@ -760,7 +774,7 @@ pub fn add_fb303_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.args_from_usage(r"--fb303-thrift-port=[PORT]    'port for fb303 service'")
 }
 
-pub fn add_disabled_hooks_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_disabled_hooks_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name("disabled-hooks")
             .long("disable-hook")

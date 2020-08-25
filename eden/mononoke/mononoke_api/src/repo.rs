@@ -31,6 +31,8 @@ use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::future::try_join_all;
 use futures::stream::{Stream, StreamExt, TryStreamExt};
 use futures::try_join;
+use hook_manager_factory::make_hook_manager;
+use hooks::HookManager;
 use itertools::Itertools;
 #[cfg(test)]
 use live_commit_sync_config::TestLiveCommitSyncConfig;
@@ -38,7 +40,9 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mercurial_types::Globalrev;
 use metaconfig_types::{CommonConfig, RepoConfig};
 #[cfg(test)]
-use metaconfig_types::{InfinitepushNamespace, InfinitepushParams, SourceControlServiceParams};
+use metaconfig_types::{
+    HookManagerParams, InfinitepushNamespace, InfinitepushParams, SourceControlServiceParams,
+};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     Generation, RepositoryId,
@@ -100,6 +104,7 @@ pub(crate) struct Repo {
     pub(crate) repo_permission_checker: ArcPermissionChecker,
     pub(crate) service_permission_checker: ArcPermissionChecker,
     pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    pub(crate) hook_manager: Arc<HookManager>,
 }
 
 #[derive(Clone)]
@@ -151,6 +156,7 @@ impl Repo {
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
         config_store: ConfigStore,
+        disabled_hooks: HashSet<String>,
     ) -> Result<Self, Error> {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
@@ -197,6 +203,18 @@ impl Repo {
             Ok(ArcPermissionChecker::from(checker))
         };
 
+        let hook_manager = {
+            let ctx = &ctx;
+            let blob_repo = &blob_repo;
+            let config = config.clone();
+            let name = name.as_str();
+            async move {
+                let hook_manager =
+                    make_hook_manager(ctx, blob_repo, config, name, &disabled_hooks).await?;
+                Ok(Arc::new(hook_manager))
+            }
+        };
+
         let blobstore = blob_repo.get_blobstore().boxed();
         let skiplist_index = fetch_skiplist_index(&ctx, &skiplist_index_blobstore_key, &blobstore);
 
@@ -220,11 +238,13 @@ impl Repo {
             service_permission_checker,
             skiplist_index,
             warm_bookmarks_cache,
+            hook_manager,
         ) = try_join!(
             repo_permission_checker,
             service_permission_checker,
             skiplist_index,
             warm_bookmarks_cache,
+            hook_manager,
         )?;
 
         Ok(Self {
@@ -237,6 +257,7 @@ impl Repo {
             repo_permission_checker,
             service_permission_checker,
             live_commit_sync_config,
+            hook_manager,
         })
     }
 
@@ -294,6 +315,10 @@ impl Repo {
                 permit_writes: true,
                 ..Default::default()
             },
+            hook_manager_params: Some(HookManagerParams {
+                disable_acl_checker: true,
+                ..Default::default()
+            }),
             ..Default::default()
         };
 
@@ -307,6 +332,10 @@ impl Repo {
             Some(live_commit_sync_config) => live_commit_sync_config,
             None => Arc::new(TestLiveCommitSyncConfig::new_empty()),
         };
+
+        let hook_manager = Arc::new(
+            make_hook_manager(&ctx, &blob_repo, config.clone(), "test", &HashSet::new()).await?,
+        );
 
         Ok(Self {
             name: String::from("test"),
@@ -322,6 +351,7 @@ impl Repo {
                 PermissionCheckerBuilder::always_allow(),
             ),
             live_commit_sync_config,
+            hook_manager,
         })
     }
 
@@ -639,6 +669,11 @@ impl RepoContext {
     /// The warm bookmarks cache for the referenced repository.
     pub(crate) fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
         &self.repo.warm_bookmarks_cache
+    }
+
+    /// The hook manager for the referenced repository.
+    pub(crate) fn hook_manager(&self) -> &Arc<HookManager> {
+        &self.repo.hook_manager
     }
 
     /// The configuration for the referenced repository.
