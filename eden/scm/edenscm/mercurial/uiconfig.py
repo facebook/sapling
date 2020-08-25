@@ -594,10 +594,7 @@ def logages(ui, configpath, cachepath):
 
 
 def validatedynamicconfig(ui):
-    if not (
-        ui.configbool("configs", "loaddynamicconfig")
-        and ui.configbool("configs", "validatedynamicconfig")
-    ):
+    if not ui.configbool("configs", "validatedynamicconfig"):
         return
 
     # As we migrate rc files into the dynamic configs, we want to verify that
@@ -672,7 +669,6 @@ def validatedynamicconfig(ui):
 
 
 def applydynamicconfig(ui, reponame, sharedpath):
-    if ui.configbool("configs", "loaddynamicconfig"):
-        configparser.applydynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
+    configparser.applydynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
 
-        validatedynamicconfig(ui)
+    validatedynamicconfig(ui)

@@ -288,7 +288,7 @@ impl Generator {
     }
 
     pub fn execute(mut self, canary_remote: Option<String>) -> Result<ConfigSet> {
-        if std::env::var("HG_TEST_DYNAMICCONFIG").is_ok() {
+        if std::env::var("TESTTMP").is_ok() {
             self._execute(test_rules, canary_remote)?;
         } else {
             #[cfg(feature = "fb")]

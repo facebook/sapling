@@ -120,6 +120,7 @@ you can't check out.
   $ hg clone --config git.blockdothg=false git hg
   importing git objects into hg
   warning: path 'nested/.hg/00changelog.i' is within a nested repository, which Mercurial cannot check out.
+  warning: path 'nested/.hg/hgrc.dynamic' is within a nested repository, which Mercurial cannot check out.
   warning: path 'nested/.hg/requires' is within a nested repository, which Mercurial cannot check out.
   warning: path 'nested/.hg/store/requires' is within a nested repository, which Mercurial cannot check out.
   updating to branch default

@@ -313,100 +313,98 @@ impl ConfigSetHgExt for ConfigSet {
     fn load_dynamic(&mut self, repo_path: &Path, opts: Options) -> Result<Vec<Error>> {
         let mut errors = Vec::new();
 
-        if self.get_or_default::<bool>("configs", "loaddynamicconfig")? {
-            // Compute path
-            let dynamic_path = get_shared_path(repo_path)?.join("hgrc.dynamic");
+        // Compute path
+        let dynamic_path = get_shared_path(repo_path)?.join("hgrc.dynamic");
 
-            // Check version
-            let content = read_to_string(&dynamic_path).ok();
-            let version = content.as_ref().and_then(|c| {
-                let mut lines = c.split("\n");
-                match lines.next() {
-                    Some(line) if line.starts_with("# version=") => Some(&line[10..]),
-                    Some(_) | None => None,
-                }
-            });
-
-            #[cfg(feature = "fb")]
-            let this_version = ::version::VERSION;
-            #[cfg(not(feature = "fb"))]
-            let this_version = "unknown";
-
-            // Synchronously generate the new config if it's out of date with our version
-            if version != Some(this_version) {
-                let (repo_name, user_name) = {
-                    let mut temp_config = ConfigSet::new();
-                    // We need to know the repo name, but that's stored in the repository configs at
-                    // the moment. In the long term we need to move that, but for now let's load the
-                    // repo config ahead of time to read the name.
-                    let mut repo_hgrc_path = repo_path.join(".hg");
-                    repo_hgrc_path.push("hgrc");
-                    if !temp_config.load_user(opts.clone()).is_empty() {
-                        bail!("unable to read user config to get user name");
-                    }
-                    let opts = opts.clone().source("temp").process_hgplain();
-                    if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
-                        bail!("unable to read repo config to get repo name");
-                    }
-
-                    (
-                        temp_config
-                            .get("remotefilelog", "reponame")
-                            .unwrap_or_default()
-                            .to_string(),
-                        temp_config
-                            .get("ui", "username")
-                            .unwrap_or_default()
-                            .to_string(),
-                    )
-                };
-
-                // Regen inline
-                let res = generate_dynamicconfig(repo_path, repo_name, None, user_name);
-                if let Err(e) = res {
-                    match e.downcast_ref::<IOError>() {
-                        Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => (),
-                        _ => return Err(e),
-                    };
-                }
+        // Check version
+        let content = read_to_string(&dynamic_path).ok();
+        let version = content.as_ref().and_then(|c| {
+            let mut lines = c.split("\n");
+            match lines.next() {
+                Some(line) if line.starts_with("# version=") => Some(&line[10..]),
+                Some(_) | None => None,
             }
+        });
 
-            if !dynamic_path.exists() {
-                return Err(IOError::new(
-                    ErrorKind::NotFound,
-                    format!("required config not found at {:?}", dynamic_path),
+        #[cfg(feature = "fb")]
+        let this_version = ::version::VERSION;
+        #[cfg(not(feature = "fb"))]
+        let this_version = "unknown";
+
+        // Synchronously generate the new config if it's out of date with our version
+        if version != Some(this_version) {
+            let (repo_name, user_name) = {
+                let mut temp_config = ConfigSet::new();
+                // We need to know the repo name, but that's stored in the repository configs at
+                // the moment. In the long term we need to move that, but for now let's load the
+                // repo config ahead of time to read the name.
+                let mut repo_hgrc_path = repo_path.join(".hg");
+                repo_hgrc_path.push("hgrc");
+                if !temp_config.load_user(opts.clone()).is_empty() {
+                    bail!("unable to read user config to get user name");
+                }
+                let opts = opts.clone().source("temp").process_hgplain();
+                if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
+                    bail!("unable to read repo config to get repo name");
+                }
+
+                (
+                    temp_config
+                        .get("remotefilelog", "reponame")
+                        .unwrap_or_default()
+                        .to_string(),
+                    temp_config
+                        .get("ui", "username")
+                        .unwrap_or_default()
+                        .to_string(),
                 )
-                .into());
+            };
+
+            // Regen inline
+            let res = generate_dynamicconfig(repo_path, repo_name, None, user_name);
+            if let Err(e) = res {
+                match e.downcast_ref::<IOError>() {
+                    Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => (),
+                    _ => return Err(e),
+                };
             }
+        }
 
-            // Read hgrc.dynamic
-            let opts = opts.source("dynamic").process_hgplain();
-            errors.append(&mut self.load_path(&dynamic_path, &opts));
+        if !dynamic_path.exists() {
+            return Err(IOError::new(
+                ErrorKind::NotFound,
+                format!("required config not found at {:?}", dynamic_path),
+            )
+            .into());
+        }
 
-            // Log config ages
-            // - Done in python for now
+        // Read hgrc.dynamic
+        let opts = opts.source("dynamic").process_hgplain();
+        errors.append(&mut self.load_path(&dynamic_path, &opts));
 
-            // Regenerate if mtime is old.
-            let generation_time: Option<u64> = self.get_opt("configs", "generationtime")?;
-            let recursion_marker = env::var("HG_DEBUGDYNAMICCONFIG");
+        // Log config ages
+        // - Done in python for now
 
-            if recursion_marker.is_err() {
-                if let Some(generation_time) = generation_time {
-                    let generation_time = Duration::from_secs(generation_time);
-                    let mtime_age = SystemTime::now()
-                        .duration_since(dynamic_path.metadata()?.modified()?)
-                        // An error from duration_since means 'now' is older than
-                        // 'last_modified'. In that case, let's assume the file
-                        // is brand new and has an age of 0.
-                        .unwrap_or(Duration::from_secs(0));
-                    if mtime_age > generation_time {
-                        let mut command = Command::new("hg");
-                        command
-                            .arg("debugdynamicconfig")
-                            .args(&["--cwd", &repo_path.to_string_lossy()])
-                            .env("HG_DEBUGDYNAMICCONFIG", "1");
-                        let _ = run_background(command);
-                    }
+        // Regenerate if mtime is old.
+        let generation_time: Option<u64> = self.get_opt("configs", "generationtime")?;
+        let recursion_marker = env::var("HG_DEBUGDYNAMICCONFIG");
+
+        if recursion_marker.is_err() {
+            if let Some(generation_time) = generation_time {
+                let generation_time = Duration::from_secs(generation_time);
+                let mtime_age = SystemTime::now()
+                    .duration_since(dynamic_path.metadata()?.modified()?)
+                    // An error from duration_since means 'now' is older than
+                    // 'last_modified'. In that case, let's assume the file
+                    // is brand new and has an age of 0.
+                    .unwrap_or(Duration::from_secs(0));
+                if mtime_age > generation_time {
+                    let mut command = Command::new("hg");
+                    command
+                        .arg("debugdynamicconfig")
+                        .args(&["--cwd", &repo_path.to_string_lossy()])
+                        .env("HG_DEBUGDYNAMICCONFIG", "1");
+                    let _ = run_background(command);
                 }
             }
         }
@@ -890,7 +888,8 @@ fn get_shared_path(repo_path: &Path) -> Result<PathBuf> {
     Ok(if shared_path.exists() {
         let raw = read_to_string(shared_path)?;
         let trimmed = raw.trim_end_matches("\n");
-        PathBuf::from(trimmed)
+        // sharedpath can be relative, so join it with repo_path.
+        repo_path.join(trimmed)
     } else {
         repo_path.to_path_buf()
     })

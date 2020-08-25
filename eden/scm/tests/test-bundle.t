@@ -193,6 +193,7 @@ Make sure bundlerepo doesn't leak tempfiles (issue2491)
   $ ls .hg
   00changelog.i
   blackbox
+  hgrc.dynamic
   requires
   store
   treestate

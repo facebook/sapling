@@ -32,6 +32,7 @@ sh % "hg verify" == r"""
 sh % "ls .hg" == r"""
     00changelog.i
     blackbox
+    hgrc.dynamic
     requires
     store
     treestate"""
@@ -62,6 +63,7 @@ sh % "ls .hg" == r"""
     blackbox
     dirstate
     hgrc
+    hgrc.dynamic
     requires
     store
     treestate

@@ -56,6 +56,7 @@ store is setgid
   $ $PYTHON ../printmodes.py .
   00700 ./.hg/
   00600 ./.hg/00changelog.i
+  00600 ./.hg/hgrc.dynamic
   00600 ./.hg/requires
   00770 ./.hg/store/
   00600 ./.hg/store/requires
@@ -75,6 +76,7 @@ new directories are setgid
   00600 ./.hg/00changelog.i
   00660 ./.hg/checkoutidentifier
   00660 ./.hg/dirstate
+  00600 ./.hg/hgrc.dynamic
   00660 ./.hg/last-message.txt
   00600 ./.hg/requires
   00770 ./.hg/store/
@@ -126,6 +128,7 @@ group can write everything
   $ $PYTHON ../printmodes.py ../push
   00770 ../push/.hg/
   00660 ../push/.hg/00changelog.i
+  00660 ../push/.hg/hgrc.dynamic
   00660 ../push/.hg/requires
   00770 ../push/.hg/store/
   00660 ../push/.hg/store/requires
@@ -141,6 +144,7 @@ XXX: treestate and allheads do not really respect this rule
   00770 ../push/.hg/
   00660 ../push/.hg/00changelog.i
   00660 ../push/.hg/dirstate
+  00660 ../push/.hg/hgrc.dynamic
   00660 ../push/.hg/requires
   00770 ../push/.hg/store/
   006?0 ../push/.hg/store/00changelog.d (glob)

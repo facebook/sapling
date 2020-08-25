@@ -2,7 +2,6 @@
 
   $ configure modern
 
-  $ setconfig configs.loaddynamicconfig=True
   $ export HG_TEST_DYNAMICCONFIG="$TESTTMP/test_hgrc"
   $ cat > test_hgrc <<EOF
   > [section]
