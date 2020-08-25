@@ -6,7 +6,9 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
+use anyhow::Context;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
@@ -15,9 +17,10 @@ use context::CoreContext;
 use hooks::HookManager;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
+use reachabilityindex::LeastCommonAncestorsHint;
 use tunables::tunables;
 
-use crate::hook_running::run_hooks;
+use crate::hook_running::{load_additional_bonsais, run_hooks};
 use crate::{BookmarkKindRestrictions, BookmarkMoveAuthorization, BookmarkMovementError};
 
 pub struct CreateBookmarkOp<'op> {
@@ -87,7 +90,10 @@ impl<'op> CreateBookmarkOp<'op> {
     async fn run_hooks(
         &self,
         ctx: &CoreContext,
+        repo: &BlobRepo,
         hook_manager: &HookManager,
+        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+        bookmark_attrs: &BookmarkAttrs,
     ) -> Result<(), BookmarkMovementError> {
         if self.reason == BookmarkUpdateReason::Push && tunables().get_disable_hooks_on_plain_push()
         {
@@ -96,11 +102,26 @@ impl<'op> CreateBookmarkOp<'op> {
         }
 
         if hook_manager.hooks_exist_for_bookmark(self.bookmark) {
+            let additional_changesets = load_additional_bonsais(
+                ctx,
+                repo,
+                lca_hint,
+                bookmark_attrs,
+                self.bookmark,
+                self.target,
+                None,
+                &self.new_changesets,
+            )
+            .await
+            .context("Failed to load additional changesets")?;
+
             run_hooks(
                 ctx,
                 hook_manager,
                 self.bookmark,
-                self.new_changesets.values(),
+                self.new_changesets
+                    .values()
+                    .chain(additional_changesets.iter()),
                 self.pushvars,
             )
             .await?;
@@ -113,6 +134,7 @@ impl<'op> CreateBookmarkOp<'op> {
         self,
         ctx: &'op CoreContext,
         repo: &'op BlobRepo,
+        lca_hint: &'op Arc<dyn LeastCommonAncestorsHint>,
         infinitepush_params: &'op InfinitepushParams,
         pushrebase_params: &'op PushrebaseParams,
         bookmark_attrs: &'op BookmarkAttrs,
@@ -126,7 +148,8 @@ impl<'op> CreateBookmarkOp<'op> {
             .check_kind(infinitepush_params, self.bookmark)?;
 
         if !is_scratch {
-            self.run_hooks(ctx, hook_manager).await?;
+            self.run_hooks(ctx, repo, hook_manager, lca_hint, bookmark_attrs)
+                .await?;
         }
 
         let mut txn = repo.update_bookmark_transaction(ctx.clone());

@@ -37,6 +37,7 @@ use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, warn};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use tunables::tunables;
 
 use crate::hook_running::{map_hook_rejections, HookRejectionRemapper};
@@ -58,7 +59,7 @@ pub async fn run_post_resolve_action(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_attrs: &BookmarkAttrs,
-    lca_hint: &dyn LeastCommonAncestorsHint,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     push_params: &PushParams,
@@ -147,7 +148,7 @@ async fn run_push(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_attrs: &BookmarkAttrs,
-    lca_hint: &dyn LeastCommonAncestorsHint,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
@@ -268,7 +269,7 @@ async fn run_infinitepush(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_attrs: &BookmarkAttrs,
-    lca_hint: &dyn LeastCommonAncestorsHint,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
@@ -349,7 +350,7 @@ async fn run_pushrebase(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_attrs: &BookmarkAttrs,
-    lca_hint: &dyn LeastCommonAncestorsHint,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     hook_manager: &HookManager,
@@ -439,7 +440,7 @@ async fn run_bookmark_only_pushrebase(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_attrs: &BookmarkAttrs,
-    lca_hint: &dyn LeastCommonAncestorsHint,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
@@ -534,7 +535,7 @@ async fn force_pushrebase(
     ctx: &CoreContext,
     repo: &BlobRepo,
     pushrebase_params: &PushrebaseParams,
-    lca_hint: &dyn LeastCommonAncestorsHint,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     hook_manager: &HookManager,
     uploaded_bonsais: HashSet<BonsaiChangeset>,
     bookmark_push: PlainBookmarkPush<ChangesetId>,
@@ -600,7 +601,7 @@ async fn force_pushrebase(
 async fn plain_push_bookmark(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    lca_hint: &dyn LeastCommonAncestorsHint,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     bookmark_attrs: &BookmarkAttrs,
@@ -615,20 +616,37 @@ async fn plain_push_bookmark(
 ) -> Result<(), BundleResolverError> {
     match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
-            bookmarks_movement::CreateBookmarkOp::new(&bookmark_push.name, new_target, reason)
-                .only_if_public()
-                .with_new_changesets(new_changesets)
-                .with_bundle_replay_data(bundle_replay_data)
-                .run(
-                    ctx,
-                    repo,
-                    infinitepush_params,
-                    pushrebase_params,
-                    bookmark_attrs,
-                    hook_manager,
-                )
-                .await
-                .context("Failed to create bookmark")?;
+            let res =
+                bookmarks_movement::CreateBookmarkOp::new(&bookmark_push.name, new_target, reason)
+                    .only_if_public()
+                    .with_new_changesets(new_changesets)
+                    .with_pushvars(maybe_pushvars)
+                    .with_bundle_replay_data(bundle_replay_data)
+                    .run(
+                        ctx,
+                        repo,
+                        lca_hint,
+                        infinitepush_params,
+                        pushrebase_params,
+                        bookmark_attrs,
+                        hook_manager,
+                    )
+                    .await;
+            match res {
+                Ok(()) => (),
+                Err(err) => match err {
+                    BookmarkMovementError::HookFailure(rejections) => {
+                        let rejections =
+                            map_hook_rejections(rejections, hook_rejection_remapper).await?;
+                        return Err(BundleResolverError::HookError(rejections));
+                    }
+                    _ => {
+                        return Err(BundleResolverError::Error(
+                            Error::from(err).context("Failed to create bookmark"),
+                        ))
+                    }
+                },
+            }
         }
 
         (Some(old_target), Some(new_target)) => {
@@ -697,7 +715,7 @@ async fn plain_push_bookmark(
 async fn infinitepush_scratch_bookmark(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    lca_hint: &dyn LeastCommonAncestorsHint,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     bookmark_attrs: &BookmarkAttrs,
@@ -716,6 +734,7 @@ async fn infinitepush_scratch_bookmark(
         .run(
             ctx,
             repo,
+            lca_hint,
             infinitepush_params,
             pushrebase_params,
             bookmark_attrs,

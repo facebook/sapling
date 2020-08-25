@@ -1603,7 +1603,7 @@ impl HgCommands for RepoClient {
                                                 &ctx,
                                                 &blobrepo,
                                                 &bookmark_attrs,
-                                                &*lca_hint,
+                                                &lca_hint,
                                                 &infinitepush_params,
                                                 &pushrebase_params,
                                                 &push_params,

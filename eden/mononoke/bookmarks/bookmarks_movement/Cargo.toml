@@ -20,6 +20,7 @@ metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 pushrebase = { path = "../../pushrebase" }
 reachabilityindex = { path = "../../reachabilityindex" }
+revset = { path = "../../revset" }
 scuba_ext = { path = "../../common/scuba_ext" }
 tunables = { path = "../../tunables" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

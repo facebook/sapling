@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use bookmarks::BookmarkName;
 use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
+use reachabilityindex::LeastCommonAncestorsHint;
 
 use unbundle::{
     run_post_resolve_action, InfiniteBookmarkPush, PlainBookmarkPush, PostResolveAction,
@@ -99,11 +102,13 @@ impl RepoWriteContext {
             })
         };
 
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index().clone();
+
         let _response = run_post_resolve_action(
             self.ctx(),
             self.blob_repo(),
             &bookmark_attrs,
-            self.skiplist_index().as_ref(),
+            &lca_hint,
             &self.config().infinitepush,
             &self.config().pushrebase,
             &self.config().push,

@@ -169,7 +169,7 @@ impl PushRedirector {
             &ctx,
             &large_repo,
             &bookmark_attrs,
-            &*lca_hint,
+            &lca_hint,
             &infinitepush_params,
             &puhsrebase_params,
             &push_params,

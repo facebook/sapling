@@ -78,6 +78,8 @@ pub struct MononokeTunables {
     disable_repo_client_warm_bookmarks_cache: AtomicBool,
     remotefilelog_file_history_limit: AtomicI64,
     disable_hooks_on_plain_push: AtomicBool,
+    run_hooks_on_additional_changesets: AtomicBool,
+    hooks_additional_changesets_limit: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
