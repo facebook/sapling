@@ -448,6 +448,31 @@ fn path_command(
     Ok(())
 }
 
+/// Normalizes various path format on Windows. This function will convert
+/// various Windows path format to full path form. Note this function does not
+/// canonicalize the given path. So it does not collapse dots nor expand
+/// relative paths.
+/// Ref: https://googleprojectzero.blogspot.com/2016/02/the-definitive-guide-on-win32-to-nt.html
+#[cfg(windows)]
+fn normalize_windows_path(path: &str) -> String {
+    let path = path.replace("/", r"\");
+    if let Some(path) = path.strip_prefix(r"\??\UNC\") {
+        // NT UNC path
+        format!(r"\\{}", path)
+    } else if let Some(path) = path.strip_prefix(r"\??\") {
+        // NT path
+        path.to_owned()
+    } else if let Some(path) = path.strip_prefix(r"\\?\UNC\") {
+        // Extend-length UNC path
+        format!(r"\\{}", path)
+    } else if let Some(path) = path.strip_prefix(r"\\?\") {
+        // Extend-length path
+        path.to_owned()
+    } else {
+        path
+    }
+}
+
 /// Given a string representation of a path, encode it such that all
 /// file/path special characters are replaced with non-special characters.
 /// This has the effect of flattening a relative path fragment like
@@ -464,6 +489,13 @@ fn path_command(
 /// value to them.
 fn encode(path: &str) -> String {
     let mut result = String::with_capacity(path.len());
+
+    // `std::fs::canonicalize` on Windows will normalize path into
+    // extended-length format, which has a prefix `\\?\`. This function will
+    // incorrect generate a path with the question mark which is an invalid
+    // path.
+    #[cfg(windows)]
+    let path = &normalize_windows_path(path);
 
     for (i, b) in path.chars().enumerate() {
         if cfg!(unix) && i == 0 && b == '/' {
@@ -501,5 +533,29 @@ mod test {
         assert_eq!(encode("foo_Zbar"), "foo__Zbar");
         assert_eq!(encode(r"C:\foo\bar"), "C_ZfooZbar");
         assert_eq!(encode(r"\\unc\path"), "ZZuncZpath");
+
+        if cfg!(windows) {
+            assert_eq!(encode(r"\\?\C:\foo\bar"), "C_ZfooZbar");
+            assert_eq!(encode(r"\\?\UNC\unc\path"), "ZZuncZpath");
+            assert_eq!(encode(r"\??\C:\foo\bar"), "C_ZfooZbar");
+            assert_eq!(encode(r"\??\UNC\unc\path"), "ZZuncZpath");
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_normalize_windows_path() {
+        assert_eq!(normalize_windows_path(r"c:\foo\bar"), r"c:\foo\bar");
+        assert_eq!(normalize_windows_path(r"c:/foo/bar"), r"c:\foo\bar");
+        assert_eq!(normalize_windows_path(r"\??\c:\foo\bar"), r"c:\foo\bar");
+        assert_eq!(normalize_windows_path(r"\\?\c:\foo\bar"), r"c:\foo\bar");
+        assert_eq!(
+            normalize_windows_path(r"\??\UNC\server\foo\bar"),
+            r"\\server\foo\bar"
+        );
+        assert_eq!(
+            normalize_windows_path(r"\\?\UNC\server\foo\bar"),
+            r"\\server\foo\bar"
+        );
     }
 }
