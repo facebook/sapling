@@ -15,6 +15,10 @@ pub fn is_quicksand(_ssh_env_vars: &SshEnvVars) -> bool {
     false
 }
 
+pub fn is_external_sync(_ssh_env_vars: &SshEnvVars) -> bool {
+    false
+}
+
 impl CoreContext {
     pub fn trace_upload(&self) -> impl Future<Item = (), Error = Error> {
         ok(())

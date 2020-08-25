@@ -158,12 +158,12 @@ impl<'op> UpdateBookmarkOp<'op> {
         bookmark_attrs: &'op BookmarkAttrs,
         hook_manager: &'op HookManager,
     ) -> Result<(), BookmarkMovementError> {
-        self.auth
-            .check_authorized(ctx, bookmark_attrs, self.bookmark)?;
-
         let kind = self
             .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
+
+        self.auth
+            .check_authorized(ctx, bookmark_attrs, self.bookmark, kind)?;
 
         self.update_policy
             .check_update_permitted(

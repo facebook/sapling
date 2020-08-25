@@ -379,6 +379,12 @@ impl BookmarkAttrs {
             }
         }
     }
+
+    /// Check if a bookmark is only updatable by an external sync process.
+    pub fn is_only_external_sync_allowed(&self, bookmark: &BookmarkName) -> bool {
+        self.select(bookmark)
+            .any(|params| params.allow_only_external_sync.unwrap_or(false))
+    }
 }
 
 /// Configuration for a bookmark
@@ -394,6 +400,8 @@ pub struct BookmarkParams {
     pub rewrite_dates: Option<bool>,
     /// Only users matching this pattern will be allowed to move this bookmark
     pub allowed_users: Option<ComparableRegex>,
+    /// Only the external sync job is allowed to modify this bookmark
+    pub allow_only_external_sync: Option<bool>,
     /// Skip hooks for changesets that are already ancestors of these
     /// bookmarks
     pub hooks_skip_ancestors_of: Vec<BookmarkName>,

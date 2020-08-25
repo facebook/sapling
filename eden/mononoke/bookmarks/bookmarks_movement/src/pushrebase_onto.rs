@@ -95,8 +95,12 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         bookmark_attrs: &'op BookmarkAttrs,
         hook_manager: &'op HookManager,
     ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
+        let kind = self
+            .kind_restrictions
+            .check_kind(infinitepush_params, self.bookmark)?;
+
         self.auth
-            .check_authorized(ctx, bookmark_attrs, self.bookmark)?;
+            .check_authorized(ctx, bookmark_attrs, self.bookmark, kind)?;
 
         if pushrebase_params.block_merges {
             let any_merges = self
@@ -113,10 +117,6 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 .into());
             }
         }
-
-        let kind = self
-            .kind_restrictions
-            .check_kind(infinitepush_params, self.bookmark)?;
 
         self.affected_changesets
             .check_restrictions(

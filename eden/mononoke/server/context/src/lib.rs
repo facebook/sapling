@@ -12,10 +12,10 @@ pub use session_id::SessionId;
 
 pub use crate::core::CoreContext;
 #[cfg(fbcode_build)]
-pub use crate::facebook::is_quicksand;
+pub use crate::facebook::{is_external_sync, is_quicksand};
 pub use crate::logging::{LoggingContainer, SamplingKey};
 #[cfg(not(fbcode_build))]
-pub use crate::oss::is_quicksand;
+pub use crate::oss::{is_external_sync, is_quicksand};
 pub use crate::perf_counters::{PerfCounterType, PerfCounters};
 pub use crate::session::{
     generate_session_id, SessionClass, SessionContainer, SessionContainerBuilder,

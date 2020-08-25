@@ -74,12 +74,12 @@ impl<'op> DeleteBookmarkOp<'op> {
         infinitepush_params: &'op InfinitepushParams,
         bookmark_attrs: &'op BookmarkAttrs,
     ) -> Result<(), BookmarkMovementError> {
-        self.auth
-            .check_authorized(ctx, bookmark_attrs, self.bookmark)?;
-
         let kind = self
             .kind_restrictions
             .check_kind(infinitepush_params, self.bookmark)?;
+
+        self.auth
+            .check_authorized(ctx, bookmark_attrs, self.bookmark, kind)?;
 
         if kind == BookmarkKind::Scratch || bookmark_attrs.is_fast_forward_only(self.bookmark) {
             // Cannot delete scratch or fast-forward-only bookmarks.

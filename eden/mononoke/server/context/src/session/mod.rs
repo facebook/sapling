@@ -22,8 +22,8 @@ use tracing::TraceContext;
 
 pub use self::builder::{generate_session_id, SessionContainerBuilder};
 use crate::core::CoreContext;
-use crate::is_quicksand;
 use crate::logging::LoggingContainer;
+use crate::{is_external_sync, is_quicksand};
 
 mod builder;
 
@@ -142,6 +142,10 @@ impl SessionContainer {
 
     pub fn is_quicksand(&self) -> bool {
         is_quicksand(self.ssh_env_vars())
+    }
+
+    pub fn is_external_sync(&self) -> bool {
+        is_external_sync(self.ssh_env_vars())
     }
 
     pub fn blobstore_read_limiter(&self) -> &Option<AsyncLimiter> {
