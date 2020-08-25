@@ -884,6 +884,92 @@ impl fmt::Debug for MPath {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PrefixTrie {
+    Included,
+    Children(HashMap<MPathElement, PrefixTrie>),
+}
+
+impl PrefixTrie {
+    /// Create a new, empty, prefix trie.
+    pub fn new() -> PrefixTrie {
+        PrefixTrie::Children(HashMap::new())
+    }
+
+    /// Add a path prefix to the prefix trie.  Returns true if the prefix
+    /// wasn't already present.
+    pub fn add<'p, P: IntoIterator<Item = &'p MPathElement>>(&mut self, path: P) -> bool {
+        match self {
+            PrefixTrie::Included => false,
+            PrefixTrie::Children(children) => {
+                let mut iter = path.into_iter();
+                match iter.next() {
+                    None => {
+                        *self = PrefixTrie::Included;
+                        true
+                    }
+                    Some(element) => {
+                        if let Some(child) = children.get_mut(&element) {
+                            return child.add(iter);
+                        }
+                        children
+                            .entry(element.clone())
+                            .or_insert_with(PrefixTrie::new)
+                            .add(iter)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Returns true if any path prefix of the given path has previously been
+    /// added to the prefix trie.
+    pub fn contains_prefix<'p, P: IntoIterator<Item = &'p MPathElement>>(&self, path: P) -> bool {
+        match self {
+            PrefixTrie::Included => true,
+            PrefixTrie::Children(children) => {
+                let mut iter = path.into_iter();
+                match iter.next() {
+                    None => false,
+                    Some(element) => {
+                        if let Some(child) = children.get(&element) {
+                            return child.contains_prefix(iter);
+                        }
+                        false
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl Default for PrefixTrie {
+    fn default() -> PrefixTrie {
+        PrefixTrie::Children(HashMap::new())
+    }
+}
+
+impl Extend<Option<MPath>> for PrefixTrie {
+    fn extend<T: IntoIterator<Item = Option<MPath>>>(&mut self, iter: T) {
+        for path in iter {
+            if let Some(path) = path {
+                self.add(&path);
+            } else {
+                // The empty path means all paths are included.
+                *self = PrefixTrie::Included;
+            }
+        }
+    }
+}
+
+impl FromIterator<Option<MPath>> for PrefixTrie {
+    fn from_iter<I: IntoIterator<Item = Option<MPath>>>(iter: I) -> Self {
+        let mut trie = PrefixTrie::new();
+        trie.extend(iter);
+        trie
+    }
+}
+
 pub struct CaseConflictTrie {
     children: HashMap<MPathElement, CaseConflictTrie>,
     lowercase: HashSet<String>,
@@ -1296,5 +1382,49 @@ mod test {
         // The input calls for a *sorted* list -- this is important.
         paths.sort_unstable();
         check_pcf(paths.iter().map(|(path, is_changed)| (path, *is_changed)))
+    }
+
+    #[test]
+    fn prefix_trie() {
+        let mut prefixes = PrefixTrie::new();
+
+        let path = |path| MPath::new(path).unwrap();
+
+        // Add some paths
+        assert!(prefixes.add(&path("a/b/c")));
+        assert!(prefixes.add(&path("a/b/d")));
+        assert!(prefixes.add(&path("e")));
+
+        // These paths are already covered by existing prefixes
+        assert!(!prefixes.add(&path("a/b/c")));
+        assert!(!prefixes.add(&path("e/f")));
+
+        // Expanding a prefix with a more general one is okay
+        assert!(prefixes.add(&path("g/h/i")));
+        assert!(prefixes.add(&path("g/h")));
+
+        // These paths should match
+        assert!(prefixes.contains_prefix(&path("a/b/c/d")));
+        assert!(prefixes.contains_prefix(&path("a/b/d/e/f/g")));
+        assert!(prefixes.contains_prefix(&path("a/b/d")));
+        assert!(prefixes.contains_prefix(&path("e/a")));
+        assert!(prefixes.contains_prefix(&path("e/f/g")));
+        assert!(prefixes.contains_prefix(&path("e")));
+        assert!(prefixes.contains_prefix(&path("g/h")));
+        assert!(prefixes.contains_prefix(&path("g/h/i/j")));
+        assert!(prefixes.contains_prefix(&path("g/h/k")));
+
+        // These paths should not match
+        assert!(!prefixes.contains_prefix(&path("a/b")));
+        assert!(!prefixes.contains_prefix(&path("a/b/cc")));
+        assert!(!prefixes.contains_prefix(&path("a/b/e")));
+        assert!(!prefixes.contains_prefix(&path("a/c")));
+        assert!(!prefixes.contains_prefix(&path("a")));
+        assert!(!prefixes.contains_prefix(&path("b")));
+        assert!(!prefixes.contains_prefix(&path("d")));
+        assert!(!prefixes.contains_prefix(&path("abc")));
+        assert!(!prefixes.contains_prefix(&path("g")));
+        assert!(!prefixes.contains_prefix(&path("g/i")));
+        assert!(!prefixes.contains_prefix(&path("g/i/h")));
     }
 }
