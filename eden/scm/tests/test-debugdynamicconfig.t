@@ -220,6 +220,20 @@ hgrc.dynamic write errors.
   $ echo > .hg/hgrc.dynamic
   $ chmod a-w .hg/hgrc.dynamic
   $ hg log -r tip
-  abort: Permission denied (os error 13)
-  [255]
+  commit:      000000000000
+  user:        
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  
   $ chmod u+w .hg/hgrc.dynamic
+  $ chmod a-w .hg/
+  $ hg log -r tip
+  commit:      000000000000
+  user:        
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  
+  $ chmod u+w .hg/
+  $ rm -f .hg/hgrc.dynamic
+  $ chmod u-w .hg/
+  $ hg log -r tip
+  abort: required config not found at "$TESTTMP/client2/.hg/hgrc.dynamic"
+  [255]

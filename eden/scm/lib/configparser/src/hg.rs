@@ -12,6 +12,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::{self, read_to_string};
 use std::hash::Hash;
+use std::io::{Error as IOError, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
@@ -361,7 +362,21 @@ impl ConfigSetHgExt for ConfigSet {
                 };
 
                 // Regen inline
-                generate_dynamicconfig(repo_path, repo_name, None, user_name)?;
+                let res = generate_dynamicconfig(repo_path, repo_name, None, user_name);
+                if let Err(e) = res {
+                    match e.downcast_ref::<IOError>() {
+                        Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => (),
+                        _ => return Err(e),
+                    };
+                }
+            }
+
+            if !dynamic_path.exists() {
+                return Err(IOError::new(
+                    ErrorKind::NotFound,
+                    format!("required config not found at {:?}", dynamic_path),
+                )
+                .into());
             }
 
             // Read hgrc.dynamic
@@ -893,7 +908,11 @@ pub fn generate_dynamicconfig(
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.
     if tempfile_in(&repo_path).is_err() {
-        bail!("no write access to {:?}", repo_path);
+        return Err(IOError::new(
+            ErrorKind::PermissionDenied,
+            format!("no write access to {:?}", repo_path),
+        )
+        .into());
     }
 
     let hgrc_path = repo_path.join("hgrc.dynamic");
