@@ -452,8 +452,13 @@ impl SourceControlServiceImpl {
             .ok_or_else(|| errors::commit_not_found(target.to_string()))?;
 
         // TODO(mbthomas): provide a way for the client to optionally specify the old value
-        repo.move_bookmark(bookmark, changeset.id(), params.allow_non_fast_forward_move)
-            .await?;
+        repo.move_bookmark(
+            bookmark,
+            changeset.id(),
+            None,
+            params.allow_non_fast_forward_move,
+        )
+        .await?;
         Ok(thrift::RepoMoveBookmarkResponse {})
     }
 

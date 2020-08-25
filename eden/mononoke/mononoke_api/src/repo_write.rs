@@ -10,7 +10,9 @@ use std::ops::Deref;
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
 
+pub mod create_bookmark;
 pub mod create_changeset;
+pub mod delete_bookmark;
 pub mod move_bookmark;
 
 /// Describes the permissions model that is being used to determine if a write is

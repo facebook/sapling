@@ -9,4 +9,4 @@ mod test_history;
 mod test_repo;
 mod test_repo_bookmarks;
 mod test_repo_create_changeset;
-mod test_repo_move_bookmark;
+mod test_repo_modify_bookmarks;
