@@ -153,6 +153,7 @@ Verify we load and verify dynamicconfigs during clone
   > EOF
   $ hg clone ssh://user@dummy/server client2 --configfile $TESTTMP/good_hgrc --config configs.testdynamicconfigsubset=good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True --config configs.legacylist=foo.bar
   Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
+  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   no changes found
   Hook ran!
   updating to branch default

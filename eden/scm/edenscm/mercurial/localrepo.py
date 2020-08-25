@@ -432,7 +432,6 @@ class localrepository(object):
         # If the repo already exists, load the existing configs
         if self.localvfs.isdir():
             self.ui.reloadconfigs(self.root)
-            uiconfig.validatedynamicconfig(self.ui)
         elif create:
             # If we're in the process of creating the repo, load the dynamic configs in
             # memory only. They will be written to disk later once the localvfs

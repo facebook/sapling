@@ -117,7 +117,7 @@ class uiconfig(object):
             self._knownconfig = configitems.coreitems
 
     @classmethod
-    def load(cls, repopath):
+    def load(cls, ui, repopath):
         """Create a uiconfig and load global and user configs"""
         u = cls()
         try:
@@ -126,14 +126,20 @@ class uiconfig(object):
             rcfg = configparser.config.load(dothgpath)
         except Exception as ex:
             raise error.ParseError(str(ex))
+
         u._rcfg = localrcfg(rcfg)
+        ui._uiconfig = u
+        if repopath is not None:
+            validatedynamicconfig(ui)
+
         root = os.path.expanduser("~")
         u.fixconfig(root=repopath or root)
-        return u
 
-    def reload(self, repopath):
+    def reload(self, ui, repopath):
         # The actual config expects the non-shared .hg directory.
         self._rcfg.reload(os.path.join(repopath, ".hg"), list(self._pinnedconfigs))
+        validatedynamicconfig(ui)
+
         # fixconfig expects the non-shard repo root, without the .hg.
         self.fixconfig(root=repopath)
 

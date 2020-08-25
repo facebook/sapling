@@ -254,12 +254,12 @@ class ui(object):
     def load(cls, repopath=None):
         """Create a ui and load global and user configs"""
         u = cls()
-        u._uiconfig = uiconfig.uiconfig.load(repopath)
+        uiconfig.uiconfig.load(u, repopath)
         return u
 
     def reloadconfigs(self, repopath=None):
         # repopath should be the non-shared repo path without .hg/
-        self._uiconfig.reload(repopath)
+        self._uiconfig.reload(self, repopath)
 
     def copy(self):
         return self.__class__(self)

@@ -999,8 +999,6 @@ def _getlocal(ui, rpath):
     if path:
         lui.reloadconfigs(path)
 
-        uiconfig.validatedynamicconfig(lui)
-
     return path, lui
 
 
