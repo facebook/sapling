@@ -126,6 +126,9 @@ pub enum BookmarkUpdateReason {
 
     /// Bookmark was moved during a sync from a small repo into a large repo.
     XRepoSync,
+
+    /// Bookmark was moved by an API request.
+    ApiRequest,
 }
 
 impl std::fmt::Display for BookmarkUpdateReason {
@@ -140,6 +143,7 @@ impl std::fmt::Display for BookmarkUpdateReason {
             TestMove => "testmove",
             Backsyncer => "backsyncer",
             XRepoSync => "xreposync",
+            ApiRequest => "apirequest",
         };
         write!(f, "{}", s)
     }
@@ -150,13 +154,14 @@ impl ConvIr<BookmarkUpdateReason> for BookmarkUpdateReason {
         use BookmarkUpdateReason::*;
 
         match v {
-            Value::Bytes(ref b) if b == &b"pushrebase" => Ok(Pushrebase),
-            Value::Bytes(ref b) if b == &b"push" => Ok(Push),
-            Value::Bytes(ref b) if b == &b"blobimport" => Ok(Blobimport),
-            Value::Bytes(ref b) if b == &b"manualmove" => Ok(ManualMove),
-            Value::Bytes(ref b) if b == &b"testmove" => Ok(TestMove),
-            Value::Bytes(ref b) if b == &b"backsyncer" => Ok(Backsyncer),
-            Value::Bytes(ref b) if b == &b"xreposync" => Ok(XRepoSync),
+            Value::Bytes(ref b) if b == b"pushrebase" => Ok(Pushrebase),
+            Value::Bytes(ref b) if b == b"push" => Ok(Push),
+            Value::Bytes(ref b) if b == b"blobimport" => Ok(Blobimport),
+            Value::Bytes(ref b) if b == b"manualmove" => Ok(ManualMove),
+            Value::Bytes(ref b) if b == b"testmove" => Ok(TestMove),
+            Value::Bytes(ref b) if b == b"backsyncer" => Ok(Backsyncer),
+            Value::Bytes(ref b) if b == b"xreposync" => Ok(XRepoSync),
+            Value::Bytes(ref b) if b == b"apirequest" => Ok(ApiRequest),
             v => Err(FromValueError(v)),
         }
     }
@@ -186,6 +191,7 @@ impl From<BookmarkUpdateReason> for Value {
             TestMove => Value::Bytes(b"testmove".to_vec()),
             Backsyncer => Value::Bytes(b"backsyncer".to_vec()),
             XRepoSync => Value::Bytes(b"xreposync".to_vec()),
+            ApiRequest => Value::Bytes(b"apirequest".to_vec()),
         }
     }
 }

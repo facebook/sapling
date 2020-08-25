@@ -9,7 +9,6 @@
 
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
-use hooks::HookRejection;
 use itertools::Itertools;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams};
 use mononoke_types::ChangesetId;
@@ -24,6 +23,7 @@ mod hook_running;
 mod pushrebase_onto;
 mod update;
 
+pub use hooks::HookRejection;
 pub use pushrebase::PushrebaseOutcome;
 
 pub use crate::create::CreateBookmarkOp;
@@ -151,7 +151,7 @@ pub enum BookmarkMovementError {
     Error(#[from] anyhow::Error),
 }
 
-fn describe_hook_rejections(rejections: &[HookRejection]) -> String {
+pub fn describe_hook_rejections(rejections: &[HookRejection]) -> String {
     rejections
         .iter()
         .map(|rejection| {

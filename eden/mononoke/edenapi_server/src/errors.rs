@@ -92,6 +92,7 @@ impl MononokeErrorExt for MononokeError {
             ServicePermissionDenied { .. } => HttpError::e403,
             ServiceRestricted { .. } => HttpError::e403,
             NotAvailable { .. } => HttpError::e503,
+            HookFailure(_) => HttpError::e400,
             InternalError(_) => HttpError::e500,
         })(Error::from(self).context(context))
     }

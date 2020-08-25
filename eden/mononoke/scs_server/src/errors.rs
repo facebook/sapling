@@ -56,6 +56,10 @@ impl From<MononokeError> for ServiceError {
                 kind: thrift::RequestErrorKind::NOT_AVAILABLE,
                 reason: error.to_string(),
             }),
+            error @ MononokeError::HookFailure(_) => Self::Request(thrift::RequestError {
+                kind: thrift::RequestErrorKind::INVALID_REQUEST,
+                reason: error.to_string(),
+            }),
             MononokeError::InternalError(error) => {
                 let reason = error.to_string();
                 let backtrace = error

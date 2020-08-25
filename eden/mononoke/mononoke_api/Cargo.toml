@@ -14,6 +14,7 @@ blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 blobstore = { path = "../blobstore" }
 blobstore_factory = { path = "../blobstore/factory" }
 bookmarks = { path = "../bookmarks" }
+bookmarks_movement = { path = "../bookmarks/bookmarks_movement" }
 changeset_info = { path = "../derived_data/changeset_info" }
 context = { path = "../server/context" }
 cross_repo_sync = { path = "../commit_rewriting/cross_repo_sync" }
@@ -44,7 +45,6 @@ skiplist = { path = "../reachabilityindex/skiplist" }
 sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
 synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping" }
-unbundle = { path = "../repo_client/unbundle" }
 unodes = { path = "../derived_data/unodes" }
 warm_bookmarks_cache = { path = "../bookmarks/warm_bookmarks_cache" }
 xdiff = { path = "../../scm/lib/xdiff" }

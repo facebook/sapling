@@ -7,16 +7,12 @@
 
 use std::sync::Arc;
 
-use bookmarks::BookmarkName;
+use anyhow::Context;
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bookmarks_movement::{BookmarkUpdatePolicy, BookmarkUpdateTargets};
 use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
-
-use unbundle::{
-    run_post_resolve_action, InfiniteBookmarkPush, PlainBookmarkPush, PostResolveAction,
-    PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, UploadedBonsais,
-    UploadedHgChangesetIds,
-};
 
 use crate::errors::MononokeError;
 use crate::repo_write::RepoWriteContext;
@@ -36,88 +32,44 @@ impl RepoWriteContext {
         let bookmark = BookmarkName::new(bookmark)?;
         let bookmark_attrs = BookmarkAttrs::new(self.config().bookmarks.clone());
 
-        // Check if this bookmark has hooks associated with it.  We don't support
-        // hooks on plain bookmark moves yet.
-        bookmark_attrs.select(&bookmark).try_for_each(|params| {
-            if params.hooks.is_empty() {
-                Ok(())
-            } else {
-                Err(MononokeError::NotAvailable(format!(
-                    "move_bookmark not available for {} because it has hooks",
-                    bookmark
-                )))
-            }
-        })?;
-
-        // We need to work out whether or not this is a scratch bookmark so
-        // we can call the right code.
-        let is_scratch_bookmark = if let Some(namespace) = &self.config().infinitepush.namespace {
-            namespace.matches_bookmark(&bookmark)
-        } else {
-            false
-        };
-
         // We need to find out where the bookmark currently points to in order
         // to move it.  Make sure to bypass any out-of-date caches.
         let old_target = self
             .blob_repo()
             .bookmarks()
             .get(self.ctx().clone(), &bookmark)
-            .await?;
-
-        let action = if is_scratch_bookmark {
-            let bookmark_push = InfiniteBookmarkPush {
-                name: bookmark,
-                create: false,
-                force: allow_non_fast_forward,
-                old: old_target,
-                new: target,
-            };
-
-            PostResolveAction::InfinitePush(PostResolveInfinitePush {
-                changegroup_id: None,
-                maybe_bookmark_push: Some(bookmark_push),
-                mutations: Vec::new(),
-                maybe_raw_bundle2_id: None,
-                uploaded_bonsais: UploadedBonsais::new(),
-                uploaded_hg_changeset_ids: UploadedHgChangesetIds::new(),
-                is_cross_backend_sync: false,
-            })
-        } else {
-            let bookmark_push = PlainBookmarkPush {
-                part_id: 0u32, // Just make something up.
-                name: bookmark,
-                old: old_target,
-                new: Some(target),
-            };
-            let hook_rejection_remapper =
-                unbundle::make_hook_rejection_remapper(self.ctx(), self.blob_repo().clone()).into();
-
-            PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {
-                bookmark_push,
-                maybe_raw_bundle2_id: None,
-                maybe_pushvars: None,
-                non_fast_forward_policy: allow_non_fast_forward.into(),
-                hook_rejection_remapper,
-            })
-        };
+            .await
+            .context("Failed to fetch old bookmark target")?
+            .ok_or_else(|| {
+                MononokeError::InvalidRequest(format!("bookmark '{}' does not exist", bookmark))
+            })?;
 
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index().clone();
 
-        let _response = run_post_resolve_action(
+        // Move the bookmark.
+        bookmarks_movement::UpdateBookmarkOp::new(
+            &bookmark,
+            BookmarkUpdateTargets {
+                old: old_target,
+                new: target,
+            },
+            if allow_non_fast_forward {
+                BookmarkUpdatePolicy::AnyPermittedByConfig
+            } else {
+                BookmarkUpdatePolicy::FastForwardOnly
+            },
+            BookmarkUpdateReason::ApiRequest,
+        )
+        .run(
             self.ctx(),
             self.blob_repo(),
-            &bookmark_attrs,
             &lca_hint,
             &self.config().infinitepush,
             &self.config().pushrebase,
-            &self.config().push,
+            &bookmark_attrs,
             self.hook_manager().as_ref(),
-            None, // maybe_reverse_filler_queue
-            action,
         )
-        .await
-        .map_err(anyhow::Error::from)?;
+        .await?;
 
         Ok(())
     }

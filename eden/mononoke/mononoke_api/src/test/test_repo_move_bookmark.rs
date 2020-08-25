@@ -84,12 +84,11 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
         .map_ok(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
         .try_collect::<Vec<_>>()
         .await?;
-    // TODO(mbthomas): These should have their own BookmarkUpdateReason.
     assert_eq!(
         entries,
         vec![
-            (Some(changesets["G"]), BookmarkUpdateReason::Pushrebase),
-            (Some(changesets["E"]), BookmarkUpdateReason::Pushrebase),
+            (Some(changesets["G"]), BookmarkUpdateReason::ApiRequest),
+            (Some(changesets["E"]), BookmarkUpdateReason::ApiRequest),
             (Some(changesets["C"]), BookmarkUpdateReason::TestMove),
         ]
     );

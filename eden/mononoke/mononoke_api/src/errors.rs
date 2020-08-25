@@ -6,6 +6,7 @@
  */
 
 use blobstore::LoadableError;
+use bookmarks_movement::{describe_hook_rejections, BookmarkMovementError, HookRejection};
 use derived_data::DeriveError;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
@@ -65,6 +66,8 @@ pub enum MononokeError {
         action: String,
         reponame: String,
     },
+    #[error("hooks failed:\n{}", describe_hook_rejections(.0.as_slice()))]
+    HookFailure(Vec<HookRejection>),
     #[error("not available: {0}")]
     NotAvailable(String),
     #[error("internal error: {0}")]
@@ -94,6 +97,20 @@ impl From<DeriveError> for MononokeError {
         match e {
             e @ DeriveError::Disabled(_, _) => MononokeError::NotAvailable(e.to_string()),
             DeriveError::Error(e) => MononokeError::from(e),
+        }
+    }
+}
+
+impl From<BookmarkMovementError> for MononokeError {
+    fn from(e: BookmarkMovementError) -> Self {
+        use BookmarkMovementError::*;
+        match e {
+            NonFastForwardMove { .. }
+            | PushrebaseRequiredGlobalrevs
+            | DeletionProhibited { .. }
+            | PermissionDeniedUser { .. } => MononokeError::InvalidRequest(e.to_string()),
+            HookFailure(rejections) => MononokeError::HookFailure(rejections),
+            _ => MononokeError::InternalError(InternalError(Arc::new(e.into()))),
         }
     }
 }
