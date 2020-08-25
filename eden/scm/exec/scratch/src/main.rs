@@ -448,6 +448,16 @@ fn path_command(
     Ok(())
 }
 
+/// TODO: remove this once Rust is 1.45+
+#[cfg(windows)]
+fn strip_prefix_polyfill<'a>(st: &'a str, prefix: &str) -> Option<&'a str> {
+    if st.starts_with(prefix) {
+        Some(&st[prefix.len()..])
+    } else {
+        None
+    }
+}
+
 /// Normalizes various path format on Windows. This function will convert
 /// various Windows path format to full path form. Note this function does not
 /// canonicalize the given path. So it does not collapse dots nor expand
@@ -456,16 +466,16 @@ fn path_command(
 #[cfg(windows)]
 fn normalize_windows_path(path: &str) -> String {
     let path = path.replace("/", r"\");
-    if let Some(path) = path.strip_prefix(r"\??\UNC\") {
+    if let Some(path) = strip_prefix_polyfill(&path, r"\??\UNC\") {
         // NT UNC path
         format!(r"\\{}", path)
-    } else if let Some(path) = path.strip_prefix(r"\??\") {
+    } else if let Some(path) = strip_prefix_polyfill(&path, r"\??\") {
         // NT path
         path.to_owned()
-    } else if let Some(path) = path.strip_prefix(r"\\?\UNC\") {
+    } else if let Some(path) = strip_prefix_polyfill(&path, r"\\?\UNC\") {
         // Extend-length UNC path
         format!(r"\\{}", path)
-    } else if let Some(path) = path.strip_prefix(r"\\?\") {
+    } else if let Some(path) = strip_prefix_polyfill(&path, r"\\?\") {
         // Extend-length path
         path.to_owned()
     } else {
