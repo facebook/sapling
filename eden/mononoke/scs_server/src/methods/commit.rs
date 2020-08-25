@@ -362,6 +362,7 @@ impl SourceControlServiceImpl {
             .history(ChangesetHistoryOptions {
                 until_timestamp: after_timestamp,
                 descendants_of,
+                exclude_changeset_and_ancestors: None,
             })
             .await;
         let history = collect_history(

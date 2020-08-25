@@ -452,8 +452,8 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
         .expect("changeset exists");
     let history: Vec<_> = cs
         .history(ChangesetHistoryOptions {
-            until_timestamp: Some(2500),
             descendants_of: Some(changesets["b2"]),
+            ..Default::default()
         })
         .await
         .and_then(|cs| async move { Ok(cs.id()) })
@@ -474,6 +474,52 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
             changesets["b2"],
         ]
     );
+
+    // Setting exclude_changeset omits some commits.
+    let cs = repo
+        .changeset(ChangesetSpecifier::Bonsai(changesets["c2"]))
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .history(ChangesetHistoryOptions {
+            until_timestamp: Some(2500),
+            exclude_changeset_and_ancestors: Some(changesets["b2"]),
+            ..Default::default()
+        })
+        .await
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        history,
+        vec![
+            changesets["c2"],
+            changesets["m2"],
+            changesets["e2"],
+            changesets["e3"],
+            changesets["a4"],
+            changesets["b3"],
+            changesets["c1"],
+            changesets["e1"],
+            changesets["m1"],
+            changesets["a3"],
+        ]
+    );
+
+    let cs = repo
+        .changeset(ChangesetSpecifier::Bonsai(changesets["m2"]))
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .history(ChangesetHistoryOptions {
+            exclude_changeset_and_ancestors: Some(changesets["c2"]),
+            ..Default::default()
+        })
+        .await
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(history, vec![]);
 
     Ok(())
 }

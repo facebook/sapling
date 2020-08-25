@@ -56,6 +56,7 @@ pub struct ChangesetContext {
 pub struct ChangesetHistoryOptions {
     pub until_timestamp: Option<i64>,
     pub descendants_of: Option<ChangesetId>,
+    pub exclude_changeset_and_ancestors: Option<ChangesetId>,
 }
 
 impl fmt::Debug for ChangesetContext {
@@ -627,6 +628,18 @@ impl ChangesetContext {
             }
         }
 
+        let exclude_changeset = opts
+            .exclude_changeset_and_ancestors
+            .map(|id| Self::new(self.repo().clone(), id));
+        if let Some(exclude_changeset) = exclude_changeset.as_ref() {
+            // If the the start is ancestor of the argument exit early.
+            match self.is_ancestor_of(exclude_changeset.id()).await {
+                Ok(true) => return stream::empty().boxed(),
+                Err(e) => return stream::once(async { Err(e) }).boxed(),
+                _ => (),
+            }
+        }
+
         let cs_info_enabled = self.repo.derive_changeset_info_enabled();
 
         // Helper allowing us to terminate walk when we reach `until_timestamp`.
@@ -656,10 +669,10 @@ impl ChangesetContext {
             (hashset! { self.id() }, VecDeque::from(vec![self.id()])),
             // unfold
             move |(mut visited, mut queue)| {
-                cloned!(descendants_of);
+                cloned!(descendants_of, exclude_changeset);
                 async move {
                     if let Some(changeset_id) = queue.pop_front() {
-                        // Terminate in two cases:
+                        // Terminate in three cases:
                         // 1. When `until_timestamp` is reached
                         if let Some(terminate) = terminate {
                             if terminate(changeset_id).await? {
@@ -670,6 +683,12 @@ impl ChangesetContext {
                         if let Some(ancestor) = descendants_of.as_ref() {
                             if changeset_id == ancestor.id() {
                                 return Ok(Some((Some(changeset_id), (visited, queue))));
+                            }
+                        }
+                        // 3. When we reach the `exclude_changeset_and_ancestors`
+                        if let Some(ancestor) = exclude_changeset.as_ref() {
+                            if changeset_id == ancestor.id() {
+                                return Ok(Some((None, (visited, queue))));
                             }
                         }
                         let mut parents = self
