@@ -15,7 +15,7 @@ use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 
 use crate::errors::MononokeError;
-use crate::repo_write::RepoWriteContext;
+use crate::repo_write::{PermissionsModel, RepoWriteContext};
 
 impl RepoWriteContext {
     /// Move a bookmark.
@@ -27,7 +27,6 @@ impl RepoWriteContext {
     ) -> Result<(), MononokeError> {
         let bookmark = bookmark.as_ref();
         self.check_method_permitted("move_bookmark")?;
-        self.check_bookmark_modification_permitted(bookmark)?;
 
         let bookmark = BookmarkName::new(bookmark)?;
         let bookmark_attrs = BookmarkAttrs::new(self.config().bookmarks.clone());
@@ -47,7 +46,7 @@ impl RepoWriteContext {
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index().clone();
 
         // Move the bookmark.
-        bookmarks_movement::UpdateBookmarkOp::new(
+        let mut op = bookmarks_movement::UpdateBookmarkOp::new(
             &bookmark,
             BookmarkUpdateTargets {
                 old: old_target,
@@ -59,8 +58,13 @@ impl RepoWriteContext {
                 BookmarkUpdatePolicy::FastForwardOnly
             },
             BookmarkUpdateReason::ApiRequest,
-        )
-        .run(
+        );
+
+        if let PermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
+            op = op.for_service(service_identity, &self.config().source_control_service);
+        }
+
+        op.run(
             self.ctx(),
             self.blob_repo(),
             &lca_hint,

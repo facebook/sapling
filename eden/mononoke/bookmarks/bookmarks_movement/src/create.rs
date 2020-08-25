@@ -14,7 +14,9 @@ use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
 use hooks::HookManager;
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
+use metaconfig_types::{
+    BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
+};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 
@@ -26,7 +28,7 @@ pub struct CreateBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     target: ChangesetId,
     reason: BookmarkUpdateReason,
-    auth: BookmarkMoveAuthorization,
+    auth: BookmarkMoveAuthorization<'op>,
     kind_restrictions: BookmarkKindRestrictions,
     affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
@@ -50,6 +52,17 @@ impl<'op> CreateBookmarkOp<'op> {
             pushvars: None,
             bundle_replay: None,
         }
+    }
+
+    /// This bookmark change is for an authenticated named service.  The change
+    /// will be checked against the service's write restrictions.
+    pub fn for_service(
+        mut self,
+        service_name: impl Into<String>,
+        params: &'op SourceControlServiceParams,
+    ) -> Self {
+        self.auth = BookmarkMoveAuthorization::Service(service_name.into(), params);
+        self
     }
 
     pub fn only_if_scratch(mut self) -> Self {

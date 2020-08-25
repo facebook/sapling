@@ -50,6 +50,12 @@ pub enum BookmarkMovementError {
         bookmark: BookmarkName,
     },
 
+    #[error("Service '{service_name}' is not permitted to move '{bookmark}'")]
+    PermissionDeniedServiceBookmark {
+        service_name: String,
+        bookmark: BookmarkName,
+    },
+
     #[error(
         "Invalid scratch bookmark: {bookmark} (scratch bookmarks must match pattern {pattern})"
     )]

@@ -7,22 +7,28 @@
 
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams};
+use metaconfig_types::{BookmarkAttrs, InfinitepushParams, SourceControlServiceParams};
 
 use crate::BookmarkMovementError;
 
 /// How authorization for the bookmark move should be determined.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum BookmarkMoveAuthorization {
+pub(crate) enum BookmarkMoveAuthorization<'params> {
     /// The bookmark move has been initiated by a user. The user's identity in
     /// the core context should be used to check permission, and hooks must be
     /// run.
     User,
+
+    /// The movement is on behalf of an authenticated service.
+    ///
+    /// repo_client doesn't have SourceControlServiceParams to hand, so until the
+    /// repo attributes refactor is complete, we must store the params here.
+    Service(String, &'params SourceControlServiceParams),
 }
 
-impl BookmarkMoveAuthorization {
+impl<'params> BookmarkMoveAuthorization<'params> {
     pub(crate) fn check_authorized(
-        &self,
+        &'params self,
         ctx: &CoreContext,
         bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
@@ -39,6 +45,14 @@ impl BookmarkMoveAuthorization {
                     }
                 }
                 // TODO: Check using ctx.identities, and deny if neither are provided.
+            }
+            BookmarkMoveAuthorization::Service(service_name, scs_params) => {
+                if !scs_params.service_write_bookmark_permitted(service_name, bookmark) {
+                    return Err(BookmarkMovementError::PermissionDeniedServiceBookmark {
+                        service_name: service_name.clone(),
+                        bookmark: bookmark.clone(),
+                    });
+                }
             }
         }
         Ok(())

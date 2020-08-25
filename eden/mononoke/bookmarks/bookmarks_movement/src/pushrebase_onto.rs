@@ -18,7 +18,9 @@ use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use hooks::HookManager;
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
+use metaconfig_types::{
+    BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
+};
 use mononoke_types::BonsaiChangeset;
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -30,7 +32,7 @@ use crate::BookmarkMovementError;
 pub struct PushrebaseOntoBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     affected_changesets: AffectedChangesets,
-    auth: BookmarkMoveAuthorization,
+    auth: BookmarkMoveAuthorization<'op>,
     kind_restrictions: BookmarkKindRestrictions,
     pushvars: Option<&'op HashMap<String, Bytes>>,
     hg_replay: Option<&'op pushrebase::HgReplayData>,
@@ -50,6 +52,17 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             pushvars: None,
             hg_replay: None,
         }
+    }
+
+    /// This bookmark change is for an authenticated named service.  The change
+    /// will be checked against the service's write restrictions.
+    pub fn for_service(
+        mut self,
+        service_name: impl Into<String>,
+        params: &'op SourceControlServiceParams,
+    ) -> Self {
+        self.auth = BookmarkMoveAuthorization::Service(service_name.into(), params);
+        self
     }
 
     pub fn only_if_scratch(mut self) -> Self {

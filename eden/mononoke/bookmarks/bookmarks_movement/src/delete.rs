@@ -9,7 +9,7 @@ use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
 use context::CoreContext;
-use metaconfig_types::{BookmarkAttrs, InfinitepushParams};
+use metaconfig_types::{BookmarkAttrs, InfinitepushParams, SourceControlServiceParams};
 use mononoke_types::ChangesetId;
 
 use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
@@ -19,7 +19,7 @@ pub struct DeleteBookmarkOp<'op> {
     bookmark: &'op BookmarkName,
     old_target: ChangesetId,
     reason: BookmarkUpdateReason,
-    auth: BookmarkMoveAuthorization,
+    auth: BookmarkMoveAuthorization<'op>,
     kind_restrictions: BookmarkKindRestrictions,
     bundle_replay: Option<&'op dyn BundleReplay>,
 }
@@ -39,6 +39,17 @@ impl<'op> DeleteBookmarkOp<'op> {
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
             bundle_replay: None,
         }
+    }
+
+    /// This bookmark change is for an authenticated named service.  The change
+    /// will be checked against the service's write restrictions.
+    pub fn for_service(
+        mut self,
+        service_name: impl Into<String>,
+        params: &'op SourceControlServiceParams,
+    ) -> Self {
+        self.auth = BookmarkMoveAuthorization::Service(service_name.into(), params);
+        self
     }
 
     pub fn only_if_scratch(mut self) -> Self {

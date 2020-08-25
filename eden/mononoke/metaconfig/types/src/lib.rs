@@ -1099,6 +1099,45 @@ impl Default for SourceControlServiceParams {
     }
 }
 
+impl SourceControlServiceParams {
+    /// Returns true if the named service is permitted to call the named method.
+    pub fn service_write_method_permitted(
+        &self,
+        service_identity: impl AsRef<str>,
+        method: impl AsRef<str>,
+    ) -> bool {
+        if let Some(restrictions) = self
+            .service_write_restrictions
+            .get(service_identity.as_ref())
+        {
+            return restrictions.permitted_methods.contains(method.as_ref());
+        }
+        false
+    }
+
+    /// Returns true if the named service is permitted to modify the named bookmark.
+    pub fn service_write_bookmark_permitted(
+        &self,
+        service_identity: impl AsRef<str>,
+        bookmark: &BookmarkName,
+    ) -> bool {
+        if let Some(restrictions) = self
+            .service_write_restrictions
+            .get(service_identity.as_ref())
+        {
+            if restrictions.permitted_bookmarks.contains(bookmark.as_str()) {
+                return true;
+            }
+            if let Some(regex) = &restrictions.permitted_bookmark_regex {
+                if regex.is_match(bookmark.as_str()) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+}
+
 /// Restrictions on writes for services.
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct ServiceWriteRestrictions {

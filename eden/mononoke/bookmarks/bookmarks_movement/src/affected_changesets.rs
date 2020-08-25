@@ -209,7 +209,7 @@ impl AffectedChangesets {
         pushvars: Option<&HashMap<String, Bytes>>,
         reason: BookmarkUpdateReason,
         kind: BookmarkKind,
-        auth: &BookmarkMoveAuthorization,
+        auth: &BookmarkMoveAuthorization<'_>,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
         match auth {
@@ -250,6 +250,11 @@ impl AffectedChangesets {
                         .await?;
                     }
                 }
+            }
+            BookmarkMoveAuthorization::Service(service_name, scs_params) => {
+                let _s = scs_params;
+                let _n = service_name;
+                // TODO(mbthomas): check path restrictions
             }
         }
 
