@@ -432,6 +432,28 @@ impl SourceControlServiceImpl {
         }
     }
 
+    pub(crate) async fn repo_create_bookmark(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoCreateBookmarkParams,
+    ) -> Result<thrift::RepoCreateBookmarkResponse, errors::ServiceError> {
+        let repo = self.repo(ctx, &repo).await?;
+        let repo = match params.service_identity {
+            Some(service_identity) => repo.service_write(service_identity).await?,
+            None => repo.write().await?,
+        };
+        let target = &params.target;
+        let changeset = repo
+            .changeset(ChangesetSpecifier::from_request(target)?)
+            .await?
+            .ok_or_else(|| errors::commit_not_found(target.to_string()))?;
+
+        repo.create_bookmark(&params.bookmark, changeset.id())
+            .await?;
+        Ok(thrift::RepoCreateBookmarkResponse {})
+    }
+
     pub(crate) async fn repo_move_bookmark(
         &self,
         ctx: CoreContext,
@@ -443,25 +465,56 @@ impl SourceControlServiceImpl {
             Some(service_identity) => repo.service_write(service_identity).await?,
             None => repo.write().await?,
         };
-        let bookmark = &params.bookmark;
         let target = &params.target;
-        let changeset_specifier = ChangesetSpecifier::from_request(target)?;
         let changeset = repo
-            .changeset(changeset_specifier)
+            .changeset(ChangesetSpecifier::from_request(target)?)
             .await?
             .ok_or_else(|| errors::commit_not_found(target.to_string()))?;
+        let old_changeset_id = match &params.old_target {
+            Some(old_target) => Some(
+                repo.changeset(ChangesetSpecifier::from_request(old_target)?)
+                    .await?
+                    .ok_or_else(|| errors::commit_not_found(old_target.to_string()))?
+                    .id(),
+            ),
+            None => None,
+        };
 
-        // TODO(mbthomas): provide a way for the client to optionally specify the old value
         repo.move_bookmark(
-            bookmark,
+            &params.bookmark,
             changeset.id(),
-            None,
+            old_changeset_id,
             params.allow_non_fast_forward_move,
         )
         .await?;
         Ok(thrift::RepoMoveBookmarkResponse {})
     }
 
+    pub(crate) async fn repo_delete_bookmark(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoDeleteBookmarkParams,
+    ) -> Result<thrift::RepoDeleteBookmarkResponse, errors::ServiceError> {
+        let repo = self.repo(ctx, &repo).await?;
+        let repo = match params.service_identity {
+            Some(service_identity) => repo.service_write(service_identity).await?,
+            None => repo.write().await?,
+        };
+        let old_changeset_id = match &params.old_target {
+            Some(old_target) => Some(
+                repo.changeset(ChangesetSpecifier::from_request(old_target)?)
+                    .await?
+                    .ok_or_else(|| errors::commit_not_found(old_target.to_string()))?
+                    .id(),
+            ),
+            None => None,
+        };
+
+        repo.delete_bookmark(&params.bookmark, old_changeset_id)
+            .await?;
+        Ok(thrift::RepoDeleteBookmarkResponse {})
+    }
     pub(crate) async fn repo_list_hg_manifest(
         &self,
         ctx: CoreContext,

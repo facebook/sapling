@@ -488,10 +488,20 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoStackInfoParams,
         ) -> Result<thrift::RepoStackInfoResponse, service::RepoStackInfoExn>;
 
+        async fn repo_create_bookmark(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoCreateBookmarkParams,
+        ) -> Result<thrift::RepoCreateBookmarkResponse, service::RepoCreateBookmarkExn>;
+
         async fn repo_move_bookmark(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoMoveBookmarkParams,
         ) -> Result<thrift::RepoMoveBookmarkResponse, service::RepoMoveBookmarkExn>;
+
+        async fn repo_delete_bookmark(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoDeleteBookmarkParams,
+        ) -> Result<thrift::RepoDeleteBookmarkResponse, service::RepoDeleteBookmarkExn>;
 
         async fn repo_list_hg_manifest(
             repo: thrift::RepoSpecifier,
