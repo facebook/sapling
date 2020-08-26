@@ -10,11 +10,10 @@ mod log;
 mod ods;
 mod request_context;
 mod scuba;
-mod timer;
 
 pub use gotham_ext::middleware::{
-    ClientIdentity, ClientIdentityMiddleware, Middleware, ServerIdentityMiddleware,
-    TlsSessionDataMiddleware,
+    ClientIdentity, ClientIdentityMiddleware, HeadersDuration, Middleware, RequestStartTime,
+    ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
 };
 
 pub use self::load::{LoadMiddleware, RequestLoad};
@@ -22,4 +21,3 @@ pub use self::log::LogMiddleware;
 pub use self::ods::OdsMiddleware;
 pub use self::request_context::{LfsMethod, RequestContext, RequestContextMiddleware};
 pub use self::scuba::{ScubaKey, ScubaMiddleware, ScubaMiddlewareState};
-pub use self::timer::{HeadersDuration, RequestStartTime, TimerMiddleware};

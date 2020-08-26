@@ -12,10 +12,12 @@ use hyper::{Body, Response};
 
 pub mod client_identity;
 pub mod server_identity;
+pub mod timer;
 pub mod tls_session_data;
 
 pub use client_identity::{ClientIdentity, ClientIdentityMiddleware};
 pub use server_identity::ServerIdentityMiddleware;
+pub use timer::{HeadersDuration, RequestStartTime, TimerMiddleware};
 pub use tls_session_data::TlsSessionDataMiddleware;
 
 #[async_trait::async_trait]
