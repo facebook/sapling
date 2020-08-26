@@ -2,3 +2,7 @@
 name = "version"
 version = "0.1.0"
 edition = "2018"
+
+[features]
+# Set this feature if 'src/version.rs' is generated.
+generated = []
