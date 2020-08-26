@@ -8,6 +8,7 @@
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
 use super::{Hints, NameIter, NameSetQuery};
+use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
 use crate::Group;
@@ -25,6 +26,7 @@ pub struct IdLazySet {
     // Arc: iter() result does not have a lifetime on this struct.
     inner: Arc<Mutex<Inner>>,
     pub map: Arc<dyn IdConvert + Send + Sync>,
+    pub(crate) dag: Arc<dyn DagAlgorithm + Send + Sync>,
     hints: Hints,
 }
 
@@ -151,7 +153,11 @@ impl fmt::Debug for IdLazySet {
 }
 
 impl IdLazySet {
-    pub fn from_iter_idmap<I>(names: I, map: Arc<dyn IdConvert + Send + Sync>) -> Self
+    pub fn from_iter_idmap_dag<I>(
+        names: I,
+        map: Arc<dyn IdConvert + Send + Sync>,
+        dag: Arc<dyn DagAlgorithm + Send + Sync>,
+    ) -> Self
     where
         I: IntoIterator<Item = Result<Id>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
@@ -163,10 +169,12 @@ impl IdLazySet {
             state: State::Incomplete,
         };
         let hints = Hints::default();
+        hints.set_dag(dag.clone());
         hints.set_id_map(map.clone());
         Self {
             inner: Arc::new(Mutex::new(inner)),
             map,
+            dag,
             hints,
         }
     }
@@ -178,7 +186,11 @@ impl IdLazySet {
         for &id in inner.visited.iter() {
             spans.push(id);
         }
-        Ok(IdStaticSet::from_spans_idmap(spans, self.map.clone()))
+        Ok(IdStaticSet::from_spans_idmap_dag(
+            spans,
+            self.map.clone(),
+            self.dag.clone(),
+        ))
     }
 
     fn load_all(&self) -> Result<MutexGuard<Inner>> {
@@ -284,12 +296,22 @@ pub(crate) mod tests {
     use super::super::tests::*;
     use super::super::NameSet;
     use super::*;
+    use crate::tests::dummy_dag::DummyDag;
     use std::collections::HashSet;
     use std::convert::TryInto;
 
     pub fn lazy_set(a: &[u64]) -> IdLazySet {
         let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();
-        IdLazySet::from_iter_idmap(ids.into_iter().map(Ok), Arc::new(StrIdMap))
+        IdLazySet::from_iter_idmap_dag(
+            ids.into_iter().map(Ok),
+            Arc::new(StrIdMap),
+            Arc::new(DummyDag),
+        )
+    }
+
+    pub fn lazy_set_inherit(a: &[u64], set: &IdLazySet) -> IdLazySet {
+        let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();
+        IdLazySet::from_iter_idmap_dag(ids.into_iter().map(Ok), set.map.clone(), set.dag.clone())
     }
 
     struct StrIdMap;
@@ -381,9 +403,10 @@ pub(crate) mod tests {
 
     #[test]
     fn test_flatten() {
-        let set1 = NameSet::from_query(lazy_set(&[3, 2, 4]));
-        let set2 = NameSet::from_query(lazy_set(&[3, 7, 6]));
-        set2.hints().inherit_id_map(set1.hints());
+        let set1 = lazy_set(&[3, 2, 4]);
+        let set2 = lazy_set_inherit(&[3, 7, 6], &set1);
+        let set1 = NameSet::from_query(set1);
+        let set2 = NameSet::from_query(set2);
 
         // Show flatten by names, and flatten by ids.
         // The first should be <static ...>, the second should be <spans ...>.

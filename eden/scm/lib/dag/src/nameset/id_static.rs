@@ -7,6 +7,7 @@
 
 use super::hints::Flags;
 use super::{Hints, NameIter, NameSetQuery};
+use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::spanset::Span;
 use crate::spanset::{SpanSet, SpanSetIter};
@@ -22,6 +23,7 @@ use std::sync::Arc;
 pub struct IdStaticSet {
     pub(crate) spans: SpanSet,
     pub(crate) map: Arc<dyn IdConvert + Send + Sync>,
+    pub(crate) dag: Arc<dyn DagAlgorithm + Send + Sync>,
     hints: Hints,
 }
 
@@ -102,17 +104,27 @@ impl fmt::Debug for IdStaticSet {
 }
 
 impl IdStaticSet {
-    pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdConvert + Send + Sync>) -> Self {
+    pub(crate) fn from_spans_idmap_dag(
+        spans: SpanSet,
+        map: Arc<dyn IdConvert + Send + Sync>,
+        dag: Arc<dyn DagAlgorithm + Send + Sync>,
+    ) -> Self {
         let hints = Hints::default();
         hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
         hints.set_id_map(map.clone());
+        hints.set_dag(dag.clone());
         if spans.is_empty() {
             hints.add_flags(Flags::EMPTY);
         } else {
             hints.set_min_id(spans.min().unwrap());
             hints.set_max_id(spans.max().unwrap());
         }
-        Self { spans, map, hints }
+        Self {
+            spans,
+            map,
+            hints,
+            dag,
+        }
     }
 }
 

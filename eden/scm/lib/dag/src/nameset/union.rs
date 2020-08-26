@@ -37,7 +37,7 @@ impl UnionSet {
                 hints.set_max_id(id1.max(id2));
             }
         }
-        if hints.is_dag_compatible(rhs.hints()) {
+        if lhs.hints().is_dag_compatible(rhs.hints()) {
             hints.inherit_dag(&lhs.hints());
             hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
         }

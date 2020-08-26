@@ -27,7 +27,7 @@ impl<'a> From<(LegacyCodeNeedIdAccess, &'a IdStaticSet)> for SpanSet {
 
 impl<'a> From<(LegacyCodeNeedIdAccess, SpanSet, &'a NameDag)> for NameSet {
     fn from(value: (LegacyCodeNeedIdAccess, SpanSet, &'a NameDag)) -> NameSet {
-        NameSet::from_spans_idmap(value.1, value.2.snapshot_map.clone())
+        NameSet::from_spans_dag(value.1, value.2).unwrap()
     }
 }
 

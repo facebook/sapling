@@ -11,6 +11,7 @@
 
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
+use crate::ops::IdMapSnapshot;
 use crate::spanset::SpanSet;
 use crate::Id;
 use crate::Result;
@@ -69,18 +70,50 @@ impl NameSet {
         Self::from_query(lazy::LazySet::from_iter(iter))
     }
 
-    /// Creates from a (lazy) iterator of Ids and an IdMap.
-    pub fn from_iter_idmap<I>(iter: I, map: Arc<dyn IdConvert + Send + Sync>) -> NameSet
+    /// Creates from a (lazy) iterator of Ids, an IdMap, and a Dag.
+    pub fn from_id_iter_idmap_dag<I>(
+        iter: I,
+        map: Arc<dyn IdConvert + Send + Sync>,
+        dag: Arc<dyn DagAlgorithm + Send + Sync>,
+    ) -> NameSet
     where
         I: IntoIterator<Item = Result<Id>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
     {
-        Self::from_query(id_lazy::IdLazySet::from_iter_idmap(iter, map))
+        Self::from_query(id_lazy::IdLazySet::from_iter_idmap_dag(iter, map, dag))
     }
 
-    /// Creates from [`SpanSet`] and [`IdMap`]. Used by [`NameDag`].
-    pub fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdConvert + Send + Sync>) -> NameSet {
-        Self::from_query(IdStaticSet::from_spans_idmap(spans, map))
+    /// Creates from a (lazy) iterator of Ids and a struct with snapshot abilities.
+    pub fn from_id_iter_dag<I>(
+        iter: I,
+        dag: &(impl DagAlgorithm + IdMapSnapshot),
+    ) -> Result<NameSet>
+    where
+        I: IntoIterator<Item = Result<Id>> + 'static,
+        <I as IntoIterator>::IntoIter: Send + Sync,
+    {
+        let map = dag.id_map_snapshot()?;
+        let dag = dag.dag_snapshot()?;
+        Ok(Self::from_id_iter_idmap_dag(iter, map, dag))
+    }
+
+    /// Creates from [`SpanSet`], [`IdMap`] and [`DagAlgorithm`].
+    pub fn from_spans_idmap_dag(
+        spans: SpanSet,
+        map: Arc<dyn IdConvert + Send + Sync>,
+        dag: Arc<dyn DagAlgorithm + Send + Sync>,
+    ) -> NameSet {
+        Self::from_query(IdStaticSet::from_spans_idmap_dag(spans, map, dag))
+    }
+
+    /// Creates from [`SpanSet`] and a struct with snapshot abilities.
+    pub fn from_spans_dag(
+        spans: SpanSet,
+        dag: &(impl DagAlgorithm + IdMapSnapshot),
+    ) -> Result<Self> {
+        let map = dag.id_map_snapshot()?;
+        let dag = dag.dag_snapshot()?;
+        Ok(Self::from_spans_idmap_dag(spans, map, dag))
     }
 
     /// Creates from a function that evaluates to a [`NameSet`], and a
@@ -106,8 +139,11 @@ impl NameSet {
         ) {
             if Arc::ptr_eq(&this.map, &other.map) {
                 // Fast path for IdStaticSet
-                let result =
-                    Self::from_spans_idmap(this.spans.difference(&other.spans), this.map.clone());
+                let result = Self::from_spans_idmap_dag(
+                    this.spans.difference(&other.spans),
+                    this.map.clone(),
+                    this.dag.clone(),
+                );
                 result
                     .hints()
                     .inherit_id_map(self.hints())
@@ -135,8 +171,11 @@ impl NameSet {
         ) {
             if Arc::ptr_eq(&this.map, &other.map) {
                 // Fast path for IdStaticSet
-                let result =
-                    Self::from_spans_idmap(this.spans.intersection(&other.spans), this.map.clone());
+                let result = Self::from_spans_idmap_dag(
+                    this.spans.intersection(&other.spans),
+                    this.map.clone(),
+                    this.dag.clone(),
+                );
                 result
                     .hints()
                     .inherit_id_map(self.hints())
@@ -169,8 +208,11 @@ impl NameSet {
         ) {
             if Arc::ptr_eq(&this.map, &other.map) {
                 // Fast path for IdStaticSet
-                let result =
-                    Self::from_spans_idmap(this.spans.union(&other.spans), this.map.clone());
+                let result = Self::from_spans_idmap_dag(
+                    this.spans.union(&other.spans),
+                    this.map.clone(),
+                    this.dag.clone(),
+                );
                 result
                     .hints()
                     .inherit_id_map(self.hints())
@@ -195,12 +237,12 @@ impl NameSet {
     /// fast paths. This is useful for some common sets like `obsolete()` that
     /// might be represented by a complex expression.
     pub fn flatten(&self) -> Result<NameSet> {
-        match self.id_map() {
-            Some(id_map) => {
+        match (self.id_map(), self.dag()) {
+            (Some(id_map), Some(dag)) => {
                 // Convert to IdStaticSet
-                self.flatten_id(id_map)
+                self.flatten_id(id_map, dag)
             }
-            None => {
+            _ => {
                 // Convert to StaticSet
                 self.flatten_names()
             }
@@ -208,7 +250,11 @@ impl NameSet {
     }
 
     /// Convert this set to a static id set.
-    pub fn flatten_id(&self, id_map: Arc<dyn IdConvert + Send + Sync>) -> Result<NameSet> {
+    pub fn flatten_id(
+        &self,
+        id_map: Arc<dyn IdConvert + Send + Sync>,
+        dag: Arc<dyn DagAlgorithm + Send + Sync>,
+    ) -> Result<NameSet> {
         if self.as_any().is::<IdStaticSet>() {
             return Ok(self.clone());
         }
@@ -219,7 +265,7 @@ impl NameSet {
         }
         ids.sort_unstable_by_key(|i| u64::MAX - i.0);
         let spans = SpanSet::from_sorted_spans(ids);
-        let flat_set = NameSet::from_spans_idmap(spans, id_map);
+        let flat_set = NameSet::from_spans_idmap_dag(spans, id_map, dag);
         flat_set.hints().replace(self.hints());
         Ok(flat_set)
     }

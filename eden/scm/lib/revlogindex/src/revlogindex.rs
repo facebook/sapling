@@ -966,8 +966,7 @@ impl DagAlgorithm for RevlogIndex {
                 let id = self.vertex_id(name?)?;
                 spans.push(id);
             }
-            let result = Set::from_spans_idmap(spans, self.get_snapshot());
-            result.hints().set_dag(self.dag_snapshot()?);
+            let result = Set::from_spans_dag(spans, self)?;
             Ok(result)
         }
     }
@@ -991,11 +990,8 @@ impl DagAlgorithm for RevlogIndex {
         } else {
             IdSet::from(Id(0)..=Id(self.len() as u64 - 1))
         };
-        let result = Set::from_spans_idmap(id_set, self.get_snapshot());
-        result
-            .hints()
-            .add_flags(Flags::FULL)
-            .set_dag(self.dag_snapshot()?);
+        let result = Set::from_spans_dag(id_set, self)?;
+        result.hints().add_flags(Flags::FULL);
         Ok(result)
     }
 
@@ -1036,13 +1032,10 @@ impl DagAlgorithm for RevlogIndex {
             }
         });
 
-        let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
-        let set = Set::from_iter_idmap(iter, map);
+        let set = Set::from_id_iter_dag(iter, self)?;
         set.hints()
             .add_flags(Flags::ID_DESC | Flags::TOPO_DESC | Flags::ANCESTORS)
-            .set_max_id(max_id)
-            .set_dag(self.dag_snapshot()?);
-
+            .set_max_id(max_id);
         Ok(set)
     }
 
@@ -1080,9 +1073,8 @@ impl DagAlgorithm for RevlogIndex {
             }
         }
 
-        let idmap = dag;
-        let result = Set::from_spans_idmap(id_spans, idmap);
-        result.hints().set_dag(self.dag_snapshot()?);
+        let idmap = dag.clone();
+        let result = Set::from_spans_idmap_dag(id_spans, idmap, dag);
         Ok(result)
     }
 
@@ -1112,12 +1104,8 @@ impl DagAlgorithm for RevlogIndex {
             }
         });
 
-        let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
-        let set = Set::from_iter_idmap(iter, map);
-        set.hints()
-            .add_flags(Flags::ID_ASC)
-            .set_min_id(min_id)
-            .set_dag(self.dag_snapshot()?);
+        let set = Set::from_id_iter_dag(iter, self)?;
+        set.hints().add_flags(Flags::ID_ASC).set_min_id(min_id);
         Ok(set)
     }
 
@@ -1146,12 +1134,11 @@ impl DagAlgorithm for RevlogIndex {
                 None
             }
         });
-        let set = Set::from_iter_idmap(iter, self.get_snapshot());
+        let set = Set::from_id_iter_dag(iter, self)?;
         set.hints()
             .add_flags(Flags::ID_DESC | Flags::TOPO_DESC)
             .set_min_id(min_id)
-            .set_max_id(max_id)
-            .set_dag(self.dag_snapshot()?);
+            .set_max_id(max_id);
         Ok(set)
     }
 
@@ -1201,8 +1188,7 @@ impl DagAlgorithm for RevlogIndex {
         let revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
         let gcas = self.gca_revs(&revs, usize::max_value())?;
         let spans = IdSet::from_spans(gcas.into_iter().map(|r| Id(r as _)));
-        let result = Set::from_spans_idmap(spans, self.get_snapshot());
-        result.hints().set_dag(self.dag_snapshot()?);
+        let result = Set::from_spans_dag(spans, self)?;
         Ok(result)
     }
 
@@ -1267,8 +1253,7 @@ impl DagAlgorithm for RevlogIndex {
                 }
             }
         }
-        let result = Set::from_spans_idmap(result_id_set, self.get_snapshot());
-        result.hints().set_dag(self.dag_snapshot()?);
+        let result = Set::from_spans_dag(result_id_set, self)?;
         Ok(result)
     }
 
@@ -1289,8 +1274,7 @@ impl DagAlgorithm for RevlogIndex {
         let head_revs: Vec<u32> = head_ids.into_iter().map(|i| i.0 as u32).collect();
         let result_revs = self.range_revs(&root_revs, &head_revs)?;
         let result_id_set = IdSet::from_spans(result_revs.into_iter().map(|r| Id(r as _)));
-        let result = Set::from_spans_idmap(result_id_set, self.get_snapshot());
-        result.hints().set_dag(self.dag_snapshot()?);
+        let result = Set::from_spans_dag(result_id_set, self)?;
         Ok(result)
     }
 
@@ -1360,8 +1344,7 @@ impl DagAlgorithm for RevlogIndex {
             }
         }
 
-        let result = Set::from_spans_idmap(result, self.get_snapshot());
-        result.hints().set_dag(self.dag_snapshot()?);
+        let result = Set::from_spans_dag(result, self)?;
         Ok(result)
     }
 
@@ -1374,13 +1357,9 @@ impl DagAlgorithm for RevlogIndex {
         // This is a same problem to head-based public/draft phase calculation.
         let (result_unreachable_id_set, result_reachable_id_set) =
             self.phasesets(unreachable_revs, reachable_revs)?;
-        let only = Set::from_spans_idmap(result_reachable_id_set, self.get_snapshot());
-        let ancestors = Set::from_spans_idmap(result_unreachable_id_set, self.get_snapshot());
-        ancestors
-            .hints()
-            .add_flags(Flags::ANCESTORS)
-            .set_dag(self.dag_snapshot()?);
-        only.hints().set_dag(self.dag_snapshot()?);
+        let only = Set::from_spans_dag(result_reachable_id_set, self)?;
+        let ancestors = Set::from_spans_dag(result_unreachable_id_set, self)?;
+        ancestors.hints().add_flags(Flags::ANCESTORS);
         Ok((only, ancestors))
     }
 
@@ -1418,12 +1397,8 @@ impl DagAlgorithm for RevlogIndex {
             }
         });
 
-        let map = self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>;
-        let set = Set::from_iter_idmap(iter, map);
-        set.hints()
-            .add_flags(Flags::ID_ASC)
-            .set_min_id(min_id)
-            .set_dag(self.dag_snapshot()?);
+        let set = Set::from_id_iter_dag(iter, self)?;
+        set.hints().add_flags(Flags::ID_ASC).set_min_id(min_id);
         Ok(set)
     }
 
@@ -1489,8 +1464,7 @@ impl DagAlgorithm for RevlogIndex {
             }
         }
 
-        let result = Set::from_spans_idmap(result, self.get_snapshot());
-        result.hints().set_dag(self.dag_snapshot()?);
+        let result = Set::from_spans_dag(result, self)?;
         Ok(result)
     }
 
