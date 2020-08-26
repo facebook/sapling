@@ -77,6 +77,12 @@ pub trait IdDagStore {
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
 
+    /// Iterate through flat segments that have the given parent.
+    fn iter_flat_segments_with_parent<'a>(
+        &'a self,
+        parent: Id,
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
+
     /// Remove all non master Group identifiers from the DAG.
     fn remove_non_master(&mut self) -> Result<()>;
 
@@ -252,6 +258,30 @@ impl IdDagStore for IndexedLogStore {
             Err(err) => Err(err.into()),
         });
         Ok(Box::new(iter))
+    }
+
+    fn iter_flat_segments_with_parent<'a>(
+        &'a self,
+        parent: Id,
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
+        let get_iter = |group: Group| -> Result<_> {
+            let mut key = Vec::with_capacity(9);
+            key.write_u8(group.0 as u8).unwrap();
+            key.write_u64::<BigEndian>(parent.0).unwrap();
+            let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
+            let iter = iter.map(move |result| match result {
+                Ok(bytes) => Ok(Segment(self.log.slice_to_bytes(bytes))),
+                Err(err) => Err(err.into()),
+            });
+            Ok(iter)
+        };
+        let iter: Box<dyn Iterator<Item = Result<Segment>> + 'a> =
+            if parent.group() == Group::MASTER {
+                Box::new(get_iter(Group::MASTER)?.chain(get_iter(Group::NON_MASTER)?))
+            } else {
+                Box::new(get_iter(Group::NON_MASTER)?)
+            };
+        Ok(iter)
     }
 
     /// Mark non-master ids as "removed".
@@ -586,6 +616,25 @@ impl IdDagStore for InProcessStore {
         }
     }
 
+    fn iter_flat_segments_with_parent<'a>(
+        &'a self,
+        parent: Id,
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
+        let get_iter = |group: Group| -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
+            match self.parent_index.get(&(group, parent)) {
+                None => Ok(Box::new(iter::empty())),
+                Some(children) => {
+                    let iter = children
+                        .iter()
+                        .map(move |store_id| Ok(self.get_segment(store_id)));
+                    Ok(Box::new(iter))
+                }
+            }
+        };
+        let iter = get_iter(Group::MASTER)?.chain(get_iter(Group::NON_MASTER)?);
+        Ok(Box::new(iter))
+    }
+
     fn reload(&mut self) -> Result<()> {
         Ok(())
     }
@@ -637,7 +686,7 @@ mod tests {
         Group::NON_MASTER.min_id() + id
     }
     //  0--1--2--3--4--5--10--11--12--13--N0--N1--N2--N5--N6
-    //         \-6-7-8--9-/                 \-N3--N4--/
+    //         \-6-7-8--9-/-----------------\-N3--N4--/
     static LEVEL0_HEAD2: Lazy<Segment> =
         Lazy::new(|| Segment::new(SegmentFlags::HAS_ROOT, 0 as Level, Id(0), Id(2), &[]));
     static LEVEL0_HEAD5: Lazy<Segment> =
@@ -656,8 +705,15 @@ mod tests {
 
     static LEVEL0_HEADN2: Lazy<Segment> =
         Lazy::new(|| Segment::new(SegmentFlags::empty(), 0 as Level, nid(0), nid(2), &[Id(13)]));
-    static LEVEL0_HEADN4: Lazy<Segment> =
-        Lazy::new(|| Segment::new(SegmentFlags::empty(), 0 as Level, nid(3), nid(4), &[nid(0)]));
+    static LEVEL0_HEADN4: Lazy<Segment> = Lazy::new(|| {
+        Segment::new(
+            SegmentFlags::empty(),
+            0 as Level,
+            nid(3),
+            nid(4),
+            &[nid(0), Id(9)],
+        )
+    });
     static LEVEL0_HEADN6: Lazy<Segment> = Lazy::new(|| {
         Segment::new(
             SegmentFlags::empty(),
@@ -893,6 +949,40 @@ mod tests {
 
         let mut answer = store.iter_master_flat_segments_with_parent(nid(2)).unwrap();
         assert!(answer.next().is_none());
+    }
+
+    #[test]
+    fn test_in_process_store_iter_flat_segments_with_parent() {
+        let store = get_in_process_store();
+
+        let lookup = |id: Id| -> Vec<_> {
+            let mut list = store
+                .iter_flat_segments_with_parent(id)
+                .unwrap()
+                .collect::<Result<Vec<_>>>()
+                .unwrap();
+            list.sort_unstable_by_key(|seg| seg.high().unwrap());
+            list
+        };
+
+        let answer = lookup(Id(2));
+        let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9]);
+        assert_eq!(answer, expected);
+
+        let answer = lookup(Id(13));
+        let expected = segments_to_owned(&[&LEVEL0_HEADN2]);
+        assert_eq!(answer, expected);
+
+        let answer = lookup(Id(4));
+        assert!(answer.is_empty());
+
+        let answer = lookup(nid(2));
+        let expected = segments_to_owned(&[&LEVEL0_HEADN6]);
+        assert_eq!(answer, expected);
+
+        let answer = lookup(Id(9));
+        let expected = segments_to_owned(&[&LEVEL0_HEAD13, &LEVEL0_HEADN4]);
+        assert_eq!(answer, expected);
     }
 
     #[test]
