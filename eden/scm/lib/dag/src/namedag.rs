@@ -9,6 +9,7 @@
 //!
 //! Combination of IdMap and IdDag.
 
+use crate::delegate;
 use crate::errors::bug;
 use crate::errors::programming;
 use crate::id::Group;
@@ -33,7 +34,6 @@ use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::ops::IdMapEq;
 use crate::ops::IdMapSnapshot;
-use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
 use crate::segment::SegmentFlags;
 use crate::spanset::SpanSet;
@@ -629,34 +629,8 @@ fn extract_ancestor_flag_if_compatible(
     }
 }
 
-impl<T> PrefixLookup for T
-where
-    T: NameDagStorage,
-    T::IdMap: PrefixLookup,
-{
-    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
-        self.map().vertexes_by_hex_prefix(hex_prefix, limit)
-    }
-}
-
-impl<T> IdConvert for T
-where
-    T: NameDagStorage,
-    T::IdMap: IdConvert,
-{
-    fn vertex_id(&self, name: VertexName) -> Result<Id> {
-        self.map().vertex_id(name)
-    }
-    fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>> {
-        self.map().vertex_id_with_max_group(name, max_group)
-    }
-    fn vertex_name(&self, id: Id) -> Result<VertexName> {
-        self.map().vertex_name(id)
-    }
-    fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
-        self.map().contains_vertex_name(name)
-    }
-}
+delegate!(PrefixLookup | IdConvert, NameDag => self.map());
+delegate!(PrefixLookup | IdConvert, MemNameDag => self.map());
 
 /// Export non-master DAG as parent_names_func on HashMap.
 ///
