@@ -674,6 +674,12 @@ Lv2: R0-12[] N0-N5[1, 9]"#
         built.name_dag.map.find_name_by_id(id).unwrap().unwrap(),
         b"q"
     );
+
+    // Parent-child indexes work fine.
+    assert_eq!(
+        format!("{:?}", built.name_dag.dag.children_id(Id(5)).unwrap(),),
+        "6 7"
+    );
 }
 
 #[test]

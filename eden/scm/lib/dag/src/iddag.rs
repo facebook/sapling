@@ -811,9 +811,45 @@ impl<Store: IdDagStore> IdDag<Store> {
         Ok(set.difference(&self.parents(set.clone())?))
     }
 
+    /// Calculate children for a single `Id`.
+    pub fn children_id(&self, id: Id) -> Result<SpanSet> {
+        let mut result = BTreeSet::new();
+        for seg in self.store.iter_flat_segments_with_parent(id)? {
+            let seg = seg?;
+            result.insert(seg.span()?.low);
+        }
+        if let Some(seg) = self.store.find_flat_segment_including_id(id)? {
+            let span = seg.span()?;
+            if span.high != id {
+                result.insert(id + 1);
+            }
+        }
+        let result = SpanSet::from_sorted_spans(result.into_iter().rev());
+        Ok(result)
+    }
+
     /// Calculate children of the given set.
     pub fn children(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let set = set.into();
+        if set.count() < 5 {
+            let result =
+                set.iter()
+                    .fold(Ok(SpanSet::empty()), |acc: Result<SpanSet>, id| match acc {
+                        Ok(acc) => Ok(acc.union(&self.children_id(id)?)),
+                        Err(err) => Err(err),
+                    })?;
+            #[cfg(test)]
+            {
+                let result_set = self.children_set(set)?;
+                assert_eq!(result.as_spans(), result_set.as_spans());
+            }
+            Ok(result)
+        } else {
+            self.children_set(set)
+        }
+    }
+
+    fn children_set(&self, set: SpanSet) -> Result<SpanSet> {
         let tracing_span = debug_span!("children", result = "", set = field::debug(&set));
         let _scope = tracing_span.enter();
 
