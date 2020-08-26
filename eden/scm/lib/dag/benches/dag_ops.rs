@@ -7,6 +7,10 @@
 
 use dag::idmap::IdMapAssignHead;
 use dag::idmap::IdMapBuildParents;
+use dag::namedag::NameDag;
+use dag::ops::DagAlgorithm;
+use dag::ops::DagPersistent;
+use dag::Set;
 use dag::{idmap::IdMap, spanset::SpanSet, Group, Id, IdDag, VertexName};
 use minibench::{bench, elapsed};
 use tempfile::tempdir;
@@ -221,6 +225,71 @@ fn main() {
         elapsed(|| {
             for set in &sample_sets {
                 dag.roots(set.clone()).unwrap();
+            }
+        })
+    });
+
+    // Create a graph with M linear vertexes in the master branch, and M
+    // child for every vertex in the master branch.
+    //
+    // VertexName are just strings of Ids (0, 1, ..., N0, N1, ...).
+    const M: usize = 8192;
+    let parent_func = |v: VertexName| -> dag::Result<Vec<VertexName>> {
+        let is_non_master = v.as_ref().starts_with(b"N");
+        let idx: usize = if is_non_master {
+            std::str::from_utf8(&v.as_ref()[1..])
+                .unwrap()
+                .parse()
+                .unwrap()
+        } else {
+            std::str::from_utf8(v.as_ref()).unwrap().parse().unwrap()
+        };
+        let parents = if is_non_master {
+            vec![VertexName::copy_from(&v.as_ref()[1..])]
+        } else if idx > 0 {
+            vec![VertexName::copy_from(format!("{}", idx - 1).as_bytes())]
+        } else {
+            vec![]
+        };
+        Ok(parents)
+    };
+    let non_master_heads: Vec<VertexName> = (0..M)
+        .map(|i| VertexName::copy_from(format!("N{}", i).as_bytes()))
+        .collect::<Vec<_>>();
+    let master_heads: Vec<VertexName> =
+        vec![VertexName::copy_from(format!("{}", M - 1).as_bytes())];
+    let dag_dir = tempdir().unwrap();
+    let mut dag = NameDag::open(&dag_dir.path()).unwrap();
+    dag.add_heads_and_flush(parent_func, &master_heads, &non_master_heads)
+        .unwrap();
+
+    let to_set = |v: &str| -> Set {
+        dag.sort(&Set::from_static_names(vec![VertexName::copy_from(
+            v.as_bytes(),
+        )]))
+        .unwrap()
+    };
+    let head_root_pairs: Vec<(Set, Set)> = (0..M)
+        .map(|i| {
+            let head = to_set(&format!("N{}", i));
+            let root = to_set(&format!("{}", i));
+            (head, root)
+        })
+        .collect();
+    bench("range (master::draft)", || {
+        elapsed(|| {
+            for (head, root) in &head_root_pairs {
+                dag.range(root.clone(), head.clone()).unwrap();
+            }
+        })
+    });
+
+    let heads = dag.heads(dag.all().unwrap()).unwrap();
+    let root_list: Vec<Set> = ((M - 64)..M).map(|i| to_set(&format!("N{}", i))).collect();
+    bench("range (recent_draft::drafts)", || {
+        elapsed(|| {
+            for root in &root_list {
+                dag.range(root.clone(), heads.clone()).unwrap();
             }
         })
     });
