@@ -123,19 +123,19 @@ pub enum Tree {}
 #[async_trait]
 pub trait EdenApiStoreKind: Send + Sync + 'static {
     async fn prefetch_files(
-        client: Arc<dyn EdenApi>,
-        repo: String,
-        keys: Vec<Key>,
-        progress: Option<ProgressCallback>,
+        _client: Arc<dyn EdenApi>,
+        _repo: String,
+        _keys: Vec<Key>,
+        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<FileEntry>, EdenApiError> {
         unimplemented!("fetching files not supported for this store")
     }
 
     async fn prefetch_trees(
-        client: Arc<dyn EdenApi>,
-        repo: String,
-        keys: Vec<Key>,
-        progress: Option<ProgressCallback>,
+        _client: Arc<dyn EdenApi>,
+        _repo: String,
+        _keys: Vec<Key>,
+        _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<TreeEntry>, EdenApiError> {
         unimplemented!("fetching trees not supported for this store")
     }
