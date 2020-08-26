@@ -231,9 +231,11 @@ hgrc.dynamic write errors.
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
+#if no-windows
   $ chmod u+w .hg/
   $ rm -f .hg/hgrc.dynamic
   $ chmod u-w .hg/
   $ hg log -r tip
   abort: required config not found at "$TESTTMP/client2/.hg/hgrc.dynamic"
   [255]
+#endif
