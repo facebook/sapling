@@ -1265,7 +1265,12 @@ def cloudstatus(ui, repo, **opts):
     if workspacename is None:
         ui.write(_("You are not connected to any workspace\n"))
         return
-    ui.write(_("Workspace: %s\n") % workspacename)
+
+    userworkspaceprefix = workspace.userworkspaceprefix(ui)
+    if workspacename.startswith(userworkspaceprefix):
+        ui.write(_("Workspace: %s\n") % workspacename[len(userworkspaceprefix) :])
+
+    ui.write(_("Raw Workspace Name: %s\n") % workspacename)
 
     backgroundnabled = background.autobackupenabled(repo)
     autosync = "ON" if backgroundnabled else "OFF"

@@ -102,7 +102,8 @@ Run cloud status before setting any workspace
 
 Run cloud status after setting a workspace
   $ hg cloud status
-  Workspace: user/test/feature
+  Workspace: feature
+  Raw Workspace Name: user/test/feature
   Automatic Sync (on local changes): OFF
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
@@ -147,7 +148,8 @@ Joining:
 Run cloud status after setting workspace
   $ cd client1
   $ hg cloud status
-  Workspace: user/test/default
+  Workspace: default
+  Raw Workspace Name: user/test/default
   Automatic Sync (on local changes): OFF
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
@@ -163,7 +165,8 @@ Enable autosync
 
 Run cloud status after enabling autosync
   $ hg cloud status
-  Workspace: user/test/default
+  Workspace: default
+  Raw Workspace Name: user/test/default
   Automatic Sync (on local changes): ON
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
@@ -178,7 +181,8 @@ Disable autosync
   $ setconfig infinitepushbackup.autobackup=false
 Run cloud status after disabling autosync
   $ hg cloud status
-  Workspace: user/test/default
+  Workspace: default
+  Raw Workspace Name: user/test/default
   Automatic Sync (on local changes): OFF
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
@@ -876,7 +880,8 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
 
 Run cloud status after failing to synchronize
   $ hg cloud status
-  Workspace: user/test/default
+  Workspace: default
+  Raw Workspace Name: user/test/default
   Automatic Sync (on local changes): OFF
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 17
