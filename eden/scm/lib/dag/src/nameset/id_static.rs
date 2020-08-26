@@ -109,10 +109,8 @@ impl IdStaticSet {
         map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
     ) -> Self {
-        let hints = Hints::default();
+        let hints = Hints::new_with_idmap_dag(map.clone(), dag.clone());
         hints.add_flags(Flags::ID_DESC | Flags::TOPO_DESC);
-        hints.set_id_map(map.clone());
-        hints.set_dag(dag.clone());
         if spans.is_empty() {
             hints.add_flags(Flags::EMPTY);
         } else {
@@ -338,11 +336,11 @@ pub(crate) mod tests {
             assert_eq!(format!("{:?}", &all), "<spans [A:G+0:6]>");
 
             let ac: NameSet = "A C".into();
-            ac.hints().set_dag(dag.dag_snapshot()?);
+            let ac = dag.sort(&ac)?;
 
             let intersection = all.intersection(&ac);
             // should not be "<and ...>"
-            assert_eq!(format!("{:?}", &intersection), "<static [A, C]>");
+            assert_eq!(format!("{:?}", &intersection), "<spans [C+2, A+0]>");
             Ok(())
         })
     }
@@ -422,7 +420,12 @@ pub(crate) mod tests {
             );
 
             // Binding to the Dag enables fast paths.
-            bfg.hints().set_dag(dag.dag_snapshot()?);
+            let bfg = dag.sort(&bfg)?;
+            bfg.hints().add_flags(Flags::ANCESTORS);
+            assert_eq!(
+                format!("{:?}", dag.ancestors(bfg.clone())?),
+                "<spans [F:G+5:6, B+1]>"
+            );
 
             // 'heads' has a fast path that uses 'heads_ancestors' to do the calculation.
             // (in this case the result is incorrect because the hints are wrong).
@@ -432,7 +435,7 @@ pub(crate) mod tests {
             // (in this case the result is incorrect because the hints are wrong).
             assert_eq!(
                 format!("{:?}", dag.ancestors(bfg.clone())?),
-                "<static [B, F, G]>"
+                "<spans [F:G+5:6, B+1]>"
             );
 
             Ok(())

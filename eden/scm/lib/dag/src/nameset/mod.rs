@@ -144,10 +144,6 @@ impl NameSet {
                     this.map.clone(),
                     this.dag.clone(),
                 );
-                result
-                    .hints()
-                    .inherit_id_map(self.hints())
-                    .inherit_dag(self.hints());
                 return result;
             }
         }
@@ -176,10 +172,6 @@ impl NameSet {
                     this.map.clone(),
                     this.dag.clone(),
                 );
-                result
-                    .hints()
-                    .inherit_id_map(self.hints())
-                    .inherit_dag(self.hints());
                 return result;
             }
         }
@@ -213,10 +205,6 @@ impl NameSet {
                     this.map.clone(),
                     this.dag.clone(),
                 );
-                result
-                    .hints()
-                    .inherit_id_map(self.hints())
-                    .inherit_dag(self.hints());
                 return result;
             }
         }
@@ -266,7 +254,7 @@ impl NameSet {
         ids.sort_unstable_by_key(|i| u64::MAX - i.0);
         let spans = SpanSet::from_sorted_spans(ids);
         let flat_set = NameSet::from_spans_idmap_dag(spans, id_map, dag);
-        flat_set.hints().replace(self.hints());
+        flat_set.hints().inherit_flags_min_max_id(self.hints());
         Ok(flat_set)
     }
 
@@ -277,7 +265,7 @@ impl NameSet {
         }
         let names = self.iter()?.collect::<Result<Vec<_>>>()?;
         let flat_set = Self::from_static_names(names);
-        flat_set.hints().replace(self.hints());
+        flat_set.hints().inherit_flags_min_max_id(self.hints());
         Ok(flat_set)
     }
 }

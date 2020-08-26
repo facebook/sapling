@@ -29,7 +29,7 @@ struct Iter {
 
 impl DifferenceSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
-        let hints = Hints::default();
+        let hints = Hints::new_inherit_idmap_dag(lhs.hints());
         // Inherit flags, min/max Ids from lhs.
         hints.add_flags(
             lhs.hints().flags()
@@ -39,7 +39,6 @@ impl DifferenceSet {
                     | Flags::TOPO_DESC
                     | Flags::FILTER),
         );
-        hints.inherit_id_map(&lhs.hints()).inherit_dag(&lhs.hints());
         if let Some(id) = lhs.hints().min_id() {
             hints.set_min_id(id);
         }

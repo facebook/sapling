@@ -24,22 +24,23 @@ pub struct UnionSet {
 
 impl UnionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
-        let hints = Hints::default();
-        if lhs.hints().contains(Flags::FILTER) || rhs.hints().contains(Flags::FILTER) {
-            hints.add_flags(Flags::FILTER);
-        }
-        if lhs.hints().is_id_map_compatible(rhs.hints()) {
-            hints.inherit_id_map(lhs.hints());
+        let hints = if lhs.hints().is_id_map_compatible(rhs.hints())
+            && lhs.hints().is_dag_compatible(rhs.hints())
+        {
+            let hints = Hints::new_inherit_idmap_dag(lhs.hints());
             if let (Some(id1), Some(id2)) = (lhs.hints().min_id(), rhs.hints().min_id()) {
                 hints.set_min_id(id1.min(id2));
             }
             if let (Some(id1), Some(id2)) = (lhs.hints().max_id(), rhs.hints().max_id()) {
                 hints.set_max_id(id1.max(id2));
             }
-        }
-        if lhs.hints().is_dag_compatible(rhs.hints()) {
-            hints.inherit_dag(&lhs.hints());
             hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
+            hints
+        } else {
+            Hints::default()
+        };
+        if lhs.hints().contains(Flags::FILTER) || rhs.hints().contains(Flags::FILTER) {
+            hints.add_flags(Flags::FILTER);
         }
         Self {
             sets: [lhs, rhs],

@@ -57,7 +57,7 @@ impl IntersectionSet {
             (lhs, rhs)
         };
 
-        let hints = Hints::default();
+        let hints = Hints::new_inherit_idmap_dag(lhs.hints());
         hints.add_flags(
             lhs.hints().flags()
                 & (Flags::EMPTY
@@ -70,7 +70,6 @@ impl IntersectionSet {
         if lhs.hints().is_dag_compatible(rhs.hints()) {
             hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
         }
-        hints.inherit_id_map(&lhs.hints()).inherit_dag(&lhs.hints());
         let compatible = hints.is_id_map_compatible(rhs.hints());
         match (lhs.hints().min_id(), rhs.hints().min_id(), compatible) {
             (Some(id), None, _) | (Some(id), Some(_), false) | (None, Some(id), true) => {
@@ -223,6 +222,7 @@ impl Iterator for Iter {
 #[allow(clippy::redundant_clone)]
 mod tests {
     use super::super::id_lazy::tests::lazy_set;
+    use super::super::id_lazy::tests::lazy_set_inherit;
     use super::super::tests::*;
     use super::*;
     use crate::Id;
@@ -253,12 +253,14 @@ mod tests {
     #[test]
     fn test_intersection_min_max_id_fast_path() {
         // The min_ids are intentionally wrong to test the fast paths.
-        let a = NameSet::from_query(lazy_set(&[0x70, 0x60, 0x50, 0x40, 0x30, 0x20]));
+        let a = lazy_set(&[0x70, 0x60, 0x50, 0x40, 0x30, 0x20]);
+        let b = lazy_set_inherit(&[0x70, 0x65, 0x50, 0x40, 0x35, 0x20], &a);
+        let a = NameSet::from_query(a);
+        let b = NameSet::from_query(b);
         a.hints().add_flags(Flags::ID_DESC);
-        let b = NameSet::from_query(lazy_set(&[0x70, 0x65, 0x50, 0x40, 0x35, 0x20]));
         b.hints().set_min_id(Id(0x40));
         b.hints().set_max_id(Id(0x50));
-        b.hints().inherit_id_map(a.hints()).inherit_dag(a.hints());
+
         let set = IntersectionSet::new(a, b.clone());
         // No "20" - filtered out by min id fast path.
         assert_eq!(shorten_iter(set.iter()), ["70", "50", "40"]);
@@ -266,9 +268,13 @@ mod tests {
         assert_eq!(shorten_iter(set.iter_rev()), ["20", "40", "50"]);
 
         // Test the reversed sort order.
-        let a = NameSet::from_query(lazy_set(&[0x20, 0x30, 0x40, 0x50, 0x60, 0x70]));
+        let a = lazy_set(&[0x20, 0x30, 0x40, 0x50, 0x60, 0x70]);
+        let b = lazy_set_inherit(&[0x70, 0x65, 0x50, 0x40, 0x35, 0x20], &a);
+        let a = NameSet::from_query(a);
+        let b = NameSet::from_query(b);
         a.hints().add_flags(Flags::ID_ASC);
-        b.hints().inherit_id_map(a.hints()).inherit_dag(a.hints());
+        b.hints().set_min_id(Id(0x40));
+        b.hints().set_max_id(Id(0x50));
         let set = IntersectionSet::new(a, b.clone());
         // No "70".
         assert_eq!(shorten_iter(set.iter()), ["20", "40", "50"]);

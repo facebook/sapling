@@ -9,7 +9,6 @@ use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::Id;
 use bitflags::bitflags;
-use parking_lot::RwLock;
 use std::fmt;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 use std::sync::atomic::{AtomicU32, AtomicU64};
@@ -55,11 +54,26 @@ pub struct Hints {
     flags: AtomicU32,
     min_id: AtomicU64,
     max_id: AtomicU64,
-    id_map: RwLock<IdMapSnapshot>,
-    dag: RwLock<DagSnapshot>,
+    id_map: IdMapSnapshot,
+    dag: DagSnapshot,
 }
 
 impl Hints {
+    pub fn new_with_idmap_dag(
+        id_map: impl Into<IdMapSnapshot>,
+        dag: impl Into<DagSnapshot>,
+    ) -> Self {
+        Self {
+            id_map: id_map.into(),
+            dag: dag.into(),
+            ..Default::default()
+        }
+    }
+
+    pub fn new_inherit_idmap_dag(hints: &Self) -> Self {
+        Self::new_with_idmap_dag(hints, hints)
+    }
+
     pub fn flags(&self) -> Flags {
         let flags = self.flags.load(Relaxed);
         Flags::from_bits_truncate(flags)
@@ -120,28 +134,8 @@ impl Hints {
         self
     }
 
-    pub fn set_id_map(&self, id_map: impl Into<IdMapSnapshot>) -> &Self {
-        *self.id_map.write() = id_map.into();
-        self
-    }
-
-    pub fn set_dag(&self, dag: impl Into<DagSnapshot>) -> &Self {
-        *self.dag.write() = dag.into();
-        self
-    }
-
-    pub fn inherit_id_map(&self, other: &Hints) -> &Self {
-        self.set_id_map(other)
-    }
-
-    pub fn inherit_dag(&self, other: &Hints) -> &Self {
-        self.set_dag(other)
-    }
-
-    pub fn replace(&self, other: &Hints) -> &Self {
-        self.update_flags_with(|_| other.flags())
-            .inherit_id_map(other)
-            .inherit_dag(other);
+    pub fn inherit_flags_min_max_id(&self, other: &Hints) -> &Self {
+        self.update_flags_with(|_| other.flags());
         if let Some(id) = other.min_id() {
             self.set_min_id(id);
         }
@@ -153,7 +147,7 @@ impl Hints {
 
     #[allow(clippy::vtable_address_comparisons)]
     pub fn is_id_map_compatible(&self, other: impl Into<IdMapSnapshot>) -> bool {
-        let lhs = self.id_map.read().clone().0;
+        let lhs = self.id_map.0.clone();
         let rhs = other.into().0;
         match (lhs, rhs) {
             (None, None) => true,
@@ -164,7 +158,7 @@ impl Hints {
 
     #[allow(clippy::vtable_address_comparisons)]
     pub fn is_dag_compatible(&self, other: impl Into<DagSnapshot>) -> bool {
-        let lhs = self.dag.read().clone().0;
+        let lhs = self.dag.0.clone();
         let rhs = other.into().0;
         match (lhs, rhs) {
             (None, None) => true,
@@ -174,11 +168,11 @@ impl Hints {
     }
 
     pub fn dag(&self) -> Option<Arc<dyn DagAlgorithm + Send + Sync>> {
-        self.dag.read().clone().0
+        self.dag.0.clone()
     }
 
     pub fn id_map(&self) -> Option<Arc<dyn IdConvert + Send + Sync>> {
-        self.id_map.read().clone().0
+        self.id_map.0.clone()
     }
 }
 
@@ -187,7 +181,7 @@ pub struct DagSnapshot(Option<Arc<dyn DagAlgorithm + Send + Sync>>);
 
 impl From<&Hints> for DagSnapshot {
     fn from(hints: &Hints) -> Self {
-        hints.dag.read().clone()
+        hints.dag.clone()
     }
 }
 
@@ -202,7 +196,7 @@ pub struct IdMapSnapshot(Option<Arc<dyn IdConvert + Send + Sync>>);
 
 impl From<&Hints> for IdMapSnapshot {
     fn from(hints: &Hints) -> Self {
-        hints.id_map.read().clone()
+        hints.id_map.clone()
     }
 }
 
@@ -218,8 +212,8 @@ impl Clone for Hints {
             flags: AtomicU32::new(self.flags.load(Acquire)),
             min_id: AtomicU64::new(self.min_id.load(Acquire)),
             max_id: AtomicU64::new(self.max_id.load(Acquire)),
-            id_map: RwLock::new(self.id_map.read().clone()),
-            dag: RwLock::new(self.dag.read().clone()),
+            id_map: self.id_map.clone(),
+            dag: self.dag.clone(),
         }
     }
 }

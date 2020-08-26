@@ -168,9 +168,7 @@ impl IdLazySet {
             visited: IndexSet::new(),
             state: State::Incomplete,
         };
-        let hints = Hints::default();
-        hints.set_dag(dag.clone());
-        hints.set_id_map(map.clone());
+        let hints = Hints::new_with_idmap_dag(map.clone(), dag.clone());
         Self {
             inner: Arc::new(Mutex::new(inner)),
             map,
