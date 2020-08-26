@@ -490,7 +490,7 @@ def _depth(init, func, startdepth, stopdepth):
     """General purposed (slow) depth handling.
 
     func could be parents, children, etc.
-    (func(x) - x) being an empty set is considered as a stop condition.
+    (func(x) - result) being an empty set is considered as a stop condition.
 
     startdepth starts with 0, is inclusive.
     stopdepth is exclusive.
@@ -508,7 +508,9 @@ def _depth(init, func, startdepth, stopdepth):
                 result = current
             else:
                 result |= current
-        current = func(current) - current
+        current = func(current)
+        if result is not None:
+            current -= result
         # empty set?
         if current.first() is None:
             break

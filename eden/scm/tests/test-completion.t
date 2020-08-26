@@ -86,6 +86,7 @@ Show debug commands if there are no other candidates
   debug-args
   debugancestor
   debugapplystreamclonebundle
+  debugbenchmarkrevsets
   debugbindag
   debugbuilddag
   debugbundle
@@ -370,6 +371,7 @@ Show all commands + options
   debug-args: 
   debugancestor: 
   debugapplystreamclonebundle: 
+  debugbenchmarkrevsets: rev-x, rev-y, expr, default, multi-backend
   debugbindag: rev, output
   debugbuilddag: mergeable-file, overwritten-file, new-file
   debugbundle: all, part-type, spec
