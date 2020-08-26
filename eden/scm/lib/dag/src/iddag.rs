@@ -191,6 +191,15 @@ impl<Store: IdDagStore> IdDag<Store> {
         self.store.iter_segments_descending(max_high_id, level)
     }
 
+    /// Iterate through segments at the given level in ascending order.
+    pub(crate) fn iter_segments_ascending<'a>(
+        &'a self,
+        min_high_id: Id,
+        level: Level,
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a + Send + Sync>> {
+        self.store.iter_segments_ascending(min_high_id, level)
+    }
+
     /// Iterate through flat segments that have the given parent.
     pub(crate) fn iter_master_flat_segments_with_parent<'a>(
         &'a self,
