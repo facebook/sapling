@@ -385,227 +385,236 @@ impl DagAddHeads for MemNameDag {
 // Dag operations. Those are just simple wrappers around [`IdDag`].
 // See [`IdDag`] for the actual implementations of these algorithms.
 
-/// DAG related read-only algorithms.
-impl<T: NameDagStorage + IdMapSnapshot + Send + Sync> DagAlgorithm for T {
-    /// Sort a `NameSet` topologically.
-    fn sort(&self, set: &NameSet) -> Result<NameSet> {
-        if set.hints().contains(Flags::TOPO_DESC)
-            && set.hints().is_dag_compatible(self.dag_snapshot()?)
-        {
-            Ok(set.clone())
-        } else {
-            let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
-            let mut spans = SpanSet::empty();
-            for name in set.iter()? {
-                let id = self.map().vertex_id(name?)?;
-                spans.push(id);
+macro_rules! impl_dag_algorithms {
+    ($t:ty) => {
+        /// DAG related read-only algorithms.
+        impl DagAlgorithm for $t {
+            /// Sort a `NameSet` topologically.
+            fn sort(&self, set: &NameSet) -> Result<NameSet> {
+                if set.hints().contains(Flags::TOPO_DESC)
+                    && set.hints().is_dag_compatible(self.dag_snapshot()?)
+                {
+                    Ok(set.clone())
+                } else {
+                    let flags =
+                        extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
+                    let mut spans = SpanSet::empty();
+                    for name in set.iter()? {
+                        let id = self.map().vertex_id(name?)?;
+                        spans.push(id);
+                    }
+                    let result = NameSet::from_spans_dag(spans, self)?;
+                    result.hints().add_flags(flags);
+                    Ok(result)
+                }
             }
-            let result = NameSet::from_spans_dag(spans, self)?;
-            result.hints().add_flags(flags);
-            Ok(result)
-        }
-    }
 
-    /// Get ordered parent vertexes.
-    fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
-        let id = self.map().vertex_id(name)?;
-        self.dag()
-            .parent_ids(id)?
-            .into_iter()
-            .map(|id| self.map().vertex_name(id))
-            .collect()
-    }
+            /// Get ordered parent vertexes.
+            fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+                let id = self.map().vertex_id(name)?;
+                self.dag()
+                    .parent_ids(id)?
+                    .into_iter()
+                    .map(|id| self.map().vertex_name(id))
+                    .collect()
+            }
 
-    /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
-    fn all(&self) -> Result<NameSet> {
-        let spans = self.dag().all()?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        result.hints().add_flags(Flags::FULL);
-        Ok(result)
-    }
+            /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
+            fn all(&self) -> Result<NameSet> {
+                let spans = self.dag().all()?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                result.hints().add_flags(Flags::FULL);
+                Ok(result)
+            }
 
-    /// Calculates all ancestors reachable from any name from the given set.
-    fn ancestors(&self, set: NameSet) -> Result<NameSet> {
-        if set.hints().contains(Flags::ANCESTORS)
-            && set.hints().is_dag_compatible(self.dag_snapshot()?)
-        {
-            return Ok(set);
-        }
-        let spans = self.to_id_set(&set)?;
-        let spans = self.dag().ancestors(spans)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        result.hints().add_flags(Flags::ANCESTORS);
-        Ok(result)
-    }
+            /// Calculates all ancestors reachable from any name from the given set.
+            fn ancestors(&self, set: NameSet) -> Result<NameSet> {
+                if set.hints().contains(Flags::ANCESTORS)
+                    && set.hints().is_dag_compatible(self.dag_snapshot()?)
+                {
+                    return Ok(set);
+                }
+                let spans = self.to_id_set(&set)?;
+                let spans = self.dag().ancestors(spans)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                result.hints().add_flags(Flags::ANCESTORS);
+                Ok(result)
+            }
 
-    /// Calculates parents of the given set.
-    ///
-    /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
-    /// to preserve order.
-    fn parents(&self, set: NameSet) -> Result<NameSet> {
-        // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
-        let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
-        let spans = self.dag().parents(self.to_id_set(&set)?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        result.hints().add_flags(flags);
-        #[cfg(test)]
-        {
-            result.assert_eq(crate::default_impl::parents(self, set)?);
-        }
-        Ok(result)
-    }
+            /// Calculates parents of the given set.
+            ///
+            /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
+            /// to preserve order.
+            fn parents(&self, set: NameSet) -> Result<NameSet> {
+                // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
+                let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
+                let spans = self.dag().parents(self.to_id_set(&set)?)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                result.hints().add_flags(flags);
+                #[cfg(test)]
+                {
+                    result.assert_eq(crate::default_impl::parents(self, set)?);
+                }
+                Ok(result)
+            }
 
-    /// Calculates the n-th first ancestor.
-    fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
-        #[cfg(test)]
-        let name2 = name.clone();
-        let id = self.map().vertex_id(name)?;
-        let id = self.dag().first_ancestor_nth(id, n)?;
-        let result = self.map().vertex_name(id)?;
-        #[cfg(test)]
-        {
-            let result2 = crate::default_impl::first_ancestor_nth(self, name2, n)?;
-            assert_eq!(result, result2);
-        }
-        Ok(result)
-    }
+            /// Calculates the n-th first ancestor.
+            fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
+                #[cfg(test)]
+                let name2 = name.clone();
+                let id = self.map().vertex_id(name)?;
+                let id = self.dag().first_ancestor_nth(id, n)?;
+                let result = self.map().vertex_name(id)?;
+                #[cfg(test)]
+                {
+                    let result2 = crate::default_impl::first_ancestor_nth(self, name2, n)?;
+                    assert_eq!(result, result2);
+                }
+                Ok(result)
+            }
 
-    /// Calculates heads of the given set.
-    fn heads(&self, set: NameSet) -> Result<NameSet> {
-        if set.hints().contains(Flags::ANCESTORS)
-            && set.hints().is_dag_compatible(self.dag_snapshot()?)
-        {
-            // heads_ancestors is faster.
-            return self.heads_ancestors(set);
-        }
-        let spans = self.dag().heads(self.to_id_set(&set)?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        #[cfg(test)]
-        {
-            result.assert_eq(crate::default_impl::heads(self, set)?);
-        }
-        Ok(result)
-    }
+            /// Calculates heads of the given set.
+            fn heads(&self, set: NameSet) -> Result<NameSet> {
+                if set.hints().contains(Flags::ANCESTORS)
+                    && set.hints().is_dag_compatible(self.dag_snapshot()?)
+                {
+                    // heads_ancestors is faster.
+                    return self.heads_ancestors(set);
+                }
+                let spans = self.dag().heads(self.to_id_set(&set)?)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                #[cfg(test)]
+                {
+                    result.assert_eq(crate::default_impl::heads(self, set)?);
+                }
+                Ok(result)
+            }
 
-    /// Calculates children of the given set.
-    fn children(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().children(self.to_id_set(&set)?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        Ok(result)
-    }
+            /// Calculates children of the given set.
+            fn children(&self, set: NameSet) -> Result<NameSet> {
+                let spans = self.dag().children(self.to_id_set(&set)?)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                Ok(result)
+            }
 
-    /// Calculates roots of the given set.
-    fn roots(&self, set: NameSet) -> Result<NameSet> {
-        let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
-        let spans = self.dag().roots(self.to_id_set(&set)?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        result.hints().add_flags(flags);
-        #[cfg(test)]
-        {
-            result.assert_eq(crate::default_impl::roots(self, set)?);
-        }
-        Ok(result)
-    }
+            /// Calculates roots of the given set.
+            fn roots(&self, set: NameSet) -> Result<NameSet> {
+                let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
+                let spans = self.dag().roots(self.to_id_set(&set)?)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                result.hints().add_flags(flags);
+                #[cfg(test)]
+                {
+                    result.assert_eq(crate::default_impl::roots(self, set)?);
+                }
+                Ok(result)
+            }
 
-    /// Calculates one "greatest common ancestor" of the given set.
-    ///
-    /// If there are no common ancestors, return None.
-    /// If there are multiple greatest common ancestors, pick one arbitrarily.
-    /// Use `gca_all` to get all of them.
-    fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
-        let result: Option<VertexName> = match self.dag().gca_one(self.to_id_set(&set)?)? {
-            None => None,
-            Some(id) => Some(self.map().vertex_name(id)?),
-        };
-        #[cfg(test)]
-        {
-            assert_eq!(&result, &crate::default_impl::gca_one(self, set)?);
-        }
-        Ok(result)
-    }
+            /// Calculates one "greatest common ancestor" of the given set.
+            ///
+            /// If there are no common ancestors, return None.
+            /// If there are multiple greatest common ancestors, pick one arbitrarily.
+            /// Use `gca_all` to get all of them.
+            fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
+                let result: Option<VertexName> = match self.dag().gca_one(self.to_id_set(&set)?)? {
+                    None => None,
+                    Some(id) => Some(self.map().vertex_name(id)?),
+                };
+                #[cfg(test)]
+                {
+                    assert_eq!(&result, &crate::default_impl::gca_one(self, set)?);
+                }
+                Ok(result)
+            }
 
-    /// Calculates all "greatest common ancestor"s of the given set.
-    /// `gca_one` is faster if an arbitrary answer is ok.
-    fn gca_all(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().gca_all(self.to_id_set(&set)?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        #[cfg(test)]
-        {
-            result.assert_eq(crate::default_impl::gca_all(self, set)?);
-        }
-        Ok(result)
-    }
+            /// Calculates all "greatest common ancestor"s of the given set.
+            /// `gca_one` is faster if an arbitrary answer is ok.
+            fn gca_all(&self, set: NameSet) -> Result<NameSet> {
+                let spans = self.dag().gca_all(self.to_id_set(&set)?)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                #[cfg(test)]
+                {
+                    result.assert_eq(crate::default_impl::gca_all(self, set)?);
+                }
+                Ok(result)
+            }
 
-    /// Calculates all common ancestors of the given set.
-    fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().common_ancestors(self.to_id_set(&set)?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        result.hints().add_flags(Flags::ANCESTORS);
-        #[cfg(test)]
-        {
-            result.assert_eq(crate::default_impl::common_ancestors(self, set)?);
-        }
-        Ok(result)
-    }
+            /// Calculates all common ancestors of the given set.
+            fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
+                let spans = self.dag().common_ancestors(self.to_id_set(&set)?)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                result.hints().add_flags(Flags::ANCESTORS);
+                #[cfg(test)]
+                {
+                    result.assert_eq(crate::default_impl::common_ancestors(self, set)?);
+                }
+                Ok(result)
+            }
 
-    /// Tests if `ancestor` is an ancestor of `descendant`.
-    fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool> {
-        #[cfg(test)]
-        let result2 = crate::default_impl::is_ancestor(self, ancestor.clone(), descendant.clone())?;
-        let ancestor_id = self.map().vertex_id(ancestor)?;
-        let descendant_id = self.map().vertex_id(descendant)?;
-        let result = self.dag().is_ancestor(ancestor_id, descendant_id)?;
-        #[cfg(test)]
-        {
-            assert_eq!(&result, &result2);
-        }
-        Ok(result)
-    }
+            /// Tests if `ancestor` is an ancestor of `descendant`.
+            fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool> {
+                #[cfg(test)]
+                let result2 =
+                    crate::default_impl::is_ancestor(self, ancestor.clone(), descendant.clone())?;
+                let ancestor_id = self.map().vertex_id(ancestor)?;
+                let descendant_id = self.map().vertex_id(descendant)?;
+                let result = self.dag().is_ancestor(ancestor_id, descendant_id)?;
+                #[cfg(test)]
+                {
+                    assert_eq!(&result, &result2);
+                }
+                Ok(result)
+            }
 
-    /// Calculates "heads" of the ancestors of the given set. That is,
-    /// Find Y, which is the smallest subset of set X, where `ancestors(Y)` is
-    /// `ancestors(X)`.
-    ///
-    /// This is faster than calculating `heads(ancestors(set))`.
-    ///
-    /// This is different from `heads`. In case set contains X and Y, and Y is
-    /// an ancestor of X, but not the immediate ancestor, `heads` will include
-    /// Y while this function won't.
-    fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().heads_ancestors(self.to_id_set(&set)?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        #[cfg(test)]
-        {
-            // default_impl::heads_ancestors calls `heads` if `Flags::ANCESTORS`
-            // is set. Prevent infinite loop.
-            if !set.hints().contains(Flags::ANCESTORS) {
-                result.assert_eq(crate::default_impl::heads_ancestors(self, set)?);
+            /// Calculates "heads" of the ancestors of the given set. That is,
+            /// Find Y, which is the smallest subset of set X, where `ancestors(Y)` is
+            /// `ancestors(X)`.
+            ///
+            /// This is faster than calculating `heads(ancestors(set))`.
+            ///
+            /// This is different from `heads`. In case set contains X and Y, and Y is
+            /// an ancestor of X, but not the immediate ancestor, `heads` will include
+            /// Y while this function won't.
+            fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
+                let spans = self.dag().heads_ancestors(self.to_id_set(&set)?)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                #[cfg(test)]
+                {
+                    // default_impl::heads_ancestors calls `heads` if `Flags::ANCESTORS`
+                    // is set. Prevent infinite loop.
+                    if !set.hints().contains(Flags::ANCESTORS) {
+                        result.assert_eq(crate::default_impl::heads_ancestors(self, set)?);
+                    }
+                }
+                Ok(result)
+            }
+
+            /// Calculates the "dag range" - vertexes reachable from both sides.
+            fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
+                let roots = self.to_id_set(&roots)?;
+                let heads = self.to_id_set(&heads)?;
+                let spans = self.dag().range(roots, heads)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                Ok(result)
+            }
+
+            /// Calculates the descendants of the given set.
+            fn descendants(&self, set: NameSet) -> Result<NameSet> {
+                let spans = self.dag().descendants(self.to_id_set(&set)?)?;
+                let result = NameSet::from_spans_dag(spans, self)?;
+                Ok(result)
+            }
+
+            /// Get a snapshot of the current graph.
+            fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+                NameDagStorage::storage_dag_snapshot(self)
             }
         }
-        Ok(result)
-    }
-
-    /// Calculates the "dag range" - vertexes reachable from both sides.
-    fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
-        let roots = self.to_id_set(&roots)?;
-        let heads = self.to_id_set(&heads)?;
-        let spans = self.dag().range(roots, heads)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        Ok(result)
-    }
-
-    /// Calculates the descendants of the given set.
-    fn descendants(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().descendants(self.to_id_set(&set)?)?;
-        let result = NameSet::from_spans_dag(spans, self)?;
-        Ok(result)
-    }
-
-    /// Get a snapshot of the current graph.
-    fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
-        NameDagStorage::dag_snapshot(self)
-    }
+    };
 }
+
+impl_dag_algorithms!(NameDag);
+impl_dag_algorithms!(MemNameDag);
 
 /// Extract the ANCESTORS flag if the set with the `hints` is bound to a
 /// compatible DAG.
@@ -776,7 +785,7 @@ pub trait NameDagStorage: IdMapEq {
     fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync>;
 
     /// (Relatively cheaply) clone the dag.
-    fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
+    fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
 }
 
 impl NameDagStorage for NameDag {
@@ -792,7 +801,7 @@ impl NameDagStorage for NameDag {
     fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync> {
         self.snapshot_map.clone()
     }
-    fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+    fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.try_snapshot()? as Arc<dyn DagAlgorithm + Send + Sync>)
     }
 }
@@ -810,7 +819,7 @@ impl NameDagStorage for MemNameDag {
     fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync> {
         self.snapshot_map.clone()
     }
-    fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+    fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.snapshot() as Arc<dyn DagAlgorithm + Send + Sync>)
     }
 }
