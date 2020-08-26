@@ -1055,20 +1055,28 @@ impl<Store: IdDagStore> IdDag<Store> {
         if roots.is_empty() {
             return Ok(SpanSet::empty());
         }
-        let heads = heads.into();
+        let mut heads = heads.into();
+        if heads.is_empty() {
+            return Ok(SpanSet::empty());
+        }
         #[cfg(test)]
         let result_old = self.range_old(roots.clone(), heads.clone())?;
-        let max_head_id = match heads.max() {
-            Some(id) => id,
-            None => return Ok(SpanSet::empty()),
-        };
+
+        // Remove uninteresting heads. Make `ancestors(heads)` a bit easier.
+        let min_root_id = roots.min().unwrap();
+        let min_head_id = heads.min().unwrap();
+        if min_head_id < min_root_id {
+            let span = min_root_id..=Id::MAX;
+            heads = heads.intersection(&span.into());
+        }
 
         let ancestors_of_heads = self.ancestors(heads)?;
-        let descendants_of_roots = self.descendants_up_to(&roots, max_head_id)?;
-        let result = ancestors_of_heads.intersection(&descendants_of_roots);
+        let result = self.descendants_intersection(&roots, &ancestors_of_heads)?;
 
         #[cfg(test)]
         {
+            let intersection = ancestors_of_heads.intersection(&result);
+            assert_eq!(result.as_spans(), intersection.as_spans());
             assert_eq!(result.as_spans(), result_old.as_spans());
         }
         Ok(result)
@@ -1219,7 +1227,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// This is O(flat segments), or O(merges).
     pub fn descendants(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let roots = set.into();
-        let result = self.descendants_up_to(&roots, Id::MAX)?;
+        let result = self.descendants_intersection(&roots, &self.all()?)?;
 
         #[cfg(test)]
         {
@@ -1318,19 +1326,28 @@ impl<Store: IdDagStore> IdDag<Store> {
         Ok(ctx.result)
     }
 
-    /// Calculate descendants(roots) up to the specified max id.
+    /// Calculate (descendants(roots) & ancestors).
     ///
     /// This is O(flat segments), or O(merges).
-    fn descendants_up_to(&self, roots: &SpanSet, max_id: Id) -> Result<SpanSet> {
+    fn descendants_intersection(&self, roots: &SpanSet, ancestors: &SpanSet) -> Result<SpanSet> {
         let min_root = match roots.min() {
             Some(id) => id,
             None => return Ok(SpanSet::empty()),
         };
+        let max_root = roots.max().unwrap();
         let mut result = SpanSetAsc::empty();
+
+        // For the master group, use linear scan for flat segments. This is
+        // usually more efficient, because the master group usually only has 1
+        // head, and most segments will be included.
+        let master_max_id = ancestors
+            .max()
+            .unwrap_or(Id::MIN)
+            .min(Group::MASTER.max_id());
         for seg in self.iter_segments_ascending(min_root, 0)? {
             let seg = seg?;
             let span = seg.span()?;
-            if span.low > max_id {
+            if span.low > master_max_id {
                 break;
             }
             let parents = seg.parents()?;
@@ -1349,11 +1366,83 @@ impl<Store: IdDagStore> IdDag<Store> {
                     None => continue,
                 }
             };
-            if low > max_id {
+            if low > master_max_id {
                 break;
             }
-            result.push_span(low..=span.high.min(max_id));
+            result.push_span(low..=span.high.min(master_max_id));
         }
+        result = result.intersection(&SpanSetAsc::from_span_set(&ancestors));
+
+        // For the non-master group, only check flat segments covered by
+        // `ancestors`.
+        //
+        // This is usually more efficient, because the non-master group can
+        // have lots of heads (created in the past) that are no longer visible
+        // or interesting. For a typical query like `x::y`, it might just select
+        // a few heads in the non-master group. It's a waste of time to iterate
+        // through lots of invisible segments.
+        let non_master_spans = ancestors.intersection(&Group::NON_MASTER.span().into());
+        // Visit in ascending order so SpanSetAsc::push_span works efficiently.
+        let mut span_iter = non_master_spans.as_spans().iter().rev().cloned();
+        let mut next_optional_span = span_iter.next();
+        while let Some(next_span) = next_optional_span {
+            // The "next_span" could be larger than a flat segment.
+            let seg = match self.find_flat_segment_including_id(next_span.low)? {
+                Some(seg) => seg,
+                None => break,
+            };
+            let seg_span = seg.span()?;
+            // The overlap part of the flat segment and the span from 'ancestors'.
+            let mut overlap_span =
+                Span::from(seg_span.low.max(next_span.low)..=seg_span.high.min(next_span.high));
+            if roots.contains(overlap_span.low) {
+                // Descendants includes 'overlap_span' since 'low' is in 'roots'.
+                // (no need to check 'result' - it does not include anything in 'overlap')
+                result.push_span(overlap_span);
+            } else if next_span.low == seg_span.low {
+                let parents = seg.parents()?;
+                if !parents.is_empty()
+                    && parents
+                        .into_iter()
+                        .any(|p| result.contains(p) || roots.contains(p))
+                {
+                    // Descendants includes 'overlap_span' since parents are in roots or result.
+                    result.push_span(overlap_span);
+                } else if overlap_span.low <= max_root && overlap_span.high >= min_root {
+                    // If 'overlap_span' overlaps with roots, part of it should be in
+                    // 'Descendants' result:
+                    //
+                    //            root1  root2
+                    //               v    v
+                    //    (low) |-- overlap-span --| (high)
+                    //               |-------------|
+                    //               push this part to result
+                    let roots_intesection = roots.intersection(&overlap_span.into());
+                    if let Some(id) = roots_intesection.min() {
+                        overlap_span.low = id;
+                        result.push_span(overlap_span);
+                    }
+                }
+            } else {
+                // This block practically does not happen if `ancestors` is
+                // really "ancestors" (aka. `ancestors(ancestors)` is
+                // `ancestors`), because `ancestors` will not include
+                // a flat segment without including the segment's low id.
+                //
+                // But, in case it happens (because `ancestors` is weird),
+                // do something sensible.
+
+                // `next_span.low - 1` is the parent of `next_span.low`,
+                let p = next_span.low - 1;
+                if result.contains(p) || roots.contains(p) {
+                    result.push_span(overlap_span);
+                }
+            }
+            // Update next_optional_span.
+            next_optional_span = Span::try_from_bounds(overlap_span.high + 1..=next_span.high)
+                .or_else(|| span_iter.next());
+        }
+
         Ok(result.into_span_set())
     }
 }

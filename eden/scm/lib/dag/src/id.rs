@@ -10,6 +10,7 @@
 //! Defines types around [`Id`].
 
 use crate::errors::programming;
+use crate::spanset::Span;
 use crate::Result;
 pub use minibytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -139,6 +140,14 @@ impl Group {
     /// The maximum [`Id`] in this group.
     pub const fn max_id(self) -> Id {
         Id(self.min_id().0 + ((1u64 << (64 - Self::BITS)) - 1))
+    }
+
+    /// A [`Span`] covering `min_id`..=`max_id`.
+    pub const fn span(self) -> Span {
+        Span {
+            low: self.min_id(),
+            high: self.max_id(),
+        }
     }
 }
 

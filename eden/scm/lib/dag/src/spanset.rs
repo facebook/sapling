@@ -89,7 +89,7 @@ impl Span {
         (Id::MIN..=Id::MAX).into()
     }
 
-    fn try_from_bounds(bounds: impl RangeBounds<Id>) -> Option<Self> {
+    pub(crate) fn try_from_bounds(bounds: impl RangeBounds<Id>) -> Option<Self> {
         use Bound::{Excluded, Included};
         #[cfg(debug_assertions)]
         {
@@ -594,6 +594,15 @@ impl SpanSetAsc {
                 None
             }
         })
+    }
+
+    pub fn intersection(&self, rhs: &SpanSetAsc) -> SpanSetAsc {
+        Self(self.0.intersection(&rhs.0))
+    }
+
+    pub fn from_span_set(set: &SpanSet) -> SpanSetAsc {
+        let spans = set.as_spans().iter().cloned().rev().map(span_rev);
+        SpanSetAsc(SpanSet::from_sorted_spans(spans))
     }
 
     /// Convert back to a `SpanSet` optimized for descending order.
