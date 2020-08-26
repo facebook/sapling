@@ -12,6 +12,7 @@ use crate::idmap::AssignHeadOutcome;
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
+use crate::spanset::SpanSetAsc;
 use crate::Error::Programming;
 use crate::Level;
 use crate::Result;
@@ -1151,7 +1152,23 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// Calculate the descendants of the given set.
     ///
     /// Logically equivalent to `range(set, all())`.
+    ///
+    /// This is O(flat segments), or O(merges).
     pub fn descendants(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
+        let roots = set.into();
+        let result = self.descendants_up_to(&roots, Id::MAX)?;
+
+        #[cfg(test)]
+        {
+            let result_old = self.descendants_old(roots)?;
+            assert_eq!(result.as_spans(), result_old.as_spans());
+        }
+
+        Ok(result)
+    }
+
+    #[cfg(test)]
+    fn descendants_old(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         // The algorithm is a manually "inlined" version of `range` where `ancestors`
         // is known to be `all()`.
 
@@ -1236,6 +1253,45 @@ impl<Store: IdDagStore> IdDag<Store> {
             tracing_span.record("result", &field::debug(&ctx.result));
         }
         Ok(ctx.result)
+    }
+
+    /// Calculate descendants(roots) up to the specified max id.
+    ///
+    /// This is O(flat segments), or O(merges).
+    fn descendants_up_to(&self, roots: &SpanSet, max_id: Id) -> Result<SpanSet> {
+        let min_root = match roots.min() {
+            Some(id) => id,
+            None => return Ok(SpanSet::empty()),
+        };
+        let mut result = SpanSetAsc::empty();
+        for seg in self.iter_segments_ascending(min_root, 0)? {
+            let seg = seg?;
+            let span = seg.span()?;
+            if span.low > max_id {
+                break;
+            }
+            let parents = seg.parents()?;
+            let low = if !parents.is_empty()
+                && parents
+                    .iter()
+                    .any(|&p| result.contains(p) || roots.contains(p))
+            {
+                span.low
+            } else {
+                match result
+                    .intersection_span_min(span)
+                    .or_else(|| roots.intersection(&span.into()).min())
+                {
+                    Some(id) => id,
+                    None => continue,
+                }
+            };
+            if low > max_id {
+                break;
+            }
+            result.push_span(low..=span.high.min(max_id));
+        }
+        Ok(result.into_span_set())
     }
 }
 
