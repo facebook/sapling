@@ -570,6 +570,12 @@ class localrepository(object):
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
 
+        # headcache might belong to the changelog object for easier
+        # invalidation. However, that requires moving the dependencies
+        # involved in `head` calculation to changelog too, including
+        # remotenames.
+        self._headcache = {}
+
         self.connectionpool = connectionpool.connectionpool(self)
 
         self._smallcommitmetadata = None
@@ -1896,6 +1902,7 @@ class localrepository(object):
         (e.g. incomplete fncache causes unintentional failure, but
         redundant one doesn't).
         """
+        self._headcache.clear()
         for k in list(self._filecache.keys()):
             # dirstate is invalidated separately in invalidatedirstate()
             if k == "dirstate":
@@ -1941,6 +1948,10 @@ class localrepository(object):
             del self._filecache["changelog"]
         if "changelog" in self.__dict__:
             del self.__dict__["changelog"]
+        # The 'revs' might have been changed (ex. changelog migrated to a
+        # different form).
+        self._headcache.clear()
+        self._phasecache.invalidate()
 
     def invalidateall(self):
         """Fully invalidates both store and non-store parts, causing the
@@ -2674,40 +2685,68 @@ class localrepository(object):
         """Used by workingctx to clear post-dirstate-status hooks."""
         del self._postdsstatus[:]
 
+    def _cachedheadrevs(self, includepublic=True, includedraft=True):
+        """Get nodes of both public and draft heads.
+
+        Cached. Invalidate on transaction commit.
+
+        Respect visibility.all-heads (aka. --hidden).
+        """
+        cl = self.changelog
+        if includedraft:
+            draftkey = cl._visibleheads.changecount
+        else:
+            draftkey = None
+        if includepublic:
+            publickey = self._remotenames.changecount
+        else:
+            publickey = None
+
+        key = (tuple(self.dirstate.parents()), len(cl), draftkey, publickey)
+        result = self._headcache.get(key)
+        if result is not None:
+            return result
+
+        if includedraft:
+            nodes = [
+                n
+                for n in self.dirstate.parents() + list(self._bookmarks.values())
+                if n != nullid
+            ]
+        else:
+            nodes = []
+        # Do not treat the draft heads returned by remotenames as
+        # unconditionally visible. This makes it possible to hide
+        # them by "hg hide".
+        publicnodes, _draftnodes = _remotenodes(self)
+        cl = self.changelog
+        torev = cl.nodemap.get
+        if includepublic:
+            nodes += publicnodes
+        if includedraft:
+            if cl._uiconfig.configbool("visibility", "all-heads"):  # aka. --hidden
+                visibleheads = cl._visibleheads.allheads()
+            else:
+                visibleheads = cl._visibleheads.heads
+            nodes += visibleheads
+        # Do not report nullid. index2.headsancestors does not support it.
+        if cl.userust("index2"):
+            hasnode = cl.hasnode
+            nodes = [n for n in set(nodes) if n != nullid and hasnode(n)]
+            headnodes = cl.dag.headsancestors(nodes)
+            headrevs = list(cl.torevs(headnodes))
+        else:
+            revs = [r for r in map(torev, nodes) if r is not None and r >= 0]
+            headrevs = cl.index2.headsancestors(revs)
+        self._headcache[key] = headrevs
+        return headrevs
+
     def headrevs(self, start=None, includepublic=True, includedraft=True, reverse=True):
         cl = self.changelog
         if self.ui.configbool("experimental", "narrow-heads"):
-            if includedraft:
-                nodes = [
-                    n
-                    for n in self.dirstate.parents() + list(self._bookmarks.values())
-                    if n != nullid
-                ]
-            else:
-                nodes = []
-            # Do not treat the draft heads returned by remotenames as
-            # unconditionally visible. This makes it possible to hide
-            # them by "hg hide".
-            publicnodes, _draftnodes = _remotenodes(self)
-            cl = self.changelog
-            torev = cl.nodemap.get
-            if includepublic:
-                nodes += publicnodes
-            if includedraft:
-                if cl._uiconfig.configbool("visibility", "all-heads"):
-                    visibleheads = cl._visibleheads.allheads()
-                else:
-                    visibleheads = cl._visibleheads.heads
-                nodes += visibleheads
-            # Do not report nullid. index2.headsancestors does not support it.
-            if cl.userust("index2"):
-                hasnode = cl.hasnode
-                nodes = [n for n in set(nodes) - {nullid} if hasnode(n)]
-                headnodes = cl.dag.headsancestors(nodes)
-                headrevs = list(cl.torevs(headnodes))
-            else:
-                revs = [r for r in map(torev, nodes) if r is not None and r >= 0]
-                headrevs = cl.index2.headsancestors(revs)
+            headrevs = self._cachedheadrevs(
+                includedraft=includedraft, includepublic=includepublic
+            )
             # headrevs is already in DESC.
             reverse = not reverse
         else:

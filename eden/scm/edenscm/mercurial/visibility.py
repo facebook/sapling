@@ -63,6 +63,9 @@ class visibleheads(object):
 
     LOGHEADLIMIT = 4
 
+    # Count of changes. Useful for cache invalidation.
+    _changecount = 0
+
     def __init__(self, vfs):
         self.vfs = vfs
         self._invisiblerevs = None
@@ -84,6 +87,10 @@ class visibleheads(object):
             add = self._allheads.add
             for head in self.heads:
                 add(head)
+
+    @property
+    def changecount(self):
+        return self._changecount
 
     def _write(self, fp):
         fp.write(encodeutf8("%s\n" % FORMAT_VERSION))
@@ -149,6 +156,7 @@ class visibleheads(object):
             [head for head in self.heads if head in realnewheadsset] + realnewheads
         )
         if self.heads != newheads:
+            self._changecount += 1
             self._logchange(self.heads, newheads)
             self.heads = newheads
             self.dirty = True

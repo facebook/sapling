@@ -1012,6 +1012,9 @@ class remotenames(dict):
     remotenames, use the `clearnames` method to force an eventual load.
     """
 
+    # Count of changes. Useful for cache invalidation.
+    _changecount = 0
+
     def __init__(self, repo, *args):
         dict.__init__(self, *args)
         self._repo = repo
@@ -1025,12 +1028,14 @@ class remotenames(dict):
         self["bookmarks"] = lazyremotenamedict("bookmarks", self._repo)
         self._invalidatecache()
         self._loadednames = False
+        self._changecount += 1
 
     def _invalidatecache(self):
         self._node2marks = None
         self._hoist2nodes = None
         self._node2hoists = None
         self._node2branch = None
+        self._changecount += 1
 
     def applychanges(self, changes):
         # Only supported for bookmarks
@@ -1040,6 +1045,7 @@ class remotenames(dict):
             path, name = splitremotename(remotename)
             remotepathbooks.setdefault(path, {})[name] = node
 
+        self._changecount += 1
         saveremotenames(self._repo, remotepathbooks)
 
     def mark2nodes(self):
@@ -1074,6 +1080,10 @@ class remotenames(dict):
                     name = name[len(hoist) :]
                     self._node2hoists.setdefault(node[0], []).append(name)
         return self._node2hoists
+
+    @property
+    def changecount(self):
+        return self._changecount
 
 
 def saveremotenames(repo, remotebookmarks, override=True):
