@@ -967,7 +967,7 @@ impl DagAlgorithm for RevlogIndex {
                 spans.push(id);
             }
             let result = Set::from_spans_idmap(spans, self.get_snapshot());
-            result.hints().set_dag(self.snapshot_dag()?);
+            result.hints().set_dag(self.dag_snapshot()?);
             Ok(result)
         }
     }
@@ -995,7 +995,7 @@ impl DagAlgorithm for RevlogIndex {
         result
             .hints()
             .add_flags(Flags::FULL)
-            .set_dag(self.snapshot_dag()?);
+            .set_dag(self.dag_snapshot()?);
         Ok(result)
     }
 
@@ -1041,7 +1041,7 @@ impl DagAlgorithm for RevlogIndex {
         set.hints()
             .add_flags(Flags::ID_DESC | Flags::TOPO_DESC | Flags::ANCESTORS)
             .set_max_id(max_id)
-            .set_dag(self.snapshot_dag()?);
+            .set_dag(self.dag_snapshot()?);
 
         Ok(set)
     }
@@ -1082,7 +1082,7 @@ impl DagAlgorithm for RevlogIndex {
 
         let idmap = dag;
         let result = Set::from_spans_idmap(id_spans, idmap);
-        result.hints().set_dag(self.snapshot_dag()?);
+        result.hints().set_dag(self.dag_snapshot()?);
         Ok(result)
     }
 
@@ -1117,7 +1117,7 @@ impl DagAlgorithm for RevlogIndex {
         set.hints()
             .add_flags(Flags::ID_ASC)
             .set_min_id(min_id)
-            .set_dag(self.snapshot_dag()?);
+            .set_dag(self.dag_snapshot()?);
         Ok(set)
     }
 
@@ -1151,7 +1151,7 @@ impl DagAlgorithm for RevlogIndex {
             .add_flags(Flags::ID_DESC | Flags::TOPO_DESC)
             .set_min_id(min_id)
             .set_max_id(max_id)
-            .set_dag(self.snapshot_dag()?);
+            .set_dag(self.dag_snapshot()?);
         Ok(set)
     }
 
@@ -1202,7 +1202,7 @@ impl DagAlgorithm for RevlogIndex {
         let gcas = self.gca_revs(&revs, usize::max_value())?;
         let spans = IdSet::from_spans(gcas.into_iter().map(|r| Id(r as _)));
         let result = Set::from_spans_idmap(spans, self.get_snapshot());
-        result.hints().set_dag(self.snapshot_dag()?);
+        result.hints().set_dag(self.dag_snapshot()?);
         Ok(result)
     }
 
@@ -1268,7 +1268,7 @@ impl DagAlgorithm for RevlogIndex {
             }
         }
         let result = Set::from_spans_idmap(result_id_set, self.get_snapshot());
-        result.hints().set_dag(self.snapshot_dag()?);
+        result.hints().set_dag(self.dag_snapshot()?);
         Ok(result)
     }
 
@@ -1290,7 +1290,7 @@ impl DagAlgorithm for RevlogIndex {
         let result_revs = self.range_revs(&root_revs, &head_revs)?;
         let result_id_set = IdSet::from_spans(result_revs.into_iter().map(|r| Id(r as _)));
         let result = Set::from_spans_idmap(result_id_set, self.get_snapshot());
-        result.hints().set_dag(self.snapshot_dag()?);
+        result.hints().set_dag(self.dag_snapshot()?);
         Ok(result)
     }
 
@@ -1361,7 +1361,7 @@ impl DagAlgorithm for RevlogIndex {
         }
 
         let result = Set::from_spans_idmap(result, self.get_snapshot());
-        result.hints().set_dag(self.snapshot_dag()?);
+        result.hints().set_dag(self.dag_snapshot()?);
         Ok(result)
     }
 
@@ -1379,8 +1379,8 @@ impl DagAlgorithm for RevlogIndex {
         ancestors
             .hints()
             .add_flags(Flags::ANCESTORS)
-            .set_dag(self.snapshot_dag()?);
-        only.hints().set_dag(self.snapshot_dag()?);
+            .set_dag(self.dag_snapshot()?);
+        only.hints().set_dag(self.dag_snapshot()?);
         Ok((only, ancestors))
     }
 
@@ -1423,7 +1423,7 @@ impl DagAlgorithm for RevlogIndex {
         set.hints()
             .add_flags(Flags::ID_ASC)
             .set_min_id(min_id)
-            .set_dag(self.snapshot_dag()?);
+            .set_dag(self.dag_snapshot()?);
         Ok(set)
     }
 
@@ -1490,11 +1490,11 @@ impl DagAlgorithm for RevlogIndex {
         }
 
         let result = Set::from_spans_idmap(result, self.get_snapshot());
-        result.hints().set_dag(self.snapshot_dag()?);
+        result.hints().set_dag(self.dag_snapshot()?);
         Ok(result)
     }
 
-    fn snapshot_dag(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+    fn dag_snapshot(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.get_snapshot())
     }
 }

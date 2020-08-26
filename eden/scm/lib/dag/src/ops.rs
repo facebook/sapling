@@ -287,7 +287,7 @@ pub trait DagAlgorithm {
     /// Get a snapshot of the current graph that can operate separately.
     ///
     /// This makes it easier to fight with borrowck.
-    fn snapshot_dag(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
+    fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
 }
 
 /// Add vertexes recursively to the DAG.
@@ -456,7 +456,7 @@ impl<T: IdMapSnapshot + DagAlgorithm> ToSet for T {
     fn to_set(&self, set: &IdSet) -> Result<NameSet> {
         let id_map = self.id_map_snapshot()?;
         let result = NameSet::from_spans_idmap(set.clone(), id_map);
-        result.hints().set_dag(self.snapshot_dag()?);
+        result.hints().set_dag(self.dag_snapshot()?);
         Ok(result)
     }
 }

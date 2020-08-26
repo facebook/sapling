@@ -154,8 +154,8 @@ impl DagAlgorithm for DoubleWriteCommits {
     fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
         self.commits.reachable_roots(roots, heads)
     }
-    fn snapshot_dag(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
-        self.commits.snapshot_dag()
+    fn dag_snapshot(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+        self.commits.dag_snapshot()
     }
 }
 

@@ -295,9 +295,9 @@ impl DagAlgorithm for commits {
         self.inner(py).borrow().reachable_roots(roots, heads)
     }
 
-    fn snapshot_dag(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
+    fn dag_snapshot(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         let py = unsafe { Python::assume_gil_acquired() };
-        self.inner(py).borrow().snapshot_dag()
+        self.inner(py).borrow().dag_snapshot()
     }
 }
 
