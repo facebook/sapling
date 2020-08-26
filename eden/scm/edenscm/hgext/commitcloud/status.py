@@ -22,7 +22,10 @@ from . import (
 
 def summary(repo):
     ui = repo.ui
-    if not ui.configbool("infinitepushbackup", "enablestatus"):
+    # commitcloud config should eventually replace the infinitepushbackup one
+    if not ui.configbool("infinitepushbackup", "enablestatus") or not ui.configbool(
+        "commitcloud", "enablestatus"
+    ):
         return
 
     # Output backup status if enablestatus is on

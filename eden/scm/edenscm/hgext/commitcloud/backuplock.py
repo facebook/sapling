@@ -117,7 +117,9 @@ def trylock(repo):
         with lockmod.trylock(repo.ui, repo.sharedvfs, lockfilename, 0, 0) as lock:
             yield lock
     except error.LockHeld as e:
-        if e.lockinfo.isrunning():
+        if e.lockinfo.isrunning() and repo.ui.configbool(
+            "commitcloud", "enableprogress"
+        ):
             lockinfo = e.lockinfo
             etime = _getprocessetime(lockinfo)
             if etime:

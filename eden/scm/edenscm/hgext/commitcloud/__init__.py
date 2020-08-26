@@ -104,6 +104,12 @@ Configs::
     # after the host, rather than the default workspace
     automigratehostworkspace = True
 
+    # Enable reporting of background sync status in the smartlog.
+    enablestatus = True
+
+    # Enable reporting of background sync progress in the smartlog.
+    enableprogress = True
+
     [infinitepushbackup]
     # Whether to enable automatic backups. If this option is True then a backup
     # process will be started after every mercurial command that modifies the
@@ -183,6 +189,8 @@ configitem("commitcloud", "backuplimitnocheck", default=4)
 configitem("commitcloud", "automigrate", default=False)
 configitem("commitcloud", "automigratehostworkspace", default=False)
 configitem("commitcloud", "synccheckoutlocations", default=False)
+configitem("commitcloud", "enablestatus", default=True)
+configitem("commitcloud", "enableprogress", default=True)
 configitem("infinitepushbackup", "backuplistlimit", default=5)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)
