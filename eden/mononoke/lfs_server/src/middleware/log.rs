@@ -10,6 +10,7 @@ use hyper::{Body, Response};
 use hyper::{Method, StatusCode, Uri, Version};
 use slog::{info, o, Logger};
 use std::fmt::{self, Debug, Display};
+use std::time::Duration;
 use time_ext::DurationExt;
 
 use super::{ClientIdentity, Middleware, RequestContext, RequestLoad};
@@ -33,12 +34,23 @@ macro_rules! TEST_FRIENDLY_FORMAT {
 
 /// We use DurationForDisplay to append ms on non-empty durations.
 #[derive(Debug)]
-struct DurationForDisplay(u64);
+struct DurationForDisplay(Option<u64>);
+
+impl From<Option<Duration>> for DurationForDisplay {
+    fn from(duration: Option<Duration>) -> Self {
+        Self(duration.map(|d| d.as_millis_unchecked()))
+    }
+}
 
 impl Display for DurationForDisplay {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.0, fmt)?;
-        write!(fmt, "ms")
+        match self.0 {
+            Some(duration) => {
+                fmt::Display::fmt(&duration, fmt)?;
+                write!(fmt, "ms")
+            }
+            None => write!(fmt, "-"),
+        }
     }
 }
 
@@ -112,7 +124,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
                     version,
                     status.as_u16(),
                     bytes_sent.unwrap_or(0),
-                    DurationForDisplay(duration.as_millis_unchecked()),
+                    DurationForDisplay::from(*duration),
                     load,
                 );
             });

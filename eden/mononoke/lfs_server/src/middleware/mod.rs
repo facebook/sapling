@@ -22,4 +22,4 @@ pub use self::log::LogMiddleware;
 pub use self::ods::OdsMiddleware;
 pub use self::request_context::{LfsMethod, RequestContext, RequestContextMiddleware};
 pub use self::scuba::{ScubaKey, ScubaMiddleware, ScubaMiddlewareState};
-pub use self::timer::TimerMiddleware;
+pub use self::timer::{HeadersDuration, RequestStartTime, TimerMiddleware};

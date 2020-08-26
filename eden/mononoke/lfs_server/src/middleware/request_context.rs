@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::time::{Duration, Instant};
+
 use cached_config::ConfigHandle;
 use context::{CoreContext, PerfCounters, SessionContainer};
 use fbinit::FacebookInit;
@@ -21,14 +24,18 @@ use gotham_ext::{
 use hyper::{body::Body, Response};
 use scuba::ScubaSampleBuilder;
 use slog::{o, Logger};
-use std::fmt;
-use std::time::{Duration, Instant};
 use tokio::task;
 
 use crate::config::ServerConfig;
 
-type PostRequestCallback =
-    Box<dyn FnOnce(&Duration, &Option<String>, Option<u64>, &PerfCounters) + Sync + Send + 'static>;
+use super::RequestStartTime;
+
+type PostRequestCallback = Box<
+    dyn FnOnce(&Option<Duration>, &Option<String>, Option<u64>, &PerfCounters)
+        + Sync
+        + Send
+        + 'static,
+>;
 
 #[derive(Copy, Clone)]
 pub enum LfsMethod {
@@ -56,11 +63,9 @@ pub struct RequestContext {
     pub repository: Option<String>,
     pub method: Option<LfsMethod>,
     pub error_msg: Option<String>,
-    pub headers_duration: Option<Duration>,
     pub should_log: bool,
 
     checkpoint: Option<Receiver<u64>>,
-    start_time: Instant,
     post_request_callbacks: Vec<PostRequestCallback>,
 }
 
@@ -71,9 +76,7 @@ impl RequestContext {
             repository: None,
             method: None,
             error_msg: None,
-            headers_duration: None,
             should_log,
-            start_time: Instant::now(),
             checkpoint: None,
             post_request_callbacks: vec![],
         }
@@ -88,19 +91,14 @@ impl RequestContext {
         self.error_msg = Some(error_msg);
     }
 
-    pub fn headers_ready(&mut self) {
-        self.headers_duration = Some(self.start_time.elapsed());
-    }
-
     pub fn add_post_request<T>(&mut self, callback: T)
     where
-        T: FnOnce(&Duration, &Option<String>, Option<u64>, &PerfCounters) + Sync + Send + 'static,
+        T: FnOnce(&Option<Duration>, &Option<String>, Option<u64>, &PerfCounters)
+            + Sync
+            + Send
+            + 'static,
     {
         self.post_request_callbacks.push(Box::new(callback));
-    }
-
-    pub fn start_time(&self) -> Instant {
-        self.start_time
     }
 
     /// Delay post request until a callback has completed. This is useful to e.g. record how much data was sent.
@@ -111,13 +109,16 @@ impl RequestContext {
         sender
     }
 
-    fn dispatch_post_request<H>(self, content_length: Option<u64>, client_hostname: H)
-    where
+    fn dispatch_post_request<H>(
+        self,
+        start_time: Option<Instant>,
+        content_length: Option<u64>,
+        client_hostname: H,
+    ) where
         H: Future<Output = Option<String>> + Send + 'static,
     {
         let Self {
             ctx,
-            start_time,
             post_request_callbacks,
             checkpoint,
             ..
@@ -133,7 +134,7 @@ impl RequestContext {
             };
 
             // Capture elapsed time before waiting for the client hostname to resolve.
-            let elapsed = start_time.elapsed();
+            let elapsed = start_time.map(|start| start.elapsed());
 
             // Resolve client hostname. Querying DNS might be slow.
             let client_hostname = client_hostname.await;
@@ -187,6 +188,7 @@ impl Middleware for RequestContextMiddleware {
     }
 
     async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
+        let start_time = RequestStartTime::try_borrow_from(&state).map(|t| t.0);
         let content_length = ResponseContentLength::try_borrow_from(&state).map(|l| l.0);
 
         let config = self.config_handle.get();
@@ -197,7 +199,7 @@ impl Middleware for RequestContextMiddleware {
         };
 
         if let Some(ctx) = state.try_take::<RequestContext>() {
-            ctx.dispatch_post_request(content_length, client_hostname);
+            ctx.dispatch_post_request(start_time, content_length, client_hostname);
         }
     }
 }

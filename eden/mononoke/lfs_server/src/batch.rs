@@ -24,6 +24,7 @@ use serde::Deserialize;
 use slog::debug;
 use stats::prelude::*;
 use std::collections::HashMap;
+use std::time::Instant;
 use time_ext::DurationExt;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
 
@@ -38,7 +39,7 @@ use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
-use crate::middleware::{LfsMethod, RequestContext, ScubaKey, ScubaMiddlewareState};
+use crate::middleware::{LfsMethod, RequestStartTime, ScubaKey, ScubaMiddlewareState};
 use crate::popularity::allow_consistent_routing;
 
 define_stats! {
@@ -489,7 +490,9 @@ async fn batch_download(
 // TODO: Do we want to validate the client's Accept & Content-Type headers here?
 pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let BatchParams { repository } = state.take();
-    let start_time = state.borrow::<RequestContext>().start_time();
+    let start_time = state
+        .try_borrow::<RequestStartTime>()
+        .map_or_else(Instant::now, |t| t.0);
 
     let ctx =
         RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Batch).await?;

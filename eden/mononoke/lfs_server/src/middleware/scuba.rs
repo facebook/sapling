@@ -19,7 +19,7 @@ use hyper::{Body, Response};
 use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
-use super::{RequestContext, RequestLoad as RequestLoadMiddleware};
+use super::{HeadersDuration, RequestContext, RequestLoad as RequestLoadMiddleware};
 
 #[derive(Copy, Clone, Debug)]
 pub enum ScubaKey {
@@ -228,6 +228,10 @@ fn log_stats(
 
     scuba.add(ScubaKey::RequestId, request_id(&state));
 
+    if let Some(HeadersDuration(duration)) = HeadersDuration::try_borrow_from(&state) {
+        scuba.add(ScubaKey::HeadersDurationMs, duration.as_millis_unchecked());
+    }
+
     let ctx = state.try_borrow_mut::<RequestContext>()?;
 
     if let Some(repository) = &ctx.repository {
@@ -242,16 +246,11 @@ fn log_stats(
         scuba.add(ScubaKey::ErrorMessage, err_msg.as_ref());
     }
 
-    if let Some(headers_duration) = ctx.headers_duration {
-        scuba.add(
-            ScubaKey::HeadersDurationMs,
-            headers_duration.as_millis_unchecked(),
-        );
-    }
-
     ctx.add_post_request(
         move |duration, client_hostname, bytes_sent, perf_counters| {
-            scuba.add(ScubaKey::DurationMs, duration.as_millis_unchecked());
+            if let Some(duration) = duration {
+                scuba.add(ScubaKey::DurationMs, duration.as_millis_unchecked());
+            }
 
             if let Some(client_hostname) = client_hostname.as_deref() {
                 scuba.add(ScubaKey::ClientHostname, client_hostname);

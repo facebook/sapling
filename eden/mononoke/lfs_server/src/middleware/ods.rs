@@ -37,17 +37,18 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     }
 
     ctx.add_post_request(move |duration, _, response_bytes_sent, _| {
-        match method {
-            LfsMethod::Upload => {
-                STATS::upload_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
-            }
-            LfsMethod::Download => {
-                STATS::download_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
-            }
-            LfsMethod::DownloadSha256 => STATS::download_sha256_duration
-                .add_value(duration.as_millis_unchecked() as i64, (repo,)),
-            LfsMethod::Batch => {
-                STATS::batch_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
+        if let Some(duration) = duration {
+            match method {
+                LfsMethod::Upload => {
+                    STATS::upload_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
+                }
+                LfsMethod::Download => STATS::download_duration
+                    .add_value(duration.as_millis_unchecked() as i64, (repo,)),
+                LfsMethod::DownloadSha256 => STATS::download_sha256_duration
+                    .add_value(duration.as_millis_unchecked() as i64, (repo,)),
+                LfsMethod::Batch => {
+                    STATS::batch_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
+                }
             }
         }
 
