@@ -19,7 +19,6 @@ use std::fs::{self, File};
 use std::io::Cursor;
 use std::iter;
 use std::path::{Path, PathBuf};
-use vlqencoding::VLQEncode;
 
 pub trait IdDagStore {
     /// Maximum level segment in the store
@@ -243,9 +242,10 @@ impl IdDagStore for IndexedLogStore {
         &'a self,
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
-        let mut key = Vec::with_capacity(8);
-        key.write_vlq(parent.0)
-            .expect("write to Vec should not fail");
+        let mut key = Vec::with_capacity(9);
+        // child (segment low id) is in the "master" group.
+        key.write_u8(Group::MASTER.0 as u8).unwrap();
+        key.write_u64::<BigEndian>(parent.0).unwrap();
         let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
         let iter = iter.map(move |result| match result {
             Ok(bytes) => Ok(Segment(self.log.slice_to_bytes(bytes))),
@@ -352,31 +352,41 @@ impl IndexedLogStore {
                     )]
                 }
             })
-            .index("parent", |data| {
-                // parent -> child for flat segments
+            .index("group-parent", |data| {
+                //  child-group parent -> child for flat segments
+                //  ^^^^^^^^^^^ ^^^^^^
+                //  u8          u64 BE
+                //
+                //  The "child-group" prefix is used for invalidating index when
+                //  non-master Ids get re-assigned.
+                if data.len() < Segment::OFFSET_DELTA && data == Self::MAGIC_CLEAR_NON_MASTER {
+                    // Invalidate child-group == 1 entries
+                    return vec![log::IndexOutput::RemovePrefix(Box::new([
+                        Group::NON_MASTER.0 as u8,
+                    ]))];
+                }
                 let seg = Segment(Bytes::copy_from_slice(data));
                 let mut result = Vec::new();
-                if seg.level().ok() == Some(0)
-                    && seg.high().map(|id| id.group()).ok() == Some(Group::MASTER)
-                {
+                if seg.level().ok() == Some(0) {
                     // This should never pass since MAGIC_CLEAR_NON_MASTER[0] != 0.
+                    // ([0] stores level: u8).
                     assert_ne!(
                         data,
                         Self::MAGIC_CLEAR_NON_MASTER,
                         "bug: MAGIC_CLEAR_NON_MASTER conflicts with data"
                     );
-                    if let Ok(parents) = seg.parents() {
+                    if let (Ok(parents), Ok(span)) = (seg.parents(), seg.span()) {
+                        let group = span.low.group();
+                        assert_eq!(
+                            span.low.group(),
+                            span.high.group(),
+                            "Cross-group segment is unexpected"
+                        );
                         for id in parents {
-                            let mut bytes = Vec::with_capacity(8);
-                            bytes.write_vlq(id.0).expect("write to Vec should not fail");
-                            // Attempt to use IndexOutput::Reference instead of
-                            // IndexOutput::Owned to reduce index size.
-                            match data.windows(bytes.len()).position(|w| w == &bytes[..]) {
-                                Some(pos) => result.push(log::IndexOutput::Reference(
-                                    pos as u64..(pos + bytes.len()) as u64,
-                                )),
-                                None => panic!("bug: {:?} should contain {:?}", &data, &bytes),
-                            }
+                            let mut bytes = Vec::with_capacity(9);
+                            bytes.write_u8(group.0 as u8).unwrap();
+                            bytes.write_u64::<BigEndian>(id.0).unwrap();
+                            result.push(log::IndexOutput::Owned(bytes.into()));
                         }
                     }
                 }
@@ -426,8 +436,8 @@ pub struct InProcessStore {
     non_master_segments: Vec<Segment>,
     // level -> head -> serialized Segment
     level_head_index: Vec<BTreeMap<Id, StoreId>>,
-    // parent -> serialized Segment
-    parent_index: BTreeMap<Id, BTreeSet<StoreId>>,
+    // (child-group, parent) -> serialized Segment
+    parent_index: BTreeMap<(Group, Id), BTreeSet<StoreId>>,
 }
 
 impl IdDagStore for InProcessStore {
@@ -467,9 +477,13 @@ impl IdDagStore for InProcessStore {
                 StoreId::NonMaster(self.non_master_segments.len() - 1)
             }
         };
-        if level == 0 && high.group() == Group::MASTER {
+        if level == 0 {
+            let group = high.group();
             for parent in parents {
-                let children = self.parent_index.entry(parent).or_insert(BTreeSet::new());
+                let children = self
+                    .parent_index
+                    .entry((group, parent))
+                    .or_insert_with(BTreeSet::new);
                 children.insert(store_id);
             }
         }
@@ -478,13 +492,19 @@ impl IdDagStore for InProcessStore {
     }
 
     fn remove_non_master(&mut self) -> Result<()> {
-        // Note. The parent index should not contain any non master entries.
         for segment in self.non_master_segments.iter() {
             let level = segment.level()?;
             let head = segment.head()?;
             self.level_head_index
                 .get_mut(level as usize)
                 .map(|head_index| head_index.remove(&head));
+        }
+        let group = Group::NON_MASTER;
+        for (_key, children) in self
+            .parent_index
+            .range_mut((group, group.min_id())..=(group, group.max_id()))
+        {
+            children.clear();
         }
         self.non_master_segments = Vec::new();
         Ok(())
@@ -555,7 +575,7 @@ impl IdDagStore for InProcessStore {
         &'a self,
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
-        match self.parent_index.get(&parent) {
+        match self.parent_index.get(&(Group::MASTER, parent)) {
             None => Ok(Box::new(iter::empty())),
             Some(children) => {
                 let iter = children
