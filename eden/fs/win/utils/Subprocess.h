@@ -8,12 +8,12 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
-#include <optional>
 
-#include "eden/fs/win/utils/Pipe.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/win/utils/Pipe.h"
 
 namespace facebook {
 namespace eden {
