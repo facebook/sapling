@@ -1012,7 +1012,34 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// ```plain,ignore
     /// intersect(ancestors(heads), descendants(roots))
     /// ```
+    ///
+    /// This is O(flat segments), or O(merges).
     pub fn range(&self, roots: impl Into<SpanSet>, heads: impl Into<SpanSet>) -> Result<SpanSet> {
+        let roots = roots.into();
+        if roots.is_empty() {
+            return Ok(SpanSet::empty());
+        }
+        let heads = heads.into();
+        #[cfg(test)]
+        let result_old = self.range_old(roots.clone(), heads.clone())?;
+        let max_head_id = match heads.max() {
+            Some(id) => id,
+            None => return Ok(SpanSet::empty()),
+        };
+
+        let ancestors_of_heads = self.ancestors(heads)?;
+        let descendants_of_roots = self.descendants_up_to(&roots, max_head_id)?;
+        let result = ancestors_of_heads.intersection(&descendants_of_roots);
+
+        #[cfg(test)]
+        {
+            assert_eq!(result.as_spans(), result_old.as_spans());
+        }
+        Ok(result)
+    }
+
+    #[cfg(test)]
+    fn range_old(&self, roots: impl Into<SpanSet>, heads: impl Into<SpanSet>) -> Result<SpanSet> {
         // Pre-calculate ancestors.
         let heads = heads.into();
         let roots = roots.into();
