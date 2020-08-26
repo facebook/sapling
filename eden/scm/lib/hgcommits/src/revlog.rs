@@ -12,14 +12,9 @@ use crate::HgCommit;
 use crate::ReadCommitText;
 use crate::Result;
 use crate::StripCommits;
-use dag::ops::DagAlgorithm;
+use dag::delegate;
 use dag::ops::IdConvert;
-use dag::ops::PrefixLookup;
-use dag::ops::ToIdSet;
-use dag::ops::ToSet;
 use dag::Group;
-use dag::Id;
-use dag::IdSet;
 use dag::Set;
 use dag::Vertex;
 use minibytes::Bytes;
@@ -28,7 +23,6 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 /// HG commits stored on disk using the revlog format.
 pub struct RevlogCommits {
@@ -90,101 +84,7 @@ impl StripCommits for RevlogCommits {
     }
 }
 
-impl IdConvert for RevlogCommits {
-    fn vertex_id(&self, name: Vertex) -> dag::Result<Id> {
-        self.revlog.vertex_id(name)
-    }
-    fn vertex_id_with_max_group(&self, name: &Vertex, max_group: Group) -> dag::Result<Option<Id>> {
-        self.revlog.vertex_id_with_max_group(name, max_group)
-    }
-    fn vertex_name(&self, id: Id) -> dag::Result<Vertex> {
-        self.revlog.vertex_name(id)
-    }
-    fn contains_vertex_name(&self, name: &Vertex) -> dag::Result<bool> {
-        self.revlog.contains_vertex_name(name)
-    }
-}
-
-impl PrefixLookup for RevlogCommits {
-    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> dag::Result<Vec<Vertex>> {
-        self.revlog.vertexes_by_hex_prefix(hex_prefix, limit)
-    }
-}
-
-impl DagAlgorithm for RevlogCommits {
-    fn sort(&self, set: &Set) -> dag::Result<Set> {
-        self.revlog.sort(set)
-    }
-    fn parent_names(&self, name: Vertex) -> dag::Result<Vec<Vertex>> {
-        self.revlog.parent_names(name)
-    }
-    fn all(&self) -> dag::Result<Set> {
-        self.revlog.all()
-    }
-    fn ancestors(&self, set: Set) -> dag::Result<Set> {
-        self.revlog.ancestors(set)
-    }
-    fn parents(&self, set: Set) -> dag::Result<Set> {
-        self.revlog.parents(set)
-    }
-    fn first_ancestor_nth(&self, name: Vertex, n: u64) -> dag::Result<Vertex> {
-        self.revlog.first_ancestor_nth(name, n)
-    }
-    fn heads(&self, set: Set) -> dag::Result<Set> {
-        self.revlog.heads(set)
-    }
-    fn children(&self, set: Set) -> dag::Result<Set> {
-        self.revlog.children(set)
-    }
-    fn roots(&self, set: Set) -> dag::Result<Set> {
-        self.revlog.roots(set)
-    }
-    fn gca_one(&self, set: Set) -> dag::Result<Option<Vertex>> {
-        self.revlog.gca_one(set)
-    }
-    fn gca_all(&self, set: Set) -> dag::Result<Set> {
-        self.revlog.gca_all(set)
-    }
-    fn common_ancestors(&self, set: Set) -> dag::Result<Set> {
-        self.revlog.common_ancestors(set)
-    }
-    fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> dag::Result<bool> {
-        self.revlog.is_ancestor(ancestor, descendant)
-    }
-    fn heads_ancestors(&self, set: Set) -> dag::Result<Set> {
-        self.revlog.heads_ancestors(set)
-    }
-    fn range(&self, roots: Set, heads: Set) -> dag::Result<Set> {
-        self.revlog.range(roots, heads)
-    }
-    fn only(&self, reachable: Set, unreachable: Set) -> dag::Result<Set> {
-        self.revlog.only(reachable, unreachable)
-    }
-    fn only_both(&self, reachable: Set, unreachable: Set) -> dag::Result<(Set, Set)> {
-        self.revlog.only_both(reachable, unreachable)
-    }
-    fn descendants(&self, set: Set) -> dag::Result<Set> {
-        self.revlog.descendants(set)
-    }
-    fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
-        self.revlog.reachable_roots(roots, heads)
-    }
-    fn dag_snapshot(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
-        self.revlog.dag_snapshot()
-    }
-}
-
-impl ToIdSet for RevlogCommits {
-    fn to_id_set(&self, set: &Set) -> dag::Result<IdSet> {
-        self.revlog.to_id_set(set)
-    }
-}
-
-impl ToSet for RevlogCommits {
-    fn to_set(&self, set: &IdSet) -> dag::Result<Set> {
-        self.revlog.to_set(set)
-    }
-}
+delegate!(IdConvert | PrefixLookup | DagAlgorithm | ToIdSet | ToSet, RevlogCommits => self.revlog);
 
 impl DescribeBackend for RevlogCommits {
     fn algorithm_backend(&self) -> &'static str {
