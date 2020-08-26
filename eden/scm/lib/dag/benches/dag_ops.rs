@@ -69,6 +69,10 @@ fn main() {
                 .map(move |j| (Id(i), Id(j)).into())
         })
         .collect(); // 2679 samples
+    let sample_one_ids: Vec<SpanSet> = (0..parents.len() as u64)
+        .step_by(153)
+        .map(|i| SpanSet::from(Id(i)))
+        .collect();
     let sample_sets: Vec<SpanSet> = (0..parents.len() as u64)
         .step_by(10079)
         .flat_map(|i| {
@@ -86,9 +90,17 @@ fn main() {
         })
     });
 
-    bench("children", || {
+    bench("children (spans)", || {
         elapsed(|| {
             for set in &sample_sets {
+                dag.children(set.clone()).unwrap();
+            }
+        })
+    });
+
+    bench("children (1 id)", || {
+        elapsed(|| {
+            for set in &sample_one_ids {
                 dag.children(set.clone()).unwrap();
             }
         })
