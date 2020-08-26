@@ -754,26 +754,6 @@ where
     Ok(())
 }
 
-/// Provide low level access to dag and map.
-/// Unsafe because it's possible to break consistency by writing to them.
-///
-/// This is currently used in Python bindings to provide an interface that is
-/// consistent with `smartset.abstractsmartset`. Ideally, `smartset` provides
-/// public commit hash interface, and there is no LowLevelAccess here.
-pub unsafe trait LowLevelAccess {
-    fn dag(&self) -> &IdDag<IndexedLogStore>;
-    fn map(&self) -> &IdMap;
-}
-
-unsafe impl LowLevelAccess for NameDag {
-    fn dag(&self) -> &IdDag<IndexedLogStore> {
-        &self.dag
-    }
-    fn map(&self) -> &IdMap {
-        &self.map
-    }
-}
-
 fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
     match value {
         Ok(Some(_)) => true,

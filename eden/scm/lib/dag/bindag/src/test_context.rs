@@ -6,10 +6,11 @@
  */
 
 use crate::{parse_bindag, ParentRevs};
+use dag::namedag::NameDagStorage;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
 use dag::OnDiskIdDag;
-use dag::{namedag::LowLevelAccess, ops::DagPersistent, spanset::SpanSet, Id, NameDag, VertexName};
+use dag::{ops::DagPersistent, spanset::SpanSet, Id, NameDag, VertexName};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Range;
