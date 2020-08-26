@@ -19,6 +19,9 @@ use crate::SpanSet;
 use tempfile::tempdir;
 
 #[cfg(test)]
+pub mod dummy_dag;
+
+#[cfg(test)]
 use crate::iddag::FirstAncestorConstraint;
 #[cfg(test)]
 use crate::namedag::MemNameDag;
