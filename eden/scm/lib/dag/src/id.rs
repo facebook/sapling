@@ -193,7 +193,11 @@ impl fmt::Debug for Id {
 
 impl fmt::Display for Group {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        match *self {
+            Group::MASTER => write!(f, "Group Master"),
+            Group::NON_MASTER => write!(f, "Group Non-Master"),
+            _ => write!(f, "Group {}", self.0),
+        }
     }
 }
 

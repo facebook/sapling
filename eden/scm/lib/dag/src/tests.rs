@@ -64,7 +64,7 @@ static ASCII_DAG5: &str = r#"
          \   \   \
       A---C---E---G"#;
 
-fn test_generic_dag1(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
+fn test_generic_dag1<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
     let dag = from_ascii(dag, ASCII_DAG1);
     assert_eq!(expand(dag.all()?), "A B C D E F G H I J K L");
     assert_eq!(expand(dag.ancestors(nameset("H I"))?), "A B C D E F G H I");
@@ -73,7 +73,7 @@ fn test_generic_dag1(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "A C I");
     assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "F J");
     assert_eq!(expand(dag.gca_all(nameset("J K H"))?), "G");
-    Ok(())
+    Ok(dag)
 }
 
 fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -> D) -> Result<()> {
@@ -248,7 +248,7 @@ fn test_generic_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     Ok(())
 }
 
-fn test_generic_dag2(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
+fn test_generic_dag2<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
     let ascii = r#"
             J K
            / \|\
@@ -285,12 +285,44 @@ fn test_generic_dag2(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
     assert!(dag.is_ancestor(v("F"), v("F"))?);
     assert!(!dag.is_ancestor(v("K"), v("I"))?);
 
-    Ok(())
+    Ok(dag)
 }
 
 #[test]
 fn test_mem_namedag() {
-    test_generic_dag1(MemNameDag::new()).unwrap()
+    let dag = test_generic_dag1(MemNameDag::new()).unwrap();
+    assert_eq!(
+        format!("{:?}", dag),
+        r#"Max Level: 1
+ Level 1
+  Group Master:
+   Next Free Id: 12
+   Segments: 1
+    A+0 : L+11 [] Root
+  Group Non-Master:
+   Next Free Id: N0
+   Segments: 0
+ Level 0
+  Group Master:
+   Next Free Id: 12
+   Segments: 12
+    L+11 : L+11 [K+10] OnlyHead
+    K+10 : K+10 [H+7, J+9] OnlyHead
+    J+9 : J+9 [I+8]
+    I+8 : I+8 [G+6]
+    H+7 : H+7 [G+6] OnlyHead
+    G+6 : G+6 [F+5] OnlyHead
+    F+5 : F+5 [E+4] OnlyHead
+    E+4 : E+4 [B+1, D+3] OnlyHead
+    D+3 : D+3 [C+2]
+    C+2 : C+2 [] Root
+    B+1 : B+1 [A+0] OnlyHead
+    A+0 : A+0 [] Root OnlyHead
+  Group Non-Master:
+   Next Free Id: N0
+   Segments: 0
+"#
+    );
 }
 
 #[test]
@@ -312,7 +344,38 @@ fn test_dag_beautify() {
 fn test_namedag() {
     let dir = tempdir().unwrap();
     let name_dag = NameDag::open(dir.path().join("n")).unwrap();
-    test_generic_dag2(name_dag).unwrap();
+    let dag = test_generic_dag2(name_dag).unwrap();
+    assert_eq!(
+        format!("{:?}", dag),
+        r#"Max Level: 1
+ Level 1
+  Group Master:
+   Next Free Id: 0
+   Segments: 0
+  Group Non-Master:
+   Next Free Id: N11
+   Segments: 2
+    H+N9 : K+N10 [E+N2, F+N6, I+N7]
+    A+N0 : J+N8 [] Root
+ Level 0
+  Group Master:
+   Next Free Id: 0
+   Segments: 0
+  Group Non-Master:
+   Next Free Id: N11
+   Segments: 10
+    K+N10 : K+N10 [H+N9, I+N7]
+    H+N9 : H+N9 [E+N2, F+N6]
+    J+N8 : J+N8 [G+N3, I+N7]
+    I+N7 : I+N7 [D+N4, F+N6]
+    F+N6 : F+N6 [B+N1, C+N5]
+    C+N5 : C+N5 [] Root
+    D+N4 : D+N4 [] Root
+    E+N2 : G+N3 [A+N0, B+N1]
+    B+N1 : B+N1 [] Root
+    A+N0 : A+N0 [] Root
+"#
+    );
 }
 
 #[test]

@@ -35,11 +35,13 @@ use crate::ops::IdMapEq;
 use crate::ops::IdMapSnapshot;
 use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
+use crate::segment::SegmentFlags;
 use crate::spanset::SpanSet;
 use crate::Result;
 use indexedlog::multi;
 use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 use std::ops::Deref;
 use std::path::Path;
 use std::sync::Arc;
@@ -854,5 +856,91 @@ impl IdMapSnapshot for NameDag {
 impl IdMapSnapshot for MemNameDag {
     fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
         Ok(Arc::clone(&self.snapshot_map))
+    }
+}
+
+impl fmt::Debug for NameDag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        debug(&self.dag, &self.map, f)
+    }
+}
+
+impl fmt::Debug for MemNameDag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        debug(&self.dag, &self.map, f)
+    }
+}
+
+fn debug<S: IdDagStore>(
+    iddag: &IdDag<S>,
+    idmap: &dyn IdConvert,
+    f: &mut fmt::Formatter,
+) -> fmt::Result {
+    // Show Id, with optional hash.
+    let show = |id: Id| DebugId {
+        id,
+        name: idmap.vertex_name(id).ok(),
+    };
+    let show_flags = |flags: SegmentFlags| -> String {
+        let mut result = Vec::new();
+        if flags.contains(SegmentFlags::HAS_ROOT) {
+            result.push("Root");
+        }
+        if flags.contains(SegmentFlags::ONLY_HEAD) {
+            result.push("OnlyHead");
+        }
+        result.join(" ")
+    };
+
+    if let Ok(max_level) = iddag.max_level() {
+        writeln!(f, "Max Level: {}", max_level)?;
+        for lv in (0..=max_level).rev() {
+            writeln!(f, " Level {}", lv)?;
+            for group in Group::ALL.iter().cloned() {
+                writeln!(f, "  {}:", group)?;
+                if let Ok(id) = iddag.next_free_id(0, group) {
+                    writeln!(f, "   Next Free Id: {}", id)?;
+                }
+                if let Ok(segments) = iddag.next_segments(group.min_id(), lv) {
+                    writeln!(f, "   Segments: {}", segments.len())?;
+                    for segment in segments.into_iter().rev() {
+                        if let (Ok(span), Ok(parents), Ok(flags)) =
+                            (segment.span(), segment.parents(), segment.flags())
+                        {
+                            write!(
+                                f,
+                                "    {:.12?} : {:.12?} {:.12?}",
+                                show(span.low),
+                                show(span.high),
+                                parents.into_iter().map(show).collect::<Vec<_>>(),
+                            )?;
+                            let flags = show_flags(flags);
+                            if !flags.is_empty() {
+                                write!(f, " {}", flags)?;
+                            }
+                            writeln!(f)?;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+struct DebugId {
+    id: Id,
+    name: Option<VertexName>,
+}
+
+impl fmt::Debug for DebugId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(name) = &self.name {
+            fmt::Debug::fmt(&name, f)?;
+            f.write_str("+")?;
+        }
+        write!(f, "{:?}", self.id)?;
+        Ok(())
     }
 }
