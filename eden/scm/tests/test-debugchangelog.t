@@ -99,7 +99,7 @@ To doublewrite:
 To full segments:
 
   $ hg debugchangelog --migrate fullsegments
-  $ hg debugchangelog
+  $ hg debugchangelog --debug
   The changelog is backed by Rust. More backend information:
   Backend (non-lazy segments):
     Local:
@@ -112,6 +112,27 @@ To full segments:
       IdMap
     Commit Data (user, message):
       Zstore
+  Max Level: 1
+   Level 1
+    Group Master:
+     Next Free Id: 0
+     Segments: 0
+    Group Non-Master:
+     Next Free Id: N4
+     Segments: 2
+      112478962961+N3 : 112478962961+N3 [426bada5c675+N1]
+      058c1e1fb10a+N0 : 417dca1c740d+N2 [] Root
+   Level 0
+    Group Master:
+     Next Free Id: 0
+     Segments: 0
+    Group Non-Master:
+     Next Free Id: N4
+     Segments: 4
+      112478962961+N3 : 112478962961+N3 [426bada5c675+N1]
+      417dca1c740d+N2 : 417dca1c740d+N2 [058c1e1fb10a+N0, 426bada5c675+N1]
+      426bada5c675+N1 : 426bada5c675+N1 [] Root
+      058c1e1fb10a+N0 : 058c1e1fb10a+N0 [] Root
 
 The segments backend does not need revlog data.
 

@@ -25,6 +25,7 @@ use gitdag::git2;
 use gitdag::GitDag;
 use metalog::MetaLog;
 use minibytes::Bytes;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -247,6 +248,10 @@ Feature Providers:
             self.dag_path.display(),
             self.git_path.display(),
         )
+    }
+
+    fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()> {
+        write!(w, "{:?}", &*self.dag)
     }
 }
 

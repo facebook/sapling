@@ -27,6 +27,7 @@ use dag::Vertex;
 use minibytes::Bytes;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::io;
 use std::sync::Arc;
 
 /// HG commits in memory.
@@ -213,5 +214,9 @@ Feature Providers:
     Memory
 "#
         .to_string()
+    }
+
+    fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()> {
+        write!(w, "{:?}", &self.dag)
     }
 }

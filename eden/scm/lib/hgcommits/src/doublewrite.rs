@@ -24,6 +24,7 @@ use dag::IdSet;
 use dag::Set;
 use dag::Vertex;
 use minibytes::Bytes;
+use std::io;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -196,5 +197,9 @@ Feature Providers:
             self.commits.commits_path.display(),
             self.revlog.dir.join("00changelog.{i,d,nodemap}").display(),
         )
+    }
+
+    fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()> {
+        self.commits.explain_internals(w)
     }
 }

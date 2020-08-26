@@ -28,6 +28,7 @@ use dag::Vertex;
 use minibytes::Bytes;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -269,5 +270,9 @@ Feature Providers:
             self.dag_path.display(),
             self.commits_path.display()
         )
+    }
+
+    fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()> {
+        write!(w, "{:?}", &self.dag)
     }
 }

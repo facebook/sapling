@@ -13,6 +13,7 @@ use dag::Vertex;
 use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
+use std::io;
 
 pub trait ReadCommitText {
     /// Read raw text for a commit.
@@ -33,6 +34,10 @@ pub trait DescribeBackend {
 
     /// Describe what storage backend is being used.
     fn describe_backend(&self) -> String;
+
+    /// Write human-readable internal data to `w`.
+    /// For segments backend, this writes segments data.
+    fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()>;
 }
 
 /// Parameter used by `add_commits`.

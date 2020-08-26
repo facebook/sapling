@@ -135,6 +135,16 @@ py_class!(pub class commits |py| {
         Ok(inner.describe_backend().into())
     }
 
+    /// Explain internal data.
+    def explaininternals(&self, out: PyObject) -> PyResult<PyNone> {
+        // This function takes a 'out' parameter so it can work with pager
+        // and output progressively.
+        let inner = self.inner(py).borrow();
+        let mut out = cpython_ext::wrap_pyio(out);
+        inner.explain_internals(&mut out).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     /// Construct `commits` from a revlog (`00changelog.i` and `00changelog.d`).
     @staticmethod
     def openrevlog(dir: &PyPath) -> PyResult<Self> {

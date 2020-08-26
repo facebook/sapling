@@ -510,6 +510,8 @@ def debugchangelog(ui, repo, migrate=None):
     if isinstance(cl, changelog2.changelog):
         ui.write(_("The changelog is backed by Rust. More backend information:\n"))
         ui.write(_("%s") % cl.inner.describebackend())
+        if ui.debugflag:
+            cl.inner.explaininternals(ui.fout)
     else:
         ui.write(_("The changelog is backed by Python + C revlog.\n"))
         if type(cl.nodemap).__module__ == "edenscmnative.clindex":

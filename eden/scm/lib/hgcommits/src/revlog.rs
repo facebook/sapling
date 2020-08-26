@@ -25,6 +25,7 @@ use dag::Vertex;
 use minibytes::Bytes;
 use revlogindex::RevlogIndex;
 use std::fs;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -207,5 +208,9 @@ Feature Providers:
             self.dir.join("00changelog.{i,d}").display(),
             self.dir.join("00changelog.nodemap").display(),
         )
+    }
+
+    fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()> {
+        writeln!(w, "(RevlogIndex explain_internals is not yet implemented)")
     }
 }
